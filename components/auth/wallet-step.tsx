@@ -7,6 +7,7 @@ import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
+import { signInWithBase, signInWithInjectedEvm } from "@/lib/chains/evm/sign-in";
 import { SOLANA, ETHEREUM, BASE, HYPERLIQUID } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { Squircle } from "@/components/ui/squircle";
@@ -141,7 +142,7 @@ function WalletFlow() {
                   key={w.rdns}
                   name={w.name}
                   icon={w.icon}
-                  onClick={() => chooseEvmWallet(async () => (await import("@/lib/chains/evm/sign-in")).signInWithInjectedEvm(chain.chainId!, w.provider), w.name, w.icon)}
+                  onClick={() => chooseEvmWallet(() => signInWithInjectedEvm(chain.chainId!, w.provider), w.name, w.icon)}
                 />
               ))}
               {evmWallets.length === 0 && chain.id !== "base" && <Hint>No EVM wallet detected. Install MetaMask to continue.</Hint>}
@@ -164,11 +165,7 @@ function WalletFlow() {
           name="Sign in with Base"
           icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
           onClick={() =>
-            chooseEvmWallet(
-              async () => (await import("@/lib/chains/evm/sign-in")).signInWithBase(),
-              "Base",
-              <BaseSquareIcon className="h-7 w-7 rounded-md" />,
-            )
+            chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)
           }
         />
         <Row name="Sign in with Hyperliquid" icon={<HyperliquidIcon className="h-7 w-7" />} onClick={() => openChain(HYPERLIQUID)} />

@@ -3,6 +3,7 @@
 // Hyperliquid use the EIP-1193 provider + personal_sign. Both verify through
 // the /siwe/* endpoints (called directly to avoid extra client-plugin inference).
 import { createSiweMessage } from "viem/siwe";
+import { createBaseAccountSDK } from "@base-org/account";
 import { BASE } from "../registry";
 
 const AUTH_URL =
@@ -40,7 +41,8 @@ async function siweVerify(body: {
 // "Sign in with Base" — opens the Base Account flow (popup to Base), connects the
 // smart wallet, and returns a SIWE message+signature via the signInWithEthereum capability.
 export async function signInWithBase() {
-  const { createBaseAccountSDK } = await import("@base-org/account");
+  // Create the provider synchronously (static import) so the Base popup can open
+  // within the click gesture — otherwise the browser blocks it.
   const provider = createBaseAccountSDK({
     appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Watchparty",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
