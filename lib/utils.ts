@@ -1,19 +1,24 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
-export function ellipsify(str = "", len = 4) {
+export function ellipsify(str = '', len = 4) {
   if (str.length > 30) {
-    return str.substring(0, len) + ".." + str.substring(str.length - len, str.length);
+    return str.substring(0, len) + '..' + str.substring(str.length - len, str.length)
   }
-  return str;
+  return str
 }
 
-// Chain-agnostic address shortener (works for Solana base58 and EVM 0x addresses).
-// Solana PublicKey-specific helpers live in lib/chains/solana to keep this file dep-free.
+import { PublicKey } from "@solana/web3.js";
+
+export const shortAddress = (address: PublicKey | string) => {
+  const key = typeof address === "string" ? address : address.toBase58();
+  return `${key.slice(0, 4)}...${key.slice(-4)}`;
+};
+
 export const shortenWalletAddress = (walletAddress: string | null | undefined, len = 5) => {
   if (!walletAddress) return "";
   return walletAddress.slice(0, len) + "...." + walletAddress.slice(-len);
@@ -68,4 +73,18 @@ export const formatNumberGrouped = (
     minimumFractionDigits: minimumFractionDigits,
     maximumFractionDigits: Math.max(2, minimumFractionDigits),
   }).format(value);
+};
+
+export const validatePublicKey = (address: PublicKey | string) => {
+  try {
+    if (typeof address == "string") {
+      new PublicKey(address);
+    } else {
+      address.toBase58();
+    }
+    return true;
+  } catch (error) {
+    return false;
+
+  }
 };

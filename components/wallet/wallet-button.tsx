@@ -1,0 +1,248 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from 'next/navigation'
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { trpc } from "@/lib/trpc/client";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { WalletConnectModal } from "./wallet-connect-modal";
+import { WalletDrawer } from "./wallet-drawer";
+import { authClient } from "@/lib/auth/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { signInWithSolana } from "@/lib/solana/sign-in";
+import { appToast } from "@/components/app-ui/app-toast";
+import { Loader2 } from "lucide-react";
+import { Skeleton } from "boneyard-js/react";
+import "@/lib/types";
+
+function shortenWalletAddress(address: string): string {
+    if (!address) return "";
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
+function WalletButtonInner() {
+    const router = useRouter();
+    const queryClient = useQueryClient();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const isSigningOut = useRef(false);
+    const isAutoSignInTriggered = useRef(false);
+
+    const { publicKey, connected, connecting, disconnecting, disconnect, signMessage } = useWallet();
+    const { data: session, isLoading: loading } = useAuthSession();
+    const [isSigningIn, startSigningIn] = useTransition();
+
+    const isSignedIn = !!session?.user;
+    const walletAddress = session?.user?.wallet_address;
+
+    const trpcUtils = trpc.useUtils();
+    const handlePrefetch = useCallback(() => {
+        if (!walletAddress) return;
+        trpcUtils.wallet.getWalletAssets.prefetch({ address: walletAddress });
+    }, [trpcUtils, walletAddress]);
+
+    // Warm the wallet cache as soon as the session is available — before the user opens the drawer
+    useEffect(() => {
+        if (walletAddress) {
+            trpcUtils.wallet.getWalletAssets.prefetch({ address: walletAddress });
+        }
+    }, [walletAddress, trpcUtils]);
+
+    const handleConnect = useCallback(() => {
+        setIsModalOpen(true);
+    }, []);
+
+    const handleSignIn = useCallback(async () => {
+        if (!connected || !publicKey) {
+            appToast.error("Please connect your wallet first");
+            return;
+        }
+
+        if (!signMessage) {
+            appToast.error("Wallet does not support message signing");
+            return;
+        }
+
+        startSigningIn(async () => {
+            try {
+                const result = await signInWithSolana({
+                    publicKey,
+                    signMessage
+                });
+
+                // Invalidate session cache to update all components
+                queryClient.invalidateQueries({ queryKey: ["session"] });
+                router.refresh();
+                appToast.success("Successfully signed in!");
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+
+                if (message.includes("rejected") || message.includes("denied")) {
+                    appToast.error("Sign-in cancelled");
+                } else if (message.includes("nonce")) {
+                    appToast.error("Session expired. Please try again.");
+                } else {
+                    appToast.error(`Sign-in failed: ${message}`);
+                }
+            }
+        });
+    }, [connected, publicKey, queryClient, router, signMessage]);
+
+    const handleSignOut = useCallback(async () => {
+        if (isSigningOut.current) return;
+
+        try {
+            isSigningOut.current = true;
+            await authClient.signOut();
+
+            // Invalidate session cache to immediately update UI
+            queryClient.invalidateQueries({ queryKey: ["session"] });
+
+            if (disconnect) {
+                await disconnect();
+            }
+
+            router.refresh();
+            appToast.success("Signed out successfully");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            appToast.error(`Sign-out failed: ${message}`);
+        } finally {
+            isSigningOut.current = false;
+        }
+    }, [disconnect, queryClient, router]);
+
+    const handleCopyAddress = useCallback(() => {
+        if (walletAddress) {
+            navigator.clipboard.writeText(walletAddress);
+            appToast.success("Address copied to clipboard");
+        }
+    }, [walletAddress]);
+
+    const handleChangeWallet = useCallback(() => {
+        setIsModalOpen(true);
+    }, []);
+
+    // Auto sign-in when wallet connects
+    useEffect(() => {
+        let timer: NodeJS.Timeout | number;
+
+        if (
+            connected &&
+            !isSignedIn &&
+            !loading &&
+            !isSigningIn &&
+            !isAutoSignInTriggered.current
+        ) {
+            isAutoSignInTriggered.current = true;
+
+            timer = setTimeout(() => {
+                handleSignIn();
+            }, 100);
+        }
+
+        if (!connected || isSignedIn) {
+            isAutoSignInTriggered.current = false;
+        }
+
+        return () => {
+            if (timer) clearTimeout(timer as any);
+        };
+    }, [connected, isSignedIn, loading, isSigningIn, handleSignIn]);
+
+    const getButtonText = () => {
+        if (connecting) return "Connecting...";
+        if (isSigningIn) return "Signing In...";
+        if (isSigningOut.current || disconnecting) return "Signing Out...";
+
+        if (isSignedIn && walletAddress) return shortenWalletAddress(walletAddress);
+        if (isSignedIn) return session?.user?.username || "Account";
+        if (connected) return "Sign In";
+        return "Sign In";
+    };
+
+    const handleButtonClick = () => {
+        if (connected && !isSignedIn) {
+            handleSignIn();
+        } else if (!connected) {
+            handleConnect();
+        }
+    };
+
+    if (loading && session === undefined) {
+        return (
+            <Button disabled variant="outline" className="text-zinc-300 h-11 font-semibold text-[18px] tracking-wide bg-zinc-500/35 backdrop-blur-xs border-none px-4 pl-2 gap-2 w-[140px]">
+                <div className="h-6 w-6 rounded-full shimmer-skeleton shrink-0" />
+                <div className="h-3 w-full rounded-full shimmer-skeleton" />
+            </Button>
+        );
+    }
+
+    const isProcessing = connecting || disconnecting || isSigningIn || isSigningOut.current;
+    const buttonText = getButtonText();
+
+    // Signed-in state: show wallet drawer
+    if (isSignedIn) {
+        return (
+            <>
+                <WalletDrawer
+                    username={session?.user?.username || "User"}
+                    avatarUrl={session?.user?.avatar_url || ""}
+                    walletAddress={walletAddress}
+                    onSignOut={handleSignOut}
+                    onChangeWallet={handleChangeWallet}
+                >
+                    <Button
+                        variant="outline"
+                        className="text-flexwhite border-none h-11 font-medium text-[18px] bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs px-4 pl-2 gap-2 min-w-[140px]"
+                        disabled={isProcessing}
+                        onMouseEnter={handlePrefetch}
+                    >
+                        <Skeleton name="wallet-btn-action" loading={isProcessing}>
+                            <span className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                    <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
+                                    <AvatarFallback></AvatarFallback>
+                                </Avatar>
+                                {buttonText}
+                            </span>
+                        </Skeleton>
+                    </Button>
+                </WalletDrawer>
+
+                <WalletConnectModal
+                    open={isModalOpen}
+                    onOpenChange={setIsModalOpen}
+                />
+            </>
+        );
+    }
+
+    // Not signed in: show regular button
+    return (
+        <>
+            <Button
+                onClick={handleButtonClick}
+                disabled={isProcessing}
+                variant="default"
+                className="bg-darkfantasy text-white2 h-11 text-[18px] backdrop-blur-xs font-medium hover:bg-twitter cursor-pointer px-6 gap-3"
+            >
+                <Skeleton name="wallet-btn-content" loading={isProcessing}>
+                    <span>{buttonText}</span>
+                </Skeleton>
+            </Button>
+
+            <WalletConnectModal
+                open={isModalOpen}
+                onOpenChange={setIsModalOpen}
+            />
+        </>
+    );
+}
+
+// Skip SSR to prevent hydration mismatch: the server-side QueryClient has no session
+// pre-populated, causing a loading→signed-in state mismatch during hydration.
+// The boneyard Skeleton loading state renders client-only with no server HTML to reconcile.
+export default dynamic(() => Promise.resolve(WalletButtonInner), { ssr: false });

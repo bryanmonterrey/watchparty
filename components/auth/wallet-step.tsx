@@ -11,7 +11,7 @@ import { SOLANA, ETHEREUM, BASE, HYPERLIQUID } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { SolanaIcon } from "@/components/icons";
+import { SolanaMarkIcon, EthDiamondIcon, HyperliquidIcon, BaseSquareIcon } from "@/components/icons";
 
 // Full-page wallet state. Two levels: choose method/chain → choose a detected
 // wallet → waiting (approve signature). Lazy-loaded with its scoped Solana provider.
@@ -137,7 +137,7 @@ function WalletFlow() {
           ) : (
             <>
               {chain.id === "base" && (
-                <Row name="Base" icon={<BaseGlyph />} onClick={() => chooseEvmWallet(async () => (await import("@/lib/chains/evm/sign-in")).signInWithBase(), "Base", <BaseGlyph />)} />
+                <Row name="Base" icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />} onClick={() => chooseEvmWallet(async () => (await import("@/lib/chains/evm/sign-in")).signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)} />
               )}
               {evmWallets.map((w) => (
                 <Row
@@ -161,10 +161,10 @@ function WalletFlow() {
     <div className="flex flex-col">
       <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">Connect Wallet</h1>
       <div className="mt-6 flex flex-col gap-2.5">
-        <Row name="Sign in with Ethereum" icon={<EthGlyph />} onClick={() => openChain(ETHEREUM)} />
-        <Row name="Sign in with Solana" icon={<SolanaIcon width={20} height={20} className="text-white" />} onClick={() => openChain(SOLANA)} />
-        <Row name="Sign in with Base" icon={<BaseGlyph />} onClick={() => openChain(BASE)} />
-        <Row name="Sign in with Hyperliquid" icon={<HyperliquidGlyph />} onClick={() => openChain(HYPERLIQUID)} />
+        <Row name="Sign in with Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => openChain(ETHEREUM)} />
+        <Row name="Sign in with Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => openChain(SOLANA)} />
+        <Row name="Sign in with Base" icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />} onClick={() => openChain(BASE)} />
+        <Row name="Sign in with Hyperliquid" icon={<HyperliquidIcon className="h-7 w-7" />} onClick={() => openChain(HYPERLIQUID)} />
         {walletConnect && (
           <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
         )}

@@ -1,0 +1,11 @@
+{
+  "breakpoints": {
+    "375": { "name": "video-card-thumb", "viewportWidth": 320, "width": 320, "height": 180, "bones": [[0, 0, 100, 180, 16]] },
+    "640": { "name": "video-card-thumb", "viewportWidth": 320, "width": 320, "height": 180, "bones": [[0, 0, 100, 180, 16]] },
+    "768": { "name": "video-card-thumb", "viewportWidth": 320, "width": 320, "height": 180, "bones": [[0, 0, 100, 180, 16]] },
+    "1024": { "name": "video-card-thumb", "viewportWidth": 320, "width": 320, "height": 180, "bones": [[0, 0, 100, 180, 16]] },
+    "1280": { "name": "video-card-thumb", "viewportWidth": 320, "width": 320, "height": 180, "bones": [[0, 0, 100, 180, 16]] },
+    "1536": { "name": "video-card-thumb", "viewportWidth": 320, "width": 320, "height": 180, "bones": [[0, 0, 100, 180, 16]] }
+  },
+  "_hash": "video-card-thumb-manual"
+}

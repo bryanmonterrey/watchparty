@@ -1,0 +1,95 @@
+{
+  "breakpoints": {
+    "375": {
+      "name": "post-card-line2",
+      "viewportWidth": 564,
+      "width": 564,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          79.9978,
+          16,
+          9999
+        ]
+      ]
+    },
+    "640": {
+      "name": "post-card-line2",
+      "viewportWidth": 564,
+      "width": 564,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          79.9978,
+          16,
+          9999
+        ]
+      ]
+    },
+    "768": {
+      "name": "post-card-line2",
+      "viewportWidth": 564,
+      "width": 564,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          79.9978,
+          16,
+          9999
+        ]
+      ]
+    },
+    "1024": {
+      "name": "post-card-line2",
+      "viewportWidth": 564,
+      "width": 564,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          79.9978,
+          16,
+          9999
+        ]
+      ]
+    },
+    "1280": {
+      "name": "post-card-line2",
+      "viewportWidth": 564,
+      "width": 564,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          79.9978,
+          16,
+          9999
+        ]
+      ]
+    },
+    "1536": {
+      "name": "post-card-line2",
+      "viewportWidth": 564,
+      "width": 564,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          79.9978,
+          16,
+          9999
+        ]
+      ]
+    }
+  },
+  "_hash": "2b2a91d268746c5e5c737828f9b523a3"
+}

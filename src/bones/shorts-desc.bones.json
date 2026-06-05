@@ -1,0 +1,95 @@
+{
+  "breakpoints": {
+    "375": {
+      "name": "shorts-desc",
+      "viewportWidth": 465,
+      "width": 465,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          41.2681,
+          16,
+          9999
+        ]
+      ]
+    },
+    "640": {
+      "name": "shorts-desc",
+      "viewportWidth": 465,
+      "width": 465,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          41.2681,
+          16,
+          9999
+        ]
+      ]
+    },
+    "768": {
+      "name": "shorts-desc",
+      "viewportWidth": 465,
+      "width": 465,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          41.2681,
+          16,
+          9999
+        ]
+      ]
+    },
+    "1024": {
+      "name": "shorts-desc",
+      "viewportWidth": 465,
+      "width": 465,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          41.2681,
+          16,
+          9999
+        ]
+      ]
+    },
+    "1280": {
+      "name": "shorts-desc",
+      "viewportWidth": 465,
+      "width": 465,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          41.2681,
+          16,
+          9999
+        ]
+      ]
+    },
+    "1536": {
+      "name": "shorts-desc",
+      "viewportWidth": 465,
+      "width": 465,
+      "height": 16,
+      "bones": [
+        [
+          0,
+          0,
+          41.2681,
+          16,
+          9999
+        ]
+      ]
+    }
+  },
+  "_hash": "19336d90c145171ae3c54768da6359c2"
+}

@@ -1,0 +1,152 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
+import { Send2Icon } from "../icons";
+
+interface StreamChatProps {
+    hostUserId: string;
+    isLive: boolean;
+    chatRoomArn: string | null;
+    isLoading?: boolean;
+}
+
+interface ChatMessage {
+    id: string;
+    sender: string;
+    content: string;
+}
+
+export function StreamChat({ hostUserId, isLive, chatRoomArn, isLoading }: StreamChatProps) {
+    const [chatToken, setChatToken] = useState<{ token: string; chatRoomArn: string } | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [input, setInput] = useState("");
+    const wsRef = useRef<WebSocket | null>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    const getChatToken = trpc.stream.getChatToken.useMutation({
+        onSuccess: (data) => setChatToken(data),
+    });
+
+    useEffect(() => {
+        if (isLoading) return;
+        if (isLive && chatRoomArn) {
+            getChatToken.mutate({ hostUserId });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isLive, chatRoomArn, hostUserId, isLoading]);
+
+    useEffect(() => {
+        if (isLoading || !chatToken) return;
+        const region = chatToken.chatRoomArn.split(":")[3];
+        const ws = new WebSocket(`wss://edge.ivschat.${region}.amazonaws.com`, chatToken.token);
+        wsRef.current = ws;
+
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.Type === "MESSAGE") {
+                    setMessages(prev => [...prev.slice(-199), {
+                        id: msg.Id,
+                        sender: msg.Sender?.Attributes?.username ?? "Guest",
+                        content: msg.Content,
+                    }]);
+                }
+            } catch { /* ignore */ }
+        };
+
+        return () => ws.close();
+    }, [chatToken, isLoading]);
+
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const sendMessage = () => {
+        if (!input.trim() || wsRef.current?.readyState !== WebSocket.OPEN) return;
+        wsRef.current.send(JSON.stringify({ Action: "SEND_MESSAGE", Content: input.trim() }));
+        setInput("");
+    };
+
+    if (isLoading) {
+        return (
+            <div className="hidden lg:flex flex-col w-[340px] shrink-0 overflow-hidden h-[calc(100vh-120px)] sticky top-20">
+                {/* Header */}
+                <div className="px-4 py-3">
+                    <div className="shimmer-skeleton h-5 w-20 rounded-full" />
+                </div>
+                {/* Messages */}
+                <div className="flex-1 p-4 space-y-4 overflow-hidden">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="flex gap-2 items-start">
+                            <div className="shimmer-skeleton w-6 h-6 rounded-full shrink-0" />
+                            <div className="flex-1 space-y-1.5">
+                                <div className={`shimmer-skeleton h-3 rounded-full ${i % 3 === 0 ? 'w-full' : i % 3 === 1 ? 'w-4/5' : 'w-2/3'}`} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {/* Input */}
+                <div className="p-3">
+                    <div className="shimmer-skeleton h-10 w-full rounded-full" />
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full lg:w-[340px] shrink-0 flex flex-col border border-white/10 rounded-xl bg-zinc-950 overflow-hidden lg:h-[calc(100vh-120px)] lg:sticky lg:top-20">
+            <div 
+                className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-zinc-900/50 hover:bg-zinc-800/50 cursor-pointer transition-colors group"
+                onClick={() => { /* Toggle chat settings or similar */ }}
+            >
+                <div className="flex items-center gap-1.5">
+                    <span className="text-base font-bold text-zinc-100">Chat</span>
+                    <ChevronRight className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
+                </div>
+            </div>
+
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2.5 min-h-0 scrollbar-hide">
+                {messages.length === 0 && (
+                    <p className="text-xs text-zinc-500 text-center pt-8 font-medium">
+                        {isLive ? (chatToken ? "Welcome to live chat!" : "Connecting to chat…") : "Chat is disabled for offline streams."}
+                    </p>
+                )}
+                {messages.map((m, i) => (
+                    <div key={`${m.id}-${i}`} className="text-[13px] break-words flex gap-2">
+                        <div className="w-6 h-6 rounded-full bg-lantern/20 text-lantern shrink-0 flex items-center justify-center font-bold text-[10px] uppercase">
+                            {m.sender[0]}
+                        </div>
+                        <div className="flex-1 pt-0.5 leading-snug">
+                            <span className="font-semibold text-zinc-400 mr-2">{m.sender}</span>
+                            <span className="text-zinc-100">{m.content}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="border-t border-white/10 p-3 bg-zinc-900/50">
+                <div className="flex gap-2">
+                    <input
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && sendMessage()}
+                        placeholder={isLive ? (chatToken ? "Chat..." : "Sign in to chat") : "Offline"}
+                        disabled={!chatToken || !isLive}
+                        className="flex-1 bg-zinc-800/80 text-sm font-medium text-zinc-200 px-3.5 py-2.5 rounded-full placeholder:text-zinc-500 border border-transparent focus:border-zinc-700 focus:outline-none focus:ring-0 disabled:opacity-50 transition-colors"
+                    />
+                    <button
+                        onClick={sendMessage}
+                        disabled={!input.trim() || !chatToken || !isLive}
+                        className="p-2.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-40 transition-colors shrink-0"
+                    >
+                        <Send2Icon className="w-[18px] h-[18px]" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}

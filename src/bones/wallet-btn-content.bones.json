@@ -1,0 +1,95 @@
+{
+  "breakpoints": {
+    "375": {
+      "name": "wallet-btn-content",
+      "viewportWidth": 53,
+      "width": 53,
+      "height": 24,
+      "bones": [
+        [
+          0,
+          3,
+          100,
+          18,
+          8
+        ]
+      ]
+    },
+    "640": {
+      "name": "wallet-btn-content",
+      "viewportWidth": 53,
+      "width": 53,
+      "height": 24,
+      "bones": [
+        [
+          0,
+          3,
+          100,
+          18,
+          8
+        ]
+      ]
+    },
+    "768": {
+      "name": "wallet-btn-content",
+      "viewportWidth": 53,
+      "width": 53,
+      "height": 24,
+      "bones": [
+        [
+          0,
+          3,
+          100,
+          18,
+          8
+        ]
+      ]
+    },
+    "1024": {
+      "name": "wallet-btn-content",
+      "viewportWidth": 53,
+      "width": 53,
+      "height": 24,
+      "bones": [
+        [
+          0,
+          3,
+          100,
+          18,
+          8
+        ]
+      ]
+    },
+    "1280": {
+      "name": "wallet-btn-content",
+      "viewportWidth": 53,
+      "width": 53,
+      "height": 24,
+      "bones": [
+        [
+          0,
+          3,
+          100,
+          18,
+          8
+        ]
+      ]
+    },
+    "1536": {
+      "name": "wallet-btn-content",
+      "viewportWidth": 53,
+      "width": 53,
+      "height": 24,
+      "bones": [
+        [
+          0,
+          3,
+          100,
+          18,
+          8
+        ]
+      ]
+    }
+  },
+  "_hash": "2b534042d42b3ae7d92eea084df4a7ff"
+}

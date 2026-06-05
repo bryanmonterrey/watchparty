@@ -1,0 +1,43 @@
+"use client";
+
+import { type ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+interface FeedTabProps {
+    label: string;
+    isActive: boolean;
+    onClick: () => void;
+    suffix?: ReactNode;
+    className?: string;
+}
+
+export function FeedTab({ label, isActive, onClick, suffix, className }: FeedTabProps) {
+    return (
+        <button
+            onClick={onClick}
+            className={cn(
+                "flex-1 h-13 w-fit cursor-pointer flex items-center justify-center hover:bg-zinc-500/20 transition-colors group",
+                className
+            )}
+        >
+            {/* Invisible spacer mirrors the suffix width to keep label centered */}
+            {suffix && <span className="ml-1 flex items-center opacity-0 pointer-events-none">{suffix}</span>}
+            {/* Label + underline — underline is anchored to this container only */}
+            <div className="relative h-full flex items-center">
+                <span className={cn(
+                    "text-[15px] font-bold transition-colors",
+                    isActive ? "text-zinc-100" : "text-zinc-500 group-hover:text-zinc-300"
+                )}>
+                    {label}
+                </span>
+                <div className={cn(
+                    "absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] w-16 bg-twitter2 rounded-full transition-opacity duration-200",
+                    isActive ? "opacity-100" : "opacity-0"
+                )} />
+            </div>
+            {suffix && (
+                <span className="ml-1 flex items-center">{suffix}</span>
+            )}
+        </button>
+    );
+}

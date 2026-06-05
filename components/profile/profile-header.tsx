@@ -1,0 +1,335 @@
+"use client";
+
+import { Edit2, Zap, MoreHorizontal, ShieldBan, Gift } from "lucide-react";
+import { SubscribeButton } from "@/components/browse/subscribe-button";
+import { GiftSubscriptionDialog } from "@/components/browse/gift-subscription-dialog";
+import { UserType } from "@/db/schema/auth/user";
+import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GlobeIcon, PinpointIcon, CalendarIcon, MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import * as React from "react";
+import { EditProfileDialog } from "./edit-profile-dialog";
+import { FollowersFollowingDialog } from "./followers-following-dialog";
+import { TipModal } from "@/components/browse/tip-modal";
+import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { trpc } from "@/lib/trpc/client";
+import { getRealtimeClient } from "@/lib/supabase/realtime-client";
+
+interface ProfileHeaderProps {
+    user: UserType;
+    isMinimized?: boolean;
+    onToggleSize?: () => void;
+}
+
+function MoreMenu({ userId, username, onClose, onGift }: { userId: string; username: string | null; onClose: () => void; onGift: () => void }) {
+    const utils = trpc.useUtils();
+    const banUser = trpc.moderation.banUser.useMutation({
+        onSuccess: () => { utils.moderation.isUserBannedByMe.invalidate({ userId }); onClose(); },
+    });
+    const unbanUser = trpc.moderation.unbanUser.useMutation({
+        onSuccess: () => { utils.moderation.isUserBannedByMe.invalidate({ userId }); onClose(); },
+    });
+    const { data: banStatus } = trpc.moderation.isUserBannedByMe.useQuery({ userId });
+    const isBanned = banStatus?.banned ?? false;
+
+    return (
+        <div className="absolute right-0 top-full mt-1 bg-zinc-900 border border-white/10 rounded-xl shadow-xl z-30 w-52 overflow-hidden py-1">
+            <button
+                onClick={() => { onGift(); onClose(); }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 transition-colors text-left"
+            >
+                <Gift className="w-4 h-4 text-lantern" />
+                Gift subscription
+            </button>
+            <MuteButton userId={userId} username={username} className="px-4 py-2.5 hover:bg-white/5 w-full text-left" onDone={onClose} />
+            <BlockButton userId={userId} username={username} className="px-4 py-2.5 hover:bg-white/5 w-full text-left" onDone={onClose} />
+            <button
+                onClick={() => isBanned ? unbanUser.mutate({ userId }) : banUser.mutate({ userId })}
+                disabled={banUser.isPending || unbanUser.isPending}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors text-left disabled:opacity-50"
+            >
+                <ShieldBan className="w-4 h-4" />
+                {isBanned ? "Unban from channel" : "Ban from channel"}
+            </button>
+        </div>
+    );
+}
+
+const formatJoinedDate = (date: Date | null) => {
+    if (!date) return "Joined Recently";
+    try {
+        const d = typeof date === "string" ? new Date(date) : date;
+        return new Intl.DateTimeFormat("en-US", {
+            month: "long",
+            year: "numeric"
+        }).format(d);
+    } catch (e) {
+        return "Joined Recently";
+    }
+};
+
+export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeaderProps) {
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [followersDialog, setFollowersDialog] = React.useState<"followers" | "following" | null>(null);
+    const [showTip, setShowTip] = React.useState(false);
+    const [showMoreMenu, setShowMoreMenu] = React.useState(false);
+    const [showGiftDialog, setShowGiftDialog] = React.useState(false);
+    const moreMenuRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+                setShowMoreMenu(false);
+            }
+        };
+        if (showMoreMenu) document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [showMoreMenu]);
+    const { data: session, isPending: sessionPending } = useAuthSession();
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => { setMounted(true); }, []);
+    const isOwner = mounted && !sessionPending && session?.user?.id === user.id;
+    const { data: counts, refetch: refetchCounts } = trpc.user.followCounts.useQuery({ userId: user.id });
+    const { data: followData, refetch: refetchFollow } = trpc.user.isFollowing.useQuery({ followingId: user.id }, { enabled: !isOwner });
+    const [optimisticFollowing, setOptimisticFollowing] = React.useState<boolean | null>(null);
+
+    React.useEffect(() => {
+        const client = getRealtimeClient();
+        const channel = client
+            .channel(`follows:${user.id}:${isMinimized ? 'compact' : 'full'}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'follows',
+                filter: `followingId=eq.${user.id}`,
+            }, () => {
+                refetchCounts();
+            })
+            .subscribe();
+
+        return () => {
+            client.removeChannel(channel);
+        };
+    }, [user.id, refetchCounts]);
+    const follow = trpc.user.follow.useMutation({
+        onSuccess: () => { refetchCounts(); refetchFollow().then(() => setOptimisticFollowing(null)); },
+        onError: () => setOptimisticFollowing(null),
+    });
+    const unfollow = trpc.user.unfollow.useMutation({
+        onSuccess: () => { refetchCounts(); refetchFollow().then(() => setOptimisticFollowing(null)); },
+        onError: () => setOptimisticFollowing(null),
+    });
+
+    const isFollowing = optimisticFollowing ?? followData?.isFollowing ?? false;
+
+    const handleFollowToggle = () => {
+        const next = !isFollowing;
+        setOptimisticFollowing(next);
+        if (!next) {
+            unfollow.mutate({ followingId: user.id });
+        } else {
+            follow.mutate({ followingId: user.id });
+        }
+    };
+
+    return (
+        <div className="flex z-30 flex-col gap-1.5 max-w-2xl">
+            <div className={cn("flex flex-row justify-start items-start", isMinimized ? "flex-row gap-4" : "gap-0.5")}>
+                <div className={cn("flex items-center", isMinimized ? "flex-row gap-2" : "flex-row gap-4")}>
+                    <h1 className={cn("font-black tracking-tighter text-white", isMinimized ? "text-xl" : "text-4xl")}>
+                        {user.name}
+                    </h1>
+                    {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-6" />}
+                    {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-6" />}
+                    {user.verifiedTier === "government" && <GovBadgeIcon className="size-6" />}
+                    
+                    {isMinimized && (
+                        <span className="text-zinc-400 tracking-wide font-semibold text-sm ml-1">
+                            @{user.username}
+                        </span>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                        {!isOwner ? (
+                            <>
+                                <Button
+                                    
+                                    onClick={handleFollowToggle}
+                                    className={cn(
+                                        "rounded-full font-bold backdrop-blur-lg text-base py-5 px-5",
+                                        isFollowing
+                                            ? "bg-black/25 border border-flexborder/50 text-white hover:bg-white2/10"
+                                            : "bg-twitter2/90 text-white2 hover:bg-twitter2"
+                                    )}
+                                >
+                                    {isFollowing ? "Following" : "Follow"}
+                                </Button>
+                                <SubscribeButton creatorId={user.id} creatorName={user.name} />
+                                {user.wallet_address && (
+                                    <Button
+                                        onClick={() => setShowTip(true)}
+                                        className="p-5 rounded-full text-base bg-black/25 font-bold border border-flexborder/50 text-white2 hover:bg-white2/10"
+                                        title="Send tip"
+                                    >
+                                        Gift Subs
+                                    </Button>
+                                )}
+                                <div className="relative" ref={moreMenuRef}>
+                                    <Button
+                                        onClick={() => setShowMoreMenu(v => !v)}
+                                        className="size-11 rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10"
+                                    >
+                                        <VerticalDotsIcon className="size-6" />
+                                    </Button>
+                                    {showMoreMenu && (
+                                        <MoreMenu
+                                            userId={user.id}
+                                            username={user.username}
+                                            onClose={() => setShowMoreMenu(false)}
+                                            onGift={() => setShowGiftDialog(true)}
+                                        />
+                                    )}
+                                </div>
+                                {onToggleSize && (
+                                    <Button
+                                        onClick={onToggleSize}
+                                        className="size-11 rounded-full border border-flexborder/50 bg-black/25 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
+                                        title={isMinimized ? "Maximum size" : "Minimum size"}
+                                    >
+                                        {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
+                                    </Button>
+                                )}
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsEditing(true)}
+                                    className="font-bold rounded-full bg-zinc-900/50 hover:bg-zinc-800 border border-flexborder/50 h-9 px-4"
+                                >
+                                    Edit profile
+                                </Button>
+                                {onToggleSize && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={onToggleSize}
+                                        className="size-9 bg-zinc-900/50 hover:bg-zinc-800 rounded-full border border-flexborder/50 flex items-center justify-center p-0"
+                                        title={isMinimized ? "Maximum size" : "Minimum size"}
+                                    >
+                                        {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {!isMinimized && (
+                <span className="text-zinc-400 tracking-wide font-semibold text-sm transition-all duration-300">
+                    @{user.username}
+                </span>
+            )}
+
+            {user.bio && !isMinimized && (
+                <p className="text-sm leading-relaxed text-white2 max-w-xl">
+                    {user.bio}
+                </p>
+            )}
+
+            {!isMinimized && (
+                <div className="flex flex-wrap items-center gap-x-5 text-sm text-zinc-400 font-medium transition-all duration-300">
+                    {user.location && (
+                        <div className="flex items-center gap-1 tracking font-bold">
+                            <PinpointIcon width={16} height={16} className="text-zinc-400" />
+                            {user.location}
+                        </div>
+                    )}
+                    
+                    <div className="flex items-center gap-1 tracking font-bold">
+                        <CalendarIcon width={16} height={16} className="text-zinc-400" />
+                        Joined {formatJoinedDate(user.createdAt)}
+                    </div>
+
+                    {user.website && (
+                        <a 
+                            href={user.website.startsWith('http') ? user.website : `https://${user.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 font-bold cursor-pointer hover:text-white transition-colors group"
+                        >
+                            <Link2Icon className="w-4 h-4 text-zinc-400 group-hover:text-twitter2 transition-colors" />
+                            {user.website.replace(/^https?:\/\//, "")}
+                        </a>
+                    )}
+                </div>
+            )}
+
+            {!counts ? (
+                <div className="flex items-center gap-5">
+                    <div className="shimmer-skeleton h-4 w-24 rounded-full" />
+                    <div className="shimmer-skeleton h-4 w-24 rounded-full" />
+                </div>
+            ) : (
+                <div className="flex items-center gap-5 text-sm">
+                    <button
+                        onClick={() => setFollowersDialog("following")}
+                        className="text-white font-bold hover:underline"
+                    >
+                        {counts.following} <span className="text-zinc-400 font-bold">Following</span>
+                    </button>
+                    <button
+                        onClick={() => setFollowersDialog("followers")}
+                        className="text-white font-bold hover:underline"
+                    >
+                        {counts.followers} <span className="text-zinc-400 font-bold">Followers</span>
+                    </button>
+                </div>
+            )}
+
+            {isOwner && (
+                <EditProfileDialog
+                    user={user}
+                    open={isEditing}
+                    onOpenChange={setIsEditing}
+                />
+            )}
+
+            <FollowersFollowingDialog
+                userId={user.id}
+                username={user.username ?? undefined}
+                initialTab={followersDialog ?? "followers"}
+                open={followersDialog !== null}
+                onOpenChange={(o) => { if (!o) setFollowersDialog(null); }}
+                isOwnProfile={isOwner}
+                followersCount={counts?.followers ?? 0}
+                followingCount={counts?.following ?? 0}
+            />
+
+            {!isOwner && (
+                <TipModal
+                    open={showTip}
+                    onOpenChange={setShowTip}
+                    recipient={{
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        avatar_url: user.avatar_url,
+                        wallet_address: user.wallet_address,
+                    }}
+                />
+            )}
+
+            {!isOwner && (
+                <GiftSubscriptionDialog
+                    open={showGiftDialog}
+                    onOpenChange={setShowGiftDialog}
+                    recipientId={user.id}
+                    recipientName={user.name}
+                    creatorId={user.id}
+                />
+            )}
+        </div>
+    );
+}

@@ -1,0 +1,106 @@
+"use client";
+
+import { useCallback } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { trpc } from "@/lib/trpc/client";
+import { useMiniPlayer } from "@/contexts/mini-player-context";
+import { VideoPlayer } from "./video-player";
+import { VideoMetadata } from "./video-metadata";
+import { UpNextSidebar } from "./up-next-sidebar";
+
+interface VideoWatchPageProps {
+    postId: string;
+    creatorUsername: string;
+}
+
+export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps) {
+    const { data: video, isLoading } = trpc.content.getVideoById.useQuery({ postId });
+    const { miniPlayerData, enterMiniPlayer, exitMiniPlayer } = useMiniPlayer();
+    const pathname = usePathname();
+
+    const isGlobalMiniActive = miniPlayerData?.postId === postId;
+
+    const handleEnterMiniPlayer = useCallback((currentTime: number) => {
+        enterMiniPlayer({
+            postId,
+            videoUrl: video?.videoUrl ?? "",
+            thumbnailUrl: video?.thumbnailUrl,
+            title: video?.title,
+            author: video?.author?.name,
+            startTime: currentTime,
+            watchUrl: pathname,
+        });
+    }, [postId, video, pathname, enterMiniPlayer]);
+
+    if (!video && !isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <p className="text-zinc-400 text-lg font-medium">Video not found</p>
+                <Link href={`/${creatorUsername}`} className="text-lantern text-sm hover:underline">
+                    Back to @{creatorUsername}
+                </Link>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col lg:flex-row gap-3 min-h-screen w-full max-w-[1400px] mx-auto px-4 pt-16 pb-4">
+            {/* ── Main column ─────────────────────────────────────────────── */}
+            <div className="flex flex-col flex-1 min-w-0">
+                <div className="relative w-full aspect-video">
+                    {isGlobalMiniActive ? (
+                        /* Placeholder shown while this video plays in the global mini player */
+                        <div className="absolute inset-0 rounded-3xl bg-black flex flex-col items-center justify-center gap-3">
+                            <img
+                                src={video?.thumbnailUrl ?? ""}
+                                className="absolute inset-0 w-full h-full object-cover rounded-3xl opacity-20"
+                                alt=""
+                            />
+                            <p className="relative text-white/70 text-sm">Playing in mini player</p>
+                            <button
+                                onClick={exitMiniPlayer}
+                                className="relative px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+                            >
+                                Resume here
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="absolute inset-0">
+                            <VideoPlayer
+                                postId={postId}
+                                title={video?.title ?? null}
+                                videoUrl={video?.videoUrl ?? null}
+                                thumbnailUrl={video?.thumbnailUrl ?? null}
+                                isLoading={isLoading}
+                                onEnterMiniPlayer={handleEnterMiniPlayer}
+                            />
+                        </div>
+                    )}
+                </div>
+                <VideoMetadata
+                    postId={postId}
+                    title={video?.title ?? null}
+                    content={video?.content ?? null}
+                    views={video?.views ?? 0}
+                    likes={video?.likes ?? 0}
+                    comments={video?.comments ?? 0}
+                    createdAt={video?.createdAt ?? new Date()}
+                    category={video?.category ?? null}
+                    isLiked={video?.isLiked ?? false}
+                    author={video?.author ?? { id: "", name: null, username: null, avatar_url: null, verifiedTier: null, followerCount: 0 }}
+                    isLoading={isLoading}
+                />
+            </div>
+
+            {/* ── Up Next sidebar ──────────────────────────────────────────── */}
+            <UpNextSidebar
+                postId={postId}
+                creatorId={video?.author?.id ?? ""}
+                creatorName={video?.author?.name ?? null}
+                category={video?.category ?? null}
+                isLoading={isLoading}
+            />
+        </div>
+    );
+}

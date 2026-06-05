@@ -5,6 +5,7 @@
 // land in M1 with lib/chains — the database hooks below already handle the
 // wallet-address path so wiring them back in is additive.
 
+// @ts-ignore - betterAuth is exported but TS's bundler resolution intermittently misses it
 import { betterAuth } from "better-auth";
 import { dash } from "@better-auth/infra";
 import { siwsPlugin } from "better-auth-siws";

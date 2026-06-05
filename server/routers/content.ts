@@ -1,0 +1,1268 @@
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { router, protectedProcedure, publicProcedure } from "../trpc";
+import { db } from "@/db";
+import { posts, playlists, playlistVideos, escrows, tokens, likes, bookmarks, polls, pollVotes, postUnlocks, reports, seenPosts, videoProgress, videoHeatmap, videoCaptions } from "@/db/schema/content";
+import { user } from "@/db/schema/auth";
+import { eq, desc, and, count, like, or, ilike, sql, gt, lt, inArray, asc, isNotNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { nanoid } from "nanoid";
+import { withCache, invalidateCache, TTL } from "@/lib/cache";
+import { createNotification } from "@/server/lib/notify";
+import { typesenseClient } from "@/lib/typesense/client";
+import { upsertPost, upsertToken, deletePost, upsertUser } from "@/lib/typesense/sync";
+
+export const contentRouter = router({
+    createVideo: protectedProcedure
+        .input(
+            z.object({
+                title: z.string().min(1),
+                description: z.string().optional(),
+                videoUrl: z.string().url(),
+                thumbnailUrl: z.string().url().optional(),
+                visibility: z.enum(["public", "private", "unlisted"]),
+                duration: z.number().default(0),
+                scheduledFor: z.date().optional(),
+                playlistIds: z.array(z.string()).optional(),
+                id: z.string().optional(),
+                // Token Launch
+                tokenAddress: z.string().optional(),
+                poolAddress: z.string().optional(),
+                creatorFeePercent: z.number().optional(),
+                tokenStatus: z.enum(["draft", "live"]).optional(),
+                earningsEnabled: z.boolean().optional(),
+                splits: z.array(z.any()).optional(),
+                ticker: z.string().optional(),
+                // Audience & permissions
+                audience: z.enum(["everyone", "followers", "verified", "token_holders"]).default("everyone"),
+                whoCanComment: z.enum(["everyone", "followers", "verified", "none"]).default("everyone"),
+                allowedCommenters: z.array(z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    avatar_url: z.string().optional(),
+                })).optional(),
+                // Metadata
+                category: z.string().optional(),
+                language: z.array(z.string()).optional(),
+                recordingDate: z.date().optional(),
+                videoLocation: z.string().optional(),
+                // Collaboration
+                collaborators: z.array(z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    username: z.string().optional(),
+                    avatar_url: z.string().optional(),
+                })).optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const videoId = input.id || nanoid();
+            let tokenId: string | undefined = undefined;
+
+            if (input.earningsEnabled && input.ticker) {
+                tokenId = input.tokenStatus === "live" ? (input.tokenAddress || nanoid()) : nanoid();
+
+                await db.insert(tokens).values({
+                    id: tokenId,
+                    tokenAddress: input.tokenAddress,
+                    poolAddress: input.poolAddress,
+                    ticker: input.ticker,
+                    name: input.title.slice(0, 32) || "Video Token",
+                    description: input.description,
+                    imageUrl: input.thumbnailUrl,
+                    creatorFeePercent: input.creatorFeePercent,
+                    status: input.tokenStatus || "draft",
+                    earningsEnabled: input.earningsEnabled,
+                    splits: input.splits,
+                    creatorId: ctx.session.user.id,
+                });
+                upsertToken({ id: tokenId, name: input.title.slice(0, 32) || "Video Token", ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: input.thumbnailUrl, createdAt: new Date() });
+            }
+
+            await db.insert(posts).values({
+                id: videoId,
+                userId: ctx.session.user.id,
+                title: input.title,
+                content: input.description,
+                videoUrl: input.videoUrl,
+                thumbnailUrl: input.thumbnailUrl,
+                visibility: input.visibility,
+                duration: input.duration,
+                scheduledFor: input.scheduledFor,
+                status: "published",
+                tokenId,
+                ticker: input.earningsEnabled && input.ticker ? input.ticker : null,
+                tokenStatus: input.earningsEnabled && input.ticker ? (input.tokenStatus || "draft") : null,
+                audience: input.audience || "everyone",
+                replyPrivacy: (input.whoCanComment === "none" ? "everyone" : input.whoCanComment) as any,
+                category: input.category,
+                language: input.language ?? [],
+                recordingDate: input.recordingDate,
+                videoLocation: input.videoLocation,
+                collaborators: input.collaborators,
+                isShort: false,
+            });
+            if (input.description) upsertPost({ id: videoId, content: input.description, userId: ctx.session.user.id, imageUrl: input.thumbnailUrl, createdAt: new Date() });
+
+            if (input.playlistIds && input.playlistIds.length > 0) {
+                const playlistInserts = input.playlistIds.map(playlistId => ({
+                    playlistId,
+                    postId: videoId,
+                    position: 0
+                }));
+                await db.insert(playlistVideos).values(playlistInserts);
+            }
+
+            if (input.earningsEnabled && input.splits && input.splits.length > 0) {
+                const pendingEscrowIds = input.splits
+                    .filter((s: any) => s.escrowId)
+                    .map((s: any) => s.escrowId);
+
+                if (pendingEscrowIds.length > 0 && tokenId) {
+                    for (const id of pendingEscrowIds) {
+                        await db.update(escrows)
+                            .set({ tokenId: tokenId })
+                            .where(eq(escrows.id, id));
+                    }
+                }
+            }
+
+            return { success: true, videoId };
+        }),
+
+    searchCollaborators: protectedProcedure
+        .input(z.object({ query: z.string().min(1), limit: z.number().default(8) }))
+        .query(async ({ ctx, input }) => {
+            return withCache(
+                `db:collaborators:${input.query.toLowerCase()}:${input.limit}`,
+                TTL.COLLABORATORS,
+                async () => {
+                    const pattern = `%${input.query}%`;
+                    const users = await db
+                        .select({ id: user.id, name: user.name, username: user.username, avatar_url: user.avatar_url })
+                        .from(user)
+                        .where(or(like(user.name, pattern), like(user.username, pattern)))
+                        .limit(input.limit);
+                    return { users };
+                }
+            );
+        }),
+
+    createPost: protectedProcedure
+        .input(
+            z.object({
+                content: z.string().optional(),
+                imageUrl: z.string().optional(),
+                media: z.array(z.object({ type: z.enum(["image", "video"]), url: z.string() })).optional(),
+                visibility: z.enum(["public", "private", "unlisted"]).default("public"),
+                audience: z.enum(["everyone", "followers", "verified", "token_holders", "community", "vip"]).default("everyone"),
+                replyPrivacy: z.enum(["everyone", "followers", "verified", "token_holders"]).default("everyone"),
+                communityId: z.string().optional(),
+                // Token Launch
+                tokenAddress: z.string().optional(),
+                poolAddress: z.string().optional(),
+                creatorFeePercent: z.number().optional(),
+                tokenStatus: z.enum(["draft", "live"]).optional(),
+                earningsEnabled: z.boolean().optional(),
+                splits: z.array(z.any()).optional(),
+                ticker: z.string().optional(),
+                token_image: z.string().optional(),
+                // Pay-Per-View
+                isPaywalled: z.boolean().optional(),
+                paywallPrice: z.number().optional(), // lamports
+                // Content warning
+                hasContentWarning: z.boolean().optional(),
+                contentWarningText: z.string().optional(),
+                // Link Preview
+                linkPreview: z.object({
+                    url: z.string(),
+                    title: z.string().nullable().optional(),
+                    description: z.string().nullable().optional(),
+                    imageUrl: z.string().nullable().optional(),
+                    siteName: z.string().nullable().optional(),
+                }).optional(),
+                // Scheduling / Draft
+                status: z.enum(["draft", "scheduled", "published"]).default("published"),
+                scheduledFor: z.date().optional(),
+                // Poll
+                poll: z.object({
+                    question: z.string().min(1),
+                    options: z.array(z.object({ id: z.string(), text: z.string() })).min(2).max(4),
+                    allowMultiple: z.boolean().default(false),
+                    endsAt: z.date().optional(),
+                }).optional(),
+                // Threading / Engagement
+                replyToId: z.string().optional(),
+                repostOfId: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            console.log("SERVER: createPost mut received:", input);
+            if (!input.content && !input.imageUrl && !input.poll) {
+                console.error("SERVER: Error missing content");
+                throw new Error("Post must have content, image, or poll");
+            }
+
+            const postId = nanoid();
+            let tokenId: string | undefined = undefined;
+
+            if (input.ticker) {
+                tokenId = input.tokenStatus === "live" ? (input.tokenAddress || nanoid()) : nanoid();
+
+                await db.insert(tokens).values({
+                    id: tokenId,
+                    tokenAddress: input.tokenAddress,
+                    poolAddress: input.poolAddress,
+                    ticker: input.ticker,
+                    name: input.content ? input.content.slice(0, 32) : "Post Token",
+                    description: input.content,
+                    imageUrl: input.imageUrl?.split(',')[0],
+                    creatorFeePercent: input.creatorFeePercent,
+                    status: input.tokenStatus || "draft",
+                    earningsEnabled: input.earningsEnabled,
+                    splits: input.splits,
+                    creatorId: ctx.session.user.id,
+                });
+                upsertToken({ id: tokenId, name: input.content ? input.content.slice(0, 32) : "Post Token", ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: input.imageUrl?.split(',')[0], createdAt: new Date() });
+            }
+
+            await db.insert(posts).values({
+                id: postId,
+                userId: ctx.session.user.id,
+                content: input.content,
+                imageUrl: input.imageUrl,
+                visibility: input.visibility,
+                audience: input.audience,
+                replyPrivacy: input.replyPrivacy,
+                communityId: input.communityId,
+                status: input.status,
+                tokenId,
+                ticker: input.ticker ?? null,
+                tokenStatus: input.tokenStatus ?? (input.earningsEnabled ? "draft" : null),
+                token_image: input.token_image,
+                media: input.media ?? [],
+                isPaywalled: input.isPaywalled ?? false,
+                paywallPrice: input.paywallPrice,
+                hasContentWarning: input.hasContentWarning ?? false,
+                contentWarningText: input.contentWarningText,
+                linkPreview: input.linkPreview ? {
+                    url: input.linkPreview.url,
+                    title: input.linkPreview.title ?? null,
+                    description: input.linkPreview.description ?? null,
+                    imageUrl: input.linkPreview.imageUrl ?? null,
+                    siteName: input.linkPreview.siteName ?? null,
+                } : null,
+                scheduledFor: input.scheduledFor,
+                replyToId: input.replyToId,
+                repostOfId: input.repostOfId,
+            });
+            if (input.status === "published" && input.content) upsertPost({ id: postId, content: input.content, userId: ctx.session.user.id, imageUrl: input.imageUrl, createdAt: new Date() });
+
+            if (input.poll) {
+                const options = input.poll.options.map(o => ({ ...o, votesCount: 0 }));
+                await db.insert(polls).values({
+                    id: nanoid(),
+                    postId,
+                    userId: ctx.session.user.id,
+                    question: input.poll.question,
+                    options,
+                    allowMultiple: input.poll.allowMultiple,
+                    endsAt: input.poll.endsAt,
+                });
+            }
+
+            if (input.earningsEnabled && input.splits && input.splits.length > 0) {
+                const pendingEscrowIds = input.splits
+                    .filter((s: any) => s.escrowId)
+                    .map((s: any) => s.escrowId);
+
+                if (pendingEscrowIds.length > 0 && tokenId) {
+                    for (const id of pendingEscrowIds) {
+                        await db.update(escrows)
+                            .set({ tokenId: tokenId })
+                            .where(eq(escrows.id, id));
+                    }
+                }
+            }
+
+            // Only bust feed cache for published posts
+            if (input.status === "published") {
+                // Handle parent post increments
+                if (input.replyToId) {
+                    await db.update(posts)
+                        .set({
+                            comments: sql`${posts.comments} + 1`,
+                            baseScore: sql`${posts.likes} * 3.0 + ${posts.reposts} * 2.0 + (${posts.comments} + 1) * 2.0 + ${posts.views} * 0.1`,
+                        })
+                        .where(eq(posts.id, input.replyToId));
+                    
+                    const parent = await db.query.posts.findFirst({ where: eq(posts.id, input.replyToId) });
+                    if (parent) await createNotification({ userId: parent.userId, actorId: ctx.session.user.id, type: "comment", postId: input.replyToId });
+                }
+
+                if (input.repostOfId) {
+                    await db.update(posts)
+                        .set({
+                            reposts: sql`${posts.reposts} + 1`,
+                            baseScore: sql`${posts.likes} * 3.0 + (${posts.reposts} + 1) * 2.0 + ${posts.comments} * 2.0 + ${posts.views} * 0.1`,
+                        })
+                        .where(eq(posts.id, input.repostOfId));
+                    
+                    const orig = await db.query.posts.findFirst({ where: eq(posts.id, input.repostOfId) });
+                    if (orig) await createNotification({ userId: orig.userId, actorId: ctx.session.user.id, type: "quote", postId: input.repostOfId });
+                }
+
+                await Promise.all([
+                    invalidateCache("db:feed:v2:for-you:initial:20"),
+                    invalidateCache("db:feed:v2:following:initial:20"),
+                    invalidateCache("db:feed:v2:news:initial:20"),
+                ]);
+            }
+
+            return { success: true, postId };
+        }),
+
+    createPlaylist: protectedProcedure
+        .input(
+            z.object({
+                title: z.string().min(1),
+                description: z.string().optional(),
+                visibility: z.enum(["public", "private", "unlisted"]).default("public"),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const playlistId = nanoid();
+
+            await db.insert(playlists).values({
+                id: playlistId,
+                userId: ctx.session.user.id,
+                title: input.title,
+                description: input.description,
+                visibility: input.visibility,
+            });
+
+            return { success: true, playlistId };
+        }),
+
+    getMyPlaylists: protectedProcedure.query(async ({ ctx }) => {
+        return await db
+            .select()
+            .from(playlists)
+            .where(eq(playlists.userId, ctx.session.user.id))
+            .orderBy(desc(playlists.updatedAt));
+    }),
+
+    addToPlaylist: protectedProcedure
+        .input(
+            z.object({
+                playlistId: z.string(),
+                videoId: z.string(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            // Verify ownership
+            const playlist = await db.query.playlists.findFirst({
+                where: and(
+                    eq(playlists.id, input.playlistId),
+                    eq(playlists.userId, ctx.session.user.id)
+                ),
+            });
+
+            if (!playlist) {
+                throw new Error("Playlist not found or access denied");
+            }
+
+            // Get current count for position
+            const videoCount = await db
+                .select({ count: count() })
+                .from(playlistVideos)
+                .where(eq(playlistVideos.playlistId, input.playlistId));
+
+            const position = (videoCount[0]?.count || 0) + 1;
+
+            await db.insert(playlistVideos).values({
+                playlistId: input.playlistId,
+                postId: input.videoId,
+                position,
+            });
+
+            // Update timestamp
+            await db
+                .update(playlists)
+                .set({ updatedAt: new Date() })
+                .where(eq(playlists.id, input.playlistId));
+
+            return { success: true };
+        }),
+
+    search: publicProcedure
+        .input(
+            z.object({
+                query: z.string().default(""),
+                limit: z.number().min(1).max(50).default(5),
+            })
+        )
+        .query(async ({ input }) => {
+            if (!input.query) {
+                return { videos: [], posts: [], tokens: [], streams: [] };
+            }
+
+            const { results } = await typesenseClient.multiSearch.perform(
+                {
+                    searches: [
+                        {
+                            collection: "users",
+                            q: input.query,
+                            query_by: "name,username",
+                            per_page: input.limit,
+                        },
+                        {
+                            collection: "posts",
+                            q: input.query,
+                            query_by: "content",
+                            per_page: input.limit,
+                        },
+                        {
+                            collection: "tokens",
+                            q: input.query,
+                            query_by: "name,ticker,tokenAddress",
+                            per_page: input.limit,
+                        },
+                    ],
+                },
+                {}
+            ) as { results: Array<{ hits?: Array<{ document: Record<string, unknown> }> }> };
+
+            const userHits  = results[0]?.hits ?? [];
+            const postHits  = results[1]?.hits ?? [];
+            const tokenHits = results[2]?.hits ?? [];
+
+            const userResults = userHits.map(h => ({
+                id:         h.document.id         as string,
+                name:       h.document.name       as string,
+                username:   h.document.username   as string,
+                avatar_url: (h.document.avatar_url as string | undefined) ?? null,
+            }));
+
+            const postResults = postHits.map(h => ({
+                id:       h.document.id       as string,
+                content:  h.document.content  as string,
+                imageUrl: (h.document.imageUrl as string | undefined) ?? null,
+            }));
+
+            const tokenResults = tokenHits.map(h => ({
+                id:           h.document.id           as string,
+                name:         h.document.name         as string,
+                ticker:       h.document.ticker       as string,
+                imageUrl:     (h.document.imageUrl     as string | undefined) ?? null,
+                tokenAddress: (h.document.tokenAddress as string | undefined) ?? null,
+            }));
+
+            // Enrich tokens with live market data from DexScreener
+            const tokenAddresses = tokenResults.map(t => t.tokenAddress).filter((a): a is string => !!a);
+            const priceMap: Record<string, { price: number; change24h: number; marketCap: number | null }> = {};
+
+            if (tokenAddresses.length > 0) {
+                try {
+                    const res = await fetch(
+                        `https://api.dexscreener.com/latest/dex/tokens/${tokenAddresses.join(",")}`,
+                        { signal: AbortSignal.timeout(5000) }
+                    );
+                    if (res.ok) {
+                        const json = await res.json();
+                        for (const pair of (json.pairs ?? [])) {
+                            const addr = pair.baseToken?.address?.toLowerCase();
+                            if (!addr || priceMap[addr]) continue;
+                            priceMap[addr] = {
+                                price: Number(pair.priceUsd) || 0,
+                                change24h: pair.priceChange?.h24 ?? 0,
+                                marketCap: pair.marketCap ?? null,
+                            };
+                        }
+                    }
+                } catch {
+                    // non-critical — return tokens without price data
+                }
+            }
+
+            const enhancedTokenResults = tokenResults.map(t => {
+                const market = t.tokenAddress ? priceMap[t.tokenAddress.toLowerCase()] : undefined;
+                return { ...t, price: market?.price ?? null, change24h: market?.change24h ?? null, marketCap: market?.marketCap ?? null };
+            });
+
+            return { videos: [], users: userResults, posts: postResults, tokens: enhancedTokenResults, streams: [] };
+        }),
+
+
+    incrementView: publicProcedure
+        .input(z.object({ postId: z.string(), contentType: z.enum(["post", "video"]).default("post") }))
+        .mutation(async ({ input }) => {
+            await db.update(posts).set({
+                views: sql`${posts.views} + 1`,
+                baseScore: sql`${posts.likes} * 3.0 + ${posts.reposts} * 2.0 + ${posts.comments} * 2.0 + (${posts.views} + 1) * 0.1`,
+            }).where(eq(posts.id, input.postId));
+            return { success: true };
+        }),
+
+    getProgress: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const row = await db.query.videoProgress.findFirst({
+                where: and(
+                    eq(videoProgress.userId, ctx.session.user.id),
+                    eq(videoProgress.postId, input.postId)
+                ),
+            });
+            return { currentTime: row?.currentTime ?? 0 };
+        }),
+
+    saveProgress: protectedProcedure
+        .input(z.object({ postId: z.string(), currentTime: z.number().min(0) }))
+        .mutation(async ({ ctx, input }) => {
+            await db.insert(videoProgress)
+                .values({
+                    userId: ctx.session.user.id,
+                    postId: input.postId,
+                    currentTime: input.currentTime,
+                    updatedAt: new Date(),
+                })
+                .onConflictDoUpdate({
+                    target: [videoProgress.userId, videoProgress.postId],
+                    set: { currentTime: input.currentTime, updatedAt: new Date() },
+                });
+            return { success: true };
+        }),
+
+    getHeatmap: publicProcedure
+        .input(z.object({ postId: z.string() }))
+        .query(async ({ input }) => {
+            const rows = await db
+                .select({ bucket: videoHeatmap.bucket, hits: videoHeatmap.hits })
+                .from(videoHeatmap)
+                .where(eq(videoHeatmap.postId, input.postId))
+                .orderBy(asc(videoHeatmap.bucket));
+
+            if (rows.length === 0) return { buckets: [] };
+
+            const maxHits = Math.max(...rows.map(r => r.hits));
+            const maxBucket = rows[rows.length - 1].bucket;
+            const hitMap = new Map(rows.map(r => [r.bucket, r.hits]));
+
+            const buckets = Array.from({ length: maxBucket + 1 }, (_, i) =>
+                (hitMap.get(i) ?? 0) / maxHits
+            );
+
+            return { buckets };
+        }),
+
+    recordHeatmap: publicProcedure
+        .input(z.object({ postId: z.string(), bucket: z.number().int().min(0) }))
+        .mutation(async ({ input }) => {
+            await db.insert(videoHeatmap)
+                .values({ postId: input.postId, bucket: input.bucket, hits: 1 })
+                .onConflictDoUpdate({
+                    target: [videoHeatmap.postId, videoHeatmap.bucket],
+                    set: { hits: sql`${videoHeatmap.hits} + 1` },
+                });
+            return { success: true };
+        }),
+
+    // ── Caption tracks ────────────────────────────────────────────────────────
+
+    getCaptions: publicProcedure
+        .input(z.object({ postId: z.string() }))
+        .query(async ({ input }) => {
+            const rows = await db
+                .select()
+                .from(videoCaptions)
+                .where(eq(videoCaptions.postId, input.postId))
+                .orderBy(asc(videoCaptions.isDefault));
+            return { captions: rows };
+        }),
+
+    addCaption: protectedProcedure
+        .input(z.object({
+            postId: z.string(),
+            language: z.string().min(2).max(10),
+            label: z.string().min(1).max(100),
+            url: z.string().url(),
+            isDefault: z.boolean().default(false),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const post = await db.query.posts.findFirst({
+                where: and(eq(posts.id, input.postId), eq(posts.userId, ctx.session.user.id)),
+                columns: { id: true },
+            });
+            if (!post) throw new TRPCError({ code: "FORBIDDEN" });
+            await db.insert(videoCaptions).values({
+                postId: input.postId,
+                language: input.language,
+                label: input.label,
+                url: input.url,
+                isDefault: input.isDefault,
+            });
+            return { success: true };
+        }),
+
+    deleteCaption: protectedProcedure
+        .input(z.object({ captionId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const caption = await db.query.videoCaptions.findFirst({
+                where: eq(videoCaptions.id, input.captionId),
+            });
+            if (!caption) throw new TRPCError({ code: "NOT_FOUND" });
+            const post = await db.query.posts.findFirst({
+                where: and(eq(posts.id, caption.postId), eq(posts.userId, ctx.session.user.id)),
+                columns: { id: true },
+            });
+            if (!post) throw new TRPCError({ code: "FORBIDDEN" });
+            await db.delete(videoCaptions).where(eq(videoCaptions.id, input.captionId));
+            return { success: true };
+        }),
+
+    toggleLike: protectedProcedure
+        .input(z.object({ postId: z.string(), contentType: z.enum(["post", "video"]).default("post").optional() }))
+        .mutation(async ({ ctx, input }) => {
+            const existing = await db.query.likes.findFirst({
+                where: and(
+                    eq(likes.contentId, input.postId),
+                    eq(likes.userId, ctx.user.id),
+                ),
+            });
+
+            if (existing) {
+                await db.delete(likes).where(eq(likes.id, existing.id));
+                await db.update(posts).set({
+                    likes: sql`GREATEST(${posts.likes} - 1, 0)`,
+                    baseScore: sql`GREATEST(${posts.likes} - 1, 0) * 3.0 + ${posts.reposts} * 2.0 + ${posts.comments} * 2.0 + ${posts.views} * 0.1`,
+                }).where(eq(posts.id, input.postId));
+                return { liked: false };
+            } else {
+                await db.insert(likes).values({ id: nanoid(), contentId: input.postId, contentType: "post", userId: ctx.user.id });
+                await db.update(posts).set({
+                    likes: sql`${posts.likes} + 1`,
+                    baseScore: sql`(${posts.likes} + 1) * 3.0 + ${posts.reposts} * 2.0 + ${posts.comments} * 2.0 + ${posts.views} * 0.1`,
+                }).where(eq(posts.id, input.postId));
+                const post = await db.query.posts.findFirst({ where: eq(posts.id, input.postId) });
+                if (post) await createNotification({ userId: post.userId, actorId: ctx.user.id, type: "like", postId: input.postId });
+                return { liked: true };
+            }
+        }),
+
+    getLikedPostIds: protectedProcedure
+        .input(z.object({ postIds: z.array(z.string()), contentType: z.enum(["post", "video"]).default("post").optional() }))
+        .query(async ({ ctx, input }) => {
+            if (input.postIds.length === 0) return { likedIds: [] };
+            const rows = await db
+                .select({ contentId: likes.contentId })
+                .from(likes)
+                .where(and(
+                    eq(likes.userId, ctx.user.id),
+                    inArray(likes.contentId, input.postIds),
+                ));
+            return { likedIds: rows.map(r => r.contentId) };
+        }),
+
+    toggleBookmark: protectedProcedure
+        .input(z.object({ postId: z.string(), contentType: z.enum(["post", "video"]).default("post").optional() }))
+        .mutation(async ({ ctx, input }) => {
+            const existing = await db.query.bookmarks.findFirst({
+                where: and(
+                    eq(bookmarks.contentId, input.postId),
+                    eq(bookmarks.userId, ctx.user.id),
+                ),
+            });
+
+            if (existing) {
+                await db.delete(bookmarks).where(eq(bookmarks.id, existing.id));
+                return { bookmarked: false };
+            } else {
+                await db.insert(bookmarks).values({ id: nanoid(), contentId: input.postId, contentType: "post", userId: ctx.user.id });
+                return { bookmarked: true };
+            }
+        }),
+
+    getBookmarkedPostIds: protectedProcedure
+        .input(z.object({ postIds: z.array(z.string()), contentType: z.enum(["post", "video"]).default("post").optional() }))
+        .query(async ({ ctx, input }) => {
+            if (input.postIds.length === 0) return { bookmarkedIds: [] };
+            const rows = await db
+                .select({ contentId: bookmarks.contentId })
+                .from(bookmarks)
+                .where(and(
+                    eq(bookmarks.userId, ctx.user.id),
+                    inArray(bookmarks.contentId, input.postIds),
+                ));
+            return { bookmarkedIds: rows.map(r => r.contentId) };
+        }),
+
+    getDrafts: protectedProcedure.query(async ({ ctx }) => {
+        return db
+            .select()
+            .from(posts)
+            .where(and(eq(posts.userId, ctx.user.id), eq(posts.status, "draft")))
+            .orderBy(desc(posts.updatedAt));
+    }),
+
+    deleteDraft: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await db.delete(posts).where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id), eq(posts.status, "draft")));
+            return { success: true };
+        }),
+
+    publishDraft: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await db.update(posts)
+                .set({ status: "published", updatedAt: new Date() })
+                .where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id), eq(posts.status, "draft")));
+            await Promise.all([
+                invalidateCache("db:feed:v2:for-you:initial:20"),
+                invalidateCache("db:feed:v2:following:initial:20"),
+                invalidateCache("db:feed:v2:news:initial:20"),
+            ]);
+            return { success: true };
+        }),
+
+    getScheduledPosts: protectedProcedure.query(async ({ ctx }) => {
+        return db
+            .select()
+            .from(posts)
+            .where(and(eq(posts.userId, ctx.user.id), eq(posts.status, "scheduled")))
+            .orderBy(posts.scheduledFor);
+    }),
+
+    cancelScheduled: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await db.delete(posts).where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id), eq(posts.status, "scheduled")));
+            return { success: true };
+        }),
+
+    reschedulePost: protectedProcedure
+        .input(z.object({ postId: z.string(), scheduledFor: z.date() }))
+        .mutation(async ({ ctx, input }) => {
+            await db.update(posts)
+                .set({ scheduledFor: input.scheduledFor, updatedAt: new Date() })
+                .where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id), eq(posts.status, "scheduled")));
+            return { success: true };
+        }),
+
+    votePoll: protectedProcedure
+        .input(z.object({ pollId: z.string(), optionIds: z.array(z.string()).min(1) }))
+        .mutation(async ({ ctx, input }) => {
+            const poll = await db.query.polls.findFirst({ where: eq(polls.id, input.pollId) });
+            if (!poll) throw new Error("Poll not found");
+            if (poll.isEnded) throw new Error("Poll has ended");
+            if (!poll.allowMultiple && input.optionIds.length > 1) throw new Error("This poll only allows one choice");
+
+            const existingVote = await db.query.pollVotes.findFirst({
+                where: and(eq(pollVotes.pollId, input.pollId), eq(pollVotes.userId, ctx.user.id)),
+            });
+            if (existingVote) throw new Error("Already voted");
+
+            await db.insert(pollVotes).values({ id: nanoid(), pollId: input.pollId, userId: ctx.user.id, optionIds: input.optionIds });
+
+            // Increment vote counts on the options jsonb and totalVotes
+            const updatedOptions = (poll.options as any[]).map((o: any) => ({
+                ...o,
+                votesCount: input.optionIds.includes(o.id) ? (o.votesCount + 1) : o.votesCount,
+            }));
+            await db.update(polls)
+                .set({ options: updatedOptions, totalVotes: sql`${polls.totalVotes} + 1` })
+                .where(eq(polls.id, input.pollId));
+
+            return { success: true };
+        }),
+
+    getPollForPost: publicProcedure
+        .input(z.object({ postId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const poll = await db.query.polls.findFirst({ where: eq(polls.postId, input.postId) });
+            if (!poll) return null;
+
+            const userVote = ctx.user
+                ? await db.query.pollVotes.findFirst({
+                    where: and(eq(pollVotes.pollId, poll.id), eq(pollVotes.userId, ctx.user.id)),
+                })
+                : null;
+
+            return { ...poll, userVote: userVote?.optionIds ?? null };
+        }),
+
+    unlockPost: protectedProcedure
+        .input(z.object({ postId: z.string(), txSignature: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const post = await db.query.posts.findFirst({ where: eq(posts.id, input.postId) });
+            if (!post || !post.isPaywalled || !post.paywallPrice) throw new Error("Post not paywalled");
+
+            const existing = await db.query.postUnlocks.findFirst({
+                where: and(eq(postUnlocks.postId, input.postId), eq(postUnlocks.userId, ctx.user.id)),
+            });
+            if (existing) return { success: true, alreadyUnlocked: true };
+
+            await db.insert(postUnlocks).values({
+                id: nanoid(),
+                postId: input.postId,
+                userId: ctx.user.id,
+                pricePaid: post.paywallPrice,
+                txSignature: input.txSignature,
+            });
+            return { success: true, alreadyUnlocked: false };
+        }),
+
+    getUnlockedPostIds: protectedProcedure
+        .input(z.object({ postIds: z.array(z.string()) }))
+        .query(async ({ ctx, input }) => {
+            if (input.postIds.length === 0) return { unlockedIds: [] };
+            const rows = await db
+                .select({ postId: postUnlocks.postId })
+                .from(postUnlocks)
+                .where(and(eq(postUnlocks.userId, ctx.user.id), inArray(postUnlocks.postId, input.postIds)));
+            return { unlockedIds: rows.map(r => r.postId) };
+        }),
+
+    repost: protectedProcedure
+        .input(z.object({ postId: z.string(), quoteContent: z.string().optional() }))
+        .mutation(async ({ ctx, input }) => {
+            // Idempotent: check if already reposted (plain repost, not quote)
+            if (!input.quoteContent) {
+                const existing = await db.query.posts.findFirst({
+                    where: and(eq(posts.repostOfId, input.postId), eq(posts.userId, ctx.user.id), eq(posts.status, "published")),
+                });
+                if (existing) {
+                    // Un-repost
+                    await db.delete(posts).where(eq(posts.id, existing.id));
+                    deletePost(existing.id);
+                    await db.update(posts).set({
+                        reposts: sql`GREATEST(${posts.reposts} - 1, 0)`,
+                        baseScore: sql`${posts.likes} * 3.0 + GREATEST(${posts.reposts} - 1, 0) * 2.0 + ${posts.comments} * 2.0 + ${posts.views} * 0.1`,
+                    }).where(eq(posts.id, input.postId));
+                    return { reposted: false };
+                }
+            }
+
+            const repostId = nanoid();
+            await db.insert(posts).values({
+                id: repostId,
+                userId: ctx.user.id,
+                repostOfId: input.postId,
+                content: input.quoteContent ?? null,
+                visibility: "public",
+                status: "published",
+            });
+            if (input.quoteContent) upsertPost({ id: repostId, content: input.quoteContent, userId: ctx.user.id, createdAt: new Date() });
+            await db.update(posts).set({
+                reposts: sql`${posts.reposts} + 1`,
+                baseScore: sql`${posts.likes} * 3.0 + (${posts.reposts} + 1) * 2.0 + ${posts.comments} * 2.0 + ${posts.views} * 0.1`,
+            }).where(eq(posts.id, input.postId));
+
+            // Notify original post owner
+            const origPost = await db.query.posts.findFirst({ where: eq(posts.id, input.postId) });
+            if (origPost) {
+                await createNotification({
+                    userId: origPost.userId,
+                    actorId: ctx.user.id,
+                    type: input.quoteContent ? "quote" : "repost",
+                    postId: input.postId,
+                });
+            }
+
+            await Promise.all([
+                invalidateCache("db:feed:v2:for-you:initial:20"),
+                invalidateCache("db:feed:v2:following:initial:20"),
+            ]);
+
+            return { reposted: true, repostId };
+        }),
+
+    getRepostedPostIds: protectedProcedure
+        .input(z.object({ postIds: z.array(z.string()) }))
+        .query(async ({ ctx, input }) => {
+            if (input.postIds.length === 0) return { repostedIds: [] };
+            const rows = await db
+                .select({ repostOfId: posts.repostOfId })
+                .from(posts)
+                .where(and(eq(posts.userId, ctx.user.id), inArray(posts.repostOfId as any, input.postIds), eq(posts.status, "published")));
+            return { repostedIds: rows.map(r => r.repostOfId).filter(Boolean) as string[] };
+        }),
+
+    markPostsSeen: protectedProcedure
+        .input(z.object({ postIds: z.array(z.string()).max(100) }))
+        .mutation(async ({ ctx, input }) => {
+            if (input.postIds.length === 0) return { success: true };
+            await db.insert(seenPosts)
+                .values(input.postIds.map(postId => ({
+                    userId: ctx.user.id,
+                    postId,
+                })))
+                .onConflictDoUpdate({
+                    target: [seenPosts.userId, seenPosts.postId],
+                    set: { seenAt: sql`NOW()` },
+                });
+            return { success: true };
+        }),
+
+    incrementViews: publicProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ input }) => {
+            // Fire-and-forget view increment — no auth required
+            await db.update(posts)
+                .set({ reposts: posts.reposts }) // placeholder — views column doesn't exist yet on posts, skip
+                .where(eq(posts.id, input.postId));
+            return { success: true };
+        }),
+
+    pinPost: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            // Unpin all existing pinned posts by this user first
+            await db.update(posts)
+                .set({ isPinned: false })
+                .where(and(eq(posts.userId, ctx.user.id), eq(posts.isPinned, true)));
+            // Pin the requested post
+            await db.update(posts)
+                .set({ isPinned: true })
+                .where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id)));
+            return { success: true };
+        }),
+
+    unpinPost: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await db.update(posts)
+                .set({ isPinned: false })
+                .where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id)));
+            return { success: true };
+        }),
+
+    // ─── New posts count (for "Show X posts" polling) ────────────────────────
+    getNewPostsCount: publicProcedure
+        .input(z.object({ since: z.string() }))
+        .query(async ({ input }) => {
+            const since = new Date(input.since);
+            const result = await db
+                .select({ count: count() })
+                .from(posts)
+                .where(and(eq(posts.status, "published"), gt(posts.createdAt, since)));
+            return { count: result[0]?.count ?? 0 };
+        }),
+
+    // ─── Get posts by user (profile page) ────────────────────────────────────
+    getPostsByUser: publicProcedure
+        .input(z.object({
+            userId: z.string(),
+            cursor: z.string().optional(),
+            limit: z.number().min(1).max(50).default(20),
+        }))
+        .query(async ({ ctx, input }) => {
+            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            const origPosts = alias(posts, "orig_posts");
+            const origUser = alias(user, "orig_user");
+
+            const results = await db
+                .select({
+                    id: posts.id,
+                    userId: posts.userId,
+                    content: posts.content,
+                    imageUrl: posts.imageUrl,
+                    likes: posts.likes,
+                    reposts: posts.reposts,
+                    comments: posts.comments,
+                    views: posts.views,
+                    createdAt: posts.createdAt,
+                    ticker: posts.ticker,
+                    tokenStatus: posts.tokenStatus,
+                    isPaywalled: posts.isPaywalled,
+                    paywallPrice: posts.paywallPrice,
+                    hasContentWarning: posts.hasContentWarning,
+                    contentWarningText: posts.contentWarningText,
+                    linkPreview: posts.linkPreview,
+                    isPinned: posts.isPinned,
+                    token_image: posts.token_image,
+                    media: posts.media,
+                    repostOfId: posts.repostOfId,
+                    origId: origPosts.id,
+                    origUserId: origPosts.userId,
+                    origContent: origPosts.content,
+                    origImageUrl: origPosts.imageUrl,
+                    origMedia: origPosts.media,
+                    origLikes: origPosts.likes,
+                    origReposts: origPosts.reposts,
+                    origComments: origPosts.comments,
+                    origCreatedAt: origPosts.createdAt,
+                    origTicker: origPosts.ticker,
+                    origTokenImage: origPosts.token_image,
+                    origLinkPreview: origPosts.linkPreview,
+                    origUserName: origUser.name,
+                    origUserUsername: origUser.username,
+                    origUserAvatar: origUser.avatar_url,
+                    isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
+                    isBookmarked: sql<boolean>`EXISTS (SELECT 1 FROM bookmarks WHERE bookmarks."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND bookmarks."userId" = ${ctx.user?.id ?? ""} AND bookmarks."contentType" = 'post')`,
+                    isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts rp WHERE rp."repostOfId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND rp."userId" = ${ctx.user?.id ?? ""} AND rp."status" = 'published')`,
+                    user: {
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        avatar_url: user.avatar_url,
+                        verifiedTier: user.verifiedTier,
+                    },
+                    origUserVerifiedTier: origUser.verifiedTier,
+                })
+                .from(posts)
+                .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(origPosts, eq(posts.repostOfId, origPosts.id))
+                .leftJoin(origUser, eq(origPosts.userId, origUser.id))
+                .where(
+                    and(
+                        eq(posts.userId, input.userId),
+                        eq(posts.status, "published"),
+                        cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
+                    )
+                )
+                .orderBy(desc(posts.isPinned), desc(posts.createdAt))
+                .limit(input.limit + 1);
+
+            let nextCursor: string | undefined;
+            if (results.length > input.limit) {
+                const nextItem = results.pop();
+                nextCursor = nextItem?.createdAt.toISOString();
+            }
+
+            const mappedResults = results.map(row => {
+                if (row.repostOfId && row.origId) {
+                    const isQuote = (row.content && row.content.trim().length > 0) || (row.media && row.media.length > 0) || row.imageUrl;
+
+                    if (isQuote) {
+                        return {
+                            ...row,
+                            feedKey: null,
+                            repostedBy: null,
+                            quotedPost: {
+                                id: row.origId,
+                                userId: row.origUserId,
+                                content: row.origContent,
+                                imageUrl: row.origImageUrl,
+                                media: row.origMedia,
+                                createdAt: row.origCreatedAt,
+                                ticker: row.origTicker,
+                                user: {
+                                    name: row.origUserName,
+                                    username: row.origUserUsername,
+                                    avatar_url: row.origUserAvatar,
+                                }
+                            }
+                        };
+                    }
+
+                    return {
+                        id: row.origId,
+                        feedKey: row.id,
+                        userId: row.origUserId ?? row.userId,
+                        content: row.origContent,
+                        imageUrl: row.origImageUrl || null,
+                        token_image: row.origTokenImage || null,
+                        media: row.origMedia || [],
+                        likes: row.origLikes ?? 0,
+                        reposts: row.origReposts ?? 0,
+                        comments: row.origComments ?? 0,
+                        views: row.views ?? 0,
+                        createdAt: row.createdAt,
+                        originalCreatedAt: row.origCreatedAt,
+                        ticker: row.origTicker ?? null,
+                        tokenStatus: row.tokenStatus,
+                        repostOfId: null,
+                        isPaywalled: row.isPaywalled,
+                        isLiked: row.isLiked,
+                        isBookmarked: row.isBookmarked,
+                        isReposted: row.isReposted,
+                        isPinned: row.isPinned,
+                        linkPreview: row.origLinkPreview || null,
+                        user: {
+                            id: row.origUserId!,
+                            name: row.origUserName!,
+                            username: row.origUserUsername ?? null,
+                            avatar_url: row.origUserAvatar ?? null,
+                            verifiedTier: (row as any).origUserVerifiedTier ?? null,
+                        },
+                        repostedBy: { name: row.user.name, username: row.user.username },
+                    };
+                }
+                return { ...row, feedKey: null, repostedBy: null, quotedPost: null };
+            });
+
+            return { posts: mappedResults, nextCursor };
+        }),
+
+    // ─── Get a single video post by ID ───────────────────────────────────────
+    getVideoById: publicProcedure
+        .input(z.object({ postId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const result = await db
+                .select({
+                    id: posts.id,
+                    title: posts.title,
+                    content: posts.content,
+                    videoUrl: posts.videoUrl,
+                    thumbnailUrl: posts.thumbnailUrl,
+                    duration: posts.duration,
+                    views: posts.views,
+                    likes: posts.likes,
+                    comments: posts.comments,
+                    createdAt: posts.createdAt,
+                    userId: posts.userId,
+                    visibility: posts.visibility,
+                    status: posts.status,
+                    category: posts.category,
+                    collaborators: posts.collaborators,
+                    isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = ${posts.id} AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
+                    author: {
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        avatar_url: user.avatar_url,
+                        verifiedTier: user.verifiedTier,
+                        wallet_address: user.wallet_address,
+                        followerCount: sql<number>`(SELECT COUNT(*) FROM follows WHERE follows."followingId" = ${user.id})`,
+                    },
+                })
+                .from(posts)
+                .innerJoin(user, eq(posts.userId, user.id))
+                .where(and(eq(posts.id, input.postId), isNotNull(posts.videoUrl)))
+                .limit(1);
+
+            return result[0] ?? null;
+        }),
+
+    // ─── Get public videos for "Up Next" sidebar ─────────────────────────────
+    getPublicVideos: publicProcedure
+        .input(z.object({
+            excludePostId: z.string().optional(),
+            limit: z.number().min(1).max(20).default(12),
+            cursor: z.string().optional(),
+        }))
+        .query(async ({ input }) => {
+            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+
+            const results = await db
+                .select({
+                    id: posts.id,
+                    title: posts.title,
+                    thumbnailUrl: posts.thumbnailUrl,
+                    duration: posts.duration,
+                    views: posts.views,
+                    createdAt: posts.createdAt,
+                    author: {
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        avatar_url: user.avatar_url,
+                        verifiedTier: user.verifiedTier,
+                    },
+                })
+                .from(posts)
+                .innerJoin(user, eq(posts.userId, user.id))
+                .where(
+                    and(
+                        eq(posts.status, "published"),
+                        eq(posts.visibility, "public"),
+                        isNotNull(posts.videoUrl),
+                        input.excludePostId ? sql`${posts.id} != ${input.excludePostId}` : undefined,
+                        cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
+                    )
+                )
+                .orderBy(desc(posts.baseScore), desc(posts.createdAt))
+                .limit(input.limit + 1);
+
+            let nextCursor: string | undefined;
+            if (results.length > input.limit) {
+                const next = results.pop();
+                nextCursor = next?.createdAt.toISOString();
+            }
+
+            return { videos: results, nextCursor };
+        }),
+
+    // ─── Get videos by a specific user ───────────────────────────────────────
+    getVideosByUser: publicProcedure
+        .input(z.object({
+            userId: z.string(),
+            excludePostId: z.string().optional(),
+            limit: z.number().min(1).max(20).default(12),
+        }))
+        .query(async ({ input }) => {
+            const results = await db
+                .select({
+                    id: posts.id,
+                    title: posts.title,
+                    thumbnailUrl: posts.thumbnailUrl,
+                    duration: posts.duration,
+                    views: posts.views,
+                    createdAt: posts.createdAt,
+                    author: {
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        avatar_url: user.avatar_url,
+                        verifiedTier: user.verifiedTier,
+                    },
+                })
+                .from(posts)
+                .innerJoin(user, eq(posts.userId, user.id))
+                .where(
+                    and(
+                        eq(posts.userId, input.userId),
+                        eq(posts.status, "published"),
+                        eq(posts.visibility, "public"),
+                        isNotNull(posts.videoUrl),
+                        input.excludePostId ? sql`${posts.id} != ${input.excludePostId}` : undefined,
+                    )
+                )
+                .orderBy(desc(posts.createdAt))
+                .limit(input.limit);
+
+            return { videos: results };
+        }),
+
+    // ─── Get related videos by category ──────────────────────────────────────
+    getRelatedVideos: publicProcedure
+        .input(z.object({
+            category: z.string().nullable().optional(),
+            excludePostId: z.string().optional(),
+            limit: z.number().min(1).max(20).default(12),
+        }))
+        .query(async ({ input }) => {
+            const results = await db
+                .select({
+                    id: posts.id,
+                    title: posts.title,
+                    thumbnailUrl: posts.thumbnailUrl,
+                    duration: posts.duration,
+                    views: posts.views,
+                    createdAt: posts.createdAt,
+                    author: {
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        avatar_url: user.avatar_url,
+                        verifiedTier: user.verifiedTier,
+                    },
+                })
+                .from(posts)
+                .innerJoin(user, eq(posts.userId, user.id))
+                .where(
+                    and(
+                        eq(posts.status, "published"),
+                        eq(posts.visibility, "public"),
+                        isNotNull(posts.videoUrl),
+                        input.category ? eq(posts.category, input.category) : undefined,
+                        input.excludePostId ? sql`${posts.id} != ${input.excludePostId}` : undefined,
+                    )
+                )
+                .orderBy(desc(posts.baseScore), desc(posts.createdAt))
+                .limit(input.limit);
+
+            return { videos: results };
+        }),
+});

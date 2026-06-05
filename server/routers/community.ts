@@ -1,0 +1,596 @@
+import { z } from "zod";
+import { router, protectedProcedure, publicProcedure } from "@/server/trpc";
+import { db } from "@/db";
+import {
+    communityServers,
+    communityMembers,
+    communityChannels,
+    communityMessages,
+} from "@/db/schema/community";
+import { user } from "@/db/schema";
+import { eq, and, desc, asc, sql, lt, count } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { nanoid } from "nanoid";
+
+export const communityRouter = router({
+    // ─── Server CRUD ─────────────────────────────────────
+
+    /** List servers the current user belongs to */
+    listServers: protectedProcedure.query(async ({ ctx }) => {
+        const servers = await db
+            .select({
+                id: communityServers.id,
+                name: communityServers.name,
+                imageUrl: communityServers.imageUrl,
+                inviteCode: communityServers.inviteCode,
+                ownerId: communityServers.ownerId,
+                createdAt: communityServers.createdAt,
+            })
+            .from(communityServers)
+            .innerJoin(communityMembers, eq(communityServers.id, communityMembers.serverId))
+            .where(eq(communityMembers.userId, ctx.user.id))
+            .orderBy(asc(communityServers.createdAt));
+
+        return servers;
+    }),
+
+    /** Get a server by ID with channels + members */
+    getServer: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // Verify membership
+            const membership = await db
+                .select()
+                .from(communityMembers)
+                .where(
+                    and(
+                        eq(communityMembers.serverId, input.serverId),
+                        eq(communityMembers.userId, ctx.user.id)
+                    )
+                )
+                .limit(1);
+
+            if (!membership.length) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this server" });
+            }
+
+            const server = await db
+                .select()
+                .from(communityServers)
+                .where(eq(communityServers.id, input.serverId))
+                .limit(1);
+
+            if (!server.length) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Server not found" });
+            }
+
+            const channels = await db
+                .select()
+                .from(communityChannels)
+                .where(eq(communityChannels.serverId, input.serverId))
+                .orderBy(asc(communityChannels.createdAt));
+
+            const members = await db
+                .select({
+                    id: communityMembers.id,
+                    role: communityMembers.role,
+                    userId: communityMembers.userId,
+                    serverId: communityMembers.serverId,
+                    createdAt: communityMembers.createdAt,
+                    userName: user.name,
+                    userImage: user.avatar_url,
+                    userUsername: user.username,
+                })
+                .from(communityMembers)
+                .innerJoin(user, eq(communityMembers.userId, user.id))
+                .where(eq(communityMembers.serverId, input.serverId))
+                .orderBy(asc(communityMembers.role));
+
+            return {
+                server: server[0],
+                channels,
+                members,
+                currentMember: membership[0],
+            };
+        }),
+
+    /** Create a new server */
+    createServer: protectedProcedure
+        .input(
+            z.object({
+                name: z.string().min(1).max(100),
+                imageUrl: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const inviteCode = nanoid(8);
+
+            const [newServer] = await db
+                .insert(communityServers)
+                .values({
+                    name: input.name,
+                    imageUrl: input.imageUrl ?? null,
+                    inviteCode,
+                    ownerId: ctx.user.id,
+                })
+                .returning();
+
+            // Add owner as ADMIN member
+            await db.insert(communityMembers).values({
+                userId: ctx.user.id,
+                serverId: newServer.id,
+                role: "ADMIN",
+            });
+
+            // Create default #general channel
+            await db.insert(communityChannels).values({
+                name: "general",
+                type: "TEXT",
+                serverId: newServer.id,
+                createdById: ctx.user.id,
+            });
+
+            return newServer;
+        }),
+
+    /** Update server */
+    updateServer: protectedProcedure
+        .input(
+            z.object({
+                serverId: z.string().uuid(),
+                name: z.string().min(1).max(100).optional(),
+                imageUrl: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            const [updated] = await db
+                .update(communityServers)
+                .set({
+                    ...(input.name && { name: input.name }),
+                    ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
+                    updatedAt: new Date(),
+                })
+                .where(eq(communityServers.id, input.serverId))
+                .returning();
+
+            return updated;
+        }),
+
+    /** Delete server */
+    deleteServer: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            await db.delete(communityServers).where(eq(communityServers.id, input.serverId));
+            return { success: true };
+        }),
+
+    /** Generate new invite code */
+    generateInviteCode: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const newCode = nanoid(8);
+            const [updated] = await db
+                .update(communityServers)
+                .set({ inviteCode: newCode, updatedAt: new Date() })
+                .where(eq(communityServers.id, input.serverId))
+                .returning();
+
+            return { inviteCode: updated.inviteCode };
+        }),
+
+    /** Join a server via invite code */
+    joinServer: protectedProcedure
+        .input(z.object({ inviteCode: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const server = await db
+                .select()
+                .from(communityServers)
+                .where(eq(communityServers.inviteCode, input.inviteCode))
+                .limit(1);
+
+            if (!server.length) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Invalid invite code" });
+            }
+
+            // Check if already a member
+            const existing = await db
+                .select()
+                .from(communityMembers)
+                .where(
+                    and(
+                        eq(communityMembers.serverId, server[0].id),
+                        eq(communityMembers.userId, ctx.user.id)
+                    )
+                )
+                .limit(1);
+
+            if (existing.length) {
+                return { serverId: server[0].id, alreadyMember: true };
+            }
+
+            await db.insert(communityMembers).values({
+                userId: ctx.user.id,
+                serverId: server[0].id,
+                role: "GUEST",
+            });
+
+            return { serverId: server[0].id, alreadyMember: false };
+        }),
+
+    /** Leave a server */
+    leaveServer: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            const server = await db
+                .select()
+                .from(communityServers)
+                .where(eq(communityServers.id, input.serverId))
+                .limit(1);
+
+            if (server.length && server[0].ownerId === ctx.user.id) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Owner cannot leave the server" });
+            }
+
+            await db
+                .delete(communityMembers)
+                .where(
+                    and(
+                        eq(communityMembers.serverId, input.serverId),
+                        eq(communityMembers.userId, ctx.user.id)
+                    )
+                );
+
+            return { success: true };
+        }),
+
+    /** Update member role */
+    updateMemberRole: protectedProcedure
+        .input(
+            z.object({
+                serverId: z.string().uuid(),
+                memberId: z.string().uuid(),
+                role: z.enum(["ADMIN", "MODERATOR", "GUEST"]),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            const [updated] = await db
+                .update(communityMembers)
+                .set({ role: input.role, updatedAt: new Date() })
+                .where(eq(communityMembers.id, input.memberId))
+                .returning();
+
+            return updated;
+        }),
+
+    /** Kick member */
+    kickMember: protectedProcedure
+        .input(
+            z.object({
+                serverId: z.string().uuid(),
+                memberId: z.string().uuid(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            // Prevent kicking yourself
+            const target = await db
+                .select()
+                .from(communityMembers)
+                .where(eq(communityMembers.id, input.memberId))
+                .limit(1);
+
+            if (target.length && target[0].userId === ctx.user.id) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot kick yourself" });
+            }
+
+            await db.delete(communityMembers).where(eq(communityMembers.id, input.memberId));
+            return { success: true };
+        }),
+
+    // ─── Channel CRUD ────────────────────────────────────
+
+    /** Create a channel */
+    createChannel: protectedProcedure
+        .input(
+            z.object({
+                serverId: z.string().uuid(),
+                name: z.string().min(1).max(100),
+                type: z.enum(["TEXT", "AUDIO", "VIDEO"]).default("TEXT"),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [channel] = await db
+                .insert(communityChannels)
+                .values({
+                    name: input.name.toLowerCase().replace(/\s+/g, "-"),
+                    type: input.type,
+                    serverId: input.serverId,
+                    createdById: ctx.user.id,
+                })
+                .returning();
+
+            return channel;
+        }),
+
+    /** Update a channel */
+    updateChannel: protectedProcedure
+        .input(
+            z.object({
+                channelId: z.string().uuid(),
+                serverId: z.string().uuid(),
+                name: z.string().min(1).max(100).optional(),
+                type: z.enum(["TEXT", "AUDIO", "VIDEO"]).optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [updated] = await db
+                .update(communityChannels)
+                .set({
+                    ...(input.name && { name: input.name.toLowerCase().replace(/\s+/g, "-") }),
+                    ...(input.type && { type: input.type }),
+                    updatedAt: new Date(),
+                })
+                .where(eq(communityChannels.id, input.channelId))
+                .returning();
+
+            return updated;
+        }),
+
+    /** Delete a channel */
+    deleteChannel: protectedProcedure
+        .input(
+            z.object({
+                channelId: z.string().uuid(),
+                serverId: z.string().uuid(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            // Prevent deleting "general"
+            const channel = await db
+                .select()
+                .from(communityChannels)
+                .where(eq(communityChannels.id, input.channelId))
+                .limit(1);
+
+            if (channel.length && channel[0].name === "general") {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete the general channel" });
+            }
+
+            await db.delete(communityChannels).where(eq(communityChannels.id, input.channelId));
+            return { success: true };
+        }),
+
+    // ─── Messages ────────────────────────────────────────
+
+    /** Get paginated messages for a channel */
+    getMessages: protectedProcedure
+        .input(
+            z.object({
+                channelId: z.string().uuid(),
+                cursor: z.string().optional(),
+                limit: z.number().min(1).max(100).default(50),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            // Get the channel to verify membership
+            const channel = await db
+                .select()
+                .from(communityChannels)
+                .where(eq(communityChannels.id, input.channelId))
+                .limit(1);
+
+            if (!channel.length) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Channel not found" });
+            }
+
+            // Verify membership
+            const member = await db
+                .select()
+                .from(communityMembers)
+                .where(
+                    and(
+                        eq(communityMembers.serverId, channel[0].serverId),
+                        eq(communityMembers.userId, ctx.user.id)
+                    )
+                )
+                .limit(1);
+
+            if (!member.length) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+            }
+
+            const conditions = [eq(communityMessages.channelId, input.channelId)];
+            if (input.cursor) {
+                conditions.push(lt(communityMessages.createdAt, new Date(input.cursor)));
+            }
+
+            const msgs = await db
+                .select({
+                    id: communityMessages.id,
+                    content: communityMessages.content,
+                    fileUrl: communityMessages.fileUrl,
+                    deleted: communityMessages.deleted,
+                    createdAt: communityMessages.createdAt,
+                    updatedAt: communityMessages.updatedAt,
+                    memberId: communityMessages.memberId,
+                    channelId: communityMessages.channelId,
+                    memberRole: communityMembers.role,
+                    userId: communityMembers.userId,
+                    userName: user.name,
+                    userImage: user.avatar_url,
+                    userUsername: user.username,
+                })
+                .from(communityMessages)
+                .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
+                .innerJoin(user, eq(communityMembers.userId, user.id))
+                .where(and(...conditions))
+                .orderBy(desc(communityMessages.createdAt))
+                .limit(input.limit + 1);
+
+            let nextCursor: string | undefined;
+            if (msgs.length > input.limit) {
+                const nextItem = msgs.pop()!;
+                nextCursor = nextItem.createdAt.toISOString();
+            }
+
+            return { items: msgs, nextCursor };
+        }),
+
+    /** Send a message */
+    sendMessage: protectedProcedure
+        .input(
+            z.object({
+                channelId: z.string().uuid(),
+                content: z.string().min(1),
+                fileUrl: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const channel = await db
+                .select()
+                .from(communityChannels)
+                .where(eq(communityChannels.id, input.channelId))
+                .limit(1);
+
+            if (!channel.length) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Channel not found" });
+            }
+
+            const member = await db
+                .select()
+                .from(communityMembers)
+                .where(
+                    and(
+                        eq(communityMembers.serverId, channel[0].serverId),
+                        eq(communityMembers.userId, ctx.user.id)
+                    )
+                )
+                .limit(1);
+
+            if (!member.length) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+            }
+
+            const [message] = await db
+                .insert(communityMessages)
+                .values({
+                    content: input.content,
+                    fileUrl: input.fileUrl ?? null,
+                    memberId: member[0].id,
+                    channelId: input.channelId,
+                })
+                .returning();
+
+            return message;
+        }),
+
+    /** Update a message (owner only) */
+    updateMessage: protectedProcedure
+        .input(
+            z.object({
+                messageId: z.string().uuid(),
+                content: z.string().min(1),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const msg = await db
+                .select({
+                    id: communityMessages.id,
+                    userId: communityMembers.userId,
+                })
+                .from(communityMessages)
+                .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
+                .where(eq(communityMessages.id, input.messageId))
+                .limit(1);
+
+            if (!msg.length || msg[0].userId !== ctx.user.id) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Cannot edit this message" });
+            }
+
+            const [updated] = await db
+                .update(communityMessages)
+                .set({ content: input.content, updatedAt: new Date() })
+                .where(eq(communityMessages.id, input.messageId))
+                .returning();
+
+            return updated;
+        }),
+
+    /** Delete a message (soft delete — owner, admin, or mod) */
+    deleteMessage: protectedProcedure
+        .input(
+            z.object({
+                messageId: z.string().uuid(),
+                serverId: z.string().uuid(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            // Check if current user is admin/mod OR the message owner
+            const msg = await db
+                .select({
+                    id: communityMessages.id,
+                    userId: communityMembers.userId,
+                })
+                .from(communityMessages)
+                .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
+                .where(eq(communityMessages.id, input.messageId))
+                .limit(1);
+
+            if (!msg.length) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+            }
+
+            const isOwner = msg[0].userId === ctx.user.id;
+            if (!isOwner) {
+                await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+            }
+
+            const [updated] = await db
+                .update(communityMessages)
+                .set({ deleted: true, content: "This message has been deleted.", fileUrl: null, updatedAt: new Date() })
+                .where(eq(communityMessages.id, input.messageId))
+                .returning();
+
+            return updated;
+        }),
+});
+
+// ─── Helpers ─────────────────────────────────────────────
+
+async function requireRole(serverId: string, userId: string, ...roles: string[]) {
+    const member = await db
+        .select()
+        .from(communityMembers)
+        .where(
+            and(
+                eq(communityMembers.serverId, serverId),
+                eq(communityMembers.userId, userId)
+            )
+        )
+        .limit(1);
+
+    if (!member.length) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not a member of this server" });
+    }
+
+    if (!roles.includes(member[0].role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: `Requires ${roles.join(" or ")} role` });
+    }
+
+    return member[0];
+}

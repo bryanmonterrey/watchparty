@@ -1,3 +1,4 @@
+// @ts-ignore - createAuthClient is exported but TS's bundler resolution intermittently misses it
 import { createAuthClient } from "better-auth/react";
 import {
   customSessionClient,
