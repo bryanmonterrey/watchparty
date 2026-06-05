@@ -1,0 +1,2337 @@
+"use client";
+
+import { motion, type SVGMotionProps } from "motion/react"
+
+export function MaximizeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            aria-label="Expand Content"
+            role="img"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 -960 960 960"
+            fill="currentColor"
+            width="20"
+            height="20"
+            className="fill-current"
+            {...props}
+        >
+            <path d="M200-200v-240h80v160h160v80H200Zm480-320v-160H520v-80h240v240h-80Z" />
+        </motion.svg>
+    )
+}
+
+export function MinimizeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            aria-label="Collapse Content"
+            role="img"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 -960 960 960"
+            fill="currentColor"
+            width="20"
+            height="20"
+            className="fill-current"
+            {...props}
+        >
+            <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z" />
+        </motion.svg>
+    )
+}
+
+export function PinpointIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M13.6177 21.367C13.1841 21.773 12.6044 22 12.0011 22C11.3978 22 10.8182 21.773 10.3845 21.367C6.41302 17.626 1.09076 13.4469 3.68627 7.37966C5.08963 4.09916 8.45834 2 12.0011 2C15.5439 2 18.9126 4.09916 20.316 7.37966C22.9082 13.4393 17.599 17.6389 13.6177 21.367Z" />
+            <path d="M15.5 11C15.5 12.933 13.933 14.5 12 14.5C10.067 14.5 8.5 12.933 8.5 11C8.5 9.067 10.067 7.5 12 7.5C13.933 7.5 15.5 9.067 15.5 11Z" />
+        </motion.svg>
+    )
+}
+
+export function TeamIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M12 7.5C12 9.433 10.433 11 8.5 11C6.567 11 5 9.433 5 7.5C5 5.567 6.567 4 8.5 4C10.433 4 12 5.567 12 7.5Z" />
+            <path d="M13.5 11C15.433 11 17 9.433 17 7.5C17 5.567 15.433 4 13.5 4" />
+            <path d="M13.1429 20H3.85714C2.83147 20 2 19.2325 2 18.2857C2 15.9188 4.07868 14 6.64286 14H10.3571C11.4023 14 12.3669 14.3188 13.1429 14.8568" />
+            <path d="M19 14V20M22 17L16 17" />
+        </motion.svg>
+    )
+}
+
+export function FlagLogo(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg width="510" height="510" viewBox="0 0 510 510" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+            <path d="M402.267 0H246.996L265.996 49H365.496L428.996 226.5H342.496L360.996 275H500.995L402.267 0Z" fill="currentColor" />
+            <path d="M107.096 373.25L262.364 374.171L243.655 325.06L144.157 324.469L81.7111 146.596L168.21 147.109L149.998 98.5L10 97.6696L107.096 373.25Z" fill="currentColor" />
+            <path d="M265.998 49H130.775L149.498 99H284.998L265.998 49Z" fill="currentColor" />
+            <path d="M360.998 275H225.775L244.498 325H379.998L360.998 275Z" fill="currentColor" />
+            <path d="M111.998 389L146.498 407L184.498 510H156.998L111.998 389Z" fill="currentColor" />
+        </svg>
+    )
+}
+
+export function WatchLogo(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            width="702"
+            height="649"
+            viewBox="0 0 702 649"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <ellipse cx="467.952" cy="324.268" rx="136.999" ry="294.785" transform="rotate(20.9127 467.952 324.268)" fill="currentColor"/>
+            <ellipse cx="179.779" cy="394.765" rx="99.8825" ry="214.502" transform="rotate(14.6163 179.779 394.765)" fill="currentColor"/>
+        </motion.svg>
+    )
+}
+
+export const LogoIcon = WatchLogo;
+
+
+export function Star2Icon({ fill = "#FDF6DA", ...props }: SVGMotionProps<SVGSVGElement> & { fill?: string }) {
+    return (
+        <motion.svg
+            width="557"
+            height="571"
+            viewBox="0 0 557 571"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <motion.path
+                d="M315.259 10.9116C340.87 -11.8575 381.524 3.01662 386.393 36.9377L404.27 161.47C406.146 174.54 413.924 186.024 425.366 192.617L534.628 255.575C564.631 272.863 562.937 316.713 531.69 331.635L419.379 385.268C407.315 391.029 398.617 402.073 395.844 415.151L370.064 536.722C362.927 570.38 321.115 582.441 297.148 557.755L208.726 466.679C199.597 457.277 186.679 452.55 173.638 453.842L47.3172 466.348C13.078 469.738 -11.0779 433.541 5.19178 403.224L63.9567 293.721C70.2783 281.942 70.7614 267.892 65.2641 255.706L14.0848 142.256C-0.154465 110.692 26.8507 76.1022 60.9265 82.259L185.02 104.68C198.014 107.028 211.367 103.275 221.236 94.5018L315.259 10.9116Z"
+                fill={fill}
+            />
+        </motion.svg>
+    )
+}
+
+export const StarIcon = Star2Icon;
+
+
+
+export function HomeIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill={active ? "currentColor" : "none"}
+            stroke={active ? "none" : "currentColor"}
+            strokeWidth={active ? undefined : "2"}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            {active ? (
+                <path d="M12 1.75C12.7872 1.75 13.4813 2.01975 14.2119 2.45996C14.9252 2.88977 15.7401 3.52485 16.7578 4.31641L18.7578 5.87207C20.0267 6.85897 20.8673 7.49025 21.3174 8.41016C21.7674 9.33029 21.75 10.3816 21.75 11.9893V14.5C21.75 16.1287 21.7517 17.4257 21.6152 18.4404C21.4759 19.4767 21.18 20.3297 20.5049 21.0049C19.8297 21.6799 18.9766 21.9759 17.9404 22.1152C16.9258 22.2516 15.6287 22.25 14 22.25H10C8.37133 22.25 7.07424 22.2516 6.05957 22.1152C5.02337 21.9759 4.17023 21.68 3.49512 21.0049C2.82004 20.3297 2.52409 19.4767 2.38477 18.4404C2.24835 17.4257 2.25 16.1287 2.25 14.5V11.9893C2.25 10.3816 2.23261 9.33028 2.68262 8.41016C3.13272 7.49024 3.97335 6.85894 5.24219 5.87207L7.24219 4.31641C8.25991 3.52484 9.07477 2.88977 9.78809 2.45996C10.5187 2.01974 11.2128 1.75002 12 1.75ZM12 13C10.8954 13 10 13.8954 10 15C10 16.1046 10.8954 17 12 17C13.1046 17 14 16.1046 14 15C14 13.8954 13.1046 13 12 13Z" />
+            ) : (
+                <>
+                    <path d="M3 11.9896V14.5C3 17.7998 3 19.4497 4.02513 20.4749C5.05025 21.5 6.70017 21.5 10 21.5H14C17.2998 21.5 18.9497 21.5 19.9749 20.4749C21 19.4497 21 17.7998 21 14.5V11.9896C21 10.3083 21 9.46773 20.6441 8.74005C20.2882 8.01237 19.6247 7.49628 18.2976 6.46411L16.2976 4.90855C14.2331 3.30285 13.2009 2.5 12 2.5C10.7991 2.5 9.76689 3.30285 7.70242 4.90855L5.70241 6.46411C4.37533 7.49628 3.71179 8.01237 3.35590 8.74005C3 9.46773 3 10.3083 3 11.9896Z" />
+                    <path d="M14 15C14 13.8954 13.1046 13 12 13C10.8954 13 10 13.8954 10 15C10 16.1046 10.8954 17 12 17C13.1046 17 14 16.1046 14 15Z" />
+                </>
+            )}
+        </motion.svg>
+    )
+}
+
+export function BrowseIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill={active ? "currentColor" : "none"}
+            stroke={active ? "none" : "currentColor"}
+            strokeWidth={active ? undefined : "2"}
+            {...props}
+        >
+            {active ? (
+                <path d="M12 1.25C17.937 1.25 22.75 6.06293 22.75 12C22.75 17.937 17.937 22.75 12 22.75C6.06293 22.75 1.25 17.937 1.25 12C1.25 6.06294 6.06294 1.25 12 1.25ZM15.708 8.33008C14.5034 7.13714 6.49629 9.45364 7.02539 10.8535C7.22547 11.382 8.23475 11.7162 10.2529 12.3838C11.0472 12.6467 11.3473 12.9352 11.6172 13.7363C11.8907 14.548 12.2957 17.1087 13.5938 16.9971C15.1417 16.8632 16.6509 9.26435 15.708 8.33008Z" />
+            ) : (
+                <>
+                    <path d="M15.7078 8.33055C16.6507 9.26482 15.1422 16.8628 13.5942 16.9967C12.2957 17.109 11.891 14.5478 11.6175 13.7361C11.3476 12.9349 11.0472 12.6465 10.2527 12.3836C8.23415 11.7159 7.22489 11.382 7.02507 10.8533C6.49595 9.45337 14.5036 7.13731 15.7078 8.33055Z" />
+                    <path d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" />
+                </>
+            )}
+        </motion.svg>
+    )
+}
+
+export function ShortsIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill={active ? "currentColor" : "none"}
+            stroke={active ? "none" : "currentColor"}
+            strokeWidth={active ? undefined : "2"}
+            {...props}
+        >
+            {active ? (
+                <>
+                    <path d="M17 8.90585L17.1259 8.80196C19.2417 7.05623 20.2996 6.18336 21.1498 6.60482C22 7.02628 22 8.42355 22 11.2181V12.7819C22 15.5765 22 16.9737 21.1498 17.3952C20.2996 17.8166 19.2417 16.9438 17.1259 15.198L17 15.0941" />
+                    <path d="M10 3.25C11.6287 3.25 12.9257 3.24834 13.9404 3.38477C14.9767 3.52409 15.8297 3.82001 16.5049 4.49512C17.18 5.17025 17.4759 6.02333 17.6152 7.05957C17.7517 8.07426 17.75 9.37129 17.75 11V13C17.75 14.6287 17.7517 15.9257 17.6152 16.9404C17.4759 17.9767 17.18 18.8297 16.5049 19.5049C15.8297 20.18 14.9767 20.4759 13.9404 20.6152C12.9257 20.7517 11.6287 20.75 10 20.75H9C7.37129 20.75 6.07426 20.7517 5.05957 20.6152C4.02333 20.4759 3.17025 20.18 2.49512 19.5049C1.82001 18.8297 1.52409 17.9767 1.38477 16.9404C1.24834 15.9257 1.25 14.6287 1.25 13V11C1.25 9.37129 1.24834 8.07426 1.38477 7.05957C1.52409 6.02332 1.81998 5.17025 2.49512 4.49512C3.17025 3.81998 4.02332 3.52409 5.05957 3.38477C6.07426 3.24834 7.37129 3.25 9 3.25H10ZM11.5 8C10.6716 8 10 8.67157 10 9.5C10 10.3284 10.6716 11 11.5 11C12.3284 11 13 10.3284 13 9.5C13 8.67157 12.3284 8 11.5 8Z" />
+                </>
+            ) : (
+                <>
+                    <path d="M2 11C2 7.70017 2 6.05025 3.02513 5.02513C4.05025 4 5.70017 4 9 4H10C13.2998 4 14.9497 4 15.9749 5.02513C17 6.05025 17 7.70017 17 11V13C17 16.2998 17 17.9497 15.9749 18.9749C14.9497 20 13.2998 20 10 20H9C5.70017 20 4.05025 20 3.02513 18.9749C2 17.9497 2 16.2998 2 13V11Z" />
+                    <path d="M17 8.90585L17.1259 8.80196C19.2417 7.05623 20.2996 6.18336 21.1498 6.60482C22 7.02628 22 8.42355 22 11.2181V12.7819C22 15.5765 22 16.9737 21.1498 17.3952C20.2996 17.8166 19.2417 16.9438 17.1259 15.198L17 15.0941" />
+                    <circle cx="11.5" cy="9.5" r="1.5" />
+                </>
+            )}
+        </motion.svg>
+    )
+}
+
+export function TradeIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M14 16V8C14 7.05719 14 6.58579 13.7071 6.29289C13.4142 6 12.9428 6 12 6C11.0572 6 10.5858 6 10.2929 6.29289C10 6.58579 10 7.05719 10 8V16C10 16.9428 10 17.4142 10.2929 17.7071C10.5858 18 11.0572 18 12 18C12.9428 18 13.4142 18 13.7071 17.7071C14 17.4142 14 16.9428 14 16Z" fill={active ? "currentColor" : "none"} />
+            <path d="M21 9V7C21 6.05719 21 5.58579 20.7071 5.29289C20.4142 5 19.9428 5 19 5C18.0572 5 17.5858 5 17.2929 5.29289C17 5.58579 17 6.05719 17 7V9C17 9.94281 17 10.4142 17.2929 10.7071C17.5858 11 18.0572 11 19 11C19.9428 11 20.4142 11 20.7071 10.7071C21 10.4142 21 9.94281 21 9Z" fill={active ? "currentColor" : "none"} />
+            <path d="M7 14V12C7 11.0572 7 10.5858 6.70711 10.2929C6.41421 10 5.94281 10 5 10C4.05719 10 3.58579 10 3.29289 10.2929C3 10.5858 3 11.0572 3 12V14C3 14.9428 3 15.4142 3.29289 15.7071C3.58579 16 4.05719 16 5 16C5.94281 16 6.41421 16 6.70711 15.7071C7 15.4142 7 14.9428 7 14Z" fill={active ? "currentColor" : "none"} />
+            <path d="M12 21L12 18" />
+            <path d="M19 13L19 11" />
+            <path d="M12 6L12 3" />
+            <path d="M19 5L19 3" />
+            <path d="M5 18L5 16" />
+            <path d="M5 10L5 8" />
+        </motion.svg>
+    )
+}
+
+export function NotificationsIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill={active ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth={active ? "1.5" : "2"}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M10.4107 19.9677C7.58942 17.858 2 13.0348 2 8.69444C2 5.82563 4.10526 3.5 7 3.5C8.5 3.5 10 4 12 6C14 4 15.5 3.5 17 3.5C19.8947 3.5 22 5.82563 22 8.69444C22 13.0348 16.4106 17.858 13.5893 19.9677C12.6399 20.6776 11.3601 20.6776 10.4107 19.9677Z" />
+        </motion.svg>
+    )
+}
+
+export function MessagesIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill={active ? "currentColor" : "none"}
+            stroke={active ? "none" : "currentColor"}
+            strokeWidth={active ? undefined : "2"}
+            strokeLinejoin="round"
+            {...props}
+        >
+            {active ? (
+                <path d="M9.07983 2.78735C11.0327 2.73829 12.9668 2.73829 14.9197 2.78735C16.4711 2.82634 17.717 2.85525 18.7126 3.02856C19.7421 3.20786 20.579 3.55243 21.2859 4.26196C21.9897 4.96853 22.3317 5.79312 22.5076 6.80591C22.6772 7.78292 22.702 8.99922 22.7341 10.509C22.7554 11.505 22.7554 12.4955 22.7341 13.4915C22.702 15.0013 22.6772 16.2176 22.5076 17.1946C22.3317 18.2072 21.9896 19.032 21.2859 19.7385C20.5791 20.4478 19.742 20.7927 18.7126 20.9719C17.717 21.1452 16.4711 21.1742 14.9197 21.2131C12.9668 21.2622 11.0327 21.2622 9.07983 21.2131C7.52837 21.1742 6.28252 21.1452 5.28687 20.9719C4.25748 20.7926 3.42043 20.448 2.71362 19.7385C2.00985 19.032 1.66783 18.2072 1.49194 17.1946C1.32231 16.2176 1.29758 15.0013 1.26538 13.4915C1.24415 12.4955 1.24415 11.505 1.26538 10.509C1.29758 8.99928 1.32235 7.78289 1.49194 6.80591C1.66779 5.79328 2.00997 4.96846 2.71362 4.26196C3.42041 3.55248 4.25752 3.20787 5.28687 3.02856C6.28252 2.85522 7.52838 2.82633 9.07983 2.78735ZM14.7166 9.26489C13.4617 9.9758 12.6998 10.2502 11.9998 10.2502C11.2997 10.2502 10.5378 9.97586 9.28296 9.26489L2.36987 5.3479L1.62964 6.65259L8.54272 10.5696C9.83589 11.3023 10.8874 11.7502 11.9998 11.7502C13.1121 11.7502 14.1637 11.3022 15.4568 10.5696L22.3699 6.65259L21.6296 5.3479L14.7166 9.26489Z" />
+            ) : (
+                <>
+                    <path d="M2 6L8.91302 9.91697C11.4616 11.361 12.5384 11.361 15.087 9.91697L22 6" />
+                    <path d="M2.01577 13.4756C2.08114 16.5412 2.11383 18.0739 3.24496 19.2094C4.37608 20.3448 5.95033 20.3843 9.09883 20.4634C11.0393 20.5122 12.9607 20.5122 14.9012 20.4634C18.0497 20.3843 19.6239 20.3448 20.7551 19.2094C21.8862 18.0739 21.9189 16.5412 21.9842 13.4756C22.0053 12.4899 22.0053 11.5101 21.9842 10.5244C21.9189 7.45886 21.8862 5.92609 20.7551 4.79066C19.6239 3.65523 18.0497 3.61568 14.9012 3.53657C12.9607 3.48781 11.0393 3.48781 9.09882 3.53656C5.95033 3.61566 4.37533 3.65521 3.24495 4.79065C2.11382 5.92608 2.08114 7.45885 2.01576 10.5244C1.99474 11.5101 1.99475 12.4899 2.01577 13.4756Z" />
+                </>
+            )}
+        </motion.svg>
+    )
+}
+
+export function CreateIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={active ? "3" : "2"}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M12 4V20M20 12H4" />
+        </motion.svg>
+    )
+}
+
+export function UserIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M15.5 10.5C15.5 8.567 13.933 7 12 7C10.067 7 8.5 8.567 8.5 10.5C8.5 12.433 10.067 14 12 14C13.933 14 15.5 12.433 15.5 10.5Z" />
+            <path d="M22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12Z" />
+            <path d="M18 20C18 16.6863 15.3137 14 12 14C8.68629 14 6 16.6863 6 20" />
+        </motion.svg>
+    )
+}
+
+export function CommunitiesIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill={active ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M13 7C13 9.20914 11.2091 11 9 11C6.79086 11 5 9.20914 5 7C5 4.79086 6.79086 3 9 3C11.2091 3 13 4.79086 13 7Z" />
+            <path d="M15 11C17.2091 11 19 9.20914 19 7C19 4.79086 17.2091 3 15 3" fill={active ? "currentColor" : "none"} />
+            <path d="M11 14H7C4.23858 14 2 16.2386 2 19C2 20.1046 2.89543 21 4 21H14C15.1046 21 16 20.1046 16 19C16 16.2386 13.7614 14 11 14Z" />
+            <path d="M17 14C19.7614 14 22 16.2386 22 19C22 20.1046 21.1046 21 20 21H18.5" fill={active ? "currentColor" : "none"} />
+        </motion.svg>
+    )
+}
+
+export function SearchIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={active ? "3" : "2"}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M17 17L21 21" />
+            <path d="M19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19C15.4183 19 19 15.4183 19 11Z" />
+        </motion.svg>
+    )
+}
+
+
+export function PremiumIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M8.62814 12.6736H8.16918C6.68545 12.6736 5.94358 12.6736 5.62736 12.1844C5.31114 11.6953 5.61244 11.0138 6.21504 9.65083L8.02668 5.55323C8.57457 4.314 8.84852 3.69438 9.37997 3.34719C9.91142 3 10.5859 3 11.935 3H14.0244C15.6632 3 16.4826 3 16.7916 3.53535C17.1007 4.0707 16.6942 4.78588 15.8811 6.21623L14.8092 8.10188C14.405 8.81295 14.2029 9.16849 14.2057 9.45952C14.2094 9.83775 14.4105 10.1862 14.7354 10.377C14.9854 10.5239 15.3927 10.5239 16.2074 10.5239C17.2373 10.5239 17.7523 10.5239 18.0205 10.7022C18.3689 10.9338 18.5513 11.3482 18.4874 11.7632C18.4382 12.0826 18.0918 12.4656 17.399 13.2317L11.8639 19.3523C10.7767 20.5545 10.2331 21.1556 9.86807 20.9654C9.50303 20.7751 9.67833 19.9822 10.0289 18.3962L10.7157 15.2896C10.9826 14.082 11.1161 13.4782 10.7951 13.0759C10.4741 12.6736 9.85877 12.6736 8.62814 12.6736Z" />
+        </motion.svg>
+    )
+}
+
+export function SettingsIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            {...props}
+        >
+            <path d="M21.3175 7.14139L20.8239 6.28479C20.4506 5.63696 20.264 5.31305 19.9464 5.18388C19.6288 5.05472 19.2696 5.15664 18.5513 5.36048L17.3311 5.70418C16.8725 5.80994 16.3913 5.74994 15.9726 5.53479L15.6357 5.34042C15.2766 5.11043 15.0004 4.77133 14.8475 4.37274L14.5136 3.37536C14.294 2.71534 14.1842 2.38533 13.9228 2.19657C13.6615 2.00781 13.3143 2.00781 12.6199 2.00781H11.5051C10.8108 2.00781 10.4636 2.00781 10.2022 2.19657C9.94085 2.38533 9.83106 2.71534 9.61149 3.37536L9.27753 4.37274C9.12465 4.77133 8.84845 5.11043 8.48937 5.34042L8.15249 5.53479C7.73374 5.74994 7.25259 5.80994 6.79398 5.70418L5.57375 5.36048C4.85541 5.15664 4.49625 5.05472 4.17867 5.18388C3.86109 5.31305 3.67445 5.63696 3.30115 6.28479L2.80757 7.14139C2.45766 7.74864 2.2827 8.05227 2.31666 8.37549C2.35061 8.69871 2.58483 8.95918 3.05326 9.48012L4.0843 10.6328C4.3363 10.9518 4.51521 11.5078 4.51521 12.0077C4.51521 12.5078 4.33636 13.0636 4.08433 13.3827L3.05326 14.5354C2.58483 15.0564 2.35062 15.3168 2.31666 15.6401C2.2827 15.9633 2.45766 16.2669 2.80757 16.8741L3.30114 17.7307C3.67443 18.3785 3.86109 18.7025 4.17867 18.8316C4.49625 18.9608 4.85542 18.8589 5.57377 18.655L6.79394 18.3113C7.25263 18.2055 7.73387 18.2656 8.15267 18.4808L8.4895 18.6752C8.84851 18.9052 9.12464 19.2442 9.2775 19.6428L9.61149 20.6403C9.83106 21.3003 9.94085 21.6303 10.2022 21.8191C10.4636 22.0078 10.8108 22.0078 11.5051 22.0078H12.6199C13.3143 22.0078 13.6615 22.0078 13.9228 21.8191C14.1842 21.6303 14.294 21.3003 14.5136 20.6403L14.8476 19.6428C15.0004 19.2442 15.2765 18.9052 15.6356 18.6752L15.9724 18.4808C16.3912 18.2656 16.8724 18.2055 17.3311 18.3113L18.5513 18.655C19.2696 18.8589 19.6288 18.9608 19.9464 18.8316C20.264 18.7025 20.4506 18.3785 20.8239 17.7307L21.3175 16.8741C21.6674 16.2669 21.8423 15.9633 21.8084 15.6401C21.7744 15.3168 21.5402 15.0564 21.0718 14.5354L20.0407 13.3827C19.7887 13.0636 19.6098 12.5078 19.6098 12.0077C19.6098 11.5078 19.7888 10.9518 20.0407 10.6328L21.0718 9.48012C21.5402 8.95918 21.7744 8.69871 21.8084 8.37549C21.8423 8.05227 21.6674 7.74864 21.3175 7.14139Z" />
+            <path d="M15.5195 12C15.5195 13.933 13.9525 15.5 12.0195 15.5C10.0865 15.5 8.51953 13.933 8.51953 12C8.51953 10.067 10.0865 8.5 12.0195 8.5C13.9525 8.5 15.5195 10.067 15.5195 12Z" />
+        </motion.svg>
+    )
+}
+
+export function ClipIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M5.82338 12L4.27922 10.4558C2.57359 8.75022 2.57359 5.98485 4.27922 4.27922C5.98485 2.57359 8.75022 2.57359 10.4558 4.27922L19.7208 13.5442C21.4264 15.2498 21.4264 18.0152 19.7208 19.7208C18.0152 21.4264 15.2498 21.4264 13.5442 19.7208L10.0698 16.2464C9.00379 15.1804 9.00379 13.4521 10.0698 12.386C11.1358 11.32 12.8642 11.32 13.9302 12.386L15.8604 14.3162" />
+        </motion.svg>
+    )
+}
+
+export function NewMessageIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M16.4249 4.60509L17.4149 3.6151C18.2351 2.79497 19.5648 2.79497 20.3849 3.6151C21.205 4.43524 21.205 5.76493 20.3849 6.58507L19.3949 7.57506M16.4249 4.60509L9.76558 11.2644C9.25807 11.772 8.89804 12.4078 8.72397 13.1041L8 16L10.8959 15.276C11.5922 15.102 12.228 14.7419 12.7356 14.2344L19.3949 7.57506M16.4249 4.60509L19.3949 7.57506" />
+            <path d="M18.9999 13.5C18.9999 16.7875 18.9999 18.4312 18.092 19.5376C17.9258 19.7401 17.7401 19.9258 17.5375 20.092C16.4312 21 14.7874 21 11.4999 21H11C7.22876 21 5.34316 21 4.17159 19.8284C3.00003 18.6569 3 16.7712 3 13V12.5C3 9.21252 3 7.56879 3.90794 6.46244C4.07417 6.2599 4.2599 6.07417 4.46244 5.90794C5.56879 5 7.21252 5 10.5 5" />
+        </motion.svg>
+    )
+}
+
+export function EmojiIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M16 9V9.01" />
+            <path d="M8 9V9.01" />
+            <path d="M8 14.5C8.91212 15.7144 10.3643 16.5 12 16.5C13.6357 16.5 15.0879 15.7144 16 14.5" />
+        </motion.svg>
+    )
+}
+
+export function SendIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M21.0477 3.05293C18.8697 0.707363 2.48648 6.4532 2.50001 8.551C2.51535 10.9299 8.89809 11.6617 10.6672 12.1581C11.7311 12.4565 12.016 12.7625 12.2613 13.8781C13.3723 18.9305 13.9301 21.4435 15.2014 21.4996C17.2278 21.5892 23.1733 5.342 21.0477 3.05293Z" />
+            <path d="M11.4999 12.5L14.9999 9" />
+        </motion.svg>
+    )
+}
+
+export function InfoIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16V11.5" />
+            <path d="M12 8.01172V8.00172" />
+        </motion.svg>
+    )
+}
+
+export function LiveIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+            <motion.circle
+                cx="12"
+                cy="12"
+                r="7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+                animate={{ opacity: [0.7, 0], scale: [0.85, 1.35] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+            />
+        </motion.svg>
+    )
+}
+
+export function VideoIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            {...props}
+        >
+            <path d="M2 11C2 7.70017 2 6.05025 3.02513 5.02513C4.05025 4 5.70017 4 9 4H10C13.2998 4 14.9497 4 15.9749 5.02513C17 6.05025 17 7.70017 17 11V13C17 16.2998 17 17.9497 15.9749 18.9749C14.9497 20 13.2998 20 10 20H9C5.70017 20 4.05025 20 3.02513 18.9749C2 17.9497 2 16.2998 2 13V11Z" />
+            <path d="M17 8.90585L17.1259 8.80196C19.2417 7.05623 20.2996 6.18336 21.1498 6.60482C22 7.02628 22 8.42355 22 11.2181V12.7819C22 15.5765 22 16.9737 21.1498 17.3952C20.2996 17.8166 19.2417 16.9438 17.1259 15.198L17 15.0941" />
+            <circle cx="11.5" cy="9.5" r="1.5" />
+        </motion.svg>
+    )
+}
+
+export function ArrowUpIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M12 5.5V19" />
+            <path d="M18 11C18 11 13.5811 5.00001 12 5C10.4188 4.99999 6 11 6 11" />
+        </motion.svg>
+    )
+}
+
+export function ArrowDownIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M12 18.502V5.00195" />
+            <path d="M18 13.002C18 13.002 13.5811 19.0019 12 19.002C10.4188 19.002 6 13.002 6 13.002" />
+        </motion.svg>
+    )
+}
+
+export function ArrowUpRightIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M9 6.65032C9 6.65032 15.9383 6.10759 16.9154 7.08463C17.8924 8.06167 17.3496 15 17.3496 15M16.5 7.5L6.5 17.5" />
+        </motion.svg>
+    )
+}
+
+export function ArrowDownLeftIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M15 17.3497C15 17.3497 8.06166 17.8924 7.08461 16.9154C6.10755 15.9383 6.65037 9 6.65037 9M7.5 16.5L17.5 6.5" />
+        </motion.svg>
+    )
+}
+export function SolanaIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 101 88"
+            width="26"
+            height="26"
+            fill="none"
+            {...props}
+        >
+            <path
+                d="M100.48 69.3817L83.8068 86.8015C83.4444 87.1799 83.0058 87.4816 82.5185 87.6878C82.0312 87.894 81.5055 88.0003 80.9743 88H1.93563C1.55849 88 1.18957 87.8926 0.874202 87.6912C0.558829 87.4897 0.31074 87.2029 0.160416 86.8659C0.0100923 86.529 -0.0359181 86.1566 0.0280382 85.7945C0.0919944 85.4324 0.263131 85.0964 0.520422 84.8278L17.2061 67.408C17.5676 67.0306 18.0047 66.7295 18.4904 66.5234C18.9762 66.3172 19.5002 66.2104 20.0301 66.2095H99.0644C99.4415 66.2095 99.8104 66.3169 100.126 66.5183C100.441 66.7198 100.689 67.0067 100.84 67.3436C100.99 67.6806 101.036 68.0529 100.972 68.415C100.908 68.7771 100.737 69.1131 100.48 69.3817ZM83.8068 34.3032C83.4444 33.9248 83.0058 33.6231 82.5185 33.4169C82.0312 33.2108 81.5055 33.1045 80.9743 33.1048H1.93563C1.55849 33.1048 1.18957 33.2121 0.874202 33.4136C0.558829 33.6151 0.31074 33.9019 0.160416 34.2388C0.0100923 34.5758 -0.0359181 34.9482 0.0280382 35.3103C0.0919944 35.6723 0.263131 36.0083 0.520422 36.277L17.2061 53.6968C17.5676 54.0742 18.0047 54.3752 18.4904 54.5814C18.9762 54.7875 19.5002 54.8944 20.0301 54.8952H99.0644C99.4415 54.8952 99.8104 54.7879 100.126 54.5864C100.441 54.3849 100.689 54.0981 100.84 53.7612C100.99 53.4242 101.036 53.0518 100.972 52.6897C100.908 52.3277 100.737 51.9917 100.48 51.723L83.8068 34.3032ZM1.93563 21.7905H80.9743C81.5055 21.7907 82.0312 21.6845 82.5185 21.4783C83.0058 21.2721 83.4444 20.9704 83.8068 20.592L100.48 3.17219C100.737 2.90357 100.908 2.56758 100.972 2.2055C101.036 1.84342 100.99 1.47103 100.84 1.13408C100.689 0.79713 100.441 0.510296 100.126 0.308823C99.8104 0.107349 99.4415 1.24074e-05 99.0644 0L20.0301 0C19.5002 0.000878397 18.9762 0.107699 18.4904 0.313848C18.0047 0.519998 17.5676 0.821087 17.2061 1.19848L0.524723 18.6183C0.267681 18.8866 0.0966198 19.2223 0.0325185 19.5839C-0.0315829 19.9456 0.0140624 20.3177 0.163856 20.6545C0.31365 20.9913 0.561081 21.2781 0.875804 21.4799C1.19053 21.6817 1.55886 21.7896 1.93563 21.7905Z"
+                fill="currentColor"
+            />
+        </motion.svg>
+    )
+}
+
+export function PauseIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M4 7C4 5.58579 4 4.87868 4.43934 4.43934C4.87868 4 5.58579 4 7 4C8.41421 4 9.12132 4 9.56066 4.43934C10 4.87868 10 5.58579 10 7V17C10 18.4142 10 19.1213 9.56066 19.5607C9.12132 20 8.41421 20 7 20C5.58579 20 4.87868 20 4 17V7Z" />
+            <path d="M14 7C14 5.58579 14 4.87868 14.4393 4.43934C14.8787 4 15.5858 4 17 4C18.4142 4 19.1213 4 19.5607 4.43934C20 4.87868 20 5.58579 20 7V17C20 18.4142 20 19.1213 19.5607 19.5607C19.1213 20 18.4142 20 17 20C15.5858 20 14.8787 20 14.4393 19.5607C14 19.1213 14 18.4142 14 17V7Z" />
+        </motion.svg>
+    )
+}
+
+export function PlayIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M18.8906 12.846C18.5371 14.189 16.8667 15.138 13.5257 17.0361C10.296 18.8709 8.6812 19.7884 7.37983 19.4196C6.8418 19.2671 6.35159 18.9776 5.95624 18.5787C5 17.6139 5 15.7426 5 12C5 8.2574 5 6.3861 5.95624 5.42132C6.35159 5.02245 6.8418 4.73288 7.37983 4.58042C8.6812 4.21165 10.296 5.12907 13.5257 6.96393C16.8667 8.86197 18.5371 9.811 18.8906 11.154C19.0365 11.7084 19.0365 12.2916 18.8906 12.846Z" />
+        </motion.svg>
+    )
+}
+
+export function VolumeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M14 14.8135V9.18646C14 6.04126 14 4.46866 13.0747 4.0773C12.1494 3.68593 11.0603 4.79793 8.88232 7.02192C7.75439 8.17365 7.11085 8.42869 5.50604 8.42869C4.10257 8.42869 3.40084 8.42869 2.89675 8.77262C1.85035 9.48655 2.00852 10.882 2.00852 12C2.00852 13.118 1.85035 14.5134 2.89675 15.2274C3.40084 15.5713 4.10257 15.5713 5.50604 15.5713C7.11085 15.5713 7.75439 15.8264 8.88232 16.9781C11.0603 19.2021 12.1494 20.3141 13.0747 19.9227C14 19.5313 14 17.9587 14 14.8135Z" />
+            <path d="M17 9C17.6254 9.81968 18 10.8634 18 12C18 13.1366 17.6254 14.1803 17 15" />
+            <path d="M20 7C21.2508 8.36613 22 10.1057 22 12C22 13.8943 21.2508 15.6339 20 17" />
+        </motion.svg>
+    )
+}
+
+export function WaveIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M9 3V21" />
+            <path d="M6 7V17" />
+            <path d="M12 6V18" />
+            <path d="M15 9L15 15" />
+            <path d="M18 7L18 17" />
+            <path d="M21 11L21 13" />
+            <path d="M3 11L3 13" />
+        </motion.svg>
+    )
+}
+
+export function ReplyIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M20 21V18.9231C20 16.9221 20 15.9217 19.8547 15.0846C19.0547 10.4765 15.0934 6.86243 10.0426 6.13259C9.12509 6 7.19318 6 5 6" />
+            <path d="M7 3C6.39316 3.58984 4 5.15973 4 6C4 6.84027 6.39316 8.41016 7 9" />
+        </motion.svg>
+    )
+}
+
+export function MenuIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M4 5L20 5" />
+            <path d="M4 12L20 12" />
+            <path d="M4 19L20 19" />
+        </motion.svg>
+    )
+}
+
+export function CartIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M10.5 20.25C10.5 20.6642 10.1642 21 9.75 21C9.33579 21 9 20.6642 9 20.25C9 19.8358 9.33579 19.5 9.75 19.5C10.1642 19.5 10.5 19.8358 10.5 20.25Z" />
+            <path d="M19 20.25C19 20.6642 18.6642 21 18.25 21C17.8358 21 17.5 20.6642 17.5 20.25C17.5 19.8358 17.8358 19.5 18.25 19.5C18.6642 19.5 19 19.8358 19 20.25Z" />
+            <path d="M2 3H2.20664C3.53124 3 4.19354 3 4.6255 3.40221C5.05746 3.80441 5.10464 4.46503 5.19902 5.78626L5.45035 9.30496C5.5924 11.2936 5.66342 12.2879 5.96476 13.0961C6.62531 14.8677 8.08229 16.2244 9.89648 16.757C10.7241 17 11.7267 17 13.7317 17C15.8373 17 16.89 17 17.7417 16.7416C19.6593 16.1599 21.1599 14.6593 21.7416 12.7417C22 11.89 22 10.8433 22 8.75C22 8.05222 22 7.70333 21.9139 7.41943C21.72 6.78023 21.2198 6.28002 20.5806 6.08612C20.2967 6 19.9478 6 19.25 6H5.5" />
+            <path d="M16 10V13M11 10V13" />
+        </motion.svg>
+    )
+}
+
+export function SwapIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M16.9767 19.5C19.4017 17.8876 21 15.1305 21 12C21 7.02944 16.9706 3 12 3C11.3126 3 10.6432 3.07706 10 3.22302M16.9767 19.5V16M16.9767 19.5H20.5M7 4.51555C4.58803 6.13007 3 8.87958 3 12C3 16.9706 7.02944 21 12 21C12.6874 21 13.3568 20.9229 14 20.777M7 4.51555V8M7 4.51555H3.5" />
+        </motion.svg>
+    )
+}
+export function ReceiptIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M12 7.5H13.5C14.3284 7.5 15 8.17157 15 9M12 7.5H10.5C9.67157 7.5 9 8.17157 9 9V9.5C9 10.3284 9.67157 11 10.5 11H13.5C14.3284 11 15 11.6716 15 12.5V13C15 13.8284 14.3284 14.5 13.5 14.5H12M12 7.5V6M12 14.5H10.5C9.67157 14.5 9 13.8284 9 13M12 14.5V16" />
+            <path d="M10.94 21.5124L9.02913 20.3073C8.54415 20.0014 8.30166 19.8485 8.03253 19.8397C7.74172 19.8301 7.49493 19.9768 6.97087 20.3073C6.38395 20.6774 5.21687 21.6971 4.46195 21.2108C4 20.9133 4 20.1575 4 18.6458V8.00002C4 5.17158 4 3.75736 4.82699 2.87868C5.65399 2 6.98501 2 9.64706 2H14.3529C17.015 2 18.346 2 19.173 2.87868C20 3.75736 20 5.17158 20 8.00002V18.6458C20 20.1575 20 20.9133 19.538 21.2108C18.7831 21.6971 17.6161 20.6774 17.0291 20.3073C16.5441 20.0014 16.3017 19.8485 16.0325 19.8397C15.7417 19.8301 15.4949 19.9768 14.9709 20.3073L13.06 21.5124C12.5445 21.8374 12.2868 22 12 22C11.7132 22 11.4554 21.8374 10.94 21.5124Z" />
+        </motion.svg>
+    )
+}
+
+export function GifIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <path d="M9 9h-1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v-2" />
+            <path d="M12 9v6" />
+            <path d="M15 9h3" />
+            <path d="M15 9v6" />
+            <path d="M15 12h2" />
+        </motion.svg>
+    )
+}
+
+export function VerticalDotsIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="12" cy="5" r="1" />
+            <circle cx="12" cy="19" r="1" />
+        </motion.svg>
+    )
+}
+
+export function BagIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M20.9427 16.8354C20.2864 12.8866 18.2432 9.94613 16.467 8.219C15.9501 7.71642 15.6917 7.46513 15.1208 7.23257C14.5499 7 14.0592 7 13.0778 7H10.9222C9.94081 7 9.4501 7 8.87922 7.23257C8.30834 7.46513 8.04991 7.71642 7.53304 8.219C5.75682 9.94613 3.71361 12.8866 3.05727 16.8354C2.56893 19.7734 5.27927 22 8.30832 22H15.6917C18.7207 22 21.4311 19.7734 20.9427 16.8354Z" />
+            <path d="M7.25662 4.44287C7.05031 4.14258 6.75128 3.73499 7.36899 3.64205C8.00392 3.54651 8.66321 3.98114 9.30855 3.97221C9.89237 3.96413 10.1898 3.70519 10.5089 3.33548C10.8449 2.94617 11.3652 2 12 2C12.6348 2 13.1551 2.94617 13.4911 3.33548C13.8102 3.70519 14.1076 3.96413 14.6914 3.97221C15.3368 3.98114 15.9961 3.54651 16.631 3.64205C17.2487 3.73499 16.9497 4.14258 16.7434 4.44287L15.8105 5.80064C15.4115 6.38146 15.212 6.67187 14.7944 6.83594C14.3769 7 13.8373 7 12.7582 7H11.2418C10.1627 7 9.6231 7 9.20556 6.83594C8.78802 6.67187 8.5885 6.38146 8.18945 5.80064L7.25662 4.44287Z" />
+            <path d="M13.6267 12.9186C13.4105 12.1205 12.3101 11.4003 10.9892 11.9391C9.66829 12.4778 9.45847 14.2113 11.4565 14.3955C12.3595 14.4787 12.9483 14.2989 13.4873 14.8076C14.0264 15.3162 14.1265 16.7308 12.7485 17.112C11.3705 17.4932 10.006 16.8976 9.85742 16.0517M11.8417 10.9927V11.7531M11.8417 17.2293V17.9927" />
+        </motion.svg>
+    )
+}
+
+export function XIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </motion.svg>
+    )
+}
+
+export function KickIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M4 4h5v4h3v-2h2v-2h6v4h-2v2h-2v4h2v2h2v4h-6v-2h-2v-2h-3v4h-5z" />
+        </motion.svg>
+    )
+}
+
+export function TwitchIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+        </motion.svg>
+    )
+}
+
+export function AtIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            {...props}
+        >
+            <path d="M15.6 8.40033V12.9003C15.6 14.3915 16.8088 15.6003 18.3 15.6003C19.7912 15.6003 21 14.3915 21 12.9003V12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C14.0265 21 15.8965 20.3302 17.4009 19.2M15.6 12.0003C15.6 13.9886 13.9882 15.6003 12 15.6003C10.0118 15.6003 8.4 13.9886 8.4 12.0003C8.4 10.0121 10.0118 8.40033 12 8.40033C13.9882 8.40033 15.6 10.0121 15.6 12.0003Z" />
+        </motion.svg>
+    )
+}
+
+export function GoogleIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 48 48"
+            width="26"
+            height="26"
+            {...props}
+        >
+            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
+            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
+            <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
+            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
+        </motion.svg>
+    )
+}
+
+export function QrIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            color="currentColor"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M2.5 8.18677C2.60406 6.08705 2.91537 4.77792 3.84664 3.84664C4.77792 2.91537 6.08705 2.60406 8.18677 2.5M21.5 8.18677C21.3959 6.08705 21.0846 4.77792 20.1534 3.84664C19.2221 2.91537 17.9129 2.60406 15.8132 2.5M15.8132 21.5C17.9129 21.3959 19.2221 21.0846 20.1534 20.1534C21.0846 19.2221 21.3959 17.9129 21.5 15.8132M8.18676 21.5C6.08705 21.3959 4.77792 21.0846 3.84664 20.1534C2.91537 19.2221 2.60406 17.9129 2.5 15.8132" />
+            <path d="M8.23463 12.8478C8.60218 13 9.06812 13 10 13C10.9319 13 11.3978 13 11.7654 12.8478C12.2554 12.6448 12.6448 12.2554 12.8478 11.7654C13 11.3978 13 10.9319 13 10C13 9.06812 13 8.60218 12.8478 8.23463C12.6448 7.74458 12.2554 7.35523 11.7654 7.15224C11.3978 7 10.9319 7 10 7C9.06812 7 8.60218 7 8.23463 7.15224C7.74458 7.35523 7.35523 7.74458 7.15224 8.23463C7 8.60218 7 9.06812 7 10C7 10.9319 7 11.3978 7.15224 11.7654C7.35523 12.2554 7.74458 12.6448 8.23463 12.8478Z" />
+            <path d="M17 7V7.01" />
+            <path d="M17 11V13C17 14.8856 17 15.8284 16.4142 16.4142C15.8284 17 14.8856 17 13 17" />
+            <path d="M9 17H7" />
+        </motion.svg>
+    )
+}
+
+export function Logo(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <path
+                d="M14.9531 12.3948C14.8016 13.0215 14.0857 13.4644 12.6539 14.3502C11.2697 15.2064 10.5777 15.6346 10.0199 15.4625C9.78934 15.3913 9.57925 15.2562 9.40982 15.07C9 14.6198 9 13.7465 9 12C9 10.2535 9 9.38018 9.40982 8.92995C9.57925 8.74381 9.78934 8.60868 10.0199 8.53753C10.5777 8.36544 11.2697 8.79357 12.6539 9.64983C14.0857 10.5356 14.8016 10.9785 14.9531 11.6052C15.0156 11.8639 15.0156 12.1361 14.9531 12.3948Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M2.5 12C2.5 7.52166 2.5 5.28249 3.89124 3.89124C5.28249 2.5 7.52166 2.5 12 2.5C16.4783 2.5 18.7175 2.5 20.1088 3.89124C21.5 5.28249 21.5 7.52166 21.5 12C21.5 16.4783 21.5 18.7175 20.1088 20.1088C18.7175 21.5 16.4783 21.5 12 21.5C7.52166 21.5 5.28249 21.5 3.89124 20.1088C2.5 18.7175 2.5 16.4783 2.5 12Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+            />
+        </motion.svg>
+    );
+}
+
+export function Icon2(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 2500 2500"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <g clipPath="url(#clip0_4679_45)">
+                <path
+                    d="M744.951 2267.47C623.082 2261.91 556.846 2241.62 512.823 2224.45C454.463 2201.74 412.863 2174.68 369.043 2130.96C325.323 2087.24 298.162 2045.64 275.545 1987.28C258.38 1943.26 238.086 1877.02 232.532 1755.15C226.474 1623.38 225.263 1583.8 225.263 1250C225.263 916.195 226.575 876.717 232.532 744.851C238.086 622.981 258.481 556.846 275.545 512.722C298.263 454.362 325.323 412.763 369.043 368.942C412.763 325.222 454.362 298.061 512.823 275.444C556.846 258.279 623.082 237.985 744.951 232.431C876.716 226.373 916.296 225.162 1250 225.162C1583.8 225.162 1623.28 226.474 1755.15 232.431C1877.02 237.985 1943.15 258.38 1987.28 275.444C2045.64 298.061 2087.24 325.222 2131.06 368.942C2174.78 412.662 2201.84 454.362 2224.56 512.722C2241.72 556.745 2262.02 622.981 2267.57 744.851C2273.63 876.717 2274.84 916.195 2274.84 1250C2274.84 1583.7 2273.63 1623.28 2267.57 1755.15C2262.02 1877.02 2241.62 1943.26 2224.56 1987.28C2201.84 2045.64 2174.78 2087.24 2131.06 2130.96C2087.34 2174.68 2045.64 2201.74 1987.28 2224.45C1943.26 2241.62 1877.02 2261.91 1755.15 2267.47C1623.38 2273.53 1583.8 2274.74 1250 2274.74C916.296 2274.74 876.716 2273.53 744.951 2267.47ZM734.653 7.5727C601.575 13.6309 510.703 34.7334 431.24 65.63C349.051 97.5363 279.382 140.347 209.814 209.814C140.347 279.281 97.5363 348.95 65.63 431.24C34.7334 510.703 13.6309 601.575 7.5727 734.653C1.41357 867.932 0 910.541 0 1250C0 1589.46 1.41357 1632.07 7.5727 1765.35C13.6309 1898.42 34.7334 1989.3 65.63 2068.76C97.5363 2150.95 140.246 2220.72 209.814 2290.19C279.281 2359.65 348.95 2402.36 431.24 2434.37C510.804 2465.27 601.575 2486.37 734.653 2492.43C868.033 2498.49 910.541 2500 1250 2500C1589.56 2500 1632.07 2498.59 1765.35 2492.43C1898.42 2486.37 1989.3 2465.27 2068.76 2434.37C2150.95 2402.36 2220.62 2359.65 2290.19 2290.19C2359.65 2220.72 2402.36 2150.95 2434.37 2068.76C2465.27 1989.3 2486.47 1898.42 2492.43 1765.35C2498.49 1631.97 2499.9 1589.46 2499.9 1250C2499.9 910.541 2498.49 867.932 2492.43 734.653C2486.37 601.575 2465.27 510.703 2434.37 431.24C2402.36 349.051 2359.65 279.382 2290.19 209.814C2220.72 140.347 2150.95 97.5363 2068.86 65.63C1989.3 34.7334 1898.42 13.5299 1765.45 7.5727C1632.17 1.51454 1589.56 0 1250.1 0C910.541 0 868.033 1.41357 734.653 7.5727Z"
+                    fill="currentColor"
+                />
+                <path
+                    d="M1742.19 1312.04C1716.94 1410.52 1597.62 1480.12 1358.99 1619.31C1128.28 1753.86 1012.95 1821.15 919.984 1794.1C881.557 1782.91 846.542 1761.68 818.304 1732.42C750 1661.68 750 1524.45 750 1250C750 975.549 750 838.313 818.304 767.563C846.542 738.313 881.557 717.078 919.984 705.897C1012.95 678.855 1128.28 746.132 1358.99 880.687C1597.62 1019.88 1716.94 1089.48 1742.19 1187.96C1752.6 1228.61 1752.6 1271.38 1742.19 1312.04Z"
+                    stroke="white"
+                    strokeWidth="228"
+                    strokeLinejoin="round"
+                />
+            </g>
+            <defs>
+                <clipPath id="clip0_4679_45">
+                    <rect width="2500" height="2500" fill="lantern" />
+                </clipPath>
+            </defs>
+        </motion.svg>
+    );
+}
+
+export function Logo2(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 22 22"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <path
+                d="M10.6509 0.0748291C13.5028 0.0748291 13.8626 0.0873405 14.9839 0.138306C16.108 0.188683 16.8794 0.368677 17.5562 0.63147C18.2546 0.902927 18.8496 1.26786 19.4409 1.85901C20.0322 2.45113 20.3971 3.04556 20.6694 3.74475V3.74573C20.9322 4.42163 21.1104 5.19329 21.1616 6.31799C21.2126 7.43904 21.2251 7.79845 21.2251 10.65C21.2251 13.5016 21.2126 13.8602 21.1616 14.9821C21.1113 16.1068 20.9322 16.8785 20.6694 17.5543V17.5553C20.3971 18.2544 20.0323 18.8497 19.4409 19.441C18.8488 20.0322 18.2544 20.3963 17.5552 20.6686C16.8792 20.9314 16.1078 21.1105 14.9829 21.1617C13.8616 21.2136 13.5027 21.2252 10.6499 21.2252C7.79837 21.2252 7.43989 21.2127 6.31787 21.1617C5.19299 21.1105 4.4224 20.9314 3.74561 20.6686C3.04555 20.3963 2.45114 20.0322 1.85986 19.441C1.26755 18.8496 0.902861 18.2537 0.631348 17.5543C0.368578 16.8784 0.189387 16.1068 0.138184 14.9821C0.0863785 13.861 0.074707 13.5015 0.074707 10.65C0.074707 7.79853 0.0863785 7.439 0.138184 6.31799C0.189387 5.19326 0.368579 4.42164 0.631348 3.74573C0.902891 3.04541 1.26847 2.45037 1.85986 1.85901C2.45194 1.26792 3.04629 0.902938 3.74561 0.63147C4.42157 0.368683 5.19302 0.189511 6.31787 0.138306C7.43993 0.0864948 7.79848 0.0748299 10.6509 0.0748291ZM10.6499 2.11682C7.84772 2.11682 7.51633 2.12658 6.41162 2.17737C5.65031 2.21206 5.151 2.31528 4.79639 2.42444L4.48486 2.53381C4.0035 2.72004 3.66307 2.94254 3.30322 3.30237C2.98841 3.61791 2.77961 3.91811 2.60693 4.31018L2.53467 4.48401C2.39419 4.84725 2.22452 5.39466 2.17822 6.40979C2.12826 7.51576 2.1167 7.84641 2.1167 10.65C2.1167 13.4537 2.12741 13.7852 2.17822 14.8903C2.22452 15.9055 2.39345 16.4539 2.53467 16.816L2.60596 16.9899C2.77822 17.382 2.98832 17.6818 3.30322 17.9967C3.66386 18.3565 4.00428 18.5782 4.48486 18.7653C4.84709 18.9065 5.39608 19.0754 6.41162 19.1217C7.51633 19.1725 7.84772 19.1832 10.6499 19.1832C13.4535 19.1832 13.7852 19.1725 14.8901 19.1217C15.9057 19.0754 16.4547 18.9065 16.8169 18.7653C17.2974 18.5782 17.6389 18.3564 17.9985 17.9967C18.3582 17.637 18.58 17.2966 18.7671 16.816L18.8755 16.5045C18.9845 16.1499 19.0888 15.6513 19.1235 14.8903C19.1743 13.7844 19.1841 13.4528 19.1841 10.65C19.1841 7.84636 19.1743 7.5157 19.1235 6.40979C19.0772 5.39454 18.9083 4.84618 18.7671 4.48401C18.6033 4.06338 18.4135 3.74909 18.1274 3.43616L17.9985 3.30237C17.6379 2.94254 17.2973 2.72002 16.8169 2.53381C16.4536 2.39332 15.9056 2.22364 14.8901 2.17737C13.7843 2.12741 13.4534 2.11682 10.6499 2.11682Z"
+                fill="currentColor"
+            />
+            <path
+                d="M15.0874 11.1576C14.8854 11.9634 13.9309 12.5328 12.0218 13.6717C10.1762 14.7725 9.25351 15.323 8.50978 15.1018C8.20236 15.0102 7.92224 14.8365 7.69633 14.5971C7.1499 14.0183 7.1499 12.8955 7.1499 10.65C7.1499 8.40451 7.1499 7.28168 7.69633 6.70281C7.92224 6.46349 8.20236 6.28975 8.50978 6.19828C9.25351 5.97702 10.1762 6.52747 12.0218 7.62837C13.9309 8.76721 14.8854 9.33665 15.0874 10.1424C15.1707 10.475 15.1707 10.825 15.0874 11.1576Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+            />
+        </motion.svg>
+    );
+}
+
+export function Logo3(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 23 25"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <path
+                d="M11.501 1.9248C14.3529 1.9248 14.7127 1.93732 15.834 1.98828C16.9581 2.03866 17.7295 2.21865 18.4062 2.48145C19.1047 2.7529 19.6997 3.11783 20.291 3.70898C20.8823 4.3011 21.2472 4.89554 21.5195 5.59473V5.5957C21.7823 6.2716 21.9605 7.04326 22.0117 8.16797C22.0627 9.28901 22.0752 9.64842 22.0752 12.5C22.0752 15.3516 22.0627 15.7101 22.0117 16.832C21.9614 17.9568 21.7823 18.7284 21.5195 19.4043V19.4053C21.2472 20.1044 20.8824 20.6997 20.291 21.291C19.6989 21.8822 19.1045 22.2463 18.4053 22.5186C17.7293 22.7814 16.9579 22.9605 15.833 23.0117C14.7117 23.0635 14.3528 23.0752 11.5 23.0752C8.64846 23.0752 8.28999 23.0627 7.16797 23.0117C6.04309 22.9605 5.27249 22.7813 4.5957 22.5186C3.89565 22.2463 3.30124 21.8821 2.70996 21.291C2.11764 20.6996 1.75296 20.1037 1.48145 19.4043C1.21868 18.7284 1.03948 17.9568 0.988281 16.832C0.936476 15.711 0.924805 15.3515 0.924805 12.5C0.924805 9.64851 0.936476 9.28897 0.988281 8.16797C1.03948 7.04324 1.21868 6.27161 1.48145 5.5957C1.75299 4.89539 2.11857 4.30035 2.70996 3.70898C3.30204 3.1179 3.89639 2.75291 4.5957 2.48145C5.27167 2.21866 6.04312 2.03949 7.16797 1.98828C8.29002 1.93647 8.64858 1.92481 11.501 1.9248ZM11.5 3.9668C8.69782 3.9668 8.36642 3.97656 7.26172 4.02734C6.50041 4.06203 6.0011 4.16525 5.64648 4.27441L5.33496 4.38379C4.85359 4.57001 4.51317 4.79251 4.15332 5.15234C3.8385 5.46789 3.62971 5.76808 3.45703 6.16016L3.38477 6.33398C3.24429 6.69723 3.07462 7.24464 3.02832 8.25977C2.97835 9.36573 2.9668 9.69639 2.9668 12.5C2.9668 15.3037 2.97751 15.6352 3.02832 16.7402C3.07462 17.7555 3.24355 18.3038 3.38477 18.666L3.45605 18.8398C3.62832 19.232 3.83842 19.5318 4.15332 19.8467C4.51396 20.2065 4.85438 20.4281 5.33496 20.6152C5.69719 20.7565 6.24618 20.9254 7.26172 20.9717C8.36643 21.0225 8.69781 21.0332 11.5 21.0332C14.3036 21.0332 14.6353 21.0225 15.7402 20.9717C16.7558 20.9254 17.3048 20.7565 17.667 20.6152C18.1475 20.4281 18.489 20.2063 18.8486 19.8467C19.2083 19.487 19.4301 19.1466 19.6172 18.666L19.7256 18.3545C19.8346 17.9999 19.9389 17.5013 19.9736 16.7402C20.0244 15.6343 20.0342 15.3028 20.0342 12.5C20.0342 9.69633 20.0244 9.36567 19.9736 8.25977C19.9273 7.24451 19.7584 6.69615 19.6172 6.33398C19.4534 5.91336 19.2635 5.59907 18.9775 5.28613L18.8486 5.15234C18.488 4.79252 18.1474 4.56999 17.667 4.38379C17.3037 4.2433 16.7557 4.07361 15.7402 4.02734C14.6344 3.97739 14.3035 3.9668 11.5 3.9668Z"
+                fill="currentColor"
+            />
+            <path
+                d="M15.9375 13.0076C15.7355 13.8133 14.781 14.3828 12.8719 15.5217C11.0263 16.6225 10.1036 17.173 9.35987 16.9517C9.05246 16.8602 8.77234 16.6865 8.54643 16.4471C8 15.8683 8 14.7455 8 12.5C8 10.2545 8 9.13165 8.54643 8.55279C8.77234 8.31347 9.05246 8.13973 9.35987 8.04825C10.1036 7.82699 11.0263 8.37744 12.8719 9.47834C14.781 10.6172 15.7355 11.1866 15.9375 11.9924C16.0208 12.325 16.0208 12.675 15.9375 13.0076Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+            />
+        </motion.svg>
+    );
+}
+
+export function Logo4(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            width="24"
+            height="24"
+            viewBox="0 0 23 25"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            {/* Solid red background fill */}
+            <rect x="0.924805" y="1.9248" width="21.1504" height="21.1504" rx="5.5" fill="#358efcff" />
+            {/* Ring outline in red */}
+            <path
+                d="M11.501 1.9248C14.3529 1.9248 14.7127 1.93732 15.834 1.98828C16.9581 2.03866 17.7295 2.21865 18.4062 2.48145C19.1047 2.7529 19.6997 3.11783 20.291 3.70898C20.8823 4.3011 21.2472 4.89554 21.5195 5.59473V5.5957C21.7823 6.2716 21.9605 7.04326 22.0117 8.16797C22.0627 9.28901 22.0752 9.64842 22.0752 12.5C22.0752 15.3516 22.0627 15.7101 22.0117 16.832C21.9614 17.9568 21.7823 18.7284 21.5195 19.4043V19.4053C21.2472 20.1044 20.8824 20.6997 20.291 21.291C19.6989 21.8822 19.1045 22.2463 18.4053 22.5186C17.7293 22.7814 16.9579 22.9605 15.833 23.0117C14.7117 23.0635 14.3528 23.0752 11.5 23.0752C8.64846 23.0752 8.28999 23.0627 7.16797 23.0117C6.04309 22.9605 5.27249 22.7813 4.5957 22.5186C3.89565 22.2463 3.30124 21.8821 2.70996 21.291C2.11764 20.6996 1.75296 20.1037 1.48145 19.4043C1.21868 18.7284 1.03948 17.9568 0.988281 16.832C0.936476 15.711 0.924805 15.3515 0.924805 12.5C0.924805 9.64851 0.936476 9.28897 0.988281 8.16797C1.03948 7.04324 1.21868 6.27161 1.48145 5.5957C1.75299 4.89539 2.11857 4.30035 2.70996 3.70898C3.30204 3.1179 3.89639 2.75291 4.5957 2.48145C5.27167 2.21866 6.04312 2.03949 7.16797 1.98828C8.29002 1.93647 8.64858 1.92481 11.501 1.9248ZM11.5 3.9668C8.69782 3.9668 8.36642 3.97656 7.26172 4.02734C6.50041 4.06203 6.0011 4.16525 5.64648 4.27441L5.33496 4.38379C4.85359 4.57001 4.51317 4.79251 4.15332 5.15234C3.8385 5.46789 3.62971 5.76808 3.45703 6.16016L3.38477 6.33398C3.24429 6.69723 3.07462 7.24464 3.02832 8.25977C2.97835 9.36573 2.9668 9.69639 2.9668 12.5C2.9668 15.3037 2.97751 15.6352 3.02832 16.7402C3.07462 17.7555 3.24355 18.3038 3.38477 18.666L3.45605 18.8398C3.62832 19.232 3.83842 19.5318 4.15332 19.8467C4.51396 20.2065 4.85438 20.4281 5.33496 20.6152C5.69719 20.7565 6.24618 20.9254 7.26172 20.9717C8.36643 21.0225 8.69781 21.0332 11.5 21.0332C14.3036 21.0332 14.6353 21.0225 15.7402 20.9717C16.7558 20.9254 17.3048 20.7565 17.667 20.6152C18.1475 20.4281 18.489 20.2063 18.8486 19.8467C19.2083 19.487 19.4301 19.1466 19.6172 18.666L19.7256 18.3545C19.8346 17.9999 19.9389 17.5013 19.9736 16.7402C20.0244 15.6343 20.0342 15.3028 20.0342 12.5C20.0342 9.69633 20.0244 9.36567 19.9736 8.25977C19.9273 7.24451 19.7584 6.69615 19.6172 6.33398C19.4534 5.91336 19.2635 5.59907 18.9775 5.28613L18.8486 5.15234C18.488 4.79252 18.1474 4.56999 17.667 4.38379C17.3037 4.2433 16.7557 4.07361 15.7402 4.02734C14.6344 3.97739 14.3035 3.9668 11.5 3.9668Z"
+                fill="#358efcff"
+            />
+            {/* White filled triangle */}
+            <path
+                d="M15.9375 13.0076C15.7355 13.8133 14.781 14.3828 12.8719 15.5217C11.0263 16.6225 10.1036 17.173 9.35987 16.9517C9.05246 16.8602 8.77234 16.6865 8.54643 16.4471C8 15.8683 8 14.7455 8 12.5C8 10.2545 8 9.13165 8.54643 8.55279C8.77234 8.31347 9.05246 8.13973 9.35987 8.04825C10.1036 7.82699 11.0263 8.37744 12.8719 9.47834C14.781 10.6172 15.7355 11.1866 15.9375 11.9924C16.0208 12.325 16.0208 12.675 15.9375 13.0076Z"
+                fill="#fffdc7ff"
+                stroke="#fffdc7ff"
+                strokeWidth="2"
+                strokeLinejoin="round"
+            />
+        </motion.svg>
+    );
+}
+
+export function CopyIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M16.9637 8.98209C16.9613 6.03194 16.9167 4.50384 16.0578 3.45753C15.892 3.25546 15.7067 3.07019 15.5047 2.90436C14.4008 1.99854 12.7609 1.99854 9.48087 1.99854C6.20089 1.99854 4.5609 1.99854 3.45708 2.90436C3.255 3.07018 3.06971 3.25546 2.90387 3.45753C1.99799 4.56128 1.99799 6.20116 1.99799 9.48091C1.99799 12.7607 1.99799 14.4005 2.90387 15.5043C3.0697 15.7063 3.255 15.8916 3.45708 16.0574C4.50346 16.9162 6.03167 16.9608 8.98201 16.9632" />
+            <path d="M14.0283 9.02455L16.994 8.98193M14.0143 22.0013L16.9799 21.9586M21.9716 14.0221L21.9436 16.9818M9.01033 14.0357L8.98236 16.9953M11.4873 9.02455C10.6545 9.17371 9.31781 9.32713 9.01033 11.0488M19.4946 21.9586C20.3296 21.8223 21.6685 21.6894 22.0025 19.9726M19.4946 9.02455C20.3274 9.17371 21.6641 9.32713 21.9716 11.0488M11.5 21.9573C10.6672 21.8086 9.33039 21.6559 9.02197 19.9344" />
+        </motion.svg>
+    );
+}
+
+export function LinkSquareIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M11.0991 3.00012C7.45013 3.00669 5.53932 3.09629 4.31817 4.31764C3.00034 5.63568 3.00034 7.75704 3.00034 11.9997C3.00034 16.2424 3.00034 18.3638 4.31817 19.6818C5.63599 20.9999 7.75701 20.9999 11.9991 20.9999C16.241 20.9999 18.3621 20.9999 19.6799 19.6818C20.901 18.4605 20.9906 16.5493 20.9972 12.8998" />
+            <path d="M20.556 3.49612L11.0487 13.0586M20.556 3.49612C20.062 3.00151 16.7343 3.04761 16.0308 3.05762M20.556 3.49612C21.05 3.99074 21.0039 7.32273 20.9939 8.02714" />
+        </motion.svg>
+    );
+}
+
+export function TelegramIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+        </motion.svg>
+    );
+}
+
+export function DiscordIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.101 18.08.114 18.101.13 18.116a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+        </motion.svg>
+    );
+}
+
+export function RedditIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" />
+        </motion.svg>
+    );
+}
+
+export function RestingDotsIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+            <circle cx="5" cy="12" r="1" />
+        </motion.svg>
+    );
+}
+
+export function Send2Icon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M11.922 4.79004C16.6963 3.16245 19.0834 2.34866 20.3674 3.63261C21.6513 4.91656 20.8375 7.30371 19.21 12.078L18.1016 15.3292C16.8517 18.9958 16.2267 20.8291 15.1964 20.9808C14.9195 21.0216 14.6328 20.9971 14.3587 20.9091C13.3395 20.5819 12.8007 18.6489 11.7231 14.783C11.4841 13.9255 11.3646 13.4967 11.0924 13.1692C11.0134 13.0742 10.9258 12.9866 10.8308 12.9076C10.5033 12.6354 10.0745 12.5159 9.21705 12.2769C5.35111 11.1993 3.41814 10.6605 3.0909 9.64127C3.00292 9.36724 2.97837 9.08053 3.01916 8.80355C3.17088 7.77332 5.00419 7.14834 8.6708 5.89838L11.922 4.79004Z" />
+        </motion.svg>
+    )
+}
+
+export function Pin2Icon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M3 21L8 16" />
+            <path d="M13.2585 18.8714C9.51516 18.0215 5.97844 14.4848 5.12853 10.7415C4.99399 10.1489 4.92672 9.85266 5.12161 9.37197C5.3165 8.89129 5.55457 8.74255 6.03071 8.44509C7.10705 7.77265 8.27254 7.55888 9.48209 7.66586C11.1793 7.81598 12.0279 7.89104 12.4512 7.67048C12.8746 7.44991 13.1622 6.93417 13.7376 5.90269L14.4664 4.59604C14.9465 3.73528 15.1866 3.3049 15.7513 3.10202C16.316 2.89913 16.6558 3.02199 17.3355 3.26771C18.9249 3.84236 20.1576 5.07505 20.7323 6.66449C20.978 7.34417 21.1009 7.68401 20.898 8.2487C20.6951 8.8134 20.2647 9.05346 19.4039 9.53358L18.0672 10.2792C17.0376 10.8534 16.5229 11.1406 16.3024 11.568C16.0819 11.9955 16.162 12.8256 16.3221 14.4859C16.4399 15.7068 16.2369 16.88 15.5555 17.9697C15.2577 18.4458 15.1088 18.6839 14.6283 18.8786C14.1477 19.0733 13.8513 19.006 13.2585 18.8714Z" />
+        </motion.svg>
+    )
+}
+
+export function UnpinIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M7.5 8C6.95863 8.1281 6.49932 8.14239 5.99268 8.45891C5.07234 9.03388 4.85108 9.71674 5.08821 10.7612C5.94028 14.5139 9.48599 18.0596 13.2388 18.9117C14.2834 19.1489 14.9661 18.928 15.5416 18.0077C15.8411 17.5288 15.8716 17.0081 16 16.5" />
+            <path d="M12 7.79915C12.1776 7.77794 12.3182 7.74034 12.4295 7.68235C13.3997 7.17686 13.9291 5.53361 14.4498 4.60009C14.9311 3.73715 15.1718 3.30567 15.7379 3.10227C16.3041 2.89888 16.6448 3.02205 17.3262 3.26839C18.9197 3.8445 20.1555 5.08032 20.7316 6.6738C20.9779 7.35521 21.1011 7.69591 20.8977 8.26204C20.6943 8.82817 20.2628 9.06884 19.3999 9.55018C18.4608 10.074 16.7954 10.6108 16.2905 11.5898C16.2345 11.6983 16.1978 11.8327 16.1769 12" />
+            <path d="M3 21L8 16" />
+            <path d="M3 3L21 21" />
+        </motion.svg>
+    )
+}
+
+export function ToggleIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M19 12C19 13.6569 17.6569 15 16 15C14.3431 15 13 13.6569 13 12C13 10.3431 14.3431 9 16 9C17.6569 9 19 10.3431 19 12Z" />
+            <path d="M16 6H8C4.68629 6 2 8.68629 2 12C2 15.3137 4.68629 18 8 18H16C19.3137 18 22 15.3137 22 12C22 8.68629 19.3137 6 16 6Z" />
+        </motion.svg>
+    )
+}
+
+export function ViewOffIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M19.439 15.439C20.3636 14.5212 21.0775 13.6091 21.544 12.955C21.848 12.5287 22 12.3155 22 12C22 11.6845 21.848 11.4713 21.544 11.045C20.1779 9.12944 16.6892 5 12 5C11.0922 5 10.2294 5.15476 9.41827 5.41827M6.74742 6.74742C4.73118 8.1072 3.24215 9.94266 2.45604 11.045C2.15201 11.4713 2 11.6845 2 12C2 12.3155 2.15201 12.5287 2.45604 12.955C3.8221 14.8706 7.31078 19 12 19C13.9908 19 15.7651 18.2557 17.2526 17.2526" />
+            <path d="M9.85786 10C9.32783 10.53 9 11.2623 9 12.0711C9 13.6887 10.3113 15 11.9289 15C12.7377 15 13.47 14.6722 14 14.1421" />
+            <path d="M3 3L21 21" />
+        </motion.svg>
+    )
+}
+
+export function RefreshIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M20.4879 15C19.2524 18.4956 15.9187 21 12 21C7.02943 21 3 16.9706 3 12C3 7.02943 7.02943 3 12 3C15.7292 3 18.9286 5.26806 20.2941 8.5" />
+            <path d="M15 9H18C19.4142 9 20.1213 9 20.5607 8.56066C21 8.12132 21 7.41421 21 6V3" />
+        </motion.svg>
+    )
+}
+
+export function FlagIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M4 7L4 21" />
+            <path d="M11.7576 3.90865C8.45236 2.22497 5.85125 3.21144 4.55426 4.2192C4.32048 4.40085 4.20358 4.49167 4.10179 4.69967C4 4.90767 4 5.10138 4 5.4888V14.7319C4.9697 13.6342 7.87879 11.9328 11.7576 13.9086C15.224 15.6744 18.1741 14.9424 19.5697 14.1795C19.7633 14.0737 19.8601 14.0207 19.9301 13.9028C20 13.7849 20 13.6569 20 13.4009V5.87389C20 5.04538 20 4.63113 19.8027 4.48106C19.6053 4.33099 19.1436 4.459 18.2202 4.71504C16.64 5.15319 14.3423 5.22532 11.7576 3.90865Z" />
+        </motion.svg>
+    );
+}
+
+export function LockIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            color="currentColor"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M4.26781 18.8447C4.49269 20.515 5.87613 21.8235 7.55966 21.9009C8.97627 21.966 10.4153 22 12 22C13.5847 22 15.0237 21.966 16.4403 21.9009C18.1239 21.8235 19.5073 20.515 19.7322 18.8447C19.879 17.7547 20 16.6376 20 15.5C20 14.3624 19.879 13.2453 19.7322 12.1553C19.5073 10.485 18.1239 9.17649 16.4403 9.09909C15.0237 9.03397 13.5847 9 12 9C10.4153 9 8.97627 9.03397 7.55966 9.09909C5.87613 9.17649 4.49269 10.485 4.26781 12.1553C4.12104 13.2453 4 14.3624 4 15.5C4 16.6376 4.12104 17.7547 4.26781 18.8447Z" />
+            <path d="M7.5 9V6.5C7.5 4.01472 9.51472 2 12 2C14.4853 2 16.5 4.01472 16.5 6.5V9" />
+            <path d="M12.125 15.5H12M12.25 15.5C12.25 15.6381 12.1381 15.75 12 15.75C11.8619 15.75 11.75 15.6381 11.75 15.5C11.75 15.3619 11.8619 15.25 12 15.25C12.1381 15.25 12.25 15.3619 12.25 15.5Z" />
+        </motion.svg>
+    );
+}
+
+export function BarsIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z" />
+        </motion.svg>
+    );
+}
+
+export function GeminiIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 28 28"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M14 28C14 26.0633 13.6267 24.2433 12.88 22.54C12.1567 20.8367 11.165 19.355 9.905 18.095C8.645 16.835 7.16333 15.8433 5.46 15.12C3.75667 14.3733 1.93667 14 0 14C1.93667 14 3.75667 13.6383 5.46 12.915C7.16333 12.1683 8.645 11.165 9.905 9.905C11.165 8.645 12.1567 7.16333 12.88 5.46C13.6267 3.75667 14 1.93667 14 0C14 1.93667 14.3617 3.75667 15.085 5.46C15.8317 7.16333 16.835 8.645 18.095 9.905C19.355 11.165 20.8367 12.1683 22.54 12.915C24.2433 13.6383 26.0633 14 28 14C26.0633 14 24.2433 14.3733 22.54 15.12C20.8367 15.8433 19.355 16.835 18.095 18.095C16.835 19.355 15.8317 20.8367 15.085 22.54C14.3617 24.2433 14 26.0633 14 28Z" />
+        </motion.svg>
+    );
+}
+export function PowerIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M18.7083 6C20.1334 7.59227 21 9.69494 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 9.69494 3.86656 7.59227 5.29168 6" />
+            <path d="M12 3V12" />
+        </motion.svg>
+        );
+}
+
+export function SunIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M17 12C17 14.7614 14.7614 17 12 17C9.23858 17 7 14.7614 7 12C7 9.23858 9.23858 7 12 7C14.7614 7 17 9.23858 17 12Z" />
+            <path d="M12 2C11.6227 2.33333 11.0945 3.2 12 4M12 20C12.3773 20.3333 12.9055 21.2 12 22M19.5 4.50271C18.9685 4.46982 17.9253 4.72293 18.0042 5.99847M5.49576 17.5C5.52865 18.0315 5.27555 19.0747 4 18.9958M5.00271 4.5C4.96979 5.03202 5.22315 6.0763 6.5 5.99729M18 17.5026C18.5315 17.4715 19.5747 17.7108 19.4958 18.9168M22 12C21.6667 11.6227 20.8 11.0945 20 12M4 11.5C3.66667 11.8773 2.8 12.4055 2 11.5" />
+        </motion.svg>
+    )
+}
+
+export function MoonIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M21.5 14.0784C20.3003 14.7189 18.9301 15.0821 17.4751 15.0821C12.7491 15.0821 8.91792 11.2509 8.91792 6.52485C8.91792 5.06986 9.28105 3.69968 9.92163 2.5C5.66765 3.49698 2.5 7.31513 2.5 11.8731C2.5 17.1899 6.8101 21.5 12.1269 21.5C16.6849 21.5 20.503 18.3324 21.5 14.0784Z" />
+        </motion.svg>
+    )
+}
+export function TrashIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            {...props}
+        >
+            <path d="M19.5 5.5L18.8803 15.5251C18.7219 18.0864 18.6428 19.3671 18.0008 20.2879C17.6833 20.7431 17.2747 21.1273 16.8007 21.416C15.8421 22 14.559 22 11.9927 22C9.42312 22 8.1383 22 7.17905 21.4149C6.7048 21.1257 6.296 20.7408 5.97868 20.2848C5.33688 19.3626 5.25945 18.0801 5.10461 15.5152L4.5 5.5" />
+            <path d="M3 5.5H21M16.0557 5.5L15.3731 4.09173C14.9196 3.15626 14.6928 2.68852 14.3017 2.39681C14.215 2.3321 14.1231 2.27454 14.027 2.2247C13.5939 2 13.0741 2 12.0345 2C10.9688 2 10.436 2 9.99568 2.23412C9.8981 2.28601 9.80498 2.3459 9.71729 2.41317C9.32164 2.7167 9.10063 3.20155 8.65861 4.17126L8.05292 5.5" />
+            <path d="M9.5 16.5L9.5 10.5" />
+            <path d="M14.5 16.5L14.5 10.5" />
+        </motion.svg>
+    )
+}
+
+export function User3Icon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" />
+            <path d="M14 14H10C7.23858 14 5 16.2386 5 19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19C19 16.2386 16.7614 14 14 14Z" />
+        </motion.svg>
+    )
+}
+
+export function HistoryIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C7.52232 2 3.77426 4.94289 2.5 9H5" />
+            <path d="M12 8V12L14 14" />
+            <path d="M2 12C2 12.3373 2.0152 12.6709 2.04494 13M9 22C8.6584 21.8876 8.32471 21.7564 8 21.6078M3.20939 17C3.01655 16.6284 2.84453 16.2433 2.69497 15.8462M4.83122 19.3065C5.1369 19.6358 5.46306 19.9441 5.80755 20.2292" />
+        </motion.svg>
+    )
+}
+
+export function DatabaseIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M2.5 12C2.5 7.52166 2.5 5.28249 3.89124 3.89124C5.28249 2.5 7.52166 2.5 12 2.5C16.4783 2.5 18.7175 2.5 20.1088 3.89124C21.5 5.28249 21.5 7.52166 21.5 12C21.5 16.4783 21.5 18.7175 20.1088 20.1088C18.7175 21.5 16.4783 21.5 12 21.5C7.52166 21.5 5.28249 21.5 3.89124 20.1088C2.5 18.7175 2.5 16.4783 2.5 12Z" />
+            <path d="M2.5 12H21.5" />
+            <path d="M13 7L17 7" />
+            <circle cx="8.25" cy="7" r="1.25" />
+            <circle cx="8.25" cy="17" r="1.25" />
+            <path d="M13 17L17 17" />
+        </motion.svg>
+    )
+}
+
+export function Link2Icon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            {...props}
+        >
+            <path d="M9.5 14.5L14.5 9.49995" />
+            <path d="M16.8463 14.6095L19.4558 12C21.5147 9.94108 21.5147 6.60298 19.4558 4.54411C17.397 2.48524 14.0589 2.48524 12 4.54411L9.39045 7.15366M14.6095 16.8463L12 19.4558C9.94113 21.5147 6.60303 21.5147 4.54416 19.4558C2.48528 17.3969 2.48528 14.0588 4.54416 12L7.1537 9.39041" />
+        </motion.svg>
+    )
+}
+
+export function GlobeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 12C8 18 12 22 12 22C12 22 16 18 16 12C16 6 12 2 12 2C12 2 8 6 8 12Z" />
+            <path d="M21 15H3" />
+            <path d="M21 9H3" />
+        </motion.svg>
+    )
+}
+
+export function RetweetIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z" />
+        </motion.svg>
+    )
+}
+
+export function BubbleIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <g transform="scale(-1, 1) translate(-24, 0)">
+                <path d="M2 10.5C2 5.5 6 3 12 3C18 3 22 5.5 22 10.5C22 15.5 18 18 12 18V21C12 21 2 18 2 10.5Z" />
+            </g>
+        </motion.svg>
+    )
+}
+
+export function HeartIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M10.4107 19.9677C7.58942 17.858 2 13.0348 2 8.69444C2 5.82563 4.10526 3.5 7 3.5C8.5 3.5 10 4 12 6C14 4 15.5 3.5 17 3.5C19.8947 3.5 22 5.82563 22 8.69444C22 13.0348 16.4106 17.858 13.5893 19.9677C12.6399 20.6776 11.3601 20.6776 10.4107 19.9677Z" />
+        </motion.svg>
+    )
+}
+
+export function HeartFilledIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="none"
+            {...props}
+        >
+            <path d="M10.4107 19.9677C7.58942 17.858 2 13.0348 2 8.69444C2 5.82563 4.10526 3.5 7 3.5C8.5 3.5 10 4 12 6C14 4 15.5 3.5 17 3.5C19.8947 3.5 22 5.82563 22 8.69444C22 13.0348 16.4106 17.858 13.5893 19.9677C12.6399 20.6776 11.3601 20.6776 10.4107 19.9677Z" />
+        </motion.svg>
+    )
+}
+
+export function LinkIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M11.0991 3.00012C7.45013 3.00669 5.53932 3.09629 4.31817 4.31764C3.00034 5.63568 3.00034 7.75704 3.00034 11.9997C3.00034 16.2424 3.00034 18.3638 4.31817 19.6818C5.63599 20.9999 7.75701 20.9999 11.9991 20.9999C16.241 20.9999 18.3621 20.9999 19.6799 19.6818C20.901 18.4605 20.9906 16.5493 20.9972 12.8998" />
+            <path d="M20.556 3.49612L11.0487 13.0586M20.556 3.49612C20.062 3.00151 16.7343 3.04761 16.0308 3.05762M20.556 3.49612C21.05 3.99074 21.0039 7.32273 20.9939 8.02714" />
+        </motion.svg>
+    );
+}
+
+export function BookmarkIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M4 17.9808V9.70753C4 6.07416 4 4.25748 5.17157 3.12874C6.34315 2 8.22876 2 12 2C15.7712 2 17.6569 2 18.8284 3.12874C20 4.25748 20 6.07416 20 9.70753V17.9808C20 20.2867 20 21.4396 19.2272 21.8523C17.7305 22.6514 14.9232 19.9852 13.59 19.1824C12.8168 18.7168 12.4302 18.484 12 18.484C11.5698 18.484 11.1832 18.7168 10.41 19.1824C9.0768 19.9852 6.26947 22.6514 4.77285 21.8523C4 21.4396 4 20.2867 4 17.9808Z" />
+        </motion.svg>
+    );
+}
+
+export function BookmarkFilledIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            stroke="none"
+            {...props}
+        >
+            <path d="M4 17.9808V9.70753C4 6.07416 4 4.25748 5.17157 3.12874C6.34315 2 8.22876 2 12 2C15.7712 2 17.6569 2 18.8284 3.12874C20 4.25748 20 6.07416 20 9.70753V17.9808C20 20.2867 20 21.4396 19.2272 21.8523C17.7305 22.6514 14.9232 19.9852 13.59 19.1824C12.8168 18.7168 12.4302 18.484 12 18.484C11.5698 18.484 11.1832 18.7168 10.41 19.1824C9.0768 19.9852 6.26947 22.6514 4.77285 21.8523C4 21.4396 4 20.2867 4 17.9808Z" />
+        </motion.svg>
+    );
+}
+
+export function RefreshIcon2(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M3.05493 13C3.01863 12.6717 3 12.338 3 12C3 7.02944 7.02944 3 12 3C14.8273 3 17.35 4.30367 19 6.34267M20.9451 11C20.9814 11.3283 21 11.662 21 12C21 16.9706 16.9706 21 12 21C9.17273 21 6.64996 19.6963 5 17.6573" />
+            <path d="M16 7H17C18.4142 7 19.1213 7 19.5607 6.56066C20 6.12132 20 5.41421 20 4V3" />
+            <path d="M8 17H7C5.58579 17 4.87868 17 4.43934 17.4393C4 17.8787 4 18.5858 4 20V21" />
+        </motion.svg>
+    );
+}
+
+export function FilterIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M3 7H6" />
+            <path d="M3 17H9" />
+            <path d="M18 17L21 17" />
+            <path d="M15 7L21 7" />
+            <path d="M6 7C6 6.06812 6 5.60218 6.15224 5.23463C6.35523 4.74458 6.74458 4.35523 7.23463 4.15224C7.60218 4 8.06812 4 9 4C9.93188 4 10.3978 4 10.7654 4.15224C11.2554 4.35523 11.6448 4.74458 11.8478 5.23463C12 5.60218 12 6.06812 12 7C12 7.93188 12 8.39782 11.8478 8.76537C11.6448 9.25542 11.2554 9.64477 10.7654 9.84776C10.3978 10 9.93188 10 9 10C8.06812 10 7.60218 10 7.23463 9.84776C6.74458 9.64477 6.35523 9.25542 6.15224 8.76537C6 8.39782 6 7.93188 6 7Z" />
+            <path d="M12 17C12 16.0681 12 15.6022 12.1522 15.2346C12.3552 14.7446 12.7446 14.3552 13.2346 14.1522C13.6022 14 14.0681 14 15 14C15.9319 14 16.3978 14 16.7654 14.1522C17.2554 14.3552 17.6448 14.7446 17.8478 15.2346C18 15.6022 18 16.0681 18 17C18 17.9319 18 18.3978 17.8478 18.7654C17.6448 19.2554 17.2554 19.6448 16.7654 19.8478C16.3978 20 15.9319 20 15 20C14.0681 20 13.6022 20 13.2346 19.8478C12.7446 19.6448 12.3552 19.2554 12.1522 18.7654C12 18.3978 12 17.9319 12 17Z" />
+        </motion.svg>
+    );
+}
+
+export function VerifiedIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            {...props}
+        >
+            {active ? (
+                <path d="M22.2501 11.9999C22.2305 11.2952 22.0156 10.609 21.6283 10.0188C21.2421 9.42976 20.6988 8.95848 20.0596 8.65957C20.3028 7.99739 20.3541 7.28066 20.2123 6.59012C20.0694 5.89848 19.7356 5.26139 19.2501 4.74976C18.7374 4.2643 18.1014 3.93157 17.4098 3.78757C16.7192 3.64576 16.0025 3.69703 15.3403 3.9403C15.0425 3.29994 14.5723 2.75557 13.9821 2.36939C13.3919 1.98321 12.7058 1.76721 11.9999 1.74976C11.2952 1.7683 10.6112 1.98212 10.0221 2.36939C9.43303 2.75666 8.96503 3.30103 8.66939 3.9403C8.00612 3.69703 7.28721 3.64357 6.59448 3.78757C5.90176 3.92939 5.26357 4.26321 4.75085 4.74976C4.26539 5.26248 3.93376 5.90066 3.79303 6.59121C3.65121 7.28176 3.70576 7.99848 3.95012 8.65957C3.30976 8.95848 2.7643 9.42866 2.37594 10.0178C1.98757 10.6068 1.77048 11.2941 1.74976 11.9999C1.77157 12.7058 1.98757 13.3919 2.37594 13.9821C2.7643 14.5712 3.30976 15.0425 3.95012 15.3403C3.70576 16.0014 3.65121 16.7181 3.79303 17.4087C3.93485 18.1003 4.26539 18.7374 4.74976 19.2501C5.26248 19.7334 5.89957 20.065 6.59012 20.2079C7.28066 20.3519 7.99739 20.2996 8.65957 20.0596C8.95848 20.6988 9.42866 21.2421 10.0188 21.6294C10.6079 22.0156 11.2952 22.2305 11.9999 22.2501C12.7058 22.2327 13.3919 22.0178 13.9821 21.6316C14.5723 21.2454 15.0425 20.6999 15.3403 20.0607C15.9992 20.3214 16.7214 20.3836 17.4163 20.2396C18.1101 20.0956 18.7472 19.7519 19.249 19.2501C19.7508 18.7483 20.0956 18.1112 20.2396 17.4163C20.3836 16.7214 20.3214 15.9992 20.0596 15.3403C20.6988 15.0414 21.2421 14.5712 21.6294 13.981C22.0156 13.3919 22.2305 12.7047 22.2501 11.9999ZM10.5403 16.1999L6.79957 12.4603L8.21012 11.0399L10.4705 13.3003L15.2705 8.07048L16.7399 9.42976L10.5403 16.1999Z" />
+            ) : (
+                <path d="M8.52 3.59c.8-1.1 2.04-1.84 3.48-1.84s2.68.74 3.49 1.84c1.34-.21 2.74.14 3.76 1.16s1.37 2.42 1.16 3.77c1.1.8 1.84 2.04 1.84 3.48s-.74 2.68-1.84 3.48c.21 1.34-.14 2.75-1.16 3.77s-2.42 1.37-3.76 1.16c-.8 1.1-2.05 1.84-3.49 1.84s-2.68-.74-3.48-1.84c-1.34.21-2.75-.14-3.77-1.16-1.01-1.02-1.37-2.42-1.16-3.77-1.09-.8-1.84-2.04-1.84-3.48s.75-2.68 1.84-3.48c-.21-1.35.14-2.75 1.16-3.77s2.43-1.37 3.77-1.16zm3.48.16c-.85 0-1.66.53-2.12 1.43l-.38.77-.82-.27c-.96-.32-1.91-.12-2.51.49-.6.6-.8 1.54-.49 2.51l.27.81-.77.39c-.9.46-1.43 1.27-1.43 2.12s.53 1.66 1.43 2.12l.77.39-.27.81c-.31.97-.11 1.91.49 2.51.6.61 1.55.81 2.51.49l.82-.27.38.77c.46.9 1.27 1.43 2.12 1.43s1.66-.53 2.12-1.43l.39-.77.82.27c.96.32 1.9.12 2.51-.49.6-.6.8-1.55.48-2.51l-.26-.81.76-.39c.91-.46 1.43-1.27 1.43-2.12s-.52-1.66-1.43-2.12l-.77-.39.27-.81c.32-.97.12-1.91-.48-2.51-.61-.61-1.55-.81-2.51-.49l-.82.27-.39-.77c-.46-.9-1.27-1.43-2.12-1.43zm4.74 5.68l-6.2 6.77-3.74-3.74 1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36z" />
+            )}
+        </motion.svg>
+    );
+}
+
+/** Blue verified badge (standard) */
+export function VerifiedBadgeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" width="22" height="22" {...props}>
+            <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
+        </motion.svg>
+    );
+}
+
+/** Gold verified badge (business) */
+export function BusinessBadgeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg xmlns="http://www.w3.org/2000/svg" viewBox="1.014 0.5 19.972 21" width="22" height="22" {...props}>
+            <defs>
+                <linearGradient id="biz-a" gradientUnits="userSpaceOnUse" x1="4" x2="19.5" y1="1.5" y2="22">
+                    <stop offset="0" stopColor="#f4e72a" />
+                    <stop offset=".539" stopColor="#cd8105" />
+                    <stop offset=".68" stopColor="#cb7b00" />
+                    <stop offset="1" stopColor="#f4e72a" />
+                </linearGradient>
+                <linearGradient id="biz-b" gradientUnits="userSpaceOnUse" x1="5" x2="17.5" y1="2.5" y2="19.5">
+                    <stop offset="0" stopColor="#f9e87f" />
+                    <stop offset=".406" stopColor="#e2b719" />
+                    <stop offset=".989" stopColor="#e2b719" />
+                </linearGradient>
+            </defs>
+            <g clipRule="evenodd" fillRule="evenodd">
+                <path d="M13.596 3.011L11 .5 8.404 3.011l-3.576-.506-.624 3.558-3.19 1.692L2.6 11l-1.586 3.245 3.19 1.692.624 3.558 3.576-.506L11 21.5l2.596-2.511 3.576.506.624-3.558 3.19-1.692L19.4 11l1.586-3.245-3.19-1.692-.624-3.558zM6 11.39l3.74 3.74 6.2-6.77L14.47 7l-4.8 5.23-2.26-2.26z" fill="url(#biz-a)" />
+                <path d="M13.348 3.772L11 1.5 8.651 3.772l-3.235-.458-.565 3.219-2.886 1.531L3.4 11l-1.435 2.936 2.886 1.531.565 3.219 3.235-.458L11 20.5l2.348-2.272 3.236.458.564-3.219 2.887-1.531L18.6 11l1.435-2.936-2.887-1.531-.564-3.219zM6 11.39l3.74 3.74 6.2-6.77L14.47 7l-4.8 5.23-2.26-2.26z" fill="url(#biz-b)" />
+                <path d="M6 11.39l3.74 3.74 6.197-6.767h.003V9.76l-6.2 6.77L6 12.79z" fill="#d18800" />
+            </g>
+        </motion.svg>
+    );
+}
+
+export function VolumeOnIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M14 14.8135V9.18646C14 6.04126 14 4.46866 13.0747 4.0773C12.1494 3.68593 11.0603 4.79793 8.88232 7.02192C7.75439 8.17365 7.11085 8.42869 5.50604 8.42869C4.10257 8.42869 3.40084 8.42869 2.89675 8.77262C1.85035 9.48655 2.00852 10.882 2.00852 12C2.00852 13.118 1.85035 14.5134 2.89675 15.2274C3.40084 15.5713 4.10257 15.5713 5.50604 15.5713C7.11085 15.5713 7.75439 15.8264 8.88232 16.9781C11.0603 19.2021 12.1494 20.3141 13.0747 19.9227C14 19.5313 14 17.9587 14 14.8135Z" />
+            <path d="M17 9C17.6254 9.81968 18 10.8634 18 12C18 13.1366 17.6254 14.1803 17 15" />
+            <path d="M20 7C21.2508 8.36613 22 10.1057 22 12C22 13.8943 21.2508 15.6339 20 17" />
+        </motion.svg>
+    )
+}
+
+export function VolumeOffIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M22 22L2 2" />
+            <path d="M17 10C17.6296 10.7667 18 11.7054 18 12.7195C18 13.593 17.929 13.593 17.7963 14" />
+            <path d="M20 8C21.2508 9.22951 22 10.7952 22 12.5C22 13.9164 21.4829 15.2367 20.5906 16.348" />
+            <path d="M14 14C14 17.1452 14 19.5313 13.074 19.9227C12.1481 20.3141 11.0583 19.2021 8.8787 16.9781C7.7499 15.8264 7.106 15.5713 5.5 15.5713C4.3879 15.5713 3.02749 15.7187 2.33706 14.6643C2 14.1496 2 13.4331 2 12C2 10.5669 2 9.85038 2.33706 9.33566C3.02749 8.28131 4.3879 8.42869 5.5 8.42869C6.60725 8.42869 7.3569 8.43869 7.96 7.96M14 9.5C14 6.3548 14.026 4.46866 13.1 4.0773C12.3292 3.75147 11.5323 4.46765 10 6" />
+        </motion.svg>
+    )
+}
+
+export function MicIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <path d="M17 7V11C17 13.7614 14.7614 16 12 16C9.23858 16 7 13.7614 7 11V7C7 4.23858 9.23858 2 12 2C14.7614 2 17 4.23858 17 7Z" />
+            <path d="M20 11C20 15.4183 16.4183 19 12 19M12 19C7.58172 19 4 15.4183 4 11M12 19V22M12 22H15M12 22H9" />
+        </motion.svg>
+    )
+}
+
+export function CalendarIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M16 2V6M8 2V6" />
+            <path d="M13 4H11C7.22876 4 5.34315 4 4.17157 5.17157C3 6.34315 3 8.22876 3 12V14C3 17.7712 3 19.6569 4.17157 20.8284C5.34315 22 7.22876 22 11 22H13C16.7712 22 18.6569 22 19.8284 20.8284C21 19.6569 21 17.7712 21 14V12C21 8.22876 21 6.34315 19.8284 5.17157C18.6569 4 16.7712 4 13 4Z" />
+            <path d="M3 10H21" />
+        </motion.svg>
+    )
+}
+
+export function ArrowRightIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M18.5 12L4.99997 12" />
+            <path d="M13 18C13 18 19 13.5811 19 12C19 10.4188 13 6 13 6" />
+        </motion.svg>
+    )
+}
+
+export function CircleTimeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M16 10.5C16 10.5 13.054 13.5 12 13.5C10.9459 13.5 8 10.5 8 10.5" />
+        </motion.svg>
+    )
+}
+
+/** Gray-blue verified badge (government) */
+export function GovBadgeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg xmlns="http://www.w3.org/2000/svg" viewBox="1.601 1.600 18.800 18.800" width="22" height="22" {...props}>
+            <path clipRule="evenodd" fillRule="evenodd" d="m12.05 2.056a1.437 1.437 0 0 0 -2.1 0l-1.393 1.49c-.284.303-.685.47-1.1.455l-2.037-.069a1.438 1.438 0 0 0 -1.486 1.486l.069 2.039c.014.415-.152.816-.456 1.1l-1.49 1.392a1.438 1.438 0 0 0 0 2.101l1.49 1.393c.304.284.47.684.456 1.1l-.07 2.038a1.44 1.44 0 0 0 1.487 1.486l2.038-.069c.415-.014.816.152 1.1.455l1.392 1.49a1.438 1.438 0 0 0 2.102 0l1.393-1.49c.283-.303.684-.47 1.099-.455l2.038.069a1.438 1.438 0 0 0 1.486-1.486l-.068-2.039a1.436 1.436 0 0 1 .455-1.099l1.49-1.393a1.438 1.438 0 0 0 0-2.101l-1.49-1.393a1.435 1.435 0 0 1 -.455-1.1l.068-2.038a1.438 1.438 0 0 0 -1.486-1.486l-2.038.07a1.446 1.446 0 0 1 -1.1-.456zm-5.817 9.367 3.429 3.428 5.683-6.206-1.347-1.247-4.4 4.795-2.072-2.072z" fill="#829aab" />
+        </motion.svg>
+    );
+}
+
+export function AlertIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M14.3942 3.00083L14.1481 2.79115C12.9103 1.73628 11.0897 1.73628 9.85189 2.79115L9.60584 3.00083C8.96518 3.54679 8.16862 3.87674 7.32956 3.9437L7.00731 3.96941C5.38613 4.09878 4.09878 5.38613 3.96941 7.00731L3.9437 7.32956C3.87674 8.16862 3.54679 8.96518 3.00083 9.60584L2.79115 9.85189C1.73628 11.0897 1.73628 12.9103 2.79115 14.1481L3.00083 14.3942C3.54679 15.0348 3.87674 15.8314 3.9437 16.6704L3.96941 16.9927C4.09878 18.6139 5.38613 19.9012 7.00731 20.0306L7.32956 20.0563C8.16862 20.1233 8.96518 20.4532 9.60584 20.9992L9.85188 21.2089C11.0897 22.2637 12.9103 22.2637 14.1481 21.2089L14.3942 20.9992C15.0348 20.4532 15.8314 20.1233 16.6704 20.0563L16.9927 20.0306C18.6139 19.9012 19.9012 18.6139 20.0306 16.9927L20.0563 16.6704C20.1233 15.8314 20.4532 15.0348 20.9992 14.3942L21.2089 14.1481C22.2637 12.9103 22.2637 11.0897 21.2089 9.85188L20.9992 9.60584C20.4532 8.96518 20.1233 8.16862 20.0563 7.32956L20.0306 7.00731C19.9012 5.38613 18.6139 4.09878 16.9927 3.96941L16.6704 3.9437C15.8314 3.87674 15.0348 3.54679 14.3942 3.00083Z" />
+            <path d="M12 8V12" />
+            <path d="M12.125 15.75H12M12.25 15.75C12.25 15.8881 12.1381 16 12 16C11.8619 16 11.75 15.8881 11.75 15.75C11.75 15.6119 11.8619 15.5 12 15.5C12.1381 15.5 12.25 15.6119 12.25 15.75Z" />
+        </motion.svg>
+    )
+}
+
+export function WalletIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M3 8.5H15C17.8284 8.5 19.2426 8.5 20.1213 9.37868C21 10.2574 21 11.6716 21 14.5V15.5C21 18.3284 21 19.7426 20.1213 20.6213C19.2426 21.5 17.8284 21.5 15 21.5H9C6.17157 21.5 4.75736 21.5 3.87868 20.6213C3 19.7426 3 18.3284 3 15.5V8.5Z" />
+            <path d="M15 8.49833V4.1103C15 3.22096 14.279 2.5 13.3897 2.5C13.1336 2.5 12.8812 2.56108 12.6534 2.67818L3.7623 7.24927C3.29424 7.48991 3 7.97203 3 8.49833" />
+            <path d="M17.5 15.5C17.7761 15.5 18 15.2761 18 15C18 14.7239 17.7761 14.5 17.5 14.5M17.5 15.5C17.2239 15.5 17 15.2761 17 15C17 14.7239 17.2239 14.5 17.5 14.5M17.5 15.5V14.5" />
+        </motion.svg>
+    );
+}
+
+export function LogoutIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M15.5 8.04045C15.4588 6.87972 15.3216 6.15451 14.8645 5.58671C14.2114 4.77536 13.0944 4.52064 10.8605 4.01121L9.85915 3.78286C6.4649 3.00882 4.76777 2.6218 3.63388 3.51317C2.5 4.40454 2.5 6.1257 2.5 9.56803V14.432C2.5 17.8743 2.5 19.5955 3.63388 20.4868C4.76777 21.3782 6.4649 20.9912 9.85915 20.2171L10.8605 19.9888C13.0944 19.4794 14.2114 19.2246 14.8645 18.4133C15.3216 17.8455 15.4588 17.1203 15.5 15.9595" />
+            <path d="M18.5 9.01172C18.5 9.01172 21.5 11.2212 21.5 12.0117C21.5 12.8023 18.5 15.0117 18.5 15.0117M21 12.0117H8.49998" />
+        </motion.svg>
+    );
+}
+
+
+export function QuoteIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M15.2141 5.98239L16.6158 4.58063C17.39 3.80646 18.6452 3.80646 19.4194 4.58063C20.1935 5.3548 20.1935 6.60998 19.4194 7.38415L18.0176 8.78591M15.2141 5.98239L6.98023 14.2163C5.93493 15.2616 5.41226 15.7842 5.05637 16.4211C4.70047 17.058 4.3424 18.5619 4 20C5.43809 19.6576 6.94199 19.2995 7.57889 18.9436C8.21579 18.5877 8.73844 18.0651 9.78375 17.0198L18.0176 8.78591M15.2141 5.98239L18.0176 8.78591" />
+            <path d="M11 20H17" />
+        </motion.svg>
+    );
+}
+
+export function ThumbsDownIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <g transform="scale(-1, 1) translate(-24, 0)">
+                <path d="M2 11.5C2 12.6046 2.89543 13.5 4 13.5C5.65685 13.5 7 12.1569 7 10.5V6.5C7 4.84315 5.65685 3.5 4 3.5C2.89543 3.5 2 4.39543 2 5.5V11.5Z" />
+                <path d="M15.4787 16.1937L15.2124 15.3337C14.9942 14.6289 14.8851 14.2765 14.969 13.9982C15.0369 13.7731 15.1859 13.579 15.389 13.4513C15.64 13.2935 16.0197 13.2935 16.7791 13.2935H17.1831C19.7532 13.2935 21.0382 13.2935 21.6452 12.5327C21.7145 12.4458 21.7762 12.3533 21.8296 12.2563C22.2965 11.4079 21.7657 10.2649 20.704 7.9789C19.7297 5.88111 19.2425 4.83222 18.338 4.21485C18.2505 4.15508 18.1605 4.0987 18.0683 4.04586C17.116 3.5 15.9362 3.5 13.5764 3.5H13.0646C10.2057 3.5 8.77628 3.5 7.88814 4.36053C7 5.22106 7 6.60607 7 9.37607V10.3497C7 11.8054 7 12.5332 7.25834 13.1994C7.51668 13.8656 8.01135 14.4134 9.00069 15.5089L13.0921 20.0394C13.1947 20.1531 13.246 20.2099 13.2913 20.2493C13.7135 20.6167 14.3652 20.5754 14.7344 20.1577C14.774 20.1129 14.8172 20.0501 14.9036 19.9245C15.0388 19.728 15.1064 19.6297 15.1654 19.5323C15.6928 18.6609 15.8524 17.6256 15.6108 16.6429C15.5838 16.5331 15.5488 16.4199 15.4787 16.1937Z" />
+            </g>
+        </motion.svg>
+    )
+}
+
+export function YTPlayIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 36 36" width="100%" fill="currentColor" {...props}>
+            <path d="M 17 8.6 L 10.89 4.99 C 9.39 4.11 7.5 5.19 7.5 6.93 L 7.5 29.06 C 7.5 30.8 9.39 31.88 10.89 31 L 17 27.4 L 17 8.6 Z M 17 8.6 L 17 27.4 L 33 18 L 17 8.6 Z" />
+        </motion.svg>
+    )
+}
+
+export function YTPauseIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 36 36" width="100%" fill="currentColor" {...props}>
+            <path d="M 12.75 4.5 L 9.75 4.5 C 9.15 4.5 8.58 4.73 8.15 5.15 C 7.73 5.58 7.5 6.15 7.5 6.75 L 7.5 29.25 C 7.5 29.84 7.73 30.41 8.15 30.84 C 8.58 31.26 9.15 31.5 9.75 31.5 L 12.75 31.5 C 13.34 31.5 13.91 31.26 14.34 30.84 C 14.76 30.41 15 29.84 15 29.25 L 15 6.75 C 15 6.15 14.76 5.58 14.34 5.15 C 13.91 4.73 13.34 4.5 12.75 4.5 Z M 26.25 4.5 L 23.25 4.5 C 22.65 4.5 22.08 4.73 21.65 5.15 C 21.23 5.58 21 6.15 21 6.75 V 29.25 C 21 29.84 21.23 30.41 21.65 30.84 C 22.08 31.26 22.65 31.5 23.25 31.5 L 26.25 31.5 C 26.84 31.5 27.41 31.26 27.84 30.84 C 28.26 30.41 28.5 29.84 28.5 29.25 V 6.75 L 28.5 6.75 C 28.5 6.15 28.26 5.58 27.84 5.15 C 27.41 4.73 26.84 4.5 26.25 4.5 Z" />
+        </motion.svg>
+    )
+}
+
+export function YTNextIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M20 20C20.26 20 20.51 19.89 20.70 19.70C20.89 19.51 21 19.26 21 19V5C21 4.73 20.89 4.48 20.70 4.29C20.51 4.10 20.26 4 20 4C19.73 4 19.48 4.10 19.29 4.29C19.10 4.48 19 4.73 19 5V19C19 19.26 19.10 19.51 19.29 19.70C19.48 19.89 19.73 20 20 20ZM5.04 19.77L18 12L5.04 4.22C4.84 4.10 4.60 4.03 4.36 4.03C4.12 4.03 3.89 4.09 3.68 4.21C3.47 4.32 3.30 4.49 3.18 4.70C3.06 4.91 2.99 5.14 3 5.38V18.61C2.99 18.85 3.06 19.08 3.18 19.29C3.30 19.50 3.47 19.67 3.68 19.79C3.89 19.90 4.12 19.96 4.36 19.96C4.60 19.96 4.84 19.89 5.04 19.77Z" />
+        </motion.svg>
+    )
+}
+
+export function YTPreviousIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M4 4C3.73 4 3.48 4.10 3.29 4.29C3.10 4.48 3 4.73 3 5V19C3 19.26 3.10 19.51 3.29 19.70C3.48 19.89 3.73 20 4 20C4.26 20 4.51 19.89 4.70 19.70C4.89 19.51 5 19.26 5 19V5C5 4.73 4.89 4.48 4.70 4.29C4.51 4.10 4.26 4 4 4ZM18.95 4.23L6 12.00L18.95 19.77C19.15 19.89 19.39 19.96 19.63 19.96C19.87 19.97 20.10 19.91 20.31 19.79C20.52 19.67 20.69 19.50 20.81 19.29C20.93 19.09 21.00 18.85 21 18.61V5.38C20.99 5.14 20.93 4.91 20.81 4.70C20.69 4.50 20.52 4.33 20.31 4.21C20.10 4.09 19.87 4.03 19.63 4.03C19.39 4.04 19.15 4.10 18.95 4.23Z" />
+        </motion.svg>
+    )
+}
+
+export function YTVolumeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M 11.60 2.08 L 11.48 2.14 L 3.91 6.68 C 3.02 7.21 2.28 7.97 1.77 8.87 C 1.26 9.77 1.00 10.79 1 11.83 V 12.16 L 1.01 12.56 C 1.07 13.52 1.37 14.46 1.87 15.29 C 2.38 16.12 3.08 16.81 3.91 17.31 L 11.48 21.85 C 11.63 21.94 11.80 21.99 11.98 21.99 C 12.16 22.00 12.33 21.95 12.49 21.87 C 12.64 21.78 12.77 21.65 12.86 21.50 C 12.95 21.35 13 21.17 13 21 V 3 C 12.99 2.83 12.95 2.67 12.87 2.52 C 12.80 2.37 12.68 2.25 12.54 2.16 C 12.41 2.07 12.25 2.01 12.08 2.00 C 11.92 1.98 11.75 2.01 11.60 2.08 Z" />
+            <path d="M 15.53 7.05 C 15.35 7.22 15.25 7.45 15.24 7.70 C 15.23 7.95 15.31 8.19 15.46 8.38 L 15.53 8.46 L 15.70 8.64 C 16.09 9.06 16.39 9.55 16.61 10.08 L 16.70 10.31 C 16.90 10.85 17 11.42 17 12 L 16.99 12.24 C 16.96 12.73 16.87 13.22 16.70 13.68 L 16.61 13.91 C 16.36 14.51 15.99 15.07 15.53 15.53 C 15.35 15.72 15.25 15.97 15.26 16.23 C 15.26 16.49 15.37 16.74 15.55 16.92 C 15.73 17.11 15.98 17.21 16.24 17.22 C 16.50 17.22 16.76 17.12 16.95 16.95 C 17.6 16.29 18.11 15.52 18.46 14.67 L 18.59 14.35 C 18.82 13.71 18.95 13.03 18.99 12.34 L 19 12 C 18.99 11.19 18.86 10.39 18.59 9.64 L 18.46 9.32 C 18.15 8.57 17.72 7.89 17.18 7.3 L 16.95 7.05 L 16.87 6.98 C 16.68 6.82 16.43 6.74 16.19 6.75 C 15.94 6.77 15.71 6.87 15.53 7.05" />
+            <path d="M18.36 4.22C18.18 4.39 18.08 4.62 18.07 4.87C18.05 5.12 18.13 5.36 18.29 5.56L18.36 5.63L18.66 5.95C19.36 6.72 19.91 7.60 20.31 8.55L20.47 8.96C20.82 9.94 21 10.96 21 11.99L20.98 12.44C20.94 13.32 20.77 14.19 20.47 15.03L20.31 15.44C19.86 16.53 19.19 17.52 18.36 18.36C18.17 18.55 18.07 18.80 18.07 19.07C18.07 19.33 18.17 19.59 18.36 19.77C18.55 19.96 18.80 20.07 19.07 20.07C19.33 20.07 19.59 19.96 19.77 19.77C20.79 18.75 21.61 17.54 22.16 16.20L22.35 15.70C22.72 14.68 22.93 13.62 22.98 12.54L23 12C22.99 10.73 22.78 9.48 22.35 8.29L22.16 7.79C21.67 6.62 20.99 5.54 20.15 4.61L19.77 4.22L19.70 4.15C19.51 3.99 19.26 3.91 19.02 3.93C18.77 3.94 18.53 4.04 18.36 4.22 Z" />
+        </motion.svg>
+    )
+}
+
+export function YTVolumeOffIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M 11.60 2.08 L 11.48 2.14 L 3.91 6.68 C 3.02 7.21 2.28 7.97 1.77 8.87 C 1.26 9.77 1.00 10.79 1 11.83 V 12.16 L 1.01 12.56 C 1.07 13.52 1.37 14.46 1.87 15.29 C 2.38 16.12 3.08 16.81 3.91 17.31 L 11.48 21.85 C 11.63 21.94 11.80 21.99 11.98 21.99 C 12.16 22.00 12.33 21.95 12.49 21.87 C 12.64 21.78 12.77 21.65 12.86 21.50 C 12.95 21.35 13 21.17 13 21 V 3 C 12.99 2.83 12.95 2.67 12.87 2.52 C 12.80 2.37 12.68 2.25 12.54 2.16 C 12.41 2.07 12.25 2.01 12.08 2.00 C 11.92 1.98 11.75 2.01 11.60 2.08 Z" />
+            <path d="M 22 8.59 L 20.59 7.17 L 18 9.75 L 15.41 7.17 L 14 8.59 L 16.59 11.17 L 14 13.75 L 15.41 15.17 L 18 12.59 L 20.59 15.17 L 22 13.75 L 19.41 11.17 L 22 8.59 Z" />
+        </motion.svg>
+    )
+}
+
+export function YTVolumeLowIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M 11.60 2.08 L 11.48 2.14 L 3.91 6.68 C 3.02 7.21 2.28 7.97 1.77 8.87 C 1.26 9.77 1.00 10.79 1 11.83 V 12.16 L 1.01 12.56 C 1.07 13.52 1.37 14.46 1.87 15.29 C 2.38 16.12 3.08 16.81 3.91 17.31 L 11.48 21.85 C 11.63 21.94 11.80 21.99 11.98 21.99 C 12.16 22.00 12.33 21.95 12.49 21.87 C 12.64 21.78 12.77 21.65 12.86 21.50 C 12.95 21.35 13 21.17 13 21 V 3 C 12.99 2.83 12.95 2.67 12.87 2.52 C 12.80 2.37 12.68 2.25 12.54 2.16 C 12.41 2.07 12.25 2.01 12.08 2.00 C 11.92 1.98 11.75 2.01 11.60 2.08 Z" />
+            <path d="M 15.53 7.05 C 15.35 7.22 15.25 7.45 15.24 7.70 C 15.23 7.95 15.31 8.19 15.46 8.38 L 15.53 8.46 L 15.70 8.64 C 16.09 9.06 16.39 9.55 16.61 10.08 L 16.70 10.31 C 16.90 10.85 17 11.42 17 12 L 16.99 12.24 C 16.96 12.73 16.87 13.22 16.70 13.68 L 16.61 13.91 C 16.36 14.51 15.99 15.07 15.53 15.53 C 15.35 15.72 15.25 15.97 15.26 16.23 C 15.26 16.49 15.37 16.74 15.55 16.92 C 15.73 17.11 15.98 17.21 16.24 17.22 C 16.50 17.22 16.76 17.12 16.95 16.95 C 17.6 16.29 18.11 15.52 18.46 14.67 L 18.59 14.35 C 18.82 13.71 18.95 13.03 18.99 12.34 L 19 12 C 18.99 11.19 18.86 10.39 18.59 9.64 L 18.46 9.32 C 18.15 8.57 17.72 7.89 17.18 7.3 L 16.95 7.05 L 16.87 6.98 C 16.68 6.82 16.43 6.74 16.19 6.75 C 15.94 6.77 15.71 6.87 15.53 7.05" />
+        </motion.svg>
+    )
+}
+
+export function YTAirPlayIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M6 22h12l-6-6-6 6zM23 3H1a1 1 0 00-1 1v14a1 1 0 001 1h4v-2H2V5h20v12h-3v2h4a1 1 0 001-1V4a1 1 0 00-1-1z" />
+        </motion.svg>
+    )
+}
+
+export function YTSettingsIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M12.84 1H11.15C10.72 .99 10.30 1.14 9.95 1.40C9.60 1.66 9.35 2.02 9.23 2.44L9.19 2.61C9.11 3.00 8.96 3.38 8.73 3.71C8.51 4.04 8.22 4.33 7.89 4.55L7.75 4.64C7.37 4.85 6.96 4.98 6.53 5.02C6.11 5.06 5.68 5.01 5.27 4.87C4.86 4.73 4.42 4.73 4.00 4.86C3.59 5.00 3.23 5.26 2.99 5.62L2.89 5.77L2.05 7.23C1.82 7.63 1.73 8.10 1.81 8.55C1.88 9.01 2.12 9.43 2.47 9.73L2.58 9.84C3.15 10.39 3.50 11.15 3.50 12L3.49 12.16C3.47 12.56 3.37 12.95 3.19 13.31C3.01 13.67 2.77 13.99 2.47 14.26C2.12 14.56 1.88 14.98 1.81 15.43C1.73 15.89 1.82 16.36 2.05 16.76L2.89 18.22L2.99 18.37C3.24 18.73 3.59 18.99 4.01 19.13C4.42 19.26 4.86 19.26 5.27 19.12L5.42 19.07C5.81 18.96 6.21 18.93 6.61 18.98C7.01 19.03 7.40 19.15 7.75 19.36L7.89 19.44C8.22 19.66 8.51 19.95 8.73 20.28C8.96 20.61 9.11 20.99 9.19 21.38C9.28 21.84 9.52 22.24 9.88 22.54C10.24 22.83 10.69 23.00 11.15 23H12.84C13.30 23.00 13.75 22.83 14.11 22.54C14.47 22.24 14.71 21.84 14.80 21.38C14.89 20.96 15.06 20.56 15.31 20.21C15.55 19.86 15.88 19.57 16.25 19.36L16.39 19.28C16.75 19.10 17.14 18.99 17.54 18.96C17.94 18.94 18.34 18.99 18.72 19.12L18.89 19.17C19.31 19.27 19.75 19.24 20.15 19.07C20.55 18.90 20.88 18.60 21.10 18.23L21.95 16.76C22.18 16.36 22.26 15.89 22.19 15.43C22.11 14.98 21.88 14.56 21.53 14.26C21.23 13.99 20.98 13.67 20.80 13.31C20.63 12.95 20.52 12.56 20.50 12.16L20.50 12C20.50 11.57 20.59 11.14 20.77 10.75C20.94 10.36 21.20 10.01 21.53 9.73C21.88 9.43 22.11 9.01 22.19 8.55C22.26 8.10 22.18 7.63 21.95 7.23L21.10 5.76C20.88 5.39 20.55 5.09 20.15 4.92C19.76 4.75 19.31 4.72 18.89 4.82L18.72 4.87C18.34 5.00 17.94 5.05 17.54 5.03C17.14 5.00 16.75 4.89 16.4 4.71L16.25 4.63C15.88 4.42 15.56 4.13 15.31 3.78C15.06 3.43 14.89 3.03 14.80 2.61C14.71 2.15 14.47 1.74 14.11 1.45C13.75 1.16 13.30 .99 12.84 1ZM11.15 3H12.84C12.98 3.70 13.26 4.36 13.68 4.94C14.09 5.52 14.63 6.01 15.25 6.37C15.87 6.72 16.55 6.94 17.26 7.01C17.97 7.08 18.69 6.99 19.37 6.76L20.21 8.23C19.67 8.69 19.24 9.27 18.94 9.92C18.65 10.57 18.50 11.28 18.5 12C18.50 12.71 18.65 13.42 18.95 14.07C19.24 14.72 19.67 15.29 20.21 15.76L19.37 17.23C18.69 16.99 17.97 16.91 17.26 16.98C16.55 17.05 15.86 17.27 15.25 17.63C14.63 17.98 14.09 18.47 13.68 19.05C13.26 19.63 12.98 20.29 12.84 21H11.15C11.01 20.29 10.73 19.63 10.31 19.05C9.90 18.47 9.36 17.98 8.75 17.62C8.13 17.27 7.44 17.05 6.73 16.98C6.02 16.91 5.30 16.99 4.62 17.23L3.78 15.76C4.32 15.29 4.75 14.71 5.05 14.06C5.34 13.41 5.49 12.71 5.5 12C5.50 11.28 5.34 10.57 5.05 9.92C4.75 9.27 4.32 8.69 3.78 8.23L4.62 6.76C5.30 7.00 6.02 7.08 6.73 7.01C7.44 6.94 8.13 6.72 8.75 6.37C9.36 6.01 9.90 5.52 10.31 4.94C10.73 4.36 11.01 3.70 11.15 3ZM12.00 8C10.94 8 9.92 8.42 9.17 9.17C8.42 9.92 8.00 10.93 8.00 12C8.00 13.06 8.42 14.07 9.17 14.82C9.92 15.57 10.94 16 12.00 16C13.06 16 14.08 15.57 14.83 14.82C15.58 14.07 16.00 13.06 16.00 12C16.00 10.93 15.58 9.92 14.83 9.17C14.08 8.42 13.06 8 12.00 8ZM12.00 10H12L12.20 10.01C12.69 10.06 13.15 10.29 13.48 10.65C13.81 11.02 14.00 11.50 14 12L13.99 12.20C13.95 12.58 13.80 12.95 13.55 13.25C13.31 13.55 12.98 13.78 12.62 13.90C12.25 14.02 11.85 14.03 11.48 13.93C11.11 13.83 10.77 13.62 10.51 13.34C10.25 13.05 10.08 12.69 10.02 12.31C9.96 11.93 10.01 11.54 10.17 11.18C10.32 10.83 10.58 10.53 10.91 10.32C11.23 10.11 11.61 10.00 12 10" />
+        </motion.svg>
+    )
+}
+
+export function YTSubtitlesIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M21.20 3.01L21 3H3L2.79 3.01C2.30 3.06 1.84 3.29 1.51 3.65C1.18 4.02 .99 4.50 1 5V19L1.01 19.20C1.05 19.66 1.26 20.08 1.58 20.41C1.91 20.73 2.33 20.94 2.79 20.99L3 21H21L21.20 20.98C21.66 20.94 22.08 20.73 22.41 20.41C22.73 20.08 22.94 19.66 22.99 19.20L23 19V5C23.00 4.50 22.81 4.02 22.48 3.65C22.15 3.29 21.69 3.06 21.20 3.01ZM3 19V5H21V19H3ZM6.97 8.34C6.42 8.64 5.96 9.09 5.64 9.63L5.50 9.87C5.16 10.53 4.99 11.26 5 12L5.00 12.27C5.04 12.92 5.21 13.55 5.50 14.12L5.64 14.36C5.96 14.90 6.42 15.35 6.97 15.65L7.21 15.77C7.79 16.01 8.43 16.06 9.03 15.91L9.29 15.83C9.88 15.61 10.39 15.23 10.77 14.73C10.93 14.53 11.00 14.27 10.97 14.02C10.94 13.77 10.82 13.53 10.63 13.37C10.44 13.20 10.19 13.11 9.93 13.12C9.68 13.13 9.44 13.24 9.26 13.43L9.19 13.50C9.05 13.70 8.85 13.85 8.62 13.94L8.54 13.97C8.35 14.02 8.16 14.00 7.99 13.92L7.91 13.88C7.67 13.75 7.48 13.56 7.35 13.32L7.28 13.20C7.11 12.88 7.02 12.52 7.00 12.16L7 12C6.99 11.58 7.09 11.16 7.28 10.79L7.35 10.67C7.48 10.43 7.67 10.24 7.91 10.11C8.10 10.00 8.32 9.97 8.54 10.02L8.62 10.05C8.81 10.12 8.98 10.24 9.11 10.39L9.19 10.49L9.26 10.57C9.43 10.74 9.66 10.85 9.91 10.87C10.15 10.89 10.40 10.81 10.59 10.66C10.79 10.51 10.92 10.29 10.96 10.05C11.01 9.80 10.96 9.55 10.83 9.34L10.77 9.26L10.60 9.05C10.24 8.65 9.79 8.35 9.29 8.16L9.03 8.08C8.34 7.91 7.60 8.00 6.97 8.34ZM14.97 8.34C14.42 8.64 13.96 9.09 13.64 9.63L13.50 9.87C13.16 10.53 12.99 11.26 13 12L13.00 12.27C13.04 12.92 13.21 13.55 13.50 14.12L13.64 14.36C13.96 14.90 14.42 15.35 14.97 15.65L15.21 15.77C15.79 16.01 16.43 16.06 17.03 15.91L17.29 15.83C17.88 15.61 18.39 15.23 18.77 14.73C18.93 14.53 19.00 14.27 18.97 14.02C18.94 13.77 18.82 13.53 18.63 13.37C18.44 13.20 18.19 13.11 17.93 13.12C17.68 13.13 17.44 13.24 17.26 13.43L17.19 13.50C17.05 13.70 16.85 13.85 16.62 13.94L16.54 13.97C16.35 14.02 16.16 14.00 15.99 13.92L15.91 13.88C15.67 13.75 15.48 13.56 15.35 13.32L15.28 13.20C15.11 12.88 15.02 12.52 15.00 12.16L15 12C14.99 11.58 15.09 11.16 15.28 10.79L15.35 10.67C15.48 10.43 15.67 10.24 15.91 10.11C16.10 10.00 16.32 9.97 16.54 10.02L16.62 10.05C16.81 10.12 16.98 10.24 17.11 10.39L17.19 10.49L17.26 10.57C17.43 10.74 17.66 10.85 17.91 10.87C18.15 10.89 18.40 10.81 18.59 10.66C18.79 10.51 18.92 10.29 18.96 10.05C19.01 9.80 18.96 9.55 18.83 9.34L18.77 9.26L18.60 9.05C18.24 8.65 17.79 8.35 17.29 8.16L17.03 8.08C16.34 7.91 15.60 8.00 14.97 8.34Z" />
+        </motion.svg>
+    )
+}
+
+// Solid variant — filled box with CC letters punched out as dark paths (captions on)
+export function YTSubtitlesIconSolid(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" {...props}>
+            <rect x="1" y="3" width="22" height="18" rx="2" fill="currentColor" />
+            <path fill="rgba(255, 255, 255, 1)" d="M6.97 8.34C6.42 8.64 5.96 9.09 5.64 9.63L5.50 9.87C5.16 10.53 4.99 11.26 5 12L5.00 12.27C5.04 12.92 5.21 13.55 5.50 14.12L5.64 14.36C5.96 14.90 6.42 15.35 6.97 15.65L7.21 15.77C7.79 16.01 8.43 16.06 9.03 15.91L9.29 15.83C9.88 15.61 10.39 15.23 10.77 14.73C10.93 14.53 11.00 14.27 10.97 14.02C10.94 13.77 10.82 13.53 10.63 13.37C10.44 13.20 10.19 13.11 9.93 13.12C9.68 13.13 9.44 13.24 9.26 13.43L9.19 13.50C9.05 13.70 8.85 13.85 8.62 13.94L8.54 13.97C8.35 14.02 8.16 14.00 7.99 13.92L7.91 13.88C7.67 13.75 7.48 13.56 7.35 13.32L7.28 13.20C7.11 12.88 7.02 12.52 7.00 12.16L7 12C6.99 11.58 7.09 11.16 7.28 10.79L7.35 10.67C7.48 10.43 7.67 10.24 7.91 10.11C8.10 10.00 8.32 9.97 8.54 10.02L8.62 10.05C8.81 10.12 8.98 10.24 9.11 10.39L9.19 10.49L9.26 10.57C9.43 10.74 9.66 10.85 9.91 10.87C10.15 10.89 10.40 10.81 10.59 10.66C10.79 10.51 10.92 10.29 10.96 10.05C11.01 9.80 10.96 9.55 10.83 9.34L10.77 9.26L10.60 9.05C10.24 8.65 9.79 8.35 9.29 8.16L9.03 8.08C8.34 7.91 7.60 8.00 6.97 8.34ZM14.97 8.34C14.42 8.64 13.96 9.09 13.64 9.63L13.50 9.87C13.16 10.53 12.99 11.26 13 12L13.00 12.27C13.04 12.92 13.21 13.55 13.50 14.12L13.64 14.36C13.96 14.90 14.42 15.35 14.97 15.65L15.21 15.77C15.79 16.01 16.43 16.06 17.03 15.91L17.29 15.83C17.88 15.61 18.39 15.23 18.77 14.73C18.93 14.53 19.00 14.27 18.97 14.02C18.94 13.77 18.82 13.53 18.63 13.37C18.44 13.20 18.19 13.11 17.93 13.12C17.68 13.13 17.44 13.24 17.26 13.43L17.19 13.50C17.05 13.70 16.85 13.85 16.62 13.94L16.54 13.97C16.35 14.02 16.16 14.00 15.99 13.92L15.91 13.88C15.67 13.75 15.48 13.56 15.35 13.32L15.28 13.20C15.11 12.88 15.02 12.52 15.00 12.16L15 12C14.99 11.58 15.09 11.16 15.28 10.79L15.35 10.67C15.48 10.43 15.67 10.24 15.91 10.11C16.10 10.00 16.32 9.97 16.54 10.02L16.62 10.05C16.81 10.12 16.98 10.24 17.11 10.39L17.19 10.49L17.26 10.57C17.43 10.74 17.66 10.85 17.91 10.87C18.15 10.89 18.40 10.81 18.59 10.66C18.79 10.51 18.92 10.29 18.96 10.05C19.01 9.80 18.96 9.55 18.83 9.34L18.77 9.26L18.60 9.05C18.24 8.65 17.79 8.35 17.29 8.16L17.03 8.08C16.34 7.91 15.60 8.00 14.97 8.34Z" />
+        </motion.svg>
+    )
+}
+
+export function YTTheaterModeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M21.20 3.01L21 3H3L2.79 3.01C2.30 3.06 1.84 3.29 1.51 3.65C1.18 4.02 .99 4.50 1 5V19L1.01 19.20C1.05 19.66 1.26 20.08 1.58 20.41C1.91 20.73 2.33 20.94 2.79 20.99L3 21H21L21.20 20.98C21.66 20.94 22.08 20.73 22.41 20.41C22.73 20.08 22.94 19.66 22.99 19.20L23 19V5C23.00 4.50 22.81 4.02 22.48 3.65C22.15 3.29 21.69 3.06 21.20 3.01ZM3 15V5H21V15H3ZM7.87 6.72L7.79 6.79L4.58 10L7.79 13.20C7.88 13.30 7.99 13.37 8.11 13.43C8.23 13.48 8.37 13.51 8.50 13.51C8.63 13.51 8.76 13.48 8.89 13.43C9.01 13.38 9.12 13.31 9.21 13.21C9.31 13.12 9.38 13.01 9.43 12.89C9.48 12.76 9.51 12.63 9.51 12.50C9.51 12.37 9.48 12.23 9.43 12.11C9.37 11.99 9.30 11.88 9.20 11.79L7.41 10L9.20 8.20L9.27 8.13C9.42 7.93 9.50 7.69 9.48 7.45C9.47 7.20 9.36 6.97 9.19 6.80C9.02 6.63 8.79 6.52 8.54 6.51C8.30 6.49 8.06 6.57 7.87 6.72ZM14.79 6.79C14.60 6.98 14.50 7.23 14.50 7.5C14.50 7.76 14.60 8.01 14.79 8.20L16.58 10L14.79 11.79L14.72 11.86C14.57 12.06 14.49 12.30 14.50 12.54C14.51 12.79 14.62 13.02 14.79 13.20C14.97 13.37 15.20 13.48 15.45 13.49C15.69 13.50 15.93 13.42 16.13 13.27L16.20 13.20L19.41 10L16.20 6.79C16.01 6.60 15.76 6.50 15.5 6.50C15.23 6.50 14.98 6.60 14.79 6.79ZM3 19V17H21V19H3Z" />
+        </motion.svg>
+    )
+}
+
+export function YTPiPIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 36 36" width="100%" fill="currentColor" {...props}>
+            <path d="M25,17 L17,17 L17,23 L25,23 L25,17 L25,17 Z M29,25 L29,10.98 C29,9.88 28.1,9 27,9 L9,9 C7.9,9 7,9.88 7,10.98 L7,25 C7,26.1 7.9,27 9,27 L27,27 C28.1,27 29,26.1 29,25 L29,25 Z M27,25.02 L9,25.02 L9,10.97 L27,10.97 L27,25.02 L27,25.02 Z" />
+        </motion.svg>
+    )
+}
+
+export function YTFullscreenIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M10 3H3V10C3 10.26 3.10 10.51 3.29 10.70C3.48 10.89 3.73 11 4 11C4.26 11 4.51 10.89 4.70 10.70C4.89 10.51 5 10.26 5 10V6.41L9.29 10.70L9.36 10.77C9.56 10.92 9.80 11.00 10.04 10.99C10.29 10.98 10.52 10.87 10.70 10.70C10.87 10.52 10.98 10.29 10.99 10.04C11.00 9.80 10.92 9.56 10.77 9.36L10.70 9.29L6.41 5H10C10.26 5 10.51 4.89 10.70 4.70C10.89 4.51 11 4.26 11 4C11 3.73 10.89 3.48 10.70 3.29C10.51 3.10 10.26 3 10 3ZM20 13C19.73 13 19.48 13.10 19.29 13.29C19.10 13.48 19 13.73 19 14V17.58L14.70 13.29L14.63 13.22C14.43 13.07 14.19 12.99 13.95 13.00C13.70 13.01 13.47 13.12 13.29 13.29C13.12 13.47 13.01 13.70 13.00 13.95C12.99 14.19 13.07 14.43 13.22 14.63L13.29 14.70L17.58 19H14C13.73 19 13.48 19.10 13.29 19.29C13.10 19.48 13 19.73 13 20C13 20.26 13.10 20.51 13.29 20.70C13.48 20.89 13.73 21 14 21H21V14C21 13.73 20.89 13.48 20.70 13.29C20.51 13.10 20.26 13 20 13Z" />
+        </motion.svg>
+    )
+}
+
+export function YTMinimizeIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M14 14h7v2h-5v5h-2v-7zm-4 0v7H8v-5H3v-2h7zm0-4H3V8h5V3h2v7zm4 0V3h2v5h5v2h-7z" />
+        </motion.svg>
+    )
+}
+
+export function DoubleArrowUpIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+            <path d="M18 11.5C18 11.5 13.5811 5.50001 12 5.5C10.4188 5.49999 6 11.5 6 11.5" />
+            <path d="M18 18.5C18 18.5 13.5811 12.5 12 12.5C10.4188 12.5 6 18.5 6 18.5" />
+        </motion.svg>
+    )
+}
+
+export function YTReplayIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 36 36" width="100%" fill="currentColor" {...props}>
+            <path d="M11.29 2.92C14.85 1.33 18.87 1.06 22.61 2.15L22.96 2.26C26.56 3.40 29.67 5.74 31.75 8.89L31.95 9.19C33.90 12.28 34.77 15.93 34.42 19.56L34.38 19.93C34.04 22.79 32.96 25.51 31.25 27.83C29.53 30.14 27.23 31.97 24.59 33.12C21.95 34.27 19.05 34.71 16.18 34.40C13.32 34.08 10.59 33.02 8.26 31.32L7.97 31.10C4.87 28.73 2.71 25.33 1.88 21.52L3.34 21.20L4.81 20.88C5.49 24.00 7.25 26.77 9.79 28.72L10.27 29.07C12.19 30.40 14.41 31.22 16.74 31.44C19.06 31.65 21.40 31.27 23.53 30.31C25.66 29.35 27.50 27.86 28.88 25.98C30.26 24.10 31.13 21.89 31.40 19.58L31.46 18.98C31.68 16.00 30.90 13.03 29.25 10.54C27.60 8.05 25.17 6.18 22.34 5.22L21.77 5.04C19.02 4.23 16.08 4.33 13.38 5.31C10.68 6.29 8.37 8.11 6.77 10.5H10.5L10.65 10.50C11.03 10.54 11.38 10.73 11.63 11.02C11.88 11.31 12.01 11.69 11.99 12.07C11.97 12.46 11.81 12.82 11.53 13.08C11.25 13.35 10.88 13.49 10.5 13.5H1.5V4.5L1.50 4.34C1.54 3.97 1.71 3.63 1.99 3.38C2.27 3.13 2.62 3.00 3 3.00C3.37 3.00 3.72 3.13 4.00 3.38C4.28 3.63 4.45 3.97 4.49 4.34L4.5 4.5V8.51C6.21 6.07 8.56 4.13 11.29 2.92ZM24 18L15 12.75V23.25L24 18ZM3.02 19.73C2.63 19.82 2.29 20.05 2.08 20.39C1.86 20.72 1.79 21.13 1.88 21.52L4.81 20.88C4.77 20.69 4.69 20.50 4.57 20.34C4.46 20.18 4.32 20.04 4.15 19.94C3.99 19.83 3.80 19.76 3.61 19.72C3.41 19.69 3.21 19.69 3.02 19.73Z" />
+        </motion.svg>
+    )
+}
+
+export function YTLargePlayIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" version="1.1" viewBox="0 0 68 48" width="100%" {...props}>
+            <path className="ytp-large-play-button-bg" d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55 C3.97,2.33,2.27,4.81,1.48,7.74C0.06,13.05,0,24,0,24s0.06,10.95,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19 C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.64-3.26,5.42-6.19C67.94,34.95,68,24,68,24S67.94,13.05,66.52,7.74z" fill="#f03" />
+            <path d="M 45,24 27,14 27,34" fill="#fff" />
+        </motion.svg>
+    )
+}
+
+export function YTLoopIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" />
+        </motion.svg>
+    )
+}
+
+export function YTDownloadIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg height="100%" viewBox="0 0 24 24" width="100%" fill="currentColor" {...props}>
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+        </motion.svg>
+    )
+}
+
+export function YtCardsPlayIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            focusable="false"
+            aria-hidden="true"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M5 4.623V19.38a1.5 1.5 0 002.26 1.29L22 12 7.26 3.33A1.5 1.5 0 005 4.623Z" />
+        </motion.svg>
+    )
+}
+
+export function YtCardsSkipBack10Icon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            focusable="false"
+            aria-hidden="true"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M4.293.293a1 1 0 011.414 1.414L4.414 3H13l.496.013A10 10 0 0113 23a1 1 0 010-2 8 8 0 00.396-15.99L13 5H4.414l1.293 1.293a1 1 0 11-1.414 1.414L.586 4 4.293.293ZM13.5 8.75a2.5 2.5 0 00-2.5 2.5v3.5a2.5 2.5 0 005 0v-3.5a2.5 2.5 0 00-2.5-2.5Zm-3.5 7.5V9H7.75a.75.75 0 000 1.5h.75v5.75a.75.75 0 101.5 0Zm3.5-6a1 1 0 011 1v3.5a1 1 0 01-2 0v-3.5a1 1 0 011-1Z" />
+        </motion.svg>
+    )
+}
+
+export function YtCardsSkipForward10Icon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            focusable="false"
+            aria-hidden="true"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M18.293.293a1 1 0 011.414 0L23.414 4l-3.707 3.707a1 1 0 11-1.414-1.414L19.586 5H11a8 8 0 100 16 1 1 0 010 2 10 10 0 010-20h8.586l-1.293-1.293a1 1 0 010-1.414ZM13.5 8.75a2.5 2.5 0 00-2.5 2.5v3.5a2.5 2.5 0 005 0v-3.5a2.5 2.5 0 00-2.5-2.5Zm-3.5 7.5V9H7.75a.75.75 0 000 1.5h.75v5.75a.75.75 0 101.5 0Zm3.5-6a1 1 0 011 1v3.5a1 1 0 01-2 0v-3.5a1 1 0 011-1Z" />
+        </motion.svg>
+    )
+}
+
+export function YtCardsVolumeHighIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            focusable="false"
+            aria-hidden="true"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M11.485 2.143 3.913 6.687A6 6 0 001 11.832v.338a6 6 0 002.913 5.144l7.572 4.543A1 1 0 0013 21V3a1.001 1.001 0 00-1.515-.857Zm6.88 2.079a1 1 0 00-.001 1.414 9 9 0 010 12.728 1 1 0 001.414 1.414 11 11 0 000-15.556 1 1 0 00-1.413 0ZM4.941 8.402l.001-.002L11 4.767v14.466l-6.058-3.635A4 4 0 013 12.168v-.337a4 4 0 011.941-3.429ZM15.535 7.05a1 1 0 000 1.415 5 5 0 010 7.07 1 1 0 001.415 1.415 6.999 6.999 0 000-9.9 1 1 0 00-1.415 0Z" />
+        </motion.svg>
+    )
+}
+
+export function YtCardsSettingsIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="24"
+            viewBox="0 0 24 24"
+            width="24"
+            focusable="false"
+            aria-hidden="true"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M12.844 1h-1.687a2 2 0 00-1.962 1.616 3 3 0 01-3.92 2.263 2 2 0 00-2.38.891l-.842 1.46a2 2 0 00.417 2.507 3 3 0 010 4.525 2 2 0 00-.417 2.507l.843 1.46a2 2 0 002.38.892 3.001 3.001 0 013.918 2.263A2 2 0 0011.157 23h1.686a2 2 0 001.963-1.615 3.002 3.002 0 013.92-2.263 2 2 0 002.38-.892l.842-1.46a2 2 0 00-.418-2.507 3 3 0 010-4.526 2 2 0 00.418-2.508l-.843-1.46a2 2 0 00-2.38-.891 3 3 0 01-3.919-2.263A2 2 0 0012.844 1Zm-1.767 2.347a6 6 0 00.08-.347h1.687a4.98 4.98 0 002.407 3.37 4.98 4.98 0 004.122.4l.843 1.46A4.98 4.98 0 0018.5 12a4.98 4.98 0 001.716 3.77l-.843 1.46a4.98 4.98 0 00-4.123.4A4.979 4.979 0 0012.843 21h-1.686a4.98 4.98 0 00-2.408-3.371 4.999 4.999 0 00-4.12-.399l-.844-1.46A4.979 4.979 0 005.5 12a4.98 4.98 0 00-1.715-3.77l.842-1.459a4.98 4.98 0 004.123-.399 4.981 4.981 0 002.327-3.025ZM16 12a4 4 0 11-7.999 0 4 4 0 018 0Zm-4 2a2 2 0 100-4 2 2 0 000 4Z" />
+        </motion.svg>
+    )
+}
+
+export function YtCardsInfoIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            focusable="false"
+            aria-hidden="true"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M12 1C5.925 1 1 5.925 1 12s4.925 11 11 11 11-4.925 11-11S18.075 1 12 1Zm0 2a9 9 0 110 18.001A9 9 0 0112 3Zm0 3.75a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5ZM13 15v-5h-2.5a1 1 0 000 2h.5v3h-1a1 1 0 000 2h4a1 1 0 000-2h-1Z" />
+        </motion.svg>
+    );
+}
+
+export function YtCardsFeedbackIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            focusable="false"
+            aria-hidden="true"
+            fill="currentColor"
+            {...props}
+        >
+            <path d="M19 2H5a4 4 0 00-4 4v10a4 4 0 004 4h2v1.604a1.41 1.41 0 002.095 1.232L14.2 20H19a4 4 0 004-4V6a4 4 0 00-4-4ZM5 4h14a2 2 0 012 2v10a2 2 0 01-2 2h-5.318l-.453.252L9 20.6V18H5a2 2 0 01-2-2V6a2 2 0 012-2Zm7 2a1 1 0 00-1 1v4.5a1 1 0 002 0V7a1 1 0 00-1-1Zm0 7.75a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5Z" />
+        </motion.svg>
+    );
+}
+
+export function SearchPlusIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+            <path d="M17 17L21 21" />
+            <path d="M19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19C15.4183 19 19 15.4183 19 11Z" />
+            <path d="M7.5 11L14.5 11M11 7.5V14.5" />
+        </svg>
+    );
+}
+
+export function SearchMinusIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+            <path d="M17 17L21 21" />
+            <path d="M19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19C15.4183 19 19 15.4183 19 11Z" />
+            <path d="M7.5 11L14.5 11" />
+        </svg>
+    );
+}
+
+export function MusicIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+            <circle cx="18" cy="16" r="3" />
+            <circle cx="6" cy="18" r="3" />
+            <path d="M9 18V9.92707C9 7.74065 9 6.64744 9.6 5.84015C10.2 5.03285 11.24 4.72675 13.32 4.11456C16.84 3.07853 18.6 2.56052 19.8 3.46872C21 4.37693 21 6.22697 21 9.92707V16" />
+        </svg>
+    );
+}
+
+export function RedoIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" focusable="false" aria-hidden="true" fill="currentColor" {...props}>
+            <path d="M15.293 2.293a1 1 0 000 1.414L18.586 7H9a7 7 0 000 14h6a1 1 0 000-2H9A5 5 0 019 9h9.586l-3.293 3.293a1 1 0 101.414 1.414L22.414 8l-5.707-5.707a1 1 0 00-1.414 0Z" />
+        </svg>
+    );
+}
+
+export function UndoIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" focusable="false" aria-hidden="true" fill="currentColor" {...props}>
+            <path d="M8.707 2.293a1 1 0 00-1.414 0L1.586 8l5.707 5.707a1 1 0 101.414-1.414L5.414 9H15a5 5 0 110 10H9a1 1 0 000 2h6a7 7 0 100-14H5.414l3.293-3.293a1 1 0 000-1.414Z" />
+        </svg>
+    );
+}
