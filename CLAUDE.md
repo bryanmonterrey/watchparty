@@ -54,3 +54,18 @@ Headless Chrome's `--screenshot` with `--window-size` **does not honor the layou
 
 ### Brand/Figma SVG icons
 Provider marks in `components/auth/provider-icons.tsx` were extracted verbatim from the Figma export. Paths keep their original canvas coordinates and each `viewBox` is positioned over the icon's location (e.g. `viewBox="522 287 28 28"`) — this avoids re-normalizing path data. Reuse this trick when lifting vector art out of a full-frame Figma SVG.
+
+## Deploy target & dev setup
+
+- **Deploy: Cloudflare** via `@opennextjs/cloudflare` (chosen for speed/cost). Keep code Workers-compatible: HTTP-based services (Upstash Redis, Resend) are fine; the DB uses **postgres.js** which runs on Cloudflare **Hyperdrive** (front Supabase with it — edge compute + single-region Postgres is slow without it). Full CF/wrangler/Hyperdrive setup is a later milestone.
+- **Dev runs on port 3001** (`bun dev` → `next dev -p 3001`) to match the reused OAuth callback URLs and `NEXT_PUBLIC_AUTH_URL` in `.env` (copied from `../sidebar`; same Supabase DB).
+- **Reused production DB:** do **not** run `drizzle-kit push`/migrations — the auth tables already exist. The schema in `db/schema/auth` is ported verbatim to match.
+- **Squircle corners: use Lisse (`@lisse/react`), opt-in per element.** The old `tailwindcss-corner-shape` was removed — it used the CSS `corner-shape` property which is **Chrome-only** (broken in Safari) and forced squircle onto *every* `rounded-*` (so even pills got squircled). Lisse uses SVG `clip-path` (works in Safari/Firefox/Chrome). Apply via the `components/ui/squircle.tsx` helper: `<Squircle asChild radius={20}><button className="…">…</button></Squircle>` — and do NOT add `rounded-*` to a squircled element (redundant under clip-path). **Pills (Connect Wallet, Complete, Create) stay plain `rounded-full` with NO `<Squircle>`.**
+
+## Auth / better-auth dependency gotchas
+
+The auth stack is sensitive to transitive versions. Two non-obvious pins/fixes were required to get it compiling and running:
+
+- **`kysely` pinned to `0.28.17`.** better-auth statically imports `@better-auth/kysely-adapter` even when using the Drizzle adapter. kysely `0.29.x` ships a single bundled `dist/index.js` that doesn't re-export `DEFAULT_MIGRATION_LOCK_TABLE`, so the route 500s with "export … doesn't exist". 0.28.17 has the proper dual ESM/CJS build. Keep it pinned.
+- **Do not install `better-call` directly.** better-auth uses `better-call@1.3.5` internally; a top-level `better-call@2.x` makes the `Endpoint` types incompatible and every auth client/server plugin fails to type-check. Import `APIError` from `better-auth/api`, not `better-call`.
+- Email OTP has a **dev console fallback**: with no `RESEND_API_KEY`, the code is `console.log`ed instead of emailed. To test the flow locally without an inbox, run dev with `RESEND_API_KEY=` cleared and read the code from stdout.
