@@ -37,19 +37,24 @@ async function siweVerify(body: {
   return data;
 }
 
-// "Sign in with Base" — Base Account (smart wallet) via wallet_connect + SIWE capability.
+// "Sign in with Base" — opens the Base Account flow (popup to Base), connects the
+// smart wallet, and returns a SIWE message+signature via the signInWithEthereum capability.
 export async function signInWithBase() {
   const { createBaseAccountSDK } = await import("@base-org/account");
-  const sdk = createBaseAccountSDK({ appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Watchparty" });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const provider = sdk.getProvider() as any;
+  const provider = createBaseAccountSDK({
+    appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Watchparty",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }).getProvider() as any;
 
   const nonce = await siweNonce(undefined, BASE.chainId);
-  const res = await provider.request({
+  // Base's SDK expects chainId in hex (Base mainnet 8453 = 0x2105), not a number.
+  const hexChainId = `0x${BASE.chainId!.toString(16)}`;
+  const { accounts } = await provider.request({
     method: "wallet_connect",
-    params: [{ version: "1", capabilities: { signInWithEthereum: { nonce, chainId: BASE.chainId } } }],
+    params: [{ version: "1", capabilities: { signInWithEthereum: { nonce, chainId: hexChainId } } }],
   });
-  const account = res?.accounts?.[0];
+
+  const account = accounts?.[0];
   const siwe = account?.capabilities?.signInWithEthereum;
   if (!account?.address || !siwe?.message || !siwe?.signature) {
     throw new Error("Base sign-in was cancelled.");

@@ -136,9 +136,6 @@ function WalletFlow() {
             </>
           ) : (
             <>
-              {chain.id === "base" && (
-                <Row name="Base" icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />} onClick={() => chooseEvmWallet(async () => (await import("@/lib/chains/evm/sign-in")).signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)} />
-              )}
               {evmWallets.map((w) => (
                 <Row
                   key={w.rdns}
@@ -163,7 +160,17 @@ function WalletFlow() {
       <div className="mt-6 flex flex-col gap-2.5">
         <Row name="Sign in with Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => openChain(ETHEREUM)} />
         <Row name="Sign in with Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => openChain(SOLANA)} />
-        <Row name="Sign in with Base" icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />} onClick={() => openChain(BASE)} />
+        <Row
+          name="Sign in with Base"
+          icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
+          onClick={() =>
+            chooseEvmWallet(
+              async () => (await import("@/lib/chains/evm/sign-in")).signInWithBase(),
+              "Base",
+              <BaseSquareIcon className="h-7 w-7 rounded-md" />,
+            )
+          }
+        />
         <Row name="Sign in with Hyperliquid" icon={<HyperliquidIcon className="h-7 w-7" />} onClick={() => openChain(HYPERLIQUID)} />
         {walletConnect && (
           <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
