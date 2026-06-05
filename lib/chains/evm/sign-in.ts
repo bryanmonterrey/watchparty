@@ -41,32 +41,14 @@ async function siweVerify(body: {
 // "Sign in with Base" — opens the Base Account flow (popup to Base), connects the
 // smart wallet, and returns a SIWE message+signature via the signInWithEthereum capability.
 export async function signInWithBase() {
-  // Create the provider synchronously (static import) so the Base popup can open
-  // within the click gesture — otherwise the browser blocks it.
+  // Create the provider synchronously (static import) so the Base popup opens
+  // within the click gesture. Base Account is an EIP-1193 provider, so we reuse
+  // the injected flow: connect → request nonce WITH the address → SIWE sign.
+  // (better-auth's SIWE nonce is keyed by address, so we must connect first.)
   const provider = createBaseAccountSDK({
     appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Watchparty",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }).getProvider() as any;
-
-  const nonce = await siweNonce(undefined, BASE.chainId);
-  // Base's SDK expects chainId in hex (Base mainnet 8453 = 0x2105), not a number.
-  const hexChainId = `0x${BASE.chainId!.toString(16)}`;
-  const { accounts } = await provider.request({
-    method: "wallet_connect",
-    params: [{ version: "1", capabilities: { signInWithEthereum: { nonce, chainId: hexChainId } } }],
-  });
-
-  const account = accounts?.[0];
-  const siwe = account?.capabilities?.signInWithEthereum;
-  if (!account?.address || !siwe?.message || !siwe?.signature) {
-    throw new Error("Base sign-in was cancelled.");
-  }
-  return siweVerify({
-    message: siwe.message,
-    signature: siwe.signature,
-    walletAddress: account.address,
-    chainId: BASE.chainId!,
-  });
+  }).getProvider();
+  return signInWithInjectedEvm(BASE.chainId!, provider);
 }
 
 // MetaMask / injected EVM wallet for any EVM chainId (Ethereum, Base, Hyperliquid).

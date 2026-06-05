@@ -8,11 +8,11 @@ import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
 import { signInWithBase, signInWithInjectedEvm } from "@/lib/chains/evm/sign-in";
-import { SOLANA, ETHEREUM, BASE, HYPERLIQUID } from "@/lib/chains/registry";
+import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { SolanaMarkIcon, EthDiamondIcon, HyperliquidIcon, BaseSquareIcon } from "@/components/icons";
+import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon } from "@/components/icons";
 
 // Full-page wallet state. Two levels: choose method/chain → choose a detected
 // wallet → waiting (approve signature). Lazy-loaded with its scoped Solana provider.
@@ -91,6 +91,7 @@ function WalletFlow() {
       await run();
       done();
     } catch (e) {
+      console.error("[wallet] sign-in failed:", e);
       failed(e);
     }
   }
@@ -168,7 +169,6 @@ function WalletFlow() {
             chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)
           }
         />
-        <Row name="Sign in with Hyperliquid" icon={<HyperliquidIcon className="h-7 w-7" />} onClick={() => openChain(HYPERLIQUID)} />
         {walletConnect && (
           <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
         )}
