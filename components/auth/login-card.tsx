@@ -17,7 +17,7 @@ import {
   KickIcon,
   DiscordIcon,
 } from "./provider-icons";
-import { MessagesIcon, ArrowLeftIcon } from "@/components/icons";
+import { MessagesIcon, CloseIcon } from "@/components/icons";
 
 // Wallet state pulls in the Solana SDK — load it only when navigated to.
 const WalletStep = dynamic(() => import("./wallet-step"), { ssr: false });
@@ -128,11 +128,11 @@ export function LoginCard() {
     <div className="relative flex flex-1 flex-col items-center px-6">
       <button
         type="button"
-        aria-label="Back to home"
+        aria-label="Close"
         onClick={handleBack}
         className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5 sm:left-7"
       >
-        <ArrowLeftIcon className="size-7" />
+        <CloseIcon className="size-7" />
       </button>
 
       <div className="flex w-full max-w-[442px] flex-col pt-14 sm:pt-[72px]">
