@@ -255,7 +255,7 @@ export function LoginCard() {
                 icon={waiting.icon}
                 error={waitError}
                 onContinue={waiting.retry}
-                backLabel="Use a different method"
+                backLabel="Other method"
                 onBack={() => {
                   setWaitError(null);
                   setBusy(null);
