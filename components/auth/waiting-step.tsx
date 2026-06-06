@@ -50,7 +50,7 @@ export function WaitingStep({
         type="button"
         disabled={busy}
         onClick={onContinue}
-        className="mt-8 flex h-[68px] w-full items-center justify-center rounded-full bg-[#00ED89] text-base font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-[82px] sm:text-[17px]"
+        className="mt-8 flex h-[68px] w-full items-center justify-center rounded-full bg-white text-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-[82px] sm:text-xl"
       >
         Continue
       </button>

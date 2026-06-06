@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
+import { useConnect, useSignMessage, type Connector } from "wagmi";
 import { SolanaProvider } from "./solana-provider";
+import { EvmProvider } from "./evm-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
-import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
-import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
+import { signInWithBase, signEvmSiwe } from "@/lib/chains/evm/sign-in";
 import { useBitcoinWallets, signInWithBitcoin, type BtcWallet } from "@/lib/chains/bitcoin/sign-in";
 import { SOLANA, ETHEREUM, BITCOIN } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
@@ -20,9 +21,11 @@ import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon, BitcoinIcon } from "@/c
 // wallet → waiting (approve signature). Lazy-loaded with its scoped Solana provider.
 export default function WalletStep({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) => void }) {
   return (
-    <SolanaProvider>
-      <WalletFlow onRegisterBack={onRegisterBack} />
-    </SolanaProvider>
+    <EvmProvider>
+      <SolanaProvider>
+        <WalletFlow onRegisterBack={onRegisterBack} />
+      </SolanaProvider>
+    </EvmProvider>
   );
 }
 
@@ -31,7 +34,8 @@ type View = "methods" | "wallets" | "waiting";
 function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) => void }) {
   const router = useRouter();
   const sol = useWallet();
-  const evmWallets = useEvmWallets();
+  const { connectors, connectAsync } = useConnect();
+  const { signMessageAsync } = useSignMessage();
   const bitcoinWallets = useBitcoinWallets();
 
   const [view, setView] = useState<View>("methods");
@@ -118,6 +122,24 @@ function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) =
       failed(e);
     }
   }
+  async function chooseEvmConnector(connector: Connector, chainId: number) {
+    const icon = connector.icon ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={connector.icon} alt="" className="size-7" />
+    ) : (
+      <WalletGlyph />
+    );
+    startWaiting(connector.name, icon, () => chooseEvmConnector(connector, chainId));
+    try {
+      const res = await connectAsync({ connector, chainId });
+      const address = res.accounts[0];
+      await signEvmSiwe(address, chainId, (message) => signMessageAsync({ message, account: address }));
+      done();
+    } catch (e) {
+      console.error("[wallet] evm sign-in failed:", e);
+      failed(e);
+    }
+  }
   async function chooseBitcoinWallet(w: BtcWallet) {
     const icon = w.icon ? (
       // eslint-disable-next-line @next/next/no-img-element
@@ -183,19 +205,10 @@ function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) =
             </>
           ) : (
             <>
-              {evmWallets.map((w) => (
-                <Row
-                  key={w.rdns}
-                  name={w.name}
-                  icon={w.icon}
-                  onClick={() => chooseEvmWallet(() => signInWithInjectedEvm(chain.chainId!, w.provider), w.name, w.icon)}
-                />
+              {connectors.map((c) => (
+                <Row key={c.uid} name={c.name} icon={c.icon} onClick={() => chooseEvmConnector(c, chain.chainId!)} />
               ))}
-              <Row
-                name="Sign in with QR code"
-                icon={<QrGlyph />}
-                onClick={() => chooseEvmWallet(() => signInWithEvmWalletConnect(chain.chainId!), "WalletConnect", <QrGlyph />)}
-              />
+              {connectors.length === 0 && <Hint>No wallet detected.</Hint>}
             </>
           )}
         </div>
