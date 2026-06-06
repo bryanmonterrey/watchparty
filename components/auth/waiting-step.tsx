@@ -11,7 +11,7 @@ export function WaitingStep({
   icon,
   onContinue,
   onBack,
-  backLabel = "Cancel",
+  backLabel = "Back",
   busy,
   error,
 }: {

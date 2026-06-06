@@ -160,7 +160,6 @@ function WalletFlow({
         icon={waiting.icon}
         error={error}
         onContinue={waiting.retry}
-        backLabel="Other wallet"
         onBack={() => {
           pendingSolana.current = false;
           setError(null);
