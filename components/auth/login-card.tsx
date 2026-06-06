@@ -16,7 +16,7 @@ import {
   KickIcon,
   DiscordIcon,
 } from "./provider-icons";
-import { MessagesIcon } from "@/components/icons";
+import { MessagesIcon, ArrowLeftIcon } from "@/components/icons";
 
 // Wallet state pulls in the Solana SDK — load it only when navigated to.
 const WalletStep = dynamic(() => import("./wallet-step"), { ssr: false });
@@ -126,7 +126,7 @@ export function LoginCard() {
         onClick={handleBack}
         className="absolute left-6 top-7 grid h-10 w-10 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5 sm:left-11"
       >
-        <BackArrowIcon/>
+        <ArrowLeftIcon className="size-7" />
       </button>
 
       <div className="flex w-full max-w-[442px] flex-col pt-14 sm:pt-[72px]">
@@ -180,7 +180,7 @@ export function LoginCard() {
                 <button
                   type="submit"
                   disabled={!canSend || sending}
-                  className="flex shrink-0 items-center gap-1.5 text-sm text-zinc-500 transition-colors enabled:hover:text-white disabled:cursor-default sm:text-[15px]"
+                  className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors enabled:text-[#207AFF] enabled:hover:opacity-80 disabled:cursor-default sm:text-[15px]"
                 >
                   {sending ? <Spinner /> : null}
                   send code
