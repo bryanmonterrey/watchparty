@@ -61,7 +61,7 @@ export function WaitingStep({
         <button
           type="button"
           onClick={onBack}
-          className="mt-3 flex h-[68px] w-full items-center justify-center rounded-full bg-[#6A6A6A]/35 text-base font-semibold text-white transition-colors hover:bg-[#6A6A6A]/50 sm:h-[82px] sm:text-[17px]"
+          className="mt-3 flex h-[68px] w-full items-center justify-center rounded-full bg-[#6A6A6A]/35 text-xl font-semibold text-white transition-colors hover:bg-[#6A6A6A]/50 sm:h-[82px]"
         >
           {backLabel}
         </button>
