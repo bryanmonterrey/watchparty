@@ -33,7 +33,7 @@ export default function WalletStep({
   );
 }
 
-type View = "methods" | "qrscan" | "wallets" | "waiting";
+type View = "methods" | "wallets" | "waiting";
 
 function WalletFlow({
   onRegisterBack,
@@ -49,12 +49,7 @@ function WalletFlow({
   const [view, setView] = useState<View>("methods");
   const [chain, setChain] = useState<ChainConfig | null>(null);
   const [waiting, setWaiting] = useState<{ name: string; icon: React.ReactNode; retry: () => void } | null>(null);
-  const [qrUri, setQrUri] = useState<string | null>(null);
-  const [qrPrompt, setQrPrompt] = useState("");
   const pendingSolana = useRef(false);
-  // Invalidates an in-flight WalletConnect attempt when the user navigates away,
-  // so a late connect/reject can't yank the UI around.
-  const wcAttempt = useRef(0);
   // Where the waiting view was entered from, so "Back" returns there. QR can be
   // launched from either "methods" (Connect Wallet) or a chain's "wallets" list.
   const returnViewRef = useRef<View>("methods");
@@ -65,11 +60,10 @@ function WalletFlow({
   viewRef.current = view;
   function returnFromWaiting() {
     pendingSolana.current = false;
-    wcAttempt.current++; // invalidate any in-flight WalletConnect attempt
     setView(returnViewRef.current);
   }
   function back() {
-    if (viewRef.current === "waiting" || viewRef.current === "qrscan") {
+    if (viewRef.current === "waiting") {
       returnFromWaiting();
     } else if (viewRef.current === "wallets") {
       setView("methods");
@@ -145,23 +139,12 @@ function WalletFlow({
     }
   }
 
-  // WalletConnect QR (in-app): one shared provider for every chain. `target` is
-  // "hybrid" (Solana + EVM in one QR), a single EVM chain, or Solana.
-  function startWalletConnect(target: WcTarget, prompt: string) {
-    const attempt = ++wcAttempt.current;
-    returnViewRef.current = viewRef.current; // remember origin for "Back"
-    setQrUri(null);
-    setQrPrompt(prompt);
-    setView("qrscan");
-    signInWithWalletConnect(target, (uri) => {
-      if (wcAttempt.current === attempt) setQrUri(uri);
-    })
-      .then(() => {
-        if (wcAttempt.current === attempt) done();
-      })
-      .catch((e) => {
-        if (wcAttempt.current === attempt) failed(e);
-      });
+  // WalletConnect via its official modal. One shared provider for every chain.
+  // `target` is "hybrid" (Solana + EVM in one QR), a single EVM chain, or Solana.
+  // We show our waiting state behind WalletConnect's modal.
+  function startWalletConnect(target: WcTarget) {
+    startWaiting("WalletConnect", <QrGlyph />, () => startWalletConnect(target));
+    signInWithWalletConnect(target).then(done).catch(failed);
   }
 
   function openChain(c: ChainConfig) {
@@ -186,21 +169,6 @@ function WalletFlow({
         onBack={returnFromWaiting}
       />
     );
-  } else if (view === "qrscan") {
-    // In-app WalletConnect QR (one shared UniversalProvider for every chain).
-    content = (
-      <div className="flex flex-col">
-        <HeaderWithBack title="Scan with QR code" onBack={back} />
-        <div className="mt-8 flex flex-col items-center gap-6">
-          <Squircle asChild radius={28} autoEffects={false}>
-            <div className="grid size-[260px] place-items-center bg-white p-3">
-              {qrUri ? <QrImage uri={qrUri} /> : <Spinner />}
-            </div>
-          </Squircle>
-          <p className="max-w-[300px] text-center text-[15px] leading-relaxed text-zinc-400">{qrPrompt}</p>
-        </div>
-      </div>
-    );
   } else if (view === "wallets" && chain) {
     content = (
       <div className="flex flex-col">
@@ -214,7 +182,7 @@ function WalletFlow({
               <Row
                 name="Sign in with QR code"
                 icon={<QrGlyph />}
-                onClick={() => startWalletConnect({ kind: "solana" }, "Scan with your Solana wallet to sign in.")}
+                onClick={() => startWalletConnect({ kind: "solana" })}
               />
               {detectedSolana.length === 0 && <Hint>No wallet detected. Use the QR code option below.</Hint>}
             </>
@@ -232,7 +200,7 @@ function WalletFlow({
               <Row
                 name="Sign in with QR code"
                 icon={<QrGlyph />}
-                onClick={() => startWalletConnect({ kind: "evm", chainId: chain.chainId! }, `Scan with your ${chain.name} wallet to sign in.`)}
+                onClick={() => startWalletConnect({ kind: "evm", chainId: chain.chainId! })}
               />
             </>
           )}
@@ -254,7 +222,7 @@ function WalletFlow({
           <Row
             name="Sign in with QR code"
             icon={<QrGlyph />}
-            onClick={() => startWalletConnect({ kind: "hybrid" }, "Scan with any Ethereum or Solana wallet to sign in.")}
+            onClick={() => startWalletConnect({ kind: "hybrid" })}
           />
         </div>
       </div>
@@ -314,28 +282,6 @@ function Row({
       </button>
     </Squircle>
   );
-}
-
-// Renders the WalletConnect pairing URI as a QR code (lazy-loads `qrcode`).
-function QrImage({ uri }: { uri: string }) {
-  const [src, setSrc] = useState<string | null>(null);
-  useEffect(() => {
-    let active = true;
-    import("qrcode").then((QR) =>
-      QR.toDataURL(uri, { margin: 1, width: 240 }).then((d) => {
-        if (active) setSrc(d);
-      }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [uri]);
-  // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt="WalletConnect QR code" className="size-full" /> : <Spinner />;
-}
-
-function Spinner() {
-  return <span className="inline-block size-8 animate-spin rounded-full border-2 border-zinc-300 border-t-transparent" />;
 }
 
 // The waiting tile renders a ReactNode, but wallet icons arrive as URL strings —

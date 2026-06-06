@@ -9,11 +9,14 @@
 // instance. We render the QR ourselves (qrcode) from the `display_uri` event
 // instead of WalletConnect's third-party modal.
 import { UniversalProvider } from "@walletconnect/universal-provider";
+import { WalletConnectModal } from "@walletconnect/modal";
 import { createSiweMessage } from "viem/siwe";
 import bs58 from "bs58";
 import { siweNonce, siweVerify } from "./evm/sign-in";
 import { signInWithSolana } from "./solana/sign-in";
 import { ETHEREUM, BASE } from "./registry";
+
+const PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
 // Solana mainnet CAIP-2 (current + legacy alias — some wallets still send the old one).
 const SOLANA_MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
@@ -26,7 +29,7 @@ function getProvider(): Promise<UP> {
   if (!providerPromise) {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://watchparty.xyz";
     providerPromise = UniversalProvider.init({
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
+      projectId: PROJECT_ID,
       metadata: {
         name: process.env.NEXT_PUBLIC_APP_NAME || "Watchparty",
         description: "Sign in to Watchparty",
@@ -36,6 +39,14 @@ function getProvider(): Promise<UP> {
     });
   }
   return providerPromise;
+}
+
+let modalSingleton: WalletConnectModal | null = null;
+function getModal(): WalletConnectModal {
+  if (!modalSingleton) {
+    modalSingleton = new WalletConnectModal({ projectId: PROJECT_ID });
+  }
+  return modalSingleton;
 }
 
 // Which namespaces to request: "hybrid" (both), a single EVM chain, or Solana.
@@ -75,13 +86,16 @@ function namespacesFor(target: WcTarget) {
   };
 }
 
-// Open a WalletConnect session for the given target, surfacing the pairing URI
-// to `onUri` (render it as a QR). Resolves once the wallet has connected, signed,
+// Open a WalletConnect session for the given target using WalletConnect's own
+// modal UI (not a custom QR). Resolves once the wallet has connected, signed,
 // and the SIWE/SIWS verification has created a session.
-export async function signInWithWalletConnect(target: WcTarget, onUri: (uri: string) => void): Promise<unknown> {
+export async function signInWithWalletConnect(target: WcTarget): Promise<unknown> {
   const provider = await getProvider();
+  const modal = getModal();
 
-  // Clear any stale session so a fresh QR is generated each time.
+  // Start from a clean slate so a fresh pairing/QR is generated each time. This
+  // is what fixes "second QR won't open": a prior attempt's session or pending
+  // pairing (e.g. after closing the modal) is torn down before reconnecting.
   if (provider.session) {
     try {
       await provider.disconnect();
@@ -89,15 +103,37 @@ export async function signInWithWalletConnect(target: WcTarget, onUri: (uri: str
       /* ignore */
     }
   }
+  await provider.cleanupPendingPairings().catch(() => {});
 
-  const handleUri = (payload: { uri?: string } | string) => {
-    const uri = typeof payload === "string" ? payload : payload?.uri;
-    if (uri) onUri(uri);
+  // Drive WalletConnect's official modal from the pairing URI.
+  const handleUri = (uri: string) => {
+    modal.openModal({ uri });
   };
   provider.on("display_uri", handleUri);
 
+  // If the user closes the modal before connecting, abort the pending pairing so
+  // it doesn't hang or block the next attempt. (Guard against the initial closed
+  // state firing immediately.)
+  let abort: (() => void) | null = null;
+  let modalWasOpen = false;
+  const aborted = new Promise<never>((_, reject) => {
+    abort = () => {
+      try {
+        provider.abortPairingAttempt();
+      } catch {
+        /* ignore */
+      }
+      reject(new Error("User closed the WalletConnect modal."));
+    };
+  });
+  const unsubscribeModal = modal.subscribeModal((state: { open: boolean }) => {
+    if (state.open) modalWasOpen = true;
+    else if (modalWasOpen) abort?.();
+  });
+
   try {
-    await provider.connect({ optionalNamespaces: namespacesFor(target) });
+    const connected = provider.connect({ optionalNamespaces: namespacesFor(target) });
+    await Promise.race([connected, aborted]);
     const ns = provider.session?.namespaces ?? {};
 
     // EVM approved → SIWE.
@@ -143,5 +179,7 @@ export async function signInWithWalletConnect(target: WcTarget, onUri: (uri: str
     throw new Error("Wallet connected but approved no supported chain.");
   } finally {
     provider.off("display_uri", handleUri);
+    unsubscribeModal();
+    modal.closeModal();
   }
 }
