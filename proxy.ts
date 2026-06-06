@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
-import { apiAuthPrefix, authRoutes, publicRoutes, DEFAULT_LOGIN_REDIRECT } from "./routes";
+import { apiAuthPrefix, authRoutes, publicRoutes } from "./routes";
 
 // Next.js 16 edge proxy (formerly middleware). Optimistic edge auth gate:
 // checks only for the presence of the session cookie (the real validation
@@ -15,9 +15,13 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // On an auth route (/login): a signed-in user is bounced into the app.
+  // On an auth route (/login): always allow. We do NOT optimistically redirect
+  // a "logged-in" user to the app here, because getSessionCookie only checks the
+  // cookie's PRESENCE. If the cookie is present but the session is invalid, that
+  // redirect loops: /home -> (app)/layout (no session) -> /login -> here -> /home
+  // -> ... which Safari shows as "this page couldn't load". Post-login redirects
+  // already send users to /home directly, so this is purely a safety removal.
   if (authRoutes.some((route) => pathname.startsWith(route))) {
-    if (session) return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, request.url));
     return NextResponse.next();
   }
 
