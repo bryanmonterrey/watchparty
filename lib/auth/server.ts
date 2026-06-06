@@ -325,7 +325,12 @@ export const auth = betterAuth({
               throw new APIError("UNAUTHORIZED", { message: "Invalid user" });
             }
 
-            if (dbUser.wallet_address && dbUser.wallet_address !== address) {
+            // Compare case-insensitively: EVM addresses are case-insensitive
+            // (checksummed vs lowercase), so a strict !== falsely rejects them.
+            if (
+              dbUser.wallet_address &&
+              dbUser.wallet_address.toLowerCase() !== String(address).toLowerCase()
+            ) {
               throw new APIError("UNAUTHORIZED", { message: "Wallet mismatch" });
             }
           }
