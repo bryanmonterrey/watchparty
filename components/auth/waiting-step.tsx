@@ -11,6 +11,7 @@ export function WaitingStep({
   icon,
   onContinue,
   onBack,
+  backLabel = "Cancel",
   busy,
   error,
 }: {
@@ -19,6 +20,7 @@ export function WaitingStep({
   icon: React.ReactNode;
   onContinue: () => void;
   onBack?: () => void;
+  backLabel?: string;
   busy?: boolean;
   error?: string | null;
 }) {
@@ -61,7 +63,7 @@ export function WaitingStep({
           onClick={onBack}
           className="mt-5 text-center text-[14px] text-zinc-500 transition-colors hover:text-white"
         >
-          Use a different wallet
+          {backLabel}
         </button>
       )}
     </div>
