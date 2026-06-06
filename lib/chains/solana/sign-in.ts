@@ -61,30 +61,6 @@ export async function signInWithSolana(wallet: SolanaWallet) {
     throw new Error("Invalid signature — user rejected?");
   }
 
-  // TEMP diagnostic: verify the wallet's signature locally to isolate wallet vs
-  // transport. local=false -> the wallet signed something other than these bytes;
-  // local=true but server 401 -> the message/signature changed in transit.
-  try {
-    const ed = await import("@noble/ed25519");
-    const local = await ed.verifyAsync(
-      signatureRaw as Uint8Array,
-      new TextEncoder().encode(message),
-      bs58.decode(address),
-    );
-    console.log(
-      "[siws] local verify:",
-      local,
-      "| sigLen:",
-      (signatureRaw as Uint8Array).length,
-      "pubLen:",
-      bs58.decode(address).length,
-      "msgLen:",
-      message.length,
-    );
-  } catch (err) {
-    console.log("[siws] local verify error:", err);
-  }
-
   // 4) Verify → session
   const verifyRes = await fetch(`${AUTH_URL}/siws/verify`, {
     method: "POST",

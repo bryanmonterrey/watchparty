@@ -10,7 +10,7 @@ import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
 import { signInWithBase, signInWithInjectedEvm } from "@/lib/chains/evm/sign-in";
 import { signInWithWalletConnect, type WcTarget } from "@/lib/chains/wallet-connect";
-import { SOLANA, ETHEREUM, BASE } from "@/lib/chains/registry";
+import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
@@ -110,9 +110,6 @@ function WalletFlow({
   }, [sol.connected, sol.publicKey, sol.signMessage]);
 
   function done() {
-    // Temporary diagnostic: distinguishes "verify succeeded, redirecting" from
-    // a silent verify failure (logged in failed()).
-    console.log("[wallet] sign-in verified → redirecting to", POST_LOGIN_REDIRECT);
     router.push(POST_LOGIN_REDIRECT);
     router.refresh();
   }
@@ -188,12 +185,6 @@ function WalletFlow({
             subtitle="MetaMask, Rainbow, Coinbase & more"
             icon={<EthDiamondIcon className="h-6 w-6" />}
             onClick={() => startWalletConnect({ kind: "evm", chainId: ETHEREUM.chainId! })}
-          />
-          <Row
-            name="Base"
-            subtitle="Coinbase Wallet & more"
-            icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
-            onClick={() => startWalletConnect({ kind: "evm", chainId: BASE.chainId! })}
           />
           <Row
             name="Solana"

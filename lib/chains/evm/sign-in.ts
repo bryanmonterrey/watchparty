@@ -51,6 +51,21 @@ export async function signInWithBase() {
   return signInWithInjectedEvm(BASE.chainId!, provider);
 }
 
+// Rejects if an EIP-1193 request hangs. A broken/stale wallet-extension context
+// (e.g. multiple EVM wallets fighting over window.ethereum, or an extension that
+// auto-updated while the page was open) can make request() never resolve.
+function rpcTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Wallet didn't respond. Refresh the page or disable other wallet extensions.")),
+        ms,
+      ),
+    ),
+  ]);
+}
+
 // MetaMask / injected EVM wallet for any EVM chainId (Ethereum, Base, Hyperliquid).
 // Pass a specific EIP-1193 `provider` (from EIP-6963 discovery) or fall back to window.ethereum.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,7 +74,7 @@ export async function signInWithInjectedEvm(chainId: number, provider?: any) {
   const eth = provider ?? (typeof window !== "undefined" ? (window as any).ethereum : undefined);
   if (!eth) throw new Error("No EVM wallet found. Install MetaMask.");
 
-  const accounts: string[] = await eth.request({ method: "eth_requestAccounts" });
+  const accounts: string[] = await rpcTimeout(eth.request({ method: "eth_requestAccounts" }), 60_000);
   const address = accounts[0];
   if (!address) throw new Error("No account selected.");
 
