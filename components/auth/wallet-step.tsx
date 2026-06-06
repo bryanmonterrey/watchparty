@@ -179,10 +179,28 @@ function WalletFlow({
     content = (
       <div className="flex flex-col">
         <HeaderWithBack title="Scan with QR code" onBack={back} />
+        <p className="mt-2 text-[15px] leading-relaxed text-white/45">
+          Choose your wallet&apos;s network to generate a code.
+        </p>
         <div className="mt-6 flex flex-col gap-2.5">
-          <Row name="Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => startWalletConnect({ kind: "evm", chainId: ETHEREUM.chainId! })} />
-          <Row name="Base" icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />} onClick={() => startWalletConnect({ kind: "evm", chainId: BASE.chainId! })} />
-          <Row name="Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => startWalletConnect({ kind: "solana" })} />
+          <Row
+            name="Ethereum"
+            subtitle="MetaMask, Rainbow, Coinbase & more"
+            icon={<EthDiamondIcon className="h-6 w-6" />}
+            onClick={() => startWalletConnect({ kind: "evm", chainId: ETHEREUM.chainId! })}
+          />
+          <Row
+            name="Base"
+            subtitle="Coinbase Wallet & more"
+            icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
+            onClick={() => startWalletConnect({ kind: "evm", chainId: BASE.chainId! })}
+          />
+          <Row
+            name="Solana"
+            subtitle="Phantom, Solflare, Backpack & more"
+            icon={<SolanaMarkIcon className="h-5 w-5" />}
+            onClick={() => startWalletConnect({ kind: "solana" })}
+          />
         </div>
       </div>
     );
@@ -263,11 +281,13 @@ function WalletFlow({
 
 function Row({
   name,
+  subtitle,
   icon,
   badge,
   onClick,
 }: {
   name: string;
+  subtitle?: string;
   icon?: string | React.ReactNode;
   badge?: React.ReactNode;
   onClick: () => void;
@@ -294,7 +314,10 @@ function Row({
             </span>
           )}
         </span>
-        <span className="flex-1 text-lg font-medium text-white">{name}</span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-lg font-medium leading-tight text-white">{name}</span>
+          {subtitle && <span className="mt-0.5 truncate text-[13px] leading-tight text-white/45">{subtitle}</span>}
+        </span>
         <ChevronGlyph />
       </button>
     </Squircle>
