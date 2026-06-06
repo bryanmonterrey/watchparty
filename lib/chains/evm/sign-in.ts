@@ -14,6 +14,7 @@ export async function siweNonce(walletAddress?: string, chainId?: number): Promi
   const res = await fetch(`${AUTH_URL}/siwe/nonce`, {
     method: "POST",
     credentials: "include",
+    keepalive: true,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ walletAddress, chainId }),
   });
@@ -27,15 +28,29 @@ export async function siweVerify(body: {
   walletAddress: string;
   chainId: number;
 }) {
-  const res = await fetch(`${AUTH_URL}/siwe/verify`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message ?? "Verification failed.");
-  return data;
+  // `keepalive` lets this request finish even if mobile Safari backgrounds the
+  // tab when returning from the wallet app — otherwise the POST is cancelled
+  // (Vercel logs it as status 0, function never runs) and sign-in hangs. Retry
+  // once for a transient post-hand-off drop.
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${AUTH_URL}/siwe/verify`, {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message ?? "Verification failed.");
+      return data;
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  throw lastErr;
 }
 
 // "Sign in with Base" — opens the Base Account flow (popup to Base), connects the

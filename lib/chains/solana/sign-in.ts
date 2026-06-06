@@ -27,6 +27,7 @@ export async function signInWithSolana(wallet: SolanaWallet) {
   const startRes = await fetch(`${AUTH_URL}/siws/start`, {
     method: "POST",
     credentials: "include",
+    keepalive: true,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ address }),
   });
@@ -65,6 +66,7 @@ export async function signInWithSolana(wallet: SolanaWallet) {
   const verifyRes = await fetch(`${AUTH_URL}/siws/verify`, {
     method: "POST",
     credentials: "include",
+    keepalive: true,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ address, message, signature }),
   });
