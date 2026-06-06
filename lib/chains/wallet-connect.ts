@@ -7,9 +7,14 @@
 // is a single client that can request BOTH the `eip155` and `solana` namespaces,
 // so one QR works for either chain ("hybrid"), and per-chain QRs reuse the same
 // instance. We render the QR ourselves (qrcode) from the `display_uri` event
-// instead of WalletConnect's third-party modal.
+// instead of a second WalletConnect modal.
+//
+// The modal UI is Reown AppKit (the same modal @walletconnect/solana-adapter
+// renders), driven by our shared provider via `manualWCControl` — so the look
+// matches what we had before, without a second WalletConnect core.
 import { UniversalProvider } from "@walletconnect/universal-provider";
-import { WalletConnectModal } from "@walletconnect/modal";
+import { createAppKit } from "@reown/appkit/core";
+import { mainnet, base, solana } from "@reown/appkit/networks";
 import { createSiweMessage } from "viem/siwe";
 import bs58 from "bs58";
 import { siweNonce, siweVerify } from "./evm/sign-in";
@@ -41,12 +46,26 @@ function getProvider(): Promise<UP> {
   return providerPromise;
 }
 
-let modalSingleton: WalletConnectModal | null = null;
-function getModal(): WalletConnectModal {
-  if (!modalSingleton) {
-    modalSingleton = new WalletConnectModal({ projectId: PROJECT_ID });
+let appKit: ReturnType<typeof createAppKit> | null = null;
+function getModal(provider: UP) {
+  if (!appKit) {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://watchparty.xyz";
+    appKit = createAppKit({
+      projectId: PROJECT_ID,
+      // AppKit bundles its own (duplicated) UniversalProvider type; same class,
+      // separate declaration — cast across the copy.
+      universalProvider: provider as unknown as Parameters<typeof createAppKit>[0]["universalProvider"],
+      networks: [mainnet, base, solana],
+      manualWCControl: true,
+      metadata: {
+        name: process.env.NEXT_PUBLIC_APP_NAME || "Watchparty",
+        description: "Sign in to Watchparty",
+        url: origin,
+        icons: [`${origin}/icon-192.png`],
+      },
+    });
   }
-  return modalSingleton;
+  return appKit;
 }
 
 // Which namespaces to request: "hybrid" (both), a single EVM chain, or Solana.
@@ -86,12 +105,12 @@ function namespacesFor(target: WcTarget) {
   };
 }
 
-// Open a WalletConnect session for the given target using WalletConnect's own
-// modal UI (not a custom QR). Resolves once the wallet has connected, signed,
-// and the SIWE/SIWS verification has created a session.
+// Open a WalletConnect session for the given target using the Reown AppKit
+// modal. Resolves once the wallet has connected, signed, and the SIWE/SIWS
+// verification has created a session.
 export async function signInWithWalletConnect(target: WcTarget): Promise<unknown> {
   const provider = await getProvider();
-  const modal = getModal();
+  const modal = getModal(provider);
 
   // Start from a clean slate so a fresh pairing/QR is generated each time. This
   // is what fixes "second QR won't open": a prior attempt's session or pending
@@ -104,12 +123,6 @@ export async function signInWithWalletConnect(target: WcTarget): Promise<unknown
     }
   }
   await provider.cleanupPendingPairings().catch(() => {});
-
-  // Drive WalletConnect's official modal from the pairing URI.
-  const handleUri = (uri: string) => {
-    modal.openModal({ uri });
-  };
-  provider.on("display_uri", handleUri);
 
   // If the user closes the modal before connecting, abort the pending pairing so
   // it doesn't hang or block the next attempt. (Guard against the initial closed
@@ -126,10 +139,14 @@ export async function signInWithWalletConnect(target: WcTarget): Promise<unknown
       reject(new Error("User closed the WalletConnect modal."));
     };
   });
-  const unsubscribeModal = modal.subscribeModal((state: { open: boolean }) => {
+  const unsubscribe = modal.subscribeState((state: { open: boolean }) => {
     if (state.open) modalWasOpen = true;
     else if (modalWasOpen) abort?.();
   });
+
+  // manualWCControl: AppKit reads the pairing URI from our provider once we open
+  // the modal and call connect().
+  modal.open();
 
   try {
     const connected = provider.connect({ optionalNamespaces: namespacesFor(target) });
@@ -178,8 +195,7 @@ export async function signInWithWalletConnect(target: WcTarget): Promise<unknown
 
     throw new Error("Wallet connected but approved no supported chain.");
   } finally {
-    provider.off("display_uri", handleUri);
-    unsubscribeModal();
-    modal.closeModal();
+    unsubscribe();
+    modal.close();
   }
 }
