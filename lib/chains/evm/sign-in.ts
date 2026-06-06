@@ -10,7 +10,7 @@ const AUTH_URL =
   process.env.NEXT_PUBLIC_AUTH_URL ??
   (typeof window !== "undefined" ? `${window.location.origin}/api/auth` : "http://localhost:3001/api/auth");
 
-async function siweNonce(walletAddress?: string, chainId?: number): Promise<string> {
+export async function siweNonce(walletAddress?: string, chainId?: number): Promise<string> {
   const res = await fetch(`${AUTH_URL}/siwe/nonce`, {
     method: "POST",
     credentials: "include",
@@ -21,7 +21,7 @@ async function siweNonce(walletAddress?: string, chainId?: number): Promise<stri
   return (await res.json()).nonce;
 }
 
-async function siweVerify(body: {
+export async function siweVerify(body: {
   message: string;
   signature: string;
   walletAddress: string;
