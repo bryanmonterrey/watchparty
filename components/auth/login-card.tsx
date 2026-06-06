@@ -52,7 +52,6 @@ export function LoginCard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [waiting, setWaiting] = useState<Waiting | null>(null);
-  const [waitError, setWaitError] = useState<string | null>(null);
 
   const canSend = /\S+@\S+\.\S+/.test(email);
 
@@ -77,7 +76,6 @@ export function LoginCard() {
 
   async function signInWithProvider(provider: string, id: string) {
     const meta = PROVIDERS.find((p) => p.id === id)!;
-    setWaitError(null);
     setWaiting({
       name: meta.label.replace("Continue with ", ""),
       description: `Redirecting you to ${meta.label.replace("Continue with ", "")} to finish signing in.`,
@@ -89,12 +87,15 @@ export function LoginCard() {
       provider: provider as Parameters<typeof authClient.signIn.social>[0]["provider"],
       callbackURL: REDIRECT_TO,
     });
-    if (error) setWaitError(error.message ?? "Sign in failed.");
-    // On success the browser is redirected to the provider.
+    // On success the browser is redirected to the provider. On failure, return
+    // to the options quietly — no raw error on screen (details to the console).
+    if (error) {
+      console.error("[auth] social sign-in failed:", error);
+      setStep("methods");
+    }
   }
 
   async function signInWithPasskey() {
-    setWaitError(null);
     setWaiting({
       name: "Passkey",
       description: "Please follow the prompts to verify your passkey.",
@@ -105,22 +106,16 @@ export function LoginCard() {
     try {
       const res = await authClient.signIn.passkey();
       if (res?.error) {
-        // Dismissing the passkey prompt isn't a failure — quietly go back.
-        if (isUserRejection(res.error)) {
-          setStep("methods");
-          return;
-        }
-        setWaitError(res.error.message ?? "Passkey sign in failed.");
+        if (!isUserRejection(res.error)) console.error("[auth] passkey sign-in failed:", res.error);
+        setStep("methods");
         return;
       }
       router.push(REDIRECT_TO);
       router.refresh();
     } catch (e) {
-      if (isUserRejection(e)) {
-        setStep("methods");
-        return;
-      }
-      setWaitError(e instanceof Error ? e.message : "Passkey sign in failed.");
+      // Cancellation or real error alike: return to the options, no UI message.
+      if (!isUserRejection(e)) console.error("[auth] passkey sign-in failed:", e);
+      setStep("methods");
     }
   }
 
@@ -253,10 +248,8 @@ export function LoginCard() {
                 name={waiting.name}
                 description={waiting.description}
                 icon={waiting.icon}
-                error={waitError}
                 onContinue={waiting.retry}
                 onBack={() => {
-                  setWaitError(null);
                   setBusy(null);
                   setStep("methods");
                 }}

@@ -48,7 +48,6 @@ function WalletFlow({
   const [view, setView] = useState<View>("methods");
   const [chain, setChain] = useState<ChainConfig | null>(null);
   const [waiting, setWaiting] = useState<{ name: string; icon: React.ReactNode; retry: () => void } | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const pendingSolana = useRef(false);
   // Where the waiting view was entered from, so "Back" returns there. QR can be
   // launched from either "methods" (Connect Wallet) or a chain's "wallets" list.
@@ -60,7 +59,6 @@ function WalletFlow({
   viewRef.current = view;
   function returnFromWaiting() {
     pendingSolana.current = false;
-    setError(null);
     setView(returnViewRef.current);
   }
   function back() {
@@ -115,16 +113,13 @@ function WalletFlow({
     router.refresh();
   }
   function failed(e: unknown) {
-    // A cancel/rejection isn't a failure — quietly return where we came from.
-    if (isUserRejection(e)) {
-      returnFromWaiting();
-      return;
-    }
-    setError(e instanceof Error ? e.message : "Sign-in failed.");
+    // Cancellation or real error alike: never surface a raw message in the UI —
+    // quietly return where we came from. Details go to the console.
+    if (!isUserRejection(e)) console.error("[wallet] sign-in failed:", e);
+    returnFromWaiting();
   }
   function startWaiting(name: string, icon: React.ReactNode, retry: () => void) {
     returnViewRef.current = viewRef.current; // remember the origin for "Back"
-    setError(null);
     setWaiting({ name, icon, retry });
     setView("waiting");
   }
@@ -140,13 +135,11 @@ function WalletFlow({
       await run();
       done();
     } catch (e) {
-      console.error("[wallet] sign-in failed:", e);
       failed(e);
     }
   }
 
   function openChain(c: ChainConfig) {
-    setError(null);
     setChain(c);
     setView("wallets");
   }
@@ -164,7 +157,6 @@ function WalletFlow({
         name={waiting.name}
         description="Approve the signature in your wallet to continue."
         icon={waiting.icon}
-        error={error}
         onContinue={waiting.retry}
         onBack={returnFromWaiting}
       />
@@ -203,7 +195,6 @@ function WalletFlow({
             </>
           )}
         </div>
-        {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
       </div>
     );
   } else {
@@ -222,7 +213,6 @@ function WalletFlow({
             <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
           )}
         </div>
-        {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
       </div>
     );
   }
