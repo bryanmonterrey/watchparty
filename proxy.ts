@@ -31,6 +31,10 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static assets and image files; run on everything else.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  // Skip static assets, icons, and the web manifest; run on everything else.
+  // (Without excluding manifest.webmanifest the proxy redirects it to /login and
+  // the browser sees HTML -> "manifest is not valid JSON data".)
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)",
+  ],
 };

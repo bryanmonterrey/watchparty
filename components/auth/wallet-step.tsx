@@ -219,7 +219,6 @@ function WalletFlow({
                 icon={<QrGlyph />}
                 onClick={() => startWalletConnect({ kind: "solana" })}
               />
-              {detectedSolana.length === 0 && <Hint>No wallet detected. Use the QR code option below.</Hint>}
             </>
           ) : (
             <>
@@ -352,10 +351,6 @@ function HeaderWithBack({ title, onBack }: { title: string; onBack: () => void }
       <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
     </div>
   );
-}
-
-function Hint({ children }: { children: React.ReactNode }) {
-  return <p className="px-1 py-1 text-center text-[13px] text-zinc-500">{children}</p>;
 }
 
 function ChevronGlyph() {
