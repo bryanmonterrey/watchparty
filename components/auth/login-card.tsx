@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
 import { Star2Icon } from "@/components/icons";
 import { authClient, sendEmailOtp } from "@/lib/auth/client";
+import { isUserRejection } from "@/lib/is-user-rejection";
 import { ConfirmEmailStep } from "./confirm-email-step";
 import { WaitingStep, FingerprintIcon } from "./waiting-step";
 import { Squircle } from "@/components/ui/squircle";
@@ -109,13 +110,26 @@ export function LoginCard() {
       retry: signInWithPasskey,
     });
     setStep("waiting");
-    const res = await authClient.signIn.passkey();
-    if (res?.error) {
-      setWaitError(res.error.message ?? "Passkey sign in failed.");
-      return;
+    try {
+      const res = await authClient.signIn.passkey();
+      if (res?.error) {
+        // Dismissing the passkey prompt isn't a failure — quietly go back.
+        if (isUserRejection(res.error)) {
+          setStep("methods");
+          return;
+        }
+        setWaitError(res.error.message ?? "Passkey sign in failed.");
+        return;
+      }
+      router.push(REDIRECT_TO);
+      router.refresh();
+    } catch (e) {
+      if (isUserRejection(e)) {
+        setStep("methods");
+        return;
+      }
+      setWaitError(e instanceof Error ? e.message : "Passkey sign in failed.");
     }
-    router.push(REDIRECT_TO);
-    router.refresh();
   }
 
   return (
@@ -124,7 +138,7 @@ export function LoginCard() {
         type="button"
         aria-label="Go back"
         onClick={handleBack}
-        className="absolute left-6 top-7 grid h-10 w-10 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5 sm:left-11"
+        className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5 sm:left-7"
       >
         <ArrowLeftIcon className="size-7" />
       </button>

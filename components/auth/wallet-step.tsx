@@ -11,6 +11,7 @@ import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
 import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
 import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
+import { isUserRejection } from "@/lib/is-user-rejection";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
 import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon, ArrowLeftIcon } from "@/components/icons";
@@ -89,7 +90,7 @@ function WalletFlow({
     if (ready) {
       sol.connect().catch((e) => {
         pendingSolana.current = false;
-        if (!String(e?.message ?? e).toLowerCase().includes("reject")) setError("Couldn't connect to that wallet.");
+        failed(e);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,6 +109,12 @@ function WalletFlow({
     router.refresh();
   }
   function failed(e: unknown) {
+    // A cancel/rejection isn't a failure — quietly return to the wallet list.
+    if (isUserRejection(e)) {
+      setError(null);
+      setView("wallets");
+      return;
+    }
     setError(e instanceof Error ? e.message : "Sign-in failed.");
   }
   function startWaiting(name: string, icon: React.ReactNode, retry: () => void) {
