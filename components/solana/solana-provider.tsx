@@ -1,6 +1,6 @@
 'use client'
 
-import { WalletAdapterNetwork, WalletError } from '@solana/wallet-adapter-base'
+import { WalletError } from '@solana/wallet-adapter-base'
 import {
   AnchorWallet,
   ConnectionProvider,
@@ -8,11 +8,9 @@ import {
   useWallet,
   WalletProvider,
 } from '@solana/wallet-adapter-react'
-import { WalletConnectWalletAdapter } from "@walletconnect/solana-adapter";
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
-import dynamic from 'next/dynamic'
-import { ReactNode, useCallback, useMemo, useState, useEffect } from 'react'
-import { ClusterNetwork, useCluster } from '../cluster/cluster-data-access'
+import { ReactNode, useCallback, useMemo } from 'react'
+import { useCluster } from '../cluster/cluster-data-access'
 import '@solana/wallet-adapter-react-ui/styles.css'
 import { AnchorProvider } from '@coral-xyz/anchor'
 
@@ -29,52 +27,18 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
     }
     return cluster.endpoint
   }, [cluster])
-  const network = useMemo(() => {
-    switch (cluster.network) {
-      case ClusterNetwork.Mainnet:
-        return WalletAdapterNetwork.Mainnet;
-      default:
-        return WalletAdapterNetwork.Devnet;
-    }
-  }, [cluster.network])
   const onError = useCallback((error: WalletError) => {
     console.error(error)
   }, [])
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      console.log("WalletConnect Config:", {
-        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
-        metadataUrl: window.location.origin
-      });
-    }
-  }, []);
-
-  const wallets = useMemo(() => {
-    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://watchparty.xyz');
-
-    return [
-      new WalletConnectWalletAdapter({
-        network,
-        options: {
-          projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '8d7de790d4225d0bfd02ad68ad524d1f',
-          metadata: {
-            name: process.env.NEXT_PUBLIC_APP_NAME || 'watchparty',
-            description: 'Connect wallet',
-            url: currentOrigin,
-            icons: ['https://watchparty.xyz/favicon.ico']
-          }
-        },
-      }),
-    ];
-  }, [network]);
-
+  // Wallet Standard wallets (Phantom, Solflare, Backpack…) auto-register, so no
+  // explicit adapters are needed. WalletConnect/QR goes through our shared
+  // UniversalProvider (lib/chains/wallet-connect.ts) — registering the
+  // solana-adapter here spun up a SECOND WalletConnect core (the "Init() called
+  // 2 times" warning) that conflicts with QR sessions.
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} onError={onError} autoConnect={true}>
+      <WalletProvider wallets={[]} onError={onError} autoConnect={true}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
