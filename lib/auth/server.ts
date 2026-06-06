@@ -151,9 +151,17 @@ export const auth = betterAuth({
     // to exist in the DB before it functions live.
     siwe({
       domain: process.env.NEXT_PUBLIC_AUTH_DOMAIN ?? "localhost",
-      getNonce: async () => crypto.randomUUID().replace(/-/g, ""),
-      verifyMessage: async ({ message, signature, address, chainId }) =>
-        verifyEvmMessage({ message, signature, address, chainId }),
+      getNonce: async () => {
+        const nonce = crypto.randomUUID().replace(/-/g, "");
+        console.log("[siwe] nonce issued");
+        return nonce;
+      },
+      verifyMessage: async ({ message, signature, address, chainId }) => {
+        console.log("[siwe] verify called", { address, chainId, msgLen: message?.length, sigLen: signature?.length });
+        const ok = await verifyEvmMessage({ message, signature, address, chainId });
+        console.log("[siwe] verify result", { address, chainId, verified: ok });
+        return ok;
+      },
     }),
 
     passkey({
@@ -320,6 +328,13 @@ export const auth = betterAuth({
               .select({ role: user.role, wallet_address: user.wallet_address })
               .from(user)
               .where(eq(user.id, sessionData.userId));
+
+            console.log("[siwe] session hook", {
+              userId: sessionData.userId,
+              address,
+              dbWallet: dbUser?.wallet_address,
+              role: dbUser?.role,
+            });
 
             if (!dbUser || !["admin", "user"].includes(dbUser.role ?? "")) {
               throw new APIError("UNAUTHORIZED", { message: "Invalid user" });

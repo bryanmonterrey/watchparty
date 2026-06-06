@@ -29,7 +29,8 @@ export async function verifyEvmMessage(args: {
       message: args.message,
       signature: args.signature as Hex,
     });
-  } catch {
+  } catch (e) {
+    console.error("[siwe] verifyMessage threw", { address: args.address, chainId: args.chainId, error: e instanceof Error ? e.message : e });
     return false;
   }
 }
