@@ -9,7 +9,7 @@ import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
 import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
-import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
+import { SOLANA, ETHEREUM, BASE } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { Squircle } from "@/components/ui/squircle";
@@ -32,7 +32,7 @@ export default function WalletStep({
   );
 }
 
-type View = "methods" | "wallets" | "waiting";
+type View = "methods" | "qr" | "wallets" | "waiting";
 
 function WalletFlow({
   onRegisterBack,
@@ -64,7 +64,7 @@ function WalletFlow({
   function back() {
     if (viewRef.current === "waiting") {
       returnFromWaiting();
-    } else if (viewRef.current === "wallets") {
+    } else if (viewRef.current === "wallets" || viewRef.current === "qr") {
       setView("methods");
     } else {
       onExit?.();
@@ -161,6 +161,34 @@ function WalletFlow({
         onBack={returnFromWaiting}
       />
     );
+  } else if (view === "qr") {
+    // Chain-aware QR chooser: WalletConnect needs to know the network, so pick
+    // one, then launch its session (EVM via ethereum-provider, Solana via the
+    // wallet-adapter). Reached from the top-level "Sign in with QR code".
+    content = (
+      <div className="flex flex-col">
+        <HeaderWithBack title="Scan with QR code" onBack={back} />
+        <div className="mt-6 flex flex-col gap-2.5">
+          <Row
+            name="Ethereum"
+            icon={<EthDiamondIcon className="h-6 w-6" />}
+            onClick={() => chooseEvmWallet(() => signInWithEvmWalletConnect(ETHEREUM.chainId!), "WalletConnect", <QrGlyph />)}
+          />
+          <Row
+            name="Base"
+            icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
+            onClick={() => chooseEvmWallet(() => signInWithEvmWalletConnect(BASE.chainId!), "WalletConnect", <QrGlyph />)}
+          />
+          {walletConnect && (
+            <Row
+              name="Solana"
+              icon={<SolanaMarkIcon className="h-5 w-5" />}
+              onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
+            />
+          )}
+        </div>
+      </div>
+    );
   } else if (view === "wallets" && chain) {
     content = (
       <div className="flex flex-col">
@@ -172,7 +200,7 @@ function WalletFlow({
                 <Row key={w.adapter.name} name={w.adapter.name} icon={w.adapter.icon} badge={chainBadge} onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)} />
               ))}
               {walletConnect && (
-                <Row name="WalletConnect (QR)" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
+                <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
               )}
               {detectedSolana.length === 0 && <Hint>No wallet detected. Use the QR code option below.</Hint>}
             </>
@@ -209,9 +237,7 @@ function WalletFlow({
             icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
             onClick={() => chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)}
           />
-          {walletConnect && (
-            <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
-          )}
+          <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => setView("qr")} />
         </div>
       </div>
     );
