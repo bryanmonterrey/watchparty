@@ -13,7 +13,7 @@ import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon } from "@/components/icons";
+import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon, ArrowLeftIcon } from "@/components/icons";
 
 // Full-page wallet state. Two levels: choose chain → choose a detected wallet →
 // waiting (approve signature). Lazy-loaded with its scoped Solana provider.
@@ -118,11 +118,11 @@ function WalletFlow({
 
   function chooseSolanaWallet(name: string, label: string, icon: React.ReactNode) {
     pendingSolana.current = true;
-    startWaiting(label, icon, () => chooseSolanaWallet(name, label, icon));
+    startWaiting(label, waitingIcon(icon), () => chooseSolanaWallet(name, label, icon));
     sol.select(name as WalletName);
   }
   async function chooseEvmWallet(run: () => Promise<unknown>, label: string, icon: React.ReactNode) {
-    startWaiting(label, icon, () => chooseEvmWallet(run, label, icon));
+    startWaiting(label, waitingIcon(icon), () => chooseEvmWallet(run, label, icon));
     try {
       await run();
       done();
@@ -273,6 +273,20 @@ function Row({
   );
 }
 
+// The waiting tile renders a ReactNode, but wallet icons arrive as URL strings —
+// wrap those in an <img> so the chosen wallet's logo shows while signing.
+function waitingIcon(icon?: string | React.ReactNode): React.ReactNode {
+  if (typeof icon === "string") {
+    return icon ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={icon} alt="" className="size-10 rounded-xl" />
+    ) : (
+      <WalletGlyph />
+    );
+  }
+  return icon ?? <WalletGlyph />;
+}
+
 function HeaderWithBack({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <div className="mt-7 flex items-center gap-2">
@@ -282,9 +296,7 @@ function HeaderWithBack({ title, onBack }: { title: string; onBack: () => void }
         onClick={onBack}
         className="-ml-2 grid size-9 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M19 12H5M5 12L11 6M5 12L11 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <ArrowLeftIcon className="size-6" />
       </button>
       <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
     </div>

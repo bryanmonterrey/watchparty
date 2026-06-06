@@ -2441,3 +2441,12 @@ export function BitcoinIcon(props: React.SVGProps<SVGSVGElement>) {
         </svg>
     );
 }
+
+// Left-pointing back arrow. Size via className (e.g. size-6) or width/height.
+export function ArrowLeftIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+            <path d="M19 12H5M5 12L11 6M5 12L11 18" />
+        </svg>
+    );
+}
