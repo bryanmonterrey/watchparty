@@ -19,13 +19,11 @@ import { createSiweMessage } from "viem/siwe";
 import bs58 from "bs58";
 import { siweNonce, siweVerify } from "./evm/sign-in";
 import { signInWithSolana } from "./solana/sign-in";
-import { ETHEREUM, BASE } from "./registry";
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
-// Solana mainnet CAIP-2 (current + legacy alias — some wallets still send the old one).
+// Solana mainnet CAIP-2.
 const SOLANA_MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
-const SOLANA_MAINNET_LEGACY = "solana:4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ";
 
 type UP = Awaited<ReturnType<typeof UniversalProvider.init>>;
 
@@ -68,40 +66,29 @@ function getModal(provider: UP) {
   return appKit;
 }
 
-// Which namespaces to request: "hybrid" (both), a single EVM chain, or Solana.
-export type WcTarget =
-  | { kind: "hybrid" }
-  | { kind: "evm"; chainId: number }
-  | { kind: "solana" };
+// A QR targets ONE ecosystem. Real wallets are single-ecosystem (Phantom=Solana,
+// MetaMask=EVM) and reject a proposal that mixes eip155 + solana — so we never
+// request both in one session.
+export type WcTarget = { kind: "evm"; chainId: number } | { kind: "solana" };
 
-function namespacesFor(target: WcTarget) {
-  const evmChains = (() => {
-    if (target.kind === "evm") return [`eip155:${target.chainId}`];
-    if (target.kind === "hybrid") return [`eip155:${ETHEREUM.chainId}`, `eip155:${BASE.chainId}`];
-    return [];
-  })();
-  const solanaChains =
-    target.kind === "solana" || target.kind === "hybrid" ? [SOLANA_MAINNET, SOLANA_MAINNET_LEGACY] : [];
-
+function namespacesFor(
+  target: WcTarget,
+): Record<string, { methods: string[]; chains: string[]; events: string[] }> {
+  if (target.kind === "evm") {
+    return {
+      eip155: {
+        methods: ["personal_sign", "eth_sendTransaction"],
+        chains: [`eip155:${target.chainId}`],
+        events: ["chainChanged", "accountsChanged"],
+      },
+    };
+  }
   return {
-    ...(evmChains.length
-      ? {
-          eip155: {
-            methods: ["personal_sign", "eth_sendTransaction"],
-            chains: evmChains,
-            events: ["chainChanged", "accountsChanged"],
-          },
-        }
-      : {}),
-    ...(solanaChains.length
-      ? {
-          solana: {
-            methods: ["solana_signMessage"],
-            chains: solanaChains,
-            events: [],
-          },
-        }
-      : {}),
+    solana: {
+      methods: ["solana_signMessage"],
+      chains: [SOLANA_MAINNET],
+      events: [],
+    },
   };
 }
 

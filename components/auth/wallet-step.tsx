@@ -10,7 +10,7 @@ import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
 import { signInWithBase, signInWithInjectedEvm } from "@/lib/chains/evm/sign-in";
 import { signInWithWalletConnect, type WcTarget } from "@/lib/chains/wallet-connect";
-import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
+import { SOLANA, ETHEREUM, BASE } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
@@ -34,7 +34,7 @@ export default function WalletStep({
   );
 }
 
-type View = "methods" | "wallets" | "waiting";
+type View = "methods" | "qr" | "wallets" | "waiting";
 
 function WalletFlow({
   onRegisterBack,
@@ -66,7 +66,7 @@ function WalletFlow({
   function back() {
     if (viewRef.current === "waiting") {
       returnFromWaiting();
-    } else if (viewRef.current === "wallets") {
+    } else if (viewRef.current === "wallets" || viewRef.current === "qr") {
       setView("methods");
     } else {
       onExit?.();
@@ -143,8 +143,8 @@ function WalletFlow({
     }
   }
 
-  // WalletConnect via its official modal. One shared provider for every chain.
-  // `target` is "hybrid" (Solana + EVM in one QR), a single EVM chain, or Solana.
+  // WalletConnect via its official modal. One shared provider; `target` is a
+  // single EVM chain or Solana (never both — wallets reject mixed proposals).
   // We show our waiting state behind WalletConnect's modal.
   function startWalletConnect(target: WcTarget) {
     startWaiting("WalletConnect", <QrGlyph />, () => startWalletConnect(target));
@@ -172,6 +172,19 @@ function WalletFlow({
         onContinue={waiting.retry}
         onBack={returnFromWaiting}
       />
+    );
+  } else if (view === "qr") {
+    // Pick the chain first — each QR then requests a SINGLE ecosystem's namespace
+    // so single-ecosystem wallets (Phantom/MetaMask) accept the proposal.
+    content = (
+      <div className="flex flex-col">
+        <HeaderWithBack title="Scan with QR code" onBack={back} />
+        <div className="mt-6 flex flex-col gap-2.5">
+          <Row name="Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => startWalletConnect({ kind: "evm", chainId: ETHEREUM.chainId! })} />
+          <Row name="Base" icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />} onClick={() => startWalletConnect({ kind: "evm", chainId: BASE.chainId! })} />
+          <Row name="Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => startWalletConnect({ kind: "solana" })} />
+        </div>
+      </div>
     );
   } else if (view === "wallets" && chain) {
     content = (
@@ -226,7 +239,7 @@ function WalletFlow({
           <Row
             name="Sign in with QR code"
             icon={<QrGlyph />}
-            onClick={() => startWalletConnect({ kind: "hybrid" })}
+            onClick={() => setView("qr")}
           />
         </div>
       </div>
