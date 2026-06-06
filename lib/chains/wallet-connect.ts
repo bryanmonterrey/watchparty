@@ -16,6 +16,7 @@ import { UniversalProvider } from "@walletconnect/universal-provider";
 import { createAppKit } from "@reown/appkit/core";
 import { mainnet, base, solana } from "@reown/appkit/networks";
 import { createSiweMessage } from "viem/siwe";
+import { toHex } from "viem";
 import bs58 from "bs58";
 import { siweNonce, siweVerify } from "./evm/sign-in";
 import { signInWithSolana } from "./solana/sign-in";
@@ -161,8 +162,11 @@ export async function signInWithWalletConnect(target: WcTarget): Promise<unknown
         version: "1",
         statement: "Sign in to Watchparty.",
       });
+      // WalletConnect wallets follow the spec strictly: personal_sign's message
+      // must be hex-encoded (injected MetaMask is lenient and accepts a raw
+      // string, but Rainbow/MetaMask-mobile over WC mishandle a non-hex message).
       const signature = (await provider.request(
-        { method: "personal_sign", params: [message, address] },
+        { method: "personal_sign", params: [toHex(message), address] },
         `eip155:${chainId}`,
       )) as string;
       return await siweVerify({ message, signature, walletAddress: address, chainId });
