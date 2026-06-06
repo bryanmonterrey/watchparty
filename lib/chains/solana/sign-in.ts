@@ -1,9 +1,15 @@
-// Solana SIWS sign-in (Connect → Nonce → Sign → Verify → Session). Ported from sidebar.
-// Solana adapter standard: signMessage(Uint8Array) → Uint8Array.
+// Solana SIWS sign-in (Connect → Nonce → Sign → Verify → Session).
+// Hits the better-auth-siws endpoints directly (like the EVM SIWE flow) so we
+// can surface the exact verify failure — the plugin returns PLAIN-TEXT errors
+// ("Domain mismatch" / "Nonce invalid or expired" / "Invalid signature"), which
+// the auth client would otherwise collapse into a generic message.
 
 import bs58 from "bs58";
-import { authClient } from "@/lib/auth/client";
 import { buildSiwsMessage } from "./message";
+
+const AUTH_URL =
+  process.env.NEXT_PUBLIC_AUTH_URL ??
+  (typeof window !== "undefined" ? `${window.location.origin}/api/auth` : "http://localhost:3001/api/auth");
 
 export interface SolanaWallet {
   publicKey: { toBase58(): string } | null;
@@ -17,34 +23,23 @@ export async function signInWithSolana(wallet: SolanaWallet) {
 
   const address = wallet.publicKey.toBase58();
 
-  // better-auth-siws is untyped; the siws namespace is added at runtime by the client plugin.
-  const siws = (authClient as unknown as {
-    siws: {
-      start: (o: { fetchOptions: { method: string; body: { address: string } } }) => Promise<{
-        data: { nonce: string; domain: string; uri: string } | null;
-        error: { message?: string } | null;
-      }>;
-      verify: (o: { fetchOptions: { method: string; body: { address: string; message: string; signature: string } } }) => Promise<{
-        data: unknown;
-        error: { message?: string } | null;
-      }>;
-    };
-  }).siws;
-
-  // 1) Nonce
-  const { data: nonceData, error: nonceError } = await siws.start({
-    fetchOptions: { method: "POST", body: { address } },
+  // 1) Nonce — POST /siws/start { address } -> { nonce, domain, uri }
+  const startRes = await fetch(`${AUTH_URL}/siws/start`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address }),
   });
-  if (nonceError || !nonceData) {
-    throw new Error(nonceError?.message ?? "Failed to fetch nonce");
+  if (!startRes.ok) {
+    throw new Error(`Couldn't start Solana sign-in (${startRes.status}).`);
   }
-
-  const { nonce, domain, uri } = nonceData as { nonce: string; domain: string; uri: string };
+  const { nonce, domain, uri } = (await startRes.json()) as { nonce: string; domain: string; uri: string };
   if (!nonce || !domain || !uri) {
-    throw new Error("Invalid nonce response");
+    throw new Error("Invalid nonce response from /siws/start.");
   }
 
-  // 2) Build SIWS message
+  // 2) Build the SIWS message — the plugin verifies the signature over this exact
+  //    string and checks it starts with "<domain> wants you to sign in".
   const message = buildSiwsMessage({
     address,
     domain,
@@ -54,24 +49,28 @@ export async function signInWithSolana(wallet: SolanaWallet) {
     statement: "Sign in with Solana to the app.",
   });
 
-  // 3) Sign (direct Uint8Array)
+  // 3) Sign (raw Uint8Array → base58)
   const signatureRaw = await wallet.signMessage(new TextEncoder().encode(message));
-  let signatureB58: string;
-  if (signatureRaw instanceof Uint8Array) {
-    signatureB58 = bs58.encode(signatureRaw);
-  } else if (typeof signatureRaw === "string") {
-    signatureB58 = signatureRaw;
-  } else {
+  const signature =
+    signatureRaw instanceof Uint8Array
+      ? bs58.encode(signatureRaw)
+      : typeof signatureRaw === "string"
+        ? signatureRaw
+        : null;
+  if (!signature) {
     throw new Error("Invalid signature — user rejected?");
   }
 
   // 4) Verify → session
-  const { data: verifyData, error: verifyError } = await siws.verify({
-    fetchOptions: { method: "POST", body: { address, message, signature: signatureB58 } },
+  const verifyRes = await fetch(`${AUTH_URL}/siws/verify`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address, message, signature }),
   });
-  if (verifyError || !verifyData) {
-    throw new Error(verifyError?.message ?? "Signature verification failed");
+  if (!verifyRes.ok) {
+    const reason = (await verifyRes.text().catch(() => "")) || "verification rejected";
+    throw new Error(`Solana sign-in failed (${verifyRes.status}): ${reason}`);
   }
-
-  return verifyData;
+  return verifyRes.json().catch(() => ({}));
 }
