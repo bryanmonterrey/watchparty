@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
@@ -53,21 +53,13 @@ export function LoginCard() {
   const [error, setError] = useState<string | null>(null);
   const [waiting, setWaiting] = useState<Waiting | null>(null);
   const [waitError, setWaitError] = useState<string | null>(null);
-  // Registered by WalletStep so the shared arrow can walk its sub-views.
-  const walletBack = useRef<(() => boolean) | null>(null);
 
   const canSend = /\S+@\S+\.\S+/.test(email);
 
+  // The top-left arrow always exits the login flow to home. In-flow back
+  // navigation is handled by the inline arrows inside each state.
   function handleBack() {
-    // While in the wallet state, the arrow first steps back through its sub-views.
-    if (step === "wallet" && walletBack.current?.()) return;
-    if (step === "methods") router.back();
-    else {
-      setStep("methods");
-      setBusy(null);
-      setError(null);
-      setWaitError(null);
-    }
+    router.push("/");
   }
 
   async function sendCode() {
@@ -136,7 +128,7 @@ export function LoginCard() {
     <div className="relative flex flex-1 flex-col items-center px-6">
       <button
         type="button"
-        aria-label="Go back"
+        aria-label="Back to home"
         onClick={handleBack}
         className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5 sm:left-7"
       >
@@ -251,7 +243,7 @@ export function LoginCard() {
 
           {step === "wallet" && (
             <motion.div key="wallet" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition}>
-              <WalletStep onRegisterBack={(fn) => { walletBack.current = fn; }} onExit={() => setStep("methods")} />
+              <WalletStep onExit={() => setStep("methods")} />
             </motion.div>
           )}
 
