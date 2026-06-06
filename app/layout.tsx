@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -18,6 +18,12 @@ export const metadata: Metadata = {
     template: "%s / Watchparty",
   },
   description: "The ultimate destination for live streaming and community engagement.",
+};
+
+// Paints the mobile browser chrome (address bar) to match the black app
+// instead of Favycon's default white.
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
