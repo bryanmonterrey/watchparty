@@ -61,7 +61,7 @@ export function AppHeader() {
       <div className="relative z-10 flex-1 flex items-center justify-start">
         <div className="flex items-center gap-2 h-11 px-3 pointer-events-auto md:hidden bg-white/5 rounded-full p-1 backdrop-blur-xs border border-white/5 ">
           <Image
-            src="/logo.svg"
+            src="/Star2.svg"
             alt="Logo"
             width={20}
             height={20}

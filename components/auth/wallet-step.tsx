@@ -110,6 +110,9 @@ function WalletFlow({
   }, [sol.connected, sol.publicKey, sol.signMessage]);
 
   function done() {
+    // Temporary diagnostic: distinguishes "verify succeeded, redirecting" from
+    // a silent verify failure (logged in failed()).
+    console.log("[wallet] sign-in verified → redirecting to", POST_LOGIN_REDIRECT);
     router.push(POST_LOGIN_REDIRECT);
     router.refresh();
   }
