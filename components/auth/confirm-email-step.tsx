@@ -69,7 +69,7 @@ export function ConfirmEmailStep({ email }: { email: string }) {
 
   return (
     <div className="flex flex-col">
-      <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">
+      <h1 className="mt-7 text-2xl font-semibold tracking-tight sm:text-[28px]">
         Confirm Email
       </h1>
       <p className="mt-2 text-[15px] text-zinc-400">

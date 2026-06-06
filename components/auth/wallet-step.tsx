@@ -5,38 +5,44 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
-import { useConnect, useSignMessage, type Connector } from "wagmi";
 import { SolanaProvider } from "./solana-provider";
-import { EvmProvider } from "./evm-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
-import { signInWithBase, signEvmSiwe } from "@/lib/chains/evm/sign-in";
-import { useBitcoinWallets, signInWithBitcoin, type BtcWallet } from "@/lib/chains/bitcoin/sign-in";
-import { SOLANA, ETHEREUM, BITCOIN } from "@/lib/chains/registry";
+import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
+import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
+import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon, BitcoinIcon } from "@/components/icons";
+import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon } from "@/components/icons";
 
-// Full-page wallet state. Two levels: choose method/chain → choose a detected
-// wallet → waiting (approve signature). Lazy-loaded with its scoped Solana provider.
-export default function WalletStep({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) => void }) {
+// Full-page wallet state. Two levels: choose chain → choose a detected wallet →
+// waiting (approve signature). Lazy-loaded with its scoped Solana provider.
+export default function WalletStep({
+  onRegisterBack,
+  onExit,
+}: {
+  onRegisterBack?: (fn: () => boolean) => void;
+  onExit?: () => void;
+}) {
   return (
-    <EvmProvider>
-      <SolanaProvider>
-        <WalletFlow onRegisterBack={onRegisterBack} />
-      </SolanaProvider>
-    </EvmProvider>
+    <SolanaProvider>
+      <WalletFlow onRegisterBack={onRegisterBack} onExit={onExit} />
+    </SolanaProvider>
   );
 }
 
 type View = "methods" | "wallets" | "waiting";
 
-function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) => void }) {
+function WalletFlow({
+  onRegisterBack,
+  onExit,
+}: {
+  onRegisterBack?: (fn: () => boolean) => void;
+  onExit?: () => void;
+}) {
   const router = useRouter();
   const sol = useWallet();
-  const { connectors, connectAsync } = useConnect();
-  const { signMessageAsync } = useSignMessage();
-  const bitcoinWallets = useBitcoinWallets();
+  const evmWallets = useEvmWallets();
 
   const [view, setView] = useState<View>("methods");
   const [chain, setChain] = useState<ChainConfig | null>(null);
@@ -44,24 +50,27 @@ function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) =
   const [error, setError] = useState<string | null>(null);
   const pendingSolana = useRef(false);
 
-  // Let the login screen's shared top-left arrow drive back-navigation through
-  // the wallet sub-views (waiting -> wallets -> methods -> exit).
+  // Hierarchical back: waiting -> wallets -> methods -> exit the wallet state.
+  // Used by both the inline header arrow and the login screen's top-left arrow.
   const viewRef = useRef(view);
   viewRef.current = view;
+  function back() {
+    if (viewRef.current === "waiting") {
+      pendingSolana.current = false;
+      setError(null);
+      setView("wallets");
+    } else if (viewRef.current === "wallets") {
+      setView("methods");
+    } else {
+      onExit?.();
+    }
+  }
   useEffect(() => {
     onRegisterBack?.(() => {
-      if (viewRef.current === "waiting") {
-        pendingSolana.current = false;
-        setError(null);
-        setView("wallets");
-        return true;
-      }
-      if (viewRef.current === "wallets") {
-        setView("methods");
-        return true;
-      }
-      return false; // at the top — let the login screen exit the wallet state
+      back();
+      return true;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onRegisterBack]);
 
   const detectedSolana = sol.wallets.filter(
@@ -122,46 +131,16 @@ function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) =
       failed(e);
     }
   }
-  async function chooseEvmConnector(connector: Connector, chainId: number) {
-    const icon = connector.icon ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={connector.icon} alt="" className="size-7" />
-    ) : (
-      <WalletGlyph />
-    );
-    startWaiting(connector.name, icon, () => chooseEvmConnector(connector, chainId));
-    try {
-      const res = await connectAsync({ connector, chainId });
-      const address = res.accounts[0];
-      await signEvmSiwe(address, chainId, (message) => signMessageAsync({ message, account: address }));
-      done();
-    } catch (e) {
-      console.error("[wallet] evm sign-in failed:", e);
-      failed(e);
-    }
-  }
-  async function chooseBitcoinWallet(w: BtcWallet) {
-    const icon = w.icon ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={w.icon} alt="" className="size-7" />
-    ) : (
-      <BitcoinIcon className="h-7 w-7" />
-    );
-    startWaiting(w.name, icon, () => chooseBitcoinWallet(w));
-    try {
-      await signInWithBitcoin(w);
-      done();
-    } catch (e) {
-      console.error("[wallet] btc sign-in failed:", e);
-      failed(e);
-    }
-  }
 
   function openChain(c: ChainConfig) {
     setError(null);
     setChain(c);
     setView("wallets");
   }
+
+  // Small network badge (chain icon) shown on each detected wallet, like a token's chain badge.
+  const chainBadge: React.ReactNode =
+    chain?.kind === "solana" ? <SolanaMarkIcon className="h-full w-full" /> : <EthDiamondIcon className="h-full w-full" />;
 
   // The three internal views share the same fade+slide as the top-level login states.
   let content: React.ReactNode;
@@ -184,31 +163,34 @@ function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) =
   } else if (view === "wallets" && chain) {
     content = (
       <div className="flex flex-col">
-        <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">{chain.name}</h1>
+        <HeaderWithBack title={chain.name} onBack={back} />
         <div className="mt-6 flex flex-col gap-2.5">
           {chain.kind === "solana" ? (
             <>
               {detectedSolana.map((w) => (
-                <Row key={w.adapter.name} name={w.adapter.name} icon={w.adapter.icon} onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)} />
+                <Row key={w.adapter.name} name={w.adapter.name} icon={w.adapter.icon} badge={chainBadge} onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)} />
               ))}
               {walletConnect && (
                 <Row name="WalletConnect (QR)" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
               )}
               {detectedSolana.length === 0 && <Hint>No wallet detected. Use the QR code option below.</Hint>}
             </>
-          ) : chain.kind === "bitcoin" ? (
-            <>
-              {bitcoinWallets.map((w) => (
-                <Row key={w.name} name={w.name} icon={w.icon} onClick={() => chooseBitcoinWallet(w)} />
-              ))}
-              {bitcoinWallets.length === 0 && <Hint>No Bitcoin wallet detected. Make sure your wallet extension is unlocked.</Hint>}
-            </>
           ) : (
             <>
-              {connectors.map((c) => (
-                <Row key={c.uid} name={c.name} icon={c.icon} onClick={() => chooseEvmConnector(c, chain.chainId!)} />
+              {evmWallets.map((w) => (
+                <Row
+                  key={w.rdns}
+                  name={w.name}
+                  icon={w.icon}
+                  badge={chainBadge}
+                  onClick={() => chooseEvmWallet(() => signInWithInjectedEvm(chain.chainId!, w.provider), w.name, w.icon)}
+                />
               ))}
-              {connectors.length === 0 && <Hint>No wallet detected.</Hint>}
+              <Row
+                name="Sign in with QR code"
+                icon={<QrGlyph />}
+                onClick={() => chooseEvmWallet(() => signInWithEvmWalletConnect(chain.chainId!), "WalletConnect", <QrGlyph />)}
+              />
             </>
           )}
         </div>
@@ -218,18 +200,15 @@ function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) =
   } else {
     content = (
       <div className="flex flex-col">
-        <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">Connect Wallet</h1>
+        <HeaderWithBack title="Connect Wallet" onBack={back} />
         <div className="mt-6 flex flex-col gap-2.5">
           <Row name="Sign in with Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => openChain(ETHEREUM)} />
           <Row name="Sign in with Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => openChain(SOLANA)} />
           <Row
             name="Sign in with Base"
             icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
-            onClick={() =>
-              chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)
-            }
+            onClick={() => chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)}
           />
-          <Row name="Sign in with Bitcoin" icon={<BitcoinIcon className="h-7 w-7" />} onClick={() => openChain(BITCOIN)} />
           {walletConnect && (
             <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
           )}
@@ -254,14 +233,15 @@ function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) =
   );
 }
 
-
 function Row({
   name,
   icon,
+  badge,
   onClick,
 }: {
   name: string;
   icon?: string | React.ReactNode;
+  badge?: React.ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -269,20 +249,45 @@ function Row({
       <button
         type="button"
         onClick={onClick}
-        className="flex h-[77px] w-full items-center gap-3.5 bg-[#6A6A6A]/35 px-5 text-left transition-colors hover:bg-[#6A6A6A]/50"
+        className="flex h-[77px] items-center w-full gap-3.5 bg-[#6A6A6A]/35 px-5 text-left transition-colors hover:bg-[#6A6A6A]/50"
       >
-        <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg">
-          {typeof icon === "string" ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={icon} alt="" className="size-7" />
-          ) : (
-            icon ?? <WalletGlyph />
+        <span className="relative grid size-9 shrink-0 place-items-center">
+          <span className="grid size-9 place-items-center overflow-hidden rounded-lg">
+            {typeof icon === "string" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={icon} alt="" className="size-7" />
+            ) : (
+              icon ?? <WalletGlyph />
+            )}
+          </span>
+          {badge && (
+            <span className="absolute -bottom-1 -right-1.5 grid size-[15px] place-items-center overflow-hidden rounded-[5px] bg-[#1b1b1b] p-[1.5px] ring-[2.5px] ring-[#2b2b2b]">
+              {badge}
+            </span>
           )}
         </span>
-        <span className="flex-1 text-[16px] font-medium text-white">{name}</span>
+        <span className="flex-1 text-lg font-medium text-white">{name}</span>
         <ChevronGlyph />
       </button>
     </Squircle>
+  );
+}
+
+function HeaderWithBack({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div className="mt-7 flex items-center gap-2">
+      <button
+        type="button"
+        aria-label="Back"
+        onClick={onBack}
+        className="-ml-2 grid size-9 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M19 12H5M5 12L11 6M5 12L11 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
+    </div>
   );
 }
 
@@ -292,7 +297,7 @@ function Hint({ children }: { children: React.ReactNode }) {
 
 function ChevronGlyph() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="text-zinc-500">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="text-zinc-500">
       <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

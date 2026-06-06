@@ -84,27 +84,6 @@ export async function signInWithInjectedEvm(chainId: number, provider?: any) {
   return siweVerify({ message, signature, walletAddress: address, chainId });
 }
 
-// SIWE for an already-connected EVM account (used by the wagmi flow): request a
-// nonce for the address, build the SIWE message, sign it, and verify -> session.
-export async function signEvmSiwe(
-  address: string,
-  chainId: number,
-  signMessage: (message: string) => Promise<string>,
-) {
-  const nonce = await siweNonce(address, chainId);
-  const message = createSiweMessage({
-    address: address as `0x${string}`,
-    chainId,
-    domain: window.location.host,
-    nonce,
-    uri: window.location.origin,
-    version: "1",
-    statement: "Sign in to Watchparty.",
-  });
-  const signature = await signMessage(message);
-  return siweVerify({ message, signature, walletAddress: address, chainId });
-}
-
 // EVM WalletConnect (QR) — for users without an injected wallet (mobile wallets).
 // WalletConnect renders its own QR modal, so the dynamic import is fine (no popup).
 export async function signInWithEvmWalletConnect(chainId: number) {

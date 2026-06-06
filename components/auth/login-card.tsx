@@ -16,6 +16,7 @@ import {
   KickIcon,
   DiscordIcon,
 } from "./provider-icons";
+import { MessagesIcon } from "@/components/icons";
 
 // Wallet state pulls in the Solana SDK — load it only when navigated to.
 const WalletStep = dynamic(() => import("./wallet-step"), { ssr: false });
@@ -123,9 +124,9 @@ export function LoginCard() {
         type="button"
         aria-label="Go back"
         onClick={handleBack}
-        className="absolute left-6 top-10 grid h-10 w-10 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5 sm:left-11"
+        className="absolute left-6 top-7 grid h-10 w-10 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/5 sm:left-11"
       >
-        <BackArrowIcon />
+        <BackArrowIcon/>
       </button>
 
       <div className="flex w-full max-w-[442px] flex-col pt-14 sm:pt-[72px]">
@@ -166,7 +167,7 @@ export function LoginCard() {
                 }}
                 className="mt-6 flex h-[68px] items-center gap-3 bg-[#6A6A6A]/35 pl-5 pr-4 sm:mt-7 sm:h-[82px] sm:pl-6 sm:pr-5"
               >
-                <MailIcon className="shrink-0 size-8 text-white/85" />
+                <MessagesIcon className="shrink-0 size-7 text-white/85" />
                 <input
                   type="email"
                   inputMode="email"
@@ -236,7 +237,7 @@ export function LoginCard() {
 
           {step === "wallet" && (
             <motion.div key="wallet" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition}>
-              <WalletStep onRegisterBack={(fn) => { walletBack.current = fn; }} />
+              <WalletStep onRegisterBack={(fn) => { walletBack.current = fn; }} onExit={() => setStep("methods")} />
             </motion.div>
           )}
 
