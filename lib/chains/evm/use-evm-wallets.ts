@@ -29,7 +29,27 @@ export function useEvmWallets(): Eip6963Wallet[] {
     window.addEventListener("eip6963:announceProvider", onAnnounce as EventListener);
     window.dispatchEvent(new Event("eip6963:requestProvider"));
 
-    return () => window.removeEventListener("eip6963:announceProvider", onAnnounce as EventListener);
+    // Some wallets inject late or don't implement EIP-6963 — re-request, and fall
+    // back to the legacy window.ethereum provider if nothing announced.
+    const t = setTimeout(() => {
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eth = (window as any).ethereum;
+      if (found.size === 0 && eth) {
+        found.set("injected", {
+          rdns: "injected",
+          name: eth.isMetaMask ? "MetaMask" : "Browser Wallet",
+          icon: "",
+          provider: eth,
+        });
+        setWallets(Array.from(found.values()));
+      }
+    }, 700);
+
+    return () => {
+      window.removeEventListener("eip6963:announceProvider", onAnnounce as EventListener);
+      clearTimeout(t);
+    };
   }, []);
 
   return wallets;

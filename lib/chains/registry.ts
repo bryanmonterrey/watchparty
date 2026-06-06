@@ -41,7 +41,15 @@ export const HYPERLIQUID: ChainConfig = {
   nativeCurrency: { symbol: "HYPE", decimals: 18 },
 };
 
-export const CHAINS: ChainConfig[] = [SOLANA, ETHEREUM, BASE, HYPERLIQUID];
+export const BITCOIN: ChainConfig = {
+  id: "bitcoin",
+  kind: "bitcoin",
+  name: "Bitcoin",
+  explorer: "https://mempool.space",
+  nativeCurrency: { symbol: "BTC", decimals: 8 },
+};
+
+export const CHAINS: ChainConfig[] = [SOLANA, ETHEREUM, BASE, HYPERLIQUID, BITCOIN];
 export const EVM_CHAINS = CHAINS.filter((c) => c.kind === "evm");
 
 export function getChain(id: string): ChainConfig | undefined {

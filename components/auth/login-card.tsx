@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
@@ -51,10 +51,14 @@ export function LoginCard() {
   const [error, setError] = useState<string | null>(null);
   const [waiting, setWaiting] = useState<Waiting | null>(null);
   const [waitError, setWaitError] = useState<string | null>(null);
+  // Registered by WalletStep so the shared arrow can walk its sub-views.
+  const walletBack = useRef<(() => boolean) | null>(null);
 
   const canSend = /\S+@\S+\.\S+/.test(email);
 
   function handleBack() {
+    // While in the wallet state, the arrow first steps back through its sub-views.
+    if (step === "wallet" && walletBack.current?.()) return;
     if (step === "methods") router.back();
     else {
       setStep("methods");
@@ -232,7 +236,7 @@ export function LoginCard() {
 
           {step === "wallet" && (
             <motion.div key="wallet" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition}>
-              <WalletStep />
+              <WalletStep onRegisterBack={(fn) => { walletBack.current = fn; }} />
             </motion.div>
           )}
 

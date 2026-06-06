@@ -9,34 +9,56 @@ import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
 import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
-import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
+import { useBitcoinWallets, signInWithBitcoin, type BtcWallet } from "@/lib/chains/bitcoin/sign-in";
+import { SOLANA, ETHEREUM, BITCOIN } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon } from "@/components/icons";
+import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon, BitcoinIcon } from "@/components/icons";
 
 // Full-page wallet state. Two levels: choose method/chain → choose a detected
 // wallet → waiting (approve signature). Lazy-loaded with its scoped Solana provider.
-export default function WalletStep() {
+export default function WalletStep({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) => void }) {
   return (
     <SolanaProvider>
-      <WalletFlow />
+      <WalletFlow onRegisterBack={onRegisterBack} />
     </SolanaProvider>
   );
 }
 
 type View = "methods" | "wallets" | "waiting";
 
-function WalletFlow() {
+function WalletFlow({ onRegisterBack }: { onRegisterBack?: (fn: () => boolean) => void }) {
   const router = useRouter();
   const sol = useWallet();
   const evmWallets = useEvmWallets();
+  const bitcoinWallets = useBitcoinWallets();
 
   const [view, setView] = useState<View>("methods");
   const [chain, setChain] = useState<ChainConfig | null>(null);
   const [waiting, setWaiting] = useState<{ name: string; icon: React.ReactNode; retry: () => void } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pendingSolana = useRef(false);
+
+  // Let the login screen's shared top-left arrow drive back-navigation through
+  // the wallet sub-views (waiting -> wallets -> methods -> exit).
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(() => {
+    onRegisterBack?.(() => {
+      if (viewRef.current === "waiting") {
+        pendingSolana.current = false;
+        setError(null);
+        setView("wallets");
+        return true;
+      }
+      if (viewRef.current === "wallets") {
+        setView("methods");
+        return true;
+      }
+      return false; // at the top — let the login screen exit the wallet state
+    });
+  }, [onRegisterBack]);
 
   const detectedSolana = sol.wallets.filter(
     (w) =>
@@ -96,6 +118,22 @@ function WalletFlow() {
       failed(e);
     }
   }
+  async function chooseBitcoinWallet(w: BtcWallet) {
+    const icon = w.icon ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={w.icon} alt="" className="size-7" />
+    ) : (
+      <BitcoinIcon className="h-7 w-7" />
+    );
+    startWaiting(w.name, icon, () => chooseBitcoinWallet(w));
+    try {
+      await signInWithBitcoin(w);
+      done();
+    } catch (e) {
+      console.error("[wallet] btc sign-in failed:", e);
+      failed(e);
+    }
+  }
 
   function openChain(c: ChainConfig) {
     setError(null);
@@ -124,7 +162,7 @@ function WalletFlow() {
   } else if (view === "wallets" && chain) {
     content = (
       <div className="flex flex-col">
-        <SubHeader title={chain.name} onBack={() => setView("methods")} />
+        <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">{chain.name}</h1>
         <div className="mt-6 flex flex-col gap-2.5">
           {chain.kind === "solana" ? (
             <>
@@ -134,7 +172,14 @@ function WalletFlow() {
               {walletConnect && (
                 <Row name="WalletConnect (QR)" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
               )}
-              {detectedSolana.length === 0 && <Hint>Install a Solana wallet like Phantom, or use WalletConnect.</Hint>}
+              {detectedSolana.length === 0 && <Hint>No wallet detected. Use the QR code option below.</Hint>}
+            </>
+          ) : chain.kind === "bitcoin" ? (
+            <>
+              {bitcoinWallets.map((w) => (
+                <Row key={w.name} name={w.name} icon={w.icon} onClick={() => chooseBitcoinWallet(w)} />
+              ))}
+              {bitcoinWallets.length === 0 && <Hint>No Bitcoin wallet detected. Make sure your wallet extension is unlocked.</Hint>}
             </>
           ) : (
             <>
@@ -171,6 +216,7 @@ function WalletFlow() {
               chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)
             }
           />
+          <Row name="Sign in with Bitcoin" icon={<BitcoinIcon className="h-7 w-7" />} onClick={() => openChain(BITCOIN)} />
           {walletConnect && (
             <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
           )}
@@ -195,21 +241,6 @@ function WalletFlow() {
   );
 }
 
-function SubHeader({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <div className="mt-12 flex items-center gap-3 sm:mt-[68px]">
-      <button
-        type="button"
-        aria-label="Back"
-        onClick={onBack}
-        className="grid size-8 place-items-center rounded-full bg-white/10 text-white/80 transition-colors hover:bg-white/15"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      </button>
-      <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
-    </div>
-  );
-}
 
 function Row({
   name,

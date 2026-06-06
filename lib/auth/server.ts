@@ -10,6 +10,7 @@ import { betterAuth } from "better-auth";
 import { dash } from "@better-auth/infra";
 import { siwsPlugin } from "better-auth-siws";
 import { siwe } from "better-auth/plugins/siwe";
+import { siwbPlugin } from "./siwb-plugin";
 import { withCache, TTL, redis } from "@/lib/cache";
 import { verifyEvmMessage } from "@/lib/chains/evm/verify";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -154,6 +155,13 @@ export const auth = betterAuth({
       getNonce: async () => crypto.randomUUID().replace(/-/g, ""),
       verifyMessage: async ({ message, signature, address, chainId }) =>
         verifyEvmMessage({ message, signature, address, chainId }),
+    }),
+
+    // Bitcoin wallet sign-in (Sign-In With Bitcoin, BIP-322).
+    siwbPlugin({
+      domain: process.env.NEXT_PUBLIC_AUTH_DOMAIN ?? "watchparty.xyz",
+      getNonce: async () => crypto.randomUUID().replace(/-/g, ""),
+      nonceTtlSeconds: 300,
     }),
 
     passkey({

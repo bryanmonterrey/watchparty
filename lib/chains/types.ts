@@ -1,7 +1,7 @@
 // Unified chain abstraction so wallet UI is chain-agnostic.
 // Solana signs in via SIWS (better-auth-siws); EVM chains via SIWE (better-auth native).
 
-export type ChainKind = "solana" | "evm";
+export type ChainKind = "solana" | "evm" | "bitcoin";
 
 export interface ChainConfig {
   /** Stable id: "solana" | "base" | "hyperliquid". */
