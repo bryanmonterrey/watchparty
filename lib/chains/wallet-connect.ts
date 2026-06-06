@@ -138,6 +138,12 @@ export async function signInWithWalletConnect(target: WcTarget): Promise<unknown
   try {
     const connected = provider.connect({ optionalNamespaces: namespacesFor(target) });
     await Promise.race([connected, aborted]);
+    // Connected — stop the close-listener (so our own close() doesn't fire the
+    // abort) and dismiss the QR modal. The signature prompt then deep-links
+    // straight to the wallet; our own waiting state shows behind it instead of
+    // the modal sitting open "waiting for signatures".
+    unsubscribe();
+    modal.close();
     const ns = provider.session?.namespaces ?? {};
 
     // EVM approved → SIWE.

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
@@ -43,7 +42,6 @@ function WalletFlow({
   onRegisterBack?: (fn: () => boolean) => void;
   onExit?: () => void;
 }) {
-  const router = useRouter();
   const sol = useWallet();
   const evmWallets = useEvmWallets();
 
@@ -110,8 +108,10 @@ function WalletFlow({
   }, [sol.connected, sol.publicKey, sol.signMessage]);
 
   function done() {
-    router.push(POST_LOGIN_REDIRECT);
-    router.refresh();
+    // Hard navigation, not client routing: after the mobile wallet hand-off the
+    // tab/session state can be stale and router.push/refresh fails ("this page
+    // couldn't load"). A full load reliably picks up the new session cookie.
+    window.location.href = POST_LOGIN_REDIRECT;
   }
   function failed(e: unknown) {
     // Cancellation or real error alike: never surface a raw message in the UI —
