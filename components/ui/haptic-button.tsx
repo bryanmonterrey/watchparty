@@ -12,7 +12,11 @@ import * as React from "react";
 //
 // Usage: drop-in for <button>, but `onClick` takes no event:
 //   <HapticButton className="…" onClick={() => doThing()}>Continue</HapticButton>
-// Pass `haptic={false}` to render a plain button.
+// Pass `haptic={false}` (or `disabled`) to render a plain <button> instead.
+//
+// Note: when haptics are on, the styled element is a <span> with an overlaid
+// switch — so `enabled:`/`disabled:` Tailwind variants (which only match form
+// controls) won't apply. Use plain conditional classes for those buttons.
 
 type HapticButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
   haptic?: boolean;
@@ -34,7 +38,7 @@ export function HapticButton({
   // `switch` is a WebKit boolean attribute React doesn't type — set it directly.
   React.useEffect(() => {
     switchRef.current?.setAttribute("switch", "");
-  }, []);
+  }, [haptic]);
 
   if (!haptic || disabled) {
     return (
@@ -54,13 +58,11 @@ export function HapticButton({
 
   const label = ariaLabel ?? (typeof children === "string" ? children : undefined);
 
+  // The wrapper itself carries the button styles; an invisible native switch
+  // overlays it as the real tap target (so iOS fires a haptic on direct tap).
   return (
-    <span className="relative isolate inline-grid">
-      {/* Visual button — not the tap target (the native switch on top is). */}
-      <button type={type} tabIndex={-1} aria-hidden className={className} {...rest}>
-        {children}
-      </button>
-      {/* Invisible native switch overlay = the real tap target -> system haptic. */}
+    <span className={`relative isolate ${className ?? ""}`}>
+      {children}
       <input
         ref={switchRef}
         type="checkbox"

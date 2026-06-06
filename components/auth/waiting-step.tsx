@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { Squircle } from "@/components/ui/squircle";
+import { HapticButton } from "@/components/ui/haptic-button";
 
 // Full-page "waiting" login state, reused for social logins and passkey.
 // Icon tile with a rotating accent arc, a "Waiting for X" title, and a retry button.
@@ -48,14 +49,13 @@ export function WaitingStep({
 
       {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
 
-      <button
-        type="button"
+      <HapticButton
         disabled={busy}
         onClick={onContinue}
         className="mt-8 flex h-[68px] w-full items-center justify-center rounded-full bg-white text-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-[82px] sm:text-xl"
       >
         Continue
-      </button>
+      </HapticButton>
 
       {onBack && (
         <button

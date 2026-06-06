@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendEmailOtp, verifyEmailOtp } from "@/lib/auth/client";
 import { OtpInput } from "./otp-input";
+import { HapticButton } from "@/components/ui/haptic-button";
 
 const RESEND_COOLDOWN = 60;
 
@@ -81,8 +82,7 @@ export function ConfirmEmailStep({ email }: { email: string }) {
         <OtpInput value={otp} onChange={setOtp} onComplete={verify} disabled={verifying} autoFocus />
       </div>
 
-      <button
-        type="button"
+      <HapticButton
         disabled={otp.length !== 6 || verifying}
         onClick={() => verify(otp)}
         className="mt-7 flex h-[68px] items-center justify-center gap-2 rounded-full bg-[#00ED89] text-base font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-[82px] sm:text-[17px]"
@@ -93,7 +93,7 @@ export function ConfirmEmailStep({ email }: { email: string }) {
           <CheckGlyph />
         )}
         Complete
-      </button>
+      </HapticButton>
 
       {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
 

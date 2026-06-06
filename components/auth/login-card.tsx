@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Star2Icon } from "@/components/icons";
 import { authClient, sendEmailOtp } from "@/lib/auth/client";
 import { isUserRejection } from "@/lib/is-user-rejection";
+import { HapticButton } from "@/components/ui/haptic-button";
 import { ConfirmEmailStep } from "./confirm-email-step";
 import { WaitingStep, FingerprintIcon } from "./waiting-step";
 import { Squircle } from "@/components/ui/squircle";
@@ -178,14 +179,17 @@ export function LoginCard() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-base text-white caret-white placeholder:text-zinc-500 focus:outline-none sm:text-[17px]"
                 />
-                <button
-                  type="submit"
+                <HapticButton
+                  haptic={canSend && !sending}
                   disabled={!canSend || sending}
-                  className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors enabled:text-[#207AFF] enabled:hover:opacity-80 disabled:cursor-default sm:text-[15px]"
+                  onClick={sendCode}
+                  className={`flex shrink-0 items-center gap-1.5 text-sm font-medium transition-colors sm:text-[15px] ${
+                    canSend && !sending ? "text-[#207AFF] hover:opacity-80" : "cursor-default text-zinc-500"
+                  }`}
                 >
                   {sending ? <Spinner /> : null}
                   send code
-                </button>
+                </HapticButton>
               </form>
               </Squircle>
 
