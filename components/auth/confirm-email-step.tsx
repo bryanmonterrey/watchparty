@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { sendEmailOtp, verifyEmailOtp } from "@/lib/auth/client";
 import { OtpInput } from "./otp-input";
 import { HapticButton } from "@/components/ui/haptic-button";
+import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 
 const RESEND_COOLDOWN = 60;
 
@@ -51,7 +52,7 @@ export function ConfirmEmailStep({ email }: { email: string }) {
       setOtp("");
       return;
     }
-    router.push("/");
+    router.push(POST_LOGIN_REDIRECT);
     router.refresh();
   }
 

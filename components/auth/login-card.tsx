@@ -8,6 +8,7 @@ import { Star2Icon } from "@/components/icons";
 import { authClient, sendEmailOtp } from "@/lib/auth/client";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { HapticButton } from "@/components/ui/haptic-button";
+import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 import { ConfirmEmailStep } from "./confirm-email-step";
 import { WaitingStep, FingerprintIcon } from "./waiting-step";
 import { Squircle } from "@/components/ui/squircle";
@@ -32,7 +33,7 @@ const PROVIDERS = [
   { id: "discord", provider: "discord", label: "Continue with Discord", Icon: DiscordIcon, w: 33, h: 26 },
 ] as const;
 
-const REDIRECT_TO = "/";
+const REDIRECT_TO = POST_LOGIN_REDIRECT;
 const tap = { scale: 0.97 };
 const transition = { duration: 0.18 };
 

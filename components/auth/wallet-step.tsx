@@ -13,6 +13,7 @@ import { signInWithWalletConnect, type WcTarget } from "@/lib/chains/wallet-conn
 import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { isUserRejection } from "@/lib/is-user-rejection";
+import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
 import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon, ArrowLeftIcon } from "@/components/icons";
@@ -109,7 +110,7 @@ function WalletFlow({
   }, [sol.connected, sol.publicKey, sol.signMessage]);
 
   function done() {
-    router.push("/");
+    router.push(POST_LOGIN_REDIRECT);
     router.refresh();
   }
   function failed(e: unknown) {
