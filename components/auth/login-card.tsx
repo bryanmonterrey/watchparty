@@ -8,6 +8,7 @@ import { Star2Icon } from "@/components/icons";
 import { authClient, sendEmailOtp } from "@/lib/auth/client";
 import { ConfirmEmailStep } from "./confirm-email-step";
 import { WaitingStep, FingerprintIcon } from "./waiting-step";
+import { Squircle } from "@/components/ui/squircle";
 import {
   GoogleIcon,
   XIcon,
@@ -125,41 +126,43 @@ export function LoginCard() {
 
       <div className="flex w-full max-w-[442px] flex-col pt-14 sm:pt-[72px]">
         {/* Logo tile — shared across states */}
-        <div className="mx-auto grid size-14 place-items-center rounded-[40px] bg-[#00ED89] sm:size-[62px] sm:rounded-[40px]">
-          <Star2Icon fill="#000000" className="size-7 sm:size-[30px]" />
+        <div className="mx-auto grid place-items-center rounded-[40px] sm:size-[62px] sm:rounded-[40px]">
+          <Star2Icon className="size-7 sm:size-[30px]" />
         </div>
 
         <AnimatePresence mode="wait" initial={false}>
           {step === "methods" && (
             <motion.div key="methods" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition} className="flex flex-col">
-              <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">Login</h1>
+              <h1 className="mt-7 text-2xl font-semibold tracking-tight sm:mt-7 sm:text-[28px]">Login</h1>
 
               {/* OAuth providers */}
               <div className="mt-5 flex gap-2.5 sm:gap-[17px]">
                 {PROVIDERS.map(({ id, provider, label, Icon, w, h }) => (
-                  <motion.button
-                    key={id}
-                    type="button"
-                    aria-label={label}
-                    whileTap={tap}
-                    disabled={!!busy}
-                    onClick={() => signInWithProvider(provider, id)}
-                    className="grid h-14 flex-1 place-items-center rounded-4xl bg-[#6A6A6A]/35 transition-colors hover:bg-[#6A6A6A]/50 disabled:opacity-50 sm:h-[61px] sm:rounded-[30px]"
-                  >
-                    {busy === id ? <Spinner /> : <Icon width={w} height={h} />}
-                  </motion.button>
+                  <Squircle key={id} asChild radius={20} autoEffects={false}>
+                    <motion.button
+                      type="button"
+                      aria-label={label}
+                      whileTap={tap}
+                      disabled={!!busy}
+                      onClick={() => signInWithProvider(provider, id)}
+                      className="grid h-14 flex-1 place-items-center bg-[#6A6A6A]/35 transition-colors hover:bg-[#6A6A6A]/50 disabled:opacity-50 sm:h-[61px]"
+                    >
+                      {busy === id ? <Spinner /> : <Icon width={w} height={h} />}
+                    </motion.button>
+                  </Squircle>
                 ))}
               </div>
 
               {/* Email → send code (OTP) */}
+              <Squircle asChild radius={28} autoEffects={false}>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   sendCode();
                 }}
-                className="mt-6 flex h-[68px] items-center gap-3 rounded-[40px] bg-[#6A6A6A]/35 pl-5 pr-4 sm:mt-7 sm:h-[82px] sm:rounded-[40px] sm:pl-6 sm:pr-5"
+                className="mt-6 flex h-[68px] items-center gap-3 bg-[#6A6A6A]/35 pl-5 pr-4 sm:mt-7 sm:h-[82px] sm:pl-6 sm:pr-5"
               >
-                <MailIcon className="shrink-0 text-white/85" />
+                <MailIcon className="shrink-0 size-8 text-white/85" />
                 <input
                   type="email"
                   inputMode="email"
@@ -178,6 +181,7 @@ export function LoginCard() {
                   send code
                 </button>
               </form>
+              </Squircle>
 
               <div className="my-6 text-center text-[15px] font-bold tracking-wide sm:my-7">OR</div>
 
@@ -186,7 +190,7 @@ export function LoginCard() {
                 type="button"
                 whileTap={tap}
                 onClick={() => setStep("wallet")}
-                className="flex h-[68px] items-center justify-center rounded-full bg-white text-xl font-semibold text-black transition-colors hover:bg-white/90 sm:h-[82px] sm:text-[17px]"
+                className="flex h-[68px] tracking-tight items-center justify-center rounded-full bg-white text-lg font-semibold text-black transition-colors hover:bg-white/90 sm:h-[82px] sm:text-xl"
               >
                 Connect Wallet
               </motion.button>
@@ -195,7 +199,7 @@ export function LoginCard() {
                 type="button"
                 disabled={!!busy}
                 onClick={signInWithPasskey}
-                className="mt-6 text-center text-[15px] font-semibold text-[#1D9BF0] transition-opacity hover:opacity-80 disabled:opacity-50"
+                className="mt-6 text-center tracking-tight text-[15px] font-semibold text-[#1D9BF0] transition-opacity hover:opacity-80 disabled:opacity-50"
               >
                 {busy === "passkey" ? "Authenticating…" : "Sign in with Passkey"}
               </button>

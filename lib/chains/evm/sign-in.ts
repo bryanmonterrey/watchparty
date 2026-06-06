@@ -83,3 +83,23 @@ export async function signInWithInjectedEvm(chainId: number, provider?: any) {
   const signature: string = await eth.request({ method: "personal_sign", params: [message, address] });
   return siweVerify({ message, signature, walletAddress: address, chainId });
 }
+
+// EVM WalletConnect (QR) — for users without an injected wallet (mobile wallets).
+// WalletConnect renders its own QR modal, so the dynamic import is fine (no popup).
+export async function signInWithEvmWalletConnect(chainId: number) {
+  const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://watchparty.xyz";
+  const provider = await EthereumProvider.init({
+    projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
+    chains: [chainId],
+    showQrModal: true,
+    metadata: {
+      name: process.env.NEXT_PUBLIC_APP_NAME || "Watchparty",
+      description: "Sign in to Watchparty",
+      url: origin,
+      icons: [`${origin}/favicon.ico`],
+    },
+  });
+  await provider.connect();
+  return signInWithInjectedEvm(chainId, provider);
+}

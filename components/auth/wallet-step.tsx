@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
-import { signInWithBase, signInWithInjectedEvm } from "@/lib/chains/evm/sign-in";
+import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
 import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { Squircle } from "@/components/ui/squircle";
@@ -102,9 +103,11 @@ function WalletFlow() {
     setView("wallets");
   }
 
-  // ---------- waiting ----------
+  // The three internal views share the same fade+slide as the top-level login states.
+  let content: React.ReactNode;
+
   if (view === "waiting" && waiting) {
-    return (
+    content = (
       <WaitingStep
         name={waiting.name}
         description="Approve the signature in your wallet to continue."
@@ -118,11 +121,8 @@ function WalletFlow() {
         }}
       />
     );
-  }
-
-  // ---------- wallets (detected for the chosen chain) ----------
-  if (view === "wallets" && chain) {
-    return (
+  } else if (view === "wallets" && chain) {
+    content = (
       <div className="flex flex-col">
         <SubHeader title={chain.name} onBack={() => setView("methods")} />
         <div className="mt-6 flex flex-col gap-2.5">
@@ -146,8 +146,33 @@ function WalletFlow() {
                   onClick={() => chooseEvmWallet(() => signInWithInjectedEvm(chain.chainId!, w.provider), w.name, w.icon)}
                 />
               ))}
-              {evmWallets.length === 0 && chain.id !== "base" && <Hint>No EVM wallet detected. Install MetaMask to continue.</Hint>}
+              <Row
+                name="Sign in with QR code"
+                icon={<QrGlyph />}
+                onClick={() => chooseEvmWallet(() => signInWithEvmWalletConnect(chain.chainId!), "WalletConnect", <QrGlyph />)}
+              />
             </>
+          )}
+        </div>
+        {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
+      </div>
+    );
+  } else {
+    content = (
+      <div className="flex flex-col">
+        <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">Connect Wallet</h1>
+        <div className="mt-6 flex flex-col gap-2.5">
+          <Row name="Sign in with Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => openChain(ETHEREUM)} />
+          <Row name="Sign in with Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => openChain(SOLANA)} />
+          <Row
+            name="Sign in with Base"
+            icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
+            onClick={() =>
+              chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)
+            }
+          />
+          {walletConnect && (
+            <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
           )}
         </div>
         {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
@@ -155,26 +180,18 @@ function WalletFlow() {
     );
   }
 
-  // ---------- methods (5 options) ----------
   return (
-    <div className="flex flex-col">
-      <h1 className="mt-12 text-2xl font-semibold tracking-tight sm:mt-[68px] sm:text-[28px]">Connect Wallet</h1>
-      <div className="mt-6 flex flex-col gap-2.5">
-        <Row name="Sign in with Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => openChain(ETHEREUM)} />
-        <Row name="Sign in with Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => openChain(SOLANA)} />
-        <Row
-          name="Sign in with Base"
-          icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
-          onClick={() =>
-            chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)
-          }
-        />
-        {walletConnect && (
-          <Row name="Sign in with QR code" icon={<QrGlyph />} onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)} />
-        )}
-      </div>
-      {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={view}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.18 }}
+      >
+        {content}
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -208,7 +225,7 @@ function Row({
       <button
         type="button"
         onClick={onClick}
-        className="flex h-[68px] items-center gap-3.5 bg-[#6A6A6A]/35 px-5 text-left transition-colors hover:bg-[#6A6A6A]/50"
+        className="flex h-[77px] w-full items-center gap-3.5 bg-[#6A6A6A]/35 px-5 text-left transition-colors hover:bg-[#6A6A6A]/50"
       >
         <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg">
           {typeof icon === "string" ? (
@@ -253,21 +270,4 @@ function WalletGlyph() {
       <circle cx="16.5" cy="13.5" r="1.5" fill="currentColor" />
     </svg>
   );
-}
-function EthGlyph() {
-  return (
-    <span className="grid size-7 place-items-center rounded-md bg-[#627EEA]">
-      <svg width="12" height="18" viewBox="0 0 24 38" fill="none"><path d="M12 0L11.7 1v26l.3.3 11.7-6.9z" fill="#fff" fillOpacity=".8" /><path d="M12 0L.3 20.4 12 27.3V0z" fill="#fff" /><path d="M12 29.5l-.15.2v9.2l.15.4 11.7-16.5z" fill="#fff" fillOpacity=".8" /><path d="M12 38.5v-9.8L.3 22.7z" fill="#fff" /></svg>
-    </span>
-  );
-}
-function BaseGlyph() {
-  return (
-    <span className="grid size-7 place-items-center rounded-md bg-[#0052FF]">
-      <span className="block size-2.5 rounded-full bg-white" />
-    </span>
-  );
-}
-function HyperliquidGlyph() {
-  return <span className="grid size-7 place-items-center rounded-md bg-[#072723] text-[11px] font-bold text-[#97FCE4]">H</span>;
 }
