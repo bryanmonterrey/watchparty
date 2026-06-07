@@ -36,7 +36,10 @@ export function SolanaProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider
+        wallets={wallets}
+        autoConnect={(adapter) => Promise.resolve(adapter.name !== "WalletConnect")}
+      >
         {children}
       </WalletProvider>
     </ConnectionProvider>

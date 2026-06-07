@@ -55,6 +55,9 @@ function WalletFlow({
   // flow yanking you to /home). wcAbort tears down the live WalletConnect session.
   const flowId = useRef(0);
   const wcAbort = useRef<null | (() => void)>(null);
+  // WalletConnect is excluded from the provider's autoConnect (so its modal never
+  // self-opens on mount); this arms an explicit connect() when the user taps it.
+  const pendingWcConnect = useRef(false);
   // Where the waiting view was entered from, so "Back" returns there. QR can be
   // launched from either "methods" (Connect Wallet) or a chain's "wallets" list.
   const returnViewRef = useRef<View>("methods");
@@ -69,6 +72,7 @@ function WalletFlow({
   function abortActiveFlow() {
     flowId.current += 1;
     pendingSolana.current = false;
+    pendingWcConnect.current = false;
     setWcStep(null);
     const abort = wcAbort.current;
     wcAbort.current = null;
@@ -104,10 +108,10 @@ function WalletFlow({
   // select it like any wallet and autoConnect renders its QR modal.
   const walletConnect = sol.wallets.find((w) => w.adapter.name === "WalletConnect");
 
-  // Solana sign-in is faithful to sidebar: selecting a wallet is enough — the
-  // WalletProvider's `autoConnect` performs the actual connect (and triggers the
-  // wallet popup). We do NOT call sol.connect() ourselves; doing so races
-  // autoConnect and the popup never appears. Once connected, sign in.
+  // Solana sign-in: for an installed extension, selecting it is enough — the
+  // provider's `autoConnect` connects it (and triggers the popup). WalletConnect
+  // is excluded from autoConnect (so its modal can't self-open on mount) and is
+  // connected explicitly in the effect below. Either way: once connected, sign in.
   useEffect(() => {
     if (!pendingSolana.current || !sol.connected || !sol.publicKey || !sol.signMessage) return;
     pendingSolana.current = false;
@@ -127,6 +131,20 @@ function WalletFlow({
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sol.connected, sol.publicKey, sol.signMessage]);
+
+  // WalletConnect is excluded from autoConnect so its modal can't pop open by
+  // itself on mount. When the user explicitly taps it, connect here — that's what
+  // renders the QR modal.
+  useEffect(() => {
+    if (!pendingWcConnect.current) return;
+    if (sol.wallet?.adapter.name !== "WalletConnect" || sol.connected || sol.connecting) return;
+    pendingWcConnect.current = false;
+    const id = flowId.current;
+    sol.connect().catch((e) => {
+      if (flowId.current === id) failed(e);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sol.wallet, sol.connected, sol.connecting]);
 
   function done() {
     // Hard navigation, not client routing: after the mobile wallet hand-off the
@@ -149,6 +167,8 @@ function WalletFlow({
   function chooseSolanaWallet(name: string, label: string, icon: React.ReactNode) {
     abortActiveFlow();
     pendingSolana.current = true;
+    // WalletConnect is excluded from autoConnect — arm an explicit connect for it.
+    if (name === "WalletConnect") pendingWcConnect.current = true;
     // Only QR is the 2-step "connect then sign" worth a progress meter; an
     // installed extension connects instantly, so skip the meter there.
     if (label === "WalletConnect") setWcStep({ current: 1, total: 2 });
