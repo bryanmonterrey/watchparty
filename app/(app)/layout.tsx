@@ -15,19 +15,15 @@ import { AppContainer } from "@/components/app-ui/app-container";
 //   layout — so login/landing never load the wallet SDK (the speed rewrite).
 // - MiniPlayerShell is intentionally omitted for now; it pulls in the video
 //   player, which nothing needs until media actually plays. Re-add with video.
+
+// This section reads the session cookie, so it's always rendered per request.
+// Declaring it explicitly stops `next build` from trying to prerender it — that
+// probe was what logged "Dynamic server usage … used headers" (harmless; it was
+// surfaced only by an old diagnostic try/catch here, now removed).
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  // Timed + logged so Vercel shows whether /home stalls or throws here (the
-  // "this page couldn't load" was a function error/timeout, not a Next 500).
-  const t0 = Date.now();
-  console.log("[app] layout start");
-  let session;
-  try {
-    session = await getServerSession();
-  } catch (e) {
-    console.error("[app] getServerSession threw after", Date.now() - t0, "ms:", e);
-    throw e;
-  }
-  console.log("[app] session resolved in", Date.now() - t0, "ms", { hasSession: !!session });
+  const session = await getServerSession();
   if (!session) redirect("/login");
 
   const cookieStore = await cookies();
