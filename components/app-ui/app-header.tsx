@@ -1,7 +1,8 @@
 "use client";
  
 import { ThemeSelect } from '@/components/theme/theme-select'
-import { WalletEntry } from './wallet-entry'
+import { ClusterUiSelect } from '../cluster/cluster-ui'
+import WalletButton from '@/components/wallet/wallet-button'
 import { useAuthSession } from '@/hooks/use-auth-session'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -113,8 +114,9 @@ export function AppHeader() {
             )}
           </WithAuth>
         </CreateDialog>
-        <WalletEntry />
+        <WalletButton />
         <div className="hidden">
+          <ClusterUiSelect />
           <ThemeSelect />
         </div>
         </div>
