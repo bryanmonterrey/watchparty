@@ -8,8 +8,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { WalletConnectModal } from "./wallet-connect-modal";
-import { WalletDrawer } from "./wallet-drawer";
 import { authClient } from "@/lib/auth/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { signInWithSolana } from "@/lib/solana/sign-in";
@@ -17,6 +15,19 @@ import { appToast } from "@/components/app-ui/app-toast";
 import { Loader2 } from "lucide-react";
 import { Skeleton } from "boneyard-js/react";
 import "@/lib/types";
+
+// WalletConnectModal + WalletDrawer are interaction-only and HEAVY (the drawer
+// pulls swap/send/settings/NFT views + @solana/web3.js + spl-token). Lazy-load
+// them so they stay OUT of the initial authenticated bundle — mobile Safari was
+// killing the tab on the eager load. They fetch on first hover/click.
+const WalletDrawer = dynamic(
+  () => import("./wallet-drawer").then((m) => ({ default: m.WalletDrawer })),
+  { ssr: false },
+);
+const WalletConnectModal = dynamic(
+  () => import("./wallet-connect-modal").then((m) => ({ default: m.WalletConnectModal })),
+  { ssr: false },
+);
 
 function shortenWalletAddress(address: string): string {
     if (!address) return "";
@@ -27,6 +38,11 @@ function WalletButtonInner() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    // Lazy-mount gates: don't fetch the drawer/modal chunks until the user shows
+    // intent (hover/click), so /home's first load stays light.
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [drawerReady, setDrawerReady] = useState(false);
+    const [modalReady, setModalReady] = useState(false);
     const isSigningOut = useRef(false);
     const isAutoSignInTriggered = useRef(false);
 
@@ -51,6 +67,7 @@ function WalletButtonInner() {
     }, [walletAddress, trpcUtils]);
 
     const handleConnect = useCallback(() => {
+        setModalReady(true);
         setIsModalOpen(true);
     }, []);
 
@@ -122,6 +139,7 @@ function WalletButtonInner() {
     }, [walletAddress]);
 
     const handleChangeWallet = useCallback(() => {
+        setModalReady(true);
         setIsModalOpen(true);
     }, []);
 
@@ -187,35 +205,42 @@ function WalletButtonInner() {
     if (isSignedIn) {
         return (
             <>
-                <WalletDrawer
-                    username={session?.user?.username || "User"}
-                    avatarUrl={session?.user?.avatar_url || ""}
-                    walletAddress={walletAddress}
-                    onSignOut={handleSignOut}
-                    onChangeWallet={handleChangeWallet}
+                <Button
+                    variant="outline"
+                    className="text-flexwhite border-none h-11 font-medium text-[18px] bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs px-4 pl-2 gap-2 min-w-[140px]"
+                    disabled={isProcessing}
+                    onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
+                    onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
                 >
-                    <Button
-                        variant="outline"
-                        className="text-flexwhite border-none h-11 font-medium text-[18px] bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs px-4 pl-2 gap-2 min-w-[140px]"
-                        disabled={isProcessing}
-                        onMouseEnter={handlePrefetch}
-                    >
-                        <Skeleton name="wallet-btn-action" loading={isProcessing}>
-                            <span className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                    <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
-                                    <AvatarFallback></AvatarFallback>
-                                </Avatar>
-                                {buttonText}
-                            </span>
-                        </Skeleton>
-                    </Button>
-                </WalletDrawer>
+                    <Skeleton name="wallet-btn-action" loading={isProcessing}>
+                        <span className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                                <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
+                                <AvatarFallback></AvatarFallback>
+                            </Avatar>
+                            {buttonText}
+                        </span>
+                    </Skeleton>
+                </Button>
 
-                <WalletConnectModal
-                    open={isModalOpen}
-                    onOpenChange={setIsModalOpen}
-                />
+                {drawerReady && (
+                    <WalletDrawer
+                        open={drawerOpen}
+                        onOpenChange={setDrawerOpen}
+                        username={session?.user?.username || "User"}
+                        avatarUrl={session?.user?.avatar_url || ""}
+                        walletAddress={walletAddress}
+                        onSignOut={handleSignOut}
+                        onChangeWallet={handleChangeWallet}
+                    />
+                )}
+
+                {modalReady && (
+                    <WalletConnectModal
+                        open={isModalOpen}
+                        onOpenChange={setIsModalOpen}
+                    />
+                )}
             </>
         );
     }
@@ -234,10 +259,12 @@ function WalletButtonInner() {
                 </Skeleton>
             </Button>
 
-            <WalletConnectModal
-                open={isModalOpen}
-                onOpenChange={setIsModalOpen}
-            />
+            {modalReady && (
+                <WalletConnectModal
+                    open={isModalOpen}
+                    onOpenChange={setIsModalOpen}
+                />
+            )}
         </>
     );
 }

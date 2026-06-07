@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { VersionedTransaction, PublicKey } from "@solana/web3.js";
+import { VersionedTransaction } from "@solana/web3.js";
+import { toPublicKey } from "@/lib/utils";
 import { ArrowDown, ArrowLeft } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
@@ -45,7 +46,7 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
     const getSwapTxMutation = trpc.wallet.getSwapTransaction.useMutation();
 
     const activePublicKeyStr = adapterPublicKey?.toBase58() || walletAddress;
-    const publicKey = activePublicKeyStr ? new PublicKey(activePublicKeyStr) : null;
+    const publicKey = toPublicKey(activePublicKeyStr);
 
     const [inputToken, setInputToken] = React.useState<Token | null>(initialInputToken ?? null);
     const [outputToken, setOutputToken] = React.useState<Token | null>(null);

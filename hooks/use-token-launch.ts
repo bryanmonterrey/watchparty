@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, Keypair, Transaction, SystemProgram, TransactionInstruction } from '@solana/web3.js';
+import { toPublicKey } from '@/lib/utils';
 import { trpc } from '@/lib/trpc/client';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { SplitShare } from '@/components/app-ui/create-dialog/token-launch-section';
@@ -96,7 +97,9 @@ export function useTokenLaunch() {
 
     // Resolve active public key
     const activePublicKeyStr = adapterPublicKey?.toBase58() || custodialWalletAddress;
-    const publicKey = activePublicKeyStr ? new PublicKey(activePublicKeyStr) : null;
+    // Safe ctor: a non-wallet user's stored address may not be base58 — a thrown
+    // `new PublicKey()` here (render path) would take down the whole page.
+    const publicKey = toPublicKey(activePublicKeyStr);
 
     const [isLaunching, setIsLaunching] = useState(false);
     const resolveSplitsMutation = trpc.escrow.resolveSplits.useMutation();

@@ -24,6 +24,8 @@ import { getRecommendedMicrolamports } from "@/lib/solana/priority-fees";
 
 const RECENTS_KEY = "send_recents_v1";
 const MAX_RECENTS = 10;
+import { toPublicKey } from "@/lib/utils";
+
 const TREASURY = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_PUBKEY!);
 const PLATFORM_FEE_BPS = 50; // 0.5%
 
@@ -87,7 +89,7 @@ export function SendView({
     const trpcUtils = trpc.useUtils();
 
     const activePublicKeyStr = adapterPublicKey?.toBase58() || custodialWalletAddress;
-    const publicKey = activePublicKeyStr ? new PublicKey(activePublicKeyStr) : null;
+    const publicKey = toPublicKey(activePublicKeyStr);
 
     const solToken = tokens.find((t) => t.mint === "So11111111111111111111111111111111111111111") ?? tokens[0] ?? null;
     const [selectedToken, setSelectedToken] = React.useState<SendToken | null>(solToken);
