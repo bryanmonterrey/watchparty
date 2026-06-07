@@ -114,9 +114,16 @@ export async function signInWithInjectedEvm(chainId: number, provider?: any) {
   return siweVerify({ message, signature, walletAddress: address, chainId });
 }
 
-// EVM WalletConnect (QR) — for users without an injected wallet (mobile wallets).
-// WalletConnect renders its own QR modal, so the dynamic import is fine (no popup).
-export async function signInWithEvmWalletConnect(chainId: number) {
+// EVM WalletConnect (QR) — the EVM twin of the Solana wallet-adapter. Uses
+// WalletConnect's OWN QR modal (showQrModal), so there's no custom modal to get
+// stuck behind. Two steps: connect (its QR modal), then personal_sign.
+//   - registerAbort: hand the caller a disconnect fn so "Back" can tear down a
+//     pending connect/sign (otherwise it hangs waiting on the relay).
+//   - onConnected: fired after connect so the UI can show "1 of 2 done".
+export async function signInWithEvmWalletConnect(
+  chainId: number,
+  opts?: { onConnected?: () => void; registerAbort?: (fn: () => void) => void },
+) {
   const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
   const origin = typeof window !== "undefined" ? window.location.origin : "https://watchparty.xyz";
   const provider = await EthereumProvider.init({
@@ -130,6 +137,10 @@ export async function signInWithEvmWalletConnect(chainId: number) {
       icons: [`${origin}/favicon.ico`],
     },
   });
-  await provider.connect();
+  opts?.registerAbort?.(() => {
+    provider.disconnect().catch(() => {});
+  });
+  await provider.connect(); // WalletConnect's QR modal; rejects if the user closes it
+  opts?.onConnected?.(); // connected — the signature is the second/last step
   return signInWithInjectedEvm(chainId, provider);
 }

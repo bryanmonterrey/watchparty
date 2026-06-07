@@ -15,6 +15,7 @@ export function WaitingStep({
   backLabel = "Back",
   busy,
   error,
+  step,
 }: {
   name: string;
   description: string;
@@ -24,6 +25,8 @@ export function WaitingStep({
   backLabel?: string;
   busy?: boolean;
   error?: string | null;
+  // Optional 2-step progress (1 = connect, 2 = sign) for WalletConnect/QR flows.
+  step?: { current: number; total: number };
 }) {
   return (
     <div className="flex flex-col items-center">
@@ -46,6 +49,20 @@ export function WaitingStep({
       <p className="mt-2 max-w-[300px] text-center text-[15px] leading-relaxed text-zinc-400">
         {description}
       </p>
+
+      {step && (
+        <div className="mt-4 flex items-center gap-2 text-[13px] text-zinc-400">
+          <span className="flex gap-1.5">
+            <span className={`size-2 rounded-full ${step.current >= 1 ? "bg-[#00ED89]" : "bg-zinc-600"}`} />
+            <span className={`size-2 rounded-full ${step.current >= 2 ? "bg-[#00ED89]" : "bg-zinc-600"}`} />
+          </span>
+          <span>
+            {step.current > 1
+              ? `${step.current - 1} of ${step.total} done`
+              : `Step ${step.current} of ${step.total}`}
+          </span>
+        </div>
+      )}
 
       {error && <p className="mt-4 text-center text-[13px] text-red-400">{error}</p>}
 

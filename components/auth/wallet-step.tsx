@@ -7,8 +7,7 @@ import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
 import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
-import { signInWithBase, signInWithInjectedEvm } from "@/lib/chains/evm/sign-in";
-import { signInWithWalletConnect, type WcTarget } from "@/lib/chains/wallet-connect";
+import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
 import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
 import type { ChainConfig } from "@/lib/chains/types";
 import { isUserRejection } from "@/lib/is-user-rejection";
@@ -48,7 +47,14 @@ function WalletFlow({
   const [view, setView] = useState<View>("methods");
   const [chain, setChain] = useState<ChainConfig | null>(null);
   const [waiting, setWaiting] = useState<{ name: string; icon: React.ReactNode; retry: () => void } | null>(null);
+  // 2-step wallet progress (1 = connect, 2 = sign) shown in the waiting view.
+  const [wcStep, setWcStep] = useState<{ current: number; total: number } | null>(null);
   const pendingSolana = useRef(false);
+  // Each wallet attempt gets an id. Back/retry bump it so a late connect/sign
+  // result from an abandoned attempt is ignored (no stuck waiting, no cancelled
+  // flow yanking you to /home). wcAbort tears down the live WalletConnect session.
+  const flowId = useRef(0);
+  const wcAbort = useRef<null | (() => void)>(null);
   // Where the waiting view was entered from, so "Back" returns there. QR can be
   // launched from either "methods" (Connect Wallet) or a chain's "wallets" list.
   const returnViewRef = useRef<View>("methods");
@@ -57,8 +63,19 @@ function WalletFlow({
   // Used by both the inline header arrow and the login screen's top-left arrow.
   const viewRef = useRef(view);
   viewRef.current = view;
-  function returnFromWaiting() {
+  // Hard-cancel the in-flight wallet attempt: invalidate its callbacks, reset
+  // progress, and disconnect any live WalletConnect session so a pending
+  // connect/sign can't complete after the user backed out.
+  function abortActiveFlow() {
+    flowId.current += 1;
     pendingSolana.current = false;
+    setWcStep(null);
+    const abort = wcAbort.current;
+    wcAbort.current = null;
+    abort?.();
+  }
+  function returnFromWaiting() {
+    abortActiveFlow();
     setView(returnViewRef.current);
   }
   function back() {
@@ -94,10 +111,18 @@ function WalletFlow({
   useEffect(() => {
     if (!pendingSolana.current || !sol.connected || !sol.publicKey || !sol.signMessage) return;
     pendingSolana.current = false;
+    const id = flowId.current;
+    setWcStep((s) => (s ? { current: 2, total: 2 } : s)); // connected → approve signature
     const { publicKey, signMessage } = sol;
     // Small delay lets the adapter settle after connect (mirrors sidebar).
     const t = setTimeout(() => {
-      signInWithSolana({ publicKey, signMessage }).then(done).catch(failed);
+      signInWithSolana({ publicKey, signMessage })
+        .then(() => {
+          if (flowId.current === id) done();
+        })
+        .catch((e) => {
+          if (flowId.current === id) failed(e);
+        });
     }, 100);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,26 +147,51 @@ function WalletFlow({
   }
 
   function chooseSolanaWallet(name: string, label: string, icon: React.ReactNode) {
+    abortActiveFlow();
     pendingSolana.current = true;
+    // Only QR is the 2-step "connect then sign" worth a progress meter; an
+    // installed extension connects instantly, so skip the meter there.
+    if (label === "WalletConnect") setWcStep({ current: 1, total: 2 });
+    wcAbort.current = () => {
+      sol.disconnect().catch(() => {});
+    };
     startWaiting(label, waitingIcon(icon), () => chooseSolanaWallet(name, label, icon));
     sol.select(name as WalletName);
   }
   async function chooseEvmWallet(run: () => Promise<unknown>, label: string, icon: React.ReactNode) {
+    abortActiveFlow();
+    const id = flowId.current;
     startWaiting(label, waitingIcon(icon), () => chooseEvmWallet(run, label, icon));
     try {
       await run();
-      done();
+      if (flowId.current === id) done();
     } catch (e) {
-      failed(e);
+      if (flowId.current === id) failed(e);
     }
   }
 
-  // WalletConnect via its official modal. One shared provider; `target` is a
-  // single EVM chain or Solana (never both — wallets reject mixed proposals).
-  // We show our waiting state behind WalletConnect's modal.
-  function startWalletConnect(target: WcTarget) {
-    startWaiting("WalletConnect", <QrGlyph />, () => startWalletConnect(target));
-    signInWithWalletConnect(target).then(done).catch(failed);
+  // EVM via WalletConnect (QR) — native EthereumProvider modal (its own QR + close
+  // button), the EVM twin of the Solana wallet-adapter. Step 1 = connect, step 2 =
+  // sign; Back cancels through the registered disconnect.
+  function startEvmQr(chainId: number) {
+    abortActiveFlow();
+    const id = flowId.current;
+    setWcStep({ current: 1, total: 2 });
+    startWaiting("WalletConnect", <QrGlyph />, () => startEvmQr(chainId));
+    signInWithEvmWalletConnect(chainId, {
+      registerAbort: (fn) => {
+        wcAbort.current = fn;
+      },
+      onConnected: () => {
+        if (flowId.current === id) setWcStep({ current: 2, total: 2 });
+      },
+    })
+      .then(() => {
+        if (flowId.current === id) done();
+      })
+      .catch((e) => {
+        if (flowId.current === id) failed(e);
+      });
   }
 
   function openChain(c: ChainConfig) {
@@ -160,8 +210,13 @@ function WalletFlow({
     content = (
       <WaitingStep
         name={waiting.name}
-        description="Approve the signature in your wallet to continue."
+        description={
+          wcStep?.current === 1
+            ? "Connect your wallet to continue."
+            : "Approve the signature in your wallet to continue."
+        }
         icon={waiting.icon}
+        step={wcStep ?? undefined}
         onContinue={waiting.retry}
         onBack={returnFromWaiting}
       />
@@ -180,7 +235,7 @@ function WalletFlow({
             name="Ethereum"
             subtitle="MetaMask, Rainbow, Coinbase & more"
             icon={<EthDiamondIcon className="h-6 w-6" />}
-            onClick={() => startWalletConnect({ kind: "evm", chainId: ETHEREUM.chainId! })}
+            onClick={() => startEvmQr(ETHEREUM.chainId!)}
           />
           {walletConnect && (
             <Row
@@ -225,7 +280,7 @@ function WalletFlow({
               <Row
                 name="Sign in with QR code"
                 icon={<QrGlyph />}
-                onClick={() => startWalletConnect({ kind: "evm", chainId: chain.chainId! })}
+                onClick={() => startEvmQr(chain.chainId!)}
               />
             </>
           )}
