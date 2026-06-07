@@ -11,15 +11,7 @@ export default async function AppHome() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-      <span className="text-sm font-semibold text-[#00ED89]">✓ Signed in</span>
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Welcome{user?.name ? `, ${user.name}` : ""}
-      </h1>
-      {(user?.email || user?.walletAddress) && (
-        <span className="text-[13px] text-zinc-300">{user.email || user.walletAddress}</span>
-      )}
-      <span className="font-mono text-[11px] text-zinc-500">{user?.id}</span>
-      <SignOutButton />
+      
     </main>
   );
 }

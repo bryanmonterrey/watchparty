@@ -44,6 +44,7 @@ import {
     VerifiedIcon,
     Logo4,
     FlagLogo,
+    Star2Icon,
 } from "@/components/icons"
 import { trpc } from "@/lib/trpc/client"
 import { WithAuth } from "@/components/auth/with-auth"
@@ -223,7 +224,7 @@ export function AppSidebar() {
                             key="logo"
                             className="flex w-(--sidebar-width-icon) items-center text-flexwhite justify-center shrink-0"
                         >
-                            <FlagLogo className="size-7" />
+                            <Star2Icon className="size-6" />
                         </div>
                     </div>
                 </SidebarHeader>
