@@ -83,6 +83,9 @@ function WalletFlow({
       w.adapter.name !== "WalletConnect" &&
       (w.readyState === WalletReadyState.Installed || w.readyState === WalletReadyState.Loadable),
   );
+  // Solana QR = the WalletConnect wallet-adapter (sidebar's proven approach):
+  // select it like any wallet and autoConnect renders its QR modal.
+  const walletConnect = sol.wallets.find((w) => w.adapter.name === "WalletConnect");
 
   // Solana sign-in is faithful to sidebar: selecting a wallet is enough — the
   // WalletProvider's `autoConnect` performs the actual connect (and triggers the
@@ -179,12 +182,14 @@ function WalletFlow({
             icon={<EthDiamondIcon className="h-6 w-6" />}
             onClick={() => startWalletConnect({ kind: "evm", chainId: ETHEREUM.chainId! })}
           />
-          <Row
-            name="Solana"
-            subtitle="Phantom, Solflare, Backpack & more"
-            icon={<SolanaMarkIcon className="h-5 w-5" />}
-            onClick={() => startWalletConnect({ kind: "solana" })}
-          />
+          {walletConnect && (
+            <Row
+              name="Solana"
+              subtitle="Phantom, Solflare, Backpack & more"
+              icon={<SolanaMarkIcon className="h-5 w-5" />}
+              onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
+            />
+          )}
         </div>
       </div>
     );
@@ -198,11 +203,13 @@ function WalletFlow({
               {detectedSolana.map((w) => (
                 <Row key={w.adapter.name} name={w.adapter.name} icon={w.adapter.icon} badge={chainBadge} onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)} />
               ))}
-              <Row
-                name="Sign in with QR code"
-                icon={<QrGlyph />}
-                onClick={() => startWalletConnect({ kind: "solana" })}
-              />
+              {walletConnect && (
+                <Row
+                  name="Sign in with QR code"
+                  icon={<QrGlyph />}
+                  onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
+                />
+              )}
             </>
           ) : (
             <>

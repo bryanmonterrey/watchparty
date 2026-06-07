@@ -1,22 +1,42 @@
 "use client";
 
+import { useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { WalletConnectWalletAdapter } from "@walletconnect/solana-adapter";
 import { SOLANA } from "@/lib/chains/registry";
 
-// Scoped Solana provider — only wraps the Connect Wallet flow (lazy-loaded),
-// NOT the whole app. Wallet Standard wallets (Phantom, Solflare, Backpack…)
-// auto-register with WalletProvider, so no explicit adapters are needed.
-//
-// We deliberately do NOT register @walletconnect/solana-adapter here: QR sign-in
-// goes through our shared UniversalProvider (lib/chains/wallet-connect.ts).
-// Registering the adapter spins up a SECOND WalletConnect core against the same
-// projectId, which conflicts with the QR session and makes wallets reject the scan.
+// Scoped Solana provider — wraps the Connect Wallet flow (lazy-loaded), not the
+// whole app. Wallet Standard wallets (Phantom, Solflare, Backpack…) auto-register;
+// we add the WalletConnect adapter so "Sign in with QR code" works exactly like
+// sidebar (select it → autoConnect shows the QR → sign-in on connect).
 export function SolanaProvider({ children }: { children: React.ReactNode }) {
   const endpoint = SOLANA.rpcUrl ?? "https://api.mainnet-beta.solana.com";
 
+  const wallets = useMemo(() => {
+    const origin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_BASE_URL ?? "https://watchparty.xyz";
+    return [
+      new WalletConnectWalletAdapter({
+        network: WalletAdapterNetwork.Mainnet,
+        options: {
+          projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "",
+          metadata: {
+            name: process.env.NEXT_PUBLIC_APP_NAME || "Watchparty",
+            description: "Sign in to Watchparty",
+            url: origin,
+            icons: [`${origin}/icon-192.png`],
+          },
+        },
+      }),
+    ];
+  }, []);
+
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={[]} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect>
         {children}
       </WalletProvider>
     </ConnectionProvider>
