@@ -84,26 +84,19 @@ function WalletFlow({
       (w.readyState === WalletReadyState.Installed || w.readyState === WalletReadyState.Loadable),
   );
 
-  // Solana: connect the selected adapter.
-  useEffect(() => {
-    if (!pendingSolana.current || !sol.wallet || sol.connected || sol.connecting) return;
-    const ready =
-      sol.wallet.readyState === WalletReadyState.Installed ||
-      sol.wallet.readyState === WalletReadyState.Loadable;
-    if (ready) {
-      sol.connect().catch((e) => {
-        pendingSolana.current = false;
-        failed(e);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sol.wallet, sol.connected, sol.connecting]);
-
-  // Solana: sign in once connected.
+  // Solana sign-in is faithful to sidebar: selecting a wallet is enough — the
+  // WalletProvider's `autoConnect` performs the actual connect (and triggers the
+  // wallet popup). We do NOT call sol.connect() ourselves; doing so races
+  // autoConnect and the popup never appears. Once connected, sign in.
   useEffect(() => {
     if (!pendingSolana.current || !sol.connected || !sol.publicKey || !sol.signMessage) return;
     pendingSolana.current = false;
-    signInWithSolana({ publicKey: sol.publicKey, signMessage: sol.signMessage }).then(done).catch(failed);
+    const { publicKey, signMessage } = sol;
+    // Small delay lets the adapter settle after connect (mirrors sidebar).
+    const t = setTimeout(() => {
+      signInWithSolana({ publicKey, signMessage }).then(done).catch(failed);
+    }, 100);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sol.connected, sol.publicKey, sol.signMessage]);
 
