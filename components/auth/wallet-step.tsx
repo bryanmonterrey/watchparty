@@ -6,18 +6,16 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
-import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
-import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
-import { SOLANA, ETHEREUM } from "@/lib/chains/registry";
-import type { ChainConfig } from "@/lib/chains/types";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { SolanaMarkIcon, EthDiamondIcon, BaseSquareIcon, ArrowLeftIcon } from "@/components/icons";
+import { ArrowLeftIcon } from "@/components/icons";
 
-// Full-page wallet state. Two levels: choose chain → choose a detected wallet →
-// waiting (approve signature). Lazy-loaded with its scoped Solana provider.
+// Full-page wallet login — Solana only (this is a Solana app; EVM stays a
+// peripheral feature, not a sign-in method). One list: detected Solana wallets
+// (Phantom, Solflare, Backpack…) + a WalletConnect QR option. Lazy-loaded with
+// its scoped Solana provider.
 export default function WalletStep({
   onRegisterBack,
   onExit,
@@ -32,7 +30,7 @@ export default function WalletStep({
   );
 }
 
-type View = "methods" | "qr" | "wallets" | "waiting";
+type View = "list" | "waiting";
 
 function WalletFlow({
   onRegisterBack,
@@ -42,10 +40,8 @@ function WalletFlow({
   onExit?: () => void;
 }) {
   const sol = useWallet();
-  const evmWallets = useEvmWallets();
 
-  const [view, setView] = useState<View>("methods");
-  const [chain, setChain] = useState<ChainConfig | null>(null);
+  const [view, setView] = useState<View>("list");
   const [waiting, setWaiting] = useState<{ name: string; icon: React.ReactNode; retry: () => void } | null>(null);
   // 2-step wallet progress (1 = connect, 2 = sign) shown in the waiting view.
   const [wcStep, setWcStep] = useState<{ current: number; total: number } | null>(null);
@@ -58,14 +54,12 @@ function WalletFlow({
   // WalletConnect is excluded from the provider's autoConnect (so its modal never
   // self-opens on mount); this arms an explicit connect() when the user taps it.
   const pendingWcConnect = useRef(false);
-  // Where the waiting view was entered from, so "Back" returns there. QR can be
-  // launched from either "methods" (Connect Wallet) or a chain's "wallets" list.
-  const returnViewRef = useRef<View>("methods");
 
-  // Hierarchical back: waiting -> origin -> methods -> exit the wallet state.
-  // Used by both the inline header arrow and the login screen's top-left arrow.
+  // Hierarchical back: waiting -> list -> exit the wallet state. Used by both the
+  // inline header arrow and the login screen's top-left arrow.
   const viewRef = useRef(view);
   viewRef.current = view;
+
   // Hard-cancel the in-flight wallet attempt: invalidate its callbacks, reset
   // progress, and disconnect any live WalletConnect session so a pending
   // connect/sign can't complete after the user backed out.
@@ -80,16 +74,11 @@ function WalletFlow({
   }
   function returnFromWaiting() {
     abortActiveFlow();
-    setView(returnViewRef.current);
+    setView("list");
   }
   function back() {
-    if (viewRef.current === "waiting") {
-      returnFromWaiting();
-    } else if (viewRef.current === "wallets" || viewRef.current === "qr") {
-      setView("methods");
-    } else {
-      onExit?.();
-    }
+    if (viewRef.current === "waiting") returnFromWaiting();
+    else onExit?.();
   }
   useEffect(() => {
     onRegisterBack?.(() => {
@@ -104,14 +93,13 @@ function WalletFlow({
       w.adapter.name !== "WalletConnect" &&
       (w.readyState === WalletReadyState.Installed || w.readyState === WalletReadyState.Loadable),
   );
-  // Solana QR = the WalletConnect wallet-adapter (sidebar's proven approach):
-  // select it like any wallet and autoConnect renders its QR modal.
+  // WalletConnect (QR) is just another adapter — selecting it opens its modal.
   const walletConnect = sol.wallets.find((w) => w.adapter.name === "WalletConnect");
 
-  // Solana sign-in: for an installed extension, selecting it is enough — the
-  // provider's `autoConnect` connects it (and triggers the popup). WalletConnect
-  // is excluded from autoConnect (so its modal can't self-open on mount) and is
-  // connected explicitly in the effect below. Either way: once connected, sign in.
+  // Sign-in: for an installed extension, selecting it is enough — the provider's
+  // `autoConnect` connects it (and triggers the popup). WalletConnect is excluded
+  // from autoConnect (so its modal can't self-open on mount) and is connected
+  // explicitly in the effect below. Either way: once connected, sign in.
   useEffect(() => {
     if (!pendingSolana.current || !sol.connected || !sol.publicKey || !sol.signMessage) return;
     pendingSolana.current = false;
@@ -154,12 +142,11 @@ function WalletFlow({
   }
   function failed(e: unknown) {
     // Cancellation or real error alike: never surface a raw message in the UI —
-    // quietly return where we came from. Details go to the console.
+    // quietly return to the list. Details go to the console.
     if (!isUserRejection(e)) console.error("[wallet] sign-in failed:", e);
     returnFromWaiting();
   }
   function startWaiting(name: string, icon: React.ReactNode, retry: () => void) {
-    returnViewRef.current = viewRef.current; // remember the origin for "Back"
     setWaiting({ name, icon, retry });
     setView("waiting");
   }
@@ -171,59 +158,14 @@ function WalletFlow({
     if (name === "WalletConnect") pendingWcConnect.current = true;
     // Only QR is the 2-step "connect then sign" worth a progress meter; an
     // installed extension connects instantly, so skip the meter there.
-    if (label === "WalletConnect") setWcStep({ current: 1, total: 2 });
+    if (name === "WalletConnect") setWcStep({ current: 1, total: 2 });
     wcAbort.current = () => {
       sol.disconnect().catch(() => {});
     };
     startWaiting(label, waitingIcon(icon), () => chooseSolanaWallet(name, label, icon));
     sol.select(name as WalletName);
   }
-  async function chooseEvmWallet(run: () => Promise<unknown>, label: string, icon: React.ReactNode) {
-    abortActiveFlow();
-    const id = flowId.current;
-    startWaiting(label, waitingIcon(icon), () => chooseEvmWallet(run, label, icon));
-    try {
-      await run();
-      if (flowId.current === id) done();
-    } catch (e) {
-      if (flowId.current === id) failed(e);
-    }
-  }
 
-  // EVM via WalletConnect (QR) — native EthereumProvider modal (its own QR + close
-  // button), the EVM twin of the Solana wallet-adapter. Step 1 = connect, step 2 =
-  // sign; Back cancels through the registered disconnect.
-  function startEvmQr(chainId: number) {
-    abortActiveFlow();
-    const id = flowId.current;
-    setWcStep({ current: 1, total: 2 });
-    startWaiting("WalletConnect", <QrGlyph />, () => startEvmQr(chainId));
-    signInWithEvmWalletConnect(chainId, {
-      registerAbort: (fn) => {
-        wcAbort.current = fn;
-      },
-      onConnected: () => {
-        if (flowId.current === id) setWcStep({ current: 2, total: 2 });
-      },
-    })
-      .then(() => {
-        if (flowId.current === id) done();
-      })
-      .catch((e) => {
-        if (flowId.current === id) failed(e);
-      });
-  }
-
-  function openChain(c: ChainConfig) {
-    setChain(c);
-    setView("wallets");
-  }
-
-  // Small network badge (chain icon) shown on each detected wallet, like a token's chain badge.
-  const chainBadge: React.ReactNode =
-    chain?.kind === "solana" ? <SolanaMarkIcon className="h-full w-full" /> : <EthDiamondIcon className="h-full w-full" />;
-
-  // The three internal views share the same fade+slide as the top-level login states.
   let content: React.ReactNode;
 
   if (view === "waiting" && waiting) {
@@ -241,89 +183,28 @@ function WalletFlow({
         onBack={returnFromWaiting}
       />
     );
-  } else if (view === "qr") {
-    // Pick the chain first — each QR then requests a SINGLE ecosystem's namespace
-    // so single-ecosystem wallets (Phantom/MetaMask) accept the proposal.
-    content = (
-      <div className="flex flex-col">
-        <HeaderWithBack title="Scan with QR code" onBack={back} />
-        <p className="mt-2 text-[15px] leading-relaxed text-white/45">
-          Choose your wallet&apos;s network to generate a code.
-        </p>
-        <div className="mt-6 flex flex-col gap-2.5">
-          <Row
-            name="Ethereum"
-            subtitle="MetaMask, Rainbow, Coinbase & more"
-            icon={<EthDiamondIcon className="h-6 w-6" />}
-            onClick={() => startEvmQr(ETHEREUM.chainId!)}
-          />
-          {walletConnect && (
-            <Row
-              name="Solana"
-              subtitle="Phantom, Solflare, Backpack & more"
-              icon={<SolanaMarkIcon className="h-5 w-5" />}
-              onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
-            />
-          )}
-        </div>
-      </div>
-    );
-  } else if (view === "wallets" && chain) {
-    content = (
-      <div className="flex flex-col">
-        <HeaderWithBack title={chain.name} onBack={back} />
-        <div className="mt-6 flex flex-col gap-2.5">
-          {chain.kind === "solana" ? (
-            <>
-              {detectedSolana.map((w) => (
-                <Row key={w.adapter.name} name={w.adapter.name} icon={w.adapter.icon} badge={chainBadge} onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)} />
-              ))}
-              {walletConnect && (
-                <Row
-                  name="Sign in with QR code"
-                  icon={<QrGlyph />}
-                  onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {evmWallets.map((w) => (
-                <Row
-                  key={w.rdns}
-                  name={w.name}
-                  icon={w.icon}
-                  badge={chainBadge}
-                  onClick={() => chooseEvmWallet(() => signInWithInjectedEvm(chain.chainId!, w.provider), w.name, w.icon)}
-                />
-              ))}
-              <Row
-                name="Sign in with QR code"
-                icon={<QrGlyph />}
-                onClick={() => startEvmQr(chain.chainId!)}
-              />
-            </>
-          )}
-        </div>
-      </div>
-    );
   } else {
     content = (
       <div className="flex flex-col">
         <HeaderWithBack title="Connect Wallet" onBack={back} />
+        <p className="mt-2 text-[15px] leading-relaxed text-white/45">Choose a wallet to sign in.</p>
         <div className="mt-6 flex flex-col gap-2.5">
-          <Row name="Sign in with Ethereum" icon={<EthDiamondIcon className="h-6 w-6" />} onClick={() => openChain(ETHEREUM)} />
-          <Row name="Sign in with Solana" icon={<SolanaMarkIcon className="h-5 w-5" />} onClick={() => openChain(SOLANA)} />
-          <Row
-            name="Sign in with Base"
-            icon={<BaseSquareIcon className="h-7 w-7 rounded-md" />}
-            onClick={() => chooseEvmWallet(() => signInWithBase(), "Base", <BaseSquareIcon className="h-7 w-7 rounded-md" />)}
-          />
-          <Row
-            name="Sign in with QR code"
-            icon={<QrGlyph />}
-            onClick={() => setView("qr")}
-          />
+          {detectedSolana.map((w) => (
+            <Row
+              key={w.adapter.name}
+              name={w.adapter.name}
+              icon={w.adapter.icon}
+              onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)}
+            />
+          ))}
+          {walletConnect && (
+            <Row
+              name="Sign in with QR code"
+              subtitle="Phantom, Solflare, Backpack & more"
+              icon={<QrGlyph />}
+              onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
+            />
+          )}
         </div>
       </div>
     );
@@ -348,13 +229,11 @@ function Row({
   name,
   subtitle,
   icon,
-  badge,
   onClick,
 }: {
   name: string;
   subtitle?: string;
   icon?: string | React.ReactNode;
-  badge?: React.ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -373,11 +252,6 @@ function Row({
               icon ?? <WalletGlyph />
             )}
           </span>
-          {badge && (
-            <span className="absolute -bottom-1 -right-1.5 grid size-[15px] place-items-center overflow-hidden rounded-[5px] bg-[#1b1b1b] p-[1.5px] ring-[2.5px] ring-[#2b2b2b]">
-              {badge}
-            </span>
-          )}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-lg font-medium leading-tight text-white">{name}</span>
