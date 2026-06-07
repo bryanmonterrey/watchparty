@@ -10,7 +10,7 @@ import { isUserRejection } from "@/lib/is-user-rejection";
 import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { ArrowLeftIcon } from "@/components/icons";
+import { ArrowLeftIcon, SolanaMarkIcon } from "@/components/icons";
 
 // Full-page wallet login — Solana only (this is a Solana app; EVM stays a
 // peripheral feature, not a sign-in method). One list: detected Solana wallets
@@ -194,6 +194,7 @@ function WalletFlow({
               key={w.adapter.name}
               name={w.adapter.name}
               icon={w.adapter.icon}
+              badge={<SolanaMarkIcon className="h-full w-full" />}
               onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)}
             />
           ))}
@@ -229,11 +230,13 @@ function Row({
   name,
   subtitle,
   icon,
+  badge,
   onClick,
 }: {
   name: string;
   subtitle?: string;
   icon?: string | React.ReactNode;
+  badge?: React.ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -252,6 +255,11 @@ function Row({
               icon ?? <WalletGlyph />
             )}
           </span>
+          {badge && (
+            <span className="absolute -bottom-1 -right-1.5 grid size-[15px] place-items-center overflow-hidden rounded-[5px] bg-[#1b1b1b] p-[1.5px] ring-[2.5px] ring-[#2b2b2b]">
+              {badge}
+            </span>
+          )}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-lg font-medium leading-tight text-white">{name}</span>
