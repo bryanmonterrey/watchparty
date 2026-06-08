@@ -2,12 +2,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Simple blur-in entrance (hero image). */
-@keyframes blur-in {
-  from { opacity: 0; filter: blur(20px); }
-  to { opacity: 1; filter: blur(0); }
-}
-
 @font-face {
   font-family: 'pixel';
   src: url('/fonts/GeistPixel-Triangle.ttf') format('ttf');

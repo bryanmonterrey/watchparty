@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Highlighter } from "@/components/ui/highlighter"
 import { TextAnimate } from "@/components/ui/text-animate"
+import { BlurInImage } from "@/components/marketing/blur-in-image"
 
 // Landing page — to be designed separately. Intentionally minimal for now.
 export default function Home() {
@@ -16,11 +17,10 @@ export default function Home() {
             hero height, centered. The wide rainbow bleeds off-screen and is
             clipped by main's overflow-hidden, so no horizontal scrollbar. */}
         <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/designwparty.png"
+          <BlurInImage
+            src="/designwparty2.png"
             alt="Skateboarder riding a rainbow"
-            className="h-full w-auto max-w-none [animation:blur-in_0.8s_ease-out_both]"
+            className="h-full w-auto max-w-none"
           />
         </div>
 
