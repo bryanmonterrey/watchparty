@@ -1,5 +1,6 @@
 "use client";
 
+import { ViewTransition } from "react";
 import { motion } from "motion/react";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -13,13 +14,14 @@ export const AppContainer = ({
   const { state } = useSidebar();
 
   return (
-    <motion.div
-      id="app-scroll-container"
-      className="flex-1 hidden-scrollbar h-screen overflow-y-auto overflow-x-hidden shadow-sm"
-      style={{ viewTransitionName: "page-content" }}
-      initial={false}
-    >
-      {children}
-    </motion.div>
+    <ViewTransition name="page-content">
+      <motion.div
+        id="app-scroll-container"
+        className="flex-1 hidden-scrollbar h-screen overflow-y-auto overflow-x-hidden shadow-sm"
+        initial={false}
+      >
+        {children}
+      </motion.div>
+    </ViewTransition>
   );
 };
