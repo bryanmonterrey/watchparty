@@ -143,7 +143,15 @@ export function Star2Icon({ fill = "#FDF6DA", ...props }: SVGMotionProps<SVGSVGE
 
 export const StarIcon = Star2Icon;
 
-export function BlackSquareStarIcon(props: SVGMotionProps<SVGSVGElement>) {
+export function BlackSquareStarIcon({
+    inverted = false,
+    ...props
+}: SVGMotionProps<SVGSVGElement> & { inverted?: boolean }) {
+    // Brand-color swap for the menu's black overlay: the squircle and star
+    // trade fills (black <-> pastel yellow) instead of an RGB invert, so the
+    // pastel yellow is preserved. Fills go through `style` so the swap eases.
+    const squareFill = inverted ? "#FDF6DA" : "black";
+    const starFill = inverted ? "black" : "#FDF6DA";
     return (
         <motion.svg
             width="44"
@@ -155,11 +163,11 @@ export function BlackSquareStarIcon(props: SVGMotionProps<SVGSVGElement>) {
         >
             <path
                 d="M0 22C0 11.6291 0 6.44365 3.22183 3.22183C6.44365 0 11.6291 0 22 0C32.3709 0 37.5563 0 40.7782 3.22183C44 6.44365 44 11.6291 44 22C44 32.3709 44 37.5563 40.7782 40.7782C37.5563 44 32.3709 44 22 44C11.6291 44 6.44365 44 3.22183 40.7782C0 37.5563 0 32.3709 0 22Z"
-                fill="black"
+                style={{ fill: squareFill, transition: "fill 300ms ease-out" }}
             />
             <path
                 d="M24.4138 7.57329C25.7472 6.37702 27.8639 7.1585 28.1174 8.94069L29.0481 15.4835C29.1458 16.1702 29.5508 16.7736 30.1465 17.12L35.8352 20.4278C37.3973 21.3361 37.3091 23.6399 35.6822 24.4239L29.8348 27.2417C29.2067 27.5444 28.7538 28.1247 28.6094 28.8118L27.2672 35.1991C26.8956 36.9674 24.7187 37.6011 23.4709 36.3041L18.8672 31.5191C18.3919 31.0251 17.7194 30.7767 17.0404 30.8446L10.4635 31.5016C8.68088 31.6798 7.42321 29.778 8.27028 28.1851L11.3299 22.432C11.659 21.8131 11.6841 21.0749 11.3979 20.4346L8.7333 14.474C7.99193 12.8157 9.39795 10.9984 11.1721 11.3218L17.633 12.4998C18.3095 12.6232 19.0047 12.4261 19.5185 11.9651L24.4138 7.57329Z"
-                fill="#FDF6DA"
+                style={{ fill: starFill, transition: "fill 300ms ease-out" }}
             />
         </motion.svg>
     )
