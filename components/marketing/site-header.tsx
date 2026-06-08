@@ -60,7 +60,7 @@ export function SiteHeader() {
         initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="sticky top-4 z-50"
+        className="absolute inset-x-0 top-4 z-50"
       >
         <div className="relative z-10 mx-auto flex h-16 w-full max-w-8xl items-center justify-between px-4 sm:h-20 sm:px-6 lg:px-8">
           {/* Logo lockup — inverts to white-on-black when the menu is open:

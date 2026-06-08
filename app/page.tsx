@@ -7,12 +7,24 @@ import { TextAnimate } from "@/components/ui/text-animate"
 // Landing page — to be designed separately. Intentionally minimal for now.
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col bg-soft-pink text-black">
+    <div className="relative flex flex-1 flex-col bg-soft-pink text-black">
       <SiteHeader />
 
       {/* Hero — replace with your skateboarder composition. */}
-      <main className="relative flex flex-1 flex-col items-center px-4 pt-8 sm:pt-12">
-       <h1 className="text-center antialiased tracking-tighter font-pixel text-3xl text-black sm:text-[55px] lg:text-[55px]">
+      <main className="relative flex flex-1 flex-col items-center overflow-hidden px-4 pt-14 sm:pt-28">
+        {/* Skater + rainbow — TEMP placement (animation comes later): fills the
+            hero height, centered. The wide rainbow bleeds off-screen and is
+            clipped by main's overflow-hidden, so no horizontal scrollbar. */}
+        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/designwparty.png"
+            alt="Skateboarder riding a rainbow"
+            className="h-full w-auto max-w-none [animation:blur-in_0.8s_ease-out_both]"
+          />
+        </div>
+
+       <h1 className="relative z-10 text-center antialiased tracking-tighter font-pixel text-3xl text-black sm:text-[55px] lg:text-[55px]">
           <TextAnimate as="span" by="word" animation="blurInUp" once segmentClassName="will-change-transform">
             {"Magic internet money meets "}
           </TextAnimate>
@@ -37,9 +49,9 @@ export default function Home() {
           by="line"
           animation="slideRight"
           once
-          className="mt-6 max-w-lg text-center text-lg font-semibold leading-snug tracking-tight text-black sm:mt-8 sm:text-2xl lg:absolute lg:left-32 lg:top-1/2 lg:mt-0 lg:max-w-xl lg:-translate-y-1/2 lg:text-left"
+          className="relative z-10 mt-6 max-w-lg text-center text-lg font-semibold leading-snug tracking-tight text-black sm:mt-8 sm:text-2xl lg:absolute lg:left-32 lg:top-1/2 lg:mt-0 lg:max-w-xl lg:-translate-y-1/2 lg:text-left"
         >
-          {"Crypto Twitter's new home.\nSame algorithm.\nEarn and chill."}
+          {"Crypto Twitter's new home.\nSame algorithm ♥️"}
         </TextAnimate>
         
 
