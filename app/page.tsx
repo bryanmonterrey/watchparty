@@ -13,14 +13,14 @@ export default function Home() {
       {/* Hero — replace with your skateboarder composition. */}
       <main className="relative flex flex-1 flex-col items-center px-4 pt-8 sm:pt-12">
        <h1 className="text-center antialiased tracking-tighter font-pixel text-3xl text-black sm:text-[55px] lg:text-[55px]">
-          <TextAnimate as="span" by="word" animation="blurInUp" once>
+          <TextAnimate as="span" by="word" animation="fadeIn" once>
             {"Magic internet money meets "}
           </TextAnimate>
           <Highlighter action="highlight" color="#000000">
             <TextAnimate
               as="span"
               by="character"
-              animation="blurInUp"
+              animation="fadeIn"
               once
               className="text-white"
             >
