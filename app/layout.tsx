@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,12 +13,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Display-only pixel font, opt-in via the `font-pixel` utility. preload:false
+// keeps it off the critical path for pages that don't use it.
+const geistPixel = localFont({
+  src: "./fonts/GeistPixel-Triangle.ttf",
+  variable: "--font-geist-pixel",
+  display: "swap",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: {
     default: "Watchparty",
     template: "%s / Watchparty",
   },
-  description: "The ultimate destination for live streaming and community engagement.",
+  description: "Magic internet money meets streaming",
 };
 
 // Paints the mobile browser chrome (address bar) to match the black app
@@ -35,7 +45,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${geistPixel.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

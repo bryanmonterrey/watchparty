@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Watchparty",
     short_name: "Watchparty",
     description:
-      "The ultimate destination for live streaming and community engagement.",
+      "Magic internet money meets streaming",
     start_url: "/",
     display: "standalone",
     background_color: "#000000",
