@@ -34,7 +34,12 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-4 z-50">
+    <motion.header
+      initial={{ opacity: 0, y: -24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="sticky top-4 z-50"
+    >
       {/* Bar is transparent over the hero. To frost it on scroll, add e.g.
           `bg-soft-pink/70 backdrop-blur-md` to this div. */}
       <div className="relative z-10 mx-auto flex h-16 w-full max-w-8xl items-center justify-between px-4 sm:h-20 sm:px-6 lg:px-8">
@@ -122,6 +127,6 @@ export function SiteHeader() {
           </motion.nav>
         )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   );
 }
