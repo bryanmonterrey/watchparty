@@ -12,7 +12,7 @@ export default function Home() {
       <SiteHeader />
 
       {/* Hero — replace with your skateboarder composition. */}
-      <main className="relative flex flex-1 flex-col items-center overflow-hidden px-4 pt-14 sm:pt-28">
+      <main className="relative flex flex-1 flex-col items-center overflow-hidden px-4 pt-28 sm:pt-28">
         {/* Skater + rainbow — TEMP placement (animation comes later): fills the
             hero height, centered. The wide rainbow bleeds off-screen and is
             clipped by main's overflow-hidden, so no horizontal scrollbar. */}
@@ -20,7 +20,7 @@ export default function Home() {
           <BlurInImage
             src="/designwparty2.png"
             alt="Skateboarder riding a rainbow"
-            className="h-full w-auto max-w-none"
+            className="sm:h-full h-screen w-auto max-w-none"
           />
         </div>
 
@@ -49,7 +49,7 @@ export default function Home() {
           by="line"
           animation="slideRight"
           once
-          className="relative z-10 mt-6 max-w-lg text-center text-lg font-semibold leading-snug tracking-tight text-black sm:mt-8 sm:text-2xl lg:absolute lg:left-32 lg:top-1/2 lg:mt-0 lg:max-w-xl lg:-translate-y-1/2 lg:text-left"
+          className="relative hidden sm:block z-10 mt-6 max-w-lg text-center text-lg font-semibold leading-snug tracking-tight text-black sm:mt-8 sm:text-2xl lg:absolute lg:left-32 lg:top-1/2 lg:mt-0 lg:max-w-xl lg:-translate-y-1/2 lg:text-left"
         >
           {"Crypto Twitter's new home.\nSame algorithm ♥️"}
         </TextAnimate>

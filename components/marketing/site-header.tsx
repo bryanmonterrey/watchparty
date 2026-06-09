@@ -93,7 +93,7 @@ export function SiteHeader() {
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               aria-controls="site-menu"
-              className={`grid place-items-center rounded-full transition-colors duration-300 ease-out sm:h-[55px] sm:w-[55px] ${
+              className={`grid place-items-center h-[55px] w-[55px] rounded-full transition-colors duration-300 ease-out sm:h-[55px] sm:w-[55px] ${
                 open ? "bg-white text-black hover:bg-white/80" : "bg-black text-white hover:bg-black/90"
               }`}
             >
