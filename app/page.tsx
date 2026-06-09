@@ -18,14 +18,14 @@ export default function Home() {
             clipped by main's overflow-hidden, so no horizontal scrollbar. */}
         <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
           <BlurInImage
-            src="/designwparty2.png"
+            src="/finaldesign.png"
             alt="Skateboarder riding a rainbow"
             className="sm:h-full h-screen w-auto max-w-none"
           />
         </div>
 
        <h1 className="relative z-10 text-center antialiased tracking-tighter font-pixel text-3xl text-black sm:text-[55px] lg:text-[55px]">
-          <TextAnimate as="span" by="word" animation="blurInUp" once segmentClassName="will-change-transform">
+          <TextAnimate as="span" by="word" animation="blurInUp" once>
             {"Magic internet money meets "}
           </TextAnimate>
           <Highlighter action="highlight" color="#000000">
@@ -35,7 +35,6 @@ export default function Home() {
               animation="blurInUp"
               once
               className="text-white"
-              segmentClassName="will-change-transform"
             >
               Streaming
             </TextAnimate>
