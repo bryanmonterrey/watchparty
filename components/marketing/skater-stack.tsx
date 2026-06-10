@@ -74,6 +74,21 @@ export function SkaterStack() {
         />
       ))}
 
+      {/* The world inside the goggles — the black canvas fades in through
+          the lens alpha mask from halfway through the zoom (the reference
+          clips an image to the lens path; same idea). Below the glare so
+          the sweep still reads on top. */}
+      <div
+        data-goggles-lens-reveal
+        className="absolute inset-0 z-[25] bg-black opacity-0"
+        style={{
+          maskImage: "url(/skater/lens.png)",
+          maskSize: "100% 100%",
+          WebkitMaskImage: "url(/skater/lens.png)",
+          WebkitMaskSize: "100% 100%",
+        }}
+      />
+
       {/* Glare sweep — only visible through the lens glass via the alpha
           mask. Band geometry hugs the lens bbox (x 46.4–51.5%, y 35.7–42.7%
           of the canvas). */}

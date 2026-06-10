@@ -76,13 +76,14 @@ export default function Home() {
           />
         </div>
 
-        {/* Deep-zoom reveal — rises in as the scroll zoom dives into the
-            goggles. Placeholder copy; swap freely. */}
-        <div
-          data-goggles-reveal
-          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6 opacity-0"
-        >
-          <p className="max-w-3xl text-center font-pixel text-3xl tracking-tighter text-black sm:text-[55px]">
+        {/* Deep-zoom headline — revealed word-by-word inside the goggles,
+            white over the black that opens up through the lens. Placeholder
+            copy; swap freely. */}
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
+          <p
+            data-goggles-reveal
+            className="max-w-3xl text-center font-pixel text-3xl tracking-tighter text-white opacity-0 sm:text-[55px]"
+          >
             Something wildly impressive goes here
           </p>
         </div>
