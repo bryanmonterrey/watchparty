@@ -52,6 +52,17 @@ export default function Home() {
         >
           {"Crypto Twitter's new home.\nSame algorithm ♥️"}
         </TextAnimate>
+
+        {/* Communities phone mockup — pinned bottom-right, bleeding off the
+            bottom edge (clipped by main's overflow-hidden). Desktop/tablet
+            only; the hero is already full on mobile. */}
+        <div className="pointer-events-none absolute bottom-0 right-4 z-10 hidden sm:block sm:right-6 lg:right-12">
+          <BlurInImage
+            src="/communitymobile.png"
+            alt="Communities screen of the watchparty mobile app"
+            className="w-64 translate-y-[55%] lg:w-80 xl:w-[360px]"
+          />
+        </div>
         
 
 
