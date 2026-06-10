@@ -58,9 +58,9 @@ export default function Home() {
             only; the hero is already full on mobile. */}
         <div className="pointer-events-none absolute bottom-0 right-4 z-10 hidden sm:block sm:right-6 lg:right-12">
           <BlurInImage
-            src="/communitymobile.png"
+            src="/community2xmock.png"
             alt="Communities screen of the watchparty mobile app"
-            className="w-64 translate-y-[55%] lg:w-80 xl:w-[360px]"
+            className="w-64 translate-y-[45%] lg:w-80 xl:w-[360px]"
           />
         </div>
         
