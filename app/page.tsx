@@ -66,8 +66,10 @@ export default function Home() {
         {/* Communities phone mockup — pinned bottom-right, bleeding off the
             bottom edge (clipped by main's overflow-hidden). Desktop/tablet
             only; the hero is already full on mobile. */}
+        {/* Rate 0: fade-only exit — a parallax y here would stomp the
+            translate-y-[45%] placement. */}
         <div
-          data-goggles-fade="0.18"
+          data-goggles-fade="0"
           className="pointer-events-none absolute bottom-0 right-4 z-10 hidden translate-y-[45%] sm:block sm:right-6 lg:right-12"
         >
           <BlurInImage

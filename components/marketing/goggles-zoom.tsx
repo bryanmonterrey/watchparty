@@ -220,13 +220,21 @@ export function GogglesZoom() {
         // than opacity: the subtext is a framer-motion element whose
         // entrance can rewrite inline opacity after us, but framer never
         // touches visibility.
+        // Rate 0 = fade only, and crucially no transform write at all: GSAP
+        // setting y would stomp an element's own CSS translate placement
+        // (e.g. the phone mockup's translate-y-[45%]).
         const exitP = Math.min(zp / 0.2, 1);
         fades.forEach((el) => {
           const rate = parseFloat(el.dataset.gogglesFade ?? "");
-          gsap.set(el, {
-            autoAlpha: 1 - exitP,
-            y: -exitP * (Number.isNaN(rate) ? 0.35 : rate) * window.innerHeight,
-          });
+          const r = Number.isNaN(rate) ? 0.35 : rate;
+          if (r === 0) {
+            gsap.set(el, { autoAlpha: 1 - exitP });
+          } else {
+            gsap.set(el, {
+              autoAlpha: 1 - exitP,
+              y: -exitP * r * window.innerHeight,
+            });
+          }
         });
 
         // The next scene opens up through the glass: black layer masked by
