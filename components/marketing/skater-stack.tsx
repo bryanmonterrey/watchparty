@@ -82,9 +82,9 @@ export function SkaterStack() {
         data-goggles-lens-reveal
         className="absolute inset-0 z-[25] bg-black opacity-0"
         style={{
-          maskImage: "url(/skater/lens.png)",
+          maskImage: "url(/skater/lens-mask.png)",
           maskSize: "100% 100%",
-          WebkitMaskImage: "url(/skater/lens.png)",
+          WebkitMaskImage: "url(/skater/lens-mask.png)",
           WebkitMaskSize: "100% 100%",
         }}
       />
@@ -95,9 +95,9 @@ export function SkaterStack() {
       <div
         className="pointer-events-none absolute inset-0 z-30"
         style={{
-          maskImage: "url(/skater/lens.png)",
+          maskImage: "url(/skater/lens-mask.png)",
           maskSize: "100% 100%",
-          WebkitMaskImage: "url(/skater/lens.png)",
+          WebkitMaskImage: "url(/skater/lens-mask.png)",
           WebkitMaskSize: "100% 100%",
         }}
       >
