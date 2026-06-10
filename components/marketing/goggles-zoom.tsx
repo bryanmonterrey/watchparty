@@ -58,6 +58,17 @@ const ORIGIN_Y = 0.382;
 // thinner band travels less and parks inside the lens at deep zoom.
 const GLARE_SWEEP = 0.09;
 
+// ── Cover-transition parallax intensity (turn these up/down to taste) ──
+// How far the outgoing in-goggles headline recedes, as a fraction of the
+// viewport height (it moves against the cover at this rate).
+const COVER_RECEDE = 0.6;
+// How far the incoming canvas's content trails below its section while it
+// rises, as a fraction of the viewport height. Bigger = more parallax.
+const COVER_RISE = 0.45;
+// Fade-out rate of the outgoing headline (1.8 = gone at ~55% of the cover,
+// the cash.app curve).
+const COVER_FADE = 1.8;
+
 // Split the headline into word spans for the stepped reveal (the reference
 // uses SplitText; words flipping 0→1 with no tween is the whole look).
 function splitWords(el: HTMLElement): HTMLElement[] {
@@ -85,6 +96,10 @@ export function GogglesZoom() {
     if (!stage || !art) return;
 
     gsap.registerPlugin(ScrollTrigger, Observer, ScrollToPlugin);
+
+    // Navigation is gesture-based, so the scrollbar is just noise — hide it
+    // while the landing effect is mounted (utility from globals.css).
+    document.documentElement.classList.add("hidden-scrollbar");
 
     const fades = gsap.utils.toArray<HTMLElement>("[data-goggles-fade]");
     const glares = gsap.utils.toArray<HTMLElement>("[data-goggles-glare]");
@@ -131,7 +146,12 @@ export function GogglesZoom() {
     const nextContent = document.querySelector<HTMLElement>(
       "[data-canvas-next-content]",
     );
-    if (nextContent) gsap.set(nextContent, { y: 120, opacity: 0.3 });
+    if (nextContent) {
+      gsap.set(nextContent, {
+        y: window.innerHeight * COVER_RISE,
+        opacity: 0,
+      });
+    }
 
     const trigger = ScrollTrigger.create({
       trigger: stage,
@@ -225,14 +245,14 @@ export function GogglesZoom() {
         // rises slower than its section, settling as it docks.
         if (reveal) {
           gsap.set(reveal, {
-            y: -cp * window.innerHeight * 0.5,
-            opacity: Math.max(0, 1 - cp * 1.8),
+            y: -cp * window.innerHeight * COVER_RECEDE,
+            opacity: Math.max(0, 1 - cp * COVER_FADE),
           });
         }
         if (nextContent) {
           gsap.set(nextContent, {
-            y: (1 - cp) * 120,
-            opacity: 0.3 + cp * 0.7,
+            y: (1 - cp) * window.innerHeight * COVER_RISE,
+            opacity: Math.min(1, cp * 1.4),
           });
         }
       },
@@ -277,6 +297,7 @@ export function GogglesZoom() {
     return () => {
       observer.kill();
       trigger.kill();
+      document.documentElement.classList.remove("hidden-scrollbar");
     };
   }, []);
 
