@@ -91,13 +91,11 @@ export default function Home() {
         <GogglesZoom />
       </main>
 
-      {/* Third canvas — where the scroll lands after the in-goggles scene
-          (the black + stepped headline inside the pin is the second canvas,
-          like the reference's spotlight → outro handoff). Placeholder. */}
-      <section
-        data-canvas-next
-        className="relative flex h-svh items-center justify-center overflow-hidden bg-black"
-      >
+      {/* Third canvas — slides up OVER the pinned in-goggles scene during
+          the last viewport of the pin (cash-app cover): the -100svh margin
+          overlaps it with the pin's final stretch, and z-30 paints it above
+          everything inside the hero. Placeholder content. */}
+      <section className="relative z-30 -mt-[100svh] flex h-svh items-center justify-center overflow-hidden bg-black">
         <div data-canvas-next-content>
           <p className="px-6 text-center font-pixel text-2xl tracking-tighter text-white/30 sm:text-4xl">
             Next canvas goes here

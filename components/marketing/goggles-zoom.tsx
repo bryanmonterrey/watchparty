@@ -18,19 +18,18 @@ import Lenis from "lenis";
  *              goggles open into the next scene
  *   0.65–0.85  headline reveals word-by-word, hard on/off steps
  *
- * After the pin releases, a second trigger runs the Cash-App-style boundary
- * parallax into the next canvas (see public/parallazcasestudy.txt):
- * differential translateY + opacity — the in-goggles headline lags the
- * scroll and fades while the next canvas's content rises slower than its
- * section and settles as it docks.
+ * The pin then holds one extra viewport for the Cash-App-style cover
+ * (see public/parallazcasestudy.txt): the black in-goggles scene stays
+ * frozen while canvas 3 — overlapping the pin via -100svh top margin —
+ * slides up over it at scroll speed; the headline recedes at half speed
+ * and fades, and the incoming content rises slower than its section.
  *
  * Renders nothing — drives elements via data attributes:
  * [data-goggles-pin] the pinned section, [data-goggles-img] the art,
  * [data-goggles-fade] hero copy, [data-goggles-glare] the glare bands,
  * [data-goggles-lens-reveal] the in-lens black layer,
  * [data-goggles-reveal] the headline (split into word spans at init),
- * [data-canvas-next] the section after the pin, [data-canvas-next-content]
- * its inner content.
+ * [data-canvas-next-content] the next canvas's inner content.
  */
 
 // The lens is a shield-goggle shape: the bottom edge curves up mid-lens for
@@ -120,10 +119,18 @@ export function GogglesZoom() {
     };
     measure();
 
+    const nextContent = document.querySelector<HTMLElement>(
+      "[data-canvas-next-content]",
+    );
+    if (nextContent) gsap.set(nextContent, { y: 120, opacity: 0.3 });
+
     const trigger = ScrollTrigger.create({
       trigger: stage,
       start: "top top",
-      end: () => "+=" + window.innerHeight * 3,
+      // 4 viewports: the first 3 scrub the goggles dive (zp), the last one
+      // is the Cash-App cover window (cp) — canvas 3 overlaps it via its
+      // -100svh top margin and slides over the still-pinned black scene.
+      end: () => "+=" + window.innerHeight * 4,
       pin: true,
       // Explicit: ScrollTrigger silently defaults this to false when the
       // pinned element's parent is display:flex, killing the scroll distance.
@@ -131,95 +138,80 @@ export function GogglesZoom() {
       scrub: true,
       onRefresh: measure,
       onUpdate: (self) => {
-        const p = self.progress;
+        // Goggles-dive progress (first 3 viewports) and cover progress
+        // (last viewport).
+        const zp = Math.min(self.progress / 0.75, 1);
+        const cp = gsap.utils.clamp(0, 1, (self.progress - 0.75) / 0.25);
 
         // Front-loaded zoom + drift: fully inside the lens at the halfway
-        // point, second half of the scroll lives within the glass.
-        const driftP = Math.min(p * 2, 1);
+        // point, second half of the dive lives within the glass; holds at
+        // max depth during the cover.
+        const driftP = Math.min(zp * 2, 1);
         gsap.set(art, {
-          scale: 1 + p * 2 * (FINAL_SCALE - 1),
+          scale: 1 + zp * 2 * (FINAL_SCALE - 1),
           x: driftP * driftX,
           y: driftP * driftY,
         });
 
-        // White glare bands sweep across the lens over the first 75%,
-        // mirroring the reference's glareProgress. Child transforms resolve
-        // in the art's unscaled layout space, so offsetWidth-derived px stay
-        // correct at any zoom.
-        const glareX = Math.min(p / 0.75, 1) * GLARE_SWEEP * art.offsetWidth;
+        // White glare bands sweep across the lens over the first 75% of the
+        // dive, mirroring the reference's glareProgress. Child transforms
+        // resolve in the art's unscaled layout space, so offsetWidth-derived
+        // px stay correct at any zoom.
+        const glareX = Math.min(zp / 0.75, 1) * GLARE_SWEEP * art.offsetWidth;
         glares.forEach((el) => gsap.set(el, { x: glareX }));
 
         // autoAlpha (opacity + visibility) rather than opacity: the subtext
         // is a framer-motion element whose entrance can rewrite inline
         // opacity after us, but framer never touches visibility.
-        const fade = 1 - Math.min(p / 0.2, 1);
+        const fade = 1 - Math.min(zp / 0.2, 1);
         fades.forEach((el) => gsap.set(el, { autoAlpha: fade }));
 
         // The next scene opens up through the glass: black layer masked by
-        // the lens alpha, fully opaque by 0.8 so the white words land on
-        // solid black.
+        // the lens alpha, fully opaque well before the words land.
         if (lensReveal) {
           gsap.set(lensReveal, {
-            opacity: gsap.utils.clamp(0, 1, (p - 0.5) / 0.3),
+            opacity: gsap.utils.clamp(0, 1, (zp - 0.5) / 0.3),
           });
         }
 
-        // Stepped word-by-word reveal between 0.65 and 0.85; snapped fully
-        // off/on outside the window.
+        // Stepped word-by-word reveal between 0.65 and 0.85 of the dive;
+        // snapped fully off/on outside the window.
         if (words.length > 0) {
-          if (p < 0.65) {
+          if (zp < 0.65) {
             gsap.set(words, { opacity: 0 });
-          } else if (p > 0.85) {
+          } else if (zp > 0.85) {
             gsap.set(words, { opacity: 1 });
           } else {
-            const textP = (p - 0.65) / 0.2;
+            const textP = (zp - 0.65) / 0.2;
             words.forEach((word, i) => {
               gsap.set(word, { opacity: textP >= i / words.length ? 1 : 0 });
             });
           }
         }
+
+        // Cover window — the Cash App boundary parallax (see
+        // public/parallazcasestudy.txt). The hero stays pinned (frozen
+        // backdrop) while canvas 3 scrolls over it at full speed; the
+        // outgoing headline recedes at half the cover speed and fades
+        // (their `opacity: 1 - progress * 1.8`), and the incoming content
+        // rises slower than its section, settling as it docks.
+        if (reveal) {
+          gsap.set(reveal, {
+            y: -cp * window.innerHeight * 0.5,
+            opacity: Math.max(0, 1 - cp * 1.8),
+          });
+        }
+        if (nextContent) {
+          gsap.set(nextContent, {
+            y: (1 - cp) * 120,
+            opacity: 0.3 + cp * 0.7,
+          });
+        }
       },
     });
 
-    // Canvas 2 → canvas 3 boundary parallax. The exit window starts exactly
-    // where the pin ends (the next section directly follows the pin spacer),
-    // so these transforms never overlap ScrollTrigger's own pin styles.
-    const next = document.querySelector<HTMLElement>("[data-canvas-next]");
-    const nextContent = document.querySelector<HTMLElement>(
-      "[data-canvas-next-content]",
-    );
-    let exitTrigger: ScrollTrigger | undefined;
-    if (next) {
-      if (nextContent) gsap.set(nextContent, { y: 120, opacity: 0.3 });
-      exitTrigger = ScrollTrigger.create({
-        trigger: next,
-        start: "top bottom",
-        end: "top top",
-        scrub: true,
-        onUpdate: (self) => {
-          const ep = self.progress;
-          // Outgoing headline lags behind the scroll and fades (the case
-          // study's `y: progress * N` + `opacity: 1 - progress * 1.8`).
-          if (reveal) {
-            gsap.set(reveal, {
-              y: ep * window.innerHeight * 0.35,
-              opacity: Math.max(0, 1 - ep * 1.8),
-            });
-          }
-          // Incoming content rises slower than its section and settles.
-          if (nextContent) {
-            gsap.set(nextContent, {
-              y: (1 - ep) * 120,
-              opacity: 0.3 + ep * 0.7,
-            });
-          }
-        },
-      });
-    }
-
     return () => {
       trigger.kill();
-      exitTrigger?.kill();
       gsap.ticker.remove(tick);
       gsap.ticker.lagSmoothing(500, 33); // gsap defaults
       lenis.destroy();
