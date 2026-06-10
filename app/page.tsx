@@ -91,9 +91,14 @@ export default function Home() {
         <GogglesZoom />
       </main>
 
-      {/* Second canvas — the scene the goggles zoom lands on after the hero.
-          Black placeholder for now; real content comes later. */}
-      <section className="relative h-svh bg-black" />
+      {/* Third canvas — where the scroll lands after the in-goggles scene
+          (the black + stepped headline inside the pin is the second canvas,
+          like the reference's spotlight → outro handoff). Placeholder. */}
+      <section className="relative flex h-svh items-center justify-center bg-black">
+        <p className="px-6 text-center font-pixel text-2xl tracking-tighter text-white/30 sm:text-4xl">
+          Next canvas goes here
+        </p>
+      </section>
     </div>
   );
 }
