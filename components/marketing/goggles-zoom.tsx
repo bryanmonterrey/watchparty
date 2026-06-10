@@ -136,6 +136,17 @@ export function GogglesZoom() {
       // pinned element's parent is display:flex, killing the scroll distance.
       pinSpacing: true,
       scrub: true,
+      // One scroll gesture per canvas (the cash-app feel): any motion
+      // commits to the next resting state in that direction — hero (0),
+      // in-goggles scene (0.75), covered by canvas 3 (1) — and the whole
+      // transition plays out as one animation.
+      snap: {
+        snapTo: [0, 0.75, 1],
+        directional: true,
+        duration: { min: 0.6, max: 1.5 },
+        delay: 0.1,
+        ease: "power2.inOut",
+      },
       onRefresh: measure,
       onUpdate: (self) => {
         // Goggles-dive progress (first 3 viewports) and cover progress

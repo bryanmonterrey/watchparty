@@ -95,9 +95,9 @@ export default function Home() {
           the last viewport of the pin (cash-app cover): the -100svh margin
           overlaps it with the pin's final stretch, and z-30 paints it above
           everything inside the hero. Placeholder content. */}
-      <section className="relative z-30 -mt-[100svh] flex h-svh items-center justify-center overflow-hidden bg-black">
+      <section className="relative z-30 -mt-[100svh] flex h-svh items-center justify-center overflow-hidden bg-soft-blue">
         <div data-canvas-next-content>
-          <p className="px-6 text-center font-pixel text-2xl tracking-tighter text-white/30 sm:text-4xl">
+          <p className="px-6 text-center font-pixel text-2xl tracking-tighter text-black/30 sm:text-4xl">
             Next canvas goes here
           </p>
         </div>
