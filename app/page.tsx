@@ -56,11 +56,12 @@ export default function Home() {
         {/* Communities phone mockup — pinned bottom-right, bleeding off the
             bottom edge (clipped by main's overflow-hidden). Desktop/tablet
             only; the hero is already full on mobile. */}
-        <div className="pointer-events-none absolute bottom-0 right-4 z-10 hidden sm:block sm:right-6 lg:right-12">
+        <div className="pointer-events-none absolute bottom-0 right-4 z-10 hidden translate-y-[45%] sm:block sm:right-6 lg:right-12">
           <BlurInImage
             src="/community2xmock.png"
             alt="Communities screen of the watchparty mobile app"
-            className="w-64 translate-y-[45%] lg:w-80 xl:w-[360px]"
+            fromY={64}
+            className="w-64 lg:w-80 xl:w-[360px]"
           />
         </div>
         

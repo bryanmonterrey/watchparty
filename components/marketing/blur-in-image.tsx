@@ -7,6 +7,8 @@ type BlurInImageProps = {
   src: string;
   alt: string;
   className?: string;
+  /** Slide-up distance (px) for the entrance, on top of the blur+fade. */
+  fromY?: number;
 };
 
 /**
@@ -15,7 +17,7 @@ type BlurInImageProps = {
  * blur is over before there's anything to see.) Triggered on `onLoad`, plus a
  * `complete` check for already-cached images where `onLoad` may not fire.
  */
-export function BlurInImage({ src, alt, className }: BlurInImageProps) {
+export function BlurInImage({ src, alt, className, fromY = 0 }: BlurInImageProps) {
   const ref = useRef<HTMLImageElement>(null);
   const played = useRef(false);
 
@@ -25,8 +27,8 @@ export function BlurInImage({ src, alt, className }: BlurInImageProps) {
     played.current = true;
     gsap.fromTo(
       el,
-      { opacity: 0, filter: "blur(20px)" },
-      { opacity: 1, filter: "blur(0px)", duration: 0.7, ease: "power2.out" },
+      { opacity: 0, filter: "blur(20px)", y: fromY },
+      { opacity: 1, filter: "blur(0px)", y: 0, duration: 0.7, ease: "power2.out" },
     );
   };
 
