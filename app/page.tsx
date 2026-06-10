@@ -28,8 +28,10 @@ export default function Home() {
           <SkaterStack />
         </div>
 
+       {/* data-goggles-fade value = upward parallax rate on exit (fraction
+           of viewport height); staggered rates create the depth. */}
        <h1
-          data-goggles-fade
+          data-goggles-fade="0.5"
           className="relative z-10 text-center antialiased tracking-tighter font-pixel text-3xl text-black sm:text-[55px] lg:text-[55px]"
         >
           <TextAnimate as="span" by="word" animation="blurInUp" once>
@@ -51,7 +53,7 @@ export default function Home() {
         {/* Subtext — centered under the headline on mobile/tablet, pinned
             left-middle on desktop (like the image). Regular font, not pixel. */}
         <TextAnimate
-          data-goggles-fade
+          data-goggles-fade="0.3"
           as="p"
           by="line"
           animation="slideRight"
@@ -65,7 +67,7 @@ export default function Home() {
             bottom edge (clipped by main's overflow-hidden). Desktop/tablet
             only; the hero is already full on mobile. */}
         <div
-          data-goggles-fade
+          data-goggles-fade="0.18"
           className="pointer-events-none absolute bottom-0 right-4 z-10 hidden translate-y-[45%] sm:block sm:right-6 lg:right-12"
         >
           <BlurInImage

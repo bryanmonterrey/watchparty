@@ -213,11 +213,21 @@ export function GogglesZoom() {
         const glareX = Math.min(zp / 0.75, 1) * GLARE_SWEEP * art.offsetWidth;
         glares.forEach((el) => gsap.set(el, { x: glareX }));
 
-        // autoAlpha (opacity + visibility) rather than opacity: the subtext
-        // is a framer-motion element whose entrance can rewrite inline
-        // opacity after us, but framer never touches visibility.
-        const fade = 1 - Math.min(zp / 0.2, 1);
-        fades.forEach((el) => gsap.set(el, { autoAlpha: fade }));
+        // Hero copy recedes upward at per-element rates while it fades (the
+        // cash.app hero parallax) — the data-goggles-fade value is the rise
+        // distance as a fraction of viewport height, so layered elements
+        // drift apart for depth. autoAlpha (opacity + visibility) rather
+        // than opacity: the subtext is a framer-motion element whose
+        // entrance can rewrite inline opacity after us, but framer never
+        // touches visibility.
+        const exitP = Math.min(zp / 0.2, 1);
+        fades.forEach((el) => {
+          const rate = parseFloat(el.dataset.gogglesFade ?? "");
+          gsap.set(el, {
+            autoAlpha: 1 - exitP,
+            y: -exitP * (Number.isNaN(rate) ? 0.35 : rate) * window.innerHeight,
+          });
+        });
 
         // The next scene opens up through the glass: black layer masked by
         // the lens alpha, fully opaque well before the words land.
