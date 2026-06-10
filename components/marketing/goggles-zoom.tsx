@@ -68,8 +68,11 @@ const REVEAL_EXIT_PORTION = 0.35;
 const COVER_RECEDE = 0.6;
 // Max blur (px) on the outgoing headline at full exit.
 const REVEAL_EXIT_BLUR = 12;
-// Fade-out rate of the outgoing headline (the cash.app curve).
-const COVER_FADE = 1.8;
+// Fade-out rate of the outgoing headline. 1 = fades across its whole exit
+// phase, accompanying the rise + blur like the hero copy does (higher
+// values finish the fade early and read as a blink inside the short
+// gesture tween).
+const COVER_FADE = 1;
 // How far the incoming canvas's content trails below its section while it
 // rises, as a fraction of the viewport height. Bigger = more parallax.
 const COVER_RISE = 0.45;
