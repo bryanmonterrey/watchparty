@@ -222,19 +222,21 @@ export function GogglesZoom() {
         // touches visibility.
         // Rate 0 = fade only, and crucially no transform write at all: GSAP
         // setting y would stomp an element's own CSS translate placement
-        // (e.g. the phone mockup's translate-y-[45%]).
+        // (e.g. the phone mockup's translate-y-[45%]). Optional
+        // data-goggles-fade-blur adds a progressive blur on exit (value =
+        // max blur px, default 12).
         const exitP = Math.min(zp / 0.2, 1);
         fades.forEach((el) => {
           const rate = parseFloat(el.dataset.gogglesFade ?? "");
           const r = Number.isNaN(rate) ? 0.35 : rate;
-          if (r === 0) {
-            gsap.set(el, { autoAlpha: 1 - exitP });
-          } else {
-            gsap.set(el, {
-              autoAlpha: 1 - exitP,
-              y: -exitP * r * window.innerHeight,
-            });
+          const vars: gsap.TweenVars = { autoAlpha: 1 - exitP };
+          if (r !== 0) vars.y = -exitP * r * window.innerHeight;
+          const blurAttr = el.dataset.gogglesFadeBlur;
+          if (blurAttr !== undefined) {
+            const maxBlur = parseFloat(blurAttr) || 12;
+            vars.filter = `blur(${(exitP * maxBlur).toFixed(2)}px)`;
           }
+          gsap.set(el, vars);
         });
 
         // The next scene opens up through the glass: black layer masked by

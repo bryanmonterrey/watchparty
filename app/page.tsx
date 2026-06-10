@@ -29,9 +29,11 @@ export default function Home() {
         </div>
 
        {/* data-goggles-fade value = upward parallax rate on exit (fraction
-           of viewport height); staggered rates create the depth. */}
+           of viewport height); staggered rates create the depth.
+           data-goggles-fade-blur adds a progressive blur-out (max px). */}
        <h1
           data-goggles-fade="0.5"
+          data-goggles-fade-blur="12"
           className="relative z-10 text-center antialiased tracking-tighter font-pixel text-3xl text-black sm:text-[55px] lg:text-[55px]"
         >
           <TextAnimate as="span" by="word" animation="blurInUp" once>
@@ -54,6 +56,7 @@ export default function Home() {
             left-middle on desktop (like the image). Regular font, not pixel. */}
         <TextAnimate
           data-goggles-fade="0.3"
+          data-goggles-fade-blur="12"
           as="p"
           by="line"
           animation="slideRight"
