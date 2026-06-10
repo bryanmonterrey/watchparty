@@ -63,7 +63,7 @@ const GLARE_SWEEP = 0.09;
 // the screen over the first REVEAL_EXIT_PORTION of the window — pure
 // motion, no fade/blur, so the travel itself is the exit — and only then
 // does canvas 3 slide over the scene.
-const REVEAL_EXIT_PORTION = 0.35;
+const REVEAL_EXIT_PORTION = 0.45;
 // How far the headline travels up during its exit phase, as a fraction of
 // the viewport height. Must clear the viewport: it starts centered, so
 // anything ≳0.65 takes it fully off-screen.
@@ -309,9 +309,12 @@ export function GogglesZoom() {
       const y = stops()[target];
       gsap.to(window, {
         scrollTo: { y, autoKill: false },
+        // Floor of 1.2s: the canvas2→3 hop is only one viewport, and at
+        // 0.8s the staggered headline exit crossed the screen in ~4 frames,
+        // smearing into what reads as a fade.
         duration: gsap.utils.clamp(
-          0.8,
-          1.6,
+          1.2,
+          1.8,
           Math.abs(y - window.scrollY) / 2000,
         ),
         ease: "power2.inOut",
