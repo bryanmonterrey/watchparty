@@ -88,6 +88,7 @@
     "jotai": "^2.20.0",
     "jsonwebtoken": "^9.0.3",
     "kysely": "0.28.17",
+    "lenis": "^1.3.23",
     "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.562.0",
     "motion": "^12.40.0",
@@ -134,6 +135,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "puppeteer-core": "^25.1.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

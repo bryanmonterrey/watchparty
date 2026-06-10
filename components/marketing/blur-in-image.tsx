@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 
-type BlurInImageProps = {
+type BlurInImageProps = Omit<
+  React.ImgHTMLAttributes<HTMLImageElement>,
+  "src" | "alt"
+> & {
   src: string;
   alt: string;
-  className?: string;
   /** Slide-up distance (px) for the entrance, on top of the blur+fade. */
   fromY?: number;
 };
@@ -17,7 +19,14 @@ type BlurInImageProps = {
  * blur is over before there's anything to see.) Triggered on `onLoad`, plus a
  * `complete` check for already-cached images where `onLoad` may not fire.
  */
-export function BlurInImage({ src, alt, className, fromY = 0 }: BlurInImageProps) {
+export function BlurInImage({
+  src,
+  alt,
+  className,
+  fromY = 0,
+  style,
+  ...imgProps
+}: BlurInImageProps) {
   const ref = useRef<HTMLImageElement>(null);
   const played = useRef(false);
 
@@ -44,8 +53,9 @@ export function BlurInImage({ src, alt, className, fromY = 0 }: BlurInImageProps
       src={src}
       alt={alt}
       className={className}
-      style={{ opacity: 0 }}
+      style={{ opacity: 0, ...style }}
       onLoad={reveal}
+      {...imgProps}
     />
   );
 }
