@@ -54,9 +54,10 @@ export default function Home() {
 
         {/* Subtext — centered under the headline on mobile/tablet, pinned
             left-middle on desktop (like the image). Regular font, not pixel. */}
+        {/* Rate 0: fade-only exit — parallax y would fight the
+            lg:-translate-y-1/2 centering. */}
         <TextAnimate
-          data-goggles-fade="0.3"
-          data-goggles-fade-blur="12"
+          data-goggles-fade="0"
           as="p"
           by="line"
           animation="slideRight"
