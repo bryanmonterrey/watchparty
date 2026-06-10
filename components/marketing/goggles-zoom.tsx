@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Lenis from "lenis";
+import { Observer } from "gsap/Observer";
+import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 
 /**
  * Scroll-driven hero zoom (the codegrid "larevoltosa" effect): pins the hero
@@ -23,6 +24,13 @@ import Lenis from "lenis";
  * frozen while canvas 3 — overlapping the pin via -100svh top margin —
  * slides up over it at scroll speed; the headline recedes at half speed
  * and fades, and the incoming content rises slower than its section.
+ *
+ * Navigation is gesture-based, not free-scroll (also per cash.app): GSAP
+ * Observer captures wheel/touch, and a single gesture tweens the scroll
+ * position to the next/previous canvas — the pinned scrub plays the dive
+ * or cover as the transition. Input is ignored while a tween runs, so one
+ * flick = one canvas, both directions. ScrollTrigger snap remains as a
+ * backup for scrollbar drags.
  *
  * Renders nothing — drives elements via data attributes:
  * [data-goggles-pin] the pinned section, [data-goggles-img] the art,
@@ -76,7 +84,7 @@ export function GogglesZoom() {
     const art = document.querySelector<HTMLElement>("[data-goggles-img]");
     if (!stage || !art) return;
 
-    gsap.registerPlugin(ScrollTrigger);
+    gsap.registerPlugin(ScrollTrigger, Observer, ScrollToPlugin);
 
     const fades = gsap.utils.toArray<HTMLElement>("[data-goggles-fade]");
     const glares = gsap.utils.toArray<HTMLElement>("[data-goggles-glare]");
@@ -88,13 +96,6 @@ export function GogglesZoom() {
     // The container starts opacity-0 in CSS (no flash before hydration);
     // from here on the individual words carry the visibility.
     if (reveal) gsap.set(reveal, { opacity: 1 });
-
-    // Lenis smooth scroll feeding ScrollTrigger, per the reference setup.
-    const lenis = new Lenis();
-    lenis.on("scroll", ScrollTrigger.update);
-    const tick = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(0);
 
     gsap.set(art, {
       transformOrigin: `${ORIGIN_X * 100}% ${ORIGIN_Y * 100}%`,
@@ -118,6 +119,14 @@ export function GogglesZoom() {
         window.innerHeight / 2 - ((window.innerHeight - h) / 2 + ORIGIN_Y * h);
     };
     measure();
+
+    // Gesture navigation state — declared before the trigger so its
+    // onUpdate can sync `current` for scrollbar/snap movements.
+    // Resting scroll positions: hero (0), in-goggles scene (3vh, p=0.75),
+    // canvas 3 docked (4vh, p=1 — also the end of the document).
+    const stops = () => [0, window.innerHeight * 3, window.innerHeight * 4];
+    let current = 0;
+    let animating = false;
 
     const nextContent = document.querySelector<HTMLElement>(
       "[data-canvas-next-content]",
@@ -153,6 +162,14 @@ export function GogglesZoom() {
         // (last viewport).
         const zp = Math.min(self.progress / 0.75, 1);
         const cp = gsap.utils.clamp(0, 1, (self.progress - 0.75) / 0.25);
+
+        // Keep the gesture navigation's notion of "current canvas" in sync
+        // when the scroll position changes by other means (scrollbar, snap).
+        if (!animating) {
+          if (self.progress < 0.01) current = 0;
+          else if (Math.abs(self.progress - 0.75) < 0.02) current = 1;
+          else if (self.progress > 0.99) current = 2;
+        }
 
         // Front-loaded zoom + drift: fully inside the lens at the halfway
         // point, second half of the dive lives within the glass; holds at
@@ -221,11 +238,45 @@ export function GogglesZoom() {
       },
     });
 
+    // One gesture = one canvas. Observer captures wheel/touch (preventing
+    // native scroll) and tweens the scroll position to the next stop; the
+    // scrubbed pin plays the dive/cover as the tween passes through it.
+    // wheelSpeed -1 unifies wheel and touch directions, per the canonical
+    // GSAP Observer sections demo: onUp = advance, onDown = go back.
+    const goto = (index: number) => {
+      const target = gsap.utils.clamp(0, stops().length - 1, index);
+      if (target === current || animating) return;
+      animating = true;
+      current = target;
+      const y = stops()[target];
+      gsap.to(window, {
+        scrollTo: { y, autoKill: false },
+        duration: gsap.utils.clamp(
+          0.8,
+          1.6,
+          Math.abs(y - window.scrollY) / 2000,
+        ),
+        ease: "power2.inOut",
+        // Small cooldown so trailing trackpad inertia doesn't immediately
+        // trigger the next canvas.
+        onComplete: () => {
+          gsap.delayedCall(0.3, () => (animating = false));
+        },
+      });
+    };
+
+    const observer = Observer.create({
+      type: "wheel,touch",
+      wheelSpeed: -1,
+      tolerance: 10,
+      preventDefault: true,
+      onUp: () => goto(current + 1),
+      onDown: () => goto(current - 1),
+    });
+
     return () => {
+      observer.kill();
       trigger.kill();
-      gsap.ticker.remove(tick);
-      gsap.ticker.lagSmoothing(500, 33); // gsap defaults
-      lenis.destroy();
     };
   }, []);
 

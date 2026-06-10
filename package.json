@@ -88,7 +88,6 @@
     "jotai": "^2.20.0",
     "jsonwebtoken": "^9.0.3",
     "kysely": "0.28.17",
-    "lenis": "^1.3.23",
     "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.562.0",
     "motion": "^12.40.0",
