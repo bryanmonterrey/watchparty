@@ -143,9 +143,14 @@ export function GogglesZoom() {
     let current = 0;
     let animating = false;
 
+    const next = document.querySelector<HTMLElement>("[data-canvas-next]");
     const nextContent = document.querySelector<HTMLElement>(
       "[data-canvas-next-content]",
     );
+    // Overlap canvas 3 with the pin's final viewport. Applied here — before
+    // the trigger is created, so the spacer math includes it — instead of in
+    // CSS, where it would cover the hero (and flash) before hydration.
+    if (next) gsap.set(next, { marginTop: "-100svh" });
     if (nextContent) {
       gsap.set(nextContent, {
         y: window.innerHeight * COVER_RISE,
@@ -297,6 +302,7 @@ export function GogglesZoom() {
     return () => {
       observer.kill();
       trigger.kill();
+      if (next) gsap.set(next, { clearProps: "marginTop" });
       document.documentElement.classList.remove("hidden-scrollbar");
     };
   }, []);
