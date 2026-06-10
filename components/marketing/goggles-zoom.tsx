@@ -59,20 +59,15 @@ const ORIGIN_Y = 0.382;
 const GLARE_SWEEP = 0.09;
 
 // ── Cover-transition parallax intensity (turn these up/down to taste) ──
-// The cover is staggered: the in-goggles headline plays its parallax exit
-// over the first REVEAL_EXIT_PORTION of the window (rise + blur + fade),
-// and only then does canvas 3 slide over the scene.
+// The cover is staggered: the in-goggles headline rides up and fully off
+// the screen over the first REVEAL_EXIT_PORTION of the window — pure
+// motion, no fade/blur, so the travel itself is the exit — and only then
+// does canvas 3 slide over the scene.
 const REVEAL_EXIT_PORTION = 0.35;
-// How far the outgoing headline recedes during its exit phase, as a
-// fraction of the viewport height.
-const COVER_RECEDE = 0.6;
-// Max blur (px) on the outgoing headline at full exit.
-const REVEAL_EXIT_BLUR = 12;
-// Fade-out rate of the outgoing headline. 1 = fades across its whole exit
-// phase, accompanying the rise + blur like the hero copy does (higher
-// values finish the fade early and read as a blink inside the short
-// gesture tween).
-const COVER_FADE = 1;
+// How far the headline travels up during its exit phase, as a fraction of
+// the viewport height. Must clear the viewport: it starts centered, so
+// anything ≳0.65 takes it fully off-screen.
+const COVER_RECEDE = 0.75;
 // How far the incoming canvas's content trails below its section while it
 // rises, as a fraction of the viewport height. Bigger = more parallax.
 const COVER_RISE = 0.45;
@@ -284,11 +279,7 @@ export function GogglesZoom() {
           (cp - REVEAL_EXIT_PORTION) / (1 - REVEAL_EXIT_PORTION),
         );
         if (reveal) {
-          gsap.set(reveal, {
-            y: -hp * window.innerHeight * COVER_RECEDE,
-            autoAlpha: Math.max(0, 1 - hp * COVER_FADE),
-            filter: `blur(${(hp * REVEAL_EXIT_BLUR).toFixed(2)}px)`,
-          });
+          gsap.set(reveal, { y: -hp * window.innerHeight * COVER_RECEDE });
         }
         // Canvas 3 physically rises with the scroll, so the stagger holds it
         // below the viewport during the headline's exit by countering the
