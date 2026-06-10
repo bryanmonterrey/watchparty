@@ -5,6 +5,7 @@ import { Highlighter } from "@/components/ui/highlighter"
 import { TextAnimate } from "@/components/ui/text-animate"
 import { BlurInImage } from "@/components/marketing/blur-in-image"
 import { GogglesZoom } from "@/components/marketing/goggles-zoom"
+import { SkaterStack } from "@/components/marketing/skater-stack"
 
 // Landing page — to be designed separately. Intentionally minimal for now.
 export default function Home() {
@@ -20,16 +21,11 @@ export default function Home() {
         data-goggles-pin
         className="relative flex h-svh flex-col items-center overflow-hidden px-4 pt-28 sm:pt-28"
       >
-        {/* Skater + rainbow — TEMP placement (animation comes later): fills the
-            hero height, centered. The wide rainbow bleeds off-screen and is
+        {/* Skater + rainbow, as stacked per-part layers: fills the hero
+            height, centered. The wide rainbow bleeds off-screen and is
             clipped by main's overflow-hidden, so no horizontal scrollbar. */}
         <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
-          <BlurInImage
-            data-goggles-img
-            src="/wolf.png"
-            alt="Skateboarder riding a rainbow"
-            className="sm:h-full h-screen w-auto max-w-none"
-          />
+          <SkaterStack />
         </div>
 
        <h1
