@@ -171,13 +171,17 @@ function Sidebar({
   overlay?: boolean
   children?: React.ReactNode
 }) {
-  const { isMobile, state, open, setOpen, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, open, setOpen, setHovered, openMobile, setOpenMobile } = useSidebar()
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   // Click outside the (pinned-open) sidebar collapses it.
   React.useEffect(() => {
     if (!open || isMobile) return
     const handler = (e: PointerEvent) => {
+      // Let the header trigger handle its own toggle — without this, the
+      // pointerdown closes the sidebar and the trigger's click re-opens it,
+      // making it impossible to close from the trigger.
+      if ((e.target as Element).closest?.('[data-sidebar="trigger"]')) return
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
@@ -228,7 +232,7 @@ function Sidebar({
 
   // Native CSS width transition — snappier than JS-driven framer-motion, and
   // the browser composites it directly.
-  const widthEase = "transition-[width] duration-75 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width]"
+  const widthEase = "transition-[width,left,right] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width,left]"
 
   return (
     <div
@@ -239,6 +243,15 @@ function Sidebar({
       data-side={side}
       data-slot="sidebar"
     >
+      {/* Invisible left-edge strip: with the sidebar fully offcanvas there is
+          nothing on screen to hover, so this is the reveal zone. */}
+      {collapsible === "offcanvas" && side === "left" && (
+        <div
+          aria-hidden
+          className="fixed inset-y-0 left-0 z-40 hidden w-3 md:block"
+          onMouseEnter={() => setHovered(true)}
+        />
+      )}
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
@@ -252,7 +265,16 @@ function Sidebar({
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
         )}
         style={{
-          width: overlay ? SIDEBAR_WIDTH_ICON : state === "expanded" ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON,
+          // Offcanvas reserves no space at all (the panel overlays content);
+          // otherwise overlay mode pins the gap at the icon-rail width.
+          width:
+            collapsible === "offcanvas"
+              ? 0
+              : overlay
+                ? SIDEBAR_WIDTH_ICON
+                : state === "expanded"
+                  ? SIDEBAR_WIDTH
+                  : SIDEBAR_WIDTH_ICON,
         }}
       />
       <div
@@ -270,7 +292,14 @@ function Sidebar({
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)  group-data-[side=right]:border-l",
           className
         )}
-        style={{ width: state === "expanded" ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON }}
+        style={{
+          // Offcanvas keeps full width and hides by sliding (left class above);
+          // icon mode shrinks to the rail instead.
+          width:
+            collapsible === "offcanvas" || state === "expanded"
+              ? SIDEBAR_WIDTH
+              : SIDEBAR_WIDTH_ICON,
+        }}
         {...props}
       >
         <div

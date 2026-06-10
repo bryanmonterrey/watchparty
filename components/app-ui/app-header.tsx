@@ -46,7 +46,7 @@ export function AppHeader() {
 
   return (
     <header
-      className="absolute top-0 left-0 w-full z-50 flex items-center justify-between p-2 pointer-events-none"
+      className="absolute top-0 left-0 w-full z-50 max-md:hidden flex items-center justify-between px-4 py-3 pointer-events-none"
     >
       {isMediaPage && (
         <div
@@ -59,29 +59,34 @@ export function AppHeader() {
       )}
       {/* Mobile Menu & Logo */}
       <div className="relative z-10 flex-1 flex items-center justify-start">
-        <div className="flex items-center gap-2 h-11 px-3 pointer-events-auto md:hidden bg-white/5 rounded-full p-1 backdrop-blur-xs border border-white/5 ">
-          <Image
-            src="/Star2.svg"
-            alt="Logo"
-            width={20}
-            height={20}
-            className="opacity-90"
-          />
+        {/* Trigger + logo, desktop too (per desktopdesigns/*.svg): pressing
+            the trigger pins the sidebar open / closes it; hover on the rail
+            and click-outside are handled by Sidebar itself. */}
+        {/* Plain trigger + logo on the canvas — no pill, per desktopdesigns. */}
+        <div className="flex items-center gap-2 h-11 px-2 pointer-events-auto">
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className="text-white/80 hover:bg-white/10 hover:text-white"
+            data-sidebar="trigger"
+            className="size-10 text-white/80 hover:bg-white/10 hover:text-white"
           >
-            <MenuIcon className="size-5" />
+            <MenuIcon className="size-6" />
           </Button>
+          <Image
+            src="/Star2.svg"
+            alt="Logo"
+            width={28}
+            height={28}
+            className="opacity-90"
+          />
         </div>
       </div>
 
       {/* SEARCH BAR CENTERED */}
       {showSearch && (
         <div className="relative z-10 flex-[2] flex items-center justify-center">
-           <div className="w-full max-w-[500px] pointer-events-auto">
+           <div className="w-full max-w-[560px] pointer-events-auto">
               <GlobalSearch placeholder="Search" />
            </div>
         </div>
@@ -103,8 +108,8 @@ export function AppHeader() {
               </Button>
             ) : (
               <Button
-                variant="outline"
-                className="mix-blend-difference rounded-full border-none font-medium flex bg-zinc-500/35 hover:bg-zinc-500/60 text-[18px] h-11 backdrop-blur-xs text-flexwhite"
+                variant="ghost"
+                className="rounded-full font-semibold flex text-[17px] h-11 px-3 text-flexwhite hover:bg-white/10"
               >
                 <span className="flex items-center gap-1">
                   <CreateIcon className="size-5" strokeWidth={2}/>

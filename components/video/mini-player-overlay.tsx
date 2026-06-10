@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { YTPlayIcon, YTPauseIcon } from "@/components/icons";
 
 interface MiniPlayerOverlayProps {
+    /** Live stream: no scrubber/seek or timestamps, LIVE badge instead. */
+    isLive?: boolean;
     isPlaying: boolean;
     currentTime: number;
     duration: number;
@@ -19,6 +21,7 @@ interface MiniPlayerOverlayProps {
 }
 
 export function MiniPlayerOverlay({
+    isLive = false,
     isPlaying,
     currentTime,
     duration,
@@ -86,7 +89,16 @@ export function MiniPlayerOverlay({
                 </button>
             </div>
 
+            {/* Live: badge instead of time/scrubber (no seeking a live stream) */}
+            {isLive && (
+                <div className="absolute bottom-2 left-3 z-10 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1">
+                    <span className="size-2 rounded-full bg-[#f00] animate-pulse" />
+                    <span className="text-white text-xs font-bold tracking-wide">LIVE</span>
+                </div>
+            )}
+
             {/* Bottom: time + thumbnail + scrubber */}
+            {!isLive && (
             <div className="absolute inset-x-0 bottom-0 z-10">
 
                 {/* Time — hover only */}
@@ -185,6 +197,7 @@ export function MiniPlayerOverlay({
                     />
                 </div>
             </div>
+            )}
         </div>
     );
 }

@@ -57,7 +57,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 const items = [
     {
         title: "Home",
-        url: "/",
+        url: "/home",
         icon: HomeIcon,
     },
     {
@@ -199,7 +199,7 @@ export function AppSidebar() {
     return (
         <>
             <Sidebar
-                collapsible="icon"
+                collapsible="offcanvas"
                 className="fixed"
                 overlay
                 onMouseEnter={() => {

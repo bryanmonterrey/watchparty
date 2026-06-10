@@ -1,17 +1,16 @@
-import { getServerSession } from "@/lib/auth/get-session";
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import type { Metadata } from "next";
+import { HomeView } from "@/components/home/home-view";
 
-// Temporary authenticated landing — confirms sign-in worked and gives a way to
-// sign out for repeat testing. To be replaced by the real app home.
-export default async function AppHome() {
-  const session = await getServerSession();
-  const user = session?.user as
-    | { id: string; name?: string | null; email?: string | null; walletAddress?: string | null }
-    | undefined;
+// Port of sidebar's (browse)/page.tsx — the authenticated home feed.
+// HomeView picks desktop VideoFeed or the sectioned MobileHome per viewport.
+export const metadata: Metadata = {
+  title: "Home",
+};
 
+export default function AppHome() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-      
-    </main>
+    <div className="hidden-scrollbar flex h-full max-w-full flex-col overflow-y-auto">
+      <HomeView />
+    </div>
   );
 }

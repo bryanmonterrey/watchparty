@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-const NEWS = [
+export const NEWS = [
     { headline: "Nike Announces Release of Patent Leather Black Air Force 1 Sneakers for Formal Wear with Suits", category: "Other", posts: "2,811" },
     { headline: "Google NotebookLM Rolls Out Cinematic Video Overviews to 100% of Pro Users in English", category: "News", posts: "90" },
     { headline: "Palm Beach Pete Clears Up Viral Epstein Mix-Up", category: "Entertainment", posts: "2,127" },
@@ -66,7 +66,7 @@ export function TrendingSidebar() {
     );
 }
 
-function NewsItem({ headline, category, posts, index }: { headline: string; category: string; posts: string; index: number }) {
+export function NewsItem({ headline, category, posts, index }: { headline: string; category: string; posts: string; index: number }) {
     return (
         <motion.button
             initial={{ opacity: 0 }}

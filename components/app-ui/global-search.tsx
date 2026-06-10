@@ -62,7 +62,7 @@ export function GlobalSearch({
             <form
                 onSubmit={handleSubmit}
                 className={cn(
-                    "relative focus-within:ring-2 focus-within:ring-twitter2 backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-zinc-500/35 rounded-full focus-within:border-zinc-700 transition-colors",
+                    "relative h-[52px] focus-within:ring-2 focus-within:ring-twitter2 backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-zinc-500/35 rounded-full focus-within:border-zinc-700 transition-colors",
                     isFocused && "ring-2 ring-paramount border-zinc-700"
                 )}
             >

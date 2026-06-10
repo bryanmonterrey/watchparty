@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
-import { X, MessageCircle } from "lucide-react";
+import { X, MessageCircle, PictureInPicture2 } from "lucide-react";
 import { AmbientGlow } from "video-ambient-glow";
 
 interface StreamPlayerProps {
@@ -11,10 +11,12 @@ interface StreamPlayerProps {
     host: UserType;
     showChat: boolean;
     onToggleChat: () => void;
+    /** Pops the live stream out into the global mini player. */
+    onEnterMiniPlayer?: () => void;
     isLoading?: boolean;
 }
 
-export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat, isLoading }: StreamPlayerProps) {
+export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat, onEnterMiniPlayer, isLoading }: StreamPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const playerRef = useRef<any>(null);
     const glowRef = useRef<AmbientGlow | null>(null);
@@ -93,12 +95,23 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
                 </div>
             )}
 
-            <button
-                onClick={onToggleChat}
-                className="absolute top-4 right-4 p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-colors z-20"
-            >
-                {showChat ? <X className="w-[18px] h-[18px]" /> : <MessageCircle className="w-[18px] h-[18px]" />}
-            </button>
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+                {isLive && onEnterMiniPlayer && (
+                    <button
+                        onClick={onEnterMiniPlayer}
+                        title="Pop out player"
+                        className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-colors"
+                    >
+                        <PictureInPicture2 className="w-[18px] h-[18px]" />
+                    </button>
+                )}
+                <button
+                    onClick={onToggleChat}
+                    className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-colors"
+                >
+                    {showChat ? <X className="w-[18px] h-[18px]" /> : <MessageCircle className="w-[18px] h-[18px]" />}
+                </button>
+            </div>
         </div>
     );
 }

@@ -38,7 +38,17 @@ File organization mirrors `../sidebar` (deliberately — keep the shape the auth
 
 The one intentional structural change is **`lib/chains/`**: a `ChainAdapter` interface (`types.ts`, `registry.ts`) with `solana/` and `evm/` implementations, so wallet UI is chain-agnostic and adding EVM (viem/wagmi + SIWE, paralleling the old Solana `better-auth-siws`) is "add a folder," not threading `if (evm)` through every wallet component.
 
-Most of this structure does not exist yet — it is the migration target. What exists today is the root layout, the `(auth)/login` route, and `components/auth/`.
+The full sidebar frontend (components/hooks/lib/server/db) was bulk-migrated in-tree, and all of sidebar's `(browse)` routes now exist under `app/(app)/` — home (`/home`), `[slug]`, `[slug]/[videoId]`, discover, communities, messages, search, settings, shorts, trade.
+
+### Migrating/adding a page from sidebar
+Porting a page = creating the route under `app/(app)/` and wiring it to the already-migrated components:
+
+1. Copy sidebar's `app/(browse)/<path>` page/layout near-verbatim into `app/(app)/<path>` (same URLs — both are route groups). Staying close to the source keeps diffing against sidebar easy.
+2. **Drop client-side auth guards** (`redirect`/`router.push` on missing session) — `(app)/layout.tsx` already guards server-side. Keep `useAuthSession` only where the user id is actually used.
+3. **Lazy-load panel-style UIs**: tab/section-switched content (see `app/(app)/settings/page.tsx`) goes behind `next/dynamic` + `ssr: false` so the route ships only the visible panel. Caveat: `dynamic()` options must be **inline object literals** — Turbopack statically analyzes them and the build fails on a shared `const options` reference.
+4. Verify with `npx tsc --noEmit` + `bun run build`. If tsc errors inside `.next/` generated types right after adding routes, they're stale — re-run `bun run build` to regenerate.
+
+Note: everything under `(app)` is login-gated, including `/[slug]` profiles and `/discover/post/[id]`, which were public share links in sidebar. Public share pages would need a separate non-guarded route group.
 
 ### Responsive: mobile-first, all breakpoints
 Unlike the old app (desktop-focused), every component here must work mobile + tablet + desktop. Build **mobile-first**: unprefixed classes are the mobile layout; `sm:`+ holds the desktop values from the Figma frame. Example from `components/auth/login-card.tsx`: `h-14 sm:h-[61px]`, `max-w-[442px]` column collapsing to full-width below it.

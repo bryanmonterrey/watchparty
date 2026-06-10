@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { getServerSession } from "@/lib/auth/get-session";
 import AppProviders from "@/components/app-ui/app-providers";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-ui/app-sidebar";
 import { AppHeader } from "@/components/app-ui/app-header";
 import { AppContainer } from "@/components/app-ui/app-container";
+import { MobileChrome } from "@/components/app-ui/mobile/mobile-chrome";
+import { MiniPlayerShell } from "@/components/app-ui/mini-player-shell";
 
 // Authenticated app shell. Guards every (app) route (no session -> /login) and
 // hosts the app's provider stack + sidebar frame.
@@ -13,8 +14,8 @@ import { AppContainer } from "@/components/app-ui/app-container";
 // Consolidation vs sidebar's layout:
 // - AppProviders (Query/tRPC/theme/cluster/Solana) lives HERE, not the root
 //   layout — so login/landing never load the wallet SDK (the speed rewrite).
-// - MiniPlayerShell is intentionally omitted for now; it pulls in the video
-//   player, which nothing needs until media actually plays. Re-add with video.
+// - MiniPlayerShell mounts here so an opened mini player persists across
+//   every (app) route; the player chunk itself stays lazy inside the shell.
 
 // This section reads the session cookie, so it's always rendered per request.
 // Declaring it explicitly stops `next build` from trying to prerender it — that
@@ -26,18 +27,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getServerSession();
   if (!session) redirect("/login");
 
-  const cookieStore = await cookies();
-  const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
-
+  // Sidebar always starts fully collapsed (hover the rail to peek, trigger to
+  // pin) — deliberately NOT restored from the cookie anymore.
   return (
     <AppProviders>
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <AppSidebar />
-        <SidebarInset>
-          <AppHeader />
-          <AppContainer>{children}</AppContainer>
-        </SidebarInset>
-      </SidebarProvider>
+      <MiniPlayerShell>
+        <SidebarProvider defaultOpen={false}>
+          <AppSidebar />
+          <SidebarInset>
+            <AppHeader />
+            <MobileChrome />
+            <AppContainer>{children}</AppContainer>
+          </SidebarInset>
+        </SidebarProvider>
+      </MiniPlayerShell>
     </AppProviders>
   );
 }

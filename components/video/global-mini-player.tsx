@@ -4,10 +4,16 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MiniPlayerOverlay } from "./mini-player-overlay";
 import { useMiniPlayer } from "@/contexts/mini-player-context";
+import { loadIvsPlayer } from "@/lib/ivs/player-loader";
 
 export function GlobalMiniPlayer() {
     const { miniPlayerData, exitMiniPlayer } = useMiniPlayer();
     const router = useRouter();
+
+    // Live streams come in as IVS .m3u8 playback URLs — a bare <video> can't
+    // play HLS outside Safari, so those attach through the IVS player instead.
+    const isLive = !!miniPlayerData?.videoUrl.includes(".m3u8");
+    const ivsPlayerRef = useRef<ReturnType<NonNullable<Window["IVSPlayer"]>["create"]> | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -111,26 +117,55 @@ export function GlobalMiniPlayer() {
         setBuffered(0);
         setDragPos(null);
 
+        if (isLive) {
+            // IVS HLS: attach through the IVS player (shared script with the
+            // stream pages). No startTime — live always joins at the edge.
+            let cancelled = false;
+            loadIvsPlayer()
+                .then(() => {
+                    if (cancelled || !videoRef.current) return;
+                    if (!window.IVSPlayer?.isPlayerSupported) return;
+                    const player = window.IVSPlayer.create();
+                    ivsPlayerRef.current = player;
+                    player.attachHTMLVideoElement(videoRef.current);
+                    player.load(miniPlayerData.videoUrl);
+                    player.play();
+                })
+                .catch(() => {});
+            return () => {
+                cancelled = true;
+                ivsPlayerRef.current?.delete();
+                ivsPlayerRef.current = null;
+            };
+        }
+
         video.src = miniPlayerData.videoUrl;
         video.currentTime = miniPlayerData.startTime;
         video.load();
         video.play().catch(() => {});
-    }, [miniPlayerData?.postId, miniPlayerData?.videoUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [miniPlayerData?.postId, miniPlayerData?.videoUrl, isLive]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const togglePlay = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
+        if (isLive && ivsPlayerRef.current) {
+            // Pause/resume through the IVS player; resuming rejoins the live edge.
+            if (video.paused) ivsPlayerRef.current.play();
+            else ivsPlayerRef.current.pause();
+            return;
+        }
         if (video.paused) video.play().catch(() => {});
         else video.pause();
-    }, []);
+    }, [isLive]);
 
     const onSeek = useCallback((frac: number) => {
+        if (isLive) return; // no seeking a live stream
         const video = videoRef.current;
         if (!video) return;
         const t = frac * (video.duration || 0);
         video.currentTime = t;
         setCurrentTime(t);
-    }, []);
+    }, [isLive]);
 
     const formatTime = (seconds: number) => {
         const hrs = Math.floor(seconds / 3600);
@@ -182,6 +217,7 @@ export function GlobalMiniPlayer() {
                     onEnded={() => setIsPlaying(false)}
                 />
                 <MiniPlayerOverlay
+                    isLive={isLive}
                     isPlaying={isPlaying}
                     currentTime={currentTime}
                     duration={duration}
