@@ -59,15 +59,20 @@ const ORIGIN_Y = 0.382;
 const GLARE_SWEEP = 0.09;
 
 // ── Cover-transition parallax intensity (turn these up/down to taste) ──
-// How far the outgoing in-goggles headline recedes, as a fraction of the
-// viewport height (it moves against the cover at this rate).
+// The cover is staggered: the in-goggles headline plays its parallax exit
+// over the first REVEAL_EXIT_PORTION of the window (rise + blur + fade),
+// and only then does canvas 3 slide over the scene.
+const REVEAL_EXIT_PORTION = 0.35;
+// How far the outgoing headline recedes during its exit phase, as a
+// fraction of the viewport height.
 const COVER_RECEDE = 0.6;
+// Max blur (px) on the outgoing headline at full exit.
+const REVEAL_EXIT_BLUR = 12;
+// Fade-out rate of the outgoing headline (the cash.app curve).
+const COVER_FADE = 1.8;
 // How far the incoming canvas's content trails below its section while it
 // rises, as a fraction of the viewport height. Bigger = more parallax.
 const COVER_RISE = 0.45;
-// Fade-out rate of the outgoing headline (1.8 = gone at ~55% of the cover,
-// the cash.app curve).
-const COVER_FADE = 1.8;
 
 // Split the headline into word spans for the stepped reveal (the reference
 // uses SplitText; words flipping 0→1 with no tween is the whole look).
@@ -268,16 +273,30 @@ export function GogglesZoom() {
         // outgoing headline recedes at half the cover speed and fades
         // (their `opacity: 1 - progress * 1.8`), and the incoming content
         // rises slower than its section, settling as it docks.
+        // Staggered: headline exit phase (hp), then the cover phase (ecp).
+        const hp = gsap.utils.clamp(0, 1, cp / REVEAL_EXIT_PORTION);
+        const ecp = gsap.utils.clamp(
+          0,
+          1,
+          (cp - REVEAL_EXIT_PORTION) / (1 - REVEAL_EXIT_PORTION),
+        );
         if (reveal) {
           gsap.set(reveal, {
-            y: -cp * window.innerHeight * COVER_RECEDE,
-            opacity: Math.max(0, 1 - cp * COVER_FADE),
+            y: -hp * window.innerHeight * COVER_RECEDE,
+            autoAlpha: Math.max(0, 1 - hp * COVER_FADE),
+            filter: `blur(${(hp * REVEAL_EXIT_BLUR).toFixed(2)}px)`,
           });
+        }
+        // Canvas 3 physically rises with the scroll, so the stagger holds it
+        // below the viewport during the headline's exit by countering the
+        // scroll-driven rise, releasing over the rest of the window.
+        if (next) {
+          gsap.set(next, { y: (cp - ecp) * window.innerHeight });
         }
         if (nextContent) {
           gsap.set(nextContent, {
-            y: (1 - cp) * window.innerHeight * COVER_RISE,
-            opacity: Math.min(1, cp * 1.4),
+            y: (1 - ecp) * window.innerHeight * COVER_RISE,
+            opacity: Math.min(1, ecp * 1.4),
           });
         }
       },
