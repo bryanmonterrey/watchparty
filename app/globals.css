@@ -18,6 +18,10 @@
    Dark values are ported from sidebar (black canvas). */
 :root {
   --radius: 0.625rem;
+  /* AppHeader height (h-11 content + py-3 = 68px). The header pins itself to
+     this via h-(--header-height); pages offset under it with
+     md:pt-(--header-height) — md: because the header is max-md:hidden. */
+  --header-height: 68px;
   --background: oklch(0.967 0.001 286.4); /* ~#F4F4F5 canvas from the designs */
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
