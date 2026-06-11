@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc/client";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { CategoryList } from "@/components/home/video-feed/category-list";
 
 const COMMUNITY_CATEGORIES = ["All", "Gaming", "Crypto", "Music", "Art", "Tech", "Trading", "IRL"];
@@ -46,7 +45,7 @@ export function CommunitiesLanding() {
     };
 
     return (
-        <ScrollArea className="flex-1 p-4 bg-black2">
+        <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 bg-black2">
             <div className="flex flex-col max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -195,6 +194,6 @@ export function CommunitiesLanding() {
                     </div>
                 )}
             </div>
-        </ScrollArea>
+        </div>
     );
 }

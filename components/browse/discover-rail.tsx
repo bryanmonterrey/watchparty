@@ -29,7 +29,7 @@ export function DiscoverRail() {
                 
                 
             </div>
-            <div className="mt-auto flex flex-col gap-2">
+            <div className="mt-auto flex flex-col gap-3">
                 
             
             <button
@@ -39,7 +39,7 @@ export function DiscoverRail() {
                     Post
             </button>
 
-            <div className="mt-auto flex h-20 w-full items-center gap-3 rounded-full bg-muted/60 px-5">
+            <div className="mt-auto flex h-20 w-full items-center gap-3 rounded-full bg-zinc-900 px-5">
             
                 <span className="size-14 shrink-0 overflow-hidden rounded-full bg-muted">
                     {avatar && (

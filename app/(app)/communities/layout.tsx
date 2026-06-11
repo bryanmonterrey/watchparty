@@ -30,7 +30,7 @@ export default function CommunitiesLayout({
                 <CommunityServerList />
 
                 {/* Columns 2+3 inside the big rounded preview card */}
-                <div className=" ml-0 flex min-w-0 flex-1 overflow-hidden rounded-3xl border border-zinc-500/5 bg-card max-md:m-0 max-md:rounded-none max-md:border-0">
+                <div className=" ml-0 flex min-w-0 flex-1 overflow-hidden rounded-4xl border border-zinc-500/5 bg-card max-md:m-0 max-md:rounded-none max-md:border-0">
                     {isHome ? (
                         <CommunityHomeSidebar />
                     ) : (

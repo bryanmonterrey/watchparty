@@ -38,7 +38,7 @@ export function CommunityHomeSidebar() {
             <div className="p-3 px-2 h-12 flex items-center text-lg justify-center">
                 <button
                     onClick={() => onOpen("createServer")}
-                    className="relative cursor-pointer placeholder:text-lg text-lg gap-1.5 flex items-center justify-center text-zinc-500 bg-zinc-600/10 hover:bg-zinc-600/20 border border-flexwhite/15 rounded-full transition-colors w-full px-4 py-3"
+                    className="relative cursor-pointer placeholder:text-lg text-lg gap-1.5 flex items-center justify-center text-zinc-500 bg-zinc-600/10 hover:bg-zinc-600/20 border border-zinc-500/5 rounded-full transition-colors w-full px-4 py-3"
                 >
                     <SearchIcon className="w-5 h-5 text-zinc-500" />
                     Search
