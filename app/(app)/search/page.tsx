@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useQueryState } from "nuqs";
 import { searchParams } from "@/lib/searchParams";
 import { SearchIcon } from "@/components/icons";
@@ -9,7 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PostCard } from "@/components/browse/post-card";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/use-debounce";
-import { MobileSearchHome } from "@/components/search/mobile-search-home";
+import { useIsMobileOrUndefined } from "@/hooks/use-mobile";
+
+// Mounted (and its chunk downloaded) only on measured-mobile viewports — CSS
+// hiding alone left it fetching its live/categories queries on desktop.
+const MobileSearchHome = dynamic(() => import("@/components/search/mobile-search-home").then(m => m.MobileSearchHome), { ssr: false });
 
 // Port of sidebar's (browse)/search/page.tsx — header-driven search results
 // (people + posts), reading ?q= from the URL. Mobile additions per the design:
@@ -19,7 +24,11 @@ import { MobileSearchHome } from "@/components/search/mobile-search-home";
 export default function SearchPage() {
     const [q, setQ] = useQueryState("q", searchParams.q);
     const [inputValue, setInputValue] = useState(q ?? "");
-    const debouncedQuery = useDebounce(q ?? "", 350);
+    const isMobile = useIsMobileOrUndefined();
+    // Single debounce off the live input — debouncing q (already written 350ms
+    // after typing) stacked two delays into ~700ms before the query fired. The
+    // URL write below still debounces, but in parallel with the query now.
+    const debouncedQuery = useDebounce(inputValue, 350);
 
     useEffect(() => setInputValue(q ?? ""), [q]);
     useEffect(() => {
@@ -117,7 +126,7 @@ export default function SearchPage() {
             ) : (
                 <>
                     <div className="md:hidden">
-                        <MobileSearchHome />
+                        {isMobile && <MobileSearchHome />}
                     </div>
                     <div className="flex flex-col items-center justify-center py-24 text-zinc-600 max-md:hidden">
                         <SearchIcon className="w-8 h-8 mb-3" />

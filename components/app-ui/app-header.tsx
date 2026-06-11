@@ -13,6 +13,7 @@ import { WithAuth } from '@/components/auth/with-auth'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { GlobalSearch } from './global-search'
+import Link from 'next/link'
  
 export function AppHeader() {
   const pathname = usePathname()
@@ -81,13 +82,15 @@ export function AppHeader() {
           >
             <MenuIcon className="size-8" />
           </Button>
-          <Image
+          <Link href="/home">
+            <Image
             src="/Star2.svg"
             alt="Logo"
             width={28}
             height={28}
             className="opacity-90"
           />
+          </Link>
         </div>
       </div>
 

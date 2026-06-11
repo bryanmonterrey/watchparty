@@ -9,8 +9,8 @@ import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
 // rail never moves with feed scroll; the right cards scroll on their own.
 export default function DiscoverLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex h-screen w-full overflow-hidden px-4 gap-6 relative">
-            <aside className="hidden h-screen min-w-0 flex-1 lg:block">
+        <div className="flex h-dvh w-full overflow-hidden px-4 gap-6 relative">
+            <aside className="hidden h-dvh min-w-0 flex-1 lg:block">
                 <DiscoverRail />
             </aside>
 

@@ -1,10 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Observer } from "gsap/Observer";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 
 /**
  * Scroll-driven hero zoom (the codegrid "larevoltosa" effect): pins the hero
@@ -97,6 +93,21 @@ export function GogglesZoom() {
     const stage = document.querySelector<HTMLElement>("[data-goggles-pin]");
     const art = document.querySelector<HTMLElement>("[data-goggles-img]");
     if (!stage || !art) return;
+
+    // GSAP + plugins load here, post-hydration, instead of in the landing
+    // page's main chunk — the scroll effect can't run before mount anyway.
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+
+    (async () => {
+    const [{ gsap }, { ScrollTrigger }, { Observer }, { ScrollToPlugin }] =
+      await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+        import("gsap/Observer"),
+        import("gsap/ScrollToPlugin"),
+      ]);
+    if (cancelled) return;
 
     gsap.registerPlugin(ScrollTrigger, Observer, ScrollToPlugin);
 
@@ -232,7 +243,9 @@ export function GogglesZoom() {
         fades.forEach((el) => {
           const rate = parseFloat(el.dataset.gogglesFade ?? "");
           const r = Number.isNaN(rate) ? 0.35 : rate;
-          const vars: gsap.TweenVars = { autoAlpha: 1 - exitP };
+          // Inline type instead of gsap.TweenVars: the local `gsap` value
+          // shadows the ambient namespace in type position.
+          const vars: { autoAlpha: number; y?: number; filter?: string } = { autoAlpha: 1 - exitP };
           if (r !== 0) vars.y = -exitP * r * window.innerHeight;
           const blurAttr = el.dataset.gogglesFadeBlur;
           if (blurAttr !== undefined) {
@@ -335,11 +348,17 @@ export function GogglesZoom() {
       onDown: () => goto(current - 1),
     });
 
-    return () => {
+    cleanup = () => {
       observer.kill();
       trigger.kill();
       if (next) gsap.set(next, { clearProps: "marginTop" });
       document.documentElement.classList.remove("hidden-scrollbar");
+    };
+    })();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
     };
   }, []);
 

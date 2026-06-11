@@ -1,11 +1,15 @@
 "use client";
 
-import { useIsMobile } from "@/hooks/use-mobile";
-import { TradeFeed } from "./trade-feed";
-import { MobileTrade } from "./mobile-trade";
+import dynamic from "next/dynamic";
+import { useIsMobileOrUndefined } from "@/hooks/use-mobile";
 
-// Conditional render so only the active variant queries/subscribes.
+// Lazy per-viewport variants — see HomeView for the pattern rationale: only
+// the active variant queries/subscribes AND only its chunk downloads.
+const TradeFeed = dynamic(() => import("./trade-feed").then(m => m.TradeFeed), { ssr: false });
+const MobileTrade = dynamic(() => import("./mobile-trade").then(m => m.MobileTrade), { ssr: false });
+
 export function TradeView() {
-    const isMobile = useIsMobile();
+    const isMobile = useIsMobileOrUndefined();
+    if (isMobile === undefined) return null;
     return isMobile ? <MobileTrade /> : <TradeFeed />;
 }

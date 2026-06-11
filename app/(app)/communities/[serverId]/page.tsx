@@ -1,36 +1,35 @@
-"use client";
-
-import { useRouter, useParams } from "next/navigation";
-import { useEffect } from "react";
-import { trpc } from "@/lib/trpc/client";
-import { Loader2 } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
+import { db } from "@/db";
+import { communityChannels } from "@/db/schema/community";
+import { eq, asc } from "drizzle-orm";
 
 // Port of sidebar's (browse)/communities/[serverId]/page.tsx — redirects to
-// the server's #general (or first) channel.
-export default function ServerPage() {
-    const params = useParams();
-    const router = useRouter();
-    const serverId = params?.serverId as string;
+// the server's #general (or first) channel. Server-side, so the client never
+// downloads this page's JS, fetches, and *then* redirects — the channel page
+// itself enforces membership via its getServer query.
+export default async function ServerPage({ params }: { params: Promise<{ serverId: string }> }) {
+    const { serverId } = await params;
 
-    const { data } = trpc.community.getServer.useQuery(
-        { serverId },
-        { enabled: !!serverId }
-    );
+    // The old tRPC route zod-validated this as a uuid; without it a malformed
+    // id makes Postgres throw a cast error instead of 404ing.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(serverId)) {
+        notFound();
+    }
 
-    useEffect(() => {
-        if (data) {
-            const generalChannel = data.channels.find((c) => c.name === "general");
-            if (generalChannel) {
-                router.replace(`/communities/${serverId}/channels/${generalChannel.id}`);
-            } else if (data.channels.length > 0) {
-                router.replace(`/communities/${serverId}/channels/${data.channels[0].id}`);
-            }
-        }
-    }, [data, serverId, router]);
+    const channels = await db
+        .select({ id: communityChannels.id, name: communityChannels.name })
+        .from(communityChannels)
+        .where(eq(communityChannels.serverId, serverId))
+        .orderBy(asc(communityChannels.createdAt));
+
+    const target = channels.find((c) => c.name === "general") ?? channels[0];
+    if (target) {
+        redirect(`/communities/${serverId}/channels/${target.id}`);
+    }
 
     return (
         <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-7 w-7 text-zinc-500 animate-spin" />
+            <p className="text-zinc-400">This server has no channels yet</p>
         </div>
     );
 }

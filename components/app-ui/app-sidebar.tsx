@@ -284,7 +284,7 @@ export function AppSidebar() {
                                                                 
                                                                 transition: { type: "tween", duration: 0.00, ease: "easeOut" } // Faster exit speed
                                                             }}
-                                                            className="whitespace-nowrap pr-5"
+                                                            className="whitespace-nowrap pr-7"
                                                         >
                                                             {item.title}
                                                         </motion.span>

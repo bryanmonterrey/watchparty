@@ -2,7 +2,11 @@ import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768
 
-export function useIsMobile() {
+// Like useIsMobile, but undefined until the viewport is actually measured
+// (post-mount). Use when guessing is expensive — e.g. picking which lazy
+// bundle to load: coercing undefined to false would start the desktop
+// download on phones before the flip.
+export function useIsMobileOrUndefined() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {
@@ -15,5 +19,9 @@ export function useIsMobile() {
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
-  return !!isMobile
+  return isMobile
+}
+
+export function useIsMobile() {
+  return !!useIsMobileOrUndefined()
 }

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
@@ -16,18 +17,30 @@ interface Params {
     videoId: string;
 }
 
+// cache() dedupes across generateMetadata + the page within one request —
+// Next only dedupes fetch(), not raw Drizzle calls. The creator-ownership
+// check lives in the page (JS), not the query, so both callers share one
+// post lookup.
+const getCreator = cache((slug: string) =>
+    db.query.user.findFirst({ where: eq(user.username, slug) })
+);
+
+const getVideoPost = cache((videoId: string) =>
+    db.query.posts.findFirst({
+        where: and(eq(posts.id, videoId), isNotNull(posts.videoUrl)),
+    })
+);
+
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
     const { slug, videoId } = await params;
 
     if (videoId === "live") {
-        const creator = await db.query.user.findFirst({ where: eq(user.username, slug) });
+        const creator = await getCreator(slug);
         if (!creator) return { title: "Not Found" };
         return { title: `${creator.name ?? slug} — Live` };
     }
 
-    const post = await db.query.posts.findFirst({
-        where: and(eq(posts.id, videoId), isNotNull(posts.videoUrl)),
-    });
+    const post = await getVideoPost(videoId);
     if (!post) return { title: "Not Found" };
 
     return {
@@ -42,21 +55,15 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 export default async function VideoPage({ params }: { params: Promise<Params> }) {
     const { slug, videoId } = await params;
 
-    const creator = await db.query.user.findFirst({ where: eq(user.username, slug) });
+    const creator = await getCreator(slug);
     if (!creator) notFound();
 
     if (videoId === "live") {
         return <StreamWatchPage host={creator} />;
     }
 
-    const post = await db.query.posts.findFirst({
-        where: and(
-            eq(posts.id, videoId),
-            eq(posts.userId, creator.id),
-            isNotNull(posts.videoUrl),
-        ),
-    });
-    if (!post) notFound();
+    const post = await getVideoPost(videoId);
+    if (!post || post.userId !== creator.id) notFound();
 
     return (
         <VideoWatchPage
