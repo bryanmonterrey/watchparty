@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CATEGORIES } from "./video-feed/types";
 import { HomeCarousel, HomeCarouselSkeleton } from "./home-carousel";
+import { HOME_CATEGORIES } from "@/lib/data/home-categories";
 
 // Desktop home per desktopdesigns/homepage.svg: full-bleed hero carousel,
 // then Trending / Categories / IRL sections. Same feed procedures as before —
@@ -79,9 +79,6 @@ export function DesktopHome() {
     const heroVideos = videos.slice(0, 24);
     const trendingVideos = videos.slice(24, 28);
     const irlVideos = irl.data?.pages.flatMap((p) => p.videos) ?? [];
-    const browseCategories = CATEGORIES.filter(
-        (c) => !["All", "Trending", "For You", "New"].includes(c)
-    );
 
     return (
         <div className="flex flex-col gap-10 pb-16 md:pt-[var(--header-height)]">
@@ -103,15 +100,37 @@ export function DesktopHome() {
                 </section>
 
                 <section>
-                    <SectionHeader title="Categories" href="/search" />
+                    <SectionHeader title="Categories" href="/category" />
                     <div className="hidden-scrollbar flex gap-4 overflow-x-auto">
-                        {browseCategories.map((c) => (
+                        {HOME_CATEGORIES.map((c) => (
                             <Link
-                                key={c}
-                                href={`/search?q=${encodeURIComponent(c)}`}
-                                className="flex aspect-square w-40 shrink-0 items-end rounded-2xl bg-muted p-3 transition-colors hover:bg-muted-foreground/20"
+                                key={c.slug}
+                                href={c.slug}
+                                className="group relative block aspect-[3/4] w-44 shrink-0 overflow-hidden rounded-2xl bg-muted"
                             >
-                                <span className="text-base font-extrabold">{c}</span>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={c.thumbnailUrl}
+                                    alt={c.title}
+                                    loading="lazy"
+                                    className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+                                <div className="absolute inset-x-0 bottom-0 p-3">
+                                    <p className="truncate text-sm font-extrabold text-white">{c.title}</p>
+                                    {c.tags.length > 0 && (
+                                        <div className="mt-1.5 flex flex-wrap gap-1">
+                                            {c.tags.slice(0, 2).map((t) => (
+                                                <span
+                                                    key={t}
+                                                    className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white/85 backdrop-blur-sm"
+                                                >
+                                                    {t}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </Link>
                         ))}
                     </div>
