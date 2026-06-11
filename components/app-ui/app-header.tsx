@@ -23,12 +23,17 @@ export function AppHeader() {
   useEffect(() => setMounted(true), [])
 
   useEffect(() => {
+    // Capture-phase listener sees scrolls from ANY container (the main
+    // app scroller, discover's independent feed column, etc.), so the header
+    // backdrop reacts on every page — ported behavior was main-container only.
+    const handler = (e: Event) => {
+      const el = e.target instanceof HTMLElement ? e.target : document.documentElement
+      setScrollY(el.scrollTop)
+    }
     const container = document.getElementById('app-scroll-container')
-    if (!container) return
-    setScrollY(container.scrollTop)
-    const handler = () => setScrollY(container.scrollTop)
-    container.addEventListener('scroll', handler, { passive: true })
-    return () => container.removeEventListener('scroll', handler)
+    setScrollY(container?.scrollTop ?? 0)
+    document.addEventListener('scroll', handler, { passive: true, capture: true })
+    return () => document.removeEventListener('scroll', handler, { capture: true })
   }, [pathname])
 
   const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'discover', 'notifications'];
@@ -48,15 +53,18 @@ export function AppHeader() {
     <header
       className="fixed top-0 left-0 w-full z-50 max-md:hidden flex items-center justify-between px-4 py-3 pointer-events-none"
     >
-      {isMediaPage && (
-        <div
-          className="absolute inset-0 transition-colors"
-          style={{
-            backgroundColor: `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.4})`,
-            backdropFilter: `blur(${Math.min(scrollY / 1, 1) * 24}px)`,
-          }}
-        />
-      )}
+      {/* Scroll backdrop on every page (sidebar only had it on media pages):
+          media pages keep the black scrim over video; elsewhere it's the
+          theme canvas so it works in light and dark. */}
+      <div
+        className="absolute inset-0 transition-colors"
+        style={{
+          backgroundColor: isMediaPage
+            ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.4})`
+            : `color-mix(in srgb, var(--background) ${Math.min(scrollY / 32, 1) * 85}%, transparent)`,
+          backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
+        }}
+      />
       {/* Mobile Menu & Logo */}
       <div className="relative z-10 flex-1 flex items-center justify-start">
         {/* Trigger + logo, desktop too (per desktopdesigns/*.svg): pressing
