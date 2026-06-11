@@ -4,6 +4,7 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CATEGORIES } from "./video-feed/types";
+import { HomeCarousel, HomeCarouselSkeleton } from "./home-carousel";
 
 // Desktop home per desktopdesigns/homepage.svg: full-bleed hero carousel,
 // then Trending / Categories / IRL sections. Same feed procedures as before —
@@ -24,8 +25,8 @@ function watchHref(v: FeedVideo) {
 function SectionHeader({ title, href }: { title: string; href: string }) {
     return (
         <div className="flex items-baseline justify-between pb-4">
-            <h2 className="text-[26px] font-extrabold tracking-tight">{title}</h2>
-            <Link href={href} className="text-sm font-semibold text-blue-500">
+            <h2 className="text-[26px] font-semibold tracking-tight">{title}</h2>
+            <Link href={href} className="text-sm font-extrabold text-zinc-300/60 hover:text-white/80">
                 View all
             </Link>
         </div>
@@ -41,7 +42,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
                     <img
                         src={v.thumbnailUrl}
                         alt={v.title}
-                        className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        className="size-full object-cover transition-transform duration-300"
                         loading="lazy"
                     />
                 )}
@@ -74,8 +75,8 @@ export function DesktopHome() {
     );
 
     const videos = feed.data?.pages.flatMap((p) => p.videos) ?? [];
-    const heroVideos = videos.slice(0, 6);
-    const trendingVideos = videos.slice(6, 10);
+    const heroVideos = videos.slice(0, 7);
+    const trendingVideos = videos.slice(7, 11);
     const irlVideos = irl.data?.pages.flatMap((p) => p.videos) ?? [];
     const browseCategories = CATEGORIES.filter(
         (c) => !["All", "Trending", "For You", "New"].includes(c)
@@ -83,36 +84,8 @@ export function DesktopHome() {
 
     return (
         <div className="flex flex-col gap-10 pb-16 pt-16">
-            {/* ── Hero carousel: full-bleed, large snap cards ─────────────── */}
-            {feed.isLoading ? (
-                <div className="flex gap-5 overflow-hidden px-6 pt-2">
-                    <Skeleton className="h-[340px] w-[180px] shrink-0 rounded-2xl" />
-                    <Skeleton className="h-[340px] w-[760px] shrink-0 rounded-2xl" />
-                    <Skeleton className="h-[340px] w-[180px] shrink-0 rounded-2xl" />
-                </div>
-            ) : heroVideos.length > 0 ? (
-                <div className="hidden-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pt-2">
-                    {heroVideos.map((v) => (
-                        <Link
-                            key={v.id}
-                            href={watchHref(v)}
-                            className="group relative block h-[340px] w-[min(760px,60vw)] shrink-0 snap-center overflow-hidden rounded-2xl bg-muted"
-                        >
-                            {v.thumbnailUrl && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={v.thumbnailUrl}
-                                    alt={v.title}
-                                    className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                                />
-                            )}
-                            <span className="absolute bottom-6 left-6 max-w-[60%] truncate rounded-2xl bg-black/55 px-6 py-3.5 text-lg font-extrabold text-white backdrop-blur-sm">
-                                {v.title}
-                            </span>
-                        </Link>
-                    ))}
-                </div>
-            ) : null}
+            {/* ── Hero carousel: full-bleed coverflow accordion ──────────── */}
+            {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
 
             <div className="flex flex-col gap-10 px-6">
                 <section>
