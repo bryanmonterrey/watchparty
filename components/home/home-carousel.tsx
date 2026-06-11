@@ -1,28 +1,36 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Hero strip per desktopdesigns/homecarousel.svg, scaled to 24 videos.
+// Hero strip per desktopdesigns/homecarousel.svg, scaled to 24 videos with a
+// seamless infinite loop.
 //
 // Layout: a horizontally-scrollable row of fixed-width peek panels and one
 // wide active panel. Pure CSS — the active panel animates its `width` and the
-// strip uses native smooth scrolling, so nothing runs on the JS thread per
-// frame (this is why it feels snappier than the old GSAP flex-grow tween).
+// strip uses native scrolling, so nothing runs on the JS thread per frame.
+//
+// Infinite wrap: the list is rendered THREE times and the viewport is parked
+// in the middle copy. When scrolling crosses into a side copy, scrollLeft jumps
+// one copy-width back into the middle — invisible, because the copies are
+// pixel-identical (the active index applies to every copy, so all three stay
+// the same width even while a panel is expanded).
 //
 // Interaction:
-//   • Click a closed panel  → it expands (becomes active) and centers.
-//   • Click the open panel   → navigates to its watch page.
-//   • Arrows                 → SCROLL the strip one video left/right. They do
-//                              NOT open anything; opening is click-only.
+//   • Click a closed panel → it expands (active) and centers.
+//   • Click the open panel  → navigates to its watch page.
+//   • Arrows                → scroll one video left/right (don't open anything).
+//   • Drag (mouse/pen)      → scroll; touch keeps native momentum.
 //
 // Closed panel: blurred thumbnail with the creator avatar centered.
 // Open panel:   the video autoplays (muted, looped) with a caption.
 
 const PEEK_W = 116; // px — closed panel width
 const GAP = 16; // px — matches gap-4
+const COPIES = 3;
+const MID = 1; // the copy the viewport lives in
 
 interface CarouselVideo {
     id: string;
@@ -37,52 +45,89 @@ function watchHref(v: CarouselVideo) {
 }
 
 export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
+    const n = videos.length;
     // Default-active the middle panel, matching the SVG's centered hero.
-    const [active, setActive] = useState(() => Math.floor(videos.length / 2));
+    const [active, setActive] = useState(() => Math.floor(n / 2));
     const scrollerRef = useRef<HTMLDivElement>(null);
+    // Flat refs across all copies: index = copy * n + realIndex.
     const panelRefs = useRef<(HTMLAnchorElement | null)[]>([]);
     const didMount = useRef(false);
 
-    // Bring the active panel to center — instantly on mount, smoothly after.
-    useEffect(() => {
-        panelRefs.current[active]?.scrollIntoView({
-            behavior: didMount.current ? "smooth" : "auto",
-            inline: "center",
-            block: "nearest",
-        });
-        didMount.current = true;
-    }, [active]);
+    // Center the middle copy's active panel. On mount it's instant (the active
+    // panel already starts wide). On a click-to-open it's delayed by the width
+    // transition, then smooth — otherwise we'd center the still-narrow 116px
+    // panel and it would finish ~320px off-centre once it expanded rightward.
+    // Explicit scroll math rather than scrollIntoView, which no-ops before the
+    // first paint and so left the active panel off-screen at load.
+    useLayoutEffect(() => {
+        const center = (behavior: ScrollBehavior) => {
+            const el = scrollerRef.current;
+            const panel = panelRefs.current[MID * n + active];
+            if (!el || !panel) return;
+            const er = el.getBoundingClientRect();
+            const pr = panel.getBoundingClientRect();
+            const left = el.scrollLeft + (pr.left - er.left) - (er.width - pr.width) / 2;
+            el.scrollTo({ left, behavior });
+        };
+        if (!didMount.current) {
+            didMount.current = true;
+            center("auto");
+            return;
+        }
+        const t = setTimeout(() => center("smooth"), 520);
+        return () => clearTimeout(t);
+    }, [active, n]);
+
+    // Seamless wrap: keep scrollLeft within one list-period of the middle copy,
+    // jumping by exactly that period when it strays. The period MUST be the true
+    // repeat distance — measured as the gap between the same video in adjacent
+    // copies — not scrollWidth/COPIES, which also folds in the side padding and
+    // inter-copy gaps and would leave a ~25px seam on every wrap.
+    const recenter = () => {
+        const el = scrollerRef.current;
+        const a = panelRefs.current[0];
+        const b = panelRefs.current[n];
+        if (!el || !a || !b) return;
+        const period = b.getBoundingClientRect().left - a.getBoundingClientRect().left;
+        if (period <= 0) return;
+        if (el.scrollLeft < period) el.scrollLeft += period;
+        else if (el.scrollLeft >= 2 * period) el.scrollLeft -= period;
+    };
 
     const scrollByVideo = (dir: -1 | 1) =>
         scrollerRef.current?.scrollBy({ left: dir * (PEEK_W + GAP), behavior: "smooth" });
 
-    // Click-drag to scroll (mouse/pen only — touch keeps native momentum
-    // scrolling). `moved` suppresses the panel click that would otherwise fire
-    // at the end of a drag.
-    const drag = useRef({ on: false, startX: 0, startScroll: 0, moved: false });
+    // Click-drag to scroll (mouse/pen only — touch keeps native momentum).
+    // Incremental (delta per move) so it survives the wrap's scrollLeft jumps.
+    // `moved` suppresses the click that would otherwise end the drag.
+    const drag = useRef({ on: false, startX: 0, lastX: 0, moved: false });
     const onPointerDown = (e: React.PointerEvent) => {
         if (e.pointerType === "touch" || !scrollerRef.current) return;
-        drag.current = { on: true, startX: e.clientX, startScroll: scrollerRef.current.scrollLeft, moved: false };
+        drag.current = { on: true, startX: e.clientX, lastX: e.clientX, moved: false };
         scrollerRef.current.setPointerCapture(e.pointerId);
     };
     const onPointerMove = (e: React.PointerEvent) => {
         const el = scrollerRef.current;
         if (!el || !drag.current.on) return;
-        const dx = e.clientX - drag.current.startX;
-        if (Math.abs(dx) > 4) drag.current.moved = true;
-        el.scrollLeft = drag.current.startScroll - dx;
+        // Incremental (delta from last move) keeps scrolling correct across the
+        // wrap's scrollLeft jumps; the drag-vs-click decision uses NET distance
+        // from the start so a jittery stationary click isn't read as a drag.
+        el.scrollLeft -= e.clientX - drag.current.lastX;
+        drag.current.lastX = e.clientX;
+        if (Math.abs(e.clientX - drag.current.startX) > 5) drag.current.moved = true;
     };
     const onPointerUp = (e: React.PointerEvent) => {
         drag.current.on = false;
         scrollerRef.current?.releasePointerCapture(e.pointerId);
     };
 
-    if (videos.length === 0) return null;
+    if (n === 0) return null;
 
     return (
         <div className="group/carousel relative w-full">
             <div
                 ref={scrollerRef}
+                onScroll={recenter}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -90,95 +135,99 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                 onDragStart={(e) => e.preventDefault()}
                 className="hidden-scrollbar flex h-[clamp(260px,23vw,360px)] cursor-grab gap-4 overflow-x-auto px-[3%] select-none active:cursor-grabbing"
             >
-                {videos.map((v, i) => {
-                    const isActive = i === active;
-                    return (
-                        <Link
-                            key={v.id}
-                            ref={(el) => { panelRefs.current[i] = el; }}
-                            href={watchHref(v)}
-                            // Click a closed panel to open it (no navigation);
-                            // click the open one to actually go watch.
-                            onClick={(e) => {
-                                // Swallow the click that ends a drag (so dragging
-                                // never opens a panel or navigates).
-                                if (drag.current.moved) {
-                                    e.preventDefault();
-                                    drag.current.moved = false;
-                                    return;
-                                }
-                                if (!isActive) {
-                                    e.preventDefault();
-                                    setActive(i);
-                                }
-                            }}
-                            aria-label={isActive ? v.title : `Open ${v.title}`}
-                            style={{ width: isActive ? "min(760px, 52vw)" : `${PEEK_W}px` }}
-                            className={`relative block h-full shrink-0 overflow-hidden rounded-[20px] bg-muted outline-none transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                                isActive ? "" : "cursor-pointer"
-                            }`}
-                        >
-                            {isActive ? (
-                                <>
-                                    {v.videoUrl ? (
-                                        <video
-                                            src={v.videoUrl}
-                                            poster={v.thumbnailUrl ?? undefined}
-                                            autoPlay
-                                            muted
-                                            loop
-                                            playsInline
-                                            className="absolute inset-0 size-full object-cover"
-                                        />
-                                    ) : (
-                                        v.thumbnailUrl && (
+                {Array.from({ length: COPIES }).flatMap((_, copy) =>
+                    videos.map((v, i) => {
+                        const isActive = i === active;
+                        return (
+                            <Link
+                                key={`${copy}-${v.id}`}
+                                ref={(el) => { panelRefs.current[copy * n + i] = el; }}
+                                href={watchHref(v)}
+                                // Click a closed panel to open it (no navigation);
+                                // click the open one to actually go watch.
+                                onClick={(e) => {
+                                    // Swallow the click that ends a drag.
+                                    if (drag.current.moved) {
+                                        e.preventDefault();
+                                        drag.current.moved = false;
+                                        return;
+                                    }
+                                    if (!isActive) {
+                                        e.preventDefault();
+                                        setActive(i);
+                                    }
+                                }}
+                                aria-label={isActive ? v.title : `Open ${v.title}`}
+                                style={{ width: isActive ? "min(760px, 52vw)" : `${PEEK_W}px` }}
+                                className={`relative block h-full shrink-0 overflow-hidden rounded-[20px] bg-muted outline-none transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                                    isActive ? "" : "cursor-pointer"
+                                }`}
+                            >
+                                {isActive ? (
+                                    <>
+                                        {/* Autoplay only in the middle copy — the side
+                                            copies are off-screen buffers, so one <video>
+                                            is enough; their active clone shows the still. */}
+                                        {v.videoUrl && copy === MID ? (
+                                            <video
+                                                src={v.videoUrl}
+                                                poster={v.thumbnailUrl ?? undefined}
+                                                autoPlay
+                                                muted
+                                                loop
+                                                playsInline
+                                                className="absolute inset-0 size-full object-cover"
+                                            />
+                                        ) : (
+                                            v.thumbnailUrl && (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
+                                            )
+                                        )}
+                                        {/* bottom gradient keeps the caption legible */}
+                                        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 38%, transparent 62%)" }} />
+                                        <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-6">
+                                            <div className="size-10 shrink-0 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/15">
+                                                {v.user.avatar_url && (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={v.user.avatar_url} alt="" className="size-full object-cover" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-xl font-extrabold tracking-tight text-white">{v.title}</p>
+                                                {v.user.username && (
+                                                    <p className="truncate text-sm font-semibold text-white/65">@{v.user.username}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        {/* Closed: blurred thumbnail + centered avatar. scale hides
+                                            the blur's transparent edge against the panel border. */}
+                                        {v.thumbnailUrl && (
                                             // eslint-disable-next-line @next/next/no-img-element
-                                            <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
-                                        )
-                                    )}
-                                    {/* bottom gradient keeps the caption legible */}
-                                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 38%, transparent 62%)" }} />
-                                    <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-6">
-                                        <div className="size-10 shrink-0 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/15">
-                                            {v.user.avatar_url && (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={v.user.avatar_url} alt="" className="size-full object-cover" />
-                                            )}
+                                            <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full scale-110 object-cover blur-xl" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40" />
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="size-14 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/25">
+                                                {v.user.avatar_url ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={v.user.avatar_url} alt={v.user.username ?? ""} className="size-full object-cover" />
+                                                ) : (
+                                                    <div className="flex size-full items-center justify-center text-lg font-bold text-white/80">
+                                                        {(v.user.username ?? "?")[0]?.toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate text-xl font-extrabold tracking-tight text-white">{v.title}</p>
-                                            {v.user.username && (
-                                                <p className="truncate text-sm font-semibold text-white/65">@{v.user.username}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    {/* Closed: blurred thumbnail + centered avatar. scale hides
-                                        the blur's transparent edge against the panel border. */}
-                                    {v.thumbnailUrl && (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full scale-110 object-cover blur-xl" />
-                                    )}
-                                    <div className="absolute inset-0 bg-black/40" />
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="size-14 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/25">
-                                            {v.user.avatar_url ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={v.user.avatar_url} alt={v.user.username ?? ""} className="size-full object-cover" />
-                                            ) : (
-                                                <div className="flex size-full items-center justify-center text-lg font-bold text-white/80">
-                                                    {(v.user.username ?? "?")[0]?.toUpperCase()}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </Link>
-                    );
-                })}
+                                    </>
+                                )}
+                            </Link>
+                        );
+                    })
+                )}
             </div>
 
             {/* Netflix-style edge controls: flat black/50 blurred rectangle that
