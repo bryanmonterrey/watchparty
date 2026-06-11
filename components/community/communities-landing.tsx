@@ -46,8 +46,8 @@ export function CommunitiesLanding() {
     };
 
     return (
-        <ScrollArea className="flex-1 bg-black2">
-            <div className="flex flex-col p-4 pt-2 max-w-6xl mx-auto">
+        <ScrollArea className="flex-1 p-4 bg-black2">
+            <div className="flex flex-col max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-4xl font-black tracking-tighter text-white">

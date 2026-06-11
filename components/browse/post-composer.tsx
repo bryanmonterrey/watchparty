@@ -776,7 +776,7 @@ export function PostComposer() {
                                 <button
                                     className={cn(
                                         "p-2 cursor-pointer rounded-full transition-colors",
-                                        scheduledFor ? "text-lantern bg-lantern/10 hover:bg-lantern/20" : "text-twitter2 hover:text-twitter hover:bg-white/10"
+                                        scheduledFor ? "text-lantern bg-lantern/10 hover:bg-lantern/20" : "text- hover:text-twitter hover:bg-white/10"
                                     )}
                                     title="Schedule"
                                 >
@@ -797,7 +797,7 @@ export function PostComposer() {
                                             scheduledFor ? "text-lantern hover:bg-lantern/10" : "text-zinc-200 hover:bg-white/5 hover:text-white"
                                         )}
                                     >
-                                        <CalendarIcon className={cn("w-[18px] h-[18px] shrink-0 transition-colors", scheduledFor ? "text-lantern" : "text-zinc-500 group-hover:text-white")} />
+                                        <CalendarIcon className={cn("w-[18px] text-pastelgray h-[18px] shrink-0 transition-colors", scheduledFor ? "text-lantern" : "text-zinc-500 group-hover:text-white")} />
                                         <span>{scheduledFor ? "Change schedule" : "Schedule post"}</span>
                                     </button>
                                     <button

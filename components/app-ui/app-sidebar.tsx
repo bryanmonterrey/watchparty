@@ -224,7 +224,7 @@ export function AppSidebar() {
                             key="logo"
                             className="flex w-(--sidebar-width-icon) items-center text-flexwhite justify-center shrink-0"
                         >
-                            <Star2Icon className="size-6" />
+                            
                         </div>
                     </div>
                 </SidebarHeader>

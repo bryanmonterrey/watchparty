@@ -46,7 +46,7 @@ export function AppHeader() {
 
   return (
     <header
-      className="absolute top-0 left-0 w-full z-50 max-md:hidden flex items-center justify-between px-4 py-3 pointer-events-none"
+      className="fixed top-0 left-0 w-full z-50 max-md:hidden flex items-center justify-between px-4 py-3 pointer-events-none"
     >
       {isMediaPage && (
         <div
@@ -63,7 +63,7 @@ export function AppHeader() {
             the trigger pins the sidebar open / closes it; hover on the rail
             and click-outside are handled by Sidebar itself. */}
         {/* Plain trigger + logo on the canvas — no pill, per desktopdesigns. */}
-        <div className="flex items-center gap-2 h-11 px-2 pointer-events-auto">
+        <div className="flex items-center gap-3 h-11 pointer-events-auto">
           <Button
             variant="ghost"
             size="icon"
@@ -71,7 +71,7 @@ export function AppHeader() {
             data-sidebar="trigger"
             className="size-10 text-white/80 hover:bg-white/10 hover:text-white"
           >
-            <MenuIcon className="size-6" />
+            <MenuIcon className="size-8" />
           </Button>
           <Image
             src="/Star2.svg"

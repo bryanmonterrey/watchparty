@@ -22,20 +22,25 @@ export function DiscoverRail() {
     // Static (parent column never scrolls — the feed has its own scroller),
     // so no sticky needed; pt-[102px] puts the card top at design y=102.
     return (
-        <div className="flex h-full flex-col pt-[102px] pb-[35px]">
-            <div className="w-full max-w-[373px]">
+        <div className="flex h-screen flex-col pt-[82px] pb-[35px]">
+            <div className="w-full">
                 {/* Placeholder card above the Post pill, per the design (its
                     contents aren't designed yet — likely nav/shortcuts). */}
-                <div className="h-[306px] w-full rounded-[39px] bg-muted/60" />
-                <button
+                
+                
+            </div>
+            <div className="mt-auto flex flex-col gap-2">
+                
+            
+            <button
                     onClick={() => setComposerOpen(true)}
-                    className="mt-[29px] h-72 w-full rounded-full bg-[#E5C1FF] text-[22px] font-extrabold text-black transition-transform hover:scale-[1.01] active:scale-[0.99]"
+                    className="h-19 w-full rounded-full bg-[#E5C1FF] text-[22px] font-extrabold text-black transition-transform hover:scale-[1.01] active:scale-[0.99]"
                 >
                     Post
-                </button>
-            </div>
+            </button>
 
-            <div className="mt-auto flex h-[108px] w-full max-w-[373px] items-center gap-3 rounded-full bg-muted/60 px-5">
+            <div className="mt-auto flex h-20 w-full items-center gap-3 rounded-full bg-muted/60 px-5">
+            
                 <span className="size-14 shrink-0 overflow-hidden rounded-full bg-muted">
                     {avatar && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -47,6 +52,7 @@ export function DiscoverRail() {
                     <p className="truncate text-sm text-muted-foreground">@{user?.username ?? ""}</p>
                 </div>
                 <MoreHorizontal className="size-6 shrink-0 text-muted-foreground" />
+            </div>
             </div>
 
             <PostComposerDialog open={composerOpen} onOpenChange={setComposerOpen} mode="post" />

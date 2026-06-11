@@ -19,7 +19,7 @@ export function CommunityServerList() {
     const onHome = !/^\/communities\/[0-9a-fA-F-]{20,}/.test(pathname);
 
     return (
-        <div className="flex flex-col items-center gap-2 py-3 h-full w-[72px] shrink-0 bg-black1 border-r border-flexwhite/10">
+        <div className="flex flex-col items-center gap-2 py-3 h-full w-[72px] shrink-0">
             {/* Home */}
             <TooltipProvider delayDuration={50}>
                 <Tooltip>
@@ -28,13 +28,12 @@ export function CommunityServerList() {
                             onClick={() => router.push("/communities")}
                             className="group relative flex cursor-pointer items-center justify-center w-full"
                         >
-                            {onHome && <span className="absolute left-0 h-9 w-1 rounded-r-full bg-twitter" />}
                             <div
                                 className={cn(
                                     "flex h-[44px] w-[44px] rounded-[16px] transition-all ease-in-out duration-200 items-center justify-center",
                                     onHome
-                                        ? "bg-twitter text-white"
-                                        : "bg-black4 text-flexwhite/70 group-hover:bg-twitter group-hover:text-white group-hover:rounded-[14px]"
+                                        ? "bg-soft-pink text-black/85"
+                                        : "bg-black4 text-black/85 group-hover:bg-soft-pink group-hover:text-black/85 group-hover:rounded-[14px]"
                                 )}
                             >
                                 <Home size={22} />
@@ -46,9 +45,6 @@ export function CommunityServerList() {
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
-
-            {/* Divider */}
-            <div className="h-px w-8 bg-flexwhite/10 my-1" />
 
             {/* Server icons + create */}
             <ScrollArea className="flex-1 w-full">
@@ -69,7 +65,7 @@ export function CommunityServerList() {
                                     onClick={() => onOpen("createServer")}
                                     className="group flex cursor-pointer items-center justify-center"
                                 >
-                                    <div className="flex h-[44px] w-[44px] rounded-[16px] group-hover:rounded-[14px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-twitter group-hover:bg-twitter group-hover:text-white">
+                                    <div className="flex h-[44px] w-[44px] rounded-[16px] group-hover:rounded-[14px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-soft-pink group-hover:bg-soft-pink group-hover:text-black/85">
                                         <Plus size={24} />
                                     </div>
                                 </button>

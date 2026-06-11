@@ -34,7 +34,7 @@ export function CommunityHomeSidebar() {
     ];
 
     return (
-        <div className="flex flex-col h-full w-64 bg-black2 shrink-0 border-r border-flexwhite/15">
+        <div className="flex flex-col h-full py-4 w-64 bg-zinc-950 shrink-0">
             <div className="p-3 px-2 h-12 flex items-center text-lg justify-center">
                 <button
                     onClick={() => onOpen("createServer")}
@@ -56,12 +56,9 @@ export function CommunityHomeSidebar() {
                                 route.active ? "bg-white/[0.07] text-flexwhite" : "text-flexwhite/50 hover:bg-white/5 hover:text-flexwhite/80"
                             )}
                         >
-                            {route.active && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-twitter" />
-                            )}
                             <route.icon className={cn(
                                 "size-5 shrink-0",
-                                route.active ? "text-twitter" : "text-flexwhite/40 group-hover:text-flexwhite/70"
+                                route.active ? "text-soft-pink" : "text-white/80 group-hover:text-white/80"
                             )} />
                             <span className="text-md font-semibold truncate leading-none">
                                 {route.label}
