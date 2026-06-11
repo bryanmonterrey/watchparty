@@ -136,20 +136,22 @@ export function DesktopHome() {
                     </div>
                 </section>
 
-                <section>
-                    <SectionHeader title="IRL" href="/search?q=IRL" />
-                    {irl.isLoading ? (
-                        <CardRowSkeleton />
-                    ) : irlVideos.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No IRL streams yet.</p>
-                    ) : (
-                        <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
-                            {irlVideos.slice(0, 4).map((v) => (
-                                <VideoCard key={v.id} v={v} />
-                            ))}
-                        </div>
-                    )}
-                </section>
+                {/* Hide the whole section when it resolves empty — only show the
+                    header/skeleton while loading or once there are streams. */}
+                {(irl.isLoading || irlVideos.length > 0) && (
+                    <section>
+                        <SectionHeader title="IRL" href="/search?q=IRL" />
+                        {irl.isLoading ? (
+                            <CardRowSkeleton />
+                        ) : (
+                            <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
+                                {irlVideos.slice(0, 4).map((v) => (
+                                    <VideoCard key={v.id} v={v} />
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
             </div>
         </div>
     );
