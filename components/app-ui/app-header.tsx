@@ -57,7 +57,7 @@ export function AppHeader() {
 
   return (
     <header
-      className="fixed top-0 left-0 w-full h-header z-50 max-md:hidden flex items-center justify-between px-header-x py-3 pointer-events-none"
+      className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-between px-[var(--header-px)] py-3 pointer-events-none"
     >
       {/* Scroll backdrop, media pages + /home only: media pages keep the
           black scrim over video; /home gets the theme canvas so it works in
@@ -119,15 +119,15 @@ export function AppHeader() {
               <Button
                 disabled
                 variant="outline"
-                className="rounded-full border-none font-semibold flex bg-zinc-500/35 backdrop-blur-xs text-white/90 gap-2 px-4 h-11 w-[110px]"
+                className="rounded-full border-none font-semibold flex bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs text-white/90 gap-2 px-4 h-11 w-[110px]"
               >
                 <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
                 <div className="h-3 w-full rounded-full shimmer-skeleton" />
               </Button>
             ) : (
               <Button
-                variant="ghost"
-                className="rounded-full font-semibold flex text-[17px] h-11 px-3 text-flexwhite hover:bg-white/10"
+                variant="outline"
+                className="rounded-full border-none font-semibold flex text-[17px] h-11 px-3 text-flexwhite bg-zinc-500/35 hover:bg-zinc-500/60"
               >
                 <span className="flex items-center gap-1">
                   <CreateIcon className="size-5" strokeWidth={2}/>
