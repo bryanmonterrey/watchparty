@@ -44,9 +44,6 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
                 isActive && "bg-white/[0.07]"
             )}
         >
-            {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full bg-twitter" />
-            )}
             <Icon className={cn("flex-shrink-0 w-5 h-5 text-flexwhite/40", isActive && "text-twitter")} />
             <p
                 className={cn(

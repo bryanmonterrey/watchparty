@@ -20,7 +20,7 @@ import {
     DammV2DynamicFeeMode,
     DammV2BaseFeeMode,
     TokenType,
-    TokenUpdateAuthorityOption,
+    TokenAuthorityOption,
     TokenDecimal,
     createSqrtPrices,
     buildCurveWithCustomSqrtPrices,
@@ -212,10 +212,10 @@ export function useTokenLaunch() {
             // Initialize Curve Client
             const curveConfig = buildCurveWithCustomSqrtPrices({
                 token: {
-                    tokenType: TokenType.SPL,
+                    tokenType: TokenType.SPLToken,
                     tokenBaseDecimal: tokenBaseDecimal,
                     tokenQuoteDecimal: tokenQuoteDecimal,
-                    tokenUpdateAuthority: TokenUpdateAuthorityOption.Immutable,
+                    tokenUpdateAuthority: TokenAuthorityOption.Immutable,
                     totalTokenSupply,
                     leftover,
                 },
@@ -274,7 +274,7 @@ export function useTokenLaunch() {
 
             // Construct Transaction
             // We use `createConfigAndPoolWithFirstBuy` to get the instructions
-            const { createConfigTx, createPoolWithFirstBuyTx } = await dbcClient.pool.createConfigAndPoolWithFirstBuy({
+            const { createConfigTx, createPoolWithFirstBuyTx } = await dbcClient.partner.createConfigAndPoolWithFirstBuy({
                 config: configKeypair.publicKey,
                 feeClaimer: feeClaimerPubkey,
                 leftoverReceiver: publicKey,
