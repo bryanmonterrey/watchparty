@@ -83,9 +83,9 @@ export function CommunitiesLanding() {
                 {mounted && session?.user && (
                     <>
                         {/* Join by invite */}
-                        <form
+                       <form
                             onSubmit={onJoin}
-                            className="rounded-3xl border border-flexwhite/10 bg-white/[0.02] p-5 mb-6"
+                            className="rounded-3xl hidden border border-flexwhite/10 bg-white/[0.02] p-5 mb-6"
                         >
                             <p className="text-sm font-semibold text-flexwhite mb-1">Have an invite?</p>
                             <p className="text-xs text-flexwhite/40 mb-4">Paste an invite code or link to jump straight in.</p>

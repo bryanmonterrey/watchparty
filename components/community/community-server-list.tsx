@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Home } from "lucide-react";
+import { Squircle } from "@/components/ui/squircle";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,7 +20,7 @@ export function CommunityServerList() {
     const onHome = !/^\/communities\/[0-9a-fA-F-]{20,}/.test(pathname);
 
     return (
-        <div className="flex flex-col items-center gap-2 py-3 h-full w-[72px] shrink-0">
+        <div className="flex flex-col items-center gap-3.5 py-3 h-full w-[99px] shrink-0">
             {/* Home */}
             <TooltipProvider delayDuration={50}>
                 <Tooltip>
@@ -28,16 +29,18 @@ export function CommunityServerList() {
                             onClick={() => router.push("/communities")}
                             className="group relative flex cursor-pointer items-center justify-center w-full"
                         >
-                            <div
-                                className={cn(
-                                    "flex h-[44px] w-[44px] rounded-[16px] transition-all ease-in-out duration-200 items-center justify-center",
-                                    onHome
-                                        ? "bg-soft-pink text-black/85"
-                                        : "bg-black4 text-black/85 group-hover:bg-soft-pink group-hover:text-black/85 group-hover:rounded-[14px]"
-                                )}
-                            >
-                                <Home size={22} />
-                            </div>
+                            <Squircle asChild radius={16} autoEffects={false}>
+                                <div
+                                    className={cn(
+                                        "flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center",
+                                        onHome
+                                            ? "bg-soft-pink text-black/85"
+                                            : "bg-black4 text-black/85 group-hover:bg-soft-pink group-hover:text-black/85"
+                                    )}
+                                >
+                                    <Home size={28} />
+                                </div>
+                            </Squircle>
                         </button>
                     </TooltipTrigger>
                     <TooltipContent side="right" align="center">
@@ -65,9 +68,11 @@ export function CommunityServerList() {
                                     onClick={() => onOpen("createServer")}
                                     className="group flex cursor-pointer items-center justify-center"
                                 >
-                                    <div className="flex h-[44px] w-[44px] rounded-[16px] group-hover:rounded-[14px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-soft-pink group-hover:bg-soft-pink group-hover:text-black/85">
-                                        <Plus size={24} />
-                                    </div>
+                                    <Squircle asChild radius={16} autoEffects={false}>
+                                        <div className="flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-soft-pink group-hover:bg-soft-pink group-hover:text-black/85">
+                                            <Plus size={24} />
+                                        </div>
+                                    </Squircle>
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right" align="center">

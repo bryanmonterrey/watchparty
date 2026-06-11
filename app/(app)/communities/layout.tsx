@@ -22,7 +22,7 @@ export default function CommunitiesLayout({
     const isHome = pathname === "/communities" || !serverId;
 
     return (
-        <div className="flex h-svh flex-col overflow-hidden pt-16">
+        <div className="flex h-svh flex-col overflow-hidden pt-14">
             <CommunityModalProvider />
 
             <div className="flex min-h-0 w-full flex-1 overflow-hidden">
@@ -30,7 +30,7 @@ export default function CommunitiesLayout({
                 <CommunityServerList />
 
                 {/* Columns 2+3 inside the big rounded preview card */}
-                <div className=" ml-0 flex min-w-0 flex-1 overflow-hidden rounded-4xl border border-zinc-500/5 bg-card max-md:m-0 max-md:rounded-none max-md:border-0">
+                <div className="flex min-w-0 flex-1 overflow-hidden rounded-4xl border border-zinc-500/20 max-md:m-0 max-md:rounded-none max-md:border-0">
                     {isHome ? (
                         <CommunityHomeSidebar />
                     ) : (

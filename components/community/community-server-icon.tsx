@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Squircle } from "@/components/ui/squircle";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 type CommunityServerIconProps = {
@@ -24,33 +25,40 @@ export function CommunityServerIcon({ id, imageUrl, name }: CommunityServerIconP
                         onClick={() => router.push(`/communities/${id}`)}
                         className="group cursor-pointer relative flex items-center justify-center w-full"
                     >
-]                        <div
-                            className={cn(
-                                "relative flex h-[44px] w-[44px] rounded-[16px] group-hover:rounded-[14px] transition-all items-center justify-center",
-                                "ring-0 group-hover:ring-2 ring-soft-pink/40",
-                                isActive && "ring-2 ring-soft-pink"
-                            )}
-                        >
+                        {/* Nested squircles: the outer one's background is the
+                            "ring" (a real ring-* would be cut off by the
+                            squircle clip-path), the inner one holds the image. */}
+                        <Squircle asChild radius={16} autoEffects={false}>
                             <div
                                 className={cn(
-                                    "relative flex h-full w-full rounded-[inherit] overflow-hidden items-center justify-center bg-black4",
-                                    isActive && "bg-soft-pink"
+                                    "relative flex h-[55px] w-[55px] p-[2.5px] transition-colors items-center justify-center",
+                                    "bg-transparent group-hover:bg-soft-pink/40",
+                                    isActive && "bg-soft-pink group-hover:bg-soft-pink"
                                 )}
                             >
-                                {imageUrl ? (
-                                    <Image
-                                        src={imageUrl}
-                                        alt={name}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                ) : (
-                                    <span className="text-white font-semibold text-lg">
-                                        {name.charAt(0).toUpperCase()}
-                                    </span>
-                                )}
+                                <Squircle asChild radius={14} autoEffects={false}>
+                                    <div
+                                        className={cn(
+                                            "relative flex h-full w-full overflow-hidden items-center justify-center bg-black4",
+                                            isActive && "bg-soft-pink"
+                                        )}
+                                    >
+                                        {imageUrl ? (
+                                            <Image
+                                                src={imageUrl}
+                                                alt={name}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-white font-semibold text-lg">
+                                                {name.charAt(0).toUpperCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </Squircle>
                             </div>
-                        </div>
+                        </Squircle>
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" align="center">

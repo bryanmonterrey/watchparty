@@ -34,13 +34,13 @@ export function CommunityHomeSidebar() {
     ];
 
     return (
-        <div className="flex flex-col h-full py-4 w-64 bg-zinc-950 shrink-0">
-            <div className="p-3 px-2 h-12 flex items-center text-lg justify-center">
+        <div className="flex flex-col h-full py-4 w-76 bg-zinc-950 shrink-0">
+            <div className="p-3 -mt-1 px-2 h-12 flex items-center text-lg justify-center">
                 <button
                     onClick={() => onOpen("createServer")}
-                    className="relative cursor-pointer placeholder:text-lg text-lg gap-1.5 flex items-center justify-center text-zinc-500 bg-zinc-600/10 hover:bg-zinc-600/20 border border-zinc-500/5 rounded-full transition-colors w-full px-4 py-3"
+                    className="relative cursor-pointer placeholder:text-lg text-lg gap-2.5 flex items-center justify-start text-zinc-500 bg-zinc-600/10 hover:bg-zinc-600/20 border border-zinc-500/5 rounded-full transition-colors w-full px-4 py-3"
                 >
-                    <SearchIcon className="w-5 h-5 text-zinc-500" />
+                    <SearchIcon className="w-7 h-7 text-zinc-500" />
                     Search
                 </button>
             </div>
