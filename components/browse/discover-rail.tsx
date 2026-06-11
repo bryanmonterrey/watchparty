@@ -34,7 +34,7 @@ export function DiscoverRail() {
             
             <button
                     onClick={() => setComposerOpen(true)}
-                    className="h-19 w-full rounded-full bg-[#E5C1FF] text-[22px] font-extrabold text-black transition-transform hover:scale-[1.01] active:scale-[0.99]"
+                    className="h-19 w-full rounded-full bg-white/85 text-[22px] font-extrabold text-black transition-transform hover:scale-[1.01] active:scale-[0.99]"
                 >
                     Post
             </button>

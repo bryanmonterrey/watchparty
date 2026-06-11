@@ -218,7 +218,7 @@ export default function ExportKeyModal({ isOpen, onClose }: ExportKeyModalProps)
                                 <p className="text-white text-sm">Decrypting your private key securely...</p>
                                 <p className="text-neutral-400 text-sm w-4/5">Verifying rate limits and preparing export.</p>
                                 <div className="h-10 w-full rounded-lg bg-neutral-800 flex items-center justify-center">
-                                    <span className="text-xs text-neutral-400 font-mono">••••••••••••••••••••••••••••••••••••••••••••••••</span>
+                                    <span className="text-xs text-neutral-400 ">••••••••••••••••••••••••••••••••••••••••••••••••</span>
                                 </div>
                             </div>
                         </>

@@ -145,12 +145,12 @@ export function PostComposer() {
             setTokenLaunch({ earningsEnabled: false, ticker: "", creatorFee: 5, splits: [], buyAmount: undefined, isTickerManuallyEdited: false });
             setIsSubmitting(false);
             toast.success(vars.status === "scheduled" ? "Post scheduled!" : "Banger posted!");
-            
+
             // Optimistically prepend to feed before invalidation finishes
             if (vars.status === "published") {
                 const newPost = {
-                    ..._, 
-                    id: _.postId, 
+                    ..._,
+                    id: _.postId,
                     createdAt: new Date().toISOString(),
                     user: session.user,
                     isLiked: false,
@@ -160,12 +160,12 @@ export function PostComposer() {
                     comments: 0,
                     views: 0
                 };
-                
+
                 utils.content.getFeed.setInfiniteData({ type: "for-you", limit: 20 }, (old: any) => {
                     if (!old) return old;
                     return {
                         ...old,
-                        pages: old.pages.map((page: any, i: number) => 
+                        pages: old.pages.map((page: any, i: number) =>
                             i === 0 ? { ...page, posts: [newPost, ...page.posts] } : page
                         )
                     };
@@ -175,7 +175,7 @@ export function PostComposer() {
                     if (!old) return old;
                     return {
                         ...old,
-                        pages: old.pages.map((page: any, i: number) => 
+                        pages: old.pages.map((page: any, i: number) =>
                             i === 0 ? { ...page, posts: [newPost, ...page.posts] } : page
                         )
                     };
@@ -216,7 +216,7 @@ export function PostComposer() {
                     const { data, error } = await supabase.storage
                         .from("posts")
                         .uploadToSignedUrl(path, token, img);
-                    
+
                     if (error) throw error;
                     if (data) {
                         const { data: pub } = supabase.storage.from("posts").getPublicUrl(data.path);
@@ -364,7 +364,7 @@ export function PostComposer() {
     return (
         <div
             ref={composerRef}
-            className="p-4 z-5 border-b border-flexwhite/20 flex gap-4 cursor-text bg-black2"
+            className="p-4 z-5 border-b border-soft-gray/[0.12] flex gap-4 cursor-text bg-black2"
             onClick={(e) => {
                 const tag = (e.target as HTMLElement).tagName;
                 if (tag !== "BUTTON" && tag !== "INPUT" && tag !== "TEXTAREA" && !(e.target as HTMLElement).closest("button")) {
@@ -380,91 +380,91 @@ export function PostComposer() {
             <div className="flex-1 flex flex-col">
                 {focused && (
                     <div className="flex items-center justify-between mb-2">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-1.5 px-3 py-1 rounded-full cursor-pointer text-twitter2 text-sm font-medium border border-flexwhite/15 hover:bg-white/10 transition-colors w-fit outline-none">
-                                {audience === "everyone" && "Everyone"}
-                                {audience === "followers" && "Followers"}
-                                {audience === "verified" && "Verified"}
-                                {audience === "token_holders" && "Token Holders"}
-                                {audience === "vip" && "VIP Only"}
-                                <ChevronDown className="w-4 h-4" />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent 
-                            align="start" 
-                            sideOffset={8}
-                            className="w-[320px] bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50"
-                        >
-                            <div className="px-4 py-3 border-b border-white/5 mb-1">
-                                <h3 className="font-bold text-white text-[15px]">Choose audience</h3>
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                                <DropdownMenuItem onClick={() => setAudience("everyone")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-500">
-                                            <Globe className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-white text-[15px]">Everyone</span>
-                                    </div>
-                                    {audience === "everyone" && <Check className="w-5 h-5 text-twitter2" />}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setAudience("followers")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-green-500/15 flex items-center justify-center text-green-500">
-                                            <Users className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-white text-[15px]">Followers</span>
-                                    </div>
-                                    {audience === "followers" && <Check className="w-5 h-5 text-twitter2" />}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setAudience("verified")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-500">
-                                            <BadgeCheck className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-white text-[15px]">Verified</span>
-                                    </div>
-                                    {audience === "verified" && <Check className="w-5 h-5 text-twitter2" />}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setAudience("token_holders")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-yellow-500/15 flex items-center justify-center text-yellow-500">
-                                            <Medal className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-white text-[15px]">Token Holders</span>
-                                    </div>
-                                    {audience === "token_holders" && <Check className="w-5 h-5 text-twitter2" />}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setAudience("vip")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-400">
-                                            <Crown className="w-5 h-5" />
-                                        </div>
-                                        <span className="font-bold text-white text-[15px]">VIP Only</span>
-                                    </div>
-                                    {audience === "vip" && <Check className="w-5 h-5 text-twitter2" />}
-                                </DropdownMenuItem>
-                            </div>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <div className="flex items-center gap-1">
-                        {(content.trim() || images.length > 0 || !!gif) && (
-                            <button
-                                onClick={handleSaveDraft}
-                                disabled={saveDraftMutation.isPending}
-                                className="px-3 py-1 rounded-full text-xs font-black text-twitter2 hover:text-zinc-100 hover:bg-white/10 transition-colors disabled:opacity-40"
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="flex items-center gap-1.5 px-3 py-1 rounded-full cursor-pointer text-twitter2 text-sm font-medium border border-flexwhite/15 hover:bg-white/10 transition-colors w-fit outline-none">
+                                    {audience === "everyone" && "Everyone"}
+                                    {audience === "followers" && "Followers"}
+                                    {audience === "verified" && "Verified"}
+                                    {audience === "token_holders" && "Token Holders"}
+                                    {audience === "vip" && "VIP Only"}
+                                    <ChevronDown className="w-4 h-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="start"
+                                sideOffset={8}
+                                className="w-[320px] bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50"
                             >
-                                Save draft
+                                <div className="px-4 py-3 border-b border-white/5 mb-1">
+                                    <h3 className="font-bold text-white text-[15px]">Choose audience</h3>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                    <DropdownMenuItem onClick={() => setAudience("everyone")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-500">
+                                                <Globe className="w-5 h-5" />
+                                            </div>
+                                            <span className="font-bold text-white text-[15px]">Everyone</span>
+                                        </div>
+                                        {audience === "everyone" && <Check className="w-5 h-5 text-twitter2" />}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setAudience("followers")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-green-500/15 flex items-center justify-center text-green-500">
+                                                <Users className="w-5 h-5" />
+                                            </div>
+                                            <span className="font-bold text-white text-[15px]">Followers</span>
+                                        </div>
+                                        {audience === "followers" && <Check className="w-5 h-5 text-twitter2" />}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setAudience("verified")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-500">
+                                                <BadgeCheck className="w-5 h-5" />
+                                            </div>
+                                            <span className="font-bold text-white text-[15px]">Verified</span>
+                                        </div>
+                                        {audience === "verified" && <Check className="w-5 h-5 text-twitter2" />}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setAudience("token_holders")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-yellow-500/15 flex items-center justify-center text-yellow-500">
+                                                <Medal className="w-5 h-5" />
+                                            </div>
+                                            <span className="font-bold text-white text-[15px]">Token Holders</span>
+                                        </div>
+                                        {audience === "token_holders" && <Check className="w-5 h-5 text-twitter2" />}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setAudience("vip")} className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 rounded-full focus:bg-white/5 transition-all group border-none outline-none">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-400">
+                                                <Crown className="w-5 h-5" />
+                                            </div>
+                                            <span className="font-bold text-white text-[15px]">VIP Only</span>
+                                        </div>
+                                        {audience === "vip" && <Check className="w-5 h-5 text-twitter2" />}
+                                    </DropdownMenuItem>
+                                </div>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                            {(content.trim() || images.length > 0 || !!gif) && (
+                                <button
+                                    onClick={handleSaveDraft}
+                                    disabled={saveDraftMutation.isPending}
+                                    className="px-3 py-1 rounded-full text-xs font-black text-twitter2 hover:text-zinc-100 hover:bg-white/10 transition-colors disabled:opacity-40"
+                                >
+                                    Save draft
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setShowDrafts(true)}
+                                className="px-3 py-1 rounded-full text-xs font-black cursor-pointer text-twitter2 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+                            >
+                                Drafts
                             </button>
-                        )}
-                        <button
-                            onClick={() => setShowDrafts(true)}
-                            className="px-3 py-1 rounded-full text-xs font-black cursor-pointer text-twitter2 hover:text-zinc-100 hover:bg-white/10 transition-colors"
-                        >
-                            Drafts
-                        </button>
-                    </div>
+                        </div>
                     </div>
                 )}
 
@@ -544,7 +544,7 @@ export function PostComposer() {
                                 className="data-[state=checked]:bg-twitter2"
                             />
                         </div>
-                        
+
                         {hasContentWarning && (
                             <div className="flex items-center gap-2 px-3 py-2 rounded-xl">
                                 <input
@@ -671,8 +671,8 @@ export function PostComposer() {
                                     {replyPrivacy === "token_holders" && <><Medal className="w-5 h-5" /> Token Holders can reply</>}
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent 
-                                align="start" 
+                            <DropdownMenuContent
+                                align="start"
                                 sideOffset={8}
                                 className="w-[320px] bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50"
                             >
@@ -783,9 +783,9 @@ export function PostComposer() {
                                     <CalendarIcon className="w-5 h-5" />
                                 </button>
                             </PopoverTrigger>
-                            <PopoverContent 
-                                className="w-52 bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50" 
-                                align="start" 
+                            <PopoverContent
+                                className="w-52 bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50"
+                                align="start"
                                 side="top"
                                 sideOffset={8}
                             >

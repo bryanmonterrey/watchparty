@@ -172,9 +172,13 @@
   --color-pastel-yellow: oklch(0.9713 0.0373 95.44);
   --color-bitcoin-orange: oklch(0.772 0.1738 64.55);
   --color-sharp-gray: oklch(0.8853 0 0);
+  --color-soft-gray: #EFF3F4;
+  --color-vice-purple: #E5C1FF;
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   --animate-shimmer-sweep: shimmer-sweep 2s infinite linear;
+
+
   @keyframes marquee {
     from { transform: translateX(0); }
     to { transform: translateX(calc(-100% - var(--gap))); }

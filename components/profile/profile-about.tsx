@@ -44,7 +44,7 @@ export function ProfileAbout({ user }: ProfileAboutProps) {
                     {user.wallet_address && (
                         <div className="flex items-center gap-3 text-sm text-zinc-400">
                             <WalletCards size={15} className="text-zinc-600 shrink-0" />
-                            <span className="font-mono text-xs truncate">{user.wallet_address}</span>
+                            <span className=" text-xs truncate">{user.wallet_address}</span>
                         </div>
                     )}
                     {user.website && (

@@ -28,7 +28,7 @@ export function CommunityServerSidebar({ serverId }: Props) {
     const videoChannels = channels.filter((c) => c.type === "VIDEO");
 
     return (
-        <div className="flex flex-col h-full w-76 bg-zinc-950 shrink-0">
+        <div className="flex flex-col h-full w-76 bg-zinc-900/60 shrink-0">
             <CommunityServerHeader server={server} role={role} />
 
             <ScrollArea className="flex-1">

@@ -193,7 +193,7 @@ export function TwoFactorSettings() {
                     <p className="text-xs text-zinc-500">Save these backup codes somewhere safe. Each can be used once if you lose your authenticator.</p>
                     <div className="grid grid-cols-2 gap-1.5">
                         {backupCodes.map((code, i) => (
-                            <code key={i} className="text-xs font-mono bg-zinc-800 text-zinc-300 px-2.5 py-1.5 rounded-lg text-center">{code}</code>
+                            <code key={i} className="text-xs  bg-zinc-800 text-zinc-300 px-2.5 py-1.5 rounded-lg text-center">{code}</code>
                         ))}
                     </div>
                 </div>
@@ -233,7 +233,7 @@ export function TwoFactorSettings() {
                 )}
                 {secret && (
                     <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-800/60 border border-white/10">
-                        <code className="flex-1 text-xs font-mono text-zinc-300 tracking-widest break-all">{secret}</code>
+                        <code className="flex-1 text-xs  text-zinc-300 tracking-widest break-all">{secret}</code>
                         <button onClick={copySecret} className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors">
                             {copiedSecret ? <Check className="w-4 h-4 text-lantern" /> : <Copy className="w-4 h-4" />}
                         </button>

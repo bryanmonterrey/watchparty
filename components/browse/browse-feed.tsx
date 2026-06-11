@@ -58,7 +58,7 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
     const feedItems = useMemo(() => {
         const rawPosts = (postData?.pages.flatMap((p) => p.posts) ?? []);
         const allItems: FeedItem[] = [];
-        
+
         // Track IDs that have been "lifted" to be parents of replies
         const liftedIds = new Set<string>();
         // Track all post IDs in the current batch for quick lookup
@@ -76,7 +76,7 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
                 // If the parent is in the batch, we are "lifting" it. 
                 // If it's not in the batch, we are "injecting" a virtual one.
                 const parentInBatch = rawPosts.find(bp => bp.id === p.replyToId);
-                
+
                 // Inject the parent (either the real data or the virtual metadata)
                 allItems.push({
                     type: "post",
@@ -129,14 +129,14 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
             // If the item below us is a reply to us, connect bottom
             // Check both id and feedKey to handle reposts and virtual posts correctly
             const isNextReplyToUs = next && (
-                next.data.replyToId === item.data.id || 
+                next.data.replyToId === item.data.id ||
                 (item.data.feedKey && next.data.replyToId === item.data.feedKey)
             );
             const connectBottom = !!isNextReplyToUs;
 
             // If we are a reply to the item above us, connect top
             const isWeReplyToPrev = prev && (
-                item.data.replyToId === prev.data.id || 
+                item.data.replyToId === prev.data.id ||
                 (prev.data.feedKey && item.data.replyToId === prev.data.feedKey)
             );
             const connectTop = !!isWeReplyToPrev;
@@ -469,7 +469,7 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
     return (
         <div className="flex flex-col">
             {/* Tabs */}
-            <div className="flex items-center w-full sticky bg-black/60 backdrop-blur-xl top-0 z-100 border-b border-x border-flexborder">
+            <div className="flex items-center w-full sticky bg-black/60 backdrop-blur-xl top-0 z-100 border-b border-soft-gray/[0.12]">
                 <FeedTab
                     label="For you"
                     isActive={activeTab === "for-you"}
@@ -479,7 +479,7 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
                 />
                 <FeedTab label="Following" isActive={activeTab === "following"} onClick={() => switchTab("following")} />
                 <FeedTab label="News" isActive={activeTab === "news"} onClick={() => switchTab("news")} />
-                <button 
+                <button
                     onClick={onSearchClick}
                     className="px-4 bg-black/40 cursor-pointer h-13 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-500/20 transition-colors shrink-0"
                 >

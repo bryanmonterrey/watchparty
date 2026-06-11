@@ -232,7 +232,7 @@ export function AppSidebar() {
                     <SidebarGroup className="!px-0">
                         <SidebarMenu className="gap-1 !items-start">
                             {items.map((item) => (
-                                <SidebarMenuItem key={item.title} className="w-full">
+                                <SidebarMenuItem key={item.title} className="w-fit">
                                     {(() => {
                                         const isProfile = item.title === "Profile";
                                         const itemUrl = mounted && isProfile && session?.user?.username
@@ -284,7 +284,7 @@ export function AppSidebar() {
                                                                 
                                                                 transition: { type: "tween", duration: 0.00, ease: "easeOut" } // Faster exit speed
                                                             }}
-                                                            className="whitespace-nowrap"
+                                                            className="whitespace-nowrap pr-5"
                                                         >
                                                             {item.title}
                                                         </motion.span>
@@ -298,7 +298,7 @@ export function AppSidebar() {
                                                 asChild={itemUrl !== "#"}
                                                 size="lg"
                                                 className={cn(
-                                                    "text-lg w-full !w-full !justify-start !p-0 transition-all duration-150 ease-in-out font-medium h-12 relative isolate hover:bg-transparent active:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-900 modal-trigger gap-0",
+                                                    "text-lg !w-auto !justify-start !p-0 transition-all duration-150 ease-in-out font-medium h-12 relative isolate hover:bg-transparent active:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-900 modal-trigger gap-0",
                                                     isActive ? "text-flexwhite font-bold" : "text-flexwhite/85 hover:text-white/85"
                                                 )}
                                                 onClick={(e) => {

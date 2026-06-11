@@ -34,7 +34,7 @@ export function CommunityHomeSidebar() {
     ];
 
     return (
-        <div className="flex flex-col h-full py-4 w-76 bg-zinc-950 shrink-0">
+        <div className="flex flex-col h-full py-4 w-76  bg-zinc-900/60 shrink-0">
             <div className="p-3 -mt-1 px-2 h-12 flex items-center text-lg justify-center">
                 <button
                     onClick={() => onOpen("createServer")}

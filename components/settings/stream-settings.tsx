@@ -41,7 +41,7 @@ function CopyField({ label, value, secret }: { label: string; value: string | nu
                     value={value ?? ""}
                     readOnly
                     placeholder={value ? "" : "Not generated yet"}
-                    className="flex-1 bg-zinc-900 text-sm text-zinc-200 px-3 py-2 rounded-lg border border-white/10 focus:outline-none font-mono"
+                    className="flex-1 bg-zinc-900 text-sm text-zinc-200 px-3 py-2 rounded-lg border border-white/10 focus:outline-none "
                 />
                 {secret && (
                     <button onClick={() => setShow(v => !v)} className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors">

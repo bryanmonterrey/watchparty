@@ -107,7 +107,7 @@ export function VoiceRecorder({ onAudioReady, onCancel }: VoiceRecorderProps) {
             {state === "recording" && (
                 <>
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                    <span className="text-sm text-zinc-300 font-mono">{formatDuration(seconds)}</span>
+                    <span className="text-sm text-zinc-300 ">{formatDuration(seconds)}</span>
                     <div className="flex-1 flex items-center gap-0.5 overflow-hidden">
                         {Array.from({ length: 20 }).map((_, i) => (
                             <span
@@ -131,7 +131,7 @@ export function VoiceRecorder({ onAudioReady, onCancel }: VoiceRecorderProps) {
                     <button onClick={togglePlayback} className="p-1.5 rounded-full bg-lantern/20 text-lantern hover:bg-lantern/30 transition-colors">
                         {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                     </button>
-                    <span className="text-sm text-zinc-400 font-mono">{formatDuration(seconds)}</span>
+                    <span className="text-sm text-zinc-400 ">{formatDuration(seconds)}</span>
                     <div className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden">
                         <div className="h-full bg-lantern/60 rounded-full w-full" />
                     </div>

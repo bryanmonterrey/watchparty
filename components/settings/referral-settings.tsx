@@ -42,7 +42,7 @@ export function ReferralSettings() {
                 </div>
                 {code ? (
                     <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs font-mono text-zinc-300 bg-zinc-800 px-3 py-2 rounded-lg truncate border border-white/10">
+                        <code className="flex-1 text-xs  text-zinc-300 bg-zinc-800 px-3 py-2 rounded-lg truncate border border-white/10">
                             {referralLink}
                         </code>
                         <button onClick={copyLink} className="shrink-0 p-2 text-zinc-500 hover:text-zinc-200 transition-colors">
@@ -98,7 +98,7 @@ export function ReferralSettings() {
                         onChange={e => setApplyInput(e.target.value.toUpperCase())}
                         placeholder="XXXXXX"
                         maxLength={12}
-                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40 font-mono tracking-widest"
+                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40  tracking-widest"
                     />
                     <button
                         onClick={() => applyCode.mutate({ code: applyInput })}

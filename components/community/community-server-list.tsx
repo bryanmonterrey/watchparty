@@ -35,7 +35,7 @@ export function CommunityServerList() {
                                         "flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center",
                                         onHome
                                             ? "bg-white/90 text-black/85"
-                                            : "bg-black4 text-white group-hover:bg-white/90 group-hover:text-black/85"
+                                            : "bg-black4 text-white/90 group-hover:bg-white/90 group-hover:text-black/85"
                                     )}
                                 >
                                     <HomeIcon className="size-8" />

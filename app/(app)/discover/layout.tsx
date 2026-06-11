@@ -14,7 +14,7 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
                 <DiscoverRail />
             </aside>
 
-            <div className="mx-auto h-full w-full max-w-[628px] shrink-0 overflow-y-auto hidden-scrollbar relative z-0 lg:border-x lg:border-flexborder">
+            <div className="mx-auto h-full w-full max-w-[628px] shrink-0 overflow-y-auto hidden-scrollbar relative z-0 lg:border-x border-soft-gray/[0.12]">
                 {children}
             </div>
 

@@ -58,7 +58,7 @@ export function PromoCodeManager() {
                                 onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ""))}
                                 placeholder="SUMMER25"
                                 maxLength={20}
-                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100  placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
                             />
                         </div>
                         <div>
@@ -95,7 +95,7 @@ export function PromoCodeManager() {
             )}
 
             {isLoading ? (
-                <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
+                <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>
             ) : !data?.length ? (
                 <div className="text-center py-10 space-y-2">
                     <Tag className="w-9 h-9 mx-auto text-zinc-700" />
@@ -107,7 +107,7 @@ export function PromoCodeManager() {
                         <div key={c.id} className={cn("flex items-center gap-3 p-3 rounded-xl border", c.isActive ? "bg-zinc-900/60 border-white/10" : "bg-zinc-950/40 border-white/5 opacity-60")}>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-sm font-bold text-zinc-100">{c.code}</span>
+                                    <span className=" text-sm font-bold text-zinc-100">{c.code}</span>
                                     <span className="text-xs bg-lantern/10 text-lantern px-1.5 py-0.5 rounded font-semibold">{c.discountPercent}% off</span>
                                     {!c.isActive && <span className="text-xs text-zinc-600">inactive</span>}
                                 </div>
