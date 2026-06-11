@@ -104,7 +104,7 @@ export function CommunityChannelInfo({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-full sm:max-w-sm bg-black2 border-l border-flexwhite/15 p-0 text-flexwhite"
+                className="w-full sm:max-w-sm bg-black border-l border-flexwhite/15 p-0 text-flexwhite"
             >
                 {/* Channel hero */}
                 <SheetHeader className="p-6 pb-5 border-b border-flexwhite/10">

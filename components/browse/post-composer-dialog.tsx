@@ -263,7 +263,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                         className={cn(
                             "fixed left-1/2 top-[5vh] z-50 -translate-x-1/2",
                             "w-full max-w-[600px] max-h-[85vh] overflow-y-auto",
-                            "bg-black2 rounded-4xl shadow-2xl outline-none border border-white/10",
+                            "bg-black rounded-4xl shadow-2xl outline-none border border-white/10",
                             "data-[state=open]:animate-in data-[state=closed]:animate-out",
                             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200"
@@ -273,7 +273,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                             {mode === "comment" ? "Reply to post" : mode === "quote" ? "Quote post" : "Create post"}
                         </DialogPrimitive.Title>
                         {/* ── Header ── */}
-                        <div className="flex items-center justify-between px-4 py-4 bg-black2 sticky top-0 z-10">
+                        <div className="flex items-center justify-between px-4 py-4 bg-black sticky top-0 z-10">
                             <DialogPrimitive.Close className="p-2 rounded-full hover:bg-white/10 transition-colors text-white cursor-pointer outline-none">
                                 <X className="w-5 h-5 stroke-[2.5]" />
                             </DialogPrimitive.Close>
@@ -295,7 +295,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                     <div className="relative mb-0.5">
                                         {/* Connector line */}
                                         <div className="absolute left-[19px] top-[46px] bottom-1.5 w-0.5 bg-zinc-800 rounded-full" />
-                                        
+
                                         <div className="flex gap-3">
                                             <Avatar className="w-10 h-10 shrink-0 border border-white/5 relative z-10">
                                                 <AvatarImage src={post.user.avatar_url || ""} />
@@ -309,7 +309,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                     <span className="text-zinc-500 text-[15px]">{post.createdAt ? formatRelativeTime(new Date(post.createdAt).toISOString()) : "Just now"}</span>
                                                 </div>
                                                 <p className="text-white text-[15px] leading-normal">{post.content}</p>
-                                                
+
                                                 {post.videoUrl ? (
                                                     <div className="mt-3 rounded-2xl overflow-hidden border border-white/10 bg-zinc-900/50 aspect-video">
                                                         <video src={post.videoUrl} controls className="w-full h-full object-cover" />
@@ -319,7 +319,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                         <img src={post.imageUrl} alt="" className="w-full h-full object-cover" />
                                                     </div>
                                                 ) : null}
-                                                
+
                                                 <div className="mt-4 mb-5">
                                                     <span className="text-zinc-500 text-[15px]">Replying to </span>
                                                     <span className="text-twitter2 text-[15px] hover:underline cursor-pointer">@{post.user.username}</span>
@@ -349,8 +349,8 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                         <ChevronDown className="w-4 h-4" />
                                                     </button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent 
-                                                    align="start" 
+                                                <DropdownMenuContent
+                                                    align="start"
                                                     sideOffset={8}
                                                     className="w-[320px] bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50"
                                                 >
@@ -469,7 +469,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                         className="data-[state=checked]:bg-twitter2"
                                                     />
                                                 </div>
-                                                
+
                                                 {hasContentWarning && (
                                                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl">
                                                         <input
@@ -525,8 +525,8 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                             {replyPrivacy === "token_holders" && <><Medal className="w-5 h-5" /> Token Holders can reply</>}
                                         </button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent 
-                                        align="start" 
+                                    <DropdownMenuContent
+                                        align="start"
                                         sideOffset={8}
                                         className="w-[320px] bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50"
                                     >
@@ -611,9 +611,9 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                 <CalendarIcon className="w-4.5 h-4.5" />
                                             </button>
                                         </PopoverTrigger>
-                                        <PopoverContent 
-                                            className="w-52 bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50" 
-                                            align="start" 
+                                        <PopoverContent
+                                            className="w-52 bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50"
+                                            align="start"
                                             side="top"
                                             sideOffset={8}
                                         >

@@ -55,7 +55,7 @@ export function VideoCard({ video, loading }: VideoCardProps) {
             onClick={() => router.push(videoUrl)}
             className="group relative rounded-none md:rounded-3xl cursor-pointer isolate z-0"
         >
-            <div className="absolute inset-0 bg-black2 rounded-none md:rounded-3xl -z-20" />
+            <div className="absolute inset-0 bg-black rounded-none md:rounded-3xl -z-20" />
             <motion.div
                 variants={{
                     initial: { scale: 0.5, opacity: 0, backgroundColor: "rgba(74,74,74,0)" },

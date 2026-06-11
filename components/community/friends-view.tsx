@@ -49,7 +49,7 @@ export function FriendsView() {
     const pendingCount = (pending.data?.incoming.length ?? 0) + (pending.data?.outgoing.length ?? 0);
 
     return (
-        <div className="flex flex-col h-full bg-black2">
+        <div className="flex flex-col h-full bg-black">
             {/* Tab bar */}
             <div className="h-14 shrink-0 px-4 flex items-center gap-1 border-b border-flexwhite/15">
                 <div className="flex items-center gap-2 mr-2 text-flexwhite font-bold">
@@ -68,8 +68,8 @@ export function FriendsView() {
                                     ? "bg-twitter text-black2"
                                     : "text-twitter hover:bg-twitter/10"
                                 : tab === t
-                                  ? "bg-white/10 text-flexwhite"
-                                  : "text-flexwhite/50 hover:bg-white/5 hover:text-flexwhite/80"
+                                    ? "bg-white/10 text-flexwhite"
+                                    : "text-flexwhite/50 hover:bg-white/5 hover:text-flexwhite/80"
                         )}
                     >
                         {t}

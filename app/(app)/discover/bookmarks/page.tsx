@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function BookmarksPage() {
     return (
         <div className="w-full min-h-screen">
-            <div className="flex flex-row items-center justify-start gap-5 backdrop-blur-sm w-full bg-black2/40 sticky top-0 z-100 border-b border-flexborder">
+            <div className="flex flex-row items-center justify-start gap-5 backdrop-blur-sm w-full bg-black/40 sticky top-0 z-100 border-b border-flexborder">
                 <div className="flex h-full">
                     <Link
                         href="/discover"

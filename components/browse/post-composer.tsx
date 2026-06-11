@@ -364,7 +364,7 @@ export function PostComposer() {
     return (
         <div
             ref={composerRef}
-            className="p-4 z-5 border-b border-soft-gray/[0.12] flex gap-4 cursor-text bg-black2"
+            className="p-4 z-5 border-b border-soft-gray/[0.12] flex gap-4 cursor-text bg-black"
             onClick={(e) => {
                 const tag = (e.target as HTMLElement).tagName;
                 if (tag !== "BUTTON" && tag !== "INPUT" && tag !== "TEXTAREA" && !(e.target as HTMLElement).closest("button")) {

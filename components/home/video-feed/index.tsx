@@ -67,7 +67,7 @@ export function VideoFeed() {
     return (
         <div className="w-full pb-20">
             {/* STICKY GLASS HEADER */}
-            <div className="sticky top-0 z-30 w-full flex flex-col backdrop-blur-xl bg-black2/40 pt-2 pb-2 px-1 space-y-3 relative">
+            <div className="sticky top-0 z-30 w-full flex flex-col backdrop-blur-xl bg-black/40 pt-2 pb-2 px-1 space-y-3 relative">
                 {/* SEARCH BAR SPACER */}
                 <div className="w-full h-[52px] pointer-events-none" />
                 <CategoryList activeTab={activeTab} setActiveTab={setActiveTab} />

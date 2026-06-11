@@ -16,7 +16,7 @@ export function TokenColumn({ tokens, loading, className }: TokenColumnProps) {
     <div className={cn("h-full overflow-y-auto scroll-smooth hidden-scrollbar", className)}>
       {/* Pushes initial content below the fixed header; scrolls away as you go up */}
       <div className="h-[116px] shrink-0" />
-      <div className="bg-black2/50 rounded-xl">
+      <div className="bg-black/50 rounded-xl">
         {loading ? (
           <div className="flex flex-col gap-px">
             {Array.from({ length: 8 }).map((_, i) => (

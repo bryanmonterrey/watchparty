@@ -46,7 +46,7 @@ export function CommunitiesLanding() {
     };
 
     return (
-        <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 bg-black2">
+        <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 bg-black">
             <div className="flex flex-col max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -84,7 +84,7 @@ export function CommunitiesLanding() {
                 {mounted && session?.user && (
                     <>
                         {/* Join by invite */}
-                       <form
+                        <form
                             onSubmit={onJoin}
                             className="rounded-3xl hidden border border-flexwhite/10 bg-white/[0.02] p-5 mb-6"
                         >
@@ -178,9 +178,9 @@ export function CommunitiesLanding() {
                             className="aspect-square cursor-pointer rounded-[36px] border-2 border-dashed border-zinc-500/25 hover:border-white/50 flex flex-col items-center justify-center gap-3 transition group hover:bg-white/5"
                         >
                             <div className="size-18 flex items-center justify-center transition">
-                                <CreateIcon className="text-flexwhite/50 size-12 transition"/>
+                                <CreateIcon className="text-flexwhite/50 size-12 transition" />
                             </div>
-                            
+
                         </motion.button>
                     </div>
                 )}

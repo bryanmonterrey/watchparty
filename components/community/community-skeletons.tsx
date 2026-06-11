@@ -12,7 +12,7 @@ export function ChannelChatSkeleton() {
     return (
         <div className="flex flex-col h-full min-w-0">
             {/* header */}
-            <div className="h-14 shrink-0 px-4 flex items-center gap-x-2 bg-black2 border-b border-flexwhite/15">
+            <div className="h-14 shrink-0 px-4 flex items-center gap-x-2 bg-black border-b border-flexwhite/15">
                 <Bone className="h-5 w-5 rounded" />
                 <Bone className="h-4 w-32" />
                 <Bone className="ml-auto h-4 w-4 rounded-full" />
@@ -46,7 +46,7 @@ export function ChannelChatSkeleton() {
 /* ─── Server sidebar (channel list) ────────────────────────── */
 export function ServerSidebarSkeleton() {
     return (
-        <div className="flex flex-col h-full w-64 bg-black2 border-r border-flexwhite/15 shrink-0">
+        <div className="flex flex-col h-full w-64 bg-black border-r border-flexwhite/15 shrink-0">
             <div className="h-12 border-b border-flexwhite/10 flex items-center px-4">
                 <Bone className="h-4 w-32" />
             </div>

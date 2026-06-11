@@ -40,7 +40,7 @@ export function DraftsDrawer({ open, onClose }: DraftsDrawerProps) {
 
     return (
         <Drawer open={open} onOpenChange={v => !v && onClose()}>
-            <DrawerContent className="bg-black2 border-white/10 max-h-[70vh]">
+            <DrawerContent className="bg-black border-white/10 max-h-[70vh]">
                 <DrawerHeader>
                     <DrawerTitle className="text-zinc-100">Drafts</DrawerTitle>
                 </DrawerHeader>

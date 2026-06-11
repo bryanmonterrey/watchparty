@@ -91,14 +91,14 @@ function TokenImage({ token }: { token: TradeToken }) {
           className="transition-all duration-500 ease-in-out"
         />
       </svg>
-      
+
       {/* Inner Image */}
-      <div 
+      <div
         className={cn("overflow-hidden flex items-center justify-center text-sm font-bold text-zinc-300", bgColor)}
-        style={{ 
-            width: size - strokeWidth * 2 - 4, 
-            height: size - strokeWidth * 2 - 4, 
-            borderRadius: radius - strokeWidth 
+        style={{
+          width: size - strokeWidth * 2 - 4,
+          height: size - strokeWidth * 2 - 4,
+          borderRadius: radius - strokeWidth
         }}
       >
         {token.imageUrl ? (
@@ -148,7 +148,7 @@ export function TokenRow({ token }: TokenRowProps) {
   return (
     <div
       onClick={goToToken}
-      className="group grid grid-cols-[56px_1fr_auto] gap-3 px-3 py-3 bg-black2 hover:bg-white/[0.03] cursor-pointer transition-colors duration-100 last:border-b-0"
+      className="group grid grid-cols-[56px_1fr_auto] gap-3 px-3 py-3 bg-black hover:bg-white/[0.03] cursor-pointer transition-colors duration-100 last:border-b-0"
     >
 
       {/* Col 1: Avatar */}

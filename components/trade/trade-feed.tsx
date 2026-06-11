@@ -50,7 +50,7 @@ export function TradeFeed() {
     <div className="h-full relative" style={{ transform: "translateZ(0)" }}>
       {/* FIXED GLASS HEADER */}
       <div className="sticky w-full top-0 left-0 right-0 z-40 flex items-center justify-center flex-col pt-2 pb-0 space-y-3">
-        <div className="absolute inset-0 backdrop-blur-sm bg-black2/20 -z-10 pointer-events-none" />
+        <div className="absolute inset-0 backdrop-blur-sm bg-black/20 -z-10 pointer-events-none" />
         <div className="w-full h-[52px] pointer-events-none" />
         <div className="flex-1 w-full grid grid-cols-3 gap-2 px-1">
           <TokenColumnHeader status="new" tokensCount={data.new.length} />

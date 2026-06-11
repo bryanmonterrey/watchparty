@@ -78,26 +78,26 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: -16, opacity: 0 }}
                         transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
-                        className="fixed left-0 top-0 h-screen w-[440px] z-[60] flex flex-col bg-black2 border-r border-flexborder/50 overflow-hidden"
+                        className="fixed left-0 top-0 h-screen w-[440px] z-[60] flex flex-col bg-black border-r border-flexborder/50 overflow-hidden"
                     >
-                        <NotificationHeader 
+                        <NotificationHeader
                             unreadCount={unreadData?.count ?? 0}
                             onMarkAllRead={() => markAllRead.mutate()}
                             onClose={onClose}
                         />
 
-                        <NotificationSearch 
+                        <NotificationSearch
                             searchQuery={searchQuery}
                             onSearchChange={setSearchQuery}
                         />
 
-                        <NotificationTabs 
+                        <NotificationTabs
                             activeTab={tab}
                             onTabChange={setTab}
                         />
 
                         <div className="flex-1 overflow-y-auto scrollbar-hide">
-                            <NotificationList 
+                            <NotificationList
                                 notifications={filtered}
                                 isLoading={isLoading}
                                 hasNextPage={hasNextPage ?? false}

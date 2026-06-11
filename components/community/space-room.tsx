@@ -52,7 +52,7 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
 
     if (isLoading || !data) {
         return (
-            <div className="flex flex-1 items-center justify-center bg-black2">
+            <div className="flex flex-1 items-center justify-center bg-black">
                 <Loader2 className="h-7 w-7 text-flexwhite/40 animate-spin" />
             </div>
         );
@@ -66,7 +66,7 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
     const listeners = participants.filter((p) => p.role === "LISTENER");
 
     return (
-        <div className="flex flex-col h-full bg-black2">
+        <div className="flex flex-col h-full bg-black">
             {/* top bar */}
             <div className="h-14 shrink-0 px-4 flex items-center gap-3 border-b border-flexwhite/15">
                 <button

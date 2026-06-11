@@ -159,8 +159,8 @@ export function WalletDrawer({
 
     const trigger = children
         ? React.cloneElement(children as React.ReactElement<any>, {
-              onClick: () => onOpenChangeHandler(true),
-          })
+            onClick: () => onOpenChangeHandler(true),
+        })
         : null;
 
     const panelContent = (
@@ -628,7 +628,7 @@ export function WalletDrawer({
                                 animate={{ x: 0, opacity: 1 }}
                                 exit={{ x: 16, opacity: 0 }}
                                 transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
-                                className="fixed right-0 top-0 h-screen w-[440px] z-[60] flex flex-col bg-black2 border-l border-flexborder/50 overflow-hidden"
+                                className="fixed right-0 top-0 h-screen w-[440px] z-[60] flex flex-col bg-black border-l border-flexborder/50 overflow-hidden"
                             >
                                 {panelContent}
                             </motion.div>
