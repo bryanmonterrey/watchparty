@@ -31,7 +31,7 @@ export function CommunityServerIcon({ id, imageUrl, name }: CommunityServerIconP
                         <Squircle asChild radius={16} autoEffects={false}>
                             <div
                                 className={cn(
-                                    "relative flex h-[55px] w-[55px] p-[2.5px] transition-colors items-center justify-center",
+                                    "relative flex h-[55px] w-[55px] transition-colors items-center justify-center",
                                     "bg-transparent group-hover:bg-soft-pink/40",
                                     isActive && "bg-soft-pink group-hover:bg-soft-pink"
                                 )}
@@ -39,7 +39,7 @@ export function CommunityServerIcon({ id, imageUrl, name }: CommunityServerIconP
                                 <Squircle asChild radius={14} autoEffects={false}>
                                     <div
                                         className={cn(
-                                            "relative flex h-full w-full overflow-hidden items-center justify-center bg-black4",
+                                            "relative flex h-[55px] w-[55px] overflow-hidden items-center justify-center bg-black4",
                                             isActive && "bg-soft-pink"
                                         )}
                                     >

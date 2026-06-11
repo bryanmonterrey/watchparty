@@ -34,8 +34,8 @@ export function CommunityServerList() {
                                     className={cn(
                                         "flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center",
                                         onHome
-                                            ? "bg-soft-pink text-black/85"
-                                            : "bg-black4 text-black/85 group-hover:bg-soft-pink group-hover:text-black/85"
+                                            ? "bg-white/90 text-black/85"
+                                            : "bg-black4 text-black/85 group-hover:bg-white/90 group-hover:text-black/85"
                                     )}
                                 >
                                     <HomeIcon className="size-8" />
@@ -69,7 +69,7 @@ export function CommunityServerList() {
                                     className="group flex cursor-pointer items-center justify-center"
                                 >
                                     <Squircle asChild radius={16} autoEffects={false}>
-                                        <div className="flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-soft-pink group-hover:bg-soft-pink group-hover:text-black/85">
+                                        <div className="flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-white/90 group-hover:bg-white/90 group-hover:text-black/85">
                                             <CreateIcon className="size-8" />
                                         </div>
                                     </Squircle>

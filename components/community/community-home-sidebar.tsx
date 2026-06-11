@@ -58,7 +58,7 @@ export function CommunityHomeSidebar() {
                         >
                             <route.icon className={cn(
                                 "size-7 shrink-0",
-                                route.active ? "text-soft-pink" : "text-white/80 group-hover:text-white/80"
+                                route.active ? "text-white" : "text-white/80 group-hover:text-white/80"
                             )} />
                             <span className="text-lg font-semibold truncate leading-none">
                                 {route.label}

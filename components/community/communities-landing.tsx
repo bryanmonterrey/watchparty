@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { CategoryList } from "@/components/home/video-feed/category-list";
+import { CreateIcon } from "../icons";
 
 const COMMUNITY_CATEGORIES = ["All", "Gaming", "Crypto", "Music", "Art", "Tech", "Trading", "IRL"];
 
@@ -109,15 +110,6 @@ export function CommunitiesLanding() {
                                 <p className="text-xs text-darkfantasy mt-2.5 px-1">{joinServer.error.message}</p>
                             )}
                         </form>
-
-                        {/* Category tabs — same component as the home feed */}
-                        <div className="mb-8">
-                            <CategoryList
-                                activeTab={activeCat}
-                                setActiveTab={setActiveCat}
-                                categories={COMMUNITY_CATEGORIES}
-                            />
-                        </div>
                     </>
                 )}
 
@@ -154,7 +146,7 @@ export function CommunitiesLanding() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05, type: "spring", damping: 20, stiffness: 100 }}
                                 onClick={() => router.push(`/communities/${server.id}`)}
-                                className="group cursor-pointer relative aspect-square rounded-[32px] border border-flexwhite/15 overflow-hidden transition-all"
+                                className="group cursor-pointer relative aspect-square rounded-[36px] border border-zinc-500/25 overflow-hidden transition-all"
                             >
                                 {server.imageUrl ? (
                                     <Image
@@ -173,7 +165,6 @@ export function CommunitiesLanding() {
 
                                 <div className="absolute inset-x-0 bottom-0 p-5 pt-12 transition-transform">
                                     <p className="text-white font-bold text-lg truncate drop-shadow-lg">{server.name}</p>
-                                    <p className="text-white/40 text-xs font-bold uppercase tracking-wider mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Enter Server</p>
                                 </div>
                             </motion.button>
                         ))}
@@ -184,12 +175,12 @@ export function CommunitiesLanding() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: servers.length * 0.05, type: "spring", damping: 20, stiffness: 100 }}
                             onClick={() => onOpen("createServer")}
-                            className="aspect-square cursor-pointer rounded-[32px] border-2 border-dashed border-flexwhite/15 hover:border-twitter/50 flex flex-col items-center justify-center gap-3 transition group hover:bg-twitter/5"
+                            className="aspect-square cursor-pointer rounded-[36px] border-2 border-dashed border-zinc-500/25 hover:border-white/50 flex flex-col items-center justify-center gap-3 transition group hover:bg-white/5"
                         >
-                            <div className="size-14 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-twitter transition shadow-lg group-hover:shadow-twitter/20">
-                                <Plus className="text-flexwhite/50 group-hover:text-black2 transition" size={32} />
+                            <div className="size-18 flex items-center justify-center transition">
+                                <CreateIcon className="text-flexwhite/50 size-12 transition"/>
                             </div>
-                            <span className="text-sm font-bold text-flexwhite/50 group-hover:text-flexwhite transition">Add Server</span>
+                            
                         </motion.button>
                     </div>
                 )}

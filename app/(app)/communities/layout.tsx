@@ -22,7 +22,7 @@ export default function CommunitiesLayout({
     const isHome = pathname === "/communities" || !serverId;
 
     return (
-        <div className="flex h-svh flex-col overflow-hidden pt-14">
+        <div className="flex h-svh flex-col overflow-hidden pt-16">
             <CommunityModalProvider />
 
             <div className="flex min-h-0 w-full flex-1 overflow-hidden">
