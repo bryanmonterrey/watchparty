@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Coverflow/accordion hero per desktopdesigns/homecarousel.svg: one wide
 // active panel (771×341, r=50) flanked by thin peek panels (119×341, r=20)
 // with 20px gaps, the row slightly wider than the viewport so the outer
-// panels bleed ~3% off each edge. Hovering a panel expands it; the middle
-// one is active by default.
+// panels bleed ~3% off each edge. The middle panel is active by default.
+//
+// Interaction: a peek panel must be CLICKED to expand (hover does nothing);
+// clicking the already-active panel navigates to its watch page. Netflix-style
+// edge arrows step the active panel and fade in only while the carousel is
+// hovered.
 //
 // Widths are flex ratios (active 6.5 : peek 1 ≈ the 771:119 of the SVG) so
 // the whole thing scales with the container instead of pinning to 1512.
@@ -32,8 +37,11 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
 
     if (videos.length === 0) return null;
 
+    const step = (dir: -1 | 1) =>
+        setActive((a) => Math.min(videos.length - 1, Math.max(0, a + dir)));
+
     return (
-        <div className="relative w-full overflow-hidden">
+        <div className="group/carousel relative w-full overflow-hidden">
             <div className="-ml-[3%] flex h-[clamp(260px,23vw,360px)] w-[106%] gap-5">
                 {videos.map((v, i) => {
                     const isActive = i === active;
@@ -41,12 +49,18 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                         <Link
                             key={v.id}
                             href={watchHref(v)}
-                            onMouseEnter={() => setActive(i)}
-                            onFocus={() => setActive(i)}
-                            aria-label={v.title}
+                            // Click a closed panel to open it (no navigation);
+                            // click the open one to actually go watch.
+                            onClick={(e) => {
+                                if (!isActive) {
+                                    e.preventDefault();
+                                    setActive(i);
+                                }
+                            }}
+                            aria-label={isActive ? v.title : `Open ${v.title}`}
                             style={{ flexGrow: isActive ? 6.5 : 1, transition: `flex-grow 0.6s ${EASE}, border-radius 0.6s ${EASE}` }}
-                            className={`group relative block h-full basis-0 overflow-hidden bg-muted outline-none ${
-                                isActive ? "rounded-[50px]" : "rounded-[20px]"
+                            className={`group/panel relative block h-full basis-0 overflow-hidden bg-muted outline-none ${
+                                isActive ? "rounded-[50px]" : "cursor-pointer rounded-[20px]"
                             }`}
                         >
                             {v.thumbnailUrl && (
@@ -99,7 +113,32 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                     );
                 })}
             </div>
+
+            {/* Netflix-style edge controls: black rectangle that fades in on
+                carousel hover, white chevron that lifts on its own hover. The
+                boundary arrow stays hidden (can't step past the ends). */}
+            <CarouselArrow side="left" onClick={() => step(-1)} disabled={active === 0} />
+            <CarouselArrow side="right" onClick={() => step(1)} disabled={active === videos.length - 1} />
         </div>
+    );
+}
+
+function CarouselArrow({ side, onClick, disabled }: { side: "left" | "right"; onClick: () => void; disabled: boolean }) {
+    const Icon = side === "left" ? ChevronLeft : ChevronRight;
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={side === "left" ? "Previous" : "Next"}
+            className={`group/arrow absolute inset-y-0 z-20 flex w-[68px] items-center transition-opacity duration-300 opacity-0 group-hover/carousel:opacity-100 disabled:pointer-events-none disabled:!opacity-0 ${
+                side === "left"
+                    ? "left-0 justify-start bg-gradient-to-r from-black/90 via-black/45 to-transparent pl-3"
+                    : "right-0 justify-end bg-gradient-to-l from-black/90 via-black/45 to-transparent pr-3"
+            }`}
+        >
+            <Icon className="size-9 text-white drop-shadow-lg transition-transform duration-200 group-hover/arrow:scale-110" strokeWidth={2.5} />
+        </button>
     );
 }
 
