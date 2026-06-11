@@ -14,6 +14,7 @@ import { HomeCarousel, HomeCarouselSkeleton } from "./home-carousel";
 interface FeedVideo {
     id: string;
     title: string;
+    videoUrl: string | null;
     thumbnailUrl: string | null;
     user: { username: string | null; avatar_url: string | null };
 }
@@ -25,7 +26,7 @@ function watchHref(v: FeedVideo) {
 function SectionHeader({ title, href }: { title: string; href: string }) {
     return (
         <div className="flex items-baseline justify-between pb-4">
-            <h2 className="text-[26px] font-semibold tracking-tight">{title}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
             <Link href={href} className="text-sm font-extrabold text-zinc-300/60 hover:text-white/80">
                 View all
             </Link>
@@ -66,7 +67,7 @@ function CardRowSkeleton() {
 
 export function DesktopHome() {
     const feed = trpc.content.getVideoFeed.useInfiniteQuery(
-        { limit: 16 },
+        { limit: 28 },
         { getNextPageParam: (p) => p.nextCursor }
     );
     const irl = trpc.content.getVideoFeed.useInfiniteQuery(
@@ -75,15 +76,15 @@ export function DesktopHome() {
     );
 
     const videos = feed.data?.pages.flatMap((p) => p.videos) ?? [];
-    const heroVideos = videos.slice(0, 7);
-    const trendingVideos = videos.slice(7, 11);
+    const heroVideos = videos.slice(0, 24);
+    const trendingVideos = videos.slice(24, 28);
     const irlVideos = irl.data?.pages.flatMap((p) => p.videos) ?? [];
     const browseCategories = CATEGORIES.filter(
         (c) => !["All", "Trending", "For You", "New"].includes(c)
     );
 
     return (
-        <div className="flex flex-col gap-10 pb-16 pt-16">
+        <div className="flex flex-col gap-10 pb-16 md:pt-[var(--header-height)]">
             {/* ── Hero carousel: full-bleed coverflow accordion ──────────── */}
             {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
 
