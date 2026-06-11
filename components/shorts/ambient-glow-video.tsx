@@ -32,20 +32,43 @@ export function AmbientGlowVideo({
         const videoEl = videoRef.current;
         if (!videoEl) return;
 
-        // Portrait-optimized halo for 9:16 aspect ratio.
-        // Reduced blur and scale to prevent excessive side bleed.
+        // Full-page ambient halo. The library sizes the glow canvas to
+        // videoRect × scale, centered on the video; fitGlow drives `scale`
+        // from the live video rect so the canvas always covers the viewport
+        // (overflow is clipped by the shorts scroll container = full page).
         glowRef.current = new AmbientGlow(videoEl, {
-            blur: 120,
+            blur: 140,
             opacity: 0.5,
             brightness: 1.1,
             saturate: 1.2,
-            scale: 1.05,
+            scale: 2.5,
             downscale: 0.1,
             updateInterval: 98,
             responsiveness: 0.1,
         });
 
+        const fitGlow = () => {
+            const v = videoRef.current;
+            const g = glowRef.current;
+            if (!v || !g) return;
+            const r = v.getBoundingClientRect();
+            if (!r.width || !r.height) return;
+            // Cover both axes (videoRect × scale ≥ viewport), +10% bleed so the
+            // soft edge sits off-screen rather than at the page boundary.
+            const scale = Math.max(window.innerWidth / r.width, window.innerHeight / r.height) * 1.1;
+            g.updateOptions({ scale });
+        };
+
+        // Fit once after first layout, then on metadata/resize. rAF defers past
+        // the initial 0-size rect before the video has measured.
+        const raf = requestAnimationFrame(fitGlow);
+        videoEl.addEventListener("loadedmetadata", fitGlow);
+        window.addEventListener("resize", fitGlow);
+
         return () => {
+            cancelAnimationFrame(raf);
+            videoEl.removeEventListener("loadedmetadata", fitGlow);
+            window.removeEventListener("resize", fitGlow);
             glowRef.current?.destroy();
             glowRef.current = null;
         };
