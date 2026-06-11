@@ -139,6 +139,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Header geometry exposed as spacing tokens. This both generates utilities
+     (h-header, pt-header, min-h-header, px-header-x) AND keeps the underlying
+     :root vars alive: a bare :root custom property referenced only from
+     className strings is dead-code-eliminated by Lightning CSS from the
+     globals chunk (the usage lives in other chunks). The var() refs here are
+     the in-file usage that prevents that. */
+  --spacing-header: var(--header-height);
+  --spacing-header-x: var(--header-px);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-pixel: var(--font-geist-pixel);
