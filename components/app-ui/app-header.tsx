@@ -57,7 +57,7 @@ export function AppHeader() {
 
   return (
     <header
-      className="fixed top-0 left-0 w-full h-(--header-height) z-50 max-md:hidden flex items-center justify-between px-4 py-3 pointer-events-none"
+      className="fixed top-0 left-0 w-full h-(--header-height) z-50 max-md:hidden flex items-center justify-between px-(--header-px) py-3 pointer-events-none"
     >
       {/* Scroll backdrop, media pages + /home only: media pages keep the
           black scrim over video; /home gets the theme canvas so it works in
