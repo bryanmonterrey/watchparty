@@ -13,7 +13,6 @@ const nextConfig: NextConfig = {
     // filesystem cache OFF: cold compiles are a touch slower, but there's no
     // cache DB to corrupt. Safe to re-enable once Turbopack's persistent cache
     // stabilizes. (Dev-only; does not affect production builds/deploys.)
-    turbopackFileSystemCacheForDev: false,
   },
 };
 

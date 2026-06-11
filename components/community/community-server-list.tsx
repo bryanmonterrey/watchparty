@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus, Home } from "lucide-react";
 import { Squircle } from "@/components/ui/squircle";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useCommunityModal } from "@/hooks/use-community-modal";
@@ -9,6 +8,7 @@ import { CommunityServerIcon } from "./community-server-icon";
 import { trpc } from "@/lib/trpc/client";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { HomeIcon, CreateIcon } from "@/components/icons";
 
 export function CommunityServerList() {
     const { onOpen } = useCommunityModal();
@@ -38,7 +38,7 @@ export function CommunityServerList() {
                                             : "bg-black4 text-black/85 group-hover:bg-soft-pink group-hover:text-black/85"
                                     )}
                                 >
-                                    <Home size={28} />
+                                    <HomeIcon className="size-8" />
                                 </div>
                             </Squircle>
                         </button>
@@ -51,7 +51,7 @@ export function CommunityServerList() {
 
             {/* Server icons + create */}
             <ScrollArea className="flex-1 w-full">
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-3">
                     {servers.map((server) => (
                         <CommunityServerIcon
                             key={server.id}
@@ -70,7 +70,7 @@ export function CommunityServerList() {
                                 >
                                     <Squircle asChild radius={16} autoEffects={false}>
                                         <div className="flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-soft-pink group-hover:bg-soft-pink group-hover:text-black/85">
-                                            <Plus size={24} />
+                                            <CreateIcon className="size-8" />
                                         </div>
                                     </Squircle>
                                 </button>

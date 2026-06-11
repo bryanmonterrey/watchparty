@@ -52,15 +52,15 @@ export function CommunityHomeSidebar() {
                             key={route.label}
                             onClick={() => router.push(route.href)}
                             className={cn(
-                                "group relative mx-2 px-3 cursor-pointer py-3 rounded-xl flex items-center gap-3 w-[calc(100%-1rem)] transition truncate",
+                                "group relative mx-2 px-3 cursor-pointer py-4 rounded-xl flex items-center gap-3 w-[calc(100%-1rem)] transition truncate",
                                 route.active ? "bg-white/[0.07] text-flexwhite" : "text-flexwhite/50 hover:bg-white/5 hover:text-flexwhite/80"
                             )}
                         >
                             <route.icon className={cn(
-                                "size-5 shrink-0",
+                                "size-7 shrink-0",
                                 route.active ? "text-soft-pink" : "text-white/80 group-hover:text-white/80"
                             )} />
-                            <span className="text-md font-semibold truncate leading-none">
+                            <span className="text-lg font-semibold truncate leading-none">
                                 {route.label}
                             </span>
                         </button>
