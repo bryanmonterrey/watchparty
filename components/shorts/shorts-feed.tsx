@@ -93,31 +93,31 @@ export function ShortsFeed() {
             <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative">
                 <div className="absolute inset-0" />
                 <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-zinc-900/60">
-                    <Skeleton name="shorts-video" loading>
+                    <Skeleton name="shorts-video" loading color="#27272a" darkColor="#27272a">
                         <div className="w-full h-full bg-zinc-800/20" />
                     </Skeleton>
                     <div className="absolute bottom-0 left-0 w-full p-4 pt-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end gap-2">
-                        <Skeleton name="shorts-title" loading>
+                        <Skeleton name="shorts-title" loading color="#27272a" darkColor="#27272a">
                             <div className="h-4 w-32 rounded-full bg-zinc-700/30" />
                         </Skeleton>
-                        <Skeleton name="shorts-desc" loading>
+                        <Skeleton name="shorts-desc" loading color="#27272a" darkColor="#27272a">
                             <div className="h-4 w-48 rounded-full bg-zinc-700/30" />
                         </Skeleton>
-                        <Skeleton name="shorts-meta" loading>
+                        <Skeleton name="shorts-meta" loading color="#27272a" darkColor="#27272a">
                             <div className="h-4 w-36 rounded-full bg-zinc-700/30" />
                         </Skeleton>
                     </div>
                 </div>
                 <div className="relative z-20 flex flex-col gap-3 items-center justify-end h-full pb-4 shrink-0 px-2 lg:px-4">
-                    <Skeleton name="shorts-avatar" loading>
+                    <Skeleton name="shorts-avatar" loading color="#27272a" darkColor="#27272a">
                         <div className="w-14 h-14 rounded-full bg-zinc-800" />
                     </Skeleton>
                     {Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className="flex flex-col items-center gap-1">
-                            <Skeleton name="shorts-action" loading>
+                            <Skeleton name="shorts-action" loading color="#27272a" darkColor="#27272a">
                                 <div className="w-16 h-16 rounded-2xl bg-zinc-800" />
                             </Skeleton>
-                            <Skeleton name="shorts-count" loading>
+                            <Skeleton name="shorts-count" loading color="#27272a" darkColor="#27272a">
                                 <div className="h-2.5 w-8 rounded-full bg-zinc-700/30" />
                             </Skeleton>
                         </div>
