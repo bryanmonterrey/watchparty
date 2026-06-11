@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, SendHorizontal } from "lucide-react";
+import { SendHorizontal } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
+import { ArrowUpIcon, CreateIcon, SendIcon } from "../icons";
 
 type Props = {
     channelId: string;
@@ -54,7 +55,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                     className="ml-2 h-8 w-8 shrink-0 flex items-center justify-center rounded-full text-flexwhite/40 hover:text-flexwhite hover:bg-white/5 transition-colors"
                     title="Add a file"
                 >
-                    <Plus size={18} />
+                    <CreateIcon className="h-5.5 w-5.5" />
                 </button>
 
                 <input
@@ -62,17 +63,17 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                     onChange={(e) => onChange(e.target.value)}
                     onBlur={() => onStopTyping?.()}
                     disabled={sendMessage.isPending}
-                    className="flex-1 min-w-0 bg-transparent py-3 pr-2 text-sm text-flexwhite outline-none placeholder:text-flexwhite/35"
+                    className="flex-1 min-w-0 bg-transparent py-3.5 pr-2 text-md text-flexwhite outline-none placeholder:text-flexwhite/35"
                     placeholder={`Message #${channelName}`}
                 />
 
                 <button
                     type="submit"
                     disabled={sendMessage.isPending || !content.trim()}
-                    className="mr-1.5 h-8 w-8 shrink-0 flex items-center justify-center rounded-full bg-twitter text-black2 transition-all hover:bg-twitter2 active:scale-95 disabled:opacity-0 disabled:scale-50"
+                    className="mr-2 h-8 w-8 shrink-0 flex items-center justify-center rounded-full bg-royal-blue text-white transition-all hover:bg-royal-blue/80 active:scale-95 disabled:opacity-0 disabled:scale-50"
                     title="Send"
                 >
-                    <SendHorizontal size={16} className="-ml-px" />
+                    <ArrowUpIcon className="h-5.5 w-5.5" />
                 </button>
             </div>
         </form>

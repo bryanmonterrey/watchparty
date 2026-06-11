@@ -28,7 +28,7 @@ export function CommunityServerSidebar({ serverId }: Props) {
     const videoChannels = channels.filter((c) => c.type === "VIDEO");
 
     return (
-        <div className="flex flex-col h-full w-64 bg-black2 border-r border-flexwhite/15 shrink-0">
+        <div className="flex flex-col h-full w-76 bg-zinc-950 shrink-0">
             <CommunityServerHeader server={server} role={role} />
 
             <ScrollArea className="flex-1">
@@ -93,25 +93,6 @@ export function CommunityServerSidebar({ serverId }: Props) {
                                     channel={channel}
                                     role={role}
                                     server={server}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {!!members.length && (
-                    <div className="mb-2">
-                        <CommunityChannelSection
-                            sectionType="members"
-                            role={role}
-                            label="Members"
-                            server={server}
-                        />
-                        <div className="space-y-[2px]">
-                            {members.map((member) => (
-                                <CommunityMemberItem
-                                    key={member.id}
-                                    member={member}
                                 />
                             ))}
                         </div>

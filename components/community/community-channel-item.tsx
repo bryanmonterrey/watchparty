@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import type { CommunityChannel, CommunityServer } from "@/db/schema/community";
+import { LockIcon, TrashIcon } from "../icons";
 
 type Props = {
     channel: CommunityChannel;
@@ -40,11 +41,11 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
         <button
             onClick={onClick}
             className={cn(
-                "group relative mx-2 px-2 py-[6px] flex items-center gap-x-2 w-[calc(100%-1rem)] rounded-lg hover:bg-white/5 transition mb-[2px]",
+                "group relative mx-2 px-2 py-3 flex items-center gap-x-2 w-[calc(100%-1rem)] rounded-lg hover:bg-white/5 transition mb-[2px]",
                 isActive && "bg-white/[0.07]"
             )}
         >
-            <Icon className={cn("flex-shrink-0 w-5 h-5 text-flexwhite/40", isActive && "text-twitter")} />
+            <Icon className={cn("flex-shrink-0 w-5 h-5 text-flexwhite/40", isActive && "text-white")} />
             <p
                 className={cn(
                     "line-clamp-1 font-medium text-sm text-flexwhite/50 group-hover:text-flexwhite/80 transition text-left",
@@ -71,9 +72,9 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
                     <TooltipProvider delayDuration={50}>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Trash
+                                <TrashIcon
                                     onClick={(e) => onAction(e, "deleteChannel")}
-                                    className="hidden group-hover:block w-4 h-4 text-zinc-400 hover:text-zinc-300 transition"
+                                    className="hidden group-hover:block w-5.5 h-5.5 text-zinc-400 hover:text-zinc-300 transition"
                                 />
                             </TooltipTrigger>
                             <TooltipContent side="top"><p className="text-xs">Delete</p></TooltipContent>
@@ -83,7 +84,7 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
             )}
 
             {channel.name === "general" && (
-                <Lock className="ml-auto w-4 h-4 text-zinc-400" />
+                <LockIcon className="ml-auto w-5.5 h-5.5 text-zinc-400" />
             )}
         </button>
     );

@@ -35,7 +35,7 @@ export function CommunityServerList() {
                                         "flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center",
                                         onHome
                                             ? "bg-white/90 text-black/85"
-                                            : "bg-black4 text-black/85 group-hover:bg-white/90 group-hover:text-black/85"
+                                            : "bg-black4 text-white group-hover:bg-white/90 group-hover:text-black/85"
                                     )}
                                 >
                                     <HomeIcon className="size-8" />
@@ -64,9 +64,11 @@ export function CommunityServerList() {
                     <TooltipProvider delayDuration={50}>
                         <Tooltip>
                             <TooltipTrigger asChild>
+                                {/* w-full so the tooltip anchors to the rail edge
+                                    like Home/server tiles (same gap separation) */}
                                 <button
                                     onClick={() => onOpen("createServer")}
-                                    className="group flex cursor-pointer items-center justify-center"
+                                    className="group flex w-full cursor-pointer items-center justify-center"
                                 >
                                     <Squircle asChild radius={16} autoEffects={false}>
                                         <div className="flex h-[55px] w-[55px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-white/90 group-hover:bg-white/90 group-hover:text-black/85">

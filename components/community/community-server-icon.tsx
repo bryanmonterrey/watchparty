@@ -51,7 +51,7 @@ export function CommunityServerIcon({ id, imageUrl, name }: CommunityServerIconP
                                                 className="object-cover"
                                             />
                                         ) : (
-                                            <span className="text-white font-semibold text-lg">
+                                            <span className="text-black font-semibold text-lg">
                                                 {name.charAt(0).toUpperCase()}
                                             </span>
                                         )}

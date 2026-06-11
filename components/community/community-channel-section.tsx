@@ -1,9 +1,9 @@
 "use client";
 
-import { Plus, Settings } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import type { CommunityServer } from "@/db/schema/community";
+import { CreateIcon, SettingsIcon } from "../icons";
 
 type Props = {
     label: string;
@@ -36,7 +36,7 @@ export function CommunityChannelSection({
                                 onClick={() => onOpen("createChannel", { channelType, server })}
                                 className="text-zinc-400 hover:text-zinc-300 transition"
                             >
-                                <Plus className="h-4 w-4" />
+                                <CreateIcon className="h-5 w-5" />
                             </button>
                         </TooltipTrigger>
                         <TooltipContent side="top">
@@ -54,7 +54,7 @@ export function CommunityChannelSection({
                                 onClick={() => onOpen("members", { server })}
                                 className="text-zinc-400 hover:text-zinc-300 transition"
                             >
-                                <Settings className="h-4 w-4" />
+                                <SettingsIcon className="h-5 w-5" />
                             </button>
                         </TooltipTrigger>
                         <TooltipContent side="top">
