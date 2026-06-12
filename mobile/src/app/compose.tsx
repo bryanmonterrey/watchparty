@@ -9,8 +9,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Constants from 'expo-constants';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -19,6 +17,7 @@ import { Image as ImageIcon, X } from 'lucide-react-native';
 
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/auth-client';
+import { putToSignedUrl, storagePublicUrl } from '@/lib/upload';
 import { trpc } from '@/lib/trpc';
 
 const MAX_LENGTH = 500;
@@ -76,15 +75,8 @@ export default function ComposeScreen() {
           filename: sanitized,
           contentType: image.mime,
         });
-        const res = await FileSystem.uploadAsync(signedUrl, image.uri, {
-          httpMethod: 'PUT',
-          headers: { 'Content-Type': image.mime, 'x-upsert': 'false' },
-        });
-        if (res.status < 200 || res.status >= 300) {
-          throw new Error(`Image upload failed (${res.status}).`);
-        }
-        const supabaseUrl = (Constants.expoConfig?.extra as { supabaseUrl?: string })?.supabaseUrl;
-        imageUrl = `${supabaseUrl}/storage/v1/object/public/posts/${path}`;
+        await putToSignedUrl(signedUrl, image.uri, image.mime);
+        imageUrl = storagePublicUrl('posts', path);
       }
 
       await create.mutateAsync({

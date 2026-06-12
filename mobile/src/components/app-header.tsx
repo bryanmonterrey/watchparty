@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Image } from 'expo-image';
@@ -68,11 +68,7 @@ function HeaderActions() {
   });
 
   function onAvatarPress() {
-    // Settings doesn't exist on mobile yet — offer sign out from here.
-    Alert.alert(user?.name || user?.email || 'Account', undefined, [
-      { text: 'Sign out', style: 'destructive', onPress: () => authClient.signOut() },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    router.push('/settings');
   }
 
   return (
