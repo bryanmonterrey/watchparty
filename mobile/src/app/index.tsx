@@ -29,16 +29,8 @@ import {
 } from '@/components/icons';
 import { OtpInput } from '@/components/otp-input';
 import { WaitingStep } from '@/components/waiting-step';
-import { Wallet as WalletGlyph } from 'lucide-react-native';
-
 import { authClient } from '@/lib/auth-client';
 import { cancelPhantomFlow, handlePhantomRedirect, signInWithPhantom } from '@/lib/phantom';
-import {
-  cancelEvmFlow,
-  EVM_WALLETS,
-  signInWithEvmWallet,
-  type EvmWalletId,
-} from '@/lib/walletconnect';
 
 // Native port of the web login (components/auth/login-card.tsx): same dark
 // single-screen flow with swapped states. Email OTP and OAuth (in-app
@@ -219,33 +211,6 @@ export default function LoginScreen() {
     }
   }
 
-  // EVM (Base) sign-in through a WalletConnect wallet app.
-  async function signInWithEvm(walletId: EvmWalletId) {
-    const name = EVM_WALLETS[walletId].name;
-    setError(null);
-    setWaiting({
-      name,
-      description: `Approve the connection in ${name} to continue.`,
-      icon: <WalletGlyph size={40} color="#fff" />,
-      retry: () => signInWithEvm(walletId),
-    });
-    setStep('waiting');
-    try {
-      await signInWithEvmWallet(walletId, (stage) => {
-        if (stage === 'sign') {
-          setWaiting((w) =>
-            w ? { ...w, description: `Sign the message in ${name} to finish logging in.` } : w,
-          );
-        } else if (stage === 'verify') {
-          setWaiting((w) => (w ? { ...w, description: 'Verifying your signature…' } : w));
-        }
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Wallet sign-in failed.';
-      if (!/reject|cancel/i.test(msg)) setError(msg);
-      setStep('wallet');
-    }
-  }
 
   return (
     <View style={styles.screen}>
@@ -263,7 +228,6 @@ export default function LoginScreen() {
                 hitSlop={12}
                 onPress={() => {
                   cancelPhantomFlow();
-                  cancelEvmFlow();
                   setError(null);
                   setStep('methods');
                 }}>
@@ -401,7 +365,6 @@ export default function LoginScreen() {
                     Sign in with your Solana wallet. The wallet app opens to approve.
                   </Text>
 
-                  <Text style={styles.walletGroup}>Solana</Text>
                   <Pressable
                     style={({ pressed }) => [styles.walletOption, pressed && styles.pressed]}
                     onPress={signInWithWallet}>
@@ -409,18 +372,9 @@ export default function LoginScreen() {
                     <Text style={styles.walletOptionText}>Phantom</Text>
                   </Pressable>
 
-                  <Text style={styles.walletGroup}>Ethereum · Base</Text>
-                  {(Object.keys(EVM_WALLETS) as EvmWalletId[]).map((id) => (
-                    <Pressable
-                      key={id}
-                      style={({ pressed }) => [styles.walletOption, pressed && styles.pressed]}
-                      onPress={() => signInWithEvm(id)}>
-                      <WalletGlyph size={26} color="#fff" />
-                      <Text style={styles.walletOptionText}>{EVM_WALLETS[id].name}</Text>
-                    </Pressable>
-                  ))}
-
                   {error && <Text style={styles.error}>{error}</Text>}
+
+                  <Text style={styles.walletNote}>More Solana wallets are coming soon.</Text>
                 </>
               ) : waiting ? (
                 <WaitingStep
@@ -430,7 +384,6 @@ export default function LoginScreen() {
                   onContinue={waiting.retry}
                   onBack={() => {
                     cancelPhantomFlow();
-                    cancelEvmFlow();
                     setStep('methods');
                   }}
                 />
@@ -531,15 +484,6 @@ const styles = StyleSheet.create({
   completeDisabled: { opacity: 0.5 },
   completeText: { color: '#000', fontSize: 16, fontWeight: '600' },
   resend: { marginTop: 24, textAlign: 'center', color: '#71717a', fontSize: 14 },
-  walletGroup: {
-    marginTop: 24,
-    marginBottom: -16,
-    color: '#71717a',
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   walletOption: {
     marginTop: 28,
     height: 68,
