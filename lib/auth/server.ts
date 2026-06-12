@@ -109,11 +109,13 @@ export const auth = betterAuth({
   },
 
   account: {
-    // Mobile OAuth: the flow starts from the app's fetch, so the in-app
-    // browser receiving the provider callback never has the state cookie —
-    // skip that check. State itself is still DB-stored, single-use, expiring
-    // (verification.storeInDatabase above).
-    skipStateCookieCheck: true,
+    // DEV ONLY: mobile dev hits the server via LAN IP but OAuth providers
+    // redirect to localhost, so the state cookie planted by the expo
+    // authorization proxy is on the wrong host — skip the cookie check
+    // there. In production app + callbacks share watchparty.xyz, the proxy
+    // cookie matches, and the full check stays ON. State is DB-validated
+    // (single-use, expiring) in both cases.
+    skipStateCookieCheck: process.env.NODE_ENV !== "production",
     accountLinking: {
       enabled: true,
       trustedProviders: ["kick", "discord"],
