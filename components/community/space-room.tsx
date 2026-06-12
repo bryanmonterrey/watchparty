@@ -167,14 +167,14 @@ function Participant({
     return (
         <div className="flex flex-col items-center gap-2 text-center">
             <div className="relative">
-                <Avatar className={cn("size-16", speaking && "ring-2 ring-twitter ring-offset-2 ring-offset-black2")}>
+                <Avatar className={cn("size-16", speaking && "ring-2 ring-twitter ring-offset-2 ring-offset-black")}>
                     <AvatarImage src={p.avatar_url ?? undefined} alt={p.name ?? ""} />
                     <AvatarFallback className="bg-zinc-700 text-flexwhite text-lg">
                         {(p.name ?? p.username ?? "?").charAt(0).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
                 {p.role === "HOST" && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-twitter text-black2 text-[9px] font-bold uppercase">
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-twitter text-black text-[9px] font-bold uppercase">
                         Host
                     </span>
                 )}

@@ -57,7 +57,7 @@ export function SpacesView() {
 
                     <button
                         onClick={() => setCreating((v) => !v)}
-                        className="mb-1 flex items-center gap-2 px-5 py-2.5 rounded-full bg-twitter text-black2 font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all"
+                        className="mb-1 flex items-center gap-2 px-5 py-2.5 rounded-full bg-twitter text-black font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all"
                     >
                         {creating ? <X className="size-4" /> : <Plus className="size-4" />}
                         {creating ? "Cancel" : "Start a Space"}
@@ -91,7 +91,7 @@ export function SpacesView() {
                                     <button
                                         type="submit"
                                         disabled={!title.trim() || create.isPending}
-                                        className="shrink-0 h-9 px-5 flex items-center gap-1.5 rounded-full bg-twitter text-black2 font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all disabled:opacity-40"
+                                        className="shrink-0 h-9 px-5 flex items-center gap-1.5 rounded-full bg-twitter text-black font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all disabled:opacity-40"
                                     >
                                         {create.isPending ? <Loader2 className="size-4 animate-spin" /> : "Go live"}
                                     </button>

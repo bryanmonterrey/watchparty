@@ -69,13 +69,13 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
             const left = el.scrollLeft + (pr.left - er.left) - (er.width - pr.width) / 2;
             el.scrollTo({ left, behavior });
         };
+        // Only center on first mount (the hero starts centered). Opening a panel
+        // expands it in place — the old post-expansion re-center caused a jarring
+        // shift after the click.
         if (!didMount.current) {
             didMount.current = true;
             center("auto");
-            return;
         }
-        const t = setTimeout(() => center("smooth"), 520);
-        return () => clearTimeout(t);
     }, [active, n]);
 
     // Seamless wrap: keep scrollLeft within one list-period of the middle copy,

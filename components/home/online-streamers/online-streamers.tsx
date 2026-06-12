@@ -6,7 +6,7 @@ export function OnlineStreamers() {
     return (
         <div className="w-full min-w-0 relative overflow-hidden shrink-0 invisible md:visible">
             {/* Left Gradient */}
-            <div className="absolute left-0 top-0 z-10 h-full flex items-center justify-center bg-gradient-to-r from-black2 via-black2 via-black2/75 to-transparent pr-16 pl-4">
+            <div className="absolute left-0 top-0 z-10 h-full flex items-center justify-center bg-gradient-to-r from-black via-black via-black/75 to-transparent pr-16 pl-4">
                 <div className="flex items-center gap-2 pl-1" />
             </div>
 

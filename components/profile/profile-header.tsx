@@ -194,7 +194,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                 {onToggleSize && (
                                     <Button
                                         onClick={onToggleSize}
-                                        className="size-11 rounded-full border border-flexborder/50 bg-black/25 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
+                                        className="size-11 rounded-full border border-flexborder/50 bg-black/25 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
                                         title={isMinimized ? "Maximum size" : "Minimum size"}
                                     >
                                         {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}

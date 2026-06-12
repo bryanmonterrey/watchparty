@@ -153,7 +153,7 @@ export function CommunityChatItem({
                             <button
                                 type="submit"
                                 disabled={updateMessage.isPending}
-                                className="px-3 py-1.5 bg-twitter hover:bg-twitter2 text-black2 font-semibold text-sm rounded-full transition disabled:opacity-50"
+                                className="px-3 py-1.5 bg-twitter hover:bg-twitter2 text-black font-semibold text-sm rounded-full transition disabled:opacity-50"
                             >
                                 Save
                             </button>

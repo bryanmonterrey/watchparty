@@ -78,7 +78,7 @@ export function ExploreSkeleton() {
                 >
                     <Bone className="h-24 w-full rounded-none" />
                     <div className="p-4 -mt-8">
-                        <Bone className="h-14 w-14 rounded-2xl border-4 border-black2" />
+                        <Bone className="h-14 w-14 rounded-2xl border-4 border-black" />
                         <Bone className="h-4 w-32 mt-3" />
                         <Bone className="h-3 w-full mt-3" />
                         <Bone className="h-3 w-2/3 mt-2" />
@@ -104,7 +104,7 @@ export function SpacesSkeleton() {
                     <Bone className="h-3 w-1/2 mt-2" />
                     <div className="flex -space-x-2 mt-5">
                         {Array.from({ length: 4 }).map((_, j) => (
-                            <Bone key={j} className="h-9 w-9 rounded-full border-2 border-black2" />
+                            <Bone key={j} className="h-9 w-9 rounded-full border-2 border-black" />
                         ))}
                     </div>
                 </div>

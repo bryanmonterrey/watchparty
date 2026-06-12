@@ -95,7 +95,7 @@ export function AppHeader() {
             alt="Logo"
             width={25}
             height={25}
-            className="opacity-90"
+            className="sm:size-[25px] opacity-90"
           />
           </Link>
         </div>

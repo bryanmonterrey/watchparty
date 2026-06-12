@@ -65,7 +65,7 @@ export function FriendsView() {
                             "px-3 py-1.5 rounded-full text-sm font-semibold transition-colors flex items-center gap-1.5",
                             t === "Add Friend"
                                 ? tab === t
-                                    ? "bg-twitter text-black2"
+                                    ? "bg-twitter text-black"
                                     : "text-twitter hover:bg-twitter/10"
                                 : tab === t
                                     ? "bg-white/10 text-flexwhite"
@@ -208,7 +208,7 @@ function FriendRow({
                 {typeof user.isOnline === "boolean" && (
                     <span
                         className={cn(
-                            "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-black2",
+                            "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-black",
                             user.isOnline ? "bg-twitter shadow-[0_0_6px_var(--color-twitter)]" : "bg-zinc-600"
                         )}
                     />
@@ -245,7 +245,7 @@ function IconBtn({
             className={cn(
                 "h-8 w-8 flex items-center justify-center rounded-full transition-colors",
                 tone === "accept"
-                    ? "bg-twitter/15 text-twitter hover:bg-twitter hover:text-black2"
+                    ? "bg-twitter/15 text-twitter hover:bg-twitter hover:text-black"
                     : "bg-white/5 text-flexwhite/60 hover:bg-white/10 hover:text-flexwhite"
             )}
         >
@@ -296,7 +296,7 @@ function AddFriendPanel({ onAdded }: { onAdded: () => void }) {
                 <button
                     type="submit"
                     disabled={!handle.trim() || add.isPending}
-                    className="shrink-0 h-9 px-5 flex items-center gap-1.5 rounded-full bg-twitter text-black2 font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all disabled:opacity-40"
+                    className="shrink-0 h-9 px-5 flex items-center gap-1.5 rounded-full bg-twitter text-black font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all disabled:opacity-40"
                 >
                     {add.isPending ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
                     Send

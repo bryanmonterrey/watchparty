@@ -15,7 +15,7 @@ export function ProfileBanner({ user, isMinimized }: ProfileBannerProps) {
             "relative w-full z-15 bg-black group overflow-hidden",
             isMinimized ? "h-[200px]" : "h-[320px]"
         )}>
-            <div className="absolute inset-0 bg-gradient-to-t from-black2 via-transparent to-black2/20 z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/20 z-10" />
             <div className="size-full">
                 {user.banner_url ? (
                     <img

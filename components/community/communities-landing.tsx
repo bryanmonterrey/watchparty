@@ -101,7 +101,7 @@ export function CommunitiesLanding() {
                                 <button
                                     type="submit"
                                     disabled={!code.trim() || joinServer.isPending}
-                                    className="shrink-0 h-9 px-5 flex items-center gap-1.5 rounded-full bg-twitter text-black2 font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all disabled:opacity-40"
+                                    className="shrink-0 h-9 px-5 flex items-center gap-1.5 rounded-full bg-twitter text-black font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all disabled:opacity-40"
                                 >
                                     {joinServer.isPending ? <Loader2 className="size-4 animate-spin" /> : <>Join <ArrowRight className="size-4" /></>}
                                 </button>

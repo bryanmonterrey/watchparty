@@ -76,7 +76,7 @@ export function CommunityChannelInfo({
                                 </Avatar>
                                 <div
                                     className={cn(
-                                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-black2",
+                                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-black",
                                         isOnline ? "bg-twitter shadow-[0_0_6px_var(--color-twitter)]" : "bg-zinc-600"
                                     )}
                                 />
@@ -128,7 +128,7 @@ export function CommunityChannelInfo({
                     {canInvite && (
                         <button
                             onClick={() => onOpen("invite", { server })}
-                            className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-twitter text-black2 font-semibold text-sm hover:bg-twitter2 active:scale-[0.98] transition-all"
+                            className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-twitter text-black font-semibold text-sm hover:bg-twitter2 active:scale-[0.98] transition-all"
                         >
                             <UserPlus className="size-4" />
                             Invite People

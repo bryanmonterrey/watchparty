@@ -229,10 +229,10 @@ export function AppSidebar() {
                     </div>
                 </SidebarHeader>
                 <SidebarContent className="flex-initial">
-                    <SidebarGroup className={cn("!px-0", isMobile && "!px-3")}>
-                        <SidebarMenu className={cn("gap-1", isMobile ? "!items-stretch" : "!items-start")}>
+                    <SidebarGroup className="!px-0">
+                        <SidebarMenu className="gap-1 !items-start">
                             {items.map((item) => (
-                                <SidebarMenuItem key={item.title} className={cn(isMobile ? "w-full" : "w-fit")}>
+                                <SidebarMenuItem key={item.title} className="w-fit">
                                     {(() => {
                                         const isProfile = item.title === "Profile";
                                         const itemUrl = mounted && isProfile && session?.user?.username
@@ -249,7 +249,7 @@ export function AppSidebar() {
                                             : itemUrl !== "#" && pathname === itemUrl;
                                         const commonContent = (
                                             <>
-                                                <div className={cn("flex h-11 items-center justify-center shrink-0 relative", isMobile ? "w-10 mr-3" : "w-(--sidebar-width-icon)")}>
+                                                <div className="flex w-(--sidebar-width-icon) h-11 items-center justify-center shrink-0 relative">
                                                     {mounted && isProfile && session?.user?.avatar_url ? (
                                                         <div className="size-7 rounded-full ring-2 ring-current p-[2px]">
                                                             <img
@@ -299,7 +299,6 @@ export function AppSidebar() {
                                                 size="lg"
                                                 className={cn(
                                                     "text-lg !w-auto !justify-start !p-0 transition-all duration-150 ease-in-out font-medium h-12 relative isolate hover:bg-transparent active:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-900 modal-trigger gap-0",
-                                                    isMobile && "!w-full",
                                                     isActive ? "text-flexwhite font-bold" : "text-flexwhite/85 hover:text-white/85"
                                                 )}
                                                 onClick={(e) => {

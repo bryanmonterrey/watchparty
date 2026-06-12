@@ -216,6 +216,10 @@ function Sidebar({
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              // Without this the icon column (w-(--sidebar-width-icon)) collapses
+              // on mobile and items cramp to the left. Set it so the drawer
+              // matches the desktop sidebar's expanded spacing.
+              "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             } as React.CSSProperties
           }
           side={side}

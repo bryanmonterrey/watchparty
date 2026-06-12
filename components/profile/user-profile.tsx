@@ -106,7 +106,7 @@ export function UserProfile({ user }: UserProfileProps) {
             <div ref={fullRef} className={buttonMinRef.current ? "hidden" : "block"}>
                 <ProfileBanner user={user} isMinimized={false} />
                 <div className={cn(
-                    "bg-[linear-gradient(to_top,black_3.5rem,transparent)]",
+                    "",
                     "max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30"
                 )}>
                     <div className="flex flex-col justify-start items-start space-y-1.5">
