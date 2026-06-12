@@ -1,3 +1,10 @@
+// Static import so expo-network lives in the MAIN bundle: @better-auth/expo
+// lazy-imports it, and Metro's lazy chunks break in Expo Go ("Requiring
+// unknown module"). Preloaded, the dynamic import resolves from the module
+// registry without fetching a chunk — works with or without
+// EXPO_NO_METRO_LAZY=1.
+import 'expo-network';
+
 import { createAuthClient } from 'better-auth/react';
 import { expoClient } from '@better-auth/expo/client';
 import { emailOTPClient } from 'better-auth/client/plugins';

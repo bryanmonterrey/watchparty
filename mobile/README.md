@@ -17,7 +17,7 @@ Physical devices must be on the same LAN as your Mac — `src/lib/base-url.ts` d
 
 Sign-in uses email OTP. With no `RESEND_API_KEY` in the root `.env`, the code is printed to the `bun dev` console.
 
-The start scripts set `EXPO_NO_METRO_LAZY=1`: `@better-auth/expo` does a runtime `import("expo-network")`, and Metro's lazy bundling splits it into a chunk Expo Go fails to load (`Requiring unknown module`). Inlining dynamic imports avoids it — keep the flag if you add start scripts.
+Historical gotcha, now fixed at the root: `@better-auth/expo` does a runtime `import("expo-network")`, and Metro's lazy bundling served it as a chunk Expo Go failed to load (`Requiring unknown module`). `src/lib/auth-client.ts` statically imports `expo-network` so it lives in the main bundle and the dynamic import resolves locally. The `EXPO_NO_METRO_LAZY=1` in the start scripts is belt-and-suspenders; plain `bunx expo start` works too.
 
 ## How the type sharing works
 
