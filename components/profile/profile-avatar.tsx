@@ -43,10 +43,6 @@ export function ProfileAvatar({ user, isMinimized }: ProfileAvatarProps) {
                     <Edit2 className="text-white" size={32} />
                 </div>
             </div>
-            {isLive
-                ? <LiveBadge size="sm" className="absolute bottom-1 right-1" />
-                : <OnlineIndicator userId={user.id} size="md" className="absolute bottom-2 right-2 ring-2 ring-black" />
-            }
         </div>
     );
 }

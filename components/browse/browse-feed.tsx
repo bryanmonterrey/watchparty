@@ -469,7 +469,7 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
     return (
         <div className="flex flex-col">
             {/* Tabs */}
-            <div className="flex items-center w-full sticky bg-black/60 backdrop-blur-xl top-0 z-100 border-b border-soft-gray/[0.12]">
+            <div className="flex items-center w-full sticky bg-background backdrop-blur-xl top-0 z-100 border-b border-soft-gray/[0.12]">
                 <FeedTab
                     label="For you"
                     isActive={activeTab === "for-you"}

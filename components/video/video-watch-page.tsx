@@ -45,7 +45,7 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
     }
 
     return (
-        <div className="flex flex-col lg:flex-row gap-3 min-h-dvh md:min-h-[calc(100dvh-var(--header-height))] w-screen mx-auto px-6 md:pt-[var(--header-height)] pb-4">
+        <div className="flex flex-col lg:flex-row gap-3 min-h-dvh md:min-h-[calc(100dvh-var(--header-height))] w-screen mx-auto px-3 md:pt-[var(--header-height)] pb-4">
             {/* ── Main column ─────────────────────────────────────────────── */}
             <div className="flex flex-col flex-1 min-w-0">
                 <div className="relative w-full aspect-video">

@@ -79,6 +79,7 @@ export async function signInWithSolana(wallet: SolanaWallet) {
     );
     console.log("[siws] address:", address);
     console.log("[siws] message:", JSON.stringify(message));
+    console.log("[siws] signature:", signature); // TEMP: to reproduce server verify byte-exact
   } catch (e) {
     console.warn("[siws] self-verify threw:", e);
   }

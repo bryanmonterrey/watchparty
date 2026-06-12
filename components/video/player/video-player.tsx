@@ -136,7 +136,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
         <div
             ref={containerRef}
             className={cn(
-                "ambient-video-container isolate p-0 relative w-full [contain:none] overflow-visible rounded-3xl bg-black group",
+                "ambient-video-container isolate p-0 relative w-full [contain:none] overflow-visible rounded-2xl bg-black group",
                 !isMiniPlayer && "aspect-video"
             )}
             style={{ cursor: !showControls && isPlaying ? "none" : "auto" }}
@@ -144,14 +144,14 @@ export function VideoPlayer(props: VideoPlayerProps) {
             tabIndex={0}
             onContextMenu={e => e.preventDefault()}
         >
-            <div className="absolute inset-0 z-0 bg-black rounded-3xl" />
+            <div className="absolute inset-0 z-0 bg-black rounded-2xl" />
 
             {/* ── Video element ────────────────────────────────────────────── */}
             <video
                 ref={videoRef}
                 poster={thumbnailUrl ?? undefined}
                 crossOrigin="anonymous"
-                className="block w-full h-full rounded-3xl outline-none relative z-10 cursor-pointer"
+                className="block w-full h-full rounded-2xl outline-none relative z-10 cursor-pointer"
                 onTimeUpdate={onTimeUpdate}
                 onLoadedMetadata={onLoadedMetadata}
                 onPlay={onPlay}
@@ -262,7 +262,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute inset-0 z-[15] flex flex-col items-center justify-center gap-3 bg-black/80 rounded-3xl pointer-events-auto"
+                        className="absolute inset-0 z-[15] flex flex-col items-center justify-center gap-3 bg-black/80 rounded-2xl pointer-events-auto"
                     >
                         <svg viewBox="0 0 24 24" className="size-10 text-white/50 fill-current">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
@@ -284,7 +284,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
 
             {/* ── Cards overlay (clip wrapper keeps slide-in within player bounds) */}
             {showCards && !isMiniPlayer && cardsData && cardsData.cards.length > 0 && (
-                <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-[25]">
+                <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none z-[25]">
                     <CardsPlayerOverlay
                         cards={cardsData.cards.map(c => ({
                             id: c.id,

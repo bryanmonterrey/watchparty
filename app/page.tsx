@@ -62,7 +62,7 @@ export default function Home() {
           by="line"
           animation="slideRight"
           once
-          className="relative hidden sm:block z-10 mt-6 max-w-lg text-center text-lg font-semibold leading-snug tracking-tight text-black sm:mt-8 sm:text-2xl lg:absolute lg:left-32 lg:top-1/2 lg:mt-0 lg:max-w-xl lg:-translate-y-1/2 lg:text-left"
+          className="relative hidden lg:block z-10 mt-6 max-w-lg text-center text-lg font-semibold leading-snug tracking-tight text-black sm:mt-8 sm:text-2xl lg:absolute lg:left-32 lg:top-1/2 lg:mt-0 lg:max-w-xl lg:-translate-y-1/2 lg:text-left"
         >
           {"Crypto Twitter's new home.\nSame algorithm ♥️"}
         </TextAnimate>

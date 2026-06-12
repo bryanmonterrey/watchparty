@@ -67,8 +67,8 @@ export function AppHeader() {
           className="absolute inset-0 transition-colors"
           style={{
             backgroundColor: isMediaPage
-              ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.4})`
-              : `color-mix(in srgb, var(--background) ${Math.min(scrollY / 32, 1) * 85}%, transparent)`,
+              ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
+              : `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`,
             backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
           }}
         />
@@ -93,8 +93,8 @@ export function AppHeader() {
             <Image
             src="/Star2.svg"
             alt="Logo"
-            width={28}
-            height={28}
+            width={25}
+            height={25}
             className="opacity-90"
           />
           </Link>

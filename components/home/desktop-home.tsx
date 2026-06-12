@@ -27,7 +27,7 @@ function SectionHeader({ title, href }: { title: string; href: string }) {
     return (
         <div className="flex items-baseline justify-between pb-4">
             <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-            <Link href={href} className="text-sm font-extrabold text-zinc-300/60 hover:text-white/80">
+            <Link href={href} className="text-sm font-extrabold text-pastel-yellow hover:text-white/80">
                 View all
             </Link>
         </div>
@@ -81,9 +81,12 @@ export function DesktopHome() {
     const irlVideos = irl.data?.pages.flatMap((p) => p.videos) ?? [];
 
     return (
-        <div className="flex flex-col gap-10 pb-16 md:pt-[var(--header-height)]">
+        <div className="flex flex-col gap-7 pb-16 md:pt-[var(--header-height)]">
             {/* ── Hero carousel: full-bleed coverflow accordion ──────────── */}
-            {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
+            <div className="pt-4">
+
+                {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
+            </div>
 
             <div className="flex flex-col gap-10 px-6">
                 <section>
@@ -106,7 +109,7 @@ export function DesktopHome() {
                             <Link
                                 key={c.slug}
                                 href={c.slug}
-                                className="group relative block aspect-[3/4] w-44 shrink-0 overflow-hidden rounded-2xl bg-muted"
+                                className="group relative block aspect-[2/3] w-36 shrink-0 overflow-hidden rounded-2xl bg-muted"
                             >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img

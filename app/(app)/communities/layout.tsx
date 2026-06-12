@@ -22,10 +22,10 @@ export default function CommunitiesLayout({
     const isHome = pathname === "/communities" || !serverId;
 
     return (
-        <div className="flex h-svh flex-col overflow-hidden pt-16">
+        <div className="flex h-svh flex-col overflow-hidden md:pt-[var(--header-height)]">
             <CommunityModalProvider />
 
-            <div className="flex min-h-0 w-full flex-1 overflow-hidden">
+            <div className="flex min-h-0 w-full flex-1 overflow-hidden pr-4 pb-4">
                 {/* Column 1: server tile rail on the canvas */}
                 <CommunityServerList />
 

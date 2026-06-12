@@ -20,7 +20,7 @@ function RailCard({
     return (
         <section className={`overflow-hidden rounded-[25px] bg-card ${className ?? ""}`}>
             <h2 className="px-6 pb-2 pt-5 text-[24px] font-extrabold tracking-tight">{title}</h2>
-            <div className="hidden-scrollbar h-[calc(100%-4.25rem)] overflow-y-auto pb-4">
+            <div className="hidden-scrollbar h-[calc(100%-4.25rem)] pb-4">
                 {children}
             </div>
         </section>

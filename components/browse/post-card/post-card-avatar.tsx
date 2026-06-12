@@ -35,7 +35,6 @@ export function PostCardAvatar({ user, userId, connectTop, connectBottom }: Post
                         {(user.name?.[0] || "U")}
                     </div>
                 )}
-                {userId && <OnlineIndicator userId={userId} className="absolute bottom-0 right-0" />}
             </div>
 
         </div>
