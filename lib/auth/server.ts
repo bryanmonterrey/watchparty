@@ -109,6 +109,11 @@ export const auth = betterAuth({
   },
 
   account: {
+    // Mobile OAuth: the flow starts from the app's fetch, so the in-app
+    // browser receiving the provider callback never has the state cookie —
+    // skip that check. State itself is still DB-stored, single-use, expiring
+    // (verification.storeInDatabase above).
+    skipStateCookieCheck: true,
     accountLinking: {
       enabled: true,
       trustedProviders: ["kick", "discord"],
