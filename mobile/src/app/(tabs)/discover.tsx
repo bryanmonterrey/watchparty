@@ -38,7 +38,8 @@ export default function DiscoverScreen() {
     <View style={styles.flex}>
       <FlatList
         data={posts}
-        keyExtractor={(p) => p.id}
+        // feedKey, not id: repost rows share the original post's id.
+        keyExtractor={(p, i) => p.feedKey ?? `${p.id}-${i}`}
         renderItem={({ item }) => <PostCard post={item} />}
         contentContainerStyle={{ paddingTop: headerInset + 56 }}
         showsVerticalScrollIndicator={false}

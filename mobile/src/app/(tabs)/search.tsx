@@ -120,7 +120,7 @@ export default function SearchScreen() {
       ) : (
         <FlatList
           data={postRows}
-          keyExtractor={(p) => p.id}
+          keyExtractor={(p, i) => `${p.id}-${i}`}
           contentContainerStyle={{ paddingTop: headerInset + 116 }}
           showsVerticalScrollIndicator={false}
           onEndReachedThreshold={0.5}

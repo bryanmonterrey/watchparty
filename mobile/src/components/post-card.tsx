@@ -16,6 +16,8 @@ export type FeedPost = inferRouterOutputs<AppRouter>['content']['getFeed']['post
 // searchPosts rows satisfy it minus the optional repost/video-thumb fields.
 export interface PostCardData {
   id: string;
+  /** Unique per feed row — reposts share `id` with the original post. */
+  feedKey?: string | null;
   content: string | null;
   imageUrl: string | null;
   videoUrl?: string | null;
