@@ -43,7 +43,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# kick scraping & thumbnails
+# kick scraping
 kick_categories.json
 *.png
-/public/thumbnails/
+# public/thumbnails/ is committed — category cards serve from it in production
