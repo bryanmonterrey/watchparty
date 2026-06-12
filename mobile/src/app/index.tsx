@@ -74,10 +74,17 @@ export default function LoginScreen() {
   }, []);
 
   // Phantom answers via deep link (exp:// in Expo Go, watchparty:// in
-  // release builds) — feed every incoming link to the pending wallet flow.
+  // dev/release builds) — feed every incoming link to the pending wallet flow.
   useEffect(() => {
     const sub = Linking.addEventListener('url', (e) => handlePhantomRedirect(e.url));
     return () => sub.remove();
+  }, []);
+
+  // Installed-wallet detection — works in dev/release builds where
+  // LSApplicationQueriesSchemes applies (Expo Go always reports false).
+  const [phantomInstalled, setPhantomInstalled] = useState(false);
+  useEffect(() => {
+    Linking.canOpenURL('phantom://').then(setPhantomInstalled).catch(() => {});
   }, []);
 
   if (sessionPending) {
@@ -370,6 +377,7 @@ export default function LoginScreen() {
                     onPress={signInWithWallet}>
                     <PhantomIcon size={32} />
                     <Text style={styles.walletOptionText}>Phantom</Text>
+                    {phantomInstalled && <Text style={styles.installed}>Installed</Text>}
                   </Pressable>
 
                   {error && <Text style={styles.error}>{error}</Text>}
@@ -495,6 +503,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   walletOptionText: { color: '#fff', fontSize: 18, fontWeight: '600', letterSpacing: -0.3 },
+  installed: { color: '#00ED89', fontSize: 12, fontWeight: '700' },
   walletNote: { marginTop: 24, textAlign: 'center', color: '#71717a', fontSize: 13 },
   wordmark: {
     marginTop: 'auto',
