@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Plus } from 'lucide-react-native';
 
 import { AppHeader, useHeaderInset } from '@/components/app-header';
 import { PostCard } from '@/components/post-card';
@@ -18,7 +20,11 @@ type FeedType = (typeof TABS)[number]['id'];
 export default function DiscoverScreen() {
   const theme = useTheme();
   const headerInset = useHeaderInset();
+  const insets = useSafeAreaInsets();
   const [type, setType] = useState<FeedType>('for-you');
+
+  // Composer isn't ported yet (web: post-composer-dialog).
+  const compose = () => Alert.alert('Compose', 'Posting from the app is coming soon.');
 
   const feed = trpc.content.getFeed.useInfiniteQuery(
     { type, limit: 20 },
@@ -59,26 +65,35 @@ export default function DiscoverScreen() {
         }
       />
 
-      {/* Tab pills under the glass header */}
-      <View style={[styles.tabs, { top: headerInset + 8 }]}>
+      {/* Centered text tabs under the glass header (design: For you | Following + compose) */}
+      <View
+        style={[
+          styles.tabs,
+          { top: headerInset, borderBottomColor: theme.backgroundElement },
+        ]}>
         {TABS.map((t) => (
-          <Pressable
-            key={t.id}
-            style={[
-              styles.tab,
-              { backgroundColor: type === t.id ? theme.text : theme.backgroundElement },
-            ]}
-            onPress={() => setType(t.id)}>
+          <Pressable key={t.id} style={styles.tab} hitSlop={8} onPress={() => setType(t.id)}>
             <Text
               style={[
                 styles.tabText,
-                { color: type === t.id ? theme.background : theme.textSecondary },
+                { color: type === t.id ? theme.text : theme.textSecondary },
+                type === t.id && styles.tabActive,
               ]}>
               {t.label}
             </Text>
           </Pressable>
         ))}
+        <Pressable style={styles.tabPlus} hitSlop={8} onPress={compose}>
+          <Plus size={20} color={theme.textSecondary} />
+        </Pressable>
       </View>
+
+      {/* Compose FAB (black circle, bottom-right per design) */}
+      <Pressable
+        style={[styles.fab, { bottom: insets.bottom + 76, backgroundColor: theme.text }]}
+        onPress={compose}>
+        <Plus size={26} color={theme.background} />
+      </Pressable>
 
       <AppHeader wordmark />
     </View>
@@ -91,18 +106,32 @@ const styles = StyleSheet.create({
   footer: { paddingVertical: 24 },
   tabs: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    gap: 8,
-    zIndex: 30,
-  },
-  tab: {
-    paddingHorizontal: 16,
-    height: 36,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 48,
+    height: 44,
+    borderBottomWidth: 1,
+    zIndex: 30,
   },
-  tabText: { fontSize: 14, fontWeight: '600' },
+  tab: { height: '100%', justifyContent: 'center' },
+  tabText: { fontSize: 15, fontWeight: '500' },
+  tabActive: { fontWeight: '800' },
+  tabPlus: { position: 'absolute', right: 16 },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    zIndex: 30,
+  },
 });
