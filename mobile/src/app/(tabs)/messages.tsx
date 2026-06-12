@@ -14,6 +14,8 @@ import { Search as SearchIcon } from 'lucide-react-native';
 
 import { AppHeader, useHeaderInset } from '@/components/app-header';
 import { useTheme } from '@/hooks/use-theme';
+import { useE2E } from '@/hooks/use-e2e';
+import { decryptText, type E2EKeys } from '@/lib/e2e';
 import { relativeTime } from '@/lib/format';
 import { trpc } from '@/lib/trpc';
 
@@ -27,9 +29,11 @@ interface Conversation {
   groupAvatar: string | null;
   otherParticipantName: string | null;
   otherParticipantAvatar: string | null;
+  otherParticipantPublicKey: string | null;
   lastMessageAt: Date | string | null;
   lastMessageContent: string | null;
   lastMessageIsEncrypted: boolean | null;
+  lastMessageIv: string | null;
 }
 
 // Messages inbox, from "public/mobile designs/Messages page mobile
@@ -45,6 +49,7 @@ export default function MessagesScreen() {
 
   const list = trpc.conversation.list.useQuery();
   const unread = trpc.conversation.getUnreadCount.useQuery();
+  const { keys } = useE2E();
 
   const conversations = useMemo(() => {
     // Cast: the server's inferred row type collapses to never (see above).
@@ -68,6 +73,7 @@ export default function MessagesScreen() {
         renderItem={({ item }) => (
           <ConversationRow
             conversation={item}
+            keys={keys}
             onPress={() => router.push(`/messages/${item.id}`)}
           />
         )}
@@ -112,17 +118,24 @@ export default function MessagesScreen() {
 
 function ConversationRow({
   conversation: c,
+  keys,
   onPress,
 }: {
   conversation: Conversation;
+  keys: E2EKeys | null;
   onPress: () => void;
 }) {
   const theme = useTheme();
 
   const name = (c.isGroup ? c.groupName : c.otherParticipantName) ?? 'Conversation';
   const avatar = c.isGroup ? c.groupAvatar : c.otherParticipantAvatar;
+  // ECDH is symmetric, so the partner's key decrypts previews either way.
+  const decrypted =
+    c.lastMessageIsEncrypted && c.lastMessageContent && c.lastMessageIv && keys && c.otherParticipantPublicKey
+      ? decryptText(c.lastMessageContent, c.lastMessageIv, keys, c.otherParticipantPublicKey)
+      : null;
   const preview = c.lastMessageIsEncrypted
-    ? 'Encrypted message'
+    ? (decrypted ?? 'Encrypted message')
     : (c.lastMessageContent ?? 'Say hi 👋');
 
   return (
@@ -144,7 +157,7 @@ function ConversationRow({
           style={[
             styles.preview,
             { color: theme.textSecondary },
-            c.lastMessageIsEncrypted ? styles.encrypted : null,
+            c.lastMessageIsEncrypted && !decrypted ? styles.encrypted : null,
           ]}
           numberOfLines={1}>
           {preview}
