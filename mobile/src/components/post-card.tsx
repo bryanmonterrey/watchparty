@@ -11,16 +11,40 @@ import { trpc } from '@/lib/trpc';
 
 export type FeedPost = inferRouterOutputs<AppRouter>['content']['getFeed']['posts'][number];
 
+// Structural subset PostCard actually reads — getFeed rows satisfy it fully,
+// searchPosts rows satisfy it minus the optional repost/video-thumb fields.
+export interface PostCardData {
+  id: string;
+  content: string | null;
+  imageUrl: string | null;
+  videoUrl?: string | null;
+  videoThumbnailUrl?: string | null;
+  repostOfId?: string | null;
+  origContent?: string | null;
+  origImageUrl?: string | null;
+  likes: number | null;
+  comments: number | null;
+  reposts?: number | null;
+  views: number | null;
+  isLiked: boolean;
+  isReposted?: boolean;
+  createdAt: Date | string | null;
+  user: { name: string | null; username: string | null; avatar_url: string | null } | null;
+}
+
 // v1 of the discover post card (web: components/browse/post-card). Renders
 // author/text/image/video-thumb/counts with a working like toggle. Paywall,
 // polls, link previews, reposts-with-quote and content warnings come later.
-export function PostCard({ post }: { post: FeedPost }) {
+export function PostCard({ post }: { post: PostCardData }) {
   const theme = useTheme();
   const router = useRouter();
   const utils = trpc.useUtils();
 
   const toggleLike = trpc.content.toggleLike.useMutation({
-    onSuccess: () => utils.content.getFeed.invalidate(),
+    onSuccess: () => {
+      utils.content.getFeed.invalidate();
+      utils.content.searchPosts.invalidate();
+    },
   });
 
   const isRepost = !!post.repostOfId;
@@ -114,7 +138,7 @@ function relativeTime(date: Date | string | null): string {
   return `${Math.floor(s / 86400)}d`;
 }
 
-function compact(n: number | null): string {
+function compact(n: number | null | undefined): string {
   const v = n ?? 0;
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
