@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { Search as SearchIcon } from 'lucide-react-native';
 
 import { AppHeader, useHeaderInset } from '@/components/app-header';
@@ -143,9 +144,12 @@ function UserRow({
   user: { id: string; name: string | null; username: string | null; avatar_url: string | null };
 }) {
   const theme = useTheme();
+  const router = useRouter();
   return (
-    // TODO: push the profile route once it's ported (task #7).
-    <View style={styles.userRow}>
+    <Pressable
+      style={styles.userRow}
+      disabled={!user.username}
+      onPress={() => router.push(`/profile/${user.username}`)}>
       <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
         {user.avatar_url && (
           <Image source={{ uri: user.avatar_url }} style={styles.fill} contentFit="cover" />
@@ -155,7 +159,7 @@ function UserRow({
         <Text style={[styles.userName, { color: theme.text }]}>{user.name ?? user.username}</Text>
         <Text style={{ color: theme.textSecondary, fontSize: 13 }}>@{user.username}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

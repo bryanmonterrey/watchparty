@@ -7,6 +7,7 @@ import type { inferRouterOutputs } from '@trpc/server';
 // Type-only import (see src/lib/trpc.ts) — never a value import.
 import type { AppRouter } from '@/server/routers';
 import { useTheme } from '@/hooks/use-theme';
+import { compact, relativeTime } from '@/lib/format';
 import { trpc } from '@/lib/trpc';
 
 export type FeedPost = inferRouterOutputs<AppRouter>['content']['getFeed']['posts'][number];
@@ -53,7 +54,10 @@ export function PostCard({ post }: { post: PostCardData }) {
 
   return (
     <View style={[styles.card, { borderBottomColor: theme.backgroundElement }]}>
-      <View style={styles.authorRow}>
+      <Pressable
+        style={styles.authorRow}
+        disabled={!post.user?.username}
+        onPress={() => router.push(`/profile/${post.user!.username}`)}>
         <View style={[styles.avatar, { backgroundColor: theme.backgroundElement }]}>
           {post.user?.avatar_url && (
             <Image source={{ uri: post.user.avatar_url }} style={styles.fill} contentFit="cover" />
@@ -68,7 +72,7 @@ export function PostCard({ post }: { post: PostCardData }) {
             @{post.user?.username ?? 'unknown'} · {relativeTime(post.createdAt)}
           </Text>
         </View>
-      </View>
+      </Pressable>
 
       {!!text && <Text style={[styles.content, { color: theme.text }]}>{text}</Text>}
 
@@ -129,21 +133,7 @@ export function PostCard({ post }: { post: PostCardData }) {
   );
 }
 
-function relativeTime(date: Date | string | null): string {
-  if (!date) return '';
-  const s = Math.max(1, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
-  if (s < 60) return `${s}s`;
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return `${Math.floor(s / 86400)}d`;
-}
 
-function compact(n: number | null | undefined): string {
-  const v = n ?? 0;
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
-  return String(v);
-}
 
 const styles = StyleSheet.create({
   card: { paddingHorizontal: 16, paddingVertical: 14, gap: 10, borderBottomWidth: 1 },

@@ -11,17 +11,26 @@ import {
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Search as SearchIcon } from 'lucide-react-native';
-import type { inferRouterOutputs } from '@trpc/server';
 
 import { AppHeader, useHeaderInset } from '@/components/app-header';
 import { useTheme } from '@/hooks/use-theme';
 import { relativeTime } from '@/lib/format';
-// Type-only import (see src/lib/trpc.ts) — never a value import.
-import type { AppRouter } from '@/server/routers';
 import { trpc } from '@/lib/trpc';
 
-type Conversation =
-  inferRouterOutputs<AppRouter>['conversation']['list']['conversations'][number];
+// Structural row type — conversation.list's inferred type collapses to
+// never under mobile tsc (drizzle aliasedTable quirk), so declare what we
+// read. Fields mirror server/routers/conversation.ts list select.
+interface Conversation {
+  id: string;
+  isGroup: boolean | null;
+  groupName: string | null;
+  groupAvatar: string | null;
+  otherParticipantName: string | null;
+  otherParticipantAvatar: string | null;
+  lastMessageAt: Date | string | null;
+  lastMessageContent: string | null;
+  lastMessageIsEncrypted: boolean | null;
+}
 
 // Messages inbox, from "public/mobile designs/Messages page mobile
 // landing.svg": big title chrome, search pill, "Inbox (n)" + Requests,
@@ -38,7 +47,8 @@ export default function MessagesScreen() {
   const unread = trpc.conversation.getUnreadCount.useQuery();
 
   const conversations = useMemo(() => {
-    const all = list.data?.conversations ?? [];
+    // Cast: the server's inferred row type collapses to never (see above).
+    const all = (list.data?.conversations ?? []) as unknown as Conversation[];
     const q = filter.trim().toLowerCase();
     if (!q) return all;
     return all.filter((c) =>

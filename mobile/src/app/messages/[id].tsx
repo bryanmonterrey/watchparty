@@ -25,6 +25,7 @@ export default function ThreadScreen() {
 
   const messages = trpc.message.list.useQuery({ conversationId: id, limit: 100 });
   const conversation = trpc.conversation.get.useQuery({ conversationId: id });
+  const participants = trpc.conversation.getParticipants.useQuery({ conversationId: id });
 
   const utils = trpc.useUtils();
   const markAsRead = trpc.conversation.markAsRead.useMutation({
@@ -37,8 +38,11 @@ export default function ThreadScreen() {
   }, [id]);
 
   const convo = conversation.data?.conversation;
+  const partner = participants.data?.participants?.find(
+    (p) => p.userId !== session?.user.id,
+  );
   const title =
-    (convo?.isGroup ? convo?.groupName : convo?.otherParticipant?.name) ?? 'Conversation';
+    (convo?.isGroup ? convo?.groupName : (partner?.name ?? partner?.username)) ?? 'Conversation';
   const rows = [...(messages.data?.messages ?? [])].reverse();
 
   return (

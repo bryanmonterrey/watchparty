@@ -76,19 +76,24 @@ function Player({ video }: { video: VideoData }) {
         </Text>
 
         <View style={styles.authorRow}>
-          <View style={styles.avatar}>
-            {video.author.avatar_url && (
-              <Image source={{ uri: video.author.avatar_url }} style={styles.avatarImage} contentFit="cover" />
-            )}
-          </View>
-          <View style={styles.flex}>
-            <Text style={styles.authorName} numberOfLines={1}>
-              {video.author.name ?? video.author.username ?? 'Unknown'}
-            </Text>
-            <Text style={styles.muted}>
-              {Number(video.author.followerCount ?? 0).toLocaleString()} followers
-            </Text>
-          </View>
+          <Pressable
+            style={[styles.authorRow, styles.flex]}
+            disabled={!video.author.username}
+            onPress={() => router.push(`/profile/${video.author.username}`)}>
+            <View style={styles.avatar}>
+              {video.author.avatar_url && (
+                <Image source={{ uri: video.author.avatar_url }} style={styles.avatarImage} contentFit="cover" />
+              )}
+            </View>
+            <View style={styles.flex}>
+              <Text style={styles.authorName} numberOfLines={1}>
+                {video.author.name ?? video.author.username ?? 'Unknown'}
+              </Text>
+              <Text style={styles.muted}>
+                {Number(video.author.followerCount ?? 0).toLocaleString()} followers
+              </Text>
+            </View>
+          </Pressable>
           <Pressable
             style={styles.likeButton}
             disabled={toggleLike.isPending}
