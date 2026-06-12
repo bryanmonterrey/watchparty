@@ -68,7 +68,7 @@ export function MobileHeader() {
                     </button>
                     {!isDiscover && (
                         <Link href="/home" aria-label="Home" className="flex size-10 items-center justify-center overflow-hidden rounded-xl">
-                            <Image src="/icon.svg" alt="Watchparty" width={40} height={40} priority />
+                            <Image src="/icon.svg" alt="Watchparty" width={28} height={28} priority className="size-7" />
                         </Link>
                     )}
                 </div>
