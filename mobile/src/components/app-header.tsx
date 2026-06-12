@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { Star2Icon } from '@/components/icons';
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/auth-client';
+import { trpc } from '@/lib/trpc';
 
 export const HEADER_HEIGHT = 64;
 
@@ -62,6 +63,9 @@ function HeaderActions() {
     | { avatar_url?: string | null; image?: string | null; name?: string | null; email?: string }
     | undefined;
   const avatar = user?.avatar_url ?? user?.image ?? null;
+  const unread = trpc.notification.getUnreadCount.useQuery(undefined, {
+    refetchInterval: 60_000,
+  });
 
   function onAvatarPress() {
     // Settings doesn't exist on mobile yet — offer sign out from here.
@@ -76,10 +80,10 @@ function HeaderActions() {
       <Pressable hitSlop={8} onPress={() => router.push('/compose')}>
         <Plus size={28} color={theme.text} />
       </Pressable>
-      <Pressable hitSlop={8}>
+      <Pressable hitSlop={8} onPress={() => router.push('/notifications')}>
         <View>
           <Heart size={26} color={theme.text} />
-          <View style={styles.dot} />
+          {!!unread.data?.count && <View style={styles.dot} />}
         </View>
       </Pressable>
       <Pressable hitSlop={8} onPress={onAvatarPress}>
