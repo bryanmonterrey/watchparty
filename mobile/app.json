@@ -51,7 +51,7 @@
       "expo-video"
     ],
     "extra": {
-      "walletConnectProjectId": "8d7de790d4225d0bfd02ad68ad524d1f"
+      "supabaseUrl": "https://ugpzuypoyeuiebqbzqcm.supabase.co"
     },
     "experiments": {
       "typedRoutes": true,
