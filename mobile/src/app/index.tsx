@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { Redirect } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -21,6 +22,7 @@ import {
   GoogleIcon,
   KickIcon,
   MessagesIcon,
+  PhantomIcon,
   Star2Icon,
   TwitchIcon,
   XIcon,
@@ -28,6 +30,7 @@ import {
 import { OtpInput } from '@/components/otp-input';
 import { WaitingStep } from '@/components/waiting-step';
 import { authClient } from '@/lib/auth-client';
+import { cancelPhantomFlow, handlePhantomRedirect, signInWithPhantom } from '@/lib/phantom';
 
 // Native port of the web login (components/auth/login-card.tsx): same dark
 // single-screen flow with swapped states. Email OTP and OAuth (in-app
@@ -44,7 +47,7 @@ const PROVIDERS = [
 
 const RESEND_COOLDOWN = 60;
 
-type Step = 'methods' | 'confirm' | 'waiting';
+type Step = 'methods' | 'confirm' | 'waiting' | 'wallet';
 
 interface Waiting {
   name: string;
@@ -68,6 +71,13 @@ export default function LoginScreen() {
 
   useEffect(() => () => {
     if (timer.current) clearInterval(timer.current);
+  }, []);
+
+  // Phantom answers via deep link (exp:// in Expo Go, watchparty:// in
+  // release builds) — feed every incoming link to the pending wallet flow.
+  useEffect(() => {
+    const sub = Linking.addEventListener('url', (e) => handlePhantomRedirect(e.url));
+    return () => sub.remove();
   }, []);
 
   if (sessionPending) {
@@ -173,6 +183,34 @@ export default function LoginScreen() {
     }
   }
 
+  // Phantom deeplink flow: connect → sign the SIWS message → verify. On
+  // success the session store is poked and <Redirect> takes over.
+  async function signInWithWallet() {
+    setError(null);
+    setWaiting({
+      name: 'Phantom',
+      description: 'Approve the connection in Phantom to continue.',
+      icon: <PhantomIcon size={40} />,
+      retry: signInWithWallet,
+    });
+    setStep('waiting');
+    try {
+      await signInWithPhantom((stage) => {
+        if (stage === 'sign') {
+          setWaiting((w) =>
+            w ? { ...w, description: 'Sign the message in Phantom to finish logging in.' } : w,
+          );
+        } else if (stage === 'verify') {
+          setWaiting((w) => (w ? { ...w, description: 'Verifying your signature…' } : w));
+        }
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Wallet sign-in failed.';
+      if (msg !== 'cancelled') setError(msg);
+      setStep('wallet');
+    }
+  }
+
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.flex}>
@@ -183,11 +221,12 @@ export default function LoginScreen() {
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
             bounces={false}>
-            {step === 'confirm' && (
+            {(step === 'confirm' || step === 'wallet') && (
               <Pressable
                 style={styles.back}
                 hitSlop={12}
                 onPress={() => {
+                  cancelPhantomFlow();
                   setError(null);
                   setStep('methods');
                 }}>
@@ -247,10 +286,13 @@ export default function LoginScreen() {
 
                   <Text style={styles.or}>OR</Text>
 
-                  {/* Connect Wallet */}
+                  {/* Connect Wallet → wallet state */}
                   <Pressable
                     style={({ pressed }) => [styles.walletButton, pressed && styles.pressed]}
-                    onPress={() => comingSoon('Wallet sign-in')}>
+                    onPress={() => {
+                      setError(null);
+                      setStep('wallet');
+                    }}>
                     <Text style={styles.walletText}>Connect Wallet</Text>
                   </Pressable>
 
@@ -315,13 +357,36 @@ export default function LoginScreen() {
                     </Text>
                   </Pressable>
                 </>
+              ) : step === 'wallet' ? (
+                <>
+                  <Text style={styles.heading}>Connect Wallet</Text>
+                  <Text style={styles.confirmSubtitle}>
+                    Sign in with your Solana wallet. The wallet app opens to approve.
+                  </Text>
+
+                  <Pressable
+                    style={({ pressed }) => [styles.walletOption, pressed && styles.pressed]}
+                    onPress={signInWithWallet}>
+                    <PhantomIcon size={32} />
+                    <Text style={styles.walletOptionText}>Phantom</Text>
+                  </Pressable>
+
+                  {error && <Text style={styles.error}>{error}</Text>}
+
+                  <Text style={styles.walletNote}>
+                    MetaMask and more wallets are coming with WalletConnect.
+                  </Text>
+                </>
               ) : waiting ? (
                 <WaitingStep
                   name={waiting.name}
                   description={waiting.description}
                   icon={waiting.icon}
                   onContinue={waiting.retry}
-                  onBack={() => setStep('methods')}
+                  onBack={() => {
+                    cancelPhantomFlow();
+                    setStep('methods');
+                  }}
                 />
               ) : null}
             </View>
@@ -420,6 +485,18 @@ const styles = StyleSheet.create({
   completeDisabled: { opacity: 0.5 },
   completeText: { color: '#000', fontSize: 16, fontWeight: '600' },
   resend: { marginTop: 24, textAlign: 'center', color: '#71717a', fontSize: 14 },
+  walletOption: {
+    marginTop: 28,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: 'rgba(106,106,106,0.35)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  walletOptionText: { color: '#fff', fontSize: 18, fontWeight: '600', letterSpacing: -0.3 },
+  walletNote: { marginTop: 24, textAlign: 'center', color: '#71717a', fontSize: 13 },
   wordmark: {
     marginTop: 'auto',
     paddingVertical: 36,

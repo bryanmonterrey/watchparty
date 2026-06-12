@@ -2,7 +2,7 @@
 // components/auth/provider-icons.tsx). Path data copied verbatim — the
 // provider marks keep their original Figma canvas coordinates with the
 // viewBox positioned over each icon, same trick as on web.
-import Svg, { Circle, Path, type SvgProps } from 'react-native-svg';
+import Svg, { Circle, Path, Rect, type SvgProps } from 'react-native-svg';
 
 type IconProps = SvgProps & { size?: number };
 
@@ -59,6 +59,21 @@ export function BackArrowIcon({ size = 24, ...props }: IconProps) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </Svg>
+  );
+}
+
+// Simplified ghost mark on Phantom purple — swap for the brand asset later.
+export function PhantomIcon({ size = 40, ...props }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 40 40" fill="none" {...props}>
+      <Rect width={40} height={40} rx={12} fill="#AB9FF2" />
+      <Path
+        d="M20 8c-7 0-12 5.5-12 12.5V30c0 .8.9 1.3 1.6.8l2.2-1.7 2.5 2 2.6-2 2.6 2 2.6-2 2.5 2 2.2 1.7c.7.5 1.6 0 1.6-.8v-9.5C32 13.5 27 8 20 8Z"
+        fill="#fff"
+      />
+      <Circle cx={15.5} cy={19} r={2} fill="#AB9FF2" />
+      <Circle cx={24.5} cy={19} r={2} fill="#AB9FF2" />
     </Svg>
   );
 }
