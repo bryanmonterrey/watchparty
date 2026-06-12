@@ -100,25 +100,32 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
     // Click-drag to scroll (mouse/pen only — touch keeps native momentum).
     // Incremental (delta per move) so it survives the wrap's scrollLeft jumps.
     // `moved` suppresses the click that would otherwise end the drag.
-    const drag = useRef({ on: false, startX: 0, lastX: 0, moved: false });
+    const drag = useRef({ on: false, startX: 0, lastX: 0, moved: false, captured: false });
     const onPointerDown = (e: React.PointerEvent) => {
         if (e.pointerType === "touch" || !scrollerRef.current) return;
-        drag.current = { on: true, startX: e.clientX, lastX: e.clientX, moved: false };
-        scrollerRef.current.setPointerCapture(e.pointerId);
+        // Do NOT setPointerCapture here: capturing on pointerdown retargets the
+        // synthesized click to the scroller (the common ancestor of down/up), so
+        // a panel never receives its click and click-to-open silently breaks.
+        // Capture only once an actual drag begins (below).
+        drag.current = { on: true, startX: e.clientX, lastX: e.clientX, moved: false, captured: false };
     };
     const onPointerMove = (e: React.PointerEvent) => {
         const el = scrollerRef.current;
         if (!el || !drag.current.on) return;
         // Incremental (delta from last move) keeps scrolling correct across the
-        // wrap's scrollLeft jumps; the drag-vs-click decision uses NET distance
-        // from the start so a jittery stationary click isn't read as a drag.
+        // wrap's scrollLeft jumps; the drag-vs-click decision uses NET distance.
         el.scrollLeft -= e.clientX - drag.current.lastX;
         drag.current.lastX = e.clientX;
-        if (Math.abs(e.clientX - drag.current.startX) > 5) drag.current.moved = true;
+        if (!drag.current.moved && Math.abs(e.clientX - drag.current.startX) > 5) {
+            drag.current.moved = true;
+            el.setPointerCapture(e.pointerId); // now safe — a plain click never reaches here
+            drag.current.captured = true;
+        }
     };
     const onPointerUp = (e: React.PointerEvent) => {
+        if (drag.current.captured) scrollerRef.current?.releasePointerCapture(e.pointerId);
         drag.current.on = false;
-        scrollerRef.current?.releasePointerCapture(e.pointerId);
+        drag.current.captured = false;
     };
 
     if (n === 0) return null;
