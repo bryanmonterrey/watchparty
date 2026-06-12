@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Heart } from 'lucide-react-native';
+import { Heart, MessageCircle } from 'lucide-react-native';
 
 import type { inferRouterOutputs } from '@trpc/server';
 
@@ -104,6 +104,12 @@ function Player({ video }: { video: VideoData }) {
               fill={video.isLiked ? '#ef4444' : 'transparent'}
             />
             <Text style={styles.likeCount}>{likes.toLocaleString()}</Text>
+          </Pressable>
+          <Pressable
+            style={styles.likeButton}
+            onPress={() => router.push(`/comments/${video.id}`)}>
+            <MessageCircle size={20} color="#fff" />
+            <Text style={styles.likeCount}>{(video.comments ?? 0).toLocaleString()}</Text>
           </Pressable>
         </View>
 

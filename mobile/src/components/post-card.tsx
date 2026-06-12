@@ -110,12 +110,15 @@ export function PostCard({ post }: { post: PostCardData }) {
             {compact(post.likes)}
           </Text>
         </Pressable>
-        <View style={styles.count}>
+        <Pressable
+          style={styles.count}
+          hitSlop={8}
+          onPress={() => router.push(`/comments/${post.repostOfId ?? post.id}`)}>
           <MessageCircle size={18} color={theme.textSecondary} />
           <Text style={[styles.countText, { color: theme.textSecondary }]}>
             {compact(post.comments)}
           </Text>
-        </View>
+        </Pressable>
         <View style={styles.count}>
           <Repeat2 size={18} color={post.isReposted ? '#22c55e' : theme.textSecondary} />
           <Text style={[styles.countText, { color: theme.textSecondary }]}>
