@@ -110,9 +110,9 @@ function VideoRow({ videos, isLoading }: { videos: FeedVideo[]; isLoading: boole
 
 function VideoCard({ video }: { video: FeedVideo }) {
   const theme = useTheme();
+  const router = useRouter();
   return (
-    // TODO: push the video detail route once it's ported.
-    <Pressable style={styles.card}>
+    <Pressable style={styles.card} onPress={() => router.push(`/watch/${video.id}`)}>
       <View style={[styles.thumb, { backgroundColor: theme.backgroundElement }]}>
         {video.thumbnailUrl && (
           <Image

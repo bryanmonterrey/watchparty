@@ -47,7 +47,8 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-video"
     ],
     "extra": {
       "walletConnectProjectId": "8d7de790d4225d0bfd02ad68ad524d1f"
