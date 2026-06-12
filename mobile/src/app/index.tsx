@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,22 +26,32 @@ import {
   XIcon,
 } from '@/components/icons';
 import { OtpInput } from '@/components/otp-input';
+import { WaitingStep } from '@/components/waiting-step';
 import { authClient } from '@/lib/auth-client';
 
 // Native port of the web login (components/auth/login-card.tsx): same dark
-// single-screen flow with swapped states. Email OTP is fully wired; OAuth,
-// wallet, and passkey render per the design but land in a later pass.
+// single-screen flow with swapped states. Email OTP and OAuth (in-app
+// browser via @better-auth/expo) are wired; wallet needs WalletConnect deep
+// links and passkey needs the EAS dev build (associated domain) — later.
+// `provider` is the better-auth social id (X signs in via "twitter").
 const PROVIDERS = [
-  { id: 'google', label: 'Continue with Google', Icon: GoogleIcon, size: 26 },
-  { id: 'x', label: 'Continue with X', Icon: XIcon, size: 24 },
-  { id: 'twitch', label: 'Continue with Twitch', Icon: TwitchIcon, size: 26 },
-  { id: 'kick', label: 'Continue with Kick', Icon: KickIcon, size: 23 },
-  { id: 'discord', label: 'Continue with Discord', Icon: DiscordIcon, size: 33 },
+  { id: 'google', provider: 'google', label: 'Continue with Google', Icon: GoogleIcon, size: 26 },
+  { id: 'x', provider: 'twitter', label: 'Continue with X', Icon: XIcon, size: 24 },
+  { id: 'twitch', provider: 'twitch', label: 'Continue with Twitch', Icon: TwitchIcon, size: 26 },
+  { id: 'kick', provider: 'kick', label: 'Continue with Kick', Icon: KickIcon, size: 23 },
+  { id: 'discord', provider: 'discord', label: 'Continue with Discord', Icon: DiscordIcon, size: 33 },
 ] as const;
 
 const RESEND_COOLDOWN = 60;
 
-type Step = 'methods' | 'confirm';
+type Step = 'methods' | 'confirm' | 'waiting';
+
+interface Waiting {
+  name: string;
+  description: string;
+  icon: ReactNode;
+  retry: () => void;
+}
 
 export default function LoginScreen() {
   const { data: session, isPending: sessionPending } = authClient.useSession();
@@ -53,6 +63,7 @@ export default function LoginScreen() {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [waiting, setWaiting] = useState<Waiting | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => () => {
@@ -138,6 +149,30 @@ export default function LoginScreen() {
     Alert.alert(what, `${what} is coming to the iOS app soon. Use email for now.`);
   }
 
+  // Opens the provider in an in-app browser sheet; @better-auth/expo handles
+  // the deep-link redirect back and persists the session cookie. On success
+  // useSession() refreshes and <Redirect> takes over.
+  async function signInWithProvider(meta: (typeof PROVIDERS)[number]) {
+    const name = meta.label.replace('Continue with ', '');
+    setWaiting({
+      name,
+      description: `Redirecting you to ${name} to finish signing in.`,
+      icon: <meta.Icon size={40} />,
+      retry: () => signInWithProvider(meta),
+    });
+    setStep('waiting');
+    const { error } = await authClient.signIn.social({
+      provider: meta.provider,
+      callbackURL: '/',
+    });
+    // Failure or user-cancelled browser alike: back to the options quietly,
+    // matching the web behavior (details to the console).
+    if (error) {
+      console.error('[auth] social sign-in failed:', error);
+      setStep('methods');
+    }
+  }
+
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.flex}>
@@ -180,7 +215,7 @@ export default function LoginScreen() {
                           styles.providerButton,
                           pressed && styles.pressed,
                         ]}
-                        onPress={() => comingSoon(label.replace('Continue with ', '') + ' sign-in')}>
+                        onPress={() => signInWithProvider(PROVIDERS.find((p) => p.id === id)!)}>
                         <Icon size={size} />
                       </Pressable>
                     ))}
@@ -241,7 +276,7 @@ export default function LoginScreen() {
                     </Text>
                   </View>
                 </>
-              ) : (
+              ) : step === 'confirm' ? (
                 <>
                   <Text style={styles.heading}>Confirm Email</Text>
                   <Text style={styles.confirmSubtitle}>
@@ -280,7 +315,15 @@ export default function LoginScreen() {
                     </Text>
                   </Pressable>
                 </>
-              )}
+              ) : waiting ? (
+                <WaitingStep
+                  name={waiting.name}
+                  description={waiting.description}
+                  icon={waiting.icon}
+                  onContinue={waiting.retry}
+                  onBack={() => setStep('methods')}
+                />
+              ) : null}
             </View>
 
             {/* Wordmark — shared across states */}
