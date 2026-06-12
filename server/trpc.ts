@@ -42,7 +42,7 @@ export const publicProcedure = t.procedure;
  * Use this for any endpoint that needs a logged-in user
  */
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-    if (!ctx.user) {
+    if (!ctx.user || !ctx.session) {
         throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "You must be logged in to access this resource",
@@ -52,7 +52,8 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     return next({
         ctx: {
             ...ctx,
-            user: ctx.user, // Now user is guaranteed to exist
+            user: ctx.user, // Now user and session are guaranteed to exist
+            session: ctx.session,
         },
     });
 });

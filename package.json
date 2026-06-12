@@ -13,6 +13,7 @@
     "@aws-sdk/client-ivschat": "^3.1066.0",
     "@base-org/account": "^2.5.6",
     "@base-ui/react": "^1.5.0",
+    "@better-auth/expo": "1.6.16",
     "@better-auth/infra": "^0.2.14",
     "@better-auth/passkey": "^1.6.16",
     "@coral-xyz/anchor": "^0.32.1",

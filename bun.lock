@@ -9,6 +9,7 @@
         "@aws-sdk/client-ivschat": "^3.1066.0",
         "@base-org/account": "^2.5.6",
         "@base-ui/react": "^1.5.0",
+        "@better-auth/expo": "1.6.16",
         "@better-auth/infra": "^0.2.14",
         "@better-auth/passkey": "^1.6.16",
         "@coral-xyz/anchor": "^0.32.1",
@@ -237,6 +238,8 @@
     "@better-auth/core": ["@better-auth/core@1.6.16", "", { "dependencies": { "@opentelemetry/semantic-conventions": "^1.39.0", "@standard-schema/spec": "^1.1.0", "zod": "^4.3.6" }, "peerDependencies": { "@better-auth/utils": "0.4.1", "@better-fetch/fetch": "1.2.2", "@cloudflare/workers-types": ">=4", "@opentelemetry/api": "^1.9.0", "better-call": "1.3.6", "jose": "^6.1.0", "kysely": "^0.28.5 || ^0.29.0", "nanostores": "^1.0.1" }, "optionalPeers": ["@cloudflare/workers-types", "@opentelemetry/api"] }, "sha512-a0+ZNaaYYxOdFXFXmOE36TgtYN8QDzSYDozaAH0zsiWB0oyljsENyCxHJSekysISftb0rFpVXNdw525aEAOa6w=="],
 
     "@better-auth/drizzle-adapter": ["@better-auth/drizzle-adapter@1.6.16", "", { "peerDependencies": { "@better-auth/core": "^1.6.16", "@better-auth/utils": "0.4.1", "drizzle-orm": "^0.45.2" }, "optionalPeers": ["drizzle-orm"] }, "sha512-AZjswadpR7zlQduj3fRSsu1R5ldQRR9AeFqoxXRI4colrQhevOVY+tJr8RTJv9Nh18e9FMYDXUju2GX+QWHDzg=="],
+
+    "@better-auth/expo": ["@better-auth/expo@1.6.16", "", { "dependencies": { "@better-fetch/fetch": "1.2.2", "better-call": "1.3.6", "zod": "^4.3.6" }, "peerDependencies": { "@better-auth/core": "^1.6.16", "better-auth": "^1.6.16", "expo-constants": ">=17.0.0", "expo-linking": ">=7.0.0", "expo-network": ">=8.0.7", "expo-web-browser": ">=14.0.0" }, "optionalPeers": ["expo-constants", "expo-linking", "expo-network", "expo-web-browser"] }, "sha512-uXnbu6d5EbBVMtmRTjyI5RAsJHcJYCtnfNar8C2RpcJecL4Fws3fhNSI8tkJHDEdNAZ2Hn70DNy2x4eb/t8irA=="],
 
     "@better-auth/infra": ["@better-auth/infra@0.2.14", "", { "dependencies": { "@better-auth/utils": "^0.4.1", "@better-fetch/fetch": "^1.1.21", "better-call": "^1.3.2", "jose": "^6.1.0", "libphonenumber-js": "^1.13.3" }, "peerDependencies": { "@better-auth/core": ">=1.4.0", "@better-auth/sso": ">=1.4.0", "@react-native-async-storage/async-storage": ">=1.21.0", "better-auth": ">=1.4.0", "expo-constants": ">=16.0.0", "expo-crypto": ">=13.0.0", "expo-device": ">=6.0.0", "react-native": ">=0.74.0", "zod": ">=4.1.12" }, "optionalPeers": ["@react-native-async-storage/async-storage", "expo-constants", "expo-crypto", "expo-device", "react-native"] }, "sha512-CAX4b2ZaN7rKNEFuoQeHc3aBfWR6I6wPGOrmyb31eADEooNN9cp48Uz0bGF2Uq41bbxMe7KPJaI4iuliT/8tXg=="],
 

@@ -16,6 +16,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { customSession, multiSession, emailOTP, admin, twoFactor } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
+import { expo } from "@better-auth/expo";
 import { db } from "@/db";
 import { user, session, account, verification, passkey as passkeyTable, walletAddress } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
@@ -32,6 +33,9 @@ const config = {
     "http://localhost:3000",
     "http://localhost:3001",
     "https://watchparty.xyz",
+    // React Native app (mobile/): release scheme + Expo Go dev client.
+    "watchparty://",
+    "exp://",
   ],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7d
@@ -139,6 +143,9 @@ export const auth = betterAuth({
 
   // Plugin order: SIWS → Passkey → Email OTP → Custom → ... → nextCookies LAST.
   plugins: [
+    // React Native (mobile/) — cookie handling for the Expo auth client.
+    expo(),
+
     // Solana wallet sign-in (Sign-In With Solana).
     siwsPlugin({
       domain: process.env.NEXT_PUBLIC_AUTH_DOMAIN ?? "localhost",
