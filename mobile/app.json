@@ -10,7 +10,17 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "xyz.watchparty.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "phantom",
+          "solflare",
+          "backpack",
+          "metamask",
+          "trust",
+          "rainbow"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
