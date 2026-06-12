@@ -23,7 +23,9 @@ export default function TabsLayout() {
   }
 
   return (
-    <NativeTabs>
+    // Icon-only pill (per the mobile design SVGs) that minimizes while
+    // scrolling — both native iOS 26 Liquid Glass behaviors.
+    <NativeTabs labelVisibilityMode="unlabeled" minimizeBehavior="onScrollDown">
       <NativeTabs.Trigger name="home">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
