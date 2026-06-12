@@ -212,7 +212,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="bg-background text-white/80 hover:text-white w-(--sidebar-width) p-0 [&>button]:hidden"
+          className="bg-background text-white/80 hover:text-white w-(--sidebar-width) border-0 p-0 [&>button]:hidden"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
