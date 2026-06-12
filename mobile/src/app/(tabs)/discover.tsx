@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
 
@@ -21,10 +22,10 @@ export default function DiscoverScreen() {
   const theme = useTheme();
   const headerInset = useHeaderInset();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [type, setType] = useState<FeedType>('for-you');
 
-  // Composer isn't ported yet (web: post-composer-dialog).
-  const compose = () => Alert.alert('Compose', 'Posting from the app is coming soon.');
+  const compose = () => router.push('/compose');
 
   const feed = trpc.content.getFeed.useInfiniteQuery(
     { type, limit: 20 },

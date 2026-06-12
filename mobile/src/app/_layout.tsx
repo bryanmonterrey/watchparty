@@ -9,7 +9,9 @@ export default function RootLayout() {
   return (
     <AppProviders>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="compose" options={{ presentation: 'modal' }} />
+        </Stack>
       </ThemeProvider>
     </AppProviders>
   );

@@ -73,7 +73,7 @@ function HeaderActions() {
 
   return (
     <View style={styles.actions}>
-      <Pressable hitSlop={8} onPress={() => router.push('/discover')}>
+      <Pressable hitSlop={8} onPress={() => router.push('/compose')}>
         <Plus size={28} color={theme.text} />
       </Pressable>
       <Pressable hitSlop={8}>
