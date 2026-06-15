@@ -56,7 +56,7 @@ export function MobileHeader() {
         <header
             className={cn(
                 "fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between px-4 md:hidden",
-                "bg-background/85 backdrop-blur-xl"
+                "bg-background/25 backdrop-blur-xl"
             )}
         >
             {titled ? (
