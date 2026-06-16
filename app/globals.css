@@ -26,6 +26,10 @@
      header consumes this via px-(--header-px); match page content to it with
      px-(--header-px) so everything shares one gutter. */
   --header-px: 1rem;
+  /* Video-player control height: the play button sets it; every control
+     button and the right-controls pill match it via h-(--player-control-h)
+     so the chrome row stays a single consistent height. */
+  --player-control-h: 40px;
   --background: oklch(0.967 0.001 286.4);
   /* ~#F4F4F5 canvas from the designs */
   --foreground: oklch(0.145 0 0);

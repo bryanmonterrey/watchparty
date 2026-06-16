@@ -328,7 +328,7 @@ export function ControlsBar({
 
                     <button
                         onClick={() => isEnded ? onReplay() : void togglePlay()}
-                        className="ytp-button cursor-pointer p-1 bg-black/30 flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors"
+                        className="ytp-button h-(--player-control-h) cursor-pointer p-1 bg-black/30 flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors"
                     >
                         <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
                             {isEnded
@@ -338,19 +338,21 @@ export function ControlsBar({
                         </div>
                     </button>
 
-                    {/* Loop toggle */}
-                    <button
-                        onClick={toggleLoop}
-                        className={cn(
-                            "ytp-button cursor-pointer p-1 flex items-center justify-center rounded-full transition-colors",
-                            loop ? "text-twitter2" : "text-white/60 hover:text-white"
-                        )}
-                        title={loop ? "Loop on" : "Loop off"}
-                    >
-                        <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
-                            <YTLoopIcon className="size-[20px]" />
-                        </div>
-                    </button>
+                    {/* Loop toggle — end screen only (replay/loop pair). */}
+                    {isEnded && (
+                        <button
+                            onClick={toggleLoop}
+                            className={cn(
+                                "ytp-button h-(--player-control-h) cursor-pointer p-1 flex items-center justify-center rounded-full transition-colors",
+                                loop ? "text-twitter2" : "text-white/60 hover:text-white"
+                            )}
+                            title={loop ? "Loop on" : "Loop off"}
+                        >
+                            <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
+                                <YTLoopIcon className="size-[24px]" />
+                            </div>
+                        </button>
+                    )}
 
                     {/* Volume */}
                     <div
@@ -360,9 +362,9 @@ export function ControlsBar({
                             adjustVolume(Math.max(0, Math.min(1, (isMuted ? 0 : volume) + (e.deltaY < 0 ? 0.05 : -0.05))));
                         }}
                     >
-                        <div className="bg-black/30 transition-[width] duration-200 ease-out p-1 rounded-full flex items-center justify-center">
+                        <div className="bg-black/30 h-(--player-control-h) transition-[width] duration-200 ease-out p-1 rounded-full flex items-center justify-center">
                             <div className="flex items-center hover:bg-white/20 rounded-full p-1">
-                                <button onClick={toggleMute} className="ytp-button cursor-pointer flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors">
+                                <button onClick={toggleMute} className="ytp-button h-full cursor-pointer flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors">
                                     <VolumeMorph level={volumeLevel} className="size-[24px] cursor-pointer" />
                                 </button>
                                 <div className="w-0 group-hover/vol:w-[56px] overflow-hidden h-6 transition-[width] duration-200 ease-out flex items-center justify-center">
@@ -395,7 +397,7 @@ export function ControlsBar({
 
                     {/* Time display — LIVE badge for streams, click-to-toggle remaining for VOD */}
                     {isLive ? (
-                        <div className="flex items-center p-1 bg-black/30 rounded-full">
+                        <div className="flex h-(--player-control-h) items-center p-1 bg-black/30 rounded-full">
                             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full">
                                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                                 <span className="text-white text-[13px] font-semibold tracking-wide">LIVE</span>
@@ -403,7 +405,7 @@ export function ControlsBar({
                         </div>
                     ) : (
                         <div
-                            className="flex items-center p-1 bg-black/30 cursor-pointer rounded-full"
+                            className="flex h-(--player-control-h) items-center p-1 bg-black/30 cursor-pointer rounded-full"
                             onClick={() => setShowTimeRemaining(v => !v)}
                         >
                             <div className="flex items-center hover:bg-white/35 px-2 transition-colors text-white text-[13px] font-normal tabular-nums p-1 rounded-full">
@@ -429,7 +431,7 @@ export function ControlsBar({
 
                 {/* Right controls */}
                 <div className="ytp-right-controls flex items-center h-full">
-                    <div className="relative flex items-center gap-1 justify-center p-1 bg-black/30 cursor-pointer rounded-full">
+                    <div className="relative flex h-(--player-control-h) items-center gap-1 justify-center p-1 bg-black/30 cursor-pointer rounded-full">
 
                         {/* ── Settings popup ──────────────────────────── */}
                         <SettingsMenu
@@ -462,7 +464,7 @@ export function ControlsBar({
 
                         {show("autoplay") && (
                             <button
-                                className="ytp-button p-1 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                className="ytp-button h-full p-1 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
                                 onClick={() => setAutoplay(a => !a)}
                                 title={autoplay ? "Autoplay is on" : "Autoplay is off"}
                             >
@@ -480,7 +482,7 @@ export function ControlsBar({
 
                         {show("subtitles") && (
                             <button
-                                className={cn("ytp-button p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center", selectedTrack >= 0 ? "text-twitter2" : "text-white/90 hover:text-white")}
+                                className={cn("ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center", selectedTrack >= 0 ? "text-twitter2" : "text-white/90 hover:text-white")}
                                 onClick={() => setSubtitleTrack(selectedTrack >= 0 ? -1 : (textTracks[0]?.index ?? 0))}
                                 title={selectedTrack >= 0 ? "Subtitles on" : "Subtitles off"}
                             >
@@ -490,7 +492,7 @@ export function ControlsBar({
 
                         {show("settings") && (
                             <button
-                                className="ytp-button p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white relative"
+                                className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white relative"
                                 onClick={() => setOpenMenu(m => m === "settings" ? null : "settings")}
                                 title="Settings"
                             >
@@ -503,7 +505,7 @@ export function ControlsBar({
 
                         {show("pip") && (
                             <button
-                                className="ytp-button px-2 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                className="ytp-button h-full px-2 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
                                 onClick={() => onEnterMiniPlayer?.(videoRef.current?.currentTime ?? 0)}
                                 title="Mini player"
                             >
@@ -513,7 +515,7 @@ export function ControlsBar({
 
                         {show("airplay") && airplayAvailable && (
                             <button
-                                className="ytp-button p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 onClick={() => (videoRef.current as any)?.webkitShowPlaybackTargetPicker?.()}
                                 title="AirPlay"
@@ -524,7 +526,7 @@ export function ControlsBar({
 
                         {show("theater") && (
                             <button
-                                className={cn("ytp-button p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center hover:text-white", isTheaterMode ? "text-twitter2" : "text-white/90")}
+                                className={cn("ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center hover:text-white", isTheaterMode ? "text-twitter2" : "text-white/90")}
                                 onClick={toggleTheaterMode}
                                 title={isTheaterMode ? "Default view" : "Theater mode"}
                             >
@@ -536,7 +538,7 @@ export function ControlsBar({
                             <a
                                 href={videoUrl}
                                 download
-                                className="ytp-button p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
                                 title="Download"
                                 onClick={e => e.stopPropagation()}
                             >
@@ -546,7 +548,7 @@ export function ControlsBar({
 
                         <button
                             onClick={toggleFullscreen}
-                            className="ytp-button p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                            className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
                         >
                             <FullscreenMorph active={isFullscreen} className="size-[24px]" />
                         </button>
