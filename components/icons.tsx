@@ -2508,3 +2508,26 @@ export function CloseIcon(props: React.SVGProps<SVGSVGElement>) {
         </svg>
     );
 }
+
+// Clock / "watch later". Migrated from public/clock.svg. Stroke-based so it
+// scales via className (size-*).
+export function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" {...props}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8V12L14 14" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+// Queue / "add to queue" (stacked lines with a highlighted bottom bar).
+// Migrated from public/queue.svg.
+export function QueueIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+            <path d="M18 18H6C5.05719 18 4.58579 18 4.29289 17.7071C4 17.4142 4 16.9428 4 16C4 15.0572 4 14.5858 4.29289 14.2929C4.58579 14 5.05719 14 6 14H18C18.9428 14 19.4142 14 19.7071 14.2929C20 14.5858 20 15.0572 20 16C20 16.9428 20 17.4142 19.7071 17.7071C19.4142 18 18.9428 18 18 18Z" />
+            <path d="M4 10H20" />
+            <path d="M4 6H20" />
+        </svg>
+    );
+}

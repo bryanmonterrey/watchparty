@@ -240,6 +240,25 @@
       opacity: 0;
     }
   }
+
+  /* Staggered skeleton pulse: a narrow brightness spike that, when each item's
+     animation-delay is offset by (duration / itemCount), travels across the row
+     one item at a time. See lib/skeleton-stagger.ts. */
+  @keyframes stagger-pulse {
+
+    0%,
+    100% {
+      opacity: 0.4;
+    }
+
+    4% {
+      opacity: 1;
+    }
+
+    10% {
+      opacity: 0.4;
+    }
+  }
 }
 
 body {

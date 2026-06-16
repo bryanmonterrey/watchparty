@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { staggerPulse } from "@/lib/skeleton-stagger";
 import { CATEGORIES } from "./video-feed/types";
 
 // Minimal shape this view reads — the feed procedure returns richer rows
@@ -33,8 +34,13 @@ function VideoRow({ videos, isLoading }: { videos: FeedVideo[]; isLoading: boole
     if (isLoading) {
         return (
             <div className="flex gap-4 overflow-x-hidden px-5">
-                <Skeleton className="aspect-video w-[320px] shrink-0 rounded-xl" />
-                <Skeleton className="aspect-video w-[320px] shrink-0 rounded-xl" />
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton
+                        key={i}
+                        style={staggerPulse(i, 3)}
+                        className="aspect-video w-[320px] shrink-0 rounded-xl"
+                    />
+                ))}
             </div>
         );
     }

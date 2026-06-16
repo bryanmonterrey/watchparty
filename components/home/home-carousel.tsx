@@ -4,6 +4,7 @@ import { useState, useRef, useLayoutEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { staggerPulse } from "@/lib/skeleton-stagger";
 
 // Hero strip per desktopdesigns/homecarousel.svg, scaled to 24 videos with a
 // seamless infinite loop.
@@ -262,45 +263,53 @@ function CarouselArrow({ side, onClick }: { side: "left" | "right"; onClick: () 
     );
 }
 
+// 8 peeks on each side of the centered active panel.
+const SKELETON_PANELS = 17;
+const SKELETON_ACTIVE_INDEX = 8;
+
 export function HomeCarouselSkeleton() {
     // Mirrors the carousel's resting state: the wide active panel centered with
     // narrow peeks flanking it. Same panel dimensions/structure as the live
     // version (avatar on closed panels, avatar + caption on the active one),
-    // minus the scrolling, edge arrows, and interaction.
+    // minus the scrolling, edge arrows, and interaction. Each panel pulses as
+    // one object; the brightness spike travels across the row one panel at a
+    // time (see staggerPulse).
+    const activePulse = staggerPulse(SKELETON_ACTIVE_INDEX, SKELETON_PANELS);
     return (
         <div className="relative w-full overflow-hidden">
             <div className="flex h-[clamp(260px,23vw,360px)] justify-center gap-4 px-[3%]">
                 {/* Enough peeks to fill the widest viewport on each side of the
                     active panel; overflow-hidden trims the surplus. */}
                 {Array.from({ length: 8 }).map((_, i) => (
-                    <ClosedPanelSkeleton key={`l-${i}`} />
+                    <ClosedPanelSkeleton key={`l-${i}`} index={i} count={SKELETON_PANELS} />
                 ))}
                 {/* Active panel: blurred thumbnail with avatar + caption at the bottom. */}
                 <div className="relative h-full w-[min(760px,52vw)] shrink-0 overflow-hidden rounded-[20px] bg-muted">
-                    <Skeleton className="absolute inset-0 size-full rounded-none" />
+                    <Skeleton style={activePulse} className="absolute inset-0 size-full rounded-none" />
                     <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-6">
-                        <Skeleton className="size-10 shrink-0 rounded-full bg-zinc-700" />
+                        <Skeleton style={activePulse} className="size-10 shrink-0 rounded-full bg-zinc-700" />
                         <div className="min-w-0 flex-1 space-y-2">
-                            <Skeleton className="h-5 w-1/2 bg-zinc-700" />
-                            <Skeleton className="h-3.5 w-1/4 bg-zinc-700" />
+                            <Skeleton style={activePulse} className="h-5 w-1/2 bg-zinc-700" />
+                            <Skeleton style={activePulse} className="h-3.5 w-1/4 bg-zinc-700" />
                         </div>
                     </div>
                 </div>
                 {Array.from({ length: 8 }).map((_, i) => (
-                    <ClosedPanelSkeleton key={`r-${i}`} />
+                    <ClosedPanelSkeleton key={`r-${i}`} index={SKELETON_ACTIVE_INDEX + 1 + i} count={SKELETON_PANELS} />
                 ))}
             </div>
         </div>
     );
 }
 
-function ClosedPanelSkeleton() {
+function ClosedPanelSkeleton({ index, count }: { index: number; count: number }) {
     // Closed panel: blurred thumbnail with the creator avatar centered.
+    const pulse = staggerPulse(index, count);
     return (
         <div className="relative h-full w-[116px] shrink-0 overflow-hidden rounded-[20px] bg-muted">
-            <Skeleton className="absolute inset-0 size-full rounded-none" />
+            <Skeleton style={pulse} className="absolute inset-0 size-full rounded-none" />
             <div className="absolute inset-0 flex items-center justify-center">
-                <Skeleton className="size-14 rounded-full bg-zinc-700" />
+                <Skeleton style={pulse} className="size-14 rounded-full bg-zinc-700" />
             </div>
         </div>
     );

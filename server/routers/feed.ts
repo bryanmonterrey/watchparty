@@ -300,6 +300,11 @@ export const feedRouter = router({
                     thumbnailUrl: posts.thumbnailUrl,
                     title: posts.title,
                     duration: posts.duration,
+                    category: posts.category,
+                    // The signed-in user's saved playback position for this video
+                    // (0 when none). Keyed by the resolved video id so reposts
+                    // reflect progress on the original. Powers the card scrubber.
+                    watchedTime: sql<number>`COALESCE((SELECT vp."currentTime" FROM video_progress vp WHERE vp."postId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND vp."userId" = ${ctx.user?.id ?? ""}), 0)`,
                     likes: posts.likes,
                     reposts: posts.reposts,
                     comments: posts.comments,
@@ -321,6 +326,8 @@ export const feedRouter = router({
                     origVideoUrl: origPosts.videoUrl,
                     origThumbnailUrl: origPosts.thumbnailUrl,
                     origTitle: origPosts.title,
+                    origDuration: origPosts.duration,
+                    origCategory: origPosts.category,
                     origContent: origPosts.content,
                     origUser: {
                         id: origUser.id,
@@ -356,6 +363,9 @@ export const feedRouter = router({
                         thumbnailUrl: s.origThumbnailUrl,
                         title: s.origTitle ?? "",
                         description: s.origContent,
+                        // Reflect the original video's metadata, not the repost's.
+                        duration: s.origDuration ?? 0,
+                        category: s.origCategory,
                         user: s.origUser!,
                         repostedBy: { name: s.user.name, username: s.user.username },
                     };

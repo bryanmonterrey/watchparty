@@ -19,7 +19,7 @@ export interface Video {
 }
 
 export const CATEGORIES = [
-    "All", "Trending", "For You", "New", "Live", "Just Chatting", "Music", "Esports",
+    "All", "Trending", "For You", "New", "Live", "Movies", "Just Chatting", "Music", "Esports",
     "Creative", "Tech", "News", "Memes", "Political", "Games", "IRL",
     "GTAV", "Sports", "Fortnite", "Pranks"
 ];
