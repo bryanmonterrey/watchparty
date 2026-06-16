@@ -214,6 +214,9 @@ function VideoCard({ v }: { v: FeedVideo }) {
                             loop
                             playsInline
                             preload="metadata"
+                            // Required so cross-origin (Supabase Storage) <track>
+                            // VTT cues are allowed to load and render natively.
+                            crossOrigin="anonymous"
                             className="absolute inset-0 size-full object-cover"
                             onLoadedMetadata={(e) => {
                                 setPreviewDuration(e.currentTarget.duration || 0);
