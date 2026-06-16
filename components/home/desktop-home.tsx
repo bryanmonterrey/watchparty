@@ -453,7 +453,7 @@ function CategoryCard({ c, index, count }: { c: (typeof HOME_CATEGORIES)[number]
 
 // Full-height edge control, matching the hero carousel's arrows: a flat
 // black/blurred bar that fades in on carousel hover (not a rounded button).
-function EdgeArrow({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+function EdgeArrow({ side, onClick, insetClass = "inset-y-0" }: { side: "left" | "right"; onClick: () => void; insetClass?: string }) {
     const Icon = side === "left" ? ChevronLeft : ChevronRight;
     return (
         <button
@@ -461,7 +461,8 @@ function EdgeArrow({ side, onClick }: { side: "left" | "right"; onClick: () => v
             onClick={onClick}
             aria-label={side === "left" ? "Scroll left" : "Scroll right"}
             className={cn(
-                "group/arrow absolute inset-y-3 z-20 flex w-16 items-center bg-black/50 backdrop-blur-xs opacity-0 transition-opacity duration-300 group-hover/trend:opacity-100",
+                "group/arrow absolute z-20 flex w-16 items-center bg-black/50 backdrop-blur-xs opacity-0 transition-opacity duration-300 group-hover/trend:opacity-100",
+                insetClass,
                 side === "left" ? "left-0 justify-start pl-2" : "right-0 justify-end pr-2"
             )}
         >
@@ -473,12 +474,10 @@ function EdgeArrow({ side, onClick }: { side: "left" | "right"; onClick: () => v
     );
 }
 
-// Trending row: a draggable carousel (drag-to-scroll like the hero, native
-// momentum on touch) with hero-style edge arrows that hide when you can't
-// scroll that way, plus a ghost "Show all / Show less" toggle that swaps it for
-// a 12-video grid.
-function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
-    const [expanded, setExpanded] = useState(false);
+// Draggable embla carousel (drag-to-scroll like the hero, native momentum on
+// touch) with hero-style edge arrows that hide when you can't scroll that way.
+// Shared by the Trending and Categories rows.
+function ArrowCarousel({ contentClassName, arrowInset, children }: { contentClassName?: string; arrowInset?: string; children: React.ReactNode }) {
     const [api, setApi] = useState<CarouselApi>();
     const [canPrev, setCanPrev] = useState(false);
     const [canNext, setCanNext] = useState(false);
@@ -499,6 +498,23 @@ function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
     }, [api]);
 
     return (
+        <Carousel
+            setApi={setApi}
+            opts={{ align: "start", dragFree: true, containScroll: "trimSnaps" }}
+            className="group/trend"
+        >
+            <CarouselContent className={contentClassName}>{children}</CarouselContent>
+            {canPrev && <EdgeArrow side="left" insetClass={arrowInset} onClick={() => api?.scrollPrev()} />}
+            {canNext && <EdgeArrow side="right" insetClass={arrowInset} onClick={() => api?.scrollNext()} />}
+        </Carousel>
+    );
+}
+
+// Trending row: the draggable arrow carousel plus a ghost "Show all / Show
+// less" toggle that swaps it for a 12-video grid.
+function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
+    const [expanded, setExpanded] = useState(false);
+    return (
         <div className="flex flex-col gap-4">
             {expanded ? (
                 <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
@@ -507,23 +523,15 @@ function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
                     ))}
                 </div>
             ) : (
-                <Carousel
-                    setApi={setApi}
-                    opts={{ align: "start", dragFree: true, containScroll: "trimSnaps" }}
-                    className="group/trend"
-                >
-                    {/* py-3 gives the cards' hover backdrop room before the embla
-                        viewport clips it vertically. */}
-                    <CarouselContent className="-ml-5 py-3">
-                        {videos.map((v) => (
-                            <CarouselItem key={v.id} className="basis-1/2 pl-5 xl:basis-1/4">
-                                <VideoCard v={v} />
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                    {canPrev && <EdgeArrow side="left" onClick={() => api?.scrollPrev()} />}
-                    {canNext && <EdgeArrow side="right" onClick={() => api?.scrollNext()} />}
-                </Carousel>
+                // py-3 gives the cards' hover backdrop room before the embla
+                // viewport clips it vertically.
+                <ArrowCarousel contentClassName="-ml-5 py-3" arrowInset="inset-y-3">
+                    {videos.map((v) => (
+                        <CarouselItem key={v.id} className="basis-1/2 pl-5 xl:basis-1/4">
+                            <VideoCard v={v} />
+                        </CarouselItem>
+                    ))}
+                </ArrowCarousel>
             )}
             <div className="flex justify-center">
                 <Button
@@ -576,11 +584,13 @@ export function DesktopHome() {
 
                 <section>
                     <SectionHeader title="Categories" href="/category" />
-                    <div className="hidden-scrollbar flex items-start gap-4 overflow-x-auto">
+                    <ArrowCarousel contentClassName="items-start">
                         {HOME_CATEGORIES.map((c, i) => (
-                            <CategoryCard key={c.slug} c={c} index={i} count={HOME_CATEGORIES.length} />
+                            <CarouselItem key={c.slug} className="basis-auto">
+                                <CategoryCard c={c} index={i} count={HOME_CATEGORIES.length} />
+                            </CarouselItem>
                         ))}
-                    </div>
+                    </ArrowCarousel>
                 </section>
 
                 {/* Hide the whole section when it resolves empty — only show the
