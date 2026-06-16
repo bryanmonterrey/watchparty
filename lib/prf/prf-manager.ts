@@ -7,6 +7,11 @@ class PRFManager {
   private aesKey: CryptoKey | null = null;
   // null = untested, true/false = result of last attempt
   private supported: boolean | null = null;
+  // Whether we've already shown the WebAuthn prompt this session. The singleton
+  // persists across client-side navigations, so this stops the Encryption
+  // provider re-prompting on every visit to /messages when PRF yields no key
+  // (unsupported authenticator) or the user cancels.
+  private attempted = false;
 
   /** Returns true if the browser API surface exists (doesn't guarantee authenticator support). */
   canAttempt(): boolean {
@@ -29,7 +34,11 @@ class PRFManager {
    */
   async derive(): Promise<CryptoKey | null> {
     if (this.aesKey) return this.aesKey;
+    // Already tried this session (succeeded-but-no-key, failed, or cancelled) —
+    // don't pop the passkey prompt again on every navigation.
+    if (this.attempted) return null;
     if (!this.canAttempt()) return null;
+    this.attempted = true;
 
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -78,9 +87,10 @@ class PRFManager {
     return this.supported;
   }
 
-  /** Call on logout to wipe the in-memory key. */
+  /** Call on logout to wipe the in-memory key (and allow one fresh attempt). */
   clear(): void {
     this.aesKey = null;
+    this.attempted = false;
   }
 }
 
