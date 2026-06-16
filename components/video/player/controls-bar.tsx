@@ -6,20 +6,15 @@ import {
     YTPlayIcon,
     YTPauseIcon,
     YTReplayIcon,
-    YTVolumeIcon,
-    YTVolumeLowIcon,
-    YTVolumeOffIcon,
-    YTFullscreenIcon,
-    YTMinimizeIcon,
     YTSettingsIcon,
     YTTheaterModeIcon,
     YTSubtitlesIcon,
-    YTSubtitlesIconSolid,
     YTPiPIcon,
     YTAirPlayIcon,
     YTLoopIcon,
     YTDownloadIcon,
 } from "@/components/icons";
+import { PlayPauseMorph, VolumeMorph, CaptionsMorph, FullscreenMorph } from "@/components/morph-icons";
 import { Scrubber } from "./scrubber";
 import { FineScrubStrip, STRIP_H } from "./fine-scrub-strip";
 import { SettingsMenu } from "./settings-menu";
@@ -338,9 +333,7 @@ export function ControlsBar({
                         <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
                             {isEnded
                                 ? <YTReplayIcon className="size-[24px]" />
-                                : isPlaying
-                                    ? <YTPauseIcon className="size-[24px]" />
-                                    : <YTPlayIcon className="size-[24px]" />
+                                : <PlayPauseMorph playing={isPlaying} className="size-[24px]" />
                             }
                         </div>
                     </button>
@@ -370,11 +363,7 @@ export function ControlsBar({
                         <div className="bg-black/30 transition-[width] duration-200 ease-out p-1 rounded-full flex items-center justify-center">
                             <div className="flex items-center hover:bg-white/20 rounded-full p-1">
                                 <button onClick={toggleMute} className="ytp-button cursor-pointer flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors">
-                                    {volumeLevel === "muted"
-                                        ? <YTVolumeOffIcon className="size-[24px] cursor-pointer " />
-                                        : volumeLevel === "low"
-                                            ? <YTVolumeLowIcon className="size-[24px] cursor-pointer " />
-                                            : <YTVolumeIcon className="size-[24px] cursor-pointer " />}
+                                    <VolumeMorph level={volumeLevel} className="size-[24px] cursor-pointer" />
                                 </button>
                                 <div className="w-0 group-hover/vol:w-[56px] overflow-hidden h-6 transition-[width] duration-200 ease-out flex items-center justify-center">
                                     <div
@@ -495,10 +484,7 @@ export function ControlsBar({
                                 onClick={() => setSubtitleTrack(selectedTrack >= 0 ? -1 : (textTracks[0]?.index ?? 0))}
                                 title={selectedTrack >= 0 ? "Subtitles on" : "Subtitles off"}
                             >
-                                {selectedTrack >= 0
-                                    ? <YTSubtitlesIconSolid className="size-[24px]" />
-                                    : <YTSubtitlesIcon className="size-[24px]" />
-                                }
+                                <CaptionsMorph on={selectedTrack >= 0} className="size-[24px]" />
                             </button>
                         )}
 
@@ -562,7 +548,7 @@ export function ControlsBar({
                             onClick={toggleFullscreen}
                             className="ytp-button p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
                         >
-                            {isFullscreen ? <YTMinimizeIcon className="size-[24px]" /> : <YTFullscreenIcon className="size-[24px]" />}
+                            <FullscreenMorph active={isFullscreen} className="size-[24px]" />
                         </button>
                     </div>
                 </div>

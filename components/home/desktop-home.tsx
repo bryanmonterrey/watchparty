@@ -15,14 +15,8 @@ import {
     CarouselItem,
     type CarouselApi,
 } from "@/components/ui/carousel";
-import {
-    ClockIcon,
-    QueueIcon,
-    YTVolumeIcon,
-    YTVolumeOffIcon,
-    YTSubtitlesIcon,
-    YTSubtitlesIconSolid,
-} from "@/components/icons";
+import { ClockIcon, QueueIcon } from "@/components/icons";
+import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
 import { HomeCarousel, HomeCarouselSkeleton } from "./home-carousel";
 import { HOME_CATEGORIES } from "@/lib/data/home-categories";
 
@@ -265,21 +259,20 @@ function VideoCard({ v }: { v: FeedVideo }) {
                     ) : (
                         <>
                             <CardIconButton label={muted ? "Unmute" : "Mute"} onClick={toggleMute}>
-                                {muted ? <YTVolumeOffIcon className="size-[18px]" /> : <YTVolumeIcon className="size-[18px]" />}
+                                <VolumeMorph level={muted ? "muted" : "full"} className="size-[18px]" />
                             </CardIconButton>
-                            <CardIconButton
-                                label={captionsOn ? "Turn off captions" : "Turn on captions"}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setCaptionsOn((c) => !c);
-                                }}
-                            >
-                                {captionsOn ? (
-                                    <YTSubtitlesIconSolid className="size-[18px]" />
-                                ) : (
-                                    <YTSubtitlesIcon className="size-[18px]" />
-                                )}
-                            </CardIconButton>
+                            {/* Only when the video actually has caption tracks. */}
+                            {captionTracks.length > 0 && (
+                                <CardIconButton
+                                    label={captionsOn ? "Turn off captions" : "Turn on captions"}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setCaptionsOn((c) => !c);
+                                    }}
+                                >
+                                    <CaptionsMorph on={captionsOn} className="size-[18px]" />
+                                </CardIconButton>
+                            )}
                         </>
                     )}
                 </div>
@@ -530,7 +523,7 @@ export function DesktopHome() {
                 {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
             </div>
 
-            <div className="flex flex-col gap-10 px-6">
+            <div className="flex flex-col gap-7 px-6">
                 <section>
                     <SectionHeader title="Trending" href="/search" />
                     {feed.isLoading ? (

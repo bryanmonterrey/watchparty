@@ -215,7 +215,7 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                                             the blur's transparent edge against the panel border. */}
                                         {v.thumbnailUrl && (
                                             // eslint-disable-next-line @next/next/no-img-element
-                                            <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full scale-110 object-cover blur-xl" />
+                                            <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full object-cover blur-xl" />
                                         )}
                                         <div className="absolute inset-0 bg-black/40" />
                                         <div className="absolute inset-0 flex items-center justify-center">
