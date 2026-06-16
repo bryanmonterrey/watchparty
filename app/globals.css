@@ -267,6 +267,88 @@
   }
 }
 
+/* ── Skeleton → content reveal (transitions.dev) ──────────────────────────
+   See components/ui/skeleton-reveal.tsx. The skeleton and content are stacked
+   in the same grid cell (natural height, layout-free swap). The skeleton owns
+   the pulse + the fade-out/blur side of the reveal; the content owns the
+   fade-in side. Vars live on .t-skel so they can be overridden per instance. */
+.t-skel {
+  --pulse-dur: 1000ms;
+  --pulse-count: 1;
+  --pulse-min: 0.5;
+  --reveal-dur: 400ms;
+  --reveal-blur: 2px;
+  --reveal-ease: ease-in-out;
+  display: grid;
+}
+
+.t-skel-skeleton,
+.t-skel-content {
+  grid-area: 1 / 1;
+  transition:
+    opacity var(--reveal-dur) var(--reveal-ease),
+    filter var(--reveal-dur) var(--reveal-ease);
+}
+
+.t-skel-skeleton {
+  z-index: 1;
+  opacity: 1;
+  filter: blur(0);
+}
+
+.t-skel-content {
+  z-index: 2;
+  opacity: 0;
+  filter: blur(var(--reveal-blur));
+}
+
+.t-skel.is-revealed .t-skel-skeleton {
+  opacity: 0;
+  filter: blur(var(--reveal-blur));
+  pointer-events: none;
+}
+
+.t-skel.is-revealed .t-skel-content {
+  opacity: 1;
+  filter: blur(0);
+}
+
+/* Snap-back when replaying: kill transitions so the reverse
+   (revealed → skeleton) is instant. */
+.t-skel.is-resetting .t-skel-skeleton,
+.t-skel.is-resetting .t-skel-content {
+  transition: none !important;
+}
+
+/* Pulse the bar/avatar children, not the skeleton itself, so its
+   opacity/filter stay free for the cross-fade. */
+.t-skel-skeleton.is-pulsing > * {
+  animation: t-skel-pulse var(--pulse-dur) ease-in-out var(--pulse-count);
+}
+
+@keyframes t-skel-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: var(--pulse-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .t-skel-skeleton,
+  .t-skel-content {
+    transition: none !important;
+  }
+
+  .t-skel-skeleton.is-pulsing > * {
+    animation: none !important;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
