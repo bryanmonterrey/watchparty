@@ -263,14 +263,40 @@ function CarouselArrow({ side, onClick }: { side: "left" | "right"; onClick: () 
 }
 
 export function HomeCarouselSkeleton() {
+    // Mirrors the carousel's resting state: the wide active panel centered with
+    // narrow peeks flanking it. Same panel dimensions/structure as the live
+    // version (avatar on closed panels, avatar + caption on the active one),
+    // minus the scrolling, edge arrows, and interaction.
     return (
         <div className="relative w-full overflow-hidden">
-            <div className="flex h-[clamp(260px,23vw,360px)] gap-4 px-[3%]">
-                <Skeleton className="h-full w-[116px] shrink-0 rounded-[20px]" />
-                <Skeleton className="h-full w-[116px] shrink-0 rounded-[20px]" />
-                <Skeleton className="h-full w-[min(760px,52vw)] shrink-0 rounded-[20px]" />
-                <Skeleton className="h-full w-[116px] shrink-0 rounded-[20px]" />
-                <Skeleton className="h-full w-[116px] shrink-0 rounded-[20px]" />
+            <div className="flex h-[clamp(260px,23vw,360px)] justify-center gap-4 px-[3%]">
+                <ClosedPanelSkeleton />
+                <ClosedPanelSkeleton />
+                {/* Active panel: blurred thumbnail with avatar + caption at the bottom. */}
+                <div className="relative h-full w-[min(760px,52vw)] shrink-0 overflow-hidden rounded-[20px] bg-muted">
+                    <Skeleton className="absolute inset-0 size-full rounded-none" />
+                    <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-6">
+                        <Skeleton className="size-10 shrink-0 rounded-full bg-zinc-700" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                            <Skeleton className="h-5 w-1/2 bg-zinc-700" />
+                            <Skeleton className="h-3.5 w-1/4 bg-zinc-700" />
+                        </div>
+                    </div>
+                </div>
+                <ClosedPanelSkeleton />
+                <ClosedPanelSkeleton />
+            </div>
+        </div>
+    );
+}
+
+function ClosedPanelSkeleton() {
+    // Closed panel: blurred thumbnail with the creator avatar centered.
+    return (
+        <div className="relative h-full w-[116px] shrink-0 overflow-hidden rounded-[20px] bg-muted">
+            <Skeleton className="absolute inset-0 size-full rounded-none" />
+            <div className="absolute inset-0 flex items-center justify-center">
+                <Skeleton className="size-14 rounded-full bg-zinc-700" />
             </div>
         </div>
     );
