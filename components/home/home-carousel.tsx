@@ -270,8 +270,11 @@ export function HomeCarouselSkeleton() {
     return (
         <div className="relative w-full overflow-hidden">
             <div className="flex h-[clamp(260px,23vw,360px)] justify-center gap-4 px-[3%]">
-                <ClosedPanelSkeleton />
-                <ClosedPanelSkeleton />
+                {/* Enough peeks to fill the widest viewport on each side of the
+                    active panel; overflow-hidden trims the surplus. */}
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <ClosedPanelSkeleton key={`l-${i}`} />
+                ))}
                 {/* Active panel: blurred thumbnail with avatar + caption at the bottom. */}
                 <div className="relative h-full w-[min(760px,52vw)] shrink-0 overflow-hidden rounded-[20px] bg-muted">
                     <Skeleton className="absolute inset-0 size-full rounded-none" />
@@ -283,8 +286,9 @@ export function HomeCarouselSkeleton() {
                         </div>
                     </div>
                 </div>
-                <ClosedPanelSkeleton />
-                <ClosedPanelSkeleton />
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <ClosedPanelSkeleton key={`r-${i}`} />
+                ))}
             </div>
         </div>
     );
