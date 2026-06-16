@@ -85,7 +85,7 @@ function CardIconButton({
             // Default: swallow the click so it doesn't fall through to the
             // thumbnail <Link>. Interactive buttons pass their own handler.
             onClick={onClick ?? ((e) => e.preventDefault())}
-            className="flex size-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+            className="flex size-9 items-center justify-center rounded-full bg-transparent hover:bg-black/25 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
         >
             {children}
         </button>
@@ -116,6 +116,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
     const [watched, setWatched] = useState(v.watchedTime ?? 0);
 
     const [captionsOn, setCaptionsOn] = useState(false);
+    const [captionText, setCaptionText] = useState("");
 
     const movie = isMovie(v);
     const duration = v.duration ?? 0;
@@ -130,15 +131,41 @@ function VideoCard({ v }: { v: FeedVideo }) {
     const captionTracks = captionsData?.captions ?? [];
     const defaultCaption = Math.max(0, captionTracks.findIndex((c) => c.isDefault));
 
-    // Drive the native <track> visibility from the toggle. Re-run as tracks
-    // attach (preview (re)mounts on hover) so the chosen track shows/hides.
+    // Captions: keep the chosen track "hidden" (fires cuechange without the
+    // browser's tiny multi-line native rendering) and surface the current cue
+    // as a single line in our own overlay. Re-runs as tracks attach (the
+    // preview (re)mounts on hover).
     useEffect(() => {
         const el = videoRef.current;
         if (!el) return;
         const tracks = el.textTracks;
+        let active: TextTrack | null = null;
         for (let i = 0; i < tracks.length; i++) {
-            tracks[i].mode = captionsOn && i === defaultCaption ? "showing" : "hidden";
+            if (captionsOn && i === defaultCaption) {
+                tracks[i].mode = "hidden";
+                active = tracks[i];
+            } else {
+                tracks[i].mode = "disabled";
+            }
         }
+        if (!active) {
+            setCaptionText("");
+            return;
+        }
+        const sync = () => {
+            const cues = active!.activeCues;
+            const text = cues && cues.length
+                ? Array.from(cues)
+                    .map((c) => (c as VTTCue).text)
+                    .join(" ")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                : "";
+            setCaptionText(text);
+        };
+        sync();
+        active.addEventListener("cuechange", sync);
+        return () => active.removeEventListener("cuechange", sync);
     }, [captionsOn, defaultCaption, hovered, previewDuration, captionTracks.length]);
 
     // While hovering, the live preview drives the scrubber; at rest it reflects
@@ -160,6 +187,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
     const endHover = () => {
         setHovered(false);
         setPreviewBuffered(0);
+        setCaptionText("");
         // Persist the hovered-to position to watch history (and the at-rest bar).
         const t = resumeRef.current;
         setWatched(t);
@@ -253,16 +281,16 @@ function VideoCard({ v }: { v: FeedVideo }) {
                 {/* Controls, vertically stacked on the right. Outside the <Link>
                     so they aren't nested interactive elements; z-10 keeps them
                     above the preview. No play/pause — hovering drives playback. */}
-                <div className="absolute right-3 top-3 z-10 flex flex-col gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <div className="absolute right-3 top-3 z-10 flex flex-col gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                     {movie ? (
                         <>
-                            <CardIconButton label="Watch later"><ClockIcon className="size-[18px]" /></CardIconButton>
-                            <CardIconButton label="Add to queue"><QueueIcon className="size-[18px]" /></CardIconButton>
+                            <CardIconButton label="Watch later"><ClockIcon className="size-5" /></CardIconButton>
+                            <CardIconButton label="Add to queue"><QueueIcon className="size-5" /></CardIconButton>
                         </>
                     ) : (
                         <>
                             <CardIconButton label={muted ? "Unmute" : "Mute"} onClick={toggleMute}>
-                                <VolumeMorph level={muted ? "muted" : "full"} className="size-[18px]" />
+                                <VolumeMorph level={muted ? "muted" : "full"} className="size-5" />
                             </CardIconButton>
                             {/* Only when the video actually has caption tracks. */}
                             {captionTracks.length > 0 && (
@@ -273,17 +301,27 @@ function VideoCard({ v }: { v: FeedVideo }) {
                                         setCaptionsOn((c) => !c);
                                     }}
                                 >
-                                    <CaptionsMorph on={captionsOn} className="size-[18px]" />
+                                    <CaptionsMorph on={captionsOn} className="size-5" />
                                 </CardIconButton>
                             )}
                         </>
                     )}
                 </div>
 
+                {/* Captions overlay: single current line, kept above the time
+                    nail / scrubber, in sync via the track's cuechange. */}
+                {hovered && captionsOn && captionText && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center px-4">
+                        <span className="max-w-full truncate rounded bg-black/70 px-2 py-0.5 text-sm font-semibold text-white sm:text-[15px]">
+                            {captionText}
+                        </span>
+                    </div>
+                )}
+
                 {/* Time nail, bottom-left: video length at rest, live preview
                     position while hovering. */}
                 {(duration > 0 || hovered) && (
-                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-lg bg-black/80 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-white">
+                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-sm bg-black/30 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-white">
                         {formatTime(hovered ? previewTime : duration)}
                     </div>
                 )}
@@ -296,7 +334,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
                             style={{ transform: `scaleX(${bufferedPct})` }}
                         />
                         <div
-                            className="absolute inset-y-0 left-0 w-full origin-left bg-[#4453FF] transition-transform duration-200 ease-linear"
+                            className="absolute inset-y-0 left-0 w-full origin-left bg-twitter2 transition-transform duration-200 ease-linear"
                             style={{ transform: `scaleX(${positionPct})` }}
                         />
                     </div>
