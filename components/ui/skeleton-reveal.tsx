@@ -21,9 +21,15 @@ export interface SkeletonRevealProps {
     className?: string;
     /** Pulse cycles before the reveal (CSS --pulse-count). Default 1. */
     pulseCount?: number;
+    /**
+     * Built-in pulse on the skeleton's direct children. Set false when the
+     * skeleton already animates itself (e.g. our staggered Skeletons) so
+     * SkeletonReveal only owns the reveal cross-fade. Default true.
+     */
+    pulse?: boolean;
 }
 
-export function SkeletonReveal({ loading, skeleton, children, className, pulseCount }: SkeletonRevealProps) {
+export function SkeletonReveal({ loading, skeleton, children, className, pulseCount, pulse = true }: SkeletonRevealProps) {
     const wrapRef = useRef<HTMLDivElement>(null);
     const skelRef = useRef<HTMLDivElement>(null);
     // Initial render class only — after mount the effect drives state via

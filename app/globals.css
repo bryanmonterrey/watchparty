@@ -247,22 +247,19 @@
 
 }
 
-/* Staggered skeleton pulse: a narrow brightness spike that, when each item's
-   animation-delay is offset by (duration / itemCount), travels across the row
-   one item at a time. Top-level (not inside @theme) so Tailwind always emits it
-   — it's referenced by an inline `animation` (lib/skeleton-stagger.ts), not by
-   an --animate-* token, so @theme would tree-shake it. */
+/* Staggered skeleton pulse: a smooth opacity pulse. Each item's
+   animation-delay is offset by (duration / itemCount) (see
+   lib/skeleton-stagger.ts) so the dip travels left-to-right as a wave rather
+   than a harsh one-at-a-time flicker. Top-level (not inside @theme) so Tailwind
+   always emits it — it's referenced by an inline `animation`, not an
+   --animate-* token, so @theme would tree-shake it. */
 @keyframes stagger-pulse {
   0%,
   100% {
-    opacity: 0.4;
-  }
-
-  4% {
     opacity: 1;
   }
 
-  10% {
+  50% {
     opacity: 0.4;
   }
 }
