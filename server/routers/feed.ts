@@ -301,6 +301,7 @@ export const feedRouter = router({
                     title: posts.title,
                     duration: posts.duration,
                     category: posts.category,
+                    isLive: posts.isLive,
                     // The signed-in user's saved playback position for this video
                     // (0 when none). Keyed by the resolved video id so reposts
                     // reflect progress on the original. Powers the card scrubber.
@@ -328,6 +329,7 @@ export const feedRouter = router({
                     origTitle: origPosts.title,
                     origDuration: origPosts.duration,
                     origCategory: origPosts.category,
+                    origIsLive: origPosts.isLive,
                     origContent: origPosts.content,
                     origUser: {
                         id: origUser.id,
@@ -366,6 +368,7 @@ export const feedRouter = router({
                         // Reflect the original video's metadata, not the repost's.
                         duration: s.origDuration ?? 0,
                         category: s.origCategory,
+                        isLive: s.origIsLive ?? false,
                         user: s.origUser!,
                         repostedBy: { name: s.user.name, username: s.user.username },
                     };

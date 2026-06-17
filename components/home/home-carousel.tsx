@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
+import { useAudioOwner } from "@/lib/audio-bus";
+import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 
@@ -26,7 +29,9 @@ import { staggerPulse } from "@/lib/skeleton-stagger";
 //   • Drag (mouse/pen)      → scroll; touch keeps native momentum.
 //
 // Closed panel: blurred thumbnail with the creator avatar centered.
-// Open panel:   the video autoplays (muted, looped) with a caption.
+// Open panel:   the video autoplays (muted, looped) with player chrome —
+//               mute toggle, caption toggle (when the post has caption tracks),
+//               and a LIVE badge for streams (see ActivePanel).
 
 const PEEK_W = 116; // px — closed panel width
 const GAP = 16; // px — matches gap-4
@@ -38,6 +43,8 @@ interface CarouselVideo {
     title: string;
     videoUrl?: string | null;
     thumbnailUrl: string | null;
+    /** Live stream rather than a VOD — drives the LIVE badge. */
+    isLive?: boolean | null;
     user: { username: string | null; avatar_url: string | null };
 }
 
@@ -54,30 +61,40 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
     const panelRefs = useRef<(HTMLAnchorElement | null)[]>([]);
     const didMount = useRef(false);
 
-    // Center the middle copy's active panel. On mount it's instant (the active
-    // panel already starts wide). On a click-to-open it's delayed by the width
-    // transition, then smooth — otherwise we'd center the still-narrow 116px
-    // panel and it would finish ~320px off-centre once it expanded rightward.
-    // Explicit scroll math rather than scrollIntoView, which no-ops before the
-    // first paint and so left the active panel off-screen at load.
+    // Scroll the middle copy's panel `index` to the viewport centre. Explicit
+    // scroll math rather than scrollIntoView, which no-ops before the first paint
+    // and so left the active panel off-screen at load.
+    const centerActive = useCallback((behavior: ScrollBehavior, index: number) => {
+        const el = scrollerRef.current;
+        const panel = panelRefs.current[MID * n + index];
+        if (!el || !panel) return;
+        const er = el.getBoundingClientRect();
+        const pr = panel.getBoundingClientRect();
+        const left = el.scrollLeft + (pr.left - er.left) - (er.width - pr.width) / 2;
+        el.scrollTo({ left, behavior });
+    }, [n]);
+
+    // Only center on first mount (the hero starts centered, already wide).
+    // Clicking a closed peek expands it in place — re-centering there caused a
+    // jarring post-click shift. Skip (prev/next) DOES re-center, separately.
     useLayoutEffect(() => {
-        const center = (behavior: ScrollBehavior) => {
-            const el = scrollerRef.current;
-            const panel = panelRefs.current[MID * n + active];
-            if (!el || !panel) return;
-            const er = el.getBoundingClientRect();
-            const pr = panel.getBoundingClientRect();
-            const left = el.scrollLeft + (pr.left - er.left) - (er.width - pr.width) / 2;
-            el.scrollTo({ left, behavior });
-        };
-        // Only center on first mount (the hero starts centered). Opening a panel
-        // expands it in place — the old post-expansion re-center caused a jarring
-        // shift after the click.
         if (!didMount.current) {
             didMount.current = true;
-            center("auto");
+            centerActive("auto", active);
         }
-    }, [active, n]);
+    }, [active, n, centerActive]);
+
+    // Prev/next video: advance the open panel (wrapping) and re-center it. The
+    // newly-active panel is a narrow peek until its width transition (500ms)
+    // runs, so centre on a delay — measuring it sooner would land ~320px off.
+    const skipTimer = useRef<number | null>(null);
+    const skip = (dir: -1 | 1) => {
+        const next = (active + dir + n) % n;
+        setActive(next);
+        if (skipTimer.current) window.clearTimeout(skipTimer.current);
+        skipTimer.current = window.setTimeout(() => centerActive("smooth", next), 520);
+    };
+    useEffect(() => () => { if (skipTimer.current) window.clearTimeout(skipTimer.current); }, []);
 
     // Seamless wrap: keep scrollLeft within one list-period of the middle copy,
     // jumping by exactly that period when it strays. The period MUST be the true
@@ -167,34 +184,35 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                                 }}
                                 aria-label={isActive ? v.title : `Open ${v.title}`}
                                 style={{ width: isActive ? "min(760px, 52vw)" : `${PEEK_W}px` }}
-                                className={`relative block h-full shrink-0 overflow-hidden rounded-[20px] bg-muted outline-none transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                                className={`group/active relative block h-full shrink-0 overflow-hidden rounded-[20px] bg-muted outline-none transition-[width] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                                     isActive ? "" : "cursor-pointer"
                                 }`}
                             >
                                 {isActive ? (
                                     <>
-                                        {/* Autoplay only in the middle copy — the side
+                                        {/* Autoplay + player chrome (mute / captions /
+                                            LIVE badge) only in the middle copy — the side
                                             copies are off-screen buffers, so one <video>
                                             is enough; their active clone shows the still. */}
                                         {v.videoUrl && copy === MID ? (
-                                            <video
-                                                src={v.videoUrl}
-                                                poster={v.thumbnailUrl ?? undefined}
-                                                autoPlay
-                                                muted
-                                                loop
-                                                playsInline
-                                                className="absolute inset-0 size-full object-cover"
-                                            />
+                                            <ActivePanel v={v} onPrev={() => skip(-1)} onNext={() => skip(1)} />
                                         ) : (
-                                            v.thumbnailUrl && (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
-                                            )
+                                            <>
+                                                {v.thumbnailUrl && (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
+                                                )}
+                                                {v.isLive && (
+                                                    <div className="absolute left-4 top-3 z-30"><LiveBadge /></div>
+                                                )}
+                                            </>
                                         )}
-                                        {/* bottom gradient keeps the caption legible */}
-                                        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 38%, transparent 62%)" }} />
-                                        <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-6">
+                                        {/* Now-playing bar (reveals with the controls on hover):
+                                            avatar + title (truncates) on the left, Watch Now CTA
+                                            on the right. The whole active panel is a <Link>, so the
+                                            CTA navigates via the parent — it's a styled span, not a
+                                            nested <a>. */}
+                                        <div className="absolute left-4 bottom-3 flex items-center gap-3 rounded-xl p-4 bg-black/30 backdrop-blur-sm opacity-0 transition-opacity duration-200 group-hover/active:opacity-100">
                                             <div className="size-10 shrink-0 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/15">
                                                 {v.user.avatar_url && (
                                                     // eslint-disable-next-line @next/next/no-img-element
@@ -202,11 +220,15 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                                                 )}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="truncate text-xl font-extrabold tracking-tight text-white">{v.title}</p>
+                                                <p className="truncate text-lg font-bold tracking-tight text-white">{v.title}</p>
                                                 {v.user.username && (
                                                     <p className="truncate text-sm font-semibold text-white/65">@{v.user.username}</p>
                                                 )}
                                             </div>
+                                            <span className="flex shrink-0 items-center gap-1.5 ml-2 rounded-full bg-white px-4 py-3 text-sm font-bold text-black transition-colors hover:bg-white/85">
+                                                <Play className="size-5 fill-current" />
+                                                Watch Now
+                                            </span>
                                         </div>
                                     </>
                                 ) : (
@@ -244,6 +266,191 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
             <CarouselArrow side="left" onClick={() => scrollByVideo(-1)} />
             <CarouselArrow side="right" onClick={() => scrollByVideo(1)} />
         </div>
+    );
+}
+
+// Red LIVE pill. No positioning of its own — the caller places it (absolute on
+// a still panel, or in ActivePanel's top-left control column).
+function LiveBadge() {
+    return (
+        <span className="flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg">
+            <span className="size-1.5 rounded-full bg-white" />
+            Live
+        </span>
+    );
+}
+
+// A single control button inside a grouped pill (matches the /video player's
+// chrome: transparent, with a hover wash).
+function PlayerButton({ label, onClick, wide, children }: { label: string; onClick: (e: React.MouseEvent) => void; wide?: boolean; children: React.ReactNode }) {
+    return (
+        <button
+            type="button"
+            aria-label={label}
+            onClick={onClick}
+            className={`flex h-8 ${wide ? "w-12" : "w-8"} cursor-pointer items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/20 hover:text-white`}
+        >
+            {children}
+        </button>
+    );
+}
+
+// Skip-to-next-video glyph (lifted from the player chrome SVG); mirrored for prev.
+function SkipIcon({ dir, className }: { dir: "prev" | "next"; className?: string }) {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            className={className}
+            fill="currentColor"
+            style={dir === "prev" ? { transform: "scaleX(-1)" } : undefined}
+        >
+            <path d="M20 20C20.26 20 20.51 19.89 20.70 19.70C20.89 19.51 21 19.26 21 19V5C21 4.73 20.89 4.48 20.70 4.29C20.51 4.10 20.26 4 20 4C19.73 4 19.48 4.10 19.29 4.29C19.10 4.48 19 4.73 19 5V19C19 19.26 19.10 19.51 19.29 19.70C19.48 19.89 19.73 20 20 20ZM5.04 19.77L18 12L5.04 4.22C4.84 4.10 4.60 4.03 4.36 4.03C4.12 4.03 3.89 4.09 3.68 4.21C3.47 4.32 3.30 4.49 3.18 4.70C3.06 4.91 2.99 5.14 3 5.38V18.61C2.99 18.85 3.06 19.08 3.18 19.29C3.30 19.50 3.47 19.67 3.68 19.79C3.89 19.90 4.12 19.96 4.36 19.96C4.60 19.96 4.84 19.89 5.04 19.77Z" />
+        </svg>
+    );
+}
+
+// The middle-copy active panel: the one real <video>, plus player chrome —
+// prev/next-video skip, mute toggle, caption toggle (only when the post has
+// caption tracks), and a LIVE badge for streams. The control pill and the
+// title block reveal on hover of the panel (group/active); the LIVE badge
+// stays put. Captions mirror the full player: the chosen track is kept
+// "hidden" so it fires cuechange without the browser's native multi-line box,
+// and the current cue is surfaced as one line in our overlay.
+function ActivePanel({ v, onPrev, onNext }: { v: CarouselVideo; onPrev: () => void; onNext: () => void }) {
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const { isOwner, hasOwner, claim, release } = useAudioOwner();
+    const [userMuted, setUserMuted] = useState(false);
+    const [captionsOn, setCaptionsOn] = useState(false);
+    const [captionText, setCaptionText] = useState("");
+    // The hero is the page's default audio source; it goes silent only when the
+    // user mutes it or another video (a hovered card) claims audio.
+    const effectiveMuted = userMuted || !isOwner;
+
+    // One query per active video (only the middle copy renders ActivePanel, and
+    // it remounts when the active index changes).
+    const { data: captionsData } = trpc.content.getCaptions.useQuery(
+        { postId: v.id },
+        { staleTime: Infinity },
+    );
+    const captionTracks = captionsData?.captions ?? [];
+    const defaultCaption = Math.max(0, captionTracks.findIndex((c) => c.isDefault));
+
+    // Autoplay (muted, to satisfy the browser policy) and claim audio on mount —
+    // the hero is the default audio source. Unmuting is then applied
+    // optimistically below; real sound resumes on the first user gesture.
+    useEffect(() => {
+        const el = videoRef.current;
+        if (el) {
+            el.muted = true;
+            void el.play().catch(() => {});
+        }
+        claim();
+        return () => release();
+    }, [claim, release]);
+
+    // Reclaim audio when nothing else owns it (a hovered card let go), unless
+    // the user explicitly muted the hero.
+    useEffect(() => {
+        if (!hasOwner && !userMuted) claim();
+    }, [hasOwner, userMuted, claim]);
+
+    // Reflect the effective mute state on the element. Bound imperatively (not
+    // via the muted prop) so the frequent caption re-renders never reassert it.
+    useEffect(() => {
+        const el = videoRef.current;
+        if (el) el.muted = effectiveMuted;
+    }, [effectiveMuted]);
+
+    // Surface the active caption cue as a single line via cuechange.
+    useEffect(() => {
+        const el = videoRef.current;
+        if (!el) return;
+        const tracks = el.textTracks;
+        let active: TextTrack | null = null;
+        for (let i = 0; i < tracks.length; i++) {
+            if (captionsOn && i === defaultCaption) {
+                tracks[i].mode = "hidden";
+                active = tracks[i];
+            } else {
+                tracks[i].mode = "disabled";
+            }
+        }
+        if (!active) {
+            setCaptionText("");
+            return;
+        }
+        const sync = () => {
+            const cues = active!.activeCues;
+            setCaptionText(
+                cues && cues.length
+                    ? Array.from(cues).map((c) => (c as VTTCue).text).join(" ").replace(/\s+/g, " ").trim()
+                    : "",
+            );
+        };
+        sync();
+        active.addEventListener("cuechange", sync);
+        return () => active.removeEventListener("cuechange", sync);
+    }, [captionsOn, defaultCaption, captionTracks.length]);
+
+    // The buttons live inside the panel's <Link>; swallow the click so it
+    // neither navigates to the watch page nor bubbles to the expand handler.
+    const stop = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
+
+    return (
+        <>
+            <video
+                ref={videoRef}
+                src={v.videoUrl ?? undefined}
+                poster={v.thumbnailUrl ?? undefined}
+                loop
+                playsInline
+                // Required so cross-origin (Supabase Storage) <track> VTT cues
+                // are allowed to load.
+                crossOrigin="anonymous"
+                className="absolute inset-0 size-full object-cover"
+            >
+                {captionTracks.map((track) => (
+                    <track key={track.id} kind="subtitles" src={track.url} srcLang={track.language} label={track.label} />
+                ))}
+            </video>
+
+            {/* LIVE badge, top-left. */}
+            {v.isLive && (
+                <div className="absolute left-4 top-3 z-30"><LiveBadge /></div>
+            )}
+
+            {/* Player controls, top-right — grouped pills (prev/next · mute/cc),
+                revealed on hover of the panel. */}
+            <div className="absolute right-3 top-3 z-30 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover/active:opacity-100">
+                <div className="flex items-center gap-0.5 rounded-full bg-black/40 p-1 backdrop-blur-sm">
+                    <PlayerButton label="Previous video" wide onClick={(e) => { stop(e); onPrev(); }}>
+                        <SkipIcon dir="prev" className="size-5" />
+                    </PlayerButton>
+                    <PlayerButton label="Next video" wide onClick={(e) => { stop(e); onNext(); }}>
+                        <SkipIcon dir="next" className="size-5" />
+                    </PlayerButton>
+                </div>
+                <div className="flex items-center gap-0.5 rounded-full bg-black/40 p-1 backdrop-blur-sm">
+                    <PlayerButton label={effectiveMuted ? "Unmute" : "Mute"} wide onClick={(e) => { stop(e); const next = !userMuted; setUserMuted(next); if (!next) claim(); }}>
+                        <VolumeMorph level={effectiveMuted ? "muted" : "full"} className="size-5" />
+                    </PlayerButton>
+                    {captionTracks.length > 0 && (
+                        <PlayerButton label={captionsOn ? "Turn off captions" : "Turn on captions"} wide onClick={(e) => { stop(e); setCaptionsOn((c) => !c); }}>
+                            <CaptionsMorph on={captionsOn} className="size-5" />
+                        </PlayerButton>
+                    )}
+                </div>
+            </div>
+
+            {/* Current caption line, above the title/avatar block. */}
+            {captionsOn && captionText && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-24 z-20 flex justify-center px-4">
+                    <span className="max-w-full truncate rounded bg-black/70 px-2 py-0.5 text-[15px] font-semibold text-white">
+                        {captionText}
+                    </span>
+                </div>
+            )}
+        </>
     );
 }
 
@@ -307,7 +514,7 @@ function ClosedPanelSkeleton({ index, count }: { index: number; count: number })
     const pulse = staggerPulse(index, count);
     return (
         <div className="relative h-full w-[116px] shrink-0 overflow-hidden rounded-[20px] bg-muted">
-            <Skeleton style={pulse} className="absolute inset-0 size-full rounded-none" />
+            <Skeleton className="absolute inset-0 size-full rounded-none" />
         </div>
     );
 }

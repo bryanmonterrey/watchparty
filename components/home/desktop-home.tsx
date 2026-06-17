@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/carousel";
 import { ClockIcon, QueueIcon } from "@/components/icons";
 import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
+import { useAudioOwner } from "@/lib/audio-bus";
 import { HomeCarousel, HomeCarouselSkeleton } from "./home-carousel";
 import { HOME_CATEGORIES } from "@/lib/data/home-categories";
 
@@ -32,6 +33,8 @@ interface FeedVideo {
     thumbnailUrl: string | null;
     category?: string | null;
     duration?: number | null;
+    /** Live stream rather than a VOD — drives the hero LIVE badge. */
+    isLive?: boolean | null;
     /** Signed-in user's saved playback position (seconds); 0/undefined = none. */
     watchedTime?: number | null;
     user: { username: string | null; avatar_url: string | null };
@@ -124,11 +127,16 @@ function CardIconButton({
 function VideoCard({ v }: { v: FeedVideo }) {
     const saveProgress = trpc.content.saveProgress.useMutation();
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    // Page-wide audio coordination: a card preview only takes sound when the
+    // user unmutes it, which mutes the hero; muting/leaving hands sound back.
+    const { isOwner, claim, release } = useAudioOwner();
     // Resume point that survives hover-in/out — re-hovering picks up where the
     // preview left off rather than restarting.
     const resumeRef = useRef(v.watchedTime ?? 0);
     const [hovered, setHovered] = useState(false);
     const [muted, setMuted] = useState(true);
+    // Silent whenever the user muted it OR another video owns page audio.
+    const effectiveMuted = muted || !isOwner;
     const [playing, setPlaying] = useState(false);
     const [previewTime, setPreviewTime] = useState(v.watchedTime ?? 0);
     const [previewBuffered, setPreviewBuffered] = useState(0);
@@ -204,14 +212,18 @@ function VideoCard({ v }: { v: FeedVideo }) {
     useEffect(() => {
         const el = videoRef.current;
         if (!el) return;
-        el.muted = muted;
+        el.muted = effectiveMuted;
         if (hovered) void el.play().catch(() => {});
-    }, [hovered, muted]);
+    }, [hovered, effectiveMuted]);
+
+    // Release page audio if this card is unmounted while it owned sound.
+    useEffect(() => release, [release]);
 
     const endHover = () => {
         setHovered(false);
         setPreviewBuffered(0);
         setCaptionText("");
+        release();
         // Persist the hovered-to position to watch history (and the at-rest bar).
         const t = resumeRef.current;
         setWatched(t);
@@ -220,7 +232,11 @@ function VideoCard({ v }: { v: FeedVideo }) {
 
     const toggleMute = (e: React.MouseEvent) => {
         e.preventDefault();
-        setMuted((m) => !m);
+        const next = !muted;
+        setMuted(next);
+        // Unmuting takes page audio (muting the hero / other cards). Called from
+        // the handler — never inside the setState updater, which runs in render.
+        if (!next) claim();
     };
 
     return (
@@ -267,7 +283,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
                             ref={videoRef}
                             src={v.videoUrl}
                             poster={v.thumbnailUrl ?? undefined}
-                            muted={muted}
+                            muted={effectiveMuted}
                             loop
                             playsInline
                             preload="metadata"
@@ -318,8 +334,8 @@ function VideoCard({ v }: { v: FeedVideo }) {
                         </>
                     ) : (
                         <>
-                            <CardIconButton label={muted ? "Unmute" : "Mute"} onClick={toggleMute}>
-                                <VolumeMorph level={muted ? "muted" : "full"} className="size-5" />
+                            <CardIconButton label={effectiveMuted ? "Unmute" : "Mute"} onClick={toggleMute}>
+                                <VolumeMorph level={effectiveMuted ? "muted" : "full"} className="size-5" />
                             </CardIconButton>
                             {/* Only when the video actually has caption tracks. */}
                             {captionTracks.length > 0 && (
