@@ -30,14 +30,14 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
                 here and never scrolls. Feed content scrolls inside via overflow. */}
             <div
                 id="discover-feed-scroll"
-                className="hidden-scrollbar scroll-smooth h-full w-full max-w-[628px] shrink-0 relative z-100 overflow-y-auto lg:border-x border-soft-gray/[0.12]"
+                className="hidden-scrollbar h-full w-full max-w-[628px] shrink-0 relative z-100 overflow-y-auto lg:border-x border-soft-gray/[0.12]"
             >
                 {children}
             </div>
 
             {/* Right rail: fills the full frame height. hidden-scrollbar in case
                 cards slightly exceed dvh on smaller screens. */}
-            <aside id="discover-right-rail" className="hidden min-w-0 flex-1 h-full overflow-y-auto scroll-smooth hidden-scrollbar xl:block">
+            <aside id="discover-right-rail" className="hidden min-w-0 flex-1 h-full overflow-y-auto hidden-scrollbar xl:block">
                 <div className="pt-[82px]">
                     <DiscoverRightRail />
                 </div>
