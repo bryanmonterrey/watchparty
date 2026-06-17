@@ -6,7 +6,7 @@ import WalletButton from '@/components/wallet/wallet-button'
 import { useAuthSession } from '@/hooks/use-auth-session'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
-import { CreateIcon, MenuIcon } from '../icons'
+import { CreateIcon, MenuIcon, SearchIcon } from '../icons'
 import Image from 'next/image'
 import { CreateDialog } from './create-dialog'
 import { WithAuth } from '@/components/auth/with-auth'
@@ -36,9 +36,10 @@ export function AppHeader() {
   const isTokenPage = segments.length === 2 && firstSegment.length >= 21;
   const isMediaPage = isWatchPage || isTokenPage;
   // The scroll-in backdrop only exists on media-style pages (watch/token +
-  // the /home and /discover feeds); everywhere else the header stays as-is on
-  // scroll.
-  const showScrollBackdrop = isMediaPage || pathname === '/home' || pathname === '/discover';
+  // the /home feed); everywhere else the header stays as-is on scroll. NOT on
+  // /discover: the app shell stacks the fixed header above all page content, so
+  // a backdrop there would sit over the feed — the feed must stay unobstructed.
+  const showScrollBackdrop = isMediaPage || pathname === '/home';
 
   useEffect(() => {
     if (!showScrollBackdrop) return
@@ -99,6 +100,17 @@ export function AppHeader() {
             className="sm:size-[25px] opacity-90"
           />
           </Link>
+          {/* Discover search lives in the header (right of the logo), not in the
+              feed tab bar. */}
+          {firstSegment === 'discover' && (
+            <Link
+              href="/discover/search"
+              aria-label="Search"
+              className="flex size-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <SearchIcon className="size-6" />
+            </Link>
+          )}
         </div>
       </div>
 

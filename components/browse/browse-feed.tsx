@@ -8,7 +8,6 @@ import { PostCardSkeleton } from "./post-card-skeleton";
 import { PostComposer } from "./post-composer";
 import { FeedTab } from "./feed-tab";
 import React from "react";
-import { SearchIcon } from "@/components/icons";
 import { ArrowUp, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -17,12 +16,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 type FeedType = "for-you" | "following" | "news";
 type FeedItem = { type: "post"; createdAt: Date; data: any };
 
-interface BrowseFeedProps {
-    extraTabs?: React.ReactNode;
-    onSearchClick?: () => void;
-}
-
-export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
+export function BrowseFeed() {
     const [activeTab, setActiveTab] = useState<FeedType>("for-you");
     const markedPageCount = useRef(0);
     const { data: session } = useAuthSession();
@@ -481,13 +475,6 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
                 />
                 <FeedTab label="Following" isActive={activeTab === "following"} onClick={() => switchTab("following")} />
                 <FeedTab label="News" isActive={activeTab === "news"} onClick={() => switchTab("news")} />
-                <button
-                    onClick={onSearchClick}
-                    className="px-4 bg-black/40 cursor-pointer h-13 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-500/20 transition-colors shrink-0"
-                >
-                    <SearchIcon className="w-6 h-6" />
-                </button>
-                {extraTabs}
             </div>
 
             {/* Floating "new posts" pill — parks just under the tab bar */}

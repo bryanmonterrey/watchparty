@@ -6,30 +6,27 @@ import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
 // full-bleed — fixed-width feed in the middle, side columns flex to consume
 // ALL remaining width (no outer gutters).
 //
-// Scroll model: ONE scroller (this outer frame). A wheel anywhere scrolls the
-// whole page, so the feed and the right column move together — they're in
-// normal flow. The left rail is `sticky` so it stays put while everything else
-// scrolls. (Previously each column was its own overflow-y-auto, so only the
-// hovered column scrolled.)
+// Scroll model: the page scrolls via the app's own scroller (#app-scroll-
+// container), NOT a per-column overflow. The layout grows to the feed height
+// (min-h-dvh, no overflow here), so a wheel anywhere scrolls everything
+// together. The left rail is `sticky top-0` (stays put). The right column
+// stretches to the full feed height (flex stretch — only possible because the
+// outer is content-height, not a fixed-height scroller) and its content is
+// `sticky bottom-0`, so it scrolls with the page then PINS once its bottom is
+// reached, instead of scrolling off into oblivion.
 export default function DiscoverLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex h-dvh w-full overflow-y-auto hidden-scrollbar px-4 gap-6 relative">
+        <div className="flex min-h-dvh w-full px-4 gap-6 relative">
             <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 self-start lg:block">
                 <DiscoverRail />
             </aside>
 
-            {/* z-100 keeps the whole feed column ABOVE the app header (z-50), so
-                the header (and its scroll backdrop) never obstructs the feed — it
-                only shows over the side columns. */}
             <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-100 lg:border-x border-soft-gray/[0.12]">
                 {children}
             </div>
 
             {/* Right cards: x=1112…1462 in the 1512 frame → anchored right with
-                a 50px page margin, content top at y=102. Scrolls with the page,
-                then pins (sticky bottom) once its bottom is reached — it doesn't
-                keep scrolling off the top. The aside stretches to the full feed
-                height to give the sticky child room to travel. */}
+                a 50px page margin, content top at y=102. */}
             <aside className="hidden min-w-0 flex-1 xl:block">
                 <div className="sticky bottom-0 flex justify-end pt-[82px]">
                     <DiscoverRightRail />

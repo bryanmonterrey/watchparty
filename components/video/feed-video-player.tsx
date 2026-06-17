@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PlayPauseMorph, VolumeMorph, CaptionsMorph, FullscreenMorph } from "@/components/morph-icons";
 import { YTReplayIcon, YTSettingsIcon } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { reportFeedVisibility, unregisterFeedVideo } from "@/lib/feed-autoplay";
 import { cn } from "@/lib/utils";
 
 // m:ss, or h:mm:ss past an hour.
@@ -22,6 +23,9 @@ interface FeedVideoPlayerProps {
     postId: string;
     videoUrl: string;
     poster?: string | null;
+    /** Autoplay (muted) when this card is the most-visible video in view, and
+     *  pause when another takes over. On for the feed; off for the detail page. */
+    autoplayInView?: boolean;
     className?: string;
 }
 
@@ -32,10 +36,11 @@ interface FeedVideoPlayerProps {
 // the same twitter2 scrubber. The watch-only controls that don't apply to a
 // plain feed mp4 (HLS quality/audio tracks, theater, PiP, AirPlay, download,
 // autoplay-next, chapters/heatmap) are omitted; speed/captions/fullscreen stay.
-export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVideoPlayerProps) {
+export function FeedVideoPlayer({ postId, videoUrl, poster, autoplayInView = false, className }: FeedVideoPlayerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const scrubRef = useRef<HTMLDivElement>(null);
+    const autoplayToken = useRef<object>({});
 
     const [started, setStarted] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -44,7 +49,9 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
     const [duration, setDuration] = useState(0);
     const [buffered, setBuffered] = useState(0);
     const [volume, setVolume] = useState(1);
-    const [muted, setMuted] = useState(false);
+    // Autoplaying cards start muted (so in-view autoplay is allowed); users
+    // unmute via the control. Non-autoplay (detail page) starts unmuted.
+    const [muted, setMuted] = useState(autoplayInView);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [captionsOn, setCaptionsOn] = useState(false);
     const [captionText, setCaptionText] = useState("");
@@ -114,6 +121,30 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
         const onFs = () => setIsFullscreen(document.fullscreenElement === containerRef.current);
         document.addEventListener("fullscreenchange", onFs);
         return () => document.removeEventListener("fullscreenchange", onFs);
+    }, []);
+
+    // Reflect the muted state on the element (autoplay starts muted).
+    useEffect(() => {
+        const v = videoRef.current;
+        if (v) v.muted = muted;
+    }, [muted]);
+
+    // Autoplay when this card is the most-visible video in the feed; pause when
+    // another takes over or it scrolls out of view. Coordinated through the
+    // feed-autoplay registry so only ONE video plays at a time.
+    useEffect(() => {
+        if (!autoplayInView) return;
+        const el = containerRef.current;
+        if (!el) return;
+        const token = autoplayToken.current;
+        const play = () => { setStarted(true); void videoRef.current?.play().catch(() => {}); };
+        const pause = () => { videoRef.current?.pause(); };
+        const io = new IntersectionObserver(
+            ([entry]) => reportFeedVisibility(token, entry.intersectionRatio, play, pause),
+            { threshold: [0, 0.25, 0.5, 0.6, 0.75, 0.9, 1] },
+        );
+        io.observe(el);
+        return () => { io.disconnect(); unregisterFeedVideo(token); };
     }, []);
 
     // Captions: keep the chosen track "hidden" (fires cuechange without the
@@ -186,18 +217,12 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
                 ))}
             </video>
 
-            {/* Center play / replay — until first play and whenever paused. */}
-            {!isPlaying && (
-                <button
-                    type="button"
-                    aria-label={isEnded ? "Replay" : "Play"}
-                    onClick={isEnded ? onReplay : togglePlay}
-                    className="absolute inset-0 z-10 flex items-center justify-center"
-                >
-                    <span className="flex size-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-transform hover:scale-105">
-                        {isEnded ? <YTReplayIcon className="size-7" /> : <PlayPauseMorph playing={false} className="size-7" />}
-                    </span>
-                </button>
+            {/* Resting time badge (bottom-left) — the only chrome shown when the
+                video isn't hovered; fades out as the full control bar fades in. */}
+            {duration > 0 && (
+                <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white transition-opacity duration-200 group-hover/fvp:opacity-0">
+                    {formatTime(started ? currentTime : duration)}
+                </div>
             )}
 
             {/* Current caption line, above the controls. */}
@@ -211,8 +236,7 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
                 Container is click-through; only the interactive bits capture. ── */}
             <div
                 className={cn(
-                    "ytp-chrome-bottom pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex flex-col px-3 pb-1 transition-opacity duration-200",
-                    isPlaying ? "opacity-0 group-hover/fvp:opacity-100" : "opacity-100",
+                    "ytp-chrome-bottom pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex flex-col px-3 pb-1 opacity-0 transition-opacity duration-200 group-hover/fvp:opacity-100",
                 )}
             >
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
