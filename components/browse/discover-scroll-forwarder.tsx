@@ -16,15 +16,7 @@ export function DiscoverScrollForwarder() {
             const feed = document.getElementById("discover-feed-scroll");
             if (!feed) return;
             // Hovering the feed → leave it fully native.
-            if (feed.contains(e.target as Node)) {
-                const before = feed.scrollTop;
-                // Measure native applied movement on the next frame.
-                requestAnimationFrame(() => {
-                    const moved = feed.scrollTop - before;
-                    console.log("[scroll] FEED native", { deltaY: e.deltaY, applied: moved.toFixed(1) });
-                });
-                return;
-            }
+            if (feed.contains(e.target as Node)) return;
 
             e.preventDefault();
 
@@ -33,19 +25,9 @@ export function DiscoverScrollForwarder() {
                 e.deltaMode === 2 ? e.deltaY * feed.clientHeight :
                 e.deltaY;
 
-            const before = feed.scrollTop;
             feed.scrollTop += delta;
-            const moved = feed.scrollTop - before;
             const rail = document.getElementById("discover-right-rail");
             if (rail) rail.scrollTop += delta;
-
-            // applied should equal delta (minus clamp at top/bottom) — i.e. no stalling.
-            console.log("[scroll] RAIL forwarded", {
-                deltaY: e.deltaY.toFixed(1),
-                delta: delta.toFixed(1),
-                applied: moved.toFixed(1),
-                stalled: Math.abs(moved - delta) > 1 && before > 0 && feed.scrollTop < feed.scrollHeight - feed.clientHeight,
-            });
         };
 
         frame.addEventListener("wheel", onWheel, { passive: false });
