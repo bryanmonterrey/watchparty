@@ -15,7 +15,7 @@ export function DiscoverScrollBackdrop() {
     const [scrollY, setScrollY] = useState(0);
 
     useEffect(() => {
-        const container = document.getElementById("app-scroll-container");
+        const container = document.getElementById("discover-feed-scroll");
         if (!container) return;
         const onScroll = () => setScrollY(container.scrollTop);
         onScroll();

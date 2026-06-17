@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function DiscoverPage() {
     return (
-        <div className="w-full h-svh relative">
+        <div className="w-full relative">
             <DiscoverClient />
         </div>
     );

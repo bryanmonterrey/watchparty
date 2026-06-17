@@ -305,7 +305,7 @@ export function BrowseFeed() {
         if (tab === activeTab) return;
 
         // Save current scroll position before leaving
-        tabScrollCache.current.set(activeTab, window.scrollY);
+        tabScrollCache.current.set(activeTab, document.getElementById("discover-feed-scroll")?.scrollTop ?? 0);
 
         markedPageCount.current = 0;
         newestPostAt.current = null;
@@ -327,14 +327,15 @@ export function BrowseFeed() {
         }
 
         // Restore scroll position after the DOM has painted
+        const feedEl = () => document.getElementById("discover-feed-scroll");
         if (cached && cached.length > 0 && savedScroll > 0) {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    window.scrollTo({ top: savedScroll, behavior: "instant" });
+                    feedEl()?.scrollTo({ top: savedScroll, behavior: "instant" });
                 });
             });
         } else {
-            window.scrollTo({ top: 0, behavior: "instant" });
+            feedEl()?.scrollTo({ top: 0, behavior: "instant" });
         }
     };
 

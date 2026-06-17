@@ -44,9 +44,9 @@ const config = {
     storeSessionInDatabase: true,
   },
   rateLimit: {
-    enabled: true,
+    enabled: process.env.NODE_ENV === "production",
     window: 60,
-    max: 20,
+    max: 100,
     storage: "secondary-storage" as const,
   },
   user: {
