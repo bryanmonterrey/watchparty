@@ -8,7 +8,6 @@ import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SkeletonReveal } from "@/components/ui/skeleton-reveal";
 import { Button } from "@/components/ui/button";
 import {
     Carousel,
@@ -382,7 +381,7 @@ function VideoCardSkeleton({ index, count }: { index: number; count: number }) {
         <div className="flex flex-col gap-3">
             <div className="relative overflow-hidden rounded-[19px]">
                 <Skeleton style={pulse} className="aspect-[382/243] w-full rounded-[19px]" />
-        
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[4px] bg-white/10" />
             </div>
             <div className="flex items-start gap-3">
                 <Skeleton style={pulse} className="size-16 shrink-0 rounded-full" />
@@ -406,20 +405,6 @@ function CardRowSkeleton() {
         <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             {Array.from({ length: TRENDING_SKELETON_COUNT }).map((_, i) => (
                 <VideoCardSkeleton key={i} index={i} count={TRENDING_SKELETON_COUNT} />
-            ))}
-        </div>
-    );
-}
-
-// Single-row skeleton matching the trending carousel's layout (so the reveal's
-// stacked skeleton doesn't reserve a taller grid than the 1-row carousel).
-function TrendingRowSkeleton() {
-    return (
-        <div className="-ml-5 flex overflow-hidden py-3">
-            {Array.from({ length: TRENDING_SKELETON_COUNT }).map((_, i) => (
-                <div key={i} className="shrink-0 basis-1/2 pl-5 xl:basis-1/4">
-                    <VideoCardSkeleton index={i} count={TRENDING_SKELETON_COUNT} />
-                </div>
             ))}
         </div>
     );
@@ -583,17 +568,18 @@ export function DesktopHome() {
         <div className="flex flex-col gap-7 pb-16 md:pt-[var(--header-height)]">
             {/* ── Hero carousel: full-bleed coverflow accordion ──────────── */}
             <div className="pt-4">
-                <SkeletonReveal loading={feed.isLoading} pulse={false} skeleton={<HomeCarouselSkeleton />}>
-                    <HomeCarousel videos={heroVideos} />
-                </SkeletonReveal>
+
+                {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
             </div>
 
             <div className="flex flex-col gap-7 px-6">
                 <section>
                     <SectionHeader title="Trending" href="/search" />
-                    <SkeletonReveal loading={feed.isLoading} pulse={false} skeleton={<TrendingRowSkeleton />}>
+                    {feed.isLoading ? (
+                        <CardRowSkeleton />
+                    ) : (
                         <TrendingCarousel videos={trendingVideos} />
-                    </SkeletonReveal>
+                    )}
                 </section>
 
                 <section>
@@ -612,13 +598,15 @@ export function DesktopHome() {
                 {(irl.isLoading || irlVideos.length > 0) && (
                     <section>
                         <SectionHeader title="IRL" href="/search?q=IRL" />
-                        <SkeletonReveal loading={irl.isLoading} pulse={false} skeleton={<CardRowSkeleton />}>
+                        {irl.isLoading ? (
+                            <CardRowSkeleton />
+                        ) : (
                             <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
                                 {irlVideos.slice(0, 4).map((v) => (
                                     <VideoCard key={v.id} v={v} />
                                 ))}
                             </div>
-                        </SkeletonReveal>
+                        )}
                     </section>
                 )}
             </div>

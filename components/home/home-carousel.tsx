@@ -308,6 +308,9 @@ function ClosedPanelSkeleton({ index, count }: { index: number; count: number })
     return (
         <div className="relative h-full w-[116px] shrink-0 overflow-hidden rounded-[20px] bg-muted">
             <Skeleton style={pulse} className="absolute inset-0 size-full rounded-none" />
+            <div className="absolute inset-0 flex items-center justify-center">
+                <Skeleton style={pulse} className="size-14 rounded-full bg-zinc-700" />
+            </div>
         </div>
     );
 }

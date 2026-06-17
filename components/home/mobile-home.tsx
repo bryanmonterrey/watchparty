@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SkeletonReveal } from "@/components/ui/skeleton-reveal";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { CATEGORIES } from "./video-feed/types";
 
@@ -31,53 +30,49 @@ function SectionHeader({ title, href }: { title: string; href: string }) {
     );
 }
 
-function MobileRowSkeleton() {
+function VideoRow({ videos, isLoading }: { videos: FeedVideo[]; isLoading: boolean }) {
+    if (isLoading) {
+        return (
+            <div className="flex gap-4 overflow-x-hidden px-5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton
+                        key={i}
+                        style={staggerPulse(i, 3)}
+                        className="aspect-video w-[320px] shrink-0 rounded-xl"
+                    />
+                ))}
+            </div>
+        );
+    }
+    if (videos.length === 0) {
+        return <p className="px-5 text-sm text-muted-foreground">Nothing here yet.</p>;
+    }
     return (
-        <div className="flex gap-4 overflow-x-hidden px-5">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton
-                    key={i}
-                    style={staggerPulse(i, 3)}
-                    className="aspect-video w-[320px] shrink-0 rounded-xl"
-                />
+        <div className="hidden-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-5">
+            {videos.map((v) => (
+                <Link
+                    key={v.id}
+                    href={`/${v.user.username}/${v.id}`}
+                    className="w-[320px] shrink-0 snap-start"
+                >
+                    <div className="aspect-video overflow-hidden rounded-xl bg-muted">
+                        {v.thumbnailUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={v.thumbnailUrl} alt={v.title} className="size-full object-cover" loading="lazy" />
+                        )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                        <span className="size-6 shrink-0 overflow-hidden rounded-full bg-muted">
+                            {v.user.avatar_url && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={v.user.avatar_url} alt="" className="size-full object-cover" />
+                            )}
+                        </span>
+                        <p className="truncate text-sm font-semibold">{v.title}</p>
+                    </div>
+                </Link>
             ))}
         </div>
-    );
-}
-
-function VideoRow({ videos, isLoading }: { videos: FeedVideo[]; isLoading: boolean }) {
-    return (
-        <SkeletonReveal loading={isLoading} pulse={false} skeleton={<MobileRowSkeleton />}>
-            {videos.length === 0 ? (
-                <p className="px-5 text-sm text-muted-foreground">Nothing here yet.</p>
-            ) : (
-                <div className="hidden-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-5">
-                    {videos.map((v) => (
-                        <Link
-                            key={v.id}
-                            href={`/${v.user.username}/${v.id}`}
-                            className="w-[320px] shrink-0 snap-start"
-                        >
-                            <div className="aspect-video overflow-hidden rounded-xl bg-muted">
-                                {v.thumbnailUrl && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={v.thumbnailUrl} alt={v.title} className="size-full object-cover" loading="lazy" />
-                                )}
-                            </div>
-                            <div className="mt-2 flex items-center gap-2">
-                                <span className="size-6 shrink-0 overflow-hidden rounded-full bg-muted">
-                                    {v.user.avatar_url && (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={v.user.avatar_url} alt="" className="size-full object-cover" />
-                                    )}
-                                </span>
-                                <p className="truncate text-sm font-semibold">{v.title}</p>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-            )}
-        </SkeletonReveal>
     );
 }
 
