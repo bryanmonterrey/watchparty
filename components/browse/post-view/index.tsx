@@ -18,6 +18,7 @@ import {
     GeminiIcon
 } from "@/components/icons";
 import { MediaGrid } from "@/components/browse/media-grid";
+import { FeedVideoPlayer } from "@/components/video/feed-video-player";
 import { ImageViewer } from "@/components/ui/image-viewer";
 import { PollDisplay } from "@/components/browse/poll-display";
 import { PostCardSkeleton } from "../post-card-skeleton";
@@ -370,7 +371,9 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                             {(post.videoUrl || (post.media && post.media.length > 0) || post.imageUrl || post.token_image) && (
                                 <div className="rounded-2xl overflow-hidden mb-4">
                                     {post.videoUrl ? (
-                                        <video src={post.videoUrl} controls className="w-full h-full object-cover" />
+                                        <div className="aspect-video">
+                                            <FeedVideoPlayer postId={post.id} videoUrl={post.videoUrl} poster={post.imageUrl} />
+                                        </div>
                                     ) : (
                                         <MediaGrid
                                             media={post.media && post.media.length > 0 ? post.media : [{ type: "image", url: (post.imageUrl || post.token_image)! }]}

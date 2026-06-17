@@ -3,6 +3,7 @@
 import React from "react";
 import { CreateIcon, BubbleIcon, RetweetIcon, HeartIcon, HeartFilledIcon, BookmarkIcon, BookmarkFilledIcon, BarsIcon, LinkIcon, VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GeminiIcon } from "@/components/icons";
 import { MediaGrid } from "@/components/browse/media-grid";
+import { FeedVideoPlayer } from "@/components/video/feed-video-player";
 import { PollDisplay } from "@/components/browse/poll-display";
 import { LinkPreviewCard } from "@/components/browse/link-preview-card";
 import { PaywallGate } from "@/components/browse/paywall-gate";
@@ -91,13 +92,7 @@ export function PostCardBody({
             {!isPaywalled && videoUrl ? (
                 <div className="my-1">
                     <div className="rounded-3xl overflow-hidden border border-white/10 bg-zinc-900/50 aspect-video">
-                        <video
-                            src={videoUrl}
-                            controls
-                            preload="metadata"
-                            className="w-full h-full object-cover"
-                            onClick={(e) => e.stopPropagation()}
-                        />
+                        <FeedVideoPlayer postId={post.id} videoUrl={videoUrl} poster={imageUrl} />
                     </div>
                     {(hasContentWarning || views !== undefined) && (
                         <div className="flex items-center justify-between mt-2.5 mx-3.5">
