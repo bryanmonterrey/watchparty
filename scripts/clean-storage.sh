@@ -46,6 +46,10 @@ rm -rf ~/.expo/* ~/.hermes/* 2>/dev/null
 rm -rf "${TMPDIR:-/tmp}"/metro-* "${TMPDIR:-/tmp}"/haste-map-* "${TMPDIR:-/tmp}"/react-* 2>/dev/null
 command -v watchman >/dev/null 2>&1 && watchman watch-del-all >/dev/null 2>&1
 
+step "User caches (~/Library/Caches, ~/.cache — incl. browser/app caches)"
+rm -rf ~/Library/Caches/* 2>/dev/null
+rm -rf ~/.cache/* 2>/dev/null
+
 step "Package-manager caches (bun / npm / yarn / pnpm)"
 command -v bun  >/dev/null 2>&1 && bun pm cache rm >/dev/null 2>&1
 command -v npm  >/dev/null 2>&1 && npm cache clean --force >/dev/null 2>&1
