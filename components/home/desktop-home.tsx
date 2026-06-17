@@ -58,6 +58,27 @@ function watchHref(v: FeedVideo) {
     return `/${v.user.username}/${v.id}`;
 }
 
+// ─── TRENDING HOVER COLORS (experimental — easy to remove) ──────────────────
+// Random palette tint for the trending card hover backdrop, pulled from the
+// globals.css design tokens. To revert: delete this block + the `hoverColor`
+// useState in VideoCard, and restore the motion.div's backgroundColor to the
+// original "rgba(74,74,74,0.3)" / "rgba(74,74,74,0)".
+const HOVER_PALETTE = [
+    "var(--color-jewel)",
+    "var(--color-soft-pink)",
+    "var(--color-soft-blue)",
+    "var(--color-royal-blue)",
+    "var(--color-pastel-yellow)",
+    "var(--color-bitcoin-orange)",
+    "var(--color-sharp-gray)",
+    "var(--color-soft-gray)",
+    "var(--color-vice-purple)",
+];
+function randomHoverColor() {
+    return HOVER_PALETTE[Math.floor(Math.random() * HOVER_PALETTE.length)];
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 function SectionHeader({ title, href }: { title: string; href: string }) {
     return (
         <div className="flex items-baseline justify-between pb-4">
@@ -117,6 +138,9 @@ function VideoCard({ v }: { v: FeedVideo }) {
 
     const [captionsOn, setCaptionsOn] = useState(false);
     const [captionText, setCaptionText] = useState("");
+    // TRENDING HOVER COLORS (experimental — easy to remove): one random palette
+    // color chosen per card mount. See HOVER_PALETTE above.
+    const [hoverColor] = useState(randomHoverColor);
 
     const movie = isMovie(v);
     const duration = v.duration ?? 0;
@@ -211,10 +235,15 @@ function VideoCard({ v }: { v: FeedVideo }) {
             <motion.div
                 aria-hidden
                 initial={false}
+                // TRENDING HOVER COLORS (experimental): static random palette tint
+                // (style.backgroundColor) faded in by the opacity spring. To
+                // revert, drop the style prop and restore backgroundColor here to
+                // "rgba(74,74,74,0.3)" / "rgba(74,74,74,0)".
+                style={{ backgroundColor: hoverColor }}
                 animate={
                     hovered
-                        ? { scale: 1, opacity: 1, backgroundColor: "rgba(74,74,74,0.3)" }
-                        : { scale: 0.5, opacity: 0, backgroundColor: "rgba(74,74,74,0)" }
+                        ? { scale: 1, opacity: 0.1 }
+                        : { scale: 0.5, opacity: 0 }
                 }
                 transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
                 className="pointer-events-none absolute inset-[-12px] -z-10 rounded-3xl"
@@ -381,7 +410,6 @@ function VideoCardSkeleton({ index, count }: { index: number; count: number }) {
         <div className="flex flex-col gap-3">
             <div className="relative overflow-hidden rounded-[19px]">
                 <Skeleton style={pulse} className="aspect-[382/243] w-full rounded-[19px]" />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[4px] bg-white/10" />
             </div>
             <div className="flex items-start gap-3">
                 <Skeleton style={pulse} className="size-16 shrink-0 rounded-full" />
@@ -389,11 +417,6 @@ function VideoCardSkeleton({ index, count }: { index: number; count: number }) {
                     <Skeleton style={pulse} className="h-4 w-full rounded-full" />
                     <Skeleton style={pulse} className="h-4 w-[82%] rounded-full" />
                     <Skeleton style={pulse} className="h-3.5 w-1/2 rounded-full" />
-                </div>
-                <div className="flex shrink-0 flex-col items-center gap-1 pt-1.5">
-                    <Skeleton style={pulse} className="size-1 rounded-full" />
-                    <Skeleton style={pulse} className="size-1 rounded-full" />
-                    <Skeleton style={pulse} className="size-1 rounded-full" />
                 </div>
             </div>
         </div>
@@ -427,7 +450,7 @@ function CategoryCard({ c, index, count }: { c: (typeof HOME_CATEGORIES)[number]
                     loading="lazy"
                     onLoad={() => setLoaded(true)}
                     className={cn(
-                        "absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105",
+                        "absolute inset-0 size-full object-cover transition-transform duration-300",
                         loaded ? "opacity-100" : "opacity-0"
                     )}
                 />
@@ -568,7 +591,6 @@ export function DesktopHome() {
         <div className="flex flex-col gap-7 pb-16 md:pt-[var(--header-height)]">
             {/* ── Hero carousel: full-bleed coverflow accordion ──────────── */}
             <div className="pt-4">
-
                 {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
             </div>
 
