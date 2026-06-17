@@ -4,23 +4,27 @@ import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
 
 // Discover 3-col frame per the updated desktopdesigns/discoverlanding.svg:
 // full-bleed — fixed-width feed in the middle, side columns flex to consume
-// ALL remaining width (no outer gutters). Columns scroll independently: the
-// outer frame is overflow-hidden, the feed has its own scroller, so the left
-// rail never moves with feed scroll; the right cards scroll on their own.
+// ALL remaining width (no outer gutters).
+//
+// Scroll model: ONE scroller (this outer frame). A wheel anywhere scrolls the
+// whole page, so the feed and the right column move together — they're in
+// normal flow. The left rail is `sticky` so it stays put while everything else
+// scrolls. (Previously each column was its own overflow-y-auto, so only the
+// hovered column scrolled.)
 export default function DiscoverLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex h-dvh w-full overflow-hidden px-4 gap-6 relative">
-            <aside className="hidden h-dvh min-w-0 flex-1 lg:block">
+        <div className="flex h-dvh w-full overflow-y-auto hidden-scrollbar px-4 gap-6 relative">
+            <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 self-start lg:block">
                 <DiscoverRail />
             </aside>
 
-            <div className="mx-auto h-full w-full max-w-[628px] shrink-0 overflow-y-auto hidden-scrollbar relative z-0 lg:border-x border-soft-gray/[0.12]">
+            <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-0 lg:border-x border-soft-gray/[0.12]">
                 {children}
             </div>
 
             {/* Right cards: x=1112…1462 in the 1512 frame → anchored right with
-                a 50px page margin, content top at y=102. */}
-            <aside className="hidden h-full min-w-0 flex-1 overflow-y-auto hidden-scrollbar xl:block">
+                a 50px page margin, content top at y=102. Scrolls with the page. */}
+            <aside className="hidden min-w-0 flex-1 self-start xl:block">
                 <div className="flex justify-end pt-[82px]">
                     <DiscoverRightRail />
                 </div>
