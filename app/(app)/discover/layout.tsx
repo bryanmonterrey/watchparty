@@ -1,4 +1,5 @@
 import React from "react";
+import { DiscoverScrollBackdrop } from "@/components/browse/discover-scroll-backdrop";
 import { DiscoverRail } from "@/components/browse/discover-rail";
 import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
 
@@ -16,8 +17,17 @@ import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
 // reached, instead of scrolling off into oblivion.
 export default function DiscoverLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex min-h-dvh w-full px-4 gap-6 relative">
-            <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 self-start lg:block">
+        <div className="relative">
+            {/* Discover's own scroll backdrop, beneath the global header. The
+                sticky h-0 wrapper overlays the top strip without pushing the
+                columns down; z-40 keeps it below the feed (z-100), so it darkens
+                the side columns on scroll but never obstructs the feed. */}
+            <div className="sticky top-0 z-40 h-0 max-md:hidden">
+                <DiscoverScrollBackdrop />
+            </div>
+
+            <div className="flex min-h-dvh w-full px-4 gap-6">
+                <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 self-start lg:block">
                 <DiscoverRail />
             </aside>
 
@@ -34,6 +44,7 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
             </aside>
             {/* lg–xl: right rail hidden — balance the left flex so the feed stays centered */}
             <div aria-hidden className="hidden flex-1 lg:block xl:hidden" />
+            </div>
         </div>
     );
 }

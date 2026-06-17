@@ -22,8 +22,9 @@ export function DiscoverRail() {
         | undefined;
     const avatar = user?.avatar_url ?? user?.image ?? null;
 
-    // Static (parent column never scrolls — the feed has its own scroller),
-    // so no sticky needed; pt-[102px] puts the card top at design y=102.
+    // Fully static — the layout pins the enclosing <aside> with `sticky top-0`,
+    // so the left rail never scrolls with the page. pt puts the card top at the
+    // design's y=102.
     return (
         <div className="flex h-screen flex-col pt-[82px] pb-[35px]">
             <div className="w-full">
