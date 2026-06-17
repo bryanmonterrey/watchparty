@@ -3,6 +3,8 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { PlayPauseMorph, VolumeMorph, CaptionsMorph, FullscreenMorph } from "@/components/morph-icons";
+import { YTReplayIcon, YTSettingsIcon } from "@/components/icons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 // m:ss, or h:mm:ss past an hour.
@@ -14,6 +16,8 @@ function formatTime(seconds: number) {
     return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
 }
 
+const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
 interface FeedVideoPlayerProps {
     postId: string;
     videoUrl: string;
@@ -21,11 +25,13 @@ interface FeedVideoPlayerProps {
     className?: string;
 }
 
-// Compact feed player (discover). Mirrors the full video-page player's control
-// language — grouped black/30 pills, morph icons, a 3-layer scrubber with a
-// twitter2 playhead — but scaled down with plain local state instead of the
-// heavy usePlayer stack (no HLS quality, chapters, ads, PiP, theater, settings
-// menu). Controls reveal on hover and stay up while paused.
+// Compact feed player (discover). The control bar is a 1:1 match of the
+// /video player's controls-bar.tsx — same grouped black/30 pills at
+// --player-control-h, the same morph icons at size-[24px], the same volume
+// pill with an expanding twitter2 slider, the same time/remaining toggle, and
+// the same twitter2 scrubber. The watch-only controls that don't apply to a
+// plain feed mp4 (HLS quality/audio tracks, theater, PiP, AirPlay, download,
+// autoplay-next, chapters/heatmap) are omitted; speed/captions/fullscreen stay.
 export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVideoPlayerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -33,6 +39,7 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
 
     const [started, setStarted] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isEnded, setIsEnded] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [buffered, setBuffered] = useState(0);
@@ -42,6 +49,9 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
     const [captionsOn, setCaptionsOn] = useState(false);
     const [captionText, setCaptionText] = useState("");
     const [scrubHover, setScrubHover] = useState<number | null>(null);
+    const [showRemaining, setShowRemaining] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1);
+    const [speedOpen, setSpeedOpen] = useState(false);
     const isScrubbingRef = useRef(false);
 
     // Lazy: only fetch caption tracks once the video has actually been played,
@@ -56,8 +66,16 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
     const togglePlay = useCallback(() => {
         const v = videoRef.current;
         if (!v) return;
-        if (v.paused) { setStarted(true); void v.play().catch(() => {}); }
+        if (v.paused) { setStarted(true); setIsEnded(false); void v.play().catch(() => {}); }
         else v.pause();
+    }, []);
+
+    const onReplay = useCallback(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        v.currentTime = 0;
+        setIsEnded(false);
+        void v.play().catch(() => {});
     }, []);
 
     const toggleMute = () => {
@@ -77,6 +95,13 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
         v.muted = clamped === 0;
         setVolume(clamped);
         setMuted(clamped === 0);
+    };
+
+    const changeSpeed = (speed: number) => {
+        const v = videoRef.current;
+        if (v) v.playbackRate = speed;
+        setPlaybackRate(speed);
+        setSpeedOpen(false);
     };
 
     const toggleFullscreen = () => {
@@ -149,8 +174,9 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
                 playsInline
                 className="h-full w-full cursor-pointer object-cover"
                 onClick={togglePlay}
-                onPlay={() => { setIsPlaying(true); setStarted(true); }}
+                onPlay={() => { setIsPlaying(true); setStarted(true); setIsEnded(false); }}
                 onPause={() => setIsPlaying(false)}
+                onEnded={() => { setIsPlaying(false); setIsEnded(true); }}
                 onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
                 onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
                 onProgress={(e) => { const b = e.currentTarget.buffered; if (b.length) setBuffered(b.end(b.length - 1)); }}
@@ -160,41 +186,42 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
                 ))}
             </video>
 
-            {/* Center play button — until first play and whenever paused. */}
+            {/* Center play / replay — until first play and whenever paused. */}
             {!isPlaying && (
                 <button
                     type="button"
-                    aria-label="Play"
-                    onClick={togglePlay}
+                    aria-label={isEnded ? "Replay" : "Play"}
+                    onClick={isEnded ? onReplay : togglePlay}
                     className="absolute inset-0 z-10 flex items-center justify-center"
                 >
                     <span className="flex size-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-transform hover:scale-105">
-                        <PlayPauseMorph playing={false} className="size-7" />
+                        {isEnded ? <YTReplayIcon className="size-7" /> : <PlayPauseMorph playing={false} className="size-7" />}
                     </span>
                 </button>
             )}
 
             {/* Current caption line, above the controls. */}
             {captionsOn && captionText && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-12 z-20 flex justify-center px-4">
+                <div className="pointer-events-none absolute inset-x-0 bottom-16 z-20 flex justify-center px-4">
                     <span className="max-w-full truncate rounded bg-black/70 px-2 py-0.5 text-sm font-semibold text-white">{captionText}</span>
                 </div>
             )}
 
-            {/* Bottom chrome — gradient + scrubber + controls. Container itself is
-                click-through; only the interactive bits capture pointer events. */}
+            {/* ── Bottom chrome — scrubber + controls row, 1:1 with the /video bar.
+                Container is click-through; only the interactive bits capture. ── */}
             <div
                 className={cn(
-                    "pointer-events-none absolute inset-x-0 bottom-0 z-20 px-2 pb-1 transition-opacity duration-200",
+                    "ytp-chrome-bottom pointer-events-none absolute bottom-0 left-0 right-0 z-20 flex flex-col px-3 pb-1 transition-opacity duration-200",
                     isPlaying ? "opacity-0 group-hover/fvp:opacity-100" : "opacity-100",
                 )}
             >
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-20 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
 
                 {/* Scrubber */}
                 <div
                     ref={scrubRef}
-                    className="pointer-events-auto relative mb-0.5 h-3.5 cursor-pointer"
+                    className="pointer-events-auto relative cursor-pointer select-none"
+                    style={{ height: 16, display: "flex", alignItems: "center" }}
                     onMouseMove={(e) => setScrubHover(scrubFraction(e.clientX))}
                     onMouseLeave={() => { if (!isScrubbingRef.current) setScrubHover(null); }}
                     onPointerDown={(e) => {
@@ -213,99 +240,152 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, className }: FeedVid
                     }}
                 >
                     <div
-                        className="absolute inset-x-0 top-1/2 -translate-y-1/2 overflow-hidden rounded-full transition-[height] duration-150"
+                        className="absolute inset-x-0 overflow-hidden rounded-full bg-white/30 transition-[height] duration-150"
                         style={{ height: scrubHover !== null ? 5 : 3 }}
                     >
-                        <div className="absolute inset-0 bg-white/30" />
-                        <div className="absolute inset-y-0 left-0 bg-white/50" style={{ width: `${bufferedPct}%` }} />
+                        <div className="absolute inset-y-0 left-0 bg-twitter2/50" style={{ width: `${bufferedPct}%` }} />
                         <div className="absolute inset-y-0 left-0 bg-twitter2" style={{ width: `${progressPct}%` }} />
                     </div>
                     <div
-                        className="pointer-events-none absolute top-1/2 size-3 rounded-full bg-twitter2 shadow"
-                        style={{ left: `${progressPct}%`, transform: `translate(-50%,-50%) scale(${scrubHover !== null ? 1.3 : 0})`, transition: "transform 150ms" }}
+                        className="absolute h-3 w-3 rounded-full bg-twitter2 shadow-md pointer-events-none"
+                        style={{
+                            left: `${progressPct}%`,
+                            top: "50%",
+                            transform: `translate(-50%, -50%) scale(${scrubHover !== null ? 1.4 : 0})`,
+                            transition: "transform 0.15s cubic-bezier(0.05, 0, 0, 1)",
+                        }}
                     />
                 </div>
 
                 {/* Controls row */}
-                <div className="pointer-events-auto flex h-9 items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-1.5">
-                        {/* Play / pause */}
+                <div className="ytp-chrome-controls pointer-events-auto flex h-[56px] items-center justify-between">
+                    {/* Left controls */}
+                    <div className="flex h-full items-center gap-1">
+                        {/* Play / pause / replay */}
                         <button
-                            type="button"
-                            aria-label={isPlaying ? "Pause" : "Play"}
-                            onClick={togglePlay}
-                            className="rounded-full bg-black/30 p-1 text-white transition-colors"
+                            onClick={isEnded ? onReplay : togglePlay}
+                            aria-label={isEnded ? "Replay" : isPlaying ? "Pause" : "Play"}
+                            className="ytp-button h-(--player-control-h) cursor-pointer rounded-full bg-black/30 p-1 text-white/90 transition-colors hover:text-white flex items-center justify-center"
                         >
-                            <span className="flex items-center justify-center rounded-full p-1 transition-colors hover:bg-white/30">
-                                <PlayPauseMorph playing={isPlaying} className="size-5" />
-                            </span>
+                            <div className="flex items-center justify-center rounded-full p-1 hover:bg-white/35">
+                                {isEnded ? <YTReplayIcon className="size-[24px]" /> : <PlayPauseMorph playing={isPlaying} className="size-[24px]" />}
+                            </div>
                         </button>
 
-                        {/* Volume — mute toggle + slider that expands on hover */}
+                        {/* Volume */}
                         <div
-                            className="group/vol flex items-center rounded-full bg-black/30 p-1"
+                            className="ytp-volume-area group/vol flex h-full cursor-pointer items-center rounded-full"
                             onWheel={(e) => { e.preventDefault(); adjustVolume((muted ? 0 : volume) + (e.deltaY < 0 ? 0.05 : -0.05)); }}
                         >
-                            <button
-                                type="button"
-                                aria-label={muted ? "Unmute" : "Mute"}
-                                onClick={toggleMute}
-                                className="flex size-7 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
-                            >
-                                <VolumeMorph level={volumeLevel} className="size-5" />
-                            </button>
-                            <div className="w-0 overflow-hidden transition-[width] duration-200 group-hover/vol:w-16">
-                                <div
-                                    className="relative mx-1.5 flex h-5 w-12 cursor-pointer items-center"
-                                    onPointerDown={(e) => {
-                                        const el = e.currentTarget;
-                                        el.setPointerCapture(e.pointerId);
-                                        const set = (clientX: number) => {
-                                            const r = el.getBoundingClientRect();
-                                            adjustVolume((clientX - r.left) / r.width);
-                                        };
-                                        set(e.clientX);
-                                        const move = (ev: PointerEvent) => set(ev.clientX);
-                                        const up = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); };
-                                        document.addEventListener("pointermove", move);
-                                        document.addEventListener("pointerup", up);
-                                    }}
-                                >
-                                    <div className="absolute inset-x-0 h-1 rounded-full bg-white/30">
-                                        <div className="absolute inset-y-0 left-0 rounded-full bg-white" style={{ width: `${volumePct}%` }} />
+                            <div className="flex h-(--player-control-h) items-center justify-center rounded-full bg-black/30 p-1">
+                                <div className="flex items-center rounded-full p-1 hover:bg-white/20">
+                                    <button
+                                        onClick={toggleMute}
+                                        aria-label={muted ? "Unmute" : "Mute"}
+                                        className="ytp-button flex h-full cursor-pointer items-center justify-center rounded-full text-white/90 transition-colors hover:text-white"
+                                    >
+                                        <VolumeMorph level={volumeLevel} className="size-[24px] cursor-pointer" />
+                                    </button>
+                                    <div className="flex h-6 w-0 items-center justify-center overflow-hidden transition-[width] duration-200 ease-out group-hover/vol:w-[56px]">
+                                        <div
+                                            className="relative flex cursor-pointer items-center"
+                                            style={{ width: 40, height: 20 }}
+                                            onPointerDown={(e) => {
+                                                const el = e.currentTarget;
+                                                el.setPointerCapture(e.pointerId);
+                                                const set = (clientX: number) => {
+                                                    const r = el.getBoundingClientRect();
+                                                    adjustVolume((clientX - r.left) / r.width);
+                                                };
+                                                set(e.clientX);
+                                                const move = (ev: PointerEvent) => set(ev.clientX);
+                                                const up = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); };
+                                                document.addEventListener("pointermove", move);
+                                                document.addEventListener("pointerup", up);
+                                            }}
+                                        >
+                                            <div className="pointer-events-none absolute inset-x-0 h-1 rounded-full bg-white/30">
+                                                <div className="absolute inset-y-0 left-0 rounded-full bg-twitter2" style={{ width: `${volumePct}%` }} />
+                                            </div>
+                                            <div className="pointer-events-none absolute top-1/2 hidden h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-twitter2 shadow group-hover/vol:block" style={{ left: `${volumePct}%` }} />
+                                        </div>
                                     </div>
-                                    <div className="absolute size-3 -translate-x-1/2 rounded-full bg-white shadow" style={{ left: `${volumePct}%` }} />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Time */}
-                        <span className="px-1 text-xs font-medium tabular-nums text-white drop-shadow">
-                            {formatTime(currentTime)}
-                            <span className="text-white/60"> / {formatTime(duration)}</span>
-                        </span>
+                        {/* Time / remaining toggle */}
+                        <div
+                            className="flex h-(--player-control-h) cursor-pointer items-center rounded-full bg-black/30 p-1"
+                            onClick={() => setShowRemaining((v) => !v)}
+                        >
+                            <div className="flex items-center rounded-full p-1 px-2 text-[13px] font-normal tabular-nums text-white transition-colors hover:bg-white/35">
+                                <div className="flex items-center justify-center rounded-full p-0.5">
+                                    {showRemaining ? (
+                                        <><span>-{formatTime(Math.max(0, duration - currentTime))}</span><span className="px-1">/</span><span className="opacity-70">{formatTime(duration)}</span></>
+                                    ) : (
+                                        <><span>{formatTime(currentTime)}</span><span className="px-1">/</span><span className="opacity-70">{formatTime(duration)}</span></>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Captions (when present) + fullscreen */}
-                    <div className="flex items-center gap-0.5 rounded-full bg-black/30 p-1">
-                        {captionTracks.length > 0 && (
+                    {/* Right controls — single pill: settings (speed) · captions · fullscreen */}
+                    <div className="ytp-right-controls flex h-full items-center">
+                        <div className="relative flex h-(--player-control-h) items-center justify-center gap-1 rounded-full bg-black/30 p-1">
+                            <Popover open={speedOpen} onOpenChange={setSpeedOpen}>
+                                <PopoverTrigger asChild>
+                                    <button
+                                        aria-label="Settings"
+                                        className="ytp-button relative flex h-full cursor-pointer items-center justify-center rounded-full p-1 px-3 text-white/90 transition-colors hover:bg-white/35 hover:text-white"
+                                    >
+                                        <YTSettingsIcon className="size-[24px]" />
+                                        {playbackRate !== 1 && (
+                                            <div className="absolute right-[4px] top-[8px] scale-90 rounded-[1px] bg-twitter2 px-[2px] text-[8px] font-bold leading-tight text-white">
+                                                {playbackRate}×
+                                            </div>
+                                        )}
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    side="top"
+                                    align="end"
+                                    sideOffset={8}
+                                    className="flex w-40 flex-col gap-0.5 rounded-2xl border-flexborder/75 bg-neutral-950 p-1.5 shadow-[0_0_15px_5px_rgba(255,255,255,0.08)] ring ring-white/10"
+                                >
+                                    <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Playback speed</p>
+                                    {SPEEDS.map((speed) => (
+                                        <button
+                                            key={speed}
+                                            onClick={() => changeSpeed(speed)}
+                                            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[13px] font-medium transition-colors hover:bg-white/5"
+                                        >
+                                            <span className={playbackRate === speed ? "text-white" : "text-zinc-400"}>{speed === 1 ? "Normal" : `${speed}×`}</span>
+                                            {playbackRate === speed && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                        </button>
+                                    ))}
+                                </PopoverContent>
+                            </Popover>
+
+                            {captionTracks.length > 0 && (
+                                <button
+                                    onClick={() => setCaptionsOn((c) => !c)}
+                                    aria-label={captionsOn ? "Turn off captions" : "Turn on captions"}
+                                    className={cn("ytp-button flex h-full cursor-pointer items-center justify-center rounded-full p-1 px-3 transition-colors hover:bg-white/35", captionsOn ? "text-twitter2" : "text-white/90 hover:text-white")}
+                                >
+                                    <CaptionsMorph on={captionsOn} className="size-[24px]" />
+                                </button>
+                            )}
+
                             <button
-                                type="button"
-                                aria-label={captionsOn ? "Turn off captions" : "Turn on captions"}
-                                onClick={() => setCaptionsOn((c) => !c)}
-                                className={cn("flex size-7 items-center justify-center rounded-full transition-colors hover:bg-white/20", captionsOn ? "text-twitter2" : "text-white")}
+                                onClick={toggleFullscreen}
+                                aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                                className="ytp-button flex h-full cursor-pointer items-center justify-center rounded-full p-1 px-3 text-white/90 transition-colors hover:bg-white/35 hover:text-white"
                             >
-                                <CaptionsMorph on={captionsOn} className="size-5" />
+                                <FullscreenMorph active={isFullscreen} className="size-[24px]" />
                             </button>
-                        )}
-                        <button
-                            type="button"
-                            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                            onClick={toggleFullscreen}
-                            className="flex size-7 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
-                        >
-                            <FullscreenMorph active={isFullscreen} className="size-5" />
-                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
