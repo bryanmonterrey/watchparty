@@ -18,7 +18,10 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
                 <DiscoverRail />
             </aside>
 
-            <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-0 lg:border-x border-soft-gray/[0.12]">
+            {/* z-[60] keeps the whole feed column ABOVE the app header (z-50), so
+                the header (and its scroll backdrop) never obstructs the feed — it
+                only shows over the side columns. */}
+            <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-[60] lg:border-x border-soft-gray/[0.12]">
                 {children}
             </div>
 

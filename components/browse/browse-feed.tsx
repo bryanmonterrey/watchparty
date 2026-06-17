@@ -467,12 +467,11 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        // Offset below the fixed app header (md+, where it exists) so the sticky
-        // tab bar parks just under it rather than behind it.
-        <div className="flex flex-col md:pt-(--header-height)">
-            {/* Tabs — stick under the app header (top: header height on md+); kept
-                below the header's z-50 so the header's scroll backdrop sits on top. */}
-            <div className="flex items-center w-full sticky bg-background backdrop-blur-xl top-0 md:top-(--header-height) z-40 border-b border-soft-gray/[0.12]">
+        <div className="flex flex-col">
+            {/* Tabs — flush at the top of the feed column, which sits ABOVE the
+                app header (see the layout's z-index), so the header never covers
+                them. */}
+            <div className="flex items-center w-full sticky bg-background backdrop-blur-xl top-0 z-100 border-b border-soft-gray/[0.12]">
                 <FeedTab
                     label="For you"
                     isActive={activeTab === "for-you"}
@@ -492,7 +491,7 @@ export function BrowseFeed({ extraTabs, onSearchClick }: BrowseFeedProps) {
             </div>
 
             {/* Floating "new posts" pill — parks just under the tab bar */}
-            <div className="sticky top-[52px] md:top-[calc(var(--header-height)+52px)] z-30 h-0 overflow-visible">
+            <div className="sticky top-[52px] z-50 h-0 overflow-visible">
                 <AnimatePresence>
                     {newPostsCount > 0 && !composerVisible && (
                         <motion.div
