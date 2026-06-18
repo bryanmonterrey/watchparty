@@ -17,10 +17,10 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex h-screen w-full flex-col items-center justify-center gap-6 px-6 text-center">
             <div className="max-w-[320px] space-y-2">
-                <h2 className="text-xl font-semibold text-white">Set up your wallet to message</h2>
+                <h2 className="text-xl font-semibold text-white">Connect a wallet to message</h2>
                 <p className="text-[13px] leading-relaxed text-zinc-500">
-                    Your messages are end-to-end encrypted with your wallet key. Create your wallet to
-                    send and read private messages — only you can unlock them.
+                    Your messages are end-to-end encrypted with your wallet key — only you can unlock
+                    them. Connect your existing wallet, or create one below.
                 </p>
             </div>
 
@@ -32,7 +32,7 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
                 onClick={retry}
                 className="cursor-pointer text-[13px] font-medium text-zinc-400 underline-offset-4 hover:text-white hover:underline"
             >
-                I&apos;ve set up my wallet
+                I&apos;ve connected my wallet
             </button>
         </div>
     );
