@@ -3,7 +3,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { CryptoManager } from '@/lib/encryption/crypto-manager';
 import { KeyStorage } from '@/lib/encryption/key-storage';
-import { prfManager } from '@/lib/prf/prf-manager';
+import {
+    deriveMessagingWrapKey,
+    wrapPrivateKey,
+    unwrapPrivateKey,
+    isWrapped,
+} from '@/lib/encryption/wallet-key-derivation';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { trpc } from '@/lib/trpc/client';
 import { logger } from '@/lib/logger';
@@ -14,11 +19,15 @@ const keyStorage = new KeyStorage();
 interface EncryptionContextValue {
     isInitialized: boolean;
     isInitializing: boolean;
+    /** True when the user has no wallet share on this device — messaging is gated until they set one up. */
+    needsWallet: boolean;
     error: string | null;
     publicKey: string | null;
     encryptMessage: (text: string, recipientPublicKey: string) => Promise<{ ciphertext: string; iv: string }>;
     decryptMessage: (ciphertext: string, iv: string, senderPublicKey: string) => Promise<string>;
     clearKeys: () => Promise<void>;
+    /** Re-run initialization (e.g. after the user sets up their wallet). */
+    retry: () => void;
 }
 
 const EncryptionContext = createContext<EncryptionContextValue | null>(null);
@@ -39,6 +48,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
     const { data: session } = useAuthSession();
     const [isInitialized, setIsInitialized] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false);
+    const [needsWallet, setNeedsWallet] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [publicKey, setPublicKey] = useState<string | null>(null);
     const [keyPair, setKeyPair] = useState<CryptoKeyPair | null>(null);
@@ -46,124 +56,110 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
     const uploadKeyPairMutation = trpc.encryption.uploadKeyPair.useMutation();
     const utils = trpc.useUtils();
 
-    // Initialize keys on mount
-    useEffect(() => {
+    const initKeys = useCallback(async () => {
         if (!session?.user?.id) return;
+        const userId = session.user.id;
 
-        const initKeys = async () => {
-            try {
-                setIsInitializing(true);
+        try {
+            setIsInitializing(true);
+            setError(null);
 
-                // 1. Try to fetch keys from server (Cloud Sync)
-                // We use fetch() to get fresh data
-                const serverKeys = await utils.encryption.getKeyPair.fetch({
-                    userId: session.user.id
-                });
+            // Root of trust: derive a wrapping key from the on-device wallet share.
+            // No prompt, no signature — it's already in IndexedDB once the wallet
+            // exists. Without a wallet there's no server-blind secret, so we gate
+            // messaging on wallet setup rather than fall back to plaintext.
+            const wrapKey = await deriveMessagingWrapKey(userId);
+            if (!wrapKey) {
+                setNeedsWallet(true);
+                setIsInitialized(false);
+                return;
+            }
+            setNeedsWallet(false);
 
-                let finalPublicKey: string | null = null;
-                let finalPrivateKey: string | null = null;
-                let isNewGeneration = false;
+            // Fetch the (wrapped) keypair from the server for cross-device sync.
+            const serverKeys = await utils.encryption.getKeyPair.fetch({ userId });
 
-                // Attempt PRF derivation silently — succeeds only if a passkey
-                // is already registered for this origin. Never blocks init.
-                const prfKey = await prfManager.derive().catch(() => null);
+            let finalPublicKey: string | null = null;
+            let finalPrivateKey: string | null = null;
 
-                if (serverKeys?.success && serverKeys.privateKey && serverKeys.publicKey) {
-                    // CASE A: Keys exist on server -> Sync DOWN
-                    logger.info('Encryption keys found on server. Syncing down...', { userId: session.user.id });
+            if (serverKeys?.success && serverKeys.privateKey && serverKeys.publicKey) {
+                finalPublicKey = serverKeys.publicKey;
 
-                    finalPublicKey = serverKeys.publicKey;
-                    finalPrivateKey = serverKeys.privateKey;
-
-                    // Save to local storage, encrypted with PRF if available
-                    await keyStorage.storeKeyPair(
-                        session.user.id,
-                        { publicKey: finalPublicKey, privateKey: finalPrivateKey },
-                        prfKey ?? undefined
-                    );
-
-                } else {
-                    // CASE B: No keys on server -> Check Local or Generate
-
-                    // Try encrypted read first (PRF), fall back to plaintext
-                    const stored = prfKey
-                        ? await keyStorage.getKeyPair(session.user.id, prfKey)
-                            ?? await keyStorage.getKeyPair(session.user.id)
-                        : await keyStorage.getKeyPair(session.user.id);
-
-                    if (stored) {
-                        // CASE B1: Keys exist locally but not on server -> Sync UP
-                        logger.info('Keys found locally but not on server. Syncing up...', { userId: session.user.id });
-                        finalPublicKey = stored.publicKey;
-                        finalPrivateKey = stored.privateKey;
-
-                        // Re-encrypt with PRF if we just read a plaintext record
-                        if (prfKey && !stored.encryptionIv) {
-                            await keyStorage.storeKeyPair(
-                                session.user.id,
-                                { publicKey: finalPublicKey, privateKey: finalPrivateKey },
-                                prfKey
-                            );
-                        }
-                    } else {
-                        // CASE B2: No keys anywhere -> Generate New
-                        logger.info('No keys found. Generating new identity...', { userId: session.user.id });
-                        const newKeyPair = await cryptoManager.generateKeyPair();
-                        const exported = await cryptoManager.exportKeyPair(newKeyPair);
-
-                        finalPublicKey = exported.publicKey;
-                        finalPrivateKey = exported.privateKey;
-                        isNewGeneration = true;
-
-                        await keyStorage.storeKeyPair(
-                            session.user.id,
-                            exported,
-                            prfKey ?? undefined
-                        );
+                if (isWrapped(serverKeys.privateKey)) {
+                    // CASE A: Wrapped key on server -> unwrap with the wallet-derived key.
+                    const unwrapped = await unwrapPrivateKey(wrapKey, serverKeys.privateKey);
+                    if (!unwrapped) {
+                        throw new Error("Couldn't unlock your messages on this device.");
                     }
-
-                    // Upload to server (Sync UP)
-                    // We upload both Public and Private keys now
+                    finalPrivateKey = unwrapped;
+                } else {
+                    // CASE A': Legacy plaintext key on server -> migrate to wrapped.
+                    logger.info('Migrating plaintext encryption key to wallet-wrapped form', { userId });
+                    finalPrivateKey = serverKeys.privateKey;
                     try {
                         await uploadKeyPairMutation.mutateAsync({
-                            publicKey: finalPublicKey!,
-                            privateKey: finalPrivateKey!
+                            publicKey: finalPublicKey,
+                            privateKey: await wrapPrivateKey(wrapKey, finalPrivateKey),
                         });
-                        logger.info('Encryption keys synced to cloud', { userId: session.user.id });
-                        utils.encryption.getKeyPair.invalidate({ userId: session.user.id });
-                        utils.encryption.getPublicKey.invalidate({ userId: session.user.id });
-                    } catch (uploadError) {
-                        logger.error('Failed to sync keys to cloud', uploadError as Error);
-                        // Don't fail the whole init, we can work locally
+                        utils.encryption.getKeyPair.invalidate({ userId });
+                    } catch (migrateError) {
+                        logger.error('Failed to migrate encryption key to wrapped form', migrateError as Error);
                     }
                 }
 
-                // Import the final keys into memory for use
-                if (finalPublicKey && finalPrivateKey) {
-                    const imported = await cryptoManager.importKeyPair(
-                        finalPublicKey,
-                        finalPrivateKey
-                    );
-                    setKeyPair(imported);
-                    setPublicKey(finalPublicKey);
-                    setIsInitialized(true);
+                // Cache locally for fast subsequent loads on this device.
+                await keyStorage.storeKeyPair(userId, { publicKey: finalPublicKey, privateKey: finalPrivateKey });
+            } else {
+                // CASE B: No keys on server -> use local cache or generate, then sync up wrapped.
+                const stored = await keyStorage.getKeyPair(userId);
+
+                if (stored) {
+                    finalPublicKey = stored.publicKey;
+                    finalPrivateKey = stored.privateKey;
                 } else {
-                    throw new Error("Failed to resolve encryption keys");
+                    logger.info('No keys found. Generating new messaging identity...', { userId });
+                    const newKeyPair = await cryptoManager.generateKeyPair();
+                    const exported = await cryptoManager.exportKeyPair(newKeyPair);
+                    finalPublicKey = exported.publicKey;
+                    finalPrivateKey = exported.privateKey;
+                    await keyStorage.storeKeyPair(userId, exported);
                 }
 
-            } catch (err) {
-                console.error('[Encryption] Initialization failed', err);
-                logger.error('Failed to initialize encryption keys', err as Error, {
-                    userId: session?.user?.id,
-                });
-                setError(err instanceof Error ? err.message : 'Failed to initialize encryption');
-            } finally {
-                setIsInitializing(false);
+                try {
+                    await uploadKeyPairMutation.mutateAsync({
+                        publicKey: finalPublicKey,
+                        privateKey: await wrapPrivateKey(wrapKey, finalPrivateKey),
+                    });
+                    utils.encryption.getKeyPair.invalidate({ userId });
+                    utils.encryption.getPublicKey.invalidate({ userId });
+                } catch (uploadError) {
+                    logger.error('Failed to sync keys to cloud', uploadError as Error);
+                    // Don't fail init — messaging still works locally on this device.
+                }
             }
-        };
 
-        initKeys();
+            if (finalPublicKey && finalPrivateKey) {
+                const imported = await cryptoManager.importKeyPair(finalPublicKey, finalPrivateKey);
+                setKeyPair(imported);
+                setPublicKey(finalPublicKey);
+                setIsInitialized(true);
+            } else {
+                throw new Error('Failed to resolve encryption keys');
+            }
+        } catch (err) {
+            console.error('[Encryption] Initialization failed', err);
+            logger.error('Failed to initialize encryption keys', err as Error, { userId });
+            setError(err instanceof Error ? err.message : 'Failed to initialize encryption');
+        } finally {
+            setIsInitializing(false);
+        }
+        // utils + uploadKeyPairMutation are stable tRPC references.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session?.user?.id]);
+
+    useEffect(() => {
+        initKeys();
+    }, [initKeys]);
 
     const encryptMessage = useCallback(
         async (text: string, recipientPublicKey: string) => {
@@ -211,7 +207,6 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
         try {
             await keyStorage.clearAll();
             cryptoManager.clearKeys();
-            prfManager.clear();
             setKeyPair(null);
             setPublicKey(null);
             setIsInitialized(false);
@@ -233,11 +228,13 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
             value={{
                 isInitialized,
                 isInitializing,
+                needsWallet,
                 error,
                 publicKey,
                 encryptMessage,
                 decryptMessage,
                 clearKeys,
+                retry: initKeys,
             }}
         >
             {children}
