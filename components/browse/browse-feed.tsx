@@ -305,7 +305,7 @@ export function BrowseFeed() {
         if (tab === activeTab) return;
 
         // Save current scroll position before leaving
-        tabScrollCache.current.set(activeTab, document.getElementById("discover-feed-scroll")?.scrollTop ?? 0);
+        tabScrollCache.current.set(activeTab, document.getElementById("app-scroll-container")?.scrollTop ?? 0);
 
         markedPageCount.current = 0;
         newestPostAt.current = null;
@@ -327,7 +327,7 @@ export function BrowseFeed() {
         }
 
         // Restore scroll position after the DOM has painted
-        const feedEl = () => document.getElementById("discover-feed-scroll");
+        const feedEl = () => document.getElementById("app-scroll-container");
         if (cached && cached.length > 0 && savedScroll > 0) {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {

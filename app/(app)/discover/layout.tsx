@@ -2,50 +2,52 @@ import React from "react";
 import { DiscoverScrollBackdrop } from "@/components/browse/discover-scroll-backdrop";
 import { DiscoverRail } from "@/components/browse/discover-rail";
 import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
-import { DiscoverScrollForwarder } from "@/components/browse/discover-scroll-forwarder";
 
-// Discover 3-col frame: fixed-height viewport frame so the side rails and the
-// center column's border-x never scroll. The center feed column (#discover-
-// feed-scroll) carries its own overflow-y-auto so it scrolls independently
-// while the outer frame stays put. This eliminates the sticky-in-finite-parent
-// problem: sticky top-0 inside a min-h-dvh aside always breaks once you scroll
-// further than (parent height – sticky height), which with h-svh page content
-// was immediately.
+// Discover 3-col frame — single native scroll, sticky rails (the Twitter/X
+// model). The whole row scrolls via the app's scroller (#app-scroll-container);
+// there is NO per-column overflow, so hovering the feed OR a rail is the same
+// one native scroll — no wheel forwarder, identical feel everywhere.
+//
+// Sticky setup: the flex row uses `items-start` (NOT stretch) so each aside is
+// only as tall as its own content; the aside itself is `position: sticky
+// top-0`, pinned against the scroller while the taller feed column keeps the
+// row tall enough to scroll. This is the canonical sticky-sidebar pattern and
+// is more robust than sticky-on-a-stretched-child, which failed against the
+// app shell's nested scroll context (SidebarInset's overflow-x-hidden makes it
+// a y-scroll container too).
 export default function DiscoverLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div id="discover-frame" className="relative flex h-dvh w-full items-stretch overflow-hidden px-4 gap-6">
-            {/* Scroll backdrop: absolutely positioned at the top of the frame so
-                it spans all three columns. z-40 keeps it below the feed (z-100)
-                but above the side columns (z-auto), darkening them on scroll. */}
-            <div className="absolute inset-x-0 top-0 h-0 z-40 max-md:hidden pointer-events-none">
+        <div className="relative">
+            {/* Discover's own scroll backdrop, beneath the global header. The
+                sticky h-0 wrapper overlays the top strip without pushing the
+                columns down; z-40 keeps it below the feed (z-100). */}
+            <div className="sticky top-0 z-40 h-0 max-md:hidden">
                 <DiscoverScrollBackdrop />
             </div>
 
-            {/* Left rail: fills the full frame height naturally — no sticky needed. */}
-            <aside className="hidden min-w-0 flex-1 lg:block">
-                <DiscoverRail />
-            </aside>
+            <div className="flex min-h-dvh w-full items-start px-4 gap-6">
+                {/* Left rail: sticky directly on the flex item (items-start keeps
+                    it from stretching), pinned to the top of the scroller. */}
+                <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 lg:block">
+                    <DiscoverRail />
+                </aside>
 
-            {/* Center feed: fixed-height column (h-full = h-dvh), border-x lives
-                here and never scrolls. Feed content scrolls inside via overflow. */}
-            <div
-                id="discover-feed-scroll"
-                className="hidden-scrollbar h-full w-full max-w-[628px] shrink-0 relative z-100 overflow-y-auto lg:border-x border-soft-gray/[0.12]"
-            >
-                {children}
-            </div>
-
-            {/* Right rail: fills the full frame height. hidden-scrollbar in case
-                cards slightly exceed dvh on smaller screens. */}
-            <aside id="discover-right-rail" className="hidden min-w-0 flex-1 h-full overflow-y-auto hidden-scrollbar xl:block">
-                <div className="pt-[82px]">
-                    <DiscoverRightRail />
+                <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-100 lg:border-x border-soft-gray/[0.12]">
+                    {children}
                 </div>
-            </aside>
-            {/* lg–xl: balance the left flex so the feed stays centered */}
-            <div aria-hidden className="hidden flex-1 lg:block xl:hidden" />
 
-            <DiscoverScrollForwarder />
+                {/* Right rail: `sticky bottom-0` — scrolls up with the page,
+                    then pins once its bottom edge reaches the viewport bottom
+                    (so a rail taller than the viewport reveals its full height
+                    as you scroll, instead of being frozen at the top). */}
+                <aside className="sticky bottom-0 hidden min-w-0 flex-1 self-end xl:block">
+                    <div className="flex justify-end pt-[82px]">
+                        <DiscoverRightRail />
+                    </div>
+                </aside>
+                {/* lg–xl: right rail hidden — balance the left flex so the feed stays centered */}
+                <div aria-hidden className="hidden flex-1 lg:block xl:hidden" />
+            </div>
         </div>
     );
 }

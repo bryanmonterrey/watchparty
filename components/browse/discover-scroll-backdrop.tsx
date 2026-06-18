@@ -9,7 +9,7 @@ export function DiscoverScrollBackdrop() {
     const divRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const container = document.getElementById("discover-feed-scroll");
+        const container = document.getElementById("app-scroll-container");
         const el = divRef.current;
         if (!container || !el) return;
 
