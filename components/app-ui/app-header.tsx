@@ -3,6 +3,7 @@
 import { ThemeSelect } from '@/components/theme/theme-select'
 import { ClusterUiSelect } from '../cluster/cluster-ui'
 import WalletButton from '@/components/wallet/wallet-button'
+import { WalletButtonSkeleton } from '@/components/wallet/wallet-button-skeleton'
 import { useAuthSession } from '@/hooks/use-auth-session'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,19 @@ import { usePathname } from 'next/navigation'
 import { GlobalSearch } from './global-search'
 import Link from 'next/link'
  
+function CreateButtonSkeleton() {
+  return (
+    <Button
+      disabled
+      variant="outline"
+      className="rounded-full border-none font-semibold flex bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs text-white/90 gap-2 px-4 h-11 w-[110px]"
+    >
+      <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
+      <div className="h-3 w-full rounded-full shimmer-skeleton" />
+    </Button>
+  )
+}
+
 export function AppHeader() {
   const pathname = usePathname()
   const { data: session, isLoading } = useAuthSession()
@@ -126,31 +140,37 @@ export function AppHeader() {
       {/* Right Actions */}
       <div className="relative z-10 flex-1 flex items-center justify-end">
         <div className="flex items-center gap-2 pointer-events-auto">
-        <CreateDialog>
-          <WithAuth>
-            {!mounted || isLoading ? (
-              <Button
-                disabled
-                variant="outline"
-                className="rounded-full border-none font-semibold flex bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs text-white/90 gap-2 px-4 h-11 w-[110px]"
-              >
-                <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
-                <div className="h-3 w-full rounded-full shimmer-skeleton" />
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="rounded-full border-none font-semibold flex text-[17px] h-11 px-3 text-flexwhite bg-zinc-500/35 hover:bg-zinc-500/60"
-              >
-                <span className="flex items-center gap-1">
-                  <CreateIcon className="size-5" strokeWidth={2}/>
-                  Create
-                </span>
-              </Button>
-            )}
-          </WithAuth>
-        </CreateDialog>
-        <WalletButton />
+        {/* Before mount, render BOTH action skeletons together so they appear in
+            the same paint — the Create skeleton is server-rendered while the
+            wallet button is a dynamic(ssr:false) chunk, so without this the
+            Create pill showed first and the wallet popped in a beat later. */}
+        {!mounted ? (
+          <>
+            <CreateButtonSkeleton />
+            <WalletButtonSkeleton />
+          </>
+        ) : (
+          <>
+            <CreateDialog>
+              <WithAuth>
+                {isLoading ? (
+                  <CreateButtonSkeleton />
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="rounded-full border-none font-semibold flex text-[17px] h-11 px-3 text-flexwhite bg-zinc-500/35 hover:bg-zinc-500/60"
+                  >
+                    <span className="flex items-center gap-1">
+                      <CreateIcon className="size-5" strokeWidth={2}/>
+                      Create
+                    </span>
+                  </Button>
+                )}
+              </WithAuth>
+            </CreateDialog>
+            <WalletButton />
+          </>
+        )}
         <div className="hidden">
           <ClusterUiSelect />
           <ThemeSelect />

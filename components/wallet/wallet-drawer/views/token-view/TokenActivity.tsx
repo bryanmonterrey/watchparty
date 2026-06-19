@@ -5,8 +5,8 @@
 import * as React from "react";
 import { Token, Transaction } from "../../types";
 import { trpc } from "@/lib/trpc/client";
-import { Skeleton } from "boneyard-js/react";
 import { TransactionItem } from "../../components/transaction-item";
+import { ActivityListSkeleton } from "../../components/wallet-skeletons";
 
 interface TokenActivityProps {
     token: Token;
@@ -40,20 +40,7 @@ export function TokenActivity({ token, tokens = [], hideBalances }: TokenActivit
     }, [transactions, token.mint, isSolToken]);
 
     if (isLoading) {
-        const mockTransactions: Transaction[] = [
-            { signature: "mock1", type: "TRANSFER", timestamp: Date.now(), amount: 1.5, tokenMint: "So11111111111111111111111111111111111111112", tokenSymbol: "SOL", isOutgoing: false, status: "success", description: "Received SOL", source: "system" },
-            { signature: "mock2", type: "SWAP", timestamp: Date.now(), amount: 100, tokenMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", tokenSymbol: "USDC", isOutgoing: false, status: "success", description: "Swapped tokens", source: "system" },
-            { signature: "mock3", type: "TRANSFER", timestamp: Date.now(), amount: 0.5, tokenMint: "So11111111111111111111111111111111111111112", tokenSymbol: "SOL", isOutgoing: true, status: "success", description: "Sent SOL", source: "system" },
-        ];
-        return (
-            <Skeleton name="token-activity" loading={true}>
-                <div className="space-y-2">
-                    {mockTransactions.map((tx) => (
-                        <TransactionItem key={tx.signature} tx={tx} tokens={tokens} hideBalances={hideBalances} />
-                    ))}
-                </div>
-            </Skeleton>
-        );
+        return <ActivityListSkeleton />;
     }
 
     if (tokenTransactions.length === 0) {

@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Skeleton } from "boneyard-js/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
@@ -41,23 +40,21 @@ export function WalletHeader({
         <div className="flex items-center justify-between px-5 pt-5 bg-gray1 relative">
             <div className="flex items-center gap-3 rounded-xl">
                 <div className="rounded-full overflow-hidden h-10 w-10 shrink-0">
-                    <Skeleton name="wallet-header-avatar" loading={!!loading}>
+                    {loading ? (
+                        <div className="h-10 w-10 rounded-full shimmer-skeleton" />
+                    ) : (
                         <Avatar className="h-10 w-10">
                             <AvatarImage src={avatarUrl} alt={username} className="object-cover" />
                             <AvatarFallback></AvatarFallback>
                         </Avatar>
-                    </Skeleton>
+                    )}
                 </div>
                 <div className="flex flex-col">
                     {loading ? (
-                        <>
-                            <Skeleton name="wallet-header-name" loading>
-                                <div className="h-4 w-24 rounded-full bg-zinc-700/10" />
-                            </Skeleton>
-                            <Skeleton name="wallet-header-address" loading>
-                                <div className="h-3 w-32 rounded-full bg-zinc-700/10" />
-                            </Skeleton>
-                        </>
+                        <div className="flex flex-col gap-1.5">
+                            <div className="h-4 w-24 rounded-full shimmer-skeleton" />
+                            <div className="h-3 w-32 rounded-full shimmer-skeleton" />
+                        </div>
                     ) : (
                         <>
                             <p className="text-lg font-semibold text-white">{username}</p>

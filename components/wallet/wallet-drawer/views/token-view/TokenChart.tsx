@@ -13,7 +13,6 @@ import {
 } from "lightweight-charts";
 import { Token } from "../../types";
 import { trpc } from "@/lib/trpc/client";
-import { Skeleton } from "boneyard-js/react";
 
 interface TokenChartProps {
     token: Token;
@@ -241,36 +240,39 @@ export function TokenChart({ token, onHoverPrice, onPeriodStart }: TokenChartPro
     }, [chartData]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
-        <Skeleton name="token-chart" loading={isLoadingChart}>
-            <div className="w-full relative">
-                <div
-                    ref={tooltipRef}
-                    className="absolute z-10 pointer-events-none text-[13px] font-bold text-white/50 px-2 py-1 transition-opacity duration-200 uppercase"
-                    style={{ opacity: 0 }}
-                />
-                {hasNoData && (
-                    <div className="absolute inset-0 flex items-center justify-center h-[200px] text-zinc-600 text-sm">
-                        No chart data available
-                    </div>
-                )}
-                <div ref={chartContainerRef} className="w-full h-[200px]" style={{ touchAction: "pan-y" }} />
-                <div className="flex items-center justify-between px-5 mt-2">
-                    {TIMEFRAMES.map((tf) => (
-                        <button
-                            key={tf}
-                            onClick={() => setActiveTimeframe(tf)}
-                            className={[
-                                "px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer",
-                                activeTimeframe === tf
-                                    ? "bg-zinc-800 text-white"
-                                    : "text-zinc-500 hover:text-zinc-300",
-                            ].join(" ")}
-                        >
-                            {tf}
-                        </button>
-                    ))}
+        <div className="w-full relative">
+            <div
+                ref={tooltipRef}
+                className="absolute z-10 pointer-events-none text-[13px] font-bold text-white/50 px-2 py-1 transition-opacity duration-200 uppercase"
+                style={{ opacity: 0 }}
+            />
+            {hasNoData && !isLoadingChart && (
+                <div className="absolute inset-0 flex items-center justify-center h-[200px] text-zinc-600 text-sm">
+                    No chart data available
                 </div>
+            )}
+            {/* Keep the chart container mounted at all times so the chart library
+                can attach to its ref; overlay a shimmer placeholder while loading. */}
+            <div ref={chartContainerRef} className="w-full h-[200px]" style={{ touchAction: "pan-y" }} />
+            {isLoadingChart && (
+                <div className="absolute top-0 left-0 right-0 h-[200px] rounded-2xl shimmer-skeleton" />
+            )}
+            <div className="flex items-center justify-between px-5 mt-2">
+                {TIMEFRAMES.map((tf) => (
+                    <button
+                        key={tf}
+                        onClick={() => setActiveTimeframe(tf)}
+                        className={[
+                            "px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer",
+                            activeTimeframe === tf
+                                ? "bg-zinc-800 text-white"
+                                : "text-zinc-500 hover:text-zinc-300",
+                        ].join(" ")}
+                    >
+                        {tf}
+                    </button>
+                ))}
             </div>
-        </Skeleton>
+        </div>
     );
 }

@@ -5,8 +5,8 @@
 import * as React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, ChevronDown, Info, X, ArrowDownUp } from "lucide-react";
-import { Skeleton } from "boneyard-js/react";
 import { TokenIcon } from "../../components/token-icon";
+import { TokenSelectorSkeleton } from "../../components/wallet-skeletons";
 import { trpc } from "@/lib/trpc/client";
 
 export interface Token {
@@ -169,42 +169,7 @@ export function TokenSelectorModal({
 
                 <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
                     {isLoadingTokens || isSearching ? (
-                        <Skeleton
-                            name="token-selector-list"
-                            loading={true}
-                        >
-                            <div className="space-y-0.5 px-2">
-                                {[
-                                    { address: "addr1", symbol: "SOL", name: "Solana", logoURI: "" },
-                                    { address: "addr2", symbol: "USDC", name: "USD Coin", logoURI: "" },
-                                    { address: "addr3", symbol: "USDT", name: "Tether", logoURI: "" },
-                                    { address: "addr4", symbol: "WBTC", name: "Wrapped Bitcoin", logoURI: "" },
-                                    { address: "addr5", symbol: "ETH", name: "Ethereum", logoURI: "" },
-                                    { address: "addr6", symbol: "BNB", name: "BNB", logoURI: "" },
-                                    { address: "addr7", symbol: "AVAX", name: "Avalanche", logoURI: "" },
-                                    { address: "addr8", symbol: "MATIC", name: "Polygon", logoURI: "" },
-                                ].map((token) => (
-                                    <button
-                                        key={token.address}
-                                        className="w-full flex items-center justify-between p-3 px-4 hover:bg-zinc-800/50 rounded-2xl transition-colors text-left group"
-                                    >
-                                        <div className="flex items-center gap-3.5">
-                                            <TokenIcon
-                                                src={token.logoURI}
-                                                symbol={token.symbol}
-                                                size="md"
-                                                showChainBadge
-                                                type="token"
-                                            />
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-[16px] text-zinc-100">{token.name}</span>
-                                                <span className="font-medium text-[13px] text-zinc-500 truncate max-w-[160px] sm:max-w-xs">{token.symbol}</span>
-                                            </div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </Skeleton>
+                        <TokenSelectorSkeleton />
                     ) : filteredTokens.length === 0 ? (
                         <div className="flex items-center justify-center p-8 text-zinc-500 text-[15px]">
                             No tokens found.

@@ -3,12 +3,12 @@
 import { motion } from "framer-motion";
 import { Coins, Image, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "boneyard-js/react";
 import { Token, NFT, Transaction, TabId, TabType, NFTCollection } from "../types";
 import { TokenListItem } from "./token-list-item";
 import { EmptyState } from "./empty-state";
 import { CollectionItem } from "./collection-item";
 import { TransactionItem } from "./transaction-item";
+import { TokenListSkeleton, NftGridSkeleton, ActivityListSkeleton } from "./wallet-skeletons";
 import { 
     RestingDotsIcon, 
     ToggleIcon, 
@@ -164,35 +164,7 @@ export function WalletTabs({
                                 description="Your token balances will appear here once you have assets."
                             />
                         ) : (
-                            <Skeleton
-                                name="wallet-tokens"
-                                loading={isLoadingTokens}
-                            >
-                                <div className="space-y-1">
-                                    {(isLoadingTokens
-                                        ? [
-                                            { mint: "mock1", symbol: "SOL", name: "Solana", balance: 1.5, usdValue: 210.0, priceChange24h: 2.5, decimals: 9 },
-                                            { mint: "mock2", symbol: "USDC", name: "USD Coin", balance: 100, usdValue: 100.0, priceChange24h: 0.01, decimals: 6 },
-                                            { mint: "mock3", symbol: "USDT", name: "Tether", balance: 50, usdValue: 50.0, priceChange24h: -0.02, decimals: 6 },
-                                            { mint: "mock4", symbol: "WBTC", name: "Wrapped Bitcoin", balance: 0.001, usdValue: 95.0, priceChange24h: 1.2, decimals: 8 },
-                                            { mint: "mock5", symbol: "JUP", name: "Jupiter", balance: 200, usdValue: 140.0, priceChange24h: -1.5, decimals: 6 },
-                                        ] as Token[]
-                                        : tokens
-                                    ).map((token) => (
-                                        <TokenListItem
-                                            key={token.mint}
-                                            icon={token.icon}
-                                            symbol={token.symbol}
-                                            name={token.name}
-                                            balance={token.balance}
-                                            usdValue={token.usdValue}
-                                            priceChange24h={token.priceChange24h}
-                                            hideBalances={hideBalances}
-                                            onClick={() => onTokenClick(token)}
-                                        />
-                                    ))}
-                                </div>
-                            </Skeleton>
+                            <TokenListSkeleton />
                         )}
                     </div>
                 )}
@@ -200,23 +172,7 @@ export function WalletTabs({
                 {activeTab === "nfts" && (
                     <div className="mb-4 p-5 pt-2">
                         {(isLoadingNfts || debugMode) ? (
-                            <div className="grid grid-cols-2 gap-3">
-                                {Array.from({ length: 4 }).map((_, i) => (
-                                    <div key={i} className="aspect-square rounded-xl overflow-hidden bg-zinc-900/40 relative">
-                                        <Skeleton name="wallet-nft-thumb" loading>
-                                            <div className="w-full h-full bg-zinc-800/20" />
-                                        </Skeleton>
-                                        <div className="absolute inset-x-2 bottom-2 p-2 bg-black/90 backdrop-blur-md rounded-md border border-white/5 flex items-center justify-between">
-                                            <Skeleton name="wallet-nft-name" loading>
-                                                <div className="h-3 w-20 rounded-full bg-zinc-700/20" />
-                                            </Skeleton>
-                                            <Skeleton name="wallet-nft-id" loading>
-                                                <div className="h-3 w-4 rounded-full bg-zinc-700/20" />
-                                            </Skeleton>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <NftGridSkeleton />
                         ) : collections.length > 0 ? (
                             <div className="grid grid-cols-2 gap-3">
                                 {collections.map((collection) => (
@@ -240,28 +196,7 @@ export function WalletTabs({
                 {activeTab === "activity" && (
                     <div className="space-y-1 mb-4 p-5 pt-2">
                         {(isLoadingActivity || debugMode) ? (
-                            <Skeleton
-                                name="wallet-activity"
-                                loading={true}
-                            >
-                                <div className="space-y-1">
-                                    {([
-                                        { signature: "m1", type: "TRANSFER", timestamp: Date.now(), amount: 1.5, tokenSymbol: "SOL", isOutgoing: false, status: "success" as const, description: "Received SOL", source: "system" },
-                                        { signature: "m2", type: "SWAP", timestamp: Date.now(), amount: 100, tokenSymbol: "USDC", isOutgoing: false, status: "success" as const, description: "Swapped tokens", source: "system" },
-                                        { signature: "m3", type: "TRANSFER", timestamp: Date.now(), amount: 0.5, tokenSymbol: "SOL", isOutgoing: true, status: "success" as const, description: "Sent SOL", source: "system" },
-                                        { signature: "m4", type: "TRANSFER", timestamp: Date.now(), amount: 2.0, tokenSymbol: "SOL", isOutgoing: false, status: "success" as const, description: "Received SOL", source: "system" },
-                                        { signature: "m5", type: "SWAP", timestamp: Date.now(), amount: 50, tokenSymbol: "USDC", isOutgoing: false, status: "success" as const, description: "Swapped tokens", source: "system" },
-                                        { signature: "m6", type: "TRANSFER", timestamp: Date.now(), amount: 0.25, tokenSymbol: "SOL", isOutgoing: true, status: "success" as const, description: "Sent SOL", source: "system" },
-                                    ] as Transaction[]).map((tx) => (
-                                        <TransactionItem
-                                            key={tx.signature}
-                                            tx={tx}
-                                            tokens={tokens}
-                                            onClick={() => onTransactionClick(tx)}
-                                        />
-                                    ))}
-                                </div>
-                            </Skeleton>
+                            <ActivityListSkeleton />
                         ) : transactions && transactions.length > 0 ? (() => {
                             // Group by date
                             const groups: { label: string; txs: typeof transactions }[] = [];

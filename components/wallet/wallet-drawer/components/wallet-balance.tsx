@@ -1,5 +1,4 @@
 import { Eye } from "lucide-react";
-import { Skeleton } from "boneyard-js/react";
 import { cn } from "@/lib/utils";
 
 interface WalletBalanceProps {
@@ -21,9 +20,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
         <div className="px-5 pt-3 pb-5 bg-gray1">
             <div className="flex items-end gap-2">
                 {loading ? (
-                    <Skeleton name="wallet-balance-amount" loading>
-                        <div className="h-10 w-40 rounded-3xl bg-zinc-700/10" />
-                    </Skeleton>
+                    <div className="h-10 w-40 rounded-3xl shimmer-skeleton" />
                 ) : hideBalances ? (
                     <p className="text-5xl font-bold text-white tracking-[0.2em] leading-none">••••••</p>
                 ) : (
@@ -34,9 +31,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
             </div>
             <div className="mt-2 flex items-center gap-2">
                 {loading ? (
-                    <Skeleton name="wallet-balance-change" loading>
-                        <div className="h-5 w-24 rounded-full bg-zinc-700/10" />
-                    </Skeleton>
+                    <div className="h-5 w-24 rounded-full shimmer-skeleton" />
                 ) : hideBalances ? (
                     <button
                         onClick={onToggleHideBalances}

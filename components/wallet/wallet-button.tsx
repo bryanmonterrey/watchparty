@@ -13,7 +13,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { signInWithSolana } from "@/lib/solana/sign-in";
 import { appToast } from "@/components/app-ui/app-toast";
 import { Loader2 } from "lucide-react";
-import { Skeleton } from "boneyard-js/react";
+import { WalletButtonSkeleton } from "./wallet-button-skeleton";
 import "@/lib/types";
 
 // WalletConnectModal + WalletDrawer are interaction-only and HEAVY (the drawer
@@ -190,12 +190,7 @@ function WalletButtonInner() {
     };
 
     if (loading && session === undefined) {
-        return (
-            <Button disabled variant="outline" className="text-zinc-300 h-11 font-semibold text-[18px] tracking-wide bg-zinc-500/35 backdrop-blur-xs border-none px-4 pl-2 gap-2 w-[140px]">
-                <div className="h-6 w-6 rounded-full shimmer-skeleton shrink-0" />
-                <div className="h-3 w-full rounded-full shimmer-skeleton" />
-            </Button>
-        );
+        return <WalletButtonSkeleton />;
     }
 
     const isProcessing = connecting || disconnecting || isSigningIn || isSigningOut.current;
@@ -212,15 +207,13 @@ function WalletButtonInner() {
                     onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
                     onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
                 >
-                    <Skeleton name="wallet-btn-action" loading={isProcessing}>
-                        <span className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                                <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
-                                <AvatarFallback></AvatarFallback>
-                            </Avatar>
-                            {buttonText}
-                        </span>
-                    </Skeleton>
+                    <span className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                            <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
+                            <AvatarFallback></AvatarFallback>
+                        </Avatar>
+                        {buttonText}
+                    </span>
                 </Button>
 
                 {drawerReady && (
@@ -254,9 +247,7 @@ function WalletButtonInner() {
                 variant="default"
                 className="bg-darkfantasy text-white2 h-11 text-[18px] backdrop-blur-xs font-medium hover:bg-twitter cursor-pointer px-6 gap-3"
             >
-                <Skeleton name="wallet-btn-content" loading={isProcessing}>
-                    <span>{buttonText}</span>
-                </Skeleton>
+                <span>{buttonText}</span>
             </Button>
 
             {modalReady && (
@@ -272,4 +263,10 @@ function WalletButtonInner() {
 // Skip SSR to prevent hydration mismatch: the server-side QueryClient has no session
 // pre-populated, causing a loading→signed-in state mismatch during hydration.
 // The boneyard Skeleton loading state renders client-only with no server HTML to reconcile.
-export default dynamic(() => Promise.resolve(WalletButtonInner), { ssr: false });
+export default dynamic(() => Promise.resolve(WalletButtonInner), {
+    ssr: false,
+    // Show the skeleton the instant the chunk starts resolving, so the wallet
+    // placeholder appears in lockstep with the header's Create skeleton instead
+    // of popping in a frame later.
+    loading: () => <WalletButtonSkeleton />,
+});
