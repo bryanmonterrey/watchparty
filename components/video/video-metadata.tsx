@@ -7,7 +7,7 @@ import { Link2Icon, BookmarkIcon, RestingDotsIcon, ThumbsDownIcon, HeartIcon, He
 import { trpc } from "@/lib/trpc/client";
 import { authClient } from "@/lib/auth/client";
 import { ProfileHeader } from "@/components/profile/profile-header";
-import { ProfileAvatar } from "@/components/profile/profile-avatar";
+import { ProfileAvatar } from "@/components/video/profile-avatar";
 import { UserType } from "@/db/schema/auth/user";
 
 interface VideoAuthor {
@@ -68,7 +68,7 @@ export function VideoMetadata({
                 {/* Creator + Actions Row */}
                 <div className="flex flex-wrap items-center justify-between gap-4 py-1">
                     <div className="flex items-center gap-4">
-                        <div className="shimmer-skeleton size-24 rounded-full shrink-0 border-[6px] border-black" />
+                        <div className="shimmer-skeleton size-20 rounded-full shrink-0 border-[6px] border-black" />
                         <div className="flex flex-col gap-2">
                             <div className="shimmer-skeleton h-6 w-36 rounded-full" />
                             <div className="shimmer-skeleton h-5 w-24 rounded-full opacity-60" />

@@ -44,7 +44,9 @@ export function ConversationList({
     return (
         <>
             <div className="flex h-full flex-col overflow-hidden">
-                {/* Search */}
+                
+
+                {/* Search + new message */}
                 <div className="px-4 py-2 flex-shrink-0 flex items-center justify-between gap-4">
                     <div className="relative flex-1 flex items-center bg-zinc-500/30 hover:bg-zinc-500/60 rounded-full focus-within:border-zinc-700 transition-colors">
                         <SearchIcon className="absolute left-4 w-[20px] h-[20px] text-zinc-400 pointer-events-none" />
@@ -66,11 +68,6 @@ export function ConversationList({
                         <NewMessageIcon className="size-7 text-white/80 hover:text-white/85" width={24} height={24} />
                     </Button>
                     </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="px-4 flex-shrink-0 text-lg font-semibold">
-                    Messages
                 </div>
 
                 {/* Conversation List */}

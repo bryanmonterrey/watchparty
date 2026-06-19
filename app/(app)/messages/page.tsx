@@ -19,9 +19,9 @@ export default function MessagesPage() {
             {/* Mobile (per "Messages page mobile landing.svg"): list fills the
                 screen; opening a conversation swaps to a full-screen chat. The
                 desktop split keeps sidebar's 3/6 grid. */}
-            <div className="grid h-screen w-full grid-cols-1 overflow-hidden md:grid-cols-9">
+            <div className="grid h-[calc(100svh-var(--header-height))] md:h-[calc(100svh-var(--header-height)-1rem)] md:mt-header md:rounded-3xl md:border md:border-flexwhite/10 w-full md:w-[calc(100vw-32px)] mx-auto grid-cols-1 overflow-hidden md:grid-cols-9 bg-zinc-950/10 backdrop-blur-md pb-4">
                 <div
-                    className={`h-full shadow-sm md:col-span-3 md:block md:border-r md:border-flexwhite/15 ${selectedConversationId ? "hidden" : "block"}`}
+                    className={`h-full shadow-sm md:col-span-3 md:block md:border-r md:border-flexwhite/10 ${selectedConversationId ? "hidden" : "block"}`}
                 >
                     <ConversationList
                         selectedConversationId={selectedConversationId}

@@ -77,7 +77,7 @@ function VideoList({ videos }: { videos: UpNextVideo[] }) {
                     href={`/${v.author.username}/${v.id}`}
                     className="flex gap-2 group rounded-xl hover:bg-white/10 p-1 transition-colors"
                 >
-                    <div className="relative shrink-0 w-38 aspect-video rounded-lg overflow-hidden bg-zinc-800">
+                    <div className="relative shrink-0 w-48 aspect-video rounded-lg overflow-hidden bg-zinc-800">
                         {v.thumbnailUrl ? (
                             <img src={v.thumbnailUrl} alt={v.title ?? ""} className="object-cover w-full h-full absolute inset-0" />
                         ) : (
@@ -158,7 +158,7 @@ export function UpNextSidebar({ postId, creatorId, creatorName, category, isLoad
     }, [activeTab, allVideos, creatorVideos, relatedVideos, watchedVideos]);
 
     return (
-        <div className="hidden lg:flex flex-col w-[360px] shrink-0 overflow-y-auto custom-scrollbar sticky top-20">
+        <div className="hidden lg:flex flex-col w-[396px] shrink-0 overflow-y-auto custom-scrollbar sticky top-20">
             {/* Tabs */}
             <div className="pb-2 shrink-0">
                 {isLoading ? (

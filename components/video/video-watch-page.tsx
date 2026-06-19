@@ -45,10 +45,10 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
     }
 
     return (
-        <div className="flex flex-col lg:flex-row gap-3 min-h-dvh md:min-h-[calc(100dvh-var(--header-height))] w-screen mx-auto px-3 md:pt-[var(--header-height)] pb-4">
+        <div className="flex flex-col lg:flex-row gap-3 lg:gap-6 min-h-dvh md:min-h-[calc(100dvh-var(--header-height))] w-screen mx-auto px-4 md:pt-[var(--header-height)] pb-4">
             {/* ── Main column ─────────────────────────────────────────────── */}
             <div className="flex flex-col flex-1 min-w-0">
-                <div className="relative w-full aspect-video">
+                <div className="relative w-full mx-auto aspect-video max-w-[min(1840px,calc((100dvh_-_172px)*16/9))]">
                     {isGlobalMiniActive ? (
                         /* Placeholder shown while this video plays in the global mini player */
                         <div className="absolute inset-0 rounded-3xl bg-black flex flex-col items-center justify-center gap-3">

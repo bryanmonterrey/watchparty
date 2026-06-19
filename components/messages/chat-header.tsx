@@ -41,7 +41,7 @@ export function ChatHeader({ conversationId }: ChatHeaderProps) {
     }
 
     return (
-        <div className="h-[64px] cursor-pointer hover:bg-zinc-900 flex items-center justify-between px-6 shrink-0 bg-black/40 backdrop-blur-xl z-10">
+        <div className="h-[64px] cursor-pointer hover:bg-zinc-900 flex items-center justify-center px-6 shrink-0 bg-background/40 backdrop-blur-xl z-10">
             {/* User Info */}
             <div className="flex items-center gap-3">
                 <div className="relative">
