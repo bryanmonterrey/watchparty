@@ -1,7 +1,7 @@
 "use client";
 
 import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchStreamLink } from "@trpc/client";
 import type { AppRouter } from "@/server/routers";
 import superjson from "superjson";
 
@@ -33,7 +33,11 @@ function getBaseUrl() {
  */
 export const trpcClient = trpc.createClient({
     links: [
-        httpBatchLink({
+        // Streaming batch link: still bundles concurrent calls into one request,
+        // but flushes each procedure's result as it resolves instead of waiting
+        // for the slowest one (no head-of-line blocking). Same TanStack Query
+        // cache behaviour — this only changes the HTTP transport.
+        httpBatchStreamLink({
             url: `${getBaseUrl()}/api/trpc`,
             transformer: superjson,
             headers() {
