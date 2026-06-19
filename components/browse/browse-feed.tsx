@@ -21,14 +21,20 @@ type FeedItem = { type: "post"; createdAt: Date; data: any };
 // asks for more via onLoadMore(direction, refItem) as you scroll. We feed it from
 // a full ordered dataset (newest-first) so items evicted off one edge can be
 // restored when scrolling back — see onLoadMore / hasPrevious / hasNext below.
+// Feed tuning knobs. Change them HERE when scaling — values chosen for the
+// current small dataset; at-scale targets noted inline.
+//
 // viewCount: max items kept in the DOM before the window trims off-screen ones.
-// Kept generous so the feed doesn't trim (and scroll-compensate, which snaps with
-// variable-height cards) until there are genuinely many posts loaded.
-// threshold: how many px from the edge to start loading — large so the next page
-// is prefetched well before the user reaches the bottom (no spinner stare).
-const VIEW_COUNT = 60;
+//   Generous so the feed doesn't trim (and scroll-compensate, which snaps with
+//   variable-height cards) until many posts are loaded. AT SCALE: 120.
+// threshold: px from the edge to start loading — large so the next page is
+//   prefetched well before the user reaches the bottom (no spinner stare).
+// PAGE_SIZE: how many items the window advances per onLoadMore step. To load
+//   more posts PER NETWORK FETCH at scale (target ~100), also raise the server
+//   page in the getFeed useInfiniteQuery `limit` below — they should match.
+const VIEW_COUNT = 60; // at scale: 120
 const LOAD_THRESHOLD_PX = 1200;
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20; // at scale: 100 (keep in sync with getFeed `limit`)
 const keyOf = (i: FeedItem) => i.data.feedKey ?? i.data.id;
 function dedupNewestFirst(items: FeedItem[]): FeedItem[] {
     const seen = new Set<string>();

@@ -55,6 +55,17 @@ The applied indexes are inert until the planner stops choosing seq scans.
 - **Action:** re-run the `EXPLAIN ANALYZE` in `db/feed-indexes.sql`. Add more
   indexes only when a real query plan demands it.
 
+### 4b. Feed window tuning at scale
+The infinite feed (`components/browse/browse-feed.tsx`) has its knobs as named
+constants at the top of the file.
+- **Trigger:** real session volume / many posts loaded at once.
+- **Targets:** `VIEW_COUNT` 60 → **120**, `PAGE_SIZE` 20 → **100** (and match the
+  server `limit` in the `getFeed` `useInfiniteQuery`). `LOAD_THRESHOLD_PX` (1200)
+  prefetches ahead — revisit only if scrolling outruns it.
+- **Watch:** larger `viewCount` means the window *will* eventually trim again on
+  long scrolls; if the scroll-snap returns with variable-height cards, that's the
+  signal to swap `broad-infinite-list` for a plain append-only list (see below).
+
 ### 5. "For you" feed is reverse-chronological, not ranked
 `getFeed` for-you just does `ORDER BY "createdAt" DESC`. `baseScore` exists on
 `posts` but is unused in ranking.
