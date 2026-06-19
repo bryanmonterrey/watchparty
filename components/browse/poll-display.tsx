@@ -3,14 +3,23 @@
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/date-utils";
+import { usePoll } from "./poll-context";
 
 interface PollDisplayProps {
     postId: string;
 }
 
 export function PollDisplay({ postId }: PollDisplayProps) {
-    const { data: poll, refetch } = trpc.content.getPollForPost.useQuery({ postId });
-    const vote = trpc.content.votePoll.useMutation({ onSuccess: () => refetch() });
+    const poll = usePoll(postId);
+    const utils = trpc.useUtils();
+    // Refresh both the batched feed query and the standalone per-post query so the
+    // result updates regardless of which path provided this poll.
+    const vote = trpc.content.votePoll.useMutation({
+        onSuccess: () => {
+            utils.content.getPollsForPosts.invalidate();
+            utils.content.getPollForPost.invalidate({ postId });
+        },
+    });
 
     if (!poll) return null;
 

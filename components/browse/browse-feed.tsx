@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import BidirectionalList, { type BidirectionalListRef } from "broad-infinite-list/react";
 import { trpc } from "@/lib/trpc/client";
 import { PostCard } from "./post-card";
+import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { PostComposer } from "./post-composer";
 import { FeedTab } from "./feed-tab";
@@ -462,6 +463,7 @@ export function BrowseFeed() {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
+        <PollProvider postIds={postIds}>
         <div className="flex flex-col">
             {/* Tabs — flush at the top of the feed column, which sits ABOVE the
                 app header (see the layout's z-index), so the header never covers
@@ -565,5 +567,6 @@ export function BrowseFeed() {
                 );
             })()}
         </div>
+        </PollProvider>
     );
 }

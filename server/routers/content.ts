@@ -791,6 +791,39 @@ export const contentRouter = router({
             return { ...poll, userVote: userVote?.optionIds ?? null };
         }),
 
+    // Batched sibling of getPollForPost: resolves polls for a whole feed page in
+    // two queries (polls + this user's votes) instead of one query per post.
+    // Returns a postId -> poll map; posts without a poll are simply absent.
+    getPollsForPosts: publicProcedure
+        .input(z.object({ postIds: z.array(z.string()) }))
+        .query(async ({ ctx, input }) => {
+            type PollWithVote = typeof polls.$inferSelect & { userVote: string[] | null };
+            const empty: Record<string, PollWithVote> = {};
+            if (input.postIds.length === 0) return { polls: empty };
+
+            const rows = await db.query.polls.findMany({
+                where: inArray(polls.postId, input.postIds),
+            });
+            if (rows.length === 0) return { polls: empty };
+
+            const votesByPoll = new Map<string, string[]>();
+            if (ctx.user) {
+                const votes = await db.query.pollVotes.findMany({
+                    where: and(
+                        inArray(pollVotes.pollId, rows.map((p) => p.id)),
+                        eq(pollVotes.userId, ctx.user.id),
+                    ),
+                });
+                for (const v of votes) votesByPoll.set(v.pollId, v.optionIds);
+            }
+
+            const result: Record<string, PollWithVote> = {};
+            for (const poll of rows) {
+                result[poll.postId] = { ...poll, userVote: votesByPoll.get(poll.id) ?? null };
+            }
+            return { polls: result };
+        }),
+
     unlockPost: protectedProcedure
         .input(z.object({ postId: z.string(), txSignature: z.string() }))
         .mutation(async ({ ctx, input }) => {
