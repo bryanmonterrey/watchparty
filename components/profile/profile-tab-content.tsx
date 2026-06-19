@@ -8,6 +8,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { StreamViewer } from "@/components/streaming/stream-viewer";
 import { trpc } from "@/lib/trpc/client";
 import { PostCard } from "@/components/browse/post-card";
+import { PollProvider } from "@/components/browse/poll-context";
 import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
 
 interface ProfileTabContentProps {
@@ -55,17 +56,19 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
 
     return (
         <div>
-            {allPosts.map((post, i) => (
-                <PostCard
-                    key={post.id}
-                    post={{
-                        ...post,
-                        linkPreview: post.linkPreview as any,
-                    }}
-                    index={i}
-                    isOwnPost={isOwner}
-                />
-            ))}
+            <PollProvider postIds={allPosts.map((p) => p.id)}>
+                {allPosts.map((post, i) => (
+                    <PostCard
+                        key={post.id}
+                        post={{
+                            ...post,
+                            linkPreview: post.linkPreview as any,
+                        }}
+                        index={i}
+                        isOwnPost={isOwner}
+                    />
+                ))}
+            </PollProvider>
             {hasNextPage && (
                 <div className="flex justify-center py-4">
                     <button

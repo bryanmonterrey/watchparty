@@ -2,6 +2,7 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { PostCard } from "./post-card";
+import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { BookmarkIcon } from "@/components/icons";
 
@@ -27,7 +28,7 @@ export function BookmarksFeed() {
                     <p className="text-zinc-500 text-sm">Posts you bookmark will appear here.</p>
                 </div>
             ) : (
-                <>
+                <PollProvider postIds={posts.map(p => p.id)}>
                     {posts.map((post, idx) => (
                         <PostCard
                             key={post.id}
@@ -49,7 +50,7 @@ export function BookmarksFeed() {
                             </button>
                         </div>
                     )}
-                </>
+                </PollProvider>
             )}
         </div>
     );

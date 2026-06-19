@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc/client";
 import { PostCard } from "./post-card";
+import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { UserResultCard } from "./user-result-card";
 import { Loader2 } from "lucide-react";
@@ -86,10 +87,12 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
 
         return (
             <div className="divide-y divide-border/40">
-                {posts.map((post) => (
-                    <PostCard key={post.id} post={post as any} />
-                ))}
-                
+                <PollProvider postIds={posts.map((p) => p.id)}>
+                    {posts.map((post) => (
+                        <PostCard key={post.id} post={post as any} />
+                    ))}
+                </PollProvider>
+
                 {postsQuery.hasNextPage && (
                     <div className="p-4 flex justify-center">
                         <button
