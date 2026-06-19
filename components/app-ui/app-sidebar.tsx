@@ -262,12 +262,12 @@ export function AppSidebar() {
                                                         <item.icon className="size-7" active={isActive} />
                                                     )}
                                                     {isNotificationsItem && (unreadNotifs?.count ?? 0) > 0 && (
-                                                        <span className="absolute top-2 right-3.5 w-3 h-3 rounded-full bg-twitter2 border-2 border-black text-black text-[10px] font-bold flex items-center justify-center">
+                                                        <span className="absolute top-2 right-3.5 w-3 h-3 rounded-full bg-notification border-2 border-black text-black text-[10px] font-bold flex items-center justify-center">
 
                                                         </span>
                                                     )}
                                                     {item.title === "Messages" && (unreadMessages?.count ?? 0) > 0 && (
-                                                        <span className="absolute top-2 right-3.5 w-3 h-3 rounded-full bg-twitter2 border-2 border-black" />
+                                                        <span className="absolute top-2 right-3.5 w-3 h-3 rounded-full bg-notification border-2 border-black" />
                                                     )}
                                                 </div>
                                                 <AnimatePresence mode="wait">

@@ -195,7 +195,7 @@
   --color-sharp-gray: oklch(0.8853 0 0);
   --color-soft-gray: oklch(0.9614 0.0045 214.33);
   --color-vice-purple: oklch(0.862065 0.092364 310.7446);
-  --color-notification: oklch(0.648371 0.237552 23.7857)
+  --color-notification: oklch(0.648371 0.237552 23.7857);
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   --animate-shimmer-sweep: shimmer-sweep 2s infinite linear;
