@@ -81,13 +81,12 @@ export function PostComposer() {
     const { data: session } = useAuthSession();
 
     useEffect(() => {
-        if (!tokenLaunch.isTickerManuallyEdited && content) {
-            const autoTicker = content
-                .replace(/[^a-zA-Z0-9]/g, "")
-                .toUpperCase()
-                .slice(0, 10);
-            setTokenLaunch((prev) => ({ ...prev, ticker: autoTicker }));
-        }
+        if (tokenLaunch.isTickerManuallyEdited) return;
+        const autoTicker = content
+            .replace(/[^a-zA-Z0-9]/g, "")
+            .toUpperCase()
+            .slice(0, 10);
+        setTokenLaunch((prev) => ({ ...prev, ticker: autoTicker }));
     }, [content, tokenLaunch.isTickerManuallyEdited]);
 
     useEffect(() => {
@@ -738,16 +737,16 @@ export function PostComposer() {
                             }}
                         />
                         <button onClick={() => imageInputRef.current?.click()} className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                            <ImageIcon className="w-5 h-5" />
+                            <ImageIcon className="w-[22px] h-[22px]" />
                         </button>
                         <GifPicker onGifSelect={(url) => setGif(url)}>
                             <button className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                                <GifIcon className="w-5 h-5" />
+                                <GifIcon className="w-[22px] h-[22px]" />
                             </button>
                         </GifPicker>
                         <EmojiPicker onEmojiSelect={(emoji) => setContent((prev) => prev + emoji.native)}>
                             <button className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                                <EmojiIcon className="w-5 h-5" />
+                                <EmojiIcon className="w-[22px] h-[22px]" />
                             </button>
                         </EmojiPicker>
                         <button
@@ -755,14 +754,14 @@ export function PostComposer() {
                             className={cn("p-2 cursor-pointer rounded-full transition-colors", showPoll ? "text-lantern bg-lantern/10" : "hover:bg-white/10")}
                             title="Add poll"
                         >
-                            <BarChart2 className="w-5 h-5" />
+                            <BarChart2 className="w-[22px] h-[22px]" />
                         </button>
                         <button
                             onClick={() => setIsPaywalled(p => !p)}
                             className={cn("p-2 cursor-pointer rounded-full transition-colors", isPaywalled ? "text-lantern bg-lantern/10" : "hover:bg-white/10")}
                             title="Pay-per-view"
                         >
-                            <LockIcon className="w-5 h-5" />
+                            <LockIcon className="w-[22px] h-[22px]" />
                         </button>
                         <VoiceRecorderTrigger
                             active={showVoiceRecorder || !!voiceBlob}
@@ -780,7 +779,7 @@ export function PostComposer() {
                                     )}
                                     title="Schedule"
                                 >
-                                    <CalendarIcon className="w-5 h-5" />
+                                    <CalendarIcon className="w-[20px] h-[20px]" />
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent
@@ -797,14 +796,14 @@ export function PostComposer() {
                                             scheduledFor ? "text-lantern hover:bg-lantern/10" : "text-zinc-200 hover:bg-white/5 hover:text-white"
                                         )}
                                     >
-                                        <CalendarIcon className={cn("w-[18px] text-pastelgray h-[18px] shrink-0 transition-colors", scheduledFor ? "text-lantern" : "text-zinc-500 group-hover:text-white")} />
+                                        <CalendarIcon className={cn("w-[20px] text-pastelgray h-[20px] shrink-0 transition-colors", scheduledFor ? "text-lantern" : "text-zinc-500 group-hover:text-white")} />
                                         <span>{scheduledFor ? "Change schedule" : "Schedule post"}</span>
                                     </button>
                                     <button
                                         onClick={() => setShowScheduledPosts(true)}
                                         className="flex items-center gap-3 w-full px-4 py-2.5 text-[15px] font-bold text-zinc-200 hover:bg-white/5 hover:text-white rounded-full transition-all cursor-pointer text-left group"
                                     >
-                                        <CalendarIcon className="w-[18px] h-[18px] shrink-0 text-pastelgray group-hover:text-white transition-colors" />
+                                        <CalendarIcon className="w-[20px] h-[20px] shrink-0 text-pastelgray group-hover:text-white transition-colors" />
                                         <span>View scheduled</span>
                                     </button>
                                 </div>

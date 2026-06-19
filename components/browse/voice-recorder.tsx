@@ -162,7 +162,7 @@ export function VoiceRecorderTrigger({ active, onClick }: VoiceRecorderTriggerPr
             )}
             title="Voice note"
         >
-            <Mic className="w-4.5 h-4.5" />
+            <Mic className="w-[22px] h-[22px]" />
         </button>
     );
 }

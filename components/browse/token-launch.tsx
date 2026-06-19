@@ -79,8 +79,8 @@ export function TokenLaunchTrigger({ state, onClick, className }: TokenLaunchTri
             )}
         >
 
-            <span className="text-zinc-400 text-sm font-extrabold tracking-tighter px-2 uppercase">
-                ${state.ticker || " • • • • •"}
+            <span className="text-zinc-400 text-base font-extrabold tracking-tighter px-2 uppercase">
+                ${state.ticker || " • • • • • • •"}
             </span>
         </button>
     )

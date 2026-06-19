@@ -120,7 +120,7 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                                     isTickerManuallyEdited: true
                                 })}
                                 className="bg-zinc-850 border-0 rounded-2xl focus-visible:ring-0 !text-center !text-5xl font-bold tracking-wider text-white placeholder:text-5xl placeholder:text-zinc-700 w-full h-24 p-0 selection:bg-lantern/30"
-                                placeholder="$•••••"
+                                placeholder="$•••••••"
                                 autoFocus
                             />
                         </div>
