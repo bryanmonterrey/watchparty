@@ -21,7 +21,13 @@ type FeedItem = { type: "post"; createdAt: Date; data: any };
 // asks for more via onLoadMore(direction, refItem) as you scroll. We feed it from
 // a full ordered dataset (newest-first) so items evicted off one edge can be
 // restored when scrolling back — see onLoadMore / hasPrevious / hasNext below.
-const VIEW_COUNT = 30;
+// viewCount: max items kept in the DOM before the window trims off-screen ones.
+// Kept generous so the feed doesn't trim (and scroll-compensate, which snaps with
+// variable-height cards) until there are genuinely many posts loaded.
+// threshold: how many px from the edge to start loading — large so the next page
+// is prefetched well before the user reaches the bottom (no spinner stare).
+const VIEW_COUNT = 60;
+const LOAD_THRESHOLD_PX = 1200;
 const PAGE_SIZE = 20;
 const keyOf = (i: FeedItem) => i.data.feedKey ?? i.data.id;
 function dedupNewestFirst(items: FeedItem[]): FeedItem[] {
@@ -608,6 +614,7 @@ export function BrowseFeed() {
                         hasPrevious={hasPrevious}
                         hasNext={hasNext}
                         viewCount={VIEW_COUNT}
+                        threshold={LOAD_THRESHOLD_PX}
                         useWindow={true}
                         spinnerRow={
                             <div className="flex justify-center py-4">
