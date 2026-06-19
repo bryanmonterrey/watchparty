@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { getServerSession } from "@/lib/auth/get-session";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Highlighter } from "@/components/ui/highlighter"
 import { TextAnimate } from "@/components/ui/text-animate"
@@ -7,8 +9,16 @@ import { BlurInImage } from "@/components/marketing/blur-in-image"
 import { GogglesZoom } from "@/components/marketing/goggles-zoom"
 import { SkaterStack } from "@/components/marketing/skater-stack"
 
+// Reads the session cookie to bounce signed-in visitors straight to the app,
+// so this route renders per request (no static prerender of the landing page).
+export const dynamic = "force-dynamic";
+
 // Landing page — to be designed separately. Intentionally minimal for now.
-export default function Home() {
+export default async function Home() {
+  // Already signed in? Skip the marketing page and go to the app.
+  const session = await getServerSession();
+  if (session) redirect("/home");
+
   // min-h-svh + content-driven height (NOT flex-1: a basis-0 flex child
   // contributes nothing to document height, which swallows the pin-spacer
   // scroll distance ScrollTrigger adds for the goggles zoom).
