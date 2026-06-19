@@ -864,12 +864,33 @@ export function GifIcon(props: SVGMotionProps<SVGSVGElement>) {
             strokeLinejoin="round"
             {...props}
         >
-            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <path d="M2.5 12C2.5 7.52166 2.5 5.28249 3.89124 3.89124C5.28249 2.5 7.52166 2.5 12 2.5C16.4783 2.5 18.7175 2.5 20.1088 3.89124C21.5 5.28249 21.5 7.52166 21.5 12C21.5 16.4783 21.5 18.7175 20.1088 20.1088C18.7175 21.5 16.4783 21.5 12 21.5C7.52166 21.5 5.28249 21.5 3.89124 20.1088C2.5 18.7175 2.5 16.4783 2.5 12Z" />
             <path d="M9 9h-1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v-2" />
             <path d="M12 9v6" />
             <path d="M15 9h3" />
             <path d="M15 9v6" />
             <path d="M15 12h2" />
+        </motion.svg>
+    )
+}
+
+export function ImageIcon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <circle cx="7.5" cy="7.5" r="1.5" />
+            <path d="M2.5 12C2.5 7.52166 2.5 5.28249 3.89124 3.89124C5.28249 2.5 7.52166 2.5 12 2.5C16.4783 2.5 18.7175 2.5 20.1088 3.89124C21.5 5.28249 21.5 7.52166 21.5 12C21.5 16.4783 21.5 18.7175 20.1088 20.1088C18.7175 21.5 16.4783 21.5 12 21.5C7.52166 21.5 5.28249 21.5 3.89124 20.1088C2.5 18.7175 2.5 16.4783 2.5 12Z" />
+            <path d="M5 21C9.37246 15.775 14.2741 8.88406 21.4975 13.5424" />
         </motion.svg>
     )
 }

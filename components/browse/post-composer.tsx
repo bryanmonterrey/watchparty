@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Image as ImageIcon, X, Globe, Users, BadgeCheck, Medal, Crown, Check, ChevronDown, BarChart2, Plus, Trash2 } from "lucide-react";
+import { X, Globe, Users, BadgeCheck, Medal, Crown, Check, ChevronDown, BarChart2, Plus, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { GifIcon, EmojiIcon, GlobeIcon, LockIcon, MicIcon, CalendarIcon, AlertIcon } from "@/components/icons";
+import { GifIcon, ImageIcon, EmojiIcon, GlobeIcon, LockIcon, MicIcon, CalendarIcon, AlertIcon } from "@/components/icons";
 import { Switch } from "@/components/ui/switch";
 import { EmojiPicker } from "@/components/messages/emoji-picker";
 import { GifPicker } from "@/components/messages/gif-picker";
