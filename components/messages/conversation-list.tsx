@@ -13,7 +13,7 @@ import { useChat } from './chat-context';
 
 import { NewConversationDialog } from './new-conversation-dialog';
 import { SearchIcon, NewMessageIcon } from '@/components/icons';
-import { authClient } from '@/lib/auth/client';
+import { useAuthSession } from '@/hooks/use-auth-session';
 import { formatRelativeTime } from '@/lib/date-utils';
 
 interface ConversationListProps {
@@ -31,7 +31,7 @@ export function ConversationList({
 
     const { conversations, isLoading } = useConversations();
     const { setActiveRecipient } = useChat();
-    const { data: session } = authClient.useSession();
+    const { data: session } = useAuthSession();
 
     const filteredConversations = conversations.filter(conv => {
         if (!searchQuery) return true;

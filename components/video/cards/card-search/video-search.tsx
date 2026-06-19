@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { SearchInput } from "./search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
-import { authClient } from "@/lib/auth/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import type { VideoResult, SearchSelectPayload } from "./types";
 
 interface VideoSearchProps {
@@ -74,7 +74,7 @@ function VideoGrid({
 export function VideoSearch({ onClose, onSelect }: VideoSearchProps) {
     const [query, setQuery] = useState("");
 
-    const { data: session } = authClient.useSession();
+    const { data: session } = useAuthSession();
     const userId = session?.user?.id;
 
     const { data, isLoading } = trpc.content.getVideosByUser.useQuery(

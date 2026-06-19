@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { Link2Icon, BookmarkIcon, RestingDotsIcon, ThumbsDownIcon, HeartIcon, HeartFilledIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
-import { authClient } from "@/lib/auth/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileAvatar } from "@/components/video/profile-avatar";
 import { UserType } from "@/db/schema/auth/user";
@@ -52,7 +52,7 @@ export function VideoMetadata({
     author,
     isLoading,
 }: VideoMetadataProps) {
-    const { data: session } = authClient.useSession();
+    const { data: session } = useAuthSession();
     const [liked, setLiked] = useState(initialLiked);
     const [likeCount, setLikeCount] = useState(likes);
     const [descExpanded, setDescExpanded] = useState(false);

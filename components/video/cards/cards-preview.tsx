@@ -3,7 +3,7 @@
 import { useRef, useEffect, forwardRef, useState } from "react";
 import { PauseIcon, YtCardsPlayIcon, YtCardsSkipBack10Icon, YtCardsSkipForward10Icon, YtCardsVolumeHighIcon, YtCardsSettingsIcon } from "@/components/icons";
 import { VolumeX } from "lucide-react";
-import { authClient } from "@/lib/auth/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DraftCard } from "./types";
 import { CardsPlayerOverlay } from "./cards-player-overlay";
@@ -26,7 +26,7 @@ export const CardsPreview = forwardRef<HTMLVideoElement, CardsPreviewProps>(func
     { videoUrl, thumbnailUrl, currentTime, duration, cards, activeCardId, onClearActive, onTimeUpdate, onDurationChange },
     ref
 ) {
-    const { data: session } = authClient.useSession();
+    const { data: session } = useAuthSession();
     const creatorName = session?.user?.name ?? undefined;
 
     const seekedRef = useRef(false);

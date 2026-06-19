@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useAmbientGlow } from "@/hooks/use-ambient-glow";
 import { trpc } from "@/lib/trpc/client";
-import { authClient } from "@/lib/auth/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { useAds } from "./use-ads";
 import { usePreviewThumbnails } from "./use-preview-thumbnails";
 import {
@@ -123,7 +123,7 @@ export function usePlayer(props: VideoPlayerProps) {
     }, [isWaiting]);
 
     // ── Progress persistence ──────────────────────────────────────────────────
-    const { data: session } = authClient.useSession();
+    const { data: session } = useAuthSession();
     const saveProgressThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resumeAppliedRef = useRef(false);
 
