@@ -17,6 +17,23 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 type FeedType = "for-you" | "following" | "news";
 type FeedItem = { type: "post"; createdAt: Date; data: any };
 
+// BidirectionalList is a sliding window: it keeps VIEW_COUNT items in the DOM and
+// asks for more via onLoadMore(direction, refItem) as you scroll. We feed it from
+// a full ordered dataset (newest-first) so items evicted off one edge can be
+// restored when scrolling back — see onLoadMore / hasPrevious / hasNext below.
+const VIEW_COUNT = 30;
+const PAGE_SIZE = 20;
+const keyOf = (i: FeedItem) => i.data.feedKey ?? i.data.id;
+function dedupNewestFirst(items: FeedItem[]): FeedItem[] {
+    const seen = new Set<string>();
+    const out: FeedItem[] = [];
+    for (const it of items) {
+        const k = keyOf(it);
+        if (!seen.has(k)) { seen.add(k); out.push(it); }
+    }
+    return out.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
 export function BrowseFeed() {
     const [activeTab, setActiveTab] = useState<FeedType>("for-you");
     const markedPageCount = useRef(0);
@@ -42,6 +59,10 @@ export function BrowseFeed() {
     const listRef = useRef<BidirectionalListRef>(null);
     // Store items for each tab so switching back never re-shows skeletons
     const tabItemsCache = useRef<Map<FeedType, FeedItem[]>>(new Map());
+    // Full ordered dataset (newest-first) per tab — the source of truth the
+    // sliding window slices from. Holds every loaded post: paginated-older ones
+    // from the infinite query plus any newer ones prepended locally.
+    const fullItemsRef = useRef<Map<FeedType, FeedItem[]>>(new Map());
     // Store scroll position per-tab so switching back restores where user was
     const tabScrollCache = useRef<Map<FeedType, number>>(new Map());
     const [listItems, setListItems] = useState<FeedItem[]>([]);
@@ -147,47 +168,41 @@ export function BrowseFeed() {
         });
     }, [postData]);
 
-    // Seed or Update listItems from tRPC data
+    // Keep the full per-tab dataset synced from the infinite query, then seed (or
+    // top-up) the rendered window from it. Pagination of OLDER posts flows through
+    // onLoadMore, not here — this effect only owns the full list + the window's top.
     useEffect(() => {
-        if (!isLoading && feedItems.length > 0) {
-            const isFirstLoad = !populatedTabs.current.has(activeTab);
+        if (isLoading || feedItems.length === 0) return;
 
-            if (isFirstLoad) {
-                populatedTabs.current.add(activeTab);
-                tabItemsCache.current.set(activeTab, feedItems);
-                setListItems(feedItems);
-            } else {
-                // If already populated, check if there are NEWER items than what's in our cache
-                const cached = tabItemsCache.current.get(activeTab) ?? [];
-                const cachedKeys = new Set(cached.map(i => i.data.feedKey ?? i.data.id));
-                const newItems = feedItems.filter(i => !cachedKeys.has(i.data.feedKey ?? i.data.id));
+        // Merge the infinite-query results with any items we prepended locally
+        // (new-posts pill, realtime inserts) that aren't part of the query pages.
+        const existingFull = fullItemsRef.current.get(activeTab) ?? [];
+        const feedKeys = new Set(feedItems.map(keyOf));
+        const localPrepends = existingFull.filter((i) => !feedKeys.has(keyOf(i)));
+        const full = dedupNewestFirst([...localPrepends, ...feedItems]);
+        fullItemsRef.current.set(activeTab, full);
 
-                if (newItems.length > 0) {
-                    // Update cache to include these new items
-                    const updated = [...newItems, ...cached].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-                    tabItemsCache.current.set(activeTab, updated);
-
-                    // If the user is at the top OR they just created a post, we can prepend immediately
-                    // For now, let's just update listItems so it appears at the top
-                    setListItems((prev) => {
-                        const prevKeys = new Set(prev.map(i => i.data.feedKey ?? i.data.id));
-                        const uniqueNew: FeedItem[] = [];
-                        const seenInBatch = new Set<string>();
-
-                        for (const item of newItems) {
-                            const key = item.data.feedKey ?? item.data.id;
-                            if (!prevKeys.has(key) && !seenInBatch.has(key)) {
-                                uniqueNew.push(item);
-                                seenInBatch.add(key);
-                            }
-                        }
-
-                        if (uniqueNew.length === 0) return prev;
-                        return [...uniqueNew, ...prev].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-                    });
-                }
-            }
+        const isFirstLoad = !populatedTabs.current.has(activeTab);
+        if (isFirstLoad) {
+            populatedTabs.current.add(activeTab);
+            const window = full.slice(0, VIEW_COUNT);
+            tabItemsCache.current.set(activeTab, window);
+            setListItems(window);
+            return;
         }
+
+        // Already populated: only fold in items that are NEWER than the window's
+        // current top (genuinely new posts). Older items are pagination the list
+        // already owns — re-injecting them here is what replaced the feed.
+        setListItems((prev) => {
+            if (prev.length === 0) return full.slice(0, VIEW_COUNT);
+            const topIdx = full.findIndex((i) => keyOf(i) === keyOf(prev[0]));
+            if (topIdx <= 0) return prev; // window top is already the newest
+            const newer = full.slice(0, topIdx);
+            const merged = dedupNewestFirst([...newer, ...prev]);
+            tabItemsCache.current.set(activeTab, merged);
+            return merged;
+        });
     }, [feedItems, isLoading, activeTab]);
 
     // ── New-posts polling ─────────────────────────────────────────────────────
@@ -249,11 +264,15 @@ export function BrowseFeed() {
                 return [...uniqueNew, ...prev].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
             });
 
-            // Update cache as well
+            // Update the window cache and the full dataset so the new posts are
+            // both visible and restorable when the user scrolls back up.
             const cached = tabItemsCache.current.get(activeTab) ?? [];
-            const cachedKeys = new Set(cached.map(i => i.data.feedKey ?? i.data.id));
-            const uniqueNewForCache = newPosts.filter(i => !cachedKeys.has(i.data.feedKey ?? i.data.id));
-            tabItemsCache.current.set(activeTab, [...uniqueNewForCache, ...cached].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+            const cachedKeys = new Set(cached.map(keyOf));
+            const uniqueNewForCache = newPosts.filter(i => !cachedKeys.has(keyOf(i)));
+            tabItemsCache.current.set(activeTab, dedupNewestFirst([...uniqueNewForCache, ...cached]));
+
+            const full = fullItemsRef.current.get(activeTab) ?? [];
+            fullItemsRef.current.set(activeTab, dedupNewestFirst([...newPosts, ...full]));
         }
 
         // Always scroll to top when manually loading new posts
@@ -378,20 +397,41 @@ export function BrowseFeed() {
         if (postData?.pages.length) pagesLoadedRef.current = postData.pages.length;
     }, [postData]);
 
-    const onLoadMore = useCallback(async (_direction: "up" | "down") => {
-        // No need to guard hasNext here — the library already checks it before calling us
-        const prevCount = pagesLoadedRef.current;
+    const onLoadMore = useCallback(async (direction: "up" | "down", refItem: FeedItem) => {
+        const full = fullItemsRef.current.get(activeTab) ?? [];
+        const idx = full.findIndex((i) => keyOf(i) === keyOf(refItem));
+
+        if (direction === "up") {
+            // Restore newer items that were windowed out above the current top.
+            if (idx <= 0) return [];
+            return full.slice(Math.max(0, idx - PAGE_SIZE), idx);
+        }
+
+        // direction === "down": older items below the bottom edge.
+        if (idx >= 0 && idx + 1 < full.length) {
+            return full.slice(idx + 1, idx + 1 + PAGE_SIZE);
+        }
+
+        // Ran off the end of what's loaded — pull the next page, fold it into the
+        // full dataset, and hand the library the items older than the edge.
+        if (!hasNextPosts) return [];
+        const before = pagesLoadedRef.current;
         const result = await fetchNextPosts();
         if (!result.data) return [];
-        const newPages = result.data.pages.slice(prevCount);
-        return newPages.flatMap((page: any) =>
+        const newRaw = result.data.pages.slice(before).flatMap((page: any) =>
             (page.posts ?? []).map((p: any) => ({
                 type: "post" as const,
                 createdAt: new Date(p.createdAt),
                 data: p,
             }))
         ) as FeedItem[];
-    }, [fetchNextPosts]);
+        fullItemsRef.current.set(
+            activeTab,
+            dedupNewestFirst([...(fullItemsRef.current.get(activeTab) ?? []), ...newRaw]),
+        );
+        const refTime = refItem.createdAt.getTime();
+        return newRaw.filter((i) => i.createdAt.getTime() < refTime);
+    }, [activeTab, hasNextPosts, fetchNextPosts]);
 
     // ── Bulk interaction queries (keyed on all loaded items) ──────────────────
     const postIds = useMemo(() => listItems.filter((i) => i.type === "post").map((i) => i.data.id), [listItems]);
@@ -535,7 +575,7 @@ export function BrowseFeed() {
                     No posts yet. Be the first to post a banger!
                 </div>
             ) : (() => {
-                const currentItems = listItems.length > 0 ? listItems : feedItems;
+                const currentItems = listItems.length > 0 ? listItems : feedItems.slice(0, VIEW_COUNT);
                 const uniqueMap = new Map<string, FeedItem>();
                 for (const item of currentItems) {
                     const k = item.data.feedKey ?? item.data.id;
@@ -544,6 +584,17 @@ export function BrowseFeed() {
                     }
                 }
                 const uniqueItems = Array.from(uniqueMap.values());
+
+                // The window's edges vs the full dataset decide whether the list
+                // may scroll further. hasPrevious lets evicted-newer items be
+                // restored on scroll-up (the bug fix); hasNext allows loading
+                // older items, then more pages once the loaded set is exhausted.
+                const full = fullItemsRef.current.get(activeTab) ?? [];
+                const windowTop = uniqueItems[0];
+                const windowBottom = uniqueItems[uniqueItems.length - 1];
+                const hasPrevious = !!windowTop && full.length > 0 && keyOf(full[0]) !== keyOf(windowTop);
+                const atLoadedEnd = !!windowBottom && full.length > 0 && keyOf(full[full.length - 1]) === keyOf(windowBottom);
+                const hasNext = !atLoadedEnd || !!hasNextPosts;
 
                 return (
                     <BidirectionalList<FeedItem>
@@ -554,9 +605,9 @@ export function BrowseFeed() {
                         renderItem={renderItem}
                         onLoadMore={onLoadMore}
                         onItemsChange={setListItems}
-                        hasPrevious={false}
-                        hasNext={!!hasNextPosts}
-                        viewCount={30}
+                        hasPrevious={hasPrevious}
+                        hasNext={hasNext}
+                        viewCount={VIEW_COUNT}
                         useWindow={true}
                         spinnerRow={
                             <div className="flex justify-center py-4">
