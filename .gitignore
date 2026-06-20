@@ -51,3 +51,9 @@ kick_categories.json
 
 # Treasury keypairs — NEVER commit
 .treasury-keys/
+
+# Cloudflare / OpenNext
+.open-next/
+.wrangler/
+.dev.vars
+cloudflare-env.d.ts

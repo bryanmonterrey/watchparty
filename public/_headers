@@ -1,0 +1,3 @@
+# Long-cache immutable Next.js build assets (hashed filenames)
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable

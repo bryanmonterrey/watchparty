@@ -6,7 +6,11 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@aws-sdk/client-ivs": "^3.1073.0",
@@ -30,6 +34,7 @@
     "@meteora-ag/dynamic-fee-sharing-sdk": "^1.0.6",
     "@noble/curves": "^2.2.0",
     "@number-flow/react": "^0.6.0",
+    "@opennextjs/cloudflare": "^1.19.11",
     "@radix-ui/react-alert-dialog": "^1.1.17",
     "@radix-ui/react-avatar": "^1.2.0",
     "@radix-ui/react-checkbox": "^1.3.5",
@@ -142,7 +147,8 @@
     "puppeteer": "^25.1.0",
     "puppeteer-core": "^25.1.0",
     "tailwindcss": "^4.3.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.103.0"
   },
   "ignoreScripts": [
     "sharp",

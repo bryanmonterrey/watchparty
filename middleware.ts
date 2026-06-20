@@ -2,11 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes } from "./routes";
 
-// Next.js 16 edge proxy (formerly middleware). Optimistic edge auth gate:
-// checks only for the presence of the session cookie (the real validation
-// stays in (app)/layout via getServerSession). Ported from sidebar and adapted
-// to watchparty's routes (/login, /home).
-export function proxy(request: NextRequest) {
+// Edge middleware. Next 16 deprecated `middleware` in favor of `proxy`, BUT
+// `proxy` is locked to the Node.js runtime, which OpenNext/Cloudflare Workers
+// does not support — only edge middleware runs there. So we deliberately keep
+// the `middleware` convention to stay on the edge runtime (the cookie-only auth
+// gate below is edge-safe; this is how it ran in sidebar). Revisit when Next
+// ships an edge option for `proxy`.
+//
+// Optimistic edge auth gate: checks only for the presence of the session cookie
+// (the real validation stays in (app)/layout via getServerSession). Ported from
+// sidebar and adapted to watchparty's routes (/login, /home).
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const session = getSessionCookie(request);
 
