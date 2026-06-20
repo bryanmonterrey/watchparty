@@ -45,15 +45,17 @@ const SubscriberBadgesManager = dynamic(() => import("@/components/creator/subsc
 const TwoFactorSettings = dynamic(() => import("@/components/settings/two-factor-settings").then(m => m.TwoFactorSettings), { loading: PanelLoading, ssr: false });
 const CreatorBansList = dynamic(() => import("@/components/settings/creator-bans-list").then(m => m.CreatorBansList), { loading: PanelLoading, ssr: false });
 const MySubscriptions = dynamic(() => import("@/components/settings/my-subscriptions").then(m => m.MySubscriptions), { loading: PanelLoading, ssr: false });
+const PremiumSettings = dynamic(() => import("@/components/settings/premium-settings").then(m => m.PremiumSettings), { loading: PanelLoading, ssr: false });
 const PayoutSettings = dynamic(() => import("@/components/settings/payout-settings").then(m => m.PayoutSettings), { loading: PanelLoading, ssr: false });
 const ReferralSettings = dynamic(() => import("@/components/settings/referral-settings").then(m => m.ReferralSettings), { loading: PanelLoading, ssr: false });
 const SubscriptionTierManager = dynamic(() => import("@/components/creator/subscription-tier-manager").then(m => m.SubscriptionTierManager), { loading: PanelLoading, ssr: false });
 const GiftInbox = dynamic(() => import("@/components/settings/gift-inbox").then(m => m.GiftInbox), { loading: PanelLoading, ssr: false });
 const AdminDashboard = dynamic(() => import("@/components/admin/admin-dashboard").then(m => m.AdminDashboard), { loading: PanelLoading, ssr: false });
 
-type Tab = "analytics" | "stream" | "vips" | "moderators" | "welcome" | "mass" | "vault" | "emotes" | "notifications" | "privacy" | "sessions" | "blocked" | "muted" | "hidden" | "verification" | "admin" | "promo" | "badges" | "2fa" | "bans" | "subscriptions" | "tiers" | "payouts" | "referrals" | "gifts";
+type Tab = "premium" | "analytics" | "stream" | "vips" | "moderators" | "welcome" | "mass" | "vault" | "emotes" | "notifications" | "privacy" | "sessions" | "blocked" | "muted" | "hidden" | "verification" | "admin" | "promo" | "badges" | "2fa" | "bans" | "subscriptions" | "tiers" | "payouts" | "referrals" | "gifts";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "premium", label: "Premium", icon: <Crown className="w-4 h-4" /> },
     { id: "analytics", label: "Analytics", icon: <BarChart2 className="w-4 h-4" /> },
     { id: "stream", label: "Stream", icon: <Radio className="w-4 h-4" /> },
     { id: "privacy", label: "Privacy", icon: <Shield className="w-4 h-4" /> },
@@ -157,6 +159,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
+            {tab === "premium" && <PremiumSettings />}
             {tab === "stream" && <StreamSettings />}
             {tab === "privacy" && <PrivacySettings />}
             {tab === "notifications" && <NotificationPreferences />}

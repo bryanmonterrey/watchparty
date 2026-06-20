@@ -13,6 +13,7 @@ export * from "./creator";
 export * from "./notification_prefs";
 export * from "./stream";
 export * from "./subscription";
+export * from "./premium";
 export * from "./referral";
 export * from "./video_progress";
 export * from "./video_heatmap";

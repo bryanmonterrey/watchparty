@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/app-ui/app-header";
 import { AppContainer } from "@/components/app-ui/app-container";
 import { MobileChrome } from "@/components/app-ui/mobile/mobile-chrome";
 import { MiniPlayerShell } from "@/components/app-ui/mini-player-shell";
+import { UpgradeOverlay } from "@/components/premium/upgrade-overlay";
 
 // Authenticated app shell. Guards every (app) route (no session -> /login) and
 // hosts the app's provider stack + sidebar frame.
@@ -40,6 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <AppContainer>{children}</AppContainer>
           </SidebarInset>
         </SidebarProvider>
+        <UpgradeOverlay />
       </MiniPlayerShell>
     </AppProviders>
   );

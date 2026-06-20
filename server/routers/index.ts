@@ -22,6 +22,7 @@ import { notificationPrefsRouter } from "./notificationPrefs";
 import { streamRouter } from "./stream";
 import { adminRouter } from "./admin";
 import { subscriptionRouter } from "./subscription";
+import { premiumRouter } from "./premium";
 import { referralRouter } from "./referral";
 import { cardsRouter } from "./cards";
 import { friendsRouter } from "./friends";
@@ -54,6 +55,7 @@ export const appRouter = router({
     stream: streamRouter,
     admin: adminRouter,
     subscription: subscriptionRouter,
+    premium: premiumRouter,
     referral: referralRouter,
     cards: cardsRouter,
     friends: friendsRouter,
