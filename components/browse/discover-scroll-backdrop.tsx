@@ -15,6 +15,7 @@ export function DiscoverScrollBackdrop() {
 
         const onScroll = () => {
             const t = Math.min(container.scrollTop / 32, 1);
+            el.style.backgroundColor = `color-mix(in oklab, var(--background) ${t * 20}%, transparent)`;
             el.style.backdropFilter = `blur(${t * 24}px)`;
             (el.style as CSSStyleDeclaration & { webkitBackdropFilter: string }).webkitBackdropFilter = `blur(${t * 24}px)`;
         };
