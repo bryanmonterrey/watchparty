@@ -57,3 +57,4 @@ kick_categories.json
 .wrangler/
 .dev.vars
 cloudflare-env.d.ts
+.cf-secrets.json
