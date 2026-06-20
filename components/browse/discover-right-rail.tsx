@@ -141,6 +141,8 @@ export function DiscoverRightRail() {
                     <HappeningRow key={item.topic} {...item} />
                 ))}
             </RailCard>
+
+            <div className="h-[40svh] w-full shrink-0 bg-transparent" />
         </div>
     );
 }
