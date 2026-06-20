@@ -10,6 +10,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Treat `../sidebar` as the reference implementation when porting a feature — but never copy its loading strategy (see the speed rule below).
 
+## Premium & creator subscriptions (USDC, auto-recurring)
+
+Both the site's **platform premium** tiers and **creator subscriptions** run on the
+Solana **Subscriptions & Allowances** program (`De1eg…`), billed in **USDC**, with a
+scheduled collector that auto-pulls each period. Built, tsc/build-clean, and
+**devnet-validated**. Not yet live on mainnet.
+
+- **Code map:** `lib/premium/tiers.ts` (platform pricing), `lib/chains/solana/subscriptions/`
+  (kit client, `compat` wallet-adapter bridge, `checkout`, `collector` = server signer +
+  pulls/sweep), `server/routers/premium.ts` + `server/routers/subscription.ts` (creator),
+  `app/api/cron/premium-collect` + `app/api/cron/treasury-sweep`, UI in `components/premium/`.
+- **Money model:** subscribers → hot **collector**; creators **claim** their balance minus a
+  **5% fee** (`PLATFORM_FEE_BPS`) automatically; profit **auto-sweeps to a cold wallet**
+  (`TREASURY_COLD_PUBKEY`). The ONLY manual recurring task is withdrawing profit from cold
+  (+ occasional SOL top-up for gas). Treasury key safety: `docs/treasury-security.md`.
+- **HOW DO I LAUNCH? → `docs/cloudflare-launch.md`** (copy-paste runbook: secrets, env,
+  provision, crons, verify). Ops detail: `docs/premium-ops.md`. Do the mainnet push on
+  Cloudflare, not Vercel (provisioning is permanent + host-independent; secrets/crons belong
+  on the real host).
+- Treasury keypairs are generated into the gitignored `.treasury-keys/` (back up + delete).
+
 ## Commands
 
 Package manager is **bun** (`bun.lock`). Runtime is Next.js 16 (App Router, Turbopack) + React 19.
