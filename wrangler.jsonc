@@ -2,14 +2,21 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "watchparty",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2025-03-25",
+  "compatibility_date": "2026-04-15",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
-  // Added when we reach Workers Paid / Hyperdrive:
-  //   "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id from `wrangler hyperdrive create`>" }]
+  },
+  // Supabase session pooler (DIRECT_URL) fronted by Hyperdrive — the DB client
+  // in db/index.ts reads env.HYPERDRIVE.connectionString on Workers.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "85d170665be54585b8f8124bd9fbb404"
+    }
+  ]
+  // Added later for ISR/revalidation caching (mirrors the playground16 example):
   //   "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "watchparty-cache" }]
   //   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "watchparty" }]
 }

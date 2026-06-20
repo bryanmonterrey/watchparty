@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-// Enables `getCloudflareContext()` (env/bindings) during `next dev`.
-// No-op at build/runtime; only wires the dev server.
-initOpenNextCloudflareForDev();
+// Wire getCloudflareContext() into the `next dev` server only. This must NOT run
+// during `next build`: it spins up a wrangler/miniflare proxy of every binding,
+// and the Hyperdrive binding then demands a local Postgres connection string,
+// crashing the production build. Dev-only avoids that; the deployed Worker sets
+// up its own context, so init isn't needed in prod.
+if (process.env.NODE_ENV === "development") {
+  initOpenNextCloudflareForDev();
+}
