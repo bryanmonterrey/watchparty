@@ -10,7 +10,7 @@ import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 import { COMPARISON, type BillingCycle, type TierKey } from "@/lib/premium/tiers";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { appToast } from "@/components/app-ui/app-toast";
-import { Check, X, Loader2, Crown, Building2, ChevronRight } from "lucide-react";
+import { Check, X, Loader2, ChevronRight } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers";
 
@@ -78,20 +78,21 @@ export function UpgradeOverlay() {
                         >
                             <X className="size-5" />
                         </button>
-                        <h2 className="text-center text-2xl sm:text-3xl font-bold text-white">
+                        <h2 className="text-center text-xl sm:text-2xl font-bold text-white">
                             Upgrade to Premium
                         </h2>
-                        <div className="mt-4 flex justify-center">
+                        <div className="mt-3.5 flex justify-center">
                             <CycleToggle cycle={cycle} onChange={setCycle} />
                         </div>
                     </div>
 
-                    {/* Scroll body */}
+                    {/* Scroll body — constrained, centered content column */}
                     <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+                      <div className="mx-auto w-full max-w-4xl">
                         <div
                             className={cn(
-                                "grid gap-3 mx-auto",
-                                view === "individual" ? "max-w-2xl sm:grid-cols-2" : "max-w-4xl sm:grid-cols-3",
+                                "grid gap-3",
+                                view === "individual" ? "sm:grid-cols-2" : "sm:grid-cols-3",
                             )}
                         >
                             {visible.map((tier) => (
@@ -124,6 +125,7 @@ export function UpgradeOverlay() {
                         )}
 
                         <CompareTable tiers={visible} />
+                      </div>
                     </div>
 
                     {/* Sticky subscribe bar */}
@@ -176,41 +178,32 @@ function TierCard({
     return (
         <Squircle
             asChild
-            radius={20}
+            radius={18}
             className={cn(
                 "relative p-4 text-left transition-colors",
-                selected ? "bg-twitter/15 ring-2 ring-twitter" : "bg-white/[0.04] ring-1 ring-white/10 hover:ring-white/20",
+                selected
+                    ? "bg-twitter/10 ring-2 ring-twitter"
+                    : tier.highlighted
+                    ? "bg-white/[0.04] ring-2 ring-twitter/70 hover:ring-twitter"
+                    : "bg-white/[0.04] ring-1 ring-white/10 hover:ring-white/20",
             )}
         >
             <button onClick={onSelect} className="block w-full">
-                {tier.highlighted && (
-                    <span className="absolute right-3 top-3 text-[10px] font-bold uppercase tracking-wide text-twitter">
-                        Popular
-                    </span>
-                )}
-                <div className="flex items-center gap-2">
-                    {tier.group === "business" ? (
-                        <Building2 className="size-4 text-zinc-300" />
-                    ) : (
-                        <Crown className="size-4 text-zinc-300" />
-                    )}
-                    <span className="font-bold text-white">{tier.name}</span>
+                <span className="text-sm font-semibold text-white">{tier.name}</span>
+                <div className="mt-1.5 flex items-baseline gap-1">
+                    <span className="text-3xl font-extrabold tracking-tight text-white">{priceLabel}</span>
+                    {period && <span className="text-xs text-zinc-400">{period}</span>}
                 </div>
-                <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-2xl font-extrabold text-white">{priceLabel}</span>
-                    {period && <span className="text-sm text-zinc-400">{period}</span>}
-                </div>
-                <p className="mt-0.5 text-xs text-zinc-500">{tier.tagline}</p>
-                <ul className="mt-3 space-y-1.5">
+                <ul className="mt-3 space-y-2">
                     {tier.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
-                            <Check className="mt-0.5 size-3.5 shrink-0 text-twitter" />
+                        <li key={f} className="flex items-start gap-2 text-[13px] leading-snug text-zinc-300">
+                            <Check className="mt-px size-3.5 shrink-0 text-twitter" />
                             {f}
                         </li>
                     ))}
                 </ul>
                 {!tier.selfServe && (
-                    <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-twitter">
+                    <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-twitter">
                         Contact sales <ChevronRight className="size-3.5" />
                     </span>
                 )}
@@ -221,15 +214,15 @@ function TierCard({
 
 function BusinessBanner({ onExplore }: { onExplore: () => void }) {
     return (
-        <Squircle asChild radius={16} className="mt-4 max-w-2xl mx-auto block bg-white/[0.04] ring-1 ring-white/10">
-            <div className="flex items-center justify-between gap-3 p-4">
+        <Squircle asChild radius={16} className="mt-4 block bg-white/[0.04] ring-1 ring-white/10">
+            <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
                 <div>
-                    <p className="font-semibold text-white">Are you a business?</p>
+                    <p className="text-sm font-semibold text-white">Are you a business?</p>
                     <p className="text-xs text-zinc-400">Gain credibility and grow faster with Premium Business.</p>
                 </div>
                 <button
                     onClick={onExplore}
-                    className="shrink-0 rounded-full bg-white/10 hover:bg-white/20 px-4 h-control text-sm font-semibold text-white transition-colors"
+                    className="shrink-0 rounded-full bg-white/10 hover:bg-white/20 px-4 sm:px-5 h-control text-[13px] font-semibold text-white transition-colors"
                 >
                     Explore Premium Business
                 </button>
@@ -240,66 +233,57 @@ function BusinessBanner({ onExplore }: { onExplore: () => void }) {
 
 function cellNode(v: boolean | string | undefined) {
     if (v === true) return <Check className="mx-auto size-4 text-twitter" />;
-    if (v === false || v === undefined) return <X className="mx-auto size-4 text-zinc-600" />;
+    if (v === false || v === undefined) return <X className="mx-auto size-4 text-zinc-700" />;
     return <span className="text-xs text-zinc-300">{v}</span>;
 }
 
 function CompareTable({ tiers }: { tiers: TierRow[] }) {
     const cols = tiers;
+    // label column flexes; each tier column is equal width.
+    const gridCols = { gridTemplateColumns: `minmax(0,1.6fr) repeat(${cols.length}, minmax(0,1fr))` };
     return (
-        <div className="mt-8 max-w-4xl mx-auto">
-            <h3 className="mb-3 text-sm font-bold text-white">Compare tiers & features</h3>
-            <div className="overflow-x-auto">
-                <table className="w-full min-w-[420px] text-sm">
-                    <thead>
-                        <tr className="border-b border-white/10">
-                            <th className="py-2 text-left font-medium text-zinc-400" />
-                            {cols.map((t) => (
-                                <th key={t.key} className="py-2 px-2 text-center font-semibold text-white">
-                                    {t.name}
-                                </th>
+        <div className="mt-10">
+            <h3 className="mb-3 text-base font-bold text-white">Compare tiers &amp; features</h3>
+            <div className="space-y-3 overflow-x-auto">
+                {COMPARISON.map((group) => (
+                    <Squircle
+                        key={group.group}
+                        asChild
+                        radius={16}
+                        className="block bg-white/[0.03] ring-1 ring-white/10"
+                    >
+                        <div className="min-w-[420px] px-4 sm:px-5 py-1">
+                            {/* group header + tier column labels */}
+                            <div
+                                className="grid items-center gap-2 py-3 border-b border-white/10"
+                                style={gridCols}
+                            >
+                                <span className="text-sm font-bold text-white">{group.group}</span>
+                                {cols.map((t) => (
+                                    <span key={t.key} className="text-center text-xs font-semibold text-zinc-400">
+                                        {t.name}
+                                    </span>
+                                ))}
+                            </div>
+                            {group.rows.map((row) => (
+                                <div
+                                    key={row.label}
+                                    className="grid items-center gap-2 py-2.5 border-b border-white/5 last:border-0"
+                                    style={gridCols}
+                                >
+                                    <span className="text-[13px] text-zinc-300">{row.label}</span>
+                                    {cols.map((t) => (
+                                        <div key={t.key} className="text-center">
+                                            {cellNode(row.values[t.key])}
+                                        </div>
+                                    ))}
+                                </div>
                             ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {COMPARISON.map((group) => (
-                            <FragmentGroup key={group.group} group={group} cols={cols} />
-                        ))}
-                    </tbody>
-                </table>
+                        </div>
+                    </Squircle>
+                ))}
             </div>
         </div>
-    );
-}
-
-function FragmentGroup({
-    group,
-    cols,
-}: {
-    group: (typeof COMPARISON)[number];
-    cols: TierRow[];
-}) {
-    return (
-        <>
-            <tr>
-                <td
-                    colSpan={cols.length + 1}
-                    className="pt-4 pb-1.5 text-xs font-bold uppercase tracking-wide text-zinc-500"
-                >
-                    {group.group}
-                </td>
-            </tr>
-            {group.rows.map((row) => (
-                <tr key={row.label} className="border-b border-white/5">
-                    <td className="py-2 text-left text-zinc-300">{row.label}</td>
-                    {cols.map((t) => (
-                        <td key={t.key} className="py-2 px-2 text-center">
-                            {cellNode(row.values[t.key])}
-                        </td>
-                    ))}
-                </tr>
-            ))}
-        </>
     );
 }
 
@@ -367,26 +351,32 @@ function SubscribeBar({
     };
 
     return (
-        <div className="shrink-0 border-t border-white/10 bg-zinc-950/80 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">
-                    {tier ? tier.name : "Select a plan"}
-                </p>
-                {tier && (
-                    <p className="text-xs text-zinc-400">
-                        {priceLabel}
-                        {tier.selfServe ? (cycle === "annual" ? "/year, billed annually" : "/month, billed monthly") : ""}
+        <div className="shrink-0 border-t border-white/10 bg-zinc-950/85 backdrop-blur-md px-4 sm:px-6 py-3">
+            <div className="mx-auto w-full max-w-4xl flex items-center gap-4">
+                <div className="min-w-0 shrink-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                        {tier ? tier.name : "Select a plan"}
                     </p>
-                )}
+                    {tier && (
+                        <p className="text-xs text-zinc-400">
+                            {priceLabel}
+                            {tier.selfServe ? (cycle === "annual" ? "/year · billed annually" : "/month · billed monthly") : ""}
+                        </p>
+                    )}
+                </div>
+                <button
+                    disabled={!canSubscribe || pending}
+                    onClick={handleSubscribe}
+                    className="shrink-0 inline-flex items-center justify-center gap-2 rounded-full bg-white text-zinc-950 font-bold px-8 h-control hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    {pending && <Loader2 className="size-4 animate-spin" />}
+                    Subscribe &amp; Pay
+                </button>
+                <p className="hidden md:block text-[11px] leading-tight text-zinc-500 max-w-[280px]">
+                    By subscribing, you agree to our Purchaser Terms. Plans auto-renew until
+                    cancelled; manage anytime in settings.
+                </p>
             </div>
-            <button
-                disabled={!canSubscribe || pending}
-                onClick={handleSubscribe}
-                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-full bg-white text-zinc-950 font-bold px-6 h-control hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-                {pending && <Loader2 className="size-4 animate-spin" />}
-                Subscribe & Pay
-            </button>
         </div>
     );
 }
