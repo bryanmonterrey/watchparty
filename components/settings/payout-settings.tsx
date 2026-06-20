@@ -32,6 +32,17 @@ export function PayoutSettings() {
         onError: e => toast.error(e.message),
     });
 
+    // USDC subscription earnings (claim model: net = gross − 5% fee, no minimum).
+    const { data: claimable } = trpc.subscription.getClaimable.useQuery();
+    const claim = trpc.subscription.claimEarnings.useMutation({
+        onSuccess: (r) => {
+            utils.subscription.getClaimable.invalidate();
+            utils.subscription.getPayouts.invalidate();
+            toast.success(`Claimed $${(r.netUsdc / 1_000_000).toFixed(2)} USDC`);
+        },
+        onError: e => toast.error(e.message),
+    });
+
     const [amount, setAmount] = useState("");
 
     const totalEarned = earnings?.totalLamports ?? 0;
@@ -40,9 +51,32 @@ export function PayoutSettings() {
         .reduce((s, p) => s + p.amountLamports, 0);
     const available = Math.max(0, totalEarned - pendingPayouts);
 
+    const claimableNet = claimable?.netUsdc ?? 0;
+
     return (
         <div className="space-y-6">
-            {/* Stats */}
+            {/* USDC subscription earnings — claim model */}
+            <div className="rounded-xl bg-gradient-to-br from-lantern/15 to-zinc-900/60 border border-lantern/20 p-4">
+                <p className="text-xs text-zinc-400 mb-1">Claimable subscription earnings (USDC)</p>
+                <div className="flex items-end justify-between gap-3">
+                    <div>
+                        <p className="text-2xl font-extrabold text-zinc-100">${(claimableNet / 1_000_000).toFixed(2)}</p>
+                        <p className="text-[11px] text-zinc-500">
+                            after {((claimable?.feeBps ?? 500) / 100).toFixed(0)}% platform fee
+                            {claimable && claimable.grossUsdc > 0 ? ` · $${(claimable.grossUsdc / 1_000_000).toFixed(2)} gross` : ""}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => claim.mutate()}
+                        disabled={claim.isPending || claimableNet <= 0}
+                        className="rounded-full bg-lantern text-zinc-950 font-bold text-sm px-5 h-10 hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                    >
+                        {claim.isPending ? "Claiming…" : "Claim to wallet"}
+                    </button>
+                </div>
+            </div>
+
+            {/* Stats (legacy SOL) */}
             <div className="grid grid-cols-3 gap-3">
                 {earningsLoading ? (
                     Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)

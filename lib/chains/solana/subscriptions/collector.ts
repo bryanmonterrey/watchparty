@@ -19,12 +19,19 @@ import {
     signTransactionMessageWithSigners,
 } from "@solana/kit";
 import {
+    fetchMaybePlan,
     findPlanPda,
     findSubscriptionDelegationPda,
+    getCreatePlanOverlayInstructionAsync,
     getTransferSubscriptionOverlayInstructionAsync,
 } from "@solana/subscriptions";
-import { findAssociatedTokenPda } from "@solana-program/token";
+import {
+    findAssociatedTokenPda,
+    getCreateAssociatedTokenIdempotentInstruction,
+    getTransferCheckedInstruction,
+} from "@solana-program/token";
 import bs58 from "bs58";
+import { USDC_DECIMALS } from "@/lib/premium/tiers";
 import {
     getRpcUrl,
     getRpcWsUrl,
@@ -118,4 +125,96 @@ export async function chargeSubscriber(args: ChargeArgs): Promise<string> {
     });
 
     return sendAsTreasury([ix]);
+}
+
+/** The treasury's USDC associated-token account (where all pulls land). */
+export async function getTreasuryUsdcAta() {
+    const signer = await getTreasurySigner();
+    const [ata] = await findAssociatedTokenPda({
+        owner: signer.address,
+        mint: USDC_MINT_ADDRESS,
+        tokenProgram: PREMIUM_TOKEN_PROGRAM,
+    });
+    return { signer, ata };
+}
+
+/**
+ * Provision a treasury-owned USDC plan (used for both platform tiers and creator
+ * tiers). Idempotent: if the plan already exists, just returns its refs.
+ * Destinations are the treasury WALLET (not its ATA) — the program checks the
+ * receiver ATA's owner (see scripts/premium/devnet-smoke.ts / error 0x1fa).
+ */
+export async function createTreasuryPlan(args: {
+    planId: number;
+    amountBaseUnits: bigint;
+    periodHours: number;
+}): Promise<{ planPda: string; createdAtChain: number | null }> {
+    const { signer, ata: treasuryAta } = await getTreasuryUsdcAta();
+    const [planPda] = await findPlanPda(
+        { owner: signer.address, planId: BigInt(args.planId) },
+        { programAddress: SUBSCRIPTIONS_PROGRAM_ID },
+    );
+
+    if (!(await fetchMaybePlan(rpcPair().rpc, planPda)).exists) {
+        const ataIx = getCreateAssociatedTokenIdempotentInstruction({
+            payer: signer,
+            ata: treasuryAta,
+            owner: signer.address,
+            mint: USDC_MINT_ADDRESS,
+            tokenProgram: PREMIUM_TOKEN_PROGRAM,
+        });
+        const planIx = await getCreatePlanOverlayInstructionAsync({
+            programAddress: SUBSCRIPTIONS_PROGRAM_ID,
+            owner: signer,
+            mint: USDC_MINT_ADDRESS,
+            tokenProgram: PREMIUM_TOKEN_PROGRAM,
+            amount: args.amountBaseUnits,
+            periodHours: BigInt(args.periodHours),
+            endTs: BigInt(0),
+            planId: BigInt(args.planId),
+            pullers: [signer.address],
+            destinations: [signer.address],
+            metadataUri: "",
+        });
+        await sendAsTreasury([ataIx, planIx]);
+    }
+
+    const plan = await fetchMaybePlan(rpcPair().rpc, planPda);
+    return {
+        planPda,
+        createdAtChain: plan.exists ? Number(plan.data.data.terms.createdAt) : null,
+    };
+}
+
+/**
+ * Send USDC from the treasury to a recipient wallet (claims/payouts). Creates the
+ * recipient's USDC ATA idempotently. Returns the tx signature.
+ */
+export async function transferUsdcFromTreasury(
+    toWallet: string,
+    amountBaseUnits: bigint,
+): Promise<string> {
+    const { signer, ata: treasuryAta } = await getTreasuryUsdcAta();
+    const owner = kitAddress(toWallet);
+    const [recipientAta] = await findAssociatedTokenPda({
+        owner,
+        mint: USDC_MINT_ADDRESS,
+        tokenProgram: PREMIUM_TOKEN_PROGRAM,
+    });
+    const ataIx = getCreateAssociatedTokenIdempotentInstruction({
+        payer: signer,
+        ata: recipientAta,
+        owner,
+        mint: USDC_MINT_ADDRESS,
+        tokenProgram: PREMIUM_TOKEN_PROGRAM,
+    });
+    const transferIx = getTransferCheckedInstruction({
+        source: treasuryAta,
+        mint: USDC_MINT_ADDRESS,
+        destination: recipientAta,
+        authority: signer,
+        amount: amountBaseUnits,
+        decimals: USDC_DECIMALS,
+    });
+    return sendAsTreasury([ataIx, transferIx]);
 }

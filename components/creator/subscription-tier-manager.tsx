@@ -7,24 +7,25 @@ import { Plus, Edit2, Trash2, Check, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const SOL = 1_000_000_000;
+const USDC = 1_000_000; // 6 decimals
 
-function lamportsToSol(l: number) {
-    return (l / SOL).toFixed(3).replace(/\.?0+$/, "");
+function baseToUsd(n: number) {
+    return (n / USDC).toFixed(2).replace(/\.00$/, "");
 }
-function solToLamports(s: string) {
-    return Math.round(parseFloat(s) * SOL);
+function usdToBase(s: string) {
+    return Math.round(parseFloat(s) * USDC);
 }
 
-function TierForm({ initial, onSave, onCancel }: {
-    initial?: { name: string; description?: string | null; priceMonthly: number; priceAnnual?: number | null; perks: string[] };
+function TierForm({ initial, isEdit, onSave, onCancel }: {
+    initial?: { name: string; description?: string | null; priceUsdcMonthly?: number | null; priceUsdcAnnual?: number | null; perks: string[] };
+    isEdit?: boolean;
     onSave: (data: any) => void;
     onCancel: () => void;
 }) {
     const [name, setName] = useState(initial?.name ?? "");
     const [description, setDescription] = useState(initial?.description ?? "");
-    const [priceMonthly, setPriceMonthly] = useState(initial ? lamportsToSol(initial.priceMonthly) : "");
-    const [priceAnnual, setPriceAnnual] = useState(initial?.priceAnnual ? lamportsToSol(initial.priceAnnual) : "");
+    const [priceMonthly, setPriceMonthly] = useState(initial?.priceUsdcMonthly ? baseToUsd(initial.priceUsdcMonthly) : "");
+    const [priceAnnual, setPriceAnnual] = useState(initial?.priceUsdcAnnual ? baseToUsd(initial.priceUsdcAnnual) : "");
     const [perks, setPerks] = useState<string[]>(initial?.perks ?? [""]);
 
     const addPerk = () => setPerks(p => [...p, ""]);
@@ -36,8 +37,9 @@ function TierForm({ initial, onSave, onCancel }: {
         onSave({
             name: name.trim(),
             description: description.trim() || undefined,
-            priceMonthly: solToLamports(priceMonthly),
-            priceAnnual: priceAnnual ? solToLamports(priceAnnual) : undefined,
+            // Price is immutable on-chain — only sent on create (stripped on update).
+            priceUsdcMonthly: usdToBase(priceMonthly),
+            priceUsdcAnnual: priceAnnual ? usdToBase(priceAnnual) : undefined,
             perks: perks.filter(p => p.trim()),
         });
     };
@@ -50,14 +52,14 @@ function TierForm({ initial, onSave, onCancel }: {
                 className="w-full bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40" />
             <div className="grid grid-cols-2 gap-2">
                 <div>
-                    <label className="text-xs text-zinc-500 mb-1 block">Monthly price (SOL)</label>
-                    <input type="number" step="0.001" min="0" value={priceMonthly} onChange={e => setPriceMonthly(e.target.value)} placeholder="0.05"
-                        className="w-full bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40" />
+                    <label className="text-xs text-zinc-500 mb-1 block">Monthly price (USDC)</label>
+                    <input type="number" step="0.01" min="0" disabled={isEdit} value={priceMonthly} onChange={e => setPriceMonthly(e.target.value)} placeholder="5"
+                        className="w-full bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40 disabled:opacity-50" />
                 </div>
                 <div>
-                    <label className="text-xs text-zinc-500 mb-1 block">Annual price (SOL, optional)</label>
-                    <input type="number" step="0.001" min="0" value={priceAnnual} onChange={e => setPriceAnnual(e.target.value)} placeholder="0.50"
-                        className="w-full bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40" />
+                    <label className="text-xs text-zinc-500 mb-1 block">Annual price (USDC, optional)</label>
+                    <input type="number" step="0.01" min="0" disabled={isEdit} value={priceAnnual} onChange={e => setPriceAnnual(e.target.value)} placeholder="50"
+                        className="w-full bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40 disabled:opacity-50" />
                 </div>
             </div>
             <div className="space-y-2">
@@ -113,7 +115,8 @@ export function SubscriptionTierManager({ creatorId }: { creatorId: string }) {
                     <TierForm
                         key={tier.id}
                         initial={tier as any}
-                        onSave={data => updateTier.mutate({ tierId: tier.id, ...data })}
+                        isEdit
+                        onSave={data => updateTier.mutate({ tierId: tier.id, name: data.name, description: data.description, perks: data.perks })}
                         onCancel={() => setEditingId(null)}
                     />
                 ) : (
@@ -123,8 +126,8 @@ export function SubscriptionTierManager({ creatorId }: { creatorId: string }) {
                             <p className="text-sm font-bold text-zinc-100">{tier.name}</p>
                             {tier.description && <p className="text-xs text-zinc-500 mt-0.5">{tier.description}</p>}
                             <p className="text-xs text-lantern font-semibold mt-1">
-                                {lamportsToSol(tier.priceMonthly)} SOL/mo
-                                {tier.priceAnnual && ` · ${lamportsToSol(tier.priceAnnual)} SOL/yr`}
+                                ${baseToUsd(tier.priceUsdcMonthly ?? 0)}/mo
+                                {tier.priceUsdcAnnual ? ` · $${baseToUsd(tier.priceUsdcAnnual)}/yr` : ""}
                             </p>
                             {((tier.perks as string[]) ?? []).length > 0 && (
                                 <ul className="mt-2 space-y-0.5">

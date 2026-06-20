@@ -5,12 +5,19 @@ import { trpc } from "@/lib/trpc/client";
 import { Crown, Check, ChevronDown, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { cn } from "@/lib/utils";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@/server/routers";
 
-const SOL = 1_000_000_000;
-function lamportsToSol(l: number) {
-    return (l / SOL).toFixed(3).replace(/\.?0+$/, "");
+const USDC = 1_000_000; // 6 decimals
+function baseToUsd(n: number) {
+    return (n / USDC).toFixed(2).replace(/\.00$/, "");
 }
+const PERIOD_HOURS = { monthly: 30 * 24, annual: 365 * 24 } as const;
+const TREASURY = process.env.NEXT_PUBLIC_PREMIUM_MERCHANT_PUBKEY ?? process.env.NEXT_PUBLIC_TREASURY_PUBKEY ?? "";
+
+type Tier = inferRouterOutputs<AppRouter>["subscription"]["getTiers"][number];
 
 interface SubscribeButtonProps {
     creatorId: string;
@@ -20,6 +27,8 @@ interface SubscribeButtonProps {
 export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps) {
     const { data: session } = useAuthSession();
     const utils = trpc.useUtils();
+    const { connection } = useConnection();
+    const { publicKey, sendTransaction } = useWallet();
 
     const { data: tiers } = trpc.subscription.getTiers.useQuery({ creatorId });
     const { data: subStatus, isLoading: subLoading } = trpc.subscription.isSubscribed.useQuery(
@@ -27,14 +36,7 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
         { enabled: !!session?.user }
     );
 
-    const subscribe = trpc.subscription.subscribe.useMutation({
-        onSuccess: () => {
-            utils.subscription.isSubscribed.invalidate({ creatorId });
-            setShowPicker(false);
-            toast.success(`Subscribed to ${creatorName}!`);
-        },
-        onError: (e) => toast.error(e.message),
-    });
+    const record = trpc.subscription.recordCreatorSubscription.useMutation();
     const cancel = trpc.subscription.cancelSubscription.useMutation({
         onSuccess: () => {
             utils.subscription.isSubscribed.invalidate({ creatorId });
@@ -44,6 +46,56 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
 
     const [showPicker, setShowPicker] = useState(false);
     const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
+    const [pendingTier, setPendingTier] = useState<string | null>(null);
+
+    const handleSubscribe = async (tier: Tier) => {
+        const annual = billingCycle === "annual";
+        const planId = annual ? tier.planIdAnnual : tier.planIdMonthly;
+        const amount = annual ? tier.priceUsdcAnnual : tier.priceUsdcMonthly;
+        const createdAt = annual ? tier.createdAtChainAnnual : tier.createdAtChainMonthly;
+        if (!planId || !amount) { toast.error("This tier isn't available for that billing cycle"); return; }
+        if (!publicKey) { toast.error("Connect your wallet to subscribe"); return; }
+        if (!TREASURY) { toast.error("Subscriptions are not configured"); return; }
+
+        setPendingTier(tier.id);
+        try {
+            const { runPremiumCheckout } = await import("@/lib/chains/solana/subscriptions/checkout");
+            const result = await runPremiumCheckout({
+                userPublicKey: publicKey,
+                connection,
+                sendTransaction,
+                plan: {
+                    merchant: TREASURY,
+                    planId,
+                    amountBaseUnits: String(amount),
+                    periodHours: annual ? PERIOD_HOURS.annual : PERIOD_HOURS.monthly,
+                    createdAt: String(createdAt ?? 0),
+                },
+            });
+            const res = await record.mutateAsync({
+                tierId: tier.id,
+                billingCycle,
+                subscriberWallet: publicKey.toBase58(),
+                planPda: result.subscriptionAuthorityPda ? (annual ? tier.planPdaAnnual : tier.planPdaMonthly) ?? "" : "",
+                subscriptionPda: result.subscriptionPda,
+                subscriptionAuthorityPda: result.subscriptionAuthorityPda,
+                delegatorAta: result.delegatorAta,
+                subscribeTxSignature: result.subscribeSignature,
+            });
+            utils.subscription.isSubscribed.invalidate({ creatorId });
+            if (res.charged) {
+                setShowPicker(false);
+                toast.success(`Subscribed to ${creatorName}!`);
+            } else {
+                toast.error("Subscription authorized, but the first USDC payment couldn't be collected. Top up USDC — we'll retry shortly.");
+            }
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            toast.error(/reject|denied|cancel/i.test(msg) ? "Subscription cancelled" : `Subscription failed: ${msg}`);
+        } finally {
+            setPendingTier(null);
+        }
+    };
 
     if (!tiers?.length) return null;
     if (!session?.user) return null;
@@ -100,12 +152,14 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
                     </div>
                     <div className="p-2 space-y-1">
                         {tiers.map(tier => {
-                            const price = billingCycle === "annual" && tier.priceAnnual ? tier.priceAnnual : tier.priceMonthly;
+                            const annual = billingCycle === "annual";
+                            const price = annual ? tier.priceUsdcAnnual : tier.priceUsdcMonthly;
+                            if (!price) return null;
                             return (
                                 <button
                                     key={tier.id}
-                                    onClick={() => subscribe.mutate({ tierId: tier.id, billingCycle })}
-                                    disabled={subscribe.isPending}
+                                    onClick={() => handleSubscribe(tier)}
+                                    disabled={pendingTier !== null}
                                     className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors text-left disabled:opacity-50"
                                 >
                                     <div>
@@ -113,7 +167,7 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
                                         {tier.description && <p className="text-xs text-zinc-500 truncate max-w-[140px]">{tier.description}</p>}
                                     </div>
                                     <span className="text-xs font-bold text-lantern shrink-0 ml-2">
-                                        {lamportsToSol(price)} SOL
+                                        {pendingTier === tier.id ? "…" : `$${baseToUsd(price)}/${annual ? "yr" : "mo"}`}
                                     </span>
                                 </button>
                             );

@@ -6,11 +6,27 @@ import {
     creatorEarnings, dmUnlocks, payouts,
 } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq, and, desc, count, sum, gte, sql } from "drizzle-orm";
+import { eq, and, desc, count, sum, gte, sql, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
+import { PERIOD_HOURS } from "@/lib/premium/tiers";
+import {
+    chargeSubscriber,
+    createTreasuryPlan,
+    transferUsdcFromTreasury,
+} from "@/lib/chains/solana/subscriptions/collector";
+import { getMerchantAddress } from "@/lib/chains/solana/subscriptions/constants";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const PLATFORM_FEE_BPS = 500; // 5% platform fee, taken at claim time
+
+/** Allocate a globally-unique on-chain plan id (treasury owns all plans). */
+async function nextPlanId(): Promise<number> {
+    const r = await db.execute<{ id: number }>(sql`SELECT nextval('premium_plan_id_seq')::int AS id`);
+    // postgres.js returns an array-like of rows
+    const row = (r as unknown as Array<{ id: number }>)[0];
+    return Number(row.id);
+}
 
 export const subscriptionRouter = router({
     // ─── Tiers (creator management) ──────────────────────────────────────────
@@ -28,8 +44,9 @@ export const subscriptionRouter = router({
         .input(z.object({
             name: z.string().min(1).max(50),
             description: z.string().max(300).optional(),
-            priceMonthly: z.number().int().positive(), // lamports
-            priceAnnual: z.number().int().positive().optional(),
+            // USDC base units (6dp). e.g. $5.00 = 5_000_000.
+            priceUsdcMonthly: z.number().int().positive(),
+            priceUsdcAnnual: z.number().int().positive().optional(),
             perks: z.array(z.string().max(100)).max(10).default([]),
         }))
         .mutation(async ({ ctx, input }) => {
@@ -39,26 +56,53 @@ export const subscriptionRouter = router({
                 .where(and(eq(subscriptionTiers.creatorId, ctx.user.id), eq(subscriptionTiers.isActive, true)));
             if (existing.length >= 3) throw new TRPCError({ code: "BAD_REQUEST", message: "Maximum 3 active tiers allowed" });
 
+            // Provision the on-chain plan(s) under the treasury (it owns all plans).
+            const planIdMonthly = await nextPlanId();
+            const monthly = await createTreasuryPlan({
+                planId: planIdMonthly,
+                amountBaseUnits: BigInt(input.priceUsdcMonthly),
+                periodHours: PERIOD_HOURS.monthly,
+            });
+
+            let planIdAnnual: number | null = null;
+            let annual: { planPda: string; createdAtChain: number | null } | null = null;
+            if (input.priceUsdcAnnual) {
+                planIdAnnual = await nextPlanId();
+                annual = await createTreasuryPlan({
+                    planId: planIdAnnual,
+                    amountBaseUnits: BigInt(input.priceUsdcAnnual),
+                    periodHours: PERIOD_HOURS.annual,
+                });
+            }
+
             const tier = await db.insert(subscriptionTiers).values({
                 id: nanoid(),
                 creatorId: ctx.user.id,
                 name: input.name,
                 description: input.description,
-                priceMonthly: input.priceMonthly,
-                priceAnnual: input.priceAnnual,
+                priceMonthly: 0, // legacy lamports column unused for USDC tiers
+                priceUsdcMonthly: input.priceUsdcMonthly,
+                priceUsdcAnnual: input.priceUsdcAnnual ?? null,
+                planIdMonthly,
+                planIdAnnual,
+                planPdaMonthly: monthly.planPda,
+                planPdaAnnual: annual?.planPda ?? null,
+                createdAtChainMonthly: monthly.createdAtChain,
+                createdAtChainAnnual: annual?.createdAtChain ?? null,
                 perks: input.perks,
                 sortOrder: existing.length,
             }).returning();
             return tier[0];
         }),
 
+    // Note: on-chain plan terms (price/period) are IMMUTABLE. updateTier only
+    // touches presentation/availability; to change price, delete + recreate the
+    // tier (existing subscribers keep their plan until they resubscribe).
     updateTier: protectedProcedure
         .input(z.object({
             tierId: z.string(),
             name: z.string().min(1).max(50).optional(),
             description: z.string().max(300).optional(),
-            priceMonthly: z.number().int().positive().optional(),
-            priceAnnual: z.number().int().positive().optional(),
             perks: z.array(z.string().max(100)).max(10).optional(),
             isActive: z.boolean().optional(),
         }))
@@ -154,6 +198,91 @@ export const subscriptionRouter = router({
                     .where(and(eq(subscriptions.subscriberId, ctx.user.id), eq(subscriptions.creatorId, input.creatorId)));
             }
             return { success: true };
+        }),
+
+    // ─── On-chain creator subscription (USDC, treasury-owned plan) ──────────────
+    // After the client confirms the on-chain subscribe, persist + charge the first
+    // period (treasury pulls), and credit the creator's gross to the ledger.
+    recordCreatorSubscription: protectedProcedure
+        .input(z.object({
+            tierId: z.string(),
+            billingCycle: z.enum(["monthly", "annual"]),
+            subscriberWallet: z.string(),
+            planPda: z.string(),
+            subscriptionPda: z.string(),
+            subscriptionAuthorityPda: z.string(),
+            delegatorAta: z.string(),
+            subscribeTxSignature: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const tier = await db.query.subscriptionTiers.findFirst({
+                where: eq(subscriptionTiers.id, input.tierId),
+            });
+            if (!tier || !tier.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "Tier not found" });
+            if (tier.creatorId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot subscribe to yourself" });
+
+            const annual = input.billingCycle === "annual";
+            const planId = annual ? tier.planIdAnnual : tier.planIdMonthly;
+            const priceUsdc = annual ? tier.priceUsdcAnnual : tier.priceUsdcMonthly;
+            if (!planId || !priceUsdc) throw new TRPCError({ code: "BAD_REQUEST", message: "Tier has no plan for this cycle" });
+
+            const now = new Date();
+            const periodHours = annual ? PERIOD_HOURS.annual : PERIOD_HOURS.monthly;
+
+            // Charge the first period now (treasury pulls). Access only if it lands.
+            let chargeSig: string | null = null;
+            try {
+                chargeSig = await chargeSubscriber({
+                    subscriber: input.subscriberWallet,
+                    merchant: getMerchantAddress(),
+                    planId,
+                    amountBaseUnits: BigInt(priceUsdc),
+                });
+            } catch {
+                chargeSig = null;
+            }
+            const charged = chargeSig !== null;
+            const periodEnd = charged ? new Date(now.getTime() + periodHours * 3600 * 1000) : now;
+
+            const subId = nanoid();
+            const shared = {
+                tierId: input.tierId,
+                status: (charged ? "active" : "past_due") as "active" | "past_due",
+                billingCycle: input.billingCycle,
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                cancelAtPeriodEnd: false,
+                cancelledAt: null,
+                priceUsdc,
+                planId,
+                planPda: input.planPda,
+                subscriberWallet: input.subscriberWallet,
+                subscriptionPda: input.subscriptionPda,
+                subscriptionAuthorityPda: input.subscriptionAuthorityPda,
+                delegatorAta: input.delegatorAta,
+                txSignature: input.subscribeTxSignature,
+                lastChargeSig: chargeSig,
+                lastChargeAt: charged ? now : null,
+                failedAttempts: charged ? 0 : 1,
+            };
+            await db.insert(subscriptions)
+                .values({ id: subId, subscriberId: ctx.user.id, creatorId: tier.creatorId, ...shared })
+                .onConflictDoUpdate({ target: [subscriptions.subscriberId, subscriptions.creatorId], set: shared });
+
+            // Credit the creator's gross to the claimable ledger.
+            if (charged) {
+                await db.insert(creatorEarnings).values({
+                    id: nanoid(),
+                    creatorId: tier.creatorId,
+                    type: "subscription",
+                    amountLamports: 0,
+                    amountUsdc: priceUsdc,
+                    referenceId: subId,
+                    claimed: false,
+                });
+            }
+
+            return { success: true, charged };
         }),
 
     getMySubscriptions: protectedProcedure.query(async ({ ctx }) => {
@@ -378,6 +507,59 @@ export const subscriptionRouter = router({
             .from(payouts)
             .where(eq(payouts.creatorId, ctx.user.id))
             .orderBy(desc(payouts.createdAt));
+    }),
+
+    // ─── Claimable USDC balance (gross, fee, net) ──────────────────────────────
+    getClaimable: protectedProcedure.query(async ({ ctx }) => {
+        const [row] = await db.select({ gross: sum(creatorEarnings.amountUsdc) })
+            .from(creatorEarnings)
+            .where(and(eq(creatorEarnings.creatorId, ctx.user.id), eq(creatorEarnings.claimed, false)));
+        const gross = Number(row?.gross ?? 0);
+        const fee = Math.floor((gross * PLATFORM_FEE_BPS) / 10000);
+        return { grossUsdc: gross, feeUsdc: fee, netUsdc: gross - fee, feeBps: PLATFORM_FEE_BPS };
+    }),
+
+    // ─── Claim: pay net USDC (gross − 5% fee) from treasury to creator wallet ───
+    claimEarnings: protectedProcedure.mutation(async ({ ctx }) => {
+        // Snapshot the exact unclaimed rows so concurrent earnings aren't swept.
+        const rows = await db.select({ id: creatorEarnings.id, amountUsdc: creatorEarnings.amountUsdc })
+            .from(creatorEarnings)
+            .where(and(eq(creatorEarnings.creatorId, ctx.user.id), eq(creatorEarnings.claimed, false)));
+        const gross = rows.reduce((s, r) => s + Number(r.amountUsdc ?? 0), 0);
+        if (gross <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Nothing to claim" });
+
+        const [u] = await db.select({ wallet: user.wallet_address }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+        if (!u?.wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "No wallet on file to receive USDC" });
+
+        const fee = Math.floor((gross * PLATFORM_FEE_BPS) / 10000);
+        const net = gross - fee;
+
+        const sig = await transferUsdcFromTreasury(u.wallet, BigInt(net));
+
+        const payoutId = nanoid();
+        await db.insert(payouts).values({
+            id: payoutId,
+            creatorId: ctx.user.id,
+            amountLamports: 0,
+            amountUsdc: net,
+            feeUsdc: fee,
+            recipientWallet: u.wallet,
+            status: "completed",
+            txSignature: sig,
+            note: "Creator subscription earnings claim",
+            completedAt: new Date(),
+        });
+
+        // Mark exactly the snapshotted rows claimed.
+        await db.update(creatorEarnings)
+            .set({ claimed: true, payoutId })
+            .where(and(
+                eq(creatorEarnings.creatorId, ctx.user.id),
+                eq(creatorEarnings.claimed, false),
+                inArray(creatorEarnings.id, rows.map((r) => r.id)),
+            ));
+
+        return { success: true, netUsdc: net, feeUsdc: fee, signature: sig };
     }),
 
     requestPayout: protectedProcedure

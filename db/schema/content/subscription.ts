@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, integer, jsonb, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "../auth/user";
 
@@ -9,8 +9,17 @@ export const subscriptionTiers = pgTable("subscription_tiers", {
     creatorId: text("creatorId").notNull().references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull(),                      // e.g. "Fan", "Super Fan"
     description: text("description"),
-    priceMonthly: integer("priceMonthly").notNull(),   // in lamports
-    priceAnnual: integer("priceAnnual"),               // annual discount price, in lamports
+    priceMonthly: integer("priceMonthly").notNull(),   // LEGACY: lamports (kept for back-compat)
+    priceAnnual: integer("priceAnnual"),               // LEGACY: lamports
+    // ── USDC + on-chain (Solana Subscriptions program; treasury owns the plans) ──
+    priceUsdcMonthly: bigint("priceUsdcMonthly", { mode: "number" }),   // USDC base units (6dp)
+    priceUsdcAnnual: bigint("priceUsdcAnnual", { mode: "number" }),
+    planIdMonthly: integer("planIdMonthly"),           // global plan id (treasury-owned)
+    planIdAnnual: integer("planIdAnnual"),
+    planPdaMonthly: text("planPdaMonthly"),
+    planPdaAnnual: text("planPdaAnnual"),
+    createdAtChainMonthly: bigint("createdAtChainMonthly", { mode: "number" }),
+    createdAtChainAnnual: bigint("createdAtChainAnnual", { mode: "number" }),
     perks: jsonb("perks").$type<string[]>().default([]),
     isActive: boolean("isActive").default(true).notNull(),
     sortOrder: integer("sortOrder").default(0).notNull(),
@@ -29,18 +38,30 @@ export const subscriptions = pgTable("subscriptions", {
     subscriberId: text("subscriberId").notNull().references(() => user.id, { onDelete: "cascade" }),
     creatorId: text("creatorId").notNull().references(() => user.id, { onDelete: "cascade" }),
     tierId: text("tierId").notNull().references(() => subscriptionTiers.id, { onDelete: "cascade" }),
-    status: text("status", { enum: ["active", "cancelled", "expired"] }).default("active").notNull(),
+    status: text("status", { enum: ["active", "past_due", "cancelled", "expired"] }).default("active").notNull(),
     billingCycle: text("billingCycle", { enum: ["monthly", "annual"] }).default("monthly").notNull(),
     currentPeriodStart: timestamp("currentPeriodStart").notNull(),
     currentPeriodEnd: timestamp("currentPeriodEnd").notNull(),
     cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
     cancelledAt: timestamp("cancelledAt"),
-    txSignature: text("txSignature"),                 // Solana tx proof
+    txSignature: text("txSignature"),                 // Solana tx proof (subscribe)
+    // ── USDC + on-chain (recurring via the Subscriptions program) ──
+    priceUsdc: bigint("priceUsdc", { mode: "number" }),  // amount pulled per period (USDC base units)
+    planId: integer("planId"),                         // tier's on-chain plan id for this cycle
+    planPda: text("planPda"),
+    subscriberWallet: text("subscriberWallet"),        // delegator (pull source owner)
+    subscriptionPda: text("subscriptionPda"),
+    subscriptionAuthorityPda: text("subscriptionAuthorityPda"),
+    delegatorAta: text("delegatorAta"),
+    lastChargeSig: text("lastChargeSig"),
+    lastChargeAt: timestamp("lastChargeAt"),
+    failedAttempts: integer("failedAttempts").default(0).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
     uniqueIndex("idx_sub_unique").on(table.subscriberId, table.creatorId),
     index("idx_sub_subscriber").on(table.subscriberId),
     index("idx_sub_creator").on(table.creatorId),
+    index("idx_sub_due").on(table.status, table.currentPeriodEnd),
     pgPolicy("sub_owner_select", { for: "select", to: "authenticated", using: sql`"subscriberId" = (SELECT auth.uid()::text) OR "creatorId" = (SELECT auth.uid()::text)` }),
     pgPolicy("sub_owner_insert", { for: "insert", to: "authenticated", withCheck: sql`"subscriberId" = (SELECT auth.uid()::text)` }),
     pgPolicy("sub_owner_update", { for: "update", to: "authenticated", using: sql`"subscriberId" = (SELECT auth.uid()::text) OR "creatorId" = (SELECT auth.uid()::text)` }),
@@ -75,11 +96,15 @@ export const creatorEarnings = pgTable("creator_earnings", {
     id: text("id").primaryKey(),
     creatorId: text("creatorId").notNull().references(() => user.id, { onDelete: "cascade" }),
     type: text("type", { enum: ["subscription", "gift", "tip", "dm_unlock"] }).notNull(),
-    amountLamports: integer("amountLamports").notNull(),
+    amountLamports: integer("amountLamports").notNull(),  // LEGACY (0 for USDC rows)
+    amountUsdc: bigint("amountUsdc", { mode: "number" }), // USDC base units (subscription pulls)
+    claimed: boolean("claimed").default(false).notNull(), // claimed into a payout yet?
+    payoutId: text("payoutId"),                           // the payout that claimed it
     referenceId: text("referenceId"),                 // subscriptionId, tipId, etc.
     createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
     index("idx_earnings_creator").on(table.creatorId),
+    index("idx_earnings_claimable").on(table.creatorId, table.claimed),
     pgPolicy("earnings_owner_select", { for: "select", to: "authenticated", using: sql`"creatorId" = (SELECT auth.uid()::text)` }),
     pgPolicy("earnings_insert_auth", { for: "insert", to: "authenticated", withCheck: sql`true` }),
 ]).enableRLS();
@@ -89,7 +114,10 @@ export const creatorEarnings = pgTable("creator_earnings", {
 export const payouts = pgTable("payouts", {
     id: text("id").primaryKey(),
     creatorId: text("creatorId").notNull().references(() => user.id, { onDelete: "cascade" }),
-    amountLamports: integer("amountLamports").notNull(),
+    amountLamports: integer("amountLamports").notNull(),  // LEGACY (0 for USDC payouts)
+    amountUsdc: bigint("amountUsdc", { mode: "number" }), // net USDC paid to creator (after fee)
+    feeUsdc: bigint("feeUsdc", { mode: "number" }),       // platform fee withheld (USDC base units)
+    recipientWallet: text("recipientWallet"),             // creator wallet the USDC was sent to
     status: text("status", { enum: ["pending", "processing", "completed", "failed"] }).default("pending").notNull(),
     txSignature: text("txSignature"),
     note: text("note"),

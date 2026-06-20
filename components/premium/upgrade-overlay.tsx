@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Squircle } from "@/components/ui/squircle";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers";
+import { ArrowLeftIcon } from "@/components/icons";
 
 type PlansData = inferRouterOutputs<AppRouter>["premium"]["getPlans"];
 type TierRow = PlansData["tiers"][number];
@@ -59,58 +59,54 @@ export function UpgradeOverlay() {
     );
     const selectedTier = tiers.find((t) => t.key === selected) ?? null;
 
+    if (!open) return null;
+
     return (
-        <AnimatePresence>
-            {open && (
-                <motion.div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Upgrade to Premium"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18, ease: "easeOut" }}
-                    className="fixed inset-0 z-50 flex flex-col bg-black text-white font-sans"
-                >
-                    {/* Header */}
-                    <div className="relative shrink-0 px-6 pt-12 pb-6 flex flex-col items-center justify-center">
-                        {/* Close button */}
-                        <button
-                            onClick={closeOverlay}
-                            aria-label="Close"
-                            className="absolute left-6 top-6 grid place-items-center size-9 rounded-full bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/40 text-zinc-400 hover:text-white transition-all duration-200 cursor-pointer"
-                        >
-                            <X className="size-5" />
-                        </button>
-                        
-                        {/* Verification Sparkle Checkmark Badge */}
-                        <div className="flex justify-center mb-4">
-                            <div className="relative flex items-center justify-center w-16 h-16">
-                                <svg className="absolute w-24 h-24 text-sky-500/80 animate-pulse" viewBox="0 0 100 100" fill="none">
-                                    <circle cx="50" cy="18" r="2" fill="currentColor" />
-                                    <circle cx="22" cy="45" r="1.5" fill="currentColor" />
-                                    <circle cx="80" cy="50" r="1.5" fill="currentColor" />
-                                    <circle cx="35" cy="80" r="2.5" fill="currentColor" className="opacity-60" />
-                                    <circle cx="68" cy="82" r="1.8" fill="currentColor" />
-                                    <path d="M 45,26 L 39,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
-                                    <path d="M 55,26 L 61,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
-                                </svg>
-                                <svg className="w-12 h-12 text-sky-500 drop-shadow-[0_0_8px_rgba(14,165,233,0.3)]" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068 1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
-                                </svg>
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Upgrade to Premium"
+            className="fixed inset-0 z-50 flex flex-col bg-black text-white font-sans"
+        >
+                    {/* Floating Close button */}
+                    <button
+                        onClick={closeOverlay}
+                        aria-label="Close"
+                        className="absolute left-6 top-6 z-10 grid place-items-center size-9 rounded-full bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/40 text-zinc-400 hover:text-white transition-all duration-200 cursor-pointer"
+                    >
+                        <X className="size-5" />
+                    </button>
+
+                    {/* Scroll body */}
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-12">
+                        {/* Header illustration, title, cycle toggle */}
+                        <div className="pt-16 pb-6 flex flex-col items-center justify-center shrink-0">
+                            {/* Verification Sparkle Checkmark Badge */}
+                            <div className="flex justify-center mb-4">
+                                <div className="relative flex items-center justify-center w-16 h-16">
+                                    <svg className="absolute w-24 h-24 text-sky-500/80 animate-pulse" viewBox="0 0 100 100" fill="none">
+                                        <circle cx="50" cy="18" r="2" fill="currentColor" />
+                                        <circle cx="22" cy="45" r="1.5" fill="currentColor" />
+                                        <circle cx="80" cy="50" r="1.5" fill="currentColor" />
+                                        <circle cx="35" cy="80" r="2.5" fill="currentColor" className="opacity-60" />
+                                        <circle cx="68" cy="82" r="1.8" fill="currentColor" />
+                                        <path d="M 45,26 L 39,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
+                                        <path d="M 55,26 L 61,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
+                                    </svg>
+                                    <svg className="w-12 h-12 text-sky-500 drop-shadow-[0_0_8px_rgba(14,165,233,0.3)]" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068-1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218-1.28.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <h2 className="text-center text-3xl font-black text-white tracking-tight sm:text-4xl">
+                                Upgrade to Premium
+                            </h2>
+                            <div className="mt-5 flex justify-center">
+                                <CycleToggle cycle={cycle} onChange={setCycle} />
                             </div>
                         </div>
 
-                        <h2 className="text-center text-3xl font-black text-white tracking-tight sm:text-4xl">
-                            Upgrade to Premium
-                        </h2>
-                        <div className="mt-5 flex justify-center">
-                            <CycleToggle cycle={cycle} onChange={setCycle} />
-                        </div>
-                    </div>
-
-                    {/* Scroll body */}
-                    <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-12 pt-2">
                         <div className="mx-auto w-full max-w-5xl space-y-6">
                             <div
                                 className={cn(
@@ -141,9 +137,9 @@ export function UpgradeOverlay() {
                             {view === "business" && (
                                 <button
                                     onClick={() => { setView("individual"); setSelected(null); }}
-                                    className="mt-2 mx-auto block text-sm font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                                    className="mt-2 flex flex-row items-center gap-2 mx-auto block text-sm font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
                                 >
-                                    ← Back to individual plans
+                                    <ArrowLeftIcon className="size-4" /> Back to individual plans
                                 </button>
                             )}
 
@@ -159,15 +155,13 @@ export function UpgradeOverlay() {
                     />
 
                     <ContactSalesDialog open={contactOpen} onOpenChange={setContactOpen} />
-                </motion.div>
-            )}
-        </AnimatePresence>
+                </div>
     );
 }
 
 function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: BillingCycle) => void }) {
     return (
-        <div className="relative inline-flex rounded-full bg-zinc-950 border border-zinc-800 p-0.5 text-sm font-semibold shadow-inner">
+        <div className="relative inline-flex rounded-full bg-[#16181c] p-1 text-sm font-semibold shadow-inner">
             {(["monthly", "annual"] as const).map((c) => {
                 const active = cycle === c;
                 return (
@@ -175,8 +169,8 @@ function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: B
                         key={c}
                         onClick={() => onChange(c)}
                         className={cn(
-                            "relative z-10 px-5 py-1.5 rounded-full capitalize text-xs sm:text-sm font-extrabold transition-colors duration-200 select-none cursor-pointer focus:outline-none min-w-[90px] sm:min-w-[110px]",
-                            active ? "text-zinc-950 font-black" : "text-zinc-400 hover:text-white",
+                            "relative z-10 px-5 py-3 rounded-full capitalize text-xs sm:text-sm font-bold transition-colors duration-200 select-none cursor-pointer focus:outline-none min-w-[90px] sm:min-w-[110px]",
+                            active ? "text-black" : "text-zinc-400 hover:text-white",
                         )}
                     >
                         {c}
@@ -192,32 +186,30 @@ function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: B
             })}
         </div>
     );
-}
-
-function getFeatureIcon(f: string) {
+}function getFeatureIcon(f: string) {
     const name = f.toLowerCase();
     if (name.includes("reply boost") || name.includes("boosted replies")) {
-        return <Zap className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <Zap className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("bookmark")) {
-        return <Bookmark className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <Bookmark className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("highlights")) {
-        return <Star className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <Star className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("edit")) {
-        return <Pencil className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <Pencil className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("longer posts") || name.includes("write articles") || name.includes("create longer")) {
-        return <FileText className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <FileText className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("customize")) {
-        return <SlidersHorizontal className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <SlidersHorizontal className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("checkmark") || name.includes("verified")) {
         return (
-            <svg className="size-4 text-sky-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068 1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
+            <svg className="size-4 text-[#1d9bf0] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068-1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
             </svg>
         );
     }
@@ -225,27 +217,27 @@ function getFeatureIcon(f: string) {
         return <Sparkles className="size-4 text-purple-400 shrink-0 mt-0.5" />;
     }
     if (name.includes("analytics")) {
-        return <TrendingUp className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <TrendingUp className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("ads") || name.includes("ad-free")) {
-        return <EyeOff className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <EyeOff className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("paid") || name.includes("creator subscriptions")) {
-        return <DollarSign className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <DollarSign className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("marketplace")) {
-        return <Store className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <Store className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("radar")) {
-        return <Search className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <Search className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("pro")) {
-        return <LayoutGrid className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+        return <LayoutGrid className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
     }
     if (name.includes("everything in")) {
-        return <Check className="size-4 text-sky-400 shrink-0 mt-0.5" />;
+        return <Check className="size-4 text-[#1d9bf0] shrink-0 mt-0.5" />;
     }
-    return <Check className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    return <Check className="size-4 text-zinc-200 shrink-0 mt-0.5" />;
 }
 
 function TierCard({
@@ -264,58 +256,55 @@ function TierCard({
     const isPremium = tier.key === "premium";
 
     return (
-        <Squircle
-            asChild
-            radius={18}
+        <div
+            onClick={onSelect}
             className={cn(
-                "relative p-6 text-left transition-all duration-300 border flex flex-col justify-between min-h-[380px]",
+                "relative p-6 text-left transition-all duration-300 flex flex-col justify-between min-h-[380px] rounded-[20px] w-full cursor-pointer select-none",
                 selected
-                    ? "bg-[#09090b]/80 border-sky-500 ring-1 ring-sky-500/20 shadow-[0_0_20px_rgba(29,155,240,0.15)]"
+                    ? "bg-[#16181c]"
                     : isPremium
-                    ? "bg-[#09090b]/80 border-[#1d9bf0] shadow-[0_0_15px_rgba(29,155,240,0.1)] hover:border-sky-400"
-                    : "bg-[#09090b]/60 border-zinc-800 hover:border-zinc-700",
+                    ? "bg-[#16181c]"
+                    : "bg-[#16181c]",
             )}
         >
-            <button onClick={onSelect} className="block w-full h-full cursor-pointer focus:outline-none">
-                <div className="flex flex-col h-full justify-between">
-                    <div>
-                        <span className="text-sm font-semibold text-zinc-400">{tier.name}</span>
-                        <div className="mt-1.5 flex items-baseline gap-1">
-                            <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">{priceLabel}</span>
-                            {period && <span className="text-xs text-zinc-500 font-semibold">{period}</span>}
-                        </div>
-                        {cycle === "annual" && tier.selfServe && (
-                            <p className="mt-1 text-[10px] text-sky-400 font-bold">
-                                Billed annually
-                            </p>
-                        )}
-                        <ul className="mt-5 space-y-2.5">
-                            {tier.features.map((f) => (
-                                <li key={f} className="flex items-start gap-2.5 text-[13px] leading-snug text-zinc-300">
-                                    {getFeatureIcon(f)}
-                                    <span className="text-left">{f}</span>
-                                </li>
-                            ))}
-                        </ul>
+            <div className="flex flex-col h-full w-full justify-between">
+                <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">{tier.name}</h3>
+                    <div className="mt-2 flex items-baseline gap-1">
+                        <span className="text-[32px] sm:text-[38px] font-black tracking-tight text-white">{priceLabel}</span>
+                        {period && <span className="text-sm text-zinc-400 font-medium">{period}</span>}
                     </div>
-                    {!tier.selfServe && (
-                        <div className="mt-4 flex items-center gap-1 text-xs font-bold text-sky-400">
-                            Contact sales <ChevronRight className="size-3" />
-                        </div>
+                    {cycle === "annual" && tier.selfServe && (
+                        <p className="mt-1 text-[10px] text-[#1d9bf0] font-bold">
+                            Billed annually
+                        </p>
                     )}
+                    <ul className="mt-6 space-y-3.5">
+                        {tier.features.map((f) => (
+                            <li key={f} className="flex items-start gap-3 text-[14px] leading-snug text-zinc-100 font-medium">
+                                {getFeatureIcon(f)}
+                                <span className="text-left">{f}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
-            </button>
-        </Squircle>
+                {!tier.selfServe && (
+                    <div className="mt-4 flex items-center gap-1 text-xs font-bold text-[#1d9bf0]">
+                        Contact sales <ChevronRight className="size-3" />
+                    </div>
+                )}
+            </div>
+        </div>
     );
-}
-
-function BusinessBanner({ onExplore }: { onExplore: () => void }) {
+}function BusinessBanner({ onExplore }: { onExplore: () => void }) {
     return (
-        <Squircle asChild radius={16} className="mt-2 block bg-[#09090b]/40 border border-zinc-800/80">
+        <div className="mt-2 block bg-[#16181c] border border-zinc-800/80 rounded-2xl">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 sm:px-6">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center size-10 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0">
-                        <Briefcase className="size-5" />
+                        <svg className="size-5 text-amber-500" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068-1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
+                        </svg>
                     </div>
                     <div>
                         <p className="text-[14px] font-extrabold text-white">Are you a business?</p>
@@ -324,12 +313,12 @@ function BusinessBanner({ onExplore }: { onExplore: () => void }) {
                 </div>
                 <button
                     onClick={onExplore}
-                    className="w-full sm:w-auto shrink-0 rounded-full bg-[#2f3336] hover:bg-zinc-800 px-5 h-9 text-xs font-black text-white transition-colors cursor-pointer select-none"
+                    className="w-full sm:w-auto shrink-0 rounded-full bg-[#2f3336] hover:bg-zinc-800 px-5 h-11 text-xs font-black text-white transition-colors cursor-pointer select-none"
                 >
                     Explore Premium Business
                 </button>
             </div>
-        </Squircle>
+        </div>
     );
 }
 
@@ -347,11 +336,9 @@ function CompareTable({ tiers }: { tiers: TierRow[] }) {
             <h3 className="mb-4 text-lg font-black text-white">Compare tiers &amp; features</h3>
             <div className="space-y-4">
                 {COMPARISON.map((group) => (
-                    <Squircle
+                    <div
                         key={group.group}
-                        asChild
-                        radius={16}
-                        className="block bg-[#09090b]/40 border border-zinc-800/80 overflow-hidden"
+                        className="block bg-[#16181c] border border-zinc-800/80 rounded-2xl overflow-hidden"
                     >
                         <div className="px-4 sm:px-6 py-2">
                             {/* group header + tier column labels */}
@@ -361,7 +348,7 @@ function CompareTable({ tiers }: { tiers: TierRow[] }) {
                             >
                                 <span className="text-[14px] font-extrabold text-white">{group.group}</span>
                                 {cols.map((t) => (
-                                    <span key={t.key} className="text-center text-xs font-bold text-zinc-500">
+                                    <span key={t.key} className="text-center text-sm font-bold text-white">
                                         {t.name}
                                     </span>
                                 ))}
@@ -369,7 +356,7 @@ function CompareTable({ tiers }: { tiers: TierRow[] }) {
                             {group.rows.map((row) => (
                                 <div
                                     key={row.label}
-                                    className="grid items-center gap-2 py-3 border-b border-zinc-800/40 last:border-0"
+                                    className="grid items-center gap-2 py-3 border-b border-[#2f3336]/40 last:border-0"
                                     style={gridCols}
                                 >
                                     <span className="text-[13px] text-zinc-300 font-medium">{row.label}</span>
@@ -381,7 +368,7 @@ function CompareTable({ tiers }: { tiers: TierRow[] }) {
                                 </div>
                             ))}
                         </div>
-                    </Squircle>
+                    </div>
                 ))}
             </div>
         </div>
@@ -458,37 +445,36 @@ function SubscribeBar({
         <div className="shrink-0 border-t border-zinc-800 bg-black/95 backdrop-blur-md px-6 sm:px-10 py-5">
             <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-8">
                 {/* Left: stacked price block */}
-                <div className="w-full sm:w-auto text-left flex sm:flex-col items-baseline sm:items-start justify-between sm:justify-start gap-2">
-                    <div>
-                        <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Selected tier</p>
-                        <p className="text-lg font-black text-white">
-                            {tier ? tier.name : "Select a plan"}
-                        </p>
-                    </div>
-                    {tier && (
-                        <div className="text-right sm:text-left">
-                            <p className="leading-none mt-1">
-                                <span className="text-2xl font-black text-white">{priceLabel}</span>
-                                {period && <span className="ml-1 text-xs text-zinc-500 font-semibold">{period}</span>}
+                <div className="w-full sm:w-auto text-left flex flex-col justify-start">
+                    {tier ? (
+                        <>
+                            <p className="text-[20px] font-bold text-white tracking-tight leading-snug">
+                                {tier.name}
                             </p>
-                            <p className="mt-1 text-[11px] text-zinc-400 font-semibold">{billing}</p>
-                        </div>
+                            <div className="flex items-baseline gap-1 mt-0.5">
+                                <span className="text-[28px] font-black text-white leading-none">{priceLabel}</span>
+                                {period && <span className="text-sm text-zinc-400 font-medium">{period}</span>}
+                            </div>
+                            <p className="mt-1 text-[11px] text-[#71767b] font-medium leading-none">{billing}</p>
+                        </>
+                    ) : (
+                        <p className="text-[20px] font-bold text-white tracking-tight">Select a plan</p>
                     )}
                 </div>
 
                 {/* Right: button + legal box block */}
-                <div className="flex w-full sm:w-[60%] max-w-lg flex-col gap-2">
+                <div className="flex w-full sm:w-[55%] max-w-[450px] flex-col items-stretch gap-2.5">
                     <button
                         disabled={!canSubscribe || pending}
                         onClick={handleSubscribe}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white text-black text-[15px] font-black h-12 hover:bg-zinc-200 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white text-black text-xl font-bold h-16 hover:bg-zinc-200 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
                     >
                         {pending && <Loader2 className="size-4 animate-spin text-black" />}
                         Subscribe &amp; Pay
                     </button>
-                    <div className="border border-zinc-800/80 rounded-xl p-3 bg-zinc-950/40">
+                    <div className="border border-zinc-800/80 rounded-xl p-3 bg-zinc-950/40 w-full">
                         <p className="text-[10px] leading-relaxed text-zinc-400">
-                            By subscribing, you agree to our <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Purchaser Terms</span>, and that subscriptions auto-renew until you cancel. <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Cancel anytime</span>, at least 24 hours prior to renewal to avoid additional charges. Price subject to change. Manage your subscription through the settings page.
+                            By subscribing, you agree to our <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Purchaser Terms</span>, and that subscriptions auto-renew until you cancel. <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Cancel anytime</span>, at least 24 hours prior to renewal to avoid additional charges. Price subject to change. Manage your subscription through the platform you subscribed on.
                         </p>
                     </div>
                 </div>

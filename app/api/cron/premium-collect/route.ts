@@ -4,9 +4,12 @@
 // Cloudflare Worker cron later (CLAUDE.md). The route works under any trigger.
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { premiumPlans, premiumSubscriptions } from "@/db/schema/content";
-import { and, eq, inArray, lte } from "drizzle-orm";
+import { creatorEarnings, premiumPlans, premiumSubscriptions, subscriptions } from "@/db/schema/content";
+import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { chargeSubscriber } from "@/lib/chains/solana/subscriptions/collector";
+import { getMerchantAddress } from "@/lib/chains/solana/subscriptions/constants";
+import { PERIOD_HOURS } from "@/lib/premium/tiers";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -96,11 +99,81 @@ export async function GET(req: NextRequest) {
         }
     }
 
+    // ── Creator subscriptions (USDC, treasury-owned plans) ──────────────────
+    // On-chain creator subs only (planId set); legacy stub subs are skipped.
+    const merchant = getMerchantAddress();
+    const dueCreator = await db
+        .select()
+        .from(subscriptions)
+        .where(
+            and(
+                inArray(subscriptions.status, ["active", "past_due"]),
+                lte(subscriptions.currentPeriodEnd, now),
+                isNotNull(subscriptions.planId),
+            ),
+        )
+        .limit(BATCH);
+
+    let creatorCharged = 0;
+    let creatorExpired = 0;
+    let creatorFailed = 0;
+
+    for (const sub of dueCreator) {
+        if (sub.cancelAtPeriodEnd) {
+            await db.update(subscriptions)
+                .set({ status: "cancelled", cancelledAt: now })
+                .where(eq(subscriptions.id, sub.id));
+            creatorExpired++;
+            continue;
+        }
+        if (!sub.planId || !sub.priceUsdc || !sub.subscriberWallet) {
+            creatorFailed++;
+            continue;
+        }
+        try {
+            const sig = await chargeSubscriber({
+                subscriber: sub.subscriberWallet,
+                merchant,
+                planId: sub.planId,
+                amountBaseUnits: BigInt(sub.priceUsdc),
+            });
+            const periodHours = sub.billingCycle === "annual" ? PERIOD_HOURS.annual : PERIOD_HOURS.monthly;
+            await db.update(subscriptions)
+                .set({
+                    status: "active",
+                    currentPeriodStart: now,
+                    currentPeriodEnd: new Date(now.getTime() + periodHours * 3600 * 1000),
+                    lastChargeSig: sig,
+                    lastChargeAt: now,
+                    failedAttempts: 0,
+                })
+                .where(eq(subscriptions.id, sub.id));
+            // Credit the creator's gross to the claimable ledger.
+            await db.insert(creatorEarnings).values({
+                id: nanoid(),
+                creatorId: sub.creatorId,
+                type: "subscription",
+                amountLamports: 0,
+                amountUsdc: sub.priceUsdc,
+                referenceId: sub.id,
+                claimed: false,
+            });
+            creatorCharged++;
+        } catch (e) {
+            const attempts = sub.failedAttempts + 1;
+            const giveUp = attempts >= MAX_ATTEMPTS;
+            await db.update(subscriptions)
+                .set({ status: giveUp ? "expired" : "past_due", failedAttempts: attempts })
+                .where(eq(subscriptions.id, sub.id));
+            if (giveUp) creatorExpired++;
+            else creatorFailed++;
+            errors.push({ id: sub.id, error: e instanceof Error ? e.message : String(e) });
+        }
+    }
+
     return NextResponse.json({
-        processed: due.length,
-        charged,
-        expired,
-        failed,
+        premium: { processed: due.length, charged, expired, failed },
+        creator: { processed: dueCreator.length, charged: creatorCharged, expired: creatorExpired, failed: creatorFailed },
         errors: errors.slice(0, 20),
     });
 }
