@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function ShortsPage() {
     return (
-        <div className="w-full h-full bg-black overflow-hidden flex justify-center">
+        <div className="w-full h-full bg-background overflow-hidden flex justify-center">
             <main className="w-full h-full relative">
                 <ShortsFeed />
             </main>

@@ -65,7 +65,7 @@ export function ShortsFeed() {
 
     if (videos.length === 0 && !isLoading) {
         return (
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center bg-background">
                 <p className="text-zinc-500">No shorts available yet.</p>
             </div>
         );
@@ -90,8 +90,8 @@ export function ShortsFeed() {
 
     if (isLoading) {
         return (
-            <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative">
-                <div className="absolute inset-0" />
+            <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-background">
+                <div className="absolute inset-0 bg-background" />
                 <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-zinc-900/60">
                     <Skeleton name="shorts-video" loading>
                         <div className="w-full h-full bg-zinc-800/20" />

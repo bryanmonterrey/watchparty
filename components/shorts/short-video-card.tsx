@@ -96,8 +96,8 @@ export function ShortVideoCard({ video, isActive }: ShortVideoCardProps) {
 
     return (
         <>
-            <div className="snap-start snap-always w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-black [contain:none] overflow-visible">
-                <div className="absolute inset-0 z-0 bg-black" />
+            <div className="snap-start snap-always w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-background [contain:none] overflow-visible">
+                <div className="absolute inset-0 z-0 bg-background" />
 
                 <div className="ambient-video-container isolate relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl [contain:none] overflow-visible">
                     <AmbientGlowVideo
