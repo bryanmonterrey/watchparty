@@ -202,7 +202,7 @@ function WalletButtonInner() {
             <>
                 <Button
                     variant="outline"
-                    className="text-flexwhite border-none h-11 font-medium text-[18px] bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs px-4 pl-2 gap-2 min-w-[140px]"
+                    className="text-flexwhite border-none h-control font-medium text-[18px] bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs px-4 pl-2 gap-2 min-w-[140px]"
                     disabled={isProcessing}
                     onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
                     onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
@@ -245,7 +245,7 @@ function WalletButtonInner() {
                 onClick={handleButtonClick}
                 disabled={isProcessing}
                 variant="default"
-                className="bg-darkfantasy text-white2 h-11 text-[18px] backdrop-blur-xs font-medium hover:bg-twitter cursor-pointer px-6 gap-3"
+                className="bg-darkfantasy text-white2 h-control text-[18px] backdrop-blur-xs font-medium hover:bg-twitter cursor-pointer px-6 gap-3"
             >
                 <span>{buttonText}</span>
             </Button>

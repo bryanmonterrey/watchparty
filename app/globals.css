@@ -152,6 +152,11 @@
      the in-file usage that prevents that. */
   --spacing-header: var(--header-height);
   --spacing-header-x: var(--header-px);
+  /* Shared control height. The header's Create pill and the WalletButton both
+     stand at h-11 (44px); this token is the single source so every other
+     action button across the app can match them with h-control (also
+     min-h-control / size-control etc.) instead of re-hardcoding h-11. */
+  --spacing-control: 44px;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-pixel: var(--font-geist-pixel);
