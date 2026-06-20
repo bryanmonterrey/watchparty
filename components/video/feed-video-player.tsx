@@ -202,7 +202,7 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, autoplayInView = fal
     return (
         <div
             ref={containerRef}
-            className={cn("group/fvp relative mx-auto w-full overflow-hidden bg-black select-none", className)}
+            className={cn("group/fvp relative mr-auto w-full overflow-hidden bg-black select-none", className)}
             style={{ aspectRatio: String(aspect), maxWidth: `${Math.round(MAX_PLAYER_HEIGHT * aspect)}px` }}
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
