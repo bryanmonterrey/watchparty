@@ -42,12 +42,25 @@ import {
 
 let cachedSigner: Promise<KeyPairSigner> | null = null;
 
-/** Treasury signer = the merchant/puller. Loaded from TREASURY_PRIVATE_KEY (base58). */
+/** Decode a 64-byte secret key in any of the common formats (JSON array / base58 / base64). */
+function decodeSecretKey(secret: string): Uint8Array {
+    const s = secret.trim();
+    if (s.startsWith("[")) return Uint8Array.from(JSON.parse(s) as number[]);
+    try {
+        return bs58.decode(s); // base58 alphabet excludes +/=, so real base64 throws here
+    } catch {
+        const b = Buffer.from(s, "base64");
+        if (b.length !== 64) throw new Error("TREASURY_PRIVATE_KEY is not a valid 64-byte secret key");
+        return new Uint8Array(b);
+    }
+}
+
+/** Treasury signer = the merchant/puller. Loaded from TREASURY_PRIVATE_KEY. */
 export function getTreasurySigner(): Promise<KeyPairSigner> {
     if (!cachedSigner) {
         const secret = process.env.TREASURY_PRIVATE_KEY;
         if (!secret) throw new Error("TREASURY_PRIVATE_KEY not configured");
-        cachedSigner = createKeyPairSignerFromBytes(bs58.decode(secret));
+        cachedSigner = createKeyPairSignerFromBytes(decodeSecretKey(secret));
     }
     return cachedSigner;
 }
