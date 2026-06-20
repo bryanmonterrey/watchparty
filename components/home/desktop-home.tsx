@@ -595,13 +595,25 @@ export function DesktopHome() {
         { getNextPageParam: (p) => p.nextCursor }
     );
 
-    const videos = feed.data?.pages.flatMap((p) => p.videos) ?? [];
+    // Dedupe by video id: a repost and its original share the same `id` (they
+    // render the same video), differing only by `feedKey`. Without this, a
+    // reposted video shows up twice in the hero/trending rows and collides on
+    // the carousels' `key={v.id}`. Keep the first occurrence.
+    const videos = [
+        ...new Map(
+            (feed.data?.pages.flatMap((p) => p.videos) ?? []).map((v) => [v.id, v]),
+        ).values(),
+    ];
     const heroVideos = videos.slice(0, 24);
     // 12 trending videos after the hero set; fall back to the first 12 when the
     // feed is too short to fill both.
     const trendingTail = videos.slice(24, 36);
     const trendingVideos = trendingTail.length ? trendingTail : videos.slice(0, 12);
-    const irlVideos = irl.data?.pages.flatMap((p) => p.videos) ?? [];
+    const irlVideos = [
+        ...new Map(
+            (irl.data?.pages.flatMap((p) => p.videos) ?? []).map((v) => [v.id, v]),
+        ).values(),
+    ];
 
     return (
         <div className="flex flex-col gap-7 pb-16 md:pt-[var(--header-height)]">

@@ -12,6 +12,7 @@ import {
     priceUsd,
     formatUsd,
 } from "@/lib/premium/tiers";
+import { chargeSubscriber } from "@/lib/chains/solana/subscriptions/collector";
 
 const TIER_KEYS = Object.keys(TIERS) as [TierKey, ...TierKey[]];
 
@@ -132,53 +133,57 @@ export const premiumRouter = router({
             if (!plan) throw new TRPCError({ code: "NOT_FOUND", message: "Plan not provisioned" });
 
             const now = new Date();
-            const periodEnd = new Date(now.getTime() + plan.periodHours * 3600 * 1000);
+
+            // Subscribe only AUTHORIZES the on-chain delegation; it does not move
+            // funds. Charge the first period now (merchant pulls via the program)
+            // so the user actually pays at signup, like any SaaS. Access is granted
+            // only if this pull succeeds; otherwise the row is past_due and the
+            // collector retries.
+            let chargeSig: string | null = null;
+            try {
+                chargeSig = await chargeSubscriber({
+                    subscriber: input.subscriberWallet,
+                    merchant: plan.collector,
+                    planId: plan.planId,
+                    amountBaseUnits: BigInt(plan.priceUsdcBaseUnits),
+                });
+            } catch {
+                chargeSig = null;
+            }
+
+            const charged = chargeSig !== null;
+            const status = charged ? ("active" as const) : ("past_due" as const);
+            // Entitlement keys off currentPeriodEnd; if the first charge failed we
+            // leave the period ended (now) so the user isn't entitled until paid.
+            const periodEnd = charged
+                ? new Date(now.getTime() + plan.periodHours * 3600 * 1000)
+                : now;
+
+            const shared = {
+                tierKey: input.tierKey,
+                billingCycle: input.billingCycle,
+                status,
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                subscriberWallet: input.subscriberWallet,
+                planPda: input.planPda,
+                subscriptionPda: input.subscriptionPda,
+                subscriptionAuthorityPda: input.subscriptionAuthorityPda,
+                delegatorAta: input.delegatorAta,
+                subscribeTxSignature: input.subscribeTxSignature,
+                lastChargeSig: chargeSig,
+                lastChargeAt: charged ? now : null,
+                failedAttempts: charged ? 0 : 1,
+                cancelAtPeriodEnd: false,
+                cancelledAt: null,
+            };
 
             await db
                 .insert(premiumSubscriptions)
-                .values({
-                    id: nanoid(),
-                    userId: ctx.user.id,
-                    tierKey: input.tierKey,
-                    billingCycle: input.billingCycle,
-                    status: "active",
-                    currentPeriodStart: now,
-                    currentPeriodEnd: periodEnd,
-                    subscriberWallet: input.subscriberWallet,
-                    planPda: input.planPda,
-                    subscriptionPda: input.subscriptionPda,
-                    subscriptionAuthorityPda: input.subscriptionAuthorityPda,
-                    delegatorAta: input.delegatorAta,
-                    subscribeTxSignature: input.subscribeTxSignature,
-                    lastChargeSig: input.subscribeTxSignature,
-                    lastChargeAt: now,
-                    failedAttempts: 0,
-                    cancelAtPeriodEnd: false,
-                    cancelledAt: null,
-                })
-                .onConflictDoUpdate({
-                    target: premiumSubscriptions.userId,
-                    set: {
-                        tierKey: input.tierKey,
-                        billingCycle: input.billingCycle,
-                        status: "active",
-                        currentPeriodStart: now,
-                        currentPeriodEnd: periodEnd,
-                        subscriberWallet: input.subscriberWallet,
-                        planPda: input.planPda,
-                        subscriptionPda: input.subscriptionPda,
-                        subscriptionAuthorityPda: input.subscriptionAuthorityPda,
-                        delegatorAta: input.delegatorAta,
-                        subscribeTxSignature: input.subscribeTxSignature,
-                        lastChargeSig: input.subscribeTxSignature,
-                        lastChargeAt: now,
-                        failedAttempts: 0,
-                        cancelAtPeriodEnd: false,
-                        cancelledAt: null,
-                    },
-                });
+                .values({ id: nanoid(), userId: ctx.user.id, ...shared })
+                .onConflictDoUpdate({ target: premiumSubscriptions.userId, set: shared });
 
-            return { success: true };
+            return { success: true, charged };
         }),
 
     // ─── Cancel at period end (stops auto-renew; access lasts the period) ────

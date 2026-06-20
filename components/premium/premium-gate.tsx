@@ -27,7 +27,7 @@ export function PremiumGate({ children, tier, fallback }: PremiumGateProps) {
     return (
         <button
             onClick={() => openOverlay(tier)}
-            className="flex items-center gap-2 rounded-full bg-twitter/15 hover:bg-twitter/25 text-twitter px-4 h-control text-sm font-semibold transition-colors"
+            className="flex items-center gap-2 rounded-full bg-twitter/15 hover:bg-twitter/25 text-twitter px-4 h-11 text-sm font-semibold transition-colors"
         >
             <Lock className="size-4" />
             Unlock with {label}

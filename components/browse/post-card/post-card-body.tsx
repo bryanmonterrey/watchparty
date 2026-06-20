@@ -100,11 +100,6 @@ export function PostCardBody({
                                     <CreateIcon className="w-4 h-4" /> Content Warning{contentWarningText ? `: ${contentWarningText}` : ""}
                                 </span>
                             ) : <span />}
-                            {views !== undefined && (
-                                <span className="flex items-center gap-1 text-sm font-medium text-zinc-500">
-                                    {views.toLocaleString()} views
-                                </span>
-                            )}
                         </div>
                     )}
                 </div>

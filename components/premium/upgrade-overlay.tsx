@@ -10,7 +10,11 @@ import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 import { COMPARISON, type BillingCycle, type TierKey } from "@/lib/premium/tiers";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { appToast } from "@/components/app-ui/app-toast";
-import { Check, X, Loader2, ChevronRight } from "lucide-react";
+import { 
+    Check, X, Loader2, ChevronRight, Zap, Bookmark, Star, 
+    Pencil, FileText, SlidersHorizontal, Sparkles, TrendingUp, 
+    EyeOff, DollarSign, Store, Search, LayoutGrid, Briefcase
+} from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers";
 
@@ -36,7 +40,6 @@ export function UpgradeOverlay() {
     }, [open, initialTier, data]);
 
     // Close on Escape + lock body scroll while the full-page overlay is open
-    // (mirrors the landing-page menu in components/marketing/site-header.tsx).
     useEffect(() => {
         if (!open) return;
         const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeOverlay(); };
@@ -67,65 +70,85 @@ export function UpgradeOverlay() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
-                    className="fixed inset-0 z-50 flex flex-col bg-zinc-950"
+                    className="fixed inset-0 z-50 flex flex-col bg-black text-white font-sans"
                 >
                     {/* Header */}
-                    <div className="relative shrink-0 px-5 pt-5 pb-4 border-b border-white/10">
+                    <div className="relative shrink-0 px-6 pt-12 pb-6 flex flex-col items-center justify-center">
+                        {/* Close button */}
                         <button
                             onClick={closeOverlay}
                             aria-label="Close"
-                            className="absolute left-4 top-4 grid place-items-center size-10 rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+                            className="absolute left-6 top-6 grid place-items-center size-9 rounded-full bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/40 text-zinc-400 hover:text-white transition-all duration-200 cursor-pointer"
                         >
                             <X className="size-5" />
                         </button>
-                        <h2 className="text-center text-xl sm:text-2xl font-bold text-white">
+                        
+                        {/* Verification Sparkle Checkmark Badge */}
+                        <div className="flex justify-center mb-4">
+                            <div className="relative flex items-center justify-center w-16 h-16">
+                                <svg className="absolute w-24 h-24 text-sky-500/80 animate-pulse" viewBox="0 0 100 100" fill="none">
+                                    <circle cx="50" cy="18" r="2" fill="currentColor" />
+                                    <circle cx="22" cy="45" r="1.5" fill="currentColor" />
+                                    <circle cx="80" cy="50" r="1.5" fill="currentColor" />
+                                    <circle cx="35" cy="80" r="2.5" fill="currentColor" className="opacity-60" />
+                                    <circle cx="68" cy="82" r="1.8" fill="currentColor" />
+                                    <path d="M 45,26 L 39,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
+                                    <path d="M 55,26 L 61,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
+                                </svg>
+                                <svg className="w-12 h-12 text-sky-500 drop-shadow-[0_0_8px_rgba(14,165,233,0.3)]" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068 1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <h2 className="text-center text-3xl font-black text-white tracking-tight sm:text-4xl">
                             Upgrade to Premium
                         </h2>
-                        <div className="mt-3.5 flex justify-center">
+                        <div className="mt-5 flex justify-center">
                             <CycleToggle cycle={cycle} onChange={setCycle} />
                         </div>
                     </div>
 
-                    {/* Scroll body — constrained, centered content column */}
-                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
-                      <div className="mx-auto w-full max-w-4xl">
-                        <div
-                            className={cn(
-                                "grid gap-3",
-                                view === "individual" ? "sm:grid-cols-2" : "sm:grid-cols-3",
-                            )}
-                        >
-                            {visible.map((tier) => (
-                                <TierCard
-                                    key={tier.key}
-                                    tier={tier}
-                                    cycle={cycle}
-                                    selected={selected === tier.key}
-                                    onSelect={() => {
-                                        if (!tier.selfServe) {
-                                            setContactOpen(true);
-                                            return;
-                                        }
-                                        setSelected(tier.key);
-                                    }}
-                                />
-                            ))}
-                        </div>
-
-                        {view === "individual" && (
-                            <BusinessBanner onExplore={() => { setView("business"); setSelected(null); }} />
-                        )}
-                        {view === "business" && (
-                            <button
-                                onClick={() => { setView("individual"); setSelected(null); }}
-                                className="mt-4 mx-auto block text-sm text-zinc-400 hover:text-white transition-colors"
+                    {/* Scroll body */}
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-12 pt-2">
+                        <div className="mx-auto w-full max-w-5xl space-y-6">
+                            <div
+                                className={cn(
+                                    "grid gap-4 grid-cols-1",
+                                    visible.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "md:grid-cols-3",
+                                )}
                             >
-                                ← Back to individual plans
-                            </button>
-                        )}
+                                {visible.map((tier) => (
+                                    <TierCard
+                                        key={tier.key}
+                                        tier={tier}
+                                        cycle={cycle}
+                                        selected={selected === tier.key}
+                                        onSelect={() => {
+                                            if (!tier.selfServe) {
+                                                setContactOpen(true);
+                                                return;
+                                            }
+                                            setSelected(tier.key);
+                                        }}
+                                    />
+                                ))}
+                            </div>
 
-                        <CompareTable tiers={visible} />
-                      </div>
+                            {view === "individual" && (
+                                <BusinessBanner onExplore={() => { setView("business"); setSelected(null); }} />
+                            )}
+                            {view === "business" && (
+                                <button
+                                    onClick={() => { setView("individual"); setSelected(null); }}
+                                    className="mt-2 mx-auto block text-sm font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                                >
+                                    ← Back to individual plans
+                                </button>
+                            )}
+
+                            <CompareTable tiers={visible} />
+                        </div>
                     </div>
 
                     {/* Sticky subscribe bar */}
@@ -144,22 +167,85 @@ export function UpgradeOverlay() {
 
 function CycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: BillingCycle) => void }) {
     return (
-        <div className="inline-flex rounded-full border border-white/15 p-0.5 text-sm font-semibold">
-            {(["monthly", "annual"] as const).map((c) => (
-                <button
-                    key={c}
-                    onClick={() => onChange(c)}
-                    className={cn(
-                        "px-4 py-1.5 rounded-full transition-colors capitalize",
-                        cycle === c ? "bg-white text-zinc-950" : "text-zinc-400 hover:text-white",
-                    )}
-                >
-                    {c}
-                    {c === "annual" && <span className="ml-1 text-xs opacity-70">2 mo free</span>}
-                </button>
-            ))}
+        <div className="relative inline-flex rounded-full bg-zinc-950 border border-zinc-800 p-0.5 text-sm font-semibold shadow-inner">
+            {(["monthly", "annual"] as const).map((c) => {
+                const active = cycle === c;
+                return (
+                    <button
+                        key={c}
+                        onClick={() => onChange(c)}
+                        className={cn(
+                            "relative z-10 px-5 py-1.5 rounded-full capitalize text-xs sm:text-sm font-extrabold transition-colors duration-200 select-none cursor-pointer focus:outline-none min-w-[90px] sm:min-w-[110px]",
+                            active ? "text-zinc-950 font-black" : "text-zinc-400 hover:text-white",
+                        )}
+                    >
+                        {c}
+                        {active && (
+                            <motion.div
+                                layoutId="cycle-toggle-bg"
+                                className="absolute inset-0 bg-white rounded-full -z-10"
+                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                            />
+                        )}
+                    </button>
+                );
+            })}
         </div>
     );
+}
+
+function getFeatureIcon(f: string) {
+    const name = f.toLowerCase();
+    if (name.includes("reply boost") || name.includes("boosted replies")) {
+        return <Zap className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("bookmark")) {
+        return <Bookmark className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("highlights")) {
+        return <Star className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("edit")) {
+        return <Pencil className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("longer posts") || name.includes("write articles") || name.includes("create longer")) {
+        return <FileText className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("customize")) {
+        return <SlidersHorizontal className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("checkmark") || name.includes("verified")) {
+        return (
+            <svg className="size-4 text-sky-500 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068 1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
+            </svg>
+        );
+    }
+    if (name.includes("grok") || name.includes("supergrok")) {
+        return <Sparkles className="size-4 text-purple-400 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("analytics")) {
+        return <TrendingUp className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("ads") || name.includes("ad-free")) {
+        return <EyeOff className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("paid") || name.includes("creator subscriptions")) {
+        return <DollarSign className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("marketplace")) {
+        return <Store className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("radar")) {
+        return <Search className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("pro")) {
+        return <LayoutGrid className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
+    }
+    if (name.includes("everything in")) {
+        return <Check className="size-4 text-sky-400 shrink-0 mt-0.5" />;
+    }
+    return <Check className="size-4 text-zinc-500 shrink-0 mt-0.5" />;
 }
 
 function TierCard({
@@ -174,39 +260,50 @@ function TierCard({
     onSelect: () => void;
 }) {
     const priceLabel = cycle === "annual" ? tier.annualLabel : tier.monthlyLabel;
-    const period = tier.selfServe ? (cycle === "annual" ? "/year" : "/month") : "";
+    const period = tier.selfServe ? (cycle === "annual" ? "/year" : "/month") : ""; 
+    const isPremium = tier.key === "premium";
+
     return (
         <Squircle
             asChild
             radius={18}
             className={cn(
-                "relative p-4 text-left transition-colors",
+                "relative p-6 text-left transition-all duration-300 border flex flex-col justify-between min-h-[380px]",
                 selected
-                    ? "bg-twitter/10 ring-2 ring-twitter"
-                    : tier.highlighted
-                    ? "bg-white/[0.04] ring-2 ring-twitter/70 hover:ring-twitter"
-                    : "bg-white/[0.04] ring-1 ring-white/10 hover:ring-white/20",
+                    ? "bg-[#09090b]/80 border-sky-500 ring-1 ring-sky-500/20 shadow-[0_0_20px_rgba(29,155,240,0.15)]"
+                    : isPremium
+                    ? "bg-[#09090b]/80 border-[#1d9bf0] shadow-[0_0_15px_rgba(29,155,240,0.1)] hover:border-sky-400"
+                    : "bg-[#09090b]/60 border-zinc-800 hover:border-zinc-700",
             )}
         >
-            <button onClick={onSelect} className="block w-full">
-                <span className="text-sm font-semibold text-white">{tier.name}</span>
-                <div className="mt-1.5 flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold tracking-tight text-white">{priceLabel}</span>
-                    {period && <span className="text-xs text-zinc-400">{period}</span>}
+            <button onClick={onSelect} className="block w-full h-full cursor-pointer focus:outline-none">
+                <div className="flex flex-col h-full justify-between">
+                    <div>
+                        <span className="text-sm font-semibold text-zinc-400">{tier.name}</span>
+                        <div className="mt-1.5 flex items-baseline gap-1">
+                            <span className="text-3xl sm:text-4xl font-black tracking-tight text-white">{priceLabel}</span>
+                            {period && <span className="text-xs text-zinc-500 font-semibold">{period}</span>}
+                        </div>
+                        {cycle === "annual" && tier.selfServe && (
+                            <p className="mt-1 text-[10px] text-sky-400 font-bold">
+                                Billed annually
+                            </p>
+                        )}
+                        <ul className="mt-5 space-y-2.5">
+                            {tier.features.map((f) => (
+                                <li key={f} className="flex items-start gap-2.5 text-[13px] leading-snug text-zinc-300">
+                                    {getFeatureIcon(f)}
+                                    <span className="text-left">{f}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    {!tier.selfServe && (
+                        <div className="mt-4 flex items-center gap-1 text-xs font-bold text-sky-400">
+                            Contact sales <ChevronRight className="size-3" />
+                        </div>
+                    )}
                 </div>
-                <ul className="mt-3 space-y-2">
-                    {tier.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-[13px] leading-snug text-zinc-300">
-                            <Check className="mt-px size-3.5 shrink-0 text-twitter" />
-                            {f}
-                        </li>
-                    ))}
-                </ul>
-                {!tier.selfServe && (
-                    <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-twitter">
-                        Contact sales <ChevronRight className="size-3.5" />
-                    </span>
-                )}
             </button>
         </Squircle>
     );
@@ -214,15 +311,20 @@ function TierCard({
 
 function BusinessBanner({ onExplore }: { onExplore: () => void }) {
     return (
-        <Squircle asChild radius={16} className="mt-4 block bg-white/[0.04] ring-1 ring-white/10">
-            <div className="flex items-center justify-between gap-3 p-4 sm:px-5">
-                <div>
-                    <p className="text-sm font-semibold text-white">Are you a business?</p>
-                    <p className="text-xs text-zinc-400">Gain credibility and grow faster with Premium Business.</p>
+        <Squircle asChild radius={16} className="mt-2 block bg-[#09090b]/40 border border-zinc-800/80">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 sm:px-6">
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center size-10 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0">
+                        <Briefcase className="size-5" />
+                    </div>
+                    <div>
+                        <p className="text-[14px] font-extrabold text-white">Are you a business?</p>
+                        <p className="text-xs text-zinc-400">Gain credibility and grow faster with Premium Business</p>
+                    </div>
                 </div>
                 <button
                     onClick={onExplore}
-                    className="shrink-0 rounded-full bg-white/10 hover:bg-white/20 px-4 sm:px-5 h-control text-[13px] font-semibold text-white transition-colors"
+                    className="w-full sm:w-auto shrink-0 rounded-full bg-[#2f3336] hover:bg-zinc-800 px-5 h-9 text-xs font-black text-white transition-colors cursor-pointer select-none"
                 >
                     Explore Premium Business
                 </button>
@@ -232,35 +334,34 @@ function BusinessBanner({ onExplore }: { onExplore: () => void }) {
 }
 
 function cellNode(v: boolean | string | undefined) {
-    if (v === true) return <Check className="mx-auto size-4 text-twitter" />;
-    if (v === false || v === undefined) return <X className="mx-auto size-4 text-zinc-700" />;
-    return <span className="text-xs text-zinc-300">{v}</span>;
+    if (v === true) return <Check className="mx-auto size-4 text-white" />;
+    if (v === false || v === undefined) return <span className="text-zinc-600 font-bold text-center block w-full text-xs">✕</span>;
+    return <span className="text-xs text-zinc-300 font-semibold text-center block w-full">{v}</span>;
 }
 
 function CompareTable({ tiers }: { tiers: TierRow[] }) {
     const cols = tiers;
-    // label column flexes; each tier column is equal width.
-    const gridCols = { gridTemplateColumns: `minmax(0,1.6fr) repeat(${cols.length}, minmax(0,1fr))` };
+    const gridCols = { gridTemplateColumns: `minmax(0,1.8fr) repeat(${cols.length}, minmax(0,1.2fr))` };
     return (
-        <div className="mt-10">
-            <h3 className="mb-3 text-base font-bold text-white">Compare tiers &amp; features</h3>
-            <div className="space-y-3 overflow-x-auto">
+        <div className="mt-8">
+            <h3 className="mb-4 text-lg font-black text-white">Compare tiers &amp; features</h3>
+            <div className="space-y-4">
                 {COMPARISON.map((group) => (
                     <Squircle
                         key={group.group}
                         asChild
                         radius={16}
-                        className="block bg-white/[0.03] ring-1 ring-white/10"
+                        className="block bg-[#09090b]/40 border border-zinc-800/80 overflow-hidden"
                     >
-                        <div className="min-w-[420px] px-4 sm:px-5 py-1">
+                        <div className="px-4 sm:px-6 py-2">
                             {/* group header + tier column labels */}
                             <div
-                                className="grid items-center gap-2 py-3 border-b border-white/10"
+                                className="grid items-center gap-2 py-3 border-b border-zinc-800"
                                 style={gridCols}
                             >
-                                <span className="text-sm font-bold text-white">{group.group}</span>
+                                <span className="text-[14px] font-extrabold text-white">{group.group}</span>
                                 {cols.map((t) => (
-                                    <span key={t.key} className="text-center text-xs font-semibold text-zinc-400">
+                                    <span key={t.key} className="text-center text-xs font-bold text-zinc-500">
                                         {t.name}
                                     </span>
                                 ))}
@@ -268,10 +369,10 @@ function CompareTable({ tiers }: { tiers: TierRow[] }) {
                             {group.rows.map((row) => (
                                 <div
                                     key={row.label}
-                                    className="grid items-center gap-2 py-2.5 border-b border-white/5 last:border-0"
+                                    className="grid items-center gap-2 py-3 border-b border-zinc-800/40 last:border-0"
                                     style={gridCols}
                                 >
-                                    <span className="text-[13px] text-zinc-300">{row.label}</span>
+                                    <span className="text-[13px] text-zinc-300 font-medium">{row.label}</span>
                                     {cols.map((t) => (
                                         <div key={t.key} className="text-center">
                                             {cellNode(row.values[t.key])}
@@ -350,32 +451,47 @@ function SubscribeBar({
         }
     };
 
+    const period = tier?.selfServe ? (cycle === "annual" ? "/year" : "/month") : "";
+    const billing = tier?.selfServe ? (cycle === "annual" ? "Billed annually" : "Billed monthly") : "";
+
     return (
-        <div className="shrink-0 border-t border-white/10 bg-zinc-950/85 backdrop-blur-md px-4 sm:px-6 py-3">
-            <div className="mx-auto w-full max-w-4xl flex items-center gap-4">
-                <div className="min-w-0 shrink-0">
-                    <p className="text-sm font-semibold text-white truncate">
-                        {tier ? tier.name : "Select a plan"}
-                    </p>
-                    {tier && (
-                        <p className="text-xs text-zinc-400">
-                            {priceLabel}
-                            {tier.selfServe ? (cycle === "annual" ? "/year · billed annually" : "/month · billed monthly") : ""}
+        <div className="shrink-0 border-t border-zinc-800 bg-black/95 backdrop-blur-md px-6 sm:px-10 py-5">
+            <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-8">
+                {/* Left: stacked price block */}
+                <div className="w-full sm:w-auto text-left flex sm:flex-col items-baseline sm:items-start justify-between sm:justify-start gap-2">
+                    <div>
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Selected tier</p>
+                        <p className="text-lg font-black text-white">
+                            {tier ? tier.name : "Select a plan"}
                         </p>
+                    </div>
+                    {tier && (
+                        <div className="text-right sm:text-left">
+                            <p className="leading-none mt-1">
+                                <span className="text-2xl font-black text-white">{priceLabel}</span>
+                                {period && <span className="ml-1 text-xs text-zinc-500 font-semibold">{period}</span>}
+                            </p>
+                            <p className="mt-1 text-[11px] text-zinc-400 font-semibold">{billing}</p>
+                        </div>
                     )}
                 </div>
-                <button
-                    disabled={!canSubscribe || pending}
-                    onClick={handleSubscribe}
-                    className="shrink-0 inline-flex items-center justify-center gap-2 rounded-full bg-white text-zinc-950 font-bold px-8 h-control hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                    {pending && <Loader2 className="size-4 animate-spin" />}
-                    Subscribe &amp; Pay
-                </button>
-                <p className="hidden md:block text-[11px] leading-tight text-zinc-500 max-w-[280px]">
-                    By subscribing, you agree to our Purchaser Terms. Plans auto-renew until
-                    cancelled; manage anytime in settings.
-                </p>
+
+                {/* Right: button + legal box block */}
+                <div className="flex w-full sm:w-[60%] max-w-lg flex-col gap-2">
+                    <button
+                        disabled={!canSubscribe || pending}
+                        onClick={handleSubscribe}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white text-black text-[15px] font-black h-12 hover:bg-zinc-200 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer"
+                    >
+                        {pending && <Loader2 className="size-4 animate-spin text-black" />}
+                        Subscribe &amp; Pay
+                    </button>
+                    <div className="border border-zinc-800/80 rounded-xl p-3 bg-zinc-950/40">
+                        <p className="text-[10px] leading-relaxed text-zinc-400">
+                            By subscribing, you agree to our <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Purchaser Terms</span>, and that subscriptions auto-renew until you cancel. <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Cancel anytime</span>, at least 24 hours prior to renewal to avoid additional charges. Price subject to change. Manage your subscription through the settings page.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -418,7 +534,7 @@ function ContactSalesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
                             value={form[key]}
                             onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                             placeholder={ph}
-                            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 h-control text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-twitter"
+                            className="w-full rounded-lg bg-white/5 border border-white/10 px-3 h-11 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-twitter"
                         />
                     ))}
                     <textarea
@@ -431,7 +547,7 @@ function ContactSalesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
                     <button
                         disabled={contact.isPending}
                         onClick={submit}
-                        className="w-full rounded-full bg-white text-zinc-950 font-bold h-control hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                        className="w-full rounded-full bg-white text-zinc-950 font-bold h-11 hover:bg-zinc-200 transition-colors disabled:opacity-50"
                     >
                         {contact.isPending ? "Sending…" : "Request a call"}
                     </button>

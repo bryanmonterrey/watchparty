@@ -273,7 +273,7 @@ export function PostCard({
                 ref={cardRef}
                 onClick={() => router.push(`/discover/post/${post.id}`)}
                 className={cn(
-                    "group cursor-pointer px-4 pt-2.5 transition-colors relative bg-background flex flex-col",
+                    "group cursor-pointer px-4 pt-2.5 pb-1.5 transition-colors relative bg-background flex flex-col",
                     connectBottom ? "border-none pb-0" : "border-b border-soft-gray/[0.12]",
                     connectTop ? "pt-0" : "pt-2.5"
                 )}

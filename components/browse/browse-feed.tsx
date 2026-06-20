@@ -529,7 +529,6 @@ export function BrowseFeed() {
                     className=""
                 />
                 <FeedTab label="Following" isActive={activeTab === "following"} onClick={() => switchTab("following")} />
-                <FeedTab label="News" isActive={activeTab === "news"} onClick={() => switchTab("news")} />
             </div>
 
             {/* Floating "new posts" pill — parks just under the tab bar */}

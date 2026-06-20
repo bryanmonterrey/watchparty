@@ -34,7 +34,7 @@ export function PremiumSettings() {
                 </p>
                 <button
                     onClick={() => openOverlay()}
-                    className="mt-4 rounded-full bg-white text-zinc-950 font-bold px-6 h-control hover:bg-zinc-200 transition-colors"
+                    className="mt-4 rounded-full bg-white text-zinc-950 font-bold px-6 h-11 hover:bg-zinc-200 transition-colors"
                 >
                     Upgrade to Premium
                 </button>
@@ -65,7 +65,7 @@ export function PremiumSettings() {
                 <div className="mt-4 flex gap-2">
                     <button
                         onClick={() => openOverlay()}
-                        className="rounded-full bg-white/10 hover:bg-white/20 text-zinc-100 font-semibold px-4 h-control text-sm transition-colors"
+                        className="rounded-full bg-white/10 hover:bg-white/20 text-zinc-100 font-semibold px-4 h-11 text-sm transition-colors"
                     >
                         Change plan
                     </button>
@@ -73,7 +73,7 @@ export function PremiumSettings() {
                         <button
                             onClick={() => cancel.mutate(undefined)}
                             disabled={cancel.isPending}
-                            className="flex items-center gap-2 rounded-full bg-transparent hover:bg-red-500/10 text-red-400 font-semibold px-4 h-control text-sm transition-colors disabled:opacity-50"
+                            className="flex items-center gap-2 rounded-full bg-transparent hover:bg-red-500/10 text-red-400 font-semibold px-4 h-11 text-sm transition-colors disabled:opacity-50"
                         >
                             {cancel.isPending && <Loader2 className="size-4 animate-spin" />}
                             Cancel auto-renew
