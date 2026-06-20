@@ -48,3 +48,6 @@ kick_categories.json
 *.png
 # public/thumbnails/ is committed — category cards serve from it in production
 .expo/
+
+# Treasury keypairs — NEVER commit
+.treasury-keys/

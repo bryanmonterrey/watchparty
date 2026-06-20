@@ -249,3 +249,44 @@ export async function transferUsdcFromTreasury(
     });
     return sendKitTx(signer, [ataIx, transferIx]);
 }
+
+/** Current USDC balance (base units) of the collector's ATA. */
+export async function getCollectorUsdcBalance(): Promise<bigint> {
+    const signer = await getCollectorSigner();
+    const ata = await usdcAtaOf(signer.address);
+    const { rpc } = rpcPair();
+    try {
+        const res = await rpc.getTokenAccountBalance(ata).send();
+        return BigInt(res.value.amount);
+    } catch {
+        return BigInt(0); // ATA not created yet
+    }
+}
+
+/**
+ * Sweep USDC from the collector (hot) to a cold wallet (a multisig). Sending TO
+ * cold needs no approval, so this is safe to run unattended. The caller decides
+ * the amount (keeping enough hot to cover unclaimed creator obligations).
+ */
+export async function sweepUsdcToCold(coldWallet: string, amountBaseUnits: bigint): Promise<string> {
+    const signer = await getCollectorSigner();
+    const sourceAta = await usdcAtaOf(signer.address);
+    const cold = kitAddress(coldWallet);
+    const coldAta = await usdcAtaOf(cold);
+    const ataIx = getCreateAssociatedTokenIdempotentInstruction({
+        payer: signer,
+        ata: coldAta,
+        owner: cold,
+        mint: USDC_MINT_ADDRESS,
+        tokenProgram: PREMIUM_TOKEN_PROGRAM,
+    });
+    const transferIx = getTransferCheckedInstruction({
+        source: sourceAta,
+        mint: USDC_MINT_ADDRESS,
+        destination: coldAta,
+        authority: signer,
+        amount: amountBaseUnits,
+        decimals: USDC_DECIMALS,
+    });
+    return sendKitTx(signer, [ataIx, transferIx]);
+}
