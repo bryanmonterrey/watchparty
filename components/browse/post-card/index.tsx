@@ -299,7 +299,7 @@ export function PostCard({
                         </UserHoverCard>
                     </div>
                     
-                    <div className="flex-1 w-full min-w-0 flex flex-col -mt-1 pb-1.5">
+                    <div className="flex-1 w-full min-w-0 flex flex-col -mt-1">
                         <PostCardHeaderRow
                             post={post}
                             isOwnPost={isOwnPost}
