@@ -142,7 +142,7 @@ export function DiscoverRightRail() {
                 ))}
             </RailCard>
 
-            <div className="h-[40svh] w-full shrink-0 bg-transparent" />
+            <div className="h-[50svh] w-full shrink-0 bg-transparent" />
         </div>
     );
 }
