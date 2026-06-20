@@ -81,7 +81,12 @@ async function main() {
                     endTs: BigInt(0),
                     planId: BigInt(planId),
                     pullers: [merchant],
-                    destinations: [treasuryAta],
+                    // Destinations are OWNER WALLETS, not ATAs: at transfer the
+                    // program checks the receiver ATA's *owner* is whitelisted
+                    // (else UnauthorizedDestination / 0x1fa). Funds still land in
+                    // the treasury's USDC ATA (collector.ts receiverAta), whose
+                    // owner is `merchant`. Verified on devnet (devnet-smoke.ts).
+                    destinations: [merchant],
                     metadataUri: `https://watchparty.xyz/premium#${key}-${cycle}`,
                 });
                 const sig = await sendAsTreasury([ix]);
