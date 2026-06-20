@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { Squircle } from "@/components/ui/squircle";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
@@ -35,6 +35,20 @@ export function UpgradeOverlay() {
         setContactOpen(false);
     }, [open, initialTier, data]);
 
+    // Close on Escape + lock body scroll while the full-page overlay is open
+    // (mirrors the landing-page menu in components/marketing/site-header.tsx).
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeOverlay(); };
+        window.addEventListener("keydown", onKey);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            window.removeEventListener("keydown", onKey);
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [open, closeOverlay]);
+
     const tiers = data?.tiers ?? [];
     const visible = useMemo(
         () => tiers.filter((t) => t.group === view),
@@ -43,36 +57,37 @@ export function UpgradeOverlay() {
     const selectedTier = tiers.find((t) => t.key === selected) ?? null;
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && closeOverlay()}>
-            <DialogContent
-                showCloseButton={false}
-                className="max-w-5xl w-[calc(100vw-1.5rem)] sm:w-full h-[90vh] p-0 gap-0 overflow-hidden border-white/10 bg-zinc-950 sm:rounded-2xl"
-            >
-                <VisuallyHidden.Root>
-                    <DialogTitle>Upgrade to Premium</DialogTitle>
-                    <DialogDescription>Choose a premium plan</DialogDescription>
-                </VisuallyHidden.Root>
-
-                <div className="flex flex-col h-full">
+        <AnimatePresence>
+            {open && (
+                <motion.div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Upgrade to Premium"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                    className="fixed inset-0 z-50 flex flex-col bg-zinc-950"
+                >
                     {/* Header */}
-                    <div className="relative shrink-0 px-5 pt-5 pb-3 border-b border-white/10">
+                    <div className="relative shrink-0 px-5 pt-5 pb-4 border-b border-white/10">
                         <button
                             onClick={closeOverlay}
                             aria-label="Close"
-                            className="absolute left-4 top-4 grid place-items-center size-9 rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+                            className="absolute left-4 top-4 grid place-items-center size-10 rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
                         >
                             <X className="size-5" />
                         </button>
-                        <h2 className="text-center text-xl sm:text-2xl font-bold text-white">
+                        <h2 className="text-center text-2xl sm:text-3xl font-bold text-white">
                             Upgrade to Premium
                         </h2>
-                        <div className="mt-3 flex justify-center">
+                        <div className="mt-4 flex justify-center">
                             <CycleToggle cycle={cycle} onChange={setCycle} />
                         </div>
                     </div>
 
                     {/* Scroll body */}
-                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
                         <div
                             className={cn(
                                 "grid gap-3 mx-auto",
@@ -117,11 +132,11 @@ export function UpgradeOverlay() {
                         cycle={cycle}
                         onSubscribed={closeOverlay}
                     />
-                </div>
 
-                <ContactSalesDialog open={contactOpen} onOpenChange={setContactOpen} />
-            </DialogContent>
-        </Dialog>
+                    <ContactSalesDialog open={contactOpen} onOpenChange={setContactOpen} />
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }
 
