@@ -1,8 +1,14 @@
 # Implement Universal Funding (deferred)
 
-> Status: **researched, not built.** Future-implementation guide so we can pick this up
-> later without re-deriving the decision. Nothing in the codebase depends on this yet.
+> Status: **PARKED (researched, not built).** Future-implementation guide so we can pick
+> this up later without re-deriving the decision. Nothing in the codebase depends on this yet.
 > Supersedes the earlier `implement-glide.md` (Glide is now a fallback, not the pick).
+>
+> **Why parked (2026-06-19):** the preferred provider **Unifold has a waitlist** — not the
+> instant self-serve its landing page implied. Combined with Glide's self-serve being
+> widget-first (fails our "only our UI" rule), there is **no hosted provider we can turn on
+> today** that meets the bar. Revisit when Unifold grants access, or when we're willing to
+> spend the engineering on roll-your-own. Until then, fiat is covered by dormant MoonPay.
 
 ## The goal (unchanged)
 
@@ -33,7 +39,7 @@ So the real choice is **"rent the watcher (Unifold) vs build the watcher (roll-y
 
 | Option | Your UI? | Self-serve | Solana | Fixed cost | Docs verifiable now | Verdict |
 |---|---|---|---|---|---|---|
-| **Unifold** | ✅ headless API | ✅ `dashboard.unifold.io` | ✅ | unknown (not public) | ❌ login-gated | **Primary** |
+| **Unifold** | ✅ headless API | ⚠️ **waitlist** (not instant) | ✅ | unknown (not public) | ❌ login-gated | **Primary — blocked on waitlist** |
 | **Roll-your-own** (deBridge/LI.FI) | ✅ (you build it) | ✅ permissionless | ✅ | **$0** (spread only) | ✅ fully public | **Fallback / $0 endgame** |
 | **Glide** | ⚠️ self-serve is **widget-first**; headless API access unconfirmed | ✅ (Deposit Mode) | ✅ (USDC/SOL/USDT/PYUSD) | ~$99/mo (reported, unverified) | partial | **Demoted** — fails the hard requirement on self-serve |
 
@@ -52,8 +58,10 @@ full control,"* self-serve, full API access — which is exactly our hard requir
 - Per-user dedicated deposit addresses via API.
 - Accepts any token on any chain, auto-converts to your settlement currency.
 - **Solana supported** as destination.
-- **Self-serve**: `dashboard.unifold.io` ("Get started"); "Talk to sales" is the enterprise
-  option, not a gate.
+- **Access: WAITLISTED** (discovered at signup, 2026-06-19). The "Get started" /
+  `dashboard.unifold.io` path puts you on a waitlist rather than granting instant access —
+  so the "self-serve, start today" pitch is aspirational right now. **This is why funding is
+  parked.** Next action is just: get off the waitlist, then resume the checklist below.
 - YC W26, ~$1M raised. **Very new** — small track record. Fine for build-now/launch-later.
 
 ### Public API signature (PROVISIONAL — docs are login-gated, verify after signup)
