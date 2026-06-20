@@ -19,6 +19,8 @@ export const user = pgTable("user", {
   website: text("website"),
   role: text("role").default("user").notNull(),
   verifiedTier: verifiedTierEnum("verified_tier"),
+  affiliateUsername: text("affiliate_username"),       // org this user is affiliated to (links + drives badge)
+  affiliateIconUrl: text("affiliate_icon_url"),         // org logo shown in the affiliate badge square
   gender: boolean("gender").notNull(),
   last_signed_in: timestamp("last_signed_in"),
   lastSeenAt: timestamp("lastSeenAt"),

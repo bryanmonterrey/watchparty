@@ -31,22 +31,38 @@ export function PostCardHeaderRow({
 
     return (
         <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-1 min-w-0 leading-none">
-                <div 
+            <div className="flex items-center gap-1.5 min-w-0 leading-none">
+                <div
                     onClick={(e) => {
                         e.stopPropagation();
                         if (user.username) router.push(`/${user.username}`);
-                    }} 
-                    className="cursor-pointer flex items-center gap-1 min-w-0"
+                    }}
+                    className="cursor-pointer flex items-center gap-1.5 min-w-0"
                 >
                     <UserHoverCard userId={post.userId}>
-                        <div className="flex items-center gap-1 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
                             <span className="font-bold text-[15px] text-white2 truncate hover:underline">
                                 {user.name || "Unknown"}
                             </span>
                             {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                             {user.verifiedTier === "business" && <BusinessBadgeIcon className="w-4 h-4 shrink-0" />}
                             {user.verifiedTier === "government" && <GovBadgeIcon className="w-4 h-4 shrink-0" />}
+                            {user.affiliateIconUrl && (
+                                <span
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (user.affiliateUsername) router.push(`/${user.affiliateUsername}`);
+                                    }}
+                                    className="shrink-0 size-[15px] overflow-hidden rounded-[3px] bg-muted ring-1 ring-border/60 cursor-pointer"
+                                >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={user.affiliateIconUrl}
+                                        alt={user.affiliateUsername ? `Affiliated with @${user.affiliateUsername}` : "Affiliate"}
+                                        className="size-full object-cover"
+                                    />
+                                </span>
+                            )}
                             <span className="text-postgray truncate text-[15px]">@{user.username || "user"}</span>
                         </div>
                     </UserHoverCard>

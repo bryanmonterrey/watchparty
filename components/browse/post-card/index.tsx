@@ -291,7 +291,7 @@ export function PostCard({
                     >
                         {/* Thread line bottom - moved here for full-height coverage */}
                         {connectBottom && (
-                            <div className="absolute top-[48px] bottom-0 left-[20px] -translate-x-1/2 w-0.5 bg-zinc-700/50 z-20" />
+                            <div className="absolute top-[52px] bottom-0 left-[22px] -translate-x-1/2 w-0.5 bg-zinc-700/50 z-20" />
                         )}
                         
                         <UserHoverCard userId={post.userId}>

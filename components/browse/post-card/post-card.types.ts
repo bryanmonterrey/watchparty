@@ -3,6 +3,8 @@ export interface PostCardUser {
     username: string | null;
     avatar_url: string | null;
     verifiedTier?: string | null;
+    affiliateUsername?: string | null;
+    affiliateIconUrl?: string | null;
 }
 
 export interface PostCardPost {
