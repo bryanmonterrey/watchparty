@@ -42,6 +42,10 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, autoplayInView = fal
     const scrubRef = useRef<HTMLDivElement>(null);
     const autoplayToken = useRef<object>({});
 
+    // Sizes the player to the video's real aspect ratio (set once metadata
+    // loads). 16/9 default avoids a flash before dimensions are known; clamped
+    // so an extreme cinematic/portrait source can't blow out the feed column.
+    const [aspect, setAspect] = useState(16 / 9);
     const [started, setStarted] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
@@ -192,7 +196,8 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, autoplayInView = fal
     return (
         <div
             ref={containerRef}
-            className={cn("group/fvp relative h-full w-full overflow-hidden bg-black select-none", className)}
+            className={cn("group/fvp relative w-full overflow-hidden bg-black select-none", className)}
+            style={{ aspectRatio: String(aspect) }}
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
         >
@@ -209,7 +214,13 @@ export function FeedVideoPlayer({ postId, videoUrl, poster, autoplayInView = fal
                 onPause={() => setIsPlaying(false)}
                 onEnded={() => { setIsPlaying(false); setIsEnded(true); }}
                 onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+                onLoadedMetadata={(e) => {
+                    const v = e.currentTarget;
+                    setDuration(v.duration || 0);
+                    if (v.videoWidth && v.videoHeight) {
+                        setAspect(Math.min(16 / 9, Math.max(9 / 16, v.videoWidth / v.videoHeight)));
+                    }
+                }}
                 onProgress={(e) => { const b = e.currentTarget.buffered; if (b.length) setBuffered(b.end(b.length - 1)); }}
             >
                 {captionTracks.map((t) => (

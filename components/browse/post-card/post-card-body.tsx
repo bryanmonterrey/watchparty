@@ -91,7 +91,7 @@ export function PostCardBody({
             {/* Video */}
             {!isPaywalled && videoUrl ? (
                 <div className="my-1">
-                    <div className="rounded-3xl overflow-hidden border border-white/10 bg-zinc-900/50 aspect-video">
+                    <div className="rounded-3xl overflow-hidden border border-white/10 bg-zinc-900/50">
                         <FeedVideoPlayer postId={post.id} videoUrl={videoUrl} poster={imageUrl} autoplayInView />
                     </div>
                     {(hasContentWarning || views !== undefined) && (
