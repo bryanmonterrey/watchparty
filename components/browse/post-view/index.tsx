@@ -371,7 +371,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                             {(post.videoUrl || (post.media && post.media.length > 0) || post.imageUrl || post.token_image) && (
                                 <div className="rounded-2xl overflow-hidden mb-4">
                                     {post.videoUrl ? (
-                                        <FeedVideoPlayer postId={post.id} videoUrl={post.videoUrl} poster={post.imageUrl} />
+                                        <FeedVideoPlayer postId={post.id} videoUrl={post.videoUrl} poster={post.imageUrl} className="rounded-2xl" />
                                     ) : (
                                         <MediaGrid
                                             media={post.media && post.media.length > 0 ? post.media : [{ type: "image", url: (post.imageUrl || post.token_image)! }]}
