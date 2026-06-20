@@ -46,7 +46,7 @@ export function PostCardActions({
     handleBookmark,
 }: PostCardActionsProps) {
     return (
-        <div className="flex items-center justify-between -ml-2 -mr-1.5 max-w-[425px]">
+        <div className="flex items-center justify-between -ml-2 -mr-1.5">
             <ActionButton
                 icon={<BubbleIcon className="w-[18px] h-[18px]"/>}
                 count={comments}
