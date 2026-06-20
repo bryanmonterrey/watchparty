@@ -29,11 +29,27 @@ export function getRpcWsUrl(): string {
     return getRpcUrl().replace(/^http/, "ws");
 }
 
-/** Merchant = the wallet that owns the premium plans and collects payments. */
+/**
+ * Merchant = plan owner + puller (the COLLECTOR). The client subscribes against
+ * this pubkey and it keys every plan PDA, so it MUST equal COLLECTOR_PRIVATE_KEY's
+ * pubkey. Falls back to the single-treasury pubkey when the split isn't set up.
+ * See docs/treasury-security.md §2.
+ */
 export function getMerchantAddress(): Address {
     const pk =
+        process.env.NEXT_PUBLIC_COLLECTOR_PUBKEY ??
         process.env.NEXT_PUBLIC_PREMIUM_MERCHANT_PUBKEY ??
         process.env.NEXT_PUBLIC_TREASURY_PUBKEY;
-    if (!pk) throw new Error("Premium merchant pubkey not configured");
+    if (!pk) throw new Error("Collector/merchant pubkey not configured");
     return address(pk);
+}
+
+/**
+ * Where collected USDC LANDS (the plan `destinations` whitelist). In production
+ * this is a Squads multisig (cold). Falls back to the merchant when unset, which
+ * reproduces single-key behaviour. Immutable once a plan is created.
+ */
+export function getCollectionDestinationOwner(): Address {
+    const d = process.env.NEXT_PUBLIC_COLLECTION_DESTINATION;
+    return d ? address(d) : getMerchantAddress();
 }

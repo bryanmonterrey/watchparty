@@ -56,7 +56,7 @@ const RPC_WS = RPC_HTTP.replace(/^http/, "ws");
 const USDC_DECIMALS = 6;
 const AMOUNT = BigInt(1_000_000); // 1 mock-USDC
 const PERIOD_HOURS = BigInt(1);
-const PLAN_ID = BigInt(3); // 1,2 used earlier runs (2 had the wrong destination)
+const PLAN_ID = BigInt(4); // bump per run; 4 = role-split test (destination ≠ owner)
 
 const rpc = createSolanaRpc(RPC_HTTP);
 const rpcSubscriptions = createSolanaRpcSubscriptions(RPC_WS);
@@ -139,17 +139,23 @@ async function main() {
     } else {
         console.log("• mock USDC mint exists");
     }
-    const merchantAta = await getOrCreateAssociatedTokenAccount(conn, merchant, mint, merchant.publicKey);
     const subAta = await getOrCreateAssociatedTokenAccount(conn, subscriber, mint, subscriber.publicKey);
     if ((await getAccount(conn, subAta.address)).amount < AMOUNT * BigInt(4)) {
         await mintTo(conn, merchant, mint, subAta.address, merchant, BigInt(100_000_000)); // top up subscriber
     }
+    // Role split: a SEPARATE destination wallet (stand-in for the multisig) that
+    // is neither the plan owner nor the puller. Its USDC ATA is created/paid by
+    // the merchant since the destination holds no SOL.
+    const destination = loadOrCreate("/tmp/wp-premium-smoke-destination.json");
+    const destAta = await getOrCreateAssociatedTokenAccount(conn, merchant, mint, destination.publicKey);
     console.log(`   mint ${mint.toBase58()}`);
+    console.log(`   destination (multisig stand-in) ${destination.publicKey.toBase58()}`);
 
     const merchantSigner = await createKeyPairSignerFromBytes(merchant.secretKey);
     const subSigner = await createKeyPairSignerFromBytes(subscriber.secretKey);
     const mintAddr = address(mint.toBase58());
-    const merchantAtaAddr = address(merchantAta.address.toBase58());
+    const destAddr = address(destination.publicKey.toBase58());
+    const destAtaAddr = address(destAta.address.toBase58());
     const subAtaAddr = address(subAta.address.toBase58());
 
     const [planPda] = await findPlanPda(
@@ -177,10 +183,11 @@ async function main() {
             periodHours: PERIOD_HOURS,
             endTs: BigInt(0),
             planId: PLAN_ID,
+            // Puller = merchant (collector); destination = a DIFFERENT wallet
+            // (the multisig stand-in). Proves collector can only route funds to
+            // the whitelisted destination, not to itself.
             pullers: [merchantSigner.address],
-            // Destinations are OWNER WALLETS, not ATAs: at transfer the program
-            // checks the receiver ATA's *owner* is whitelisted (else 0x1fa).
-            destinations: [merchantSigner.address],
+            destinations: [destAddr],
             metadataUri: "https://watchparty.xyz/premium#smoke",
         });
         console.log(`   ${await send(merchantSigner, [createIx])}`);
@@ -224,27 +231,27 @@ async function main() {
         console.log(`   ${await send(subSigner, [subscribeIx])}`);
     } else console.log("• subscription exists");
 
-    // 4. Merchant pulls the first period (the "charge at signup" path).
-    console.log("→ transferSubscription (first charge)…");
-    const balBefore = (await getAccount(conn, merchantAta.address)).amount;
+    // 4. Collector (puller) pulls the first period → funds land in the DESTINATION.
+    console.log("→ transferSubscription (first charge → destination)…");
+    const balBefore = (await getAccount(conn, destAta.address)).amount;
     const chargeIx = await getTransferSubscriptionOverlayInstructionAsync({
         programAddress: PROGRAM_ID,
         amount: AMOUNT,
         caller: merchantSigner,
         delegator: subSigner.address,
         planPda,
-        receiverAta: merchantAtaAddr,
+        receiverAta: destAtaAddr,
         subscriptionPda,
         tokenMint: mintAddr,
         tokenProgram: TOKEN_PROGRAM_ADDRESS,
     });
     console.log(`   ${await send(merchantSigner, [chargeIx])}`);
-    const balAfter = (await getAccount(conn, merchantAta.address)).amount;
+    const balAfter = (await getAccount(conn, destAta.address)).amount;
 
     const pulled = balAfter - balBefore;
-    console.log(`\nmerchant received ${Number(pulled) / 10 ** USDC_DECIMALS} mUSDC (expected 1)`);
+    console.log(`\ndestination received ${Number(pulled) / 10 ** USDC_DECIMALS} mUSDC (expected 1)`);
     if (pulled !== AMOUNT) throw new Error(`unexpected pull amount: ${pulled}`);
-    console.log("✅ devnet smoke test passed — full subscribe + charge flow works.");
+    console.log("✅ devnet smoke test passed — role split (collector→destination) works.");
     process.exit(0);
 }
 

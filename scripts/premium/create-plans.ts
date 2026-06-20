@@ -1,27 +1,21 @@
 /**
  * One-time (idempotent) provisioning of the platform-premium on-chain plans.
- * Creates a Subscriptions-program Plan for every self-serve tier × billing
- * cycle (8 plans) owned by the treasury, then mirrors the PDAs into the
- * `premium_plans` table for premium.getPlans.
+ * Creates a Subscriptions-program Plan for every self-serve tier × billing cycle
+ * (8 plans) owned by the COLLECTOR, with funds whitelisted to the collection
+ * destination (multisig in prod), then mirrors the PDAs into `premium_plans`.
  *
  * Run:  bun run scripts/premium/create-plans.ts
- * Needs: TREASURY_PRIVATE_KEY, NEXT_PUBLIC_TREASURY_PUBKEY (or
- *        NEXT_PUBLIC_PREMIUM_MERCHANT_PUBKEY), an RPC URL, and DB env.
+ * Needs: COLLECTOR_PRIVATE_KEY (or TREASURY_PRIVATE_KEY), NEXT_PUBLIC_COLLECTOR_PUBKEY
+ *        (or NEXT_PUBLIC_TREASURY_PUBKEY), optional NEXT_PUBLIC_COLLECTION_DESTINATION
+ *        (multisig), an RPC URL, and DB env. See docs/treasury-security.md.
  */
-import { fetchMaybePlan, findPlanPda, getCreatePlanOverlayInstructionAsync } from "@solana/subscriptions";
-import {
-    findAssociatedTokenPda,
-    getCreateAssociatedTokenIdempotentInstruction,
-} from "@solana-program/token";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { premiumPlans } from "@/db/schema/content";
 import { eq, and } from "drizzle-orm";
-import { getKitRpc } from "@/lib/chains/solana/subscriptions/client";
-import { getTreasurySigner, sendAsTreasury } from "@/lib/chains/solana/subscriptions/collector";
+import { createTreasuryPlan } from "@/lib/chains/solana/subscriptions/collector";
 import {
-    PREMIUM_TOKEN_PROGRAM,
-    SUBSCRIPTIONS_PROGRAM_ID,
+    getMerchantAddress,
     USDC_MINT_ADDRESS,
 } from "@/lib/chains/solana/subscriptions/constants";
 import {
@@ -37,66 +31,21 @@ import {
 const CYCLES: BillingCycle[] = ["monthly", "annual"];
 
 async function main() {
-    const signer = await getTreasurySigner();
-    const rpc = getKitRpc();
-    const merchant = signer.address;
-
-    const [treasuryAta] = await findAssociatedTokenPda({
-        owner: merchant,
-        mint: USDC_MINT_ADDRESS,
-        tokenProgram: PREMIUM_TOKEN_PROGRAM,
-    });
-
-    // Ensure the treasury USDC ATA exists (idempotent) — it's the plan destination.
-    const ataIx = getCreateAssociatedTokenIdempotentInstruction({
-        payer: signer,
-        ata: treasuryAta,
-        owner: merchant,
-        mint: USDC_MINT_ADDRESS,
-        tokenProgram: PREMIUM_TOKEN_PROGRAM,
-    });
-    await sendAsTreasury([ataIx]);
-    console.log(`✓ treasury USDC ATA ready: ${treasuryAta}`);
+    const merchant = getMerchantAddress(); // collector pubkey (plan owner)
 
     for (const key of SELF_SERVE_TIERS as TierKey[]) {
         for (const cycle of CYCLES) {
             const planId = planIdFor(key, cycle);
             const amount = priceBaseUnits(key, cycle);
             const periodHours = PERIOD_HOURS[cycle];
-            const [planPda] = await findPlanPda(
-                { owner: merchant, planId: BigInt(planId) },
-                { programAddress: SUBSCRIPTIONS_PROGRAM_ID },
-            );
-
             const label = `${key}/${cycle} (planId ${planId})`;
-            const existing = await fetchMaybePlan(rpc, planPda);
-            if (!existing.exists) {
-                const ix = await getCreatePlanOverlayInstructionAsync({
-                    programAddress: SUBSCRIPTIONS_PROGRAM_ID,
-                    owner: signer,
-                    mint: USDC_MINT_ADDRESS,
-                    tokenProgram: PREMIUM_TOKEN_PROGRAM,
-                    amount,
-                    periodHours: BigInt(periodHours),
-                    endTs: BigInt(0),
-                    planId: BigInt(planId),
-                    pullers: [merchant],
-                    // Destinations are OWNER WALLETS, not ATAs: at transfer the
-                    // program checks the receiver ATA's *owner* is whitelisted
-                    // (else UnauthorizedDestination / 0x1fa). Funds still land in
-                    // the treasury's USDC ATA (collector.ts receiverAta), whose
-                    // owner is `merchant`. Verified on devnet (devnet-smoke.ts).
-                    destinations: [merchant],
-                    metadataUri: `https://watchparty.xyz/premium#${key}-${cycle}`,
-                });
-                const sig = await sendAsTreasury([ix]);
-                console.log(`✓ created ${label} — ${sig}`);
-            } else {
-                console.log(`• ${label} already on-chain, syncing DB`);
-            }
 
-            const plan = await fetchMaybePlan(rpc, planPda);
-            const createdAtChain = plan.exists ? Number(plan.data.data.terms.createdAt) : null;
+            const { planPda, createdAtChain } = await createTreasuryPlan({
+                planId,
+                amountBaseUnits: amount,
+                periodHours,
+            });
+            console.log(`✓ ${label} → ${planPda}`);
 
             const [row] = await db
                 .select({ id: premiumPlans.id })
@@ -124,7 +73,7 @@ async function main() {
         }
     }
 
-    console.log(`\nDone. Provisioned ${SELF_SERVE_TIERS.length * CYCLES.length} plans for merchant ${merchant}.`);
+    console.log(`\nDone. Provisioned ${SELF_SERVE_TIERS.length * CYCLES.length} plans for collector ${merchant}.`);
     console.log("Tiers:", SELF_SERVE_TIERS.map((k) => TIERS[k].name).join(", "));
     process.exit(0);
 }
