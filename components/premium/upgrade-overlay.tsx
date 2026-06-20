@@ -258,12 +258,12 @@ function TierCard({
         <div
             onClick={onSelect}
             className={cn(
-                "relative p-6 text-left transition-all duration-300 flex flex-col justify-between min-h-[380px] rounded-[20px] w-full cursor-pointer select-none border",
+                "relative p-6 text-left transition-all duration-300 flex flex-col justify-between min-h-[380px] rounded-[20px] w-full cursor-pointer select-none",
                 selected
-                    ? "bg-[#16181c] border-[#1d9bf0] ring-1 ring-[#1d9bf0]/20 shadow-[0_0_24px_rgba(29,155,240,0.18)]"
+                    ? "bg-[#16181c]"
                     : isPremium
-                    ? "bg-[#16181c] border-[#1d9bf0]/60 shadow-[0_0_15px_rgba(29,155,240,0.08)] hover:border-[#1d9bf0]"
-                    : "bg-[#16181c] border-zinc-800/80 hover:border-zinc-700",
+                    ? "bg-[#16181c]"
+                    : "bg-[#16181c]",
             )}
         >
             <div className="flex flex-col h-full w-full justify-between">
