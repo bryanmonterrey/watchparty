@@ -46,39 +46,37 @@ export function PostCardActions({
     handleBookmark,
 }: PostCardActionsProps) {
     return (
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-22">
-                <ActionButton
-                    icon={<BubbleIcon className="w-[18px] h-[18px]"/>}
-                    count={comments}
-                    hoverColor="hover:text-twitter2"
-                    onClick={handleComment}
-                    active={false}
-                    activeColor="text-twitter2"
-                />
-                <RepostMenu
-                    open={showRepostMenu}
-                    onOpenChange={setShowRepostMenu}
-                    reposted={reposted}
-                    repostCount={repostCount}
-                    onRepostClick={handleRepost}
-                    onDoRepost={doRepost}
-                    onDoQuote={doQuote}
-                />
-                <ActionButton
-                    icon={liked ? <HeartFilledIcon className="w-[18px] h-[18px]" /> : <HeartIcon className="w-[18px] h-[18px]" />}
-                    count={likeCount}
-                    hoverColor="hover:text-red1"
-                    onClick={handleLike}
-                    active={liked}
-                    activeColor="text-red1"
-                />
-                <ActionButton
-                    icon={<BarsIcon className="w-[18px] h-[18px]"/>}
-                    count={views}
-                    hoverColor="hover:text-twitter2"
-                />
-            </div>
+        <div className="flex items-center justify-between -ml-2 -mr-1.5 max-w-[425px]">
+            <ActionButton
+                icon={<BubbleIcon className="w-[18px] h-[18px]"/>}
+                count={comments}
+                hoverColor="hover:text-twitter2"
+                onClick={handleComment}
+                active={false}
+                activeColor="text-twitter2"
+            />
+            <RepostMenu
+                open={showRepostMenu}
+                onOpenChange={setShowRepostMenu}
+                reposted={reposted}
+                repostCount={repostCount}
+                onRepostClick={handleRepost}
+                onDoRepost={doRepost}
+                onDoQuote={doQuote}
+            />
+            <ActionButton
+                icon={liked ? <HeartFilledIcon className="w-[18px] h-[18px]" /> : <HeartIcon className="w-[18px] h-[18px]" />}
+                count={likeCount}
+                hoverColor="hover:text-red1"
+                onClick={handleLike}
+                active={liked}
+                activeColor="text-red1"
+            />
+            <ActionButton
+                icon={<BarsIcon className="w-[18px] h-[18px]"/>}
+                count={views}
+                hoverColor="hover:text-twitter2"
+            />
 
             <div className="flex items-center gap-0.5">
                 <button
