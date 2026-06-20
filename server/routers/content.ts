@@ -1040,6 +1040,8 @@ export const contentRouter = router({
                         username: user.username,
                         avatar_url: user.avatar_url,
                         verifiedTier: user.verifiedTier,
+                        affiliateUsername: user.affiliateUsername,
+                        affiliateIconUrl: user.affiliateIconUrl,
                     },
                     origUserVerifiedTier: origUser.verifiedTier,
                 })
@@ -1156,6 +1158,8 @@ export const contentRouter = router({
                         username: user.username,
                         avatar_url: user.avatar_url,
                         verifiedTier: user.verifiedTier,
+                        affiliateUsername: user.affiliateUsername,
+                        affiliateIconUrl: user.affiliateIconUrl,
                         wallet_address: user.wallet_address,
                         followerCount: sql<number>`(SELECT COUNT(*) FROM follows WHERE follows."followingId" = ${user.id})`,
                     },
@@ -1192,6 +1196,8 @@ export const contentRouter = router({
                         username: user.username,
                         avatar_url: user.avatar_url,
                         verifiedTier: user.verifiedTier,
+                        affiliateUsername: user.affiliateUsername,
+                        affiliateIconUrl: user.affiliateIconUrl,
                     },
                 })
                 .from(posts)
@@ -1239,6 +1245,8 @@ export const contentRouter = router({
                         username: user.username,
                         avatar_url: user.avatar_url,
                         verifiedTier: user.verifiedTier,
+                        affiliateUsername: user.affiliateUsername,
+                        affiliateIconUrl: user.affiliateIconUrl,
                     },
                 })
                 .from(posts)
@@ -1280,6 +1288,8 @@ export const contentRouter = router({
                         username: user.username,
                         avatar_url: user.avatar_url,
                         verifiedTier: user.verifiedTier,
+                        affiliateUsername: user.affiliateUsername,
+                        affiliateIconUrl: user.affiliateIconUrl,
                     },
                 })
                 .from(posts)
