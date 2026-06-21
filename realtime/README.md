@@ -52,7 +52,22 @@ bun run deploy      # wrangler deploy
 
 ## CI
 
-Deploy is a second step alongside the main Cloudflare deploy (see
-`.github/workflows`). It needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`
-(already present) and `REALTIME_SECRET` set as a worker secret. Not yet wired
-into the workflow — add `wrangler deploy --config realtime/wrangler.jsonc`.
+Wired as the `deploy-realtime` job in `.github/workflows/deploy.yml` — runs in
+parallel with the OpenNext worker on every push to `main`. It installs deps,
+deploys via `wrangler deploy --config realtime/wrangler.jsonc`, then pushes
+`REALTIME_SECRET` (extracted from `DOTENV_PRODUCTION` by
+`scripts/cf/gen-realtime-secrets.mjs`) with `wrangler secret bulk`. Reuses the
+existing `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets.
+
+**Before the first deploy**, add to the `DOTENV_PRODUCTION` GitHub secret:
+
+```
+REALTIME_SECRET=<openssl rand -hex 32>
+NEXT_PUBLIC_REALTIME_HOST=watchparty-realtime.<your-account-subdomain>.workers.dev
+```
+
+`NEXT_PUBLIC_REALTIME_HOST` is baked into the Next build, so it must be set
+*before* deploying the app — but the host is predictable (same account
+subdomain as the main `watchparty` worker, with the `watchparty-realtime`
+name), so you can set it up front. Both values must be present or the migrated
+realtime surfaces stay dark.

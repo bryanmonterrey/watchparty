@@ -60,3 +60,39 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # The realtime layer is a separate Worker (Durable Objects via partyserver).
+  # Independent of the Next/OpenNext worker, so it deploys in parallel.
+  deploy-realtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # partyserver/partysocket/jose resolve from the root node_modules that
+      # wrangler bundles, so install at the repo root.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Restore .env
+        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        env:
+          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+
+      - name: Deploy realtime worker
+        run: bunx wrangler deploy --config realtime/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Generate realtime secrets bundle
+        run: node scripts/cf/gen-realtime-secrets.mjs
+
+      - name: Push REALTIME_SECRET to the realtime worker
+        run: bunx wrangler secret bulk realtime/.cf-secrets.json --config realtime/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
