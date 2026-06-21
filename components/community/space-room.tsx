@@ -1,13 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { ArrowLeft, Mic, MicOff, Hand, Radio, Loader2, PhoneOff } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useRealtimeRoom } from "@/hooks/use-realtime-room";
 import { rooms, type ServerEvent } from "@/lib/realtime/protocol";
+import { useSpaceMedia } from "./space-media-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
+// Heavy WebRTC SDK — load only when a Space is open (speed rule). Inline options
+// literal required by Turbopack.
+const SpaceMediaProvider = dynamic(
+    () => import("./space-media").then((m) => m.SpaceMediaProvider),
+    { ssr: false },
+);
 
 type Props = {
     spaceId: string;
@@ -48,6 +57,7 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
     const listeners = participants.filter((p) => p.role === "LISTENER");
 
     return (
+        <SpaceMediaProvider spaceId={spaceId}>
         <div className="flex flex-col h-full bg-black">
             {/* top bar */}
             <div className="h-14 shrink-0 px-4 flex items-center gap-3 border-b border-flexwhite/15">
@@ -66,13 +76,8 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
 
             <ScrollArea className="flex-1">
                 <div className="p-6 max-w-3xl mx-auto">
-                    {/* audio integration banner */}
-                    <div className="rounded-2xl border border-twitter/20 bg-twitter/5 px-4 py-3 mb-8 flex items-center gap-3">
-                        <Radio className="size-5 text-twitter shrink-0" />
-                        <p className="text-xs text-flexwhite/60">
-                            Room & roster are live. Voice audio transport plugs in here next.
-                        </p>
-                    </div>
+                    {/* live audio status */}
+                    <SpaceAudioBanner />
 
                     {/* speakers */}
                     <h3 className="text-[11px] font-semibold uppercase tracking-wider text-flexwhite/40 mb-4 px-1">
@@ -101,13 +106,7 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
 
             {/* control bar */}
             <div className="shrink-0 border-t border-flexwhite/15 px-4 py-3 flex items-center justify-center gap-3">
-                <button
-                    disabled
-                    title="Mic (audio coming soon)"
-                    className="h-11 w-11 flex items-center justify-center rounded-full bg-white/5 text-flexwhite/40 cursor-not-allowed"
-                >
-                    {isHost ? <Mic className="size-5" /> : <MicOff className="size-5" />}
-                </button>
+                <SpaceMicButton />
                 {!isHost && (
                     <button
                         disabled
@@ -136,6 +135,58 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
                 )}
             </div>
         </div>
+        </SpaceMediaProvider>
+    );
+}
+
+/** Live audio connection status banner. Inside SpaceMediaProvider. */
+function SpaceAudioBanner() {
+    const { status } = useSpaceMedia();
+    const label =
+        status === "connected"
+            ? "Live audio connected."
+            : status === "connecting"
+            ? "Connecting to live audio…"
+            : status === "disabled"
+            ? "Room & roster are live. Voice audio isn't configured on this deployment yet."
+            : "Couldn't connect to live audio — roster + controls still work.";
+    return (
+        <div className="rounded-2xl border border-twitter/20 bg-twitter/5 px-4 py-3 mb-8 flex items-center gap-3">
+            <Radio className={cn("size-5 shrink-0", status === "connected" ? "text-twitter" : "text-flexwhite/50")} />
+            <p className="text-xs text-flexwhite/60">{label}</p>
+        </div>
+    );
+}
+
+/** Mic toggle wired to live WebRTC audio (RealtimeKit). Inside SpaceMediaProvider. */
+function SpaceMicButton() {
+    const { status, micEnabled, canSpeak, toggleMic } = useSpaceMedia();
+    const ready = status === "connected";
+    const usable = canSpeak && ready;
+    return (
+        <button
+            onClick={toggleMic}
+            disabled={!usable}
+            title={
+                !canSpeak
+                    ? "Listeners can't speak — ask the host to invite you up"
+                    : !ready
+                    ? "Connecting audio…"
+                    : micEnabled
+                    ? "Mute"
+                    : "Unmute"
+            }
+            className={cn(
+                "h-11 w-11 flex items-center justify-center rounded-full transition-colors",
+                usable
+                    ? micEnabled
+                        ? "bg-twitter text-white hover:opacity-90"
+                        : "bg-white/10 text-flexwhite hover:bg-white/15"
+                    : "bg-white/5 text-flexwhite/40 cursor-not-allowed",
+            )}
+        >
+            {micEnabled ? <Mic className="size-5" /> : <MicOff className="size-5" />}
+        </button>
     );
 }
 

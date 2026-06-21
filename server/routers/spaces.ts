@@ -6,10 +6,16 @@ import {
     communitySpaceParticipants,
 } from "@/db/schema/community/spaces";
 import { user } from "@/db/schema";
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc, count, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { rooms } from "@/lib/realtime/protocol";
+import {
+    isMediaEnabled,
+    createMeeting,
+    addParticipant,
+    REALTIMEKIT_PRESETS,
+} from "@/lib/realtime/media/realtimekit";
 
 /** Tell everyone in a space its roster/status changed → they refetch. */
 function notifySpaceChange(spaceId: string) {
@@ -216,5 +222,73 @@ export const spacesRouter = router({
                 );
             await notifySpaceChange(input.spaceId);
             return { success: true };
+        }),
+
+    /**
+     * Mint a Cloudflare RealtimeKit auth token so the caller can join this
+     * space's WebRTC audio. Preset (publish vs receive-only) is derived from the
+     * caller's role. The meeting is created lazily on first join and cached on
+     * the space row. Returns `{ enabled: false }` when media isn't provisioned.
+     */
+    getMediaToken: protectedProcedure
+        .input(z.object({ spaceId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            if (!isMediaEnabled()) return { enabled: false as const };
+
+            const [space] = await db
+                .select({
+                    title: communitySpaces.title,
+                    status: communitySpaces.status,
+                    meetingId: communitySpaces.mediaMeetingId,
+                })
+                .from(communitySpaces)
+                .where(eq(communitySpaces.id, input.spaceId))
+                .limit(1);
+            if (!space) throw new TRPCError({ code: "NOT_FOUND", message: "Space not found" });
+            if (space.status !== "LIVE")
+                throw new TRPCError({ code: "BAD_REQUEST", message: "This space has ended" });
+
+            const [participant] = await db
+                .select({ role: communitySpaceParticipants.role })
+                .from(communitySpaceParticipants)
+                .where(
+                    and(
+                        eq(communitySpaceParticipants.spaceId, input.spaceId),
+                        eq(communitySpaceParticipants.userId, ctx.user.id)
+                    )
+                )
+                .limit(1);
+            if (!participant)
+                throw new TRPCError({ code: "FORBIDDEN", message: "Join the space before connecting audio" });
+
+            // Lazily create the meeting; guard against a concurrent first-join race.
+            let meetingId = space.meetingId;
+            if (!meetingId) {
+                const created = await createMeeting(space.title);
+                const [won] = await db
+                    .update(communitySpaces)
+                    .set({ mediaMeetingId: created })
+                    .where(and(eq(communitySpaces.id, input.spaceId), isNull(communitySpaces.mediaMeetingId)))
+                    .returning({ id: communitySpaces.mediaMeetingId });
+                if (won?.id) {
+                    meetingId = won.id;
+                } else {
+                    const [fresh] = await db
+                        .select({ id: communitySpaces.mediaMeetingId })
+                        .from(communitySpaces)
+                        .where(eq(communitySpaces.id, input.spaceId))
+                        .limit(1);
+                    meetingId = fresh?.id ?? created;
+                }
+            }
+
+            const canSpeak = participant.role === "HOST" || participant.role === "SPEAKER";
+            const authToken = await addParticipant(meetingId, {
+                name: ctx.user.name ?? "Guest",
+                presetName: canSpeak ? REALTIMEKIT_PRESETS.speaker : REALTIMEKIT_PRESETS.listener,
+                customParticipantId: ctx.user.id,
+            });
+
+            return { enabled: true as const, authToken, canSpeak };
         }),
 });

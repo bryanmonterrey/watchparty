@@ -20,6 +20,8 @@
     "@better-auth/expo": "1.6.20",
     "@better-auth/infra": "^0.2.14",
     "@better-auth/passkey": "^1.6.20",
+    "@cloudflare/realtimekit": "^2.0.0",
+    "@cloudflare/realtimekit-react": "^2.0.0",
     "@coral-xyz/anchor": "^0.32.1",
     "@deepgram/sdk": "^5.4.0",
     "@emoji-mart/data": "^1.2.1",

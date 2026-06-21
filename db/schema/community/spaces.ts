@@ -17,6 +17,9 @@ export const communitySpaces = pgTable('community_spaces', {
         .notNull(),
     // Optional: a space can belong to a server, or be standalone.
     serverId: uuid('server_id').references(() => communityServers.id, { onDelete: 'cascade' }),
+    // Cloudflare RealtimeKit meeting id for this space's WebRTC audio (lazily
+    // created on first join). Nullable — null until media is provisioned/used.
+    mediaMeetingId: text('media_meeting_id'),
     startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
     endedAt: timestamp('ended_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
