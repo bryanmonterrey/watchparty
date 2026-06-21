@@ -14,6 +14,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { trpc } from '@/lib/trpc/client';
 import { logger } from '@/lib/logger';
+import { storeFrostClientShare } from '@/lib/frost/frost-storage';
 
 const cryptoManager = new CryptoManager();
 const keyStorage = new KeyStorage();
@@ -64,6 +65,10 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
     const initGuard = useRef(false);
 
     const uploadKeyPairMutation = trpc.encryption.uploadKeyPair.useMutation();
+    // Restores/ensures the embedded (MPC) wallet's FROST client share. Used to
+    // rehydrate the on-device share when an existing wallet isn't materialized on
+    // this device yet, so messaging doesn't wrongly prompt to generate a wallet.
+    const frostSetup = trpc.wallet.frostSetup.useMutation();
     const utils = trpc.useUtils();
 
     const initKeys = useCallback(async () => {
@@ -95,6 +100,26 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
             // Without either, gate on wallet setup rather than fall back to a
             // server-readable key.
             let wrapKey = await deriveMessagingWrapKey(userId);
+
+            // The account has an embedded (MPC) wallet but its FROST client share
+            // isn't on THIS device yet — created on another device, storage was
+            // cleared, or it's normally hydrated lazily by a wallet action that
+            // hasn't run here. Restore it from the server's encrypted backup and
+            // retry, instead of wrongly prompting the user to generate a wallet
+            // they already have. Gated on wallet_address so we never create a
+            // wallet for someone who genuinely has none.
+            if (!wrapKey && session?.user?.wallet_address) {
+                try {
+                    const setup = await frostSetup.mutateAsync();
+                    if (setup?.clientShare) {
+                        await storeFrostClientShare(userId, setup.clientShare, setup.publicInfo);
+                        wrapKey = await deriveMessagingWrapKey(userId);
+                    }
+                } catch (restoreErr) {
+                    logger.error('Failed to restore embedded wallet share for messaging', restoreErr as Error, { userId });
+                }
+            }
+
             if (!wrapKey) {
                 if (adapterPublicKey && signMessage) {
                     wrapKey = await deriveWrapKeyFromSignature(signMessage);
@@ -182,9 +207,9 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
         } finally {
             setIsInitializing(false);
         }
-        // utils + uploadKeyPairMutation are stable tRPC references.
+        // utils + uploadKeyPairMutation + frostSetup are stable tRPC references.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session?.user?.id, adapterPublicKey, signMessage, connecting]);
+    }, [session?.user?.id, session?.user?.wallet_address, adapterPublicKey, signMessage, connecting]);
 
     useEffect(() => {
         initKeys();
