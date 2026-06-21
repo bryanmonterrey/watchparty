@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthSession } from './use-auth-session';
-import { logger } from '@/lib/logger';
-import { getRealtimeClient, authenticateRealtimeClient } from '@/lib/supabase/realtime-client';
+import { createRoomSocket, isRealtimeEnabled } from '@/lib/realtime/client';
+import { parseServerEvent, rooms, type ClientMessage } from '@/lib/realtime/protocol';
+import type PartySocket from 'partysocket';
 
 export interface Message {
     id: string;
@@ -21,16 +21,7 @@ export interface Message {
     replyToId?: string | null;
 }
 
-interface PresenceState {
-    [userId: string]: {
-        online_at: string;
-        typing?: boolean;
-        user_id?: string;
-    }[];
-}
-
-interface UseSupabaseRealtimeReturn {
-    channel: RealtimeChannel | null;
+interface UseRealtimeReturn {
     isConnected: boolean;
     error: string | null;
     subscribeToConversation: (
@@ -40,270 +31,137 @@ interface UseSupabaseRealtimeReturn {
         onReadReceipt?: (payload: any) => void
     ) => void;
     unsubscribeFromConversation: () => void;
-    // Presence features
     onlineUsers: string[];
     typingUsers: string[];
     setTyping: (isTyping: boolean) => void;
 }
 
+const TYPING_TTL = 4000; // clear a peer's typing indicator if no signal within this window
+
 /**
- * Hook for Supabase Realtime subscriptions + Presence
- * Uses a singleton client to prevent multiple GoTrueClient conflicts
+ * DM realtime — PartyServer Durable Object transport (was Supabase Realtime).
+ *
+ * Same interface as before so `MessagesProvider` is unchanged:
+ *  - new messages, reaction changes, and read receipts arrive as DO events
+ *    whose payloads match the previous Supabase `postgres_changes` shapes
+ *    (server-published from the message router after each DB write).
+ *  - presence + typing run over the same per-conversation room.
+ *
+ * Edits/deletes were never delivered over realtime in the Supabase version;
+ * that scope is preserved.
  */
-export function useSupabaseRealtime(): UseSupabaseRealtimeReturn {
+export function useSupabaseRealtime(): UseRealtimeReturn {
     const { data: session } = useAuthSession();
-    const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+    const userId = session?.user?.id;
+
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const channelRef = useRef<RealtimeChannel | null>(null);
-    const isSubscribingRef = useRef(false);
-    const currentConversationRef = useRef<string | null>(null);
+    const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+    const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
-    // Presence state
-    const [presenceState, setPresenceState] = useState<PresenceState>({});
+    const socketRef = useRef<PartySocket | null>(null);
+    const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-    // Subscribe to a conversation's messages + presence
+    const clearTypingLater = useCallback((id: string) => {
+        const timers = typingTimers.current;
+        const existing = timers.get(id);
+        if (existing) clearTimeout(existing);
+        timers.set(
+            id,
+            setTimeout(() => {
+                setTypingUsers((prev) => prev.filter((u) => u !== id));
+                timers.delete(id);
+            }, TYPING_TTL)
+        );
+    }, []);
+
+    const teardown = useCallback(() => {
+        socketRef.current?.close();
+        socketRef.current = null;
+        typingTimers.current.forEach((t) => clearTimeout(t));
+        typingTimers.current.clear();
+        setIsConnected(false);
+        setOnlineUsers([]);
+        setTypingUsers([]);
+    }, []);
+
     const subscribeToConversation = useCallback(
-        async (
+        (
             conversationId: string,
             onMessage: (message: Message) => void,
             onReactionChange?: (payload: any) => void,
             onReadReceipt?: (payload: any) => void
         ) => {
-            if (!session?.user) {
+            if (!userId) {
                 setError('No session found');
                 return;
             }
+            if (!isRealtimeEnabled()) return; // realtime worker not configured
 
-            // Prevent concurrent subscriptions to the same conversation
-            if (isSubscribingRef.current && currentConversationRef.current === conversationId) {
-                return;
-            }
+            teardown();
 
-            isSubscribingRef.current = true;
-            currentConversationRef.current = conversationId;
+            const socket = createRoomSocket(rooms.dm(conversationId));
+            socketRef.current = socket;
 
-            const client = getRealtimeClient();
-
-            // Unsubscribe from previous channel if exists
-            if (channelRef.current) {
-                console.log('[Realtime] Removing previous channel');
-                await client.removeChannel(channelRef.current);
-                channelRef.current = null;
-            }
-
-            try {
-                await authenticateRealtimeClient();
-            } catch (err) {
-                console.error('[Realtime] Authentication failed:', err);
-                setError('Failed to authenticate realtime connection');
-                return;
-            }
-
-            console.log('[Realtime] Creating channel for conversation:', conversationId);
-
-            const newChannel = client.channel(`conversation:${conversationId}`, {
-                config: {
-                    presence: {
-                        key: session.user.id,
-                    },
-                },
+            socket.addEventListener('open', () => {
+                setIsConnected(true);
+                setError(null);
             });
+            socket.addEventListener('close', () => setIsConnected(false));
 
-            newChannel
-                // 1. Listen for new messages
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'messages',
-                        filter: `conversation_id=eq.${conversationId}`,
-                    },
-                    (payload) => {
-                        console.log('[Realtime] INSERT received:', payload.new.id);
+            socket.addEventListener('message', (ev: MessageEvent) => {
+                if (typeof ev.data !== 'string') return;
+                const event = parseServerEvent(ev.data);
+                if (!event) return;
 
-                        const newMessage: Message = {
-                            id: payload.new.id,
-                            conversationId: payload.new.conversation_id,
-                            senderId: payload.new.sender_id,
-                            content: payload.new.content,
-                            encryptionIv: payload.new.encryption_iv,
-                            messageType: payload.new.message_type,
-                            createdAt: payload.new.created_at,
-                            updatedAt: payload.new.updated_at || payload.new.created_at,
-                            deletedAt: payload.new.deleted_at || null,
-                            editedAt: payload.new.edited_at,
-                            attachmentUrl: payload.new.attachment_url,
-                            replyToId: payload.new.reply_to_id,
-                        };
-
-                        onMessage(newMessage);
-                    }
-                )
-                // 1.5 Listen for reactions
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'message_reactions',
-                    },
-                    (payload) => {
-                        if (onReactionChange) onReactionChange(payload);
-                    }
-                )
-                // 1.6 Listen for read receipts
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'message_read_receipts',
-                    },
-                    (payload) => {
-                        if (onReadReceipt) onReadReceipt(payload);
-                    }
-                )
-                // 2. Listen for presence sync
-                .on('presence', { event: 'sync' }, () => {
-                    const state = newChannel.presenceState();
-                    // Force new object reference to trigger React re-render
-                    setPresenceState({ ...state } as unknown as PresenceState);
-                })
-                .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-                    // console.log('[Presence] Join:', key, newPresences);
-                })
-                .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-                    // console.log('[Presence] Leave:', key, leftPresences);
-                })
-                .subscribe(async (status: string) => {
-                    console.log('[Realtime] Subscription Status:', status);
-
-                    if (status === 'SUBSCRIBED') {
-                        setIsConnected(true);
-                        setError(null);
-
-                        // Initial presence tracking
-                        await newChannel.track({
-                            online_at: new Date().toISOString(),
-                            typing: false,
-                        });
-
-                    } else if (status === 'CHANNEL_ERROR') {
-                        setIsConnected(false);
-                        setError('Realtime channel error');
-                    } else if (status === 'TIMED_OUT') {
-                        setIsConnected(false);
-                        setError('Realtime timed out');
-                    }
-                });
-
-            channelRef.current = newChannel;
-            setChannel(newChannel);
-            isSubscribingRef.current = false;
+                switch (event.t) {
+                    case 'message':
+                        onMessage(event.payload as Message);
+                        break;
+                    case 'presence':
+                        setOnlineUsers(event.users.map((u) => u.userId));
+                        break;
+                    case 'typing':
+                        if (event.userId === userId) break;
+                        setTypingUsers((prev) =>
+                            prev.includes(event.userId) ? prev : [...prev, event.userId]
+                        );
+                        clearTypingLater(event.userId);
+                        break;
+                    case 'stop-typing':
+                        setTypingUsers((prev) => prev.filter((u) => u !== event.userId));
+                        break;
+                    case 'event':
+                        if (event.name === 'reaction') onReactionChange?.(event.payload);
+                        else if (event.name === 'read-receipt') onReadReceipt?.(event.payload);
+                        break;
+                }
+            });
         },
-        [session?.user]
+        [userId, teardown, clearTypingLater]
     );
 
-    // Unsubscribe
     const unsubscribeFromConversation = useCallback(() => {
-        if (channelRef.current) {
-            const client = getRealtimeClient();
-            client.removeChannel(channelRef.current);
-            channelRef.current = null;
-            setChannel(null);
-            setIsConnected(false);
-            setPresenceState({});
-            currentConversationRef.current = null;
-        }
+        teardown();
+    }, [teardown]);
+
+    const setTyping = useCallback((isTyping: boolean) => {
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== 1) return;
+        const msg: ClientMessage = isTyping ? { t: 'typing' } : { t: 'stop-typing' };
+        socket.send(JSON.stringify(msg));
     }, []);
 
-    // Cleanup
-    useEffect(() => {
-        return () => {
-            if (channelRef.current) {
-                const client = getRealtimeClient();
-                client.removeChannel(channelRef.current);
-            }
-        };
-    }, []);
-
-    // Derived State
-    const onlineUsers = Object.keys(presenceState);
-
-    // Raw typing users
-    const rawTypingUsers = Object.entries(presenceState)
-        .filter(([key, presences]) => {
-            // Check if ANY presence for this key involves typing
-            const isTyping = presences.some((p: any) => p.typing === true);
-
-            // Try to find the REAL user ID from payload, fallback to key
-            const userId = presences[0]?.user_id || key;
-
-            if (userId === session?.user?.id) return false;
-            return isTyping;
-        })
-        .map(([key, presences]) => presences[0]?.user_id || key);
-
-    // Debounced typing users to prevent flickering (Fast On, Slow Off)
-    const [debouncedTypingUsers, setDebouncedTypingUsers] = useState<string[]>([]);
-    const typingTimeoutRef = useRef<any>(null);
-
-    // Use stringified key to safely compare content
-    const rawTypingEventsKey = JSON.stringify(rawTypingUsers);
-
-    useEffect(() => {
-        const hasNewTyping = rawTypingUsers.length > 0;
-        const currentHasTyping = debouncedTypingUsers.length > 0;
-
-        if (hasNewTyping) {
-            // Fast On: If anyone is typing, show immediately
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            setDebouncedTypingUsers(rawTypingUsers);
-        } else if (currentHasTyping && !hasNewTyping) {
-            // Slow Off: If everyone stopped, wait a bit before clearing to prevent flicker
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            typingTimeoutRef.current = setTimeout(() => {
-                setDebouncedTypingUsers([]);
-            }, 500); // 500ms grace period
-        }
-
-        return () => {
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rawTypingEventsKey]);
-
-    // Track last sent state to handle transitions vs keep-alives
-    const lastTypingStateRef = useRef<boolean>(false);
-    const lastTypingTimestampRef = useRef<number>(0);
-
-    // Set Typing Helper (Simplified)
-    const setTyping = useCallback(async (isTyping: boolean) => {
-        if (!channelRef.current || !isConnected) return;
-
-        // No throttling, no checks. Just send it.
-        // The UI handles debounce.
-        try {
-            await channelRef.current.track({
-                user_id: session?.user?.id,
-                online_at: new Date().toISOString(),
-                typing: isTyping,
-            });
-        } catch (err) {
-            console.error('[TypingDebug] Error:', err);
-        }
-    }, [isConnected, session?.user?.id]);
+    // Cleanup on unmount
+    useEffect(() => () => teardown(), [teardown]);
 
     return {
-        channel,
         isConnected,
         error,
         subscribeToConversation,
         unsubscribeFromConversation,
         onlineUsers,
-        typingUsers: debouncedTypingUsers, // Polished, debounced feedback
+        typingUsers,
         setTyping,
     };
 }

@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { messages, conversationParticipants, conversations, messageReactions, messageReadReceipts } from "@/db/schema/messaging";
 import { eq, and, desc, inArray, getTableColumns, aliasedTable } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { publishToRoom } from "@/lib/realtime/publish";
+import { rooms } from "@/lib/realtime/protocol";
 
 export const messageRouter = router({
     /**
@@ -182,6 +184,12 @@ export const messageRouter = router({
                 })
                 .where(eq(conversations.id, input.conversationId));
 
+            // Fan out to connected clients (ciphertext relay — decrypted client-side).
+            await publishToRoom(rooms.dm(input.conversationId), {
+                t: "message",
+                payload: newMessage,
+            });
+
             return {
                 success: true,
                 message: newMessage,
@@ -291,10 +299,28 @@ export const messageRouter = router({
             }));
 
             // Upsert read receipts (ignore if already exists)
-            await db
+            const inserted = await db
                 .insert(messageReadReceipts)
                 .values(values)
-                .onConflictDoNothing();
+                .onConflictDoNothing()
+                .returning();
+
+            // Fan out only the newly-created receipts.
+            for (const r of inserted) {
+                await publishToRoom(rooms.dm(input.conversationId), {
+                    t: "event",
+                    name: "read-receipt",
+                    payload: {
+                        eventType: "INSERT",
+                        new: {
+                            id: r.id,
+                            message_id: r.messageId,
+                            user_id: r.userId,
+                            read_at: r.readAt,
+                        },
+                    },
+                });
+            }
 
             return { success: true };
         }),
@@ -337,20 +363,31 @@ export const messageRouter = router({
                 )
                 .limit(1);
 
+            const room = rooms.dm(message[0].conversationId);
+
             if (existingReaction.length > 0) {
                 // Remove reaction
                 await db
                     .delete(messageReactions)
                     .where(eq(messageReactions.id, existingReaction[0].id));
 
+                await publishToRoom(room, {
+                    t: "event",
+                    name: "reaction",
+                    payload: { eventType: "DELETE", old: { id: existingReaction[0].id } },
+                });
+
                 return { success: true, action: "removed" };
             } else {
                 // Add reaction
-                await db.insert(messageReactions).values({
-                    messageId: input.messageId,
-                    userId: ctx.user.id,
-                    emoji: input.emoji,
-                });
+                const [reaction] = await db
+                    .insert(messageReactions)
+                    .values({
+                        messageId: input.messageId,
+                        userId: ctx.user.id,
+                        emoji: input.emoji,
+                    })
+                    .returning();
 
                 // Update conversation last activity
                 // We need the conversationId. The message has it.
@@ -361,6 +398,20 @@ export const messageRouter = router({
                         lastReactionSenderId: ctx.user.id
                     })
                     .where(eq(conversations.id, message[0].conversationId));
+
+                await publishToRoom(room, {
+                    t: "event",
+                    name: "reaction",
+                    payload: {
+                        eventType: "INSERT",
+                        new: {
+                            id: reaction.id,
+                            message_id: reaction.messageId,
+                            user_id: reaction.userId,
+                            emoji: reaction.emoji,
+                        },
+                    },
+                });
 
                 return { success: true, action: "added" };
             }
