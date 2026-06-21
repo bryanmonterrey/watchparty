@@ -21,6 +21,21 @@ browsers, join audio, confirm SFU connect + mic publish + speaking rings. Ping t
 the merge of .env + .env.local + .env.production.local. Do NOT `gh secret set
 DOTENV_PRODUCTION < .env.production` — that file lacks ALERT_WEBHOOK_URL.)
 
+## 🐞 Spaces — known issues (investigate)
+- **`__name is not defined` on the spaces route (prod only).** Console throws
+  `Uncaught ReferenceError: __name is not defined at spaces:10`. NOT in the local
+  Turbopack build (`.next` has zero `__name`) → injected by the OpenNext/esbuild
+  worker bundle into a server-rendered inline script. Appears non-fatal (page
+  hydrates, audio SDK runs), but should be root-caused. Likely an esbuild
+  keep-names helper getting separated from its usage in the OpenNext build.
+- **Realtime roster-change WS not reaching browsers.** Server publish verified
+  working (POST → 200, wrong secret → 403, host baked into client, token route
+  exists), but the live event didn't refresh either client. Worked around with a
+  5s poll + actor-side refetch (commit 58a4540). Still verify the client WS
+  actually connects (check `/api/realtime/token` + DO onConnect token verify in a
+  browser) so cross-user updates are instant, not 5s-polled. Affects all realtime
+  surfaces (channels/DMs), not just spaces.
+
 ## 🔜 Loose ends (small)
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
