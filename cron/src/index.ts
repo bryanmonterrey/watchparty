@@ -1,0 +1,34 @@
+// Cloudflare Cron Triggers worker for the premium/treasury automation.
+//
+// The actual logic lives in the Next/OpenNext app's guarded routes
+// (/api/cron/premium-collect renews due subscriptions; /api/cron/treasury-sweep
+// moves profit to the cold wallet). This worker just calls them on schedule with
+// the shared CRON_SECRET. Kept separate from the OpenNext worker because that
+// worker has no scheduled() handler.
+//
+// Schedules (wrangler.jsonc): collect "0 * * * *" (hourly), sweep "*/30 * * * *".
+
+interface Env {
+    CRON_SECRET: string;
+    TARGET_BASE_URL: string;
+}
+
+async function call(env: Env, path: string): Promise<void> {
+    const res = await fetch(`${env.TARGET_BASE_URL}${path}`, {
+        headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
+    });
+    const body = await res.text();
+    console.log(`${path} -> ${res.status} ${body.slice(0, 300)}`);
+    if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+}
+
+export default {
+    async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+        // At :00 both crons fire as separate events — dispatch by which one triggered.
+        if (event.cron === "*/30 * * * *") {
+            ctx.waitUntil(call(env, "/api/cron/treasury-sweep"));
+        } else {
+            ctx.waitUntil(call(env, "/api/cron/premium-collect"));
+        }
+    },
+} satisfies ExportedHandler<Env>;

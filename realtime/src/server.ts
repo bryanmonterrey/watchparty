@@ -144,8 +144,15 @@ export class Chat extends Server<Env> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     return (
-      (await routePartykitRequest(request, env as never)) ??
-      new Response("Not found", { status: 404 })
+      (await routePartykitRequest(request, env as never, {
+        // Authenticate at the HTTP/upgrade layer so invalid tokens are rejected
+        // with a clean 401 and never open a WebSocket (no dangling sockets).
+        onBeforeConnect: async (req: Request) => {
+          const token = new URL(req.url).searchParams.get("token");
+          const claims = token ? await verifyRealtimeToken(token, env.REALTIME_SECRET) : null;
+          if (!claims) return new Response("unauthorized", { status: 401 });
+        },
+      })) ?? new Response("Not found", { status: 404 })
     );
   },
 };

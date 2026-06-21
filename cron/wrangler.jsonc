@@ -1,0 +1,14 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "watchparty-cron",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-15",
+  "compatibility_flags": ["nodejs_compat"],
+  // Drives the premium/treasury crons by calling the app's guarded endpoints.
+  // Collect hourly; sweep every 30 min. (Top-of-hour fires both; dispatched in code.)
+  "triggers": { "crons": ["0 * * * *", "*/30 * * * *"] },
+  "vars": { "TARGET_BASE_URL": "https://watchparty.xyz" },
+  "observability": { "enabled": true }
+  // CRON_SECRET is a secret and MUST equal the app's CRON_SECRET. Set out-of-band:
+  //   cd cron && wrangler secret put CRON_SECRET
+}
