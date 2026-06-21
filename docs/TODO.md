@@ -10,16 +10,16 @@ Consolidated state across sessions so work can resume in a fresh chat. Last upda
 - **Legacy custodial wallets** migrated to Swig-only model (6 empty accounts reset; `db/legacy-wallet-migration.sql`, backup in `.treasury-keys/`).
 - **RealtimeKit (Cloudflare Realtime) for Spaces audio** provisioned (app `f6c3e642-3c5b-40b3-9afc-664cea0f4b1b`, both presets); server token flow proven against live API; DB col `community_spaces.media_meeting_id` applied; env in place.
 
-## ▶️ DO NEXT — deploy Spaces audio (1 command)
-`DOTENV_PRODUCTION` GitHub secret was just refreshed (2026-06-21) from the FULL merge
-(.env + .env.local + .env.production.local) and verified to contain CLOUDFLARE_REALTIME_*,
-ALERT_WEBHOOK_URL, TREASURY_*, and prod URLs. So **do NOT** run `gh secret set DOTENV_PRODUCTION < .env.production`
-(that file is missing ALERT_WEBHOOK_URL and would drop treasury alerts). Just deploy:
-```
-gh workflow run "Deploy to Cloudflare Workers"
-```
-Then verify `getMediaToken` returns a token (not `{enabled:false}`) and `isMediaEnabled()` is true in prod.
-Then: **two-browser/mic test** of a Space (join SFU + speaking rings) — the only thing that can't be automated.
+## ▶️ Spaces audio — DEPLOYED 2026-06-21 ✅ (server side); needs live mic test
+Deployed (run 27908554134, all 3 workers green). Verified on the live `watchparty`
+worker: CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_REALTIME_APP_ID + CLOUDFLARE_REALTIME_API_TOKEN
+all present → `isMediaEnabled()` returns true in prod → `getMediaToken` mints real tokens.
+**Remaining (manual, can't automate): two-browser/mic test** — open a LIVE Space in two
+browsers, join audio, confirm SFU connect + mic publish + speaking rings. Ping to debug.
+
+(Note for future deploys: `DOTENV_PRODUCTION` secret is the source of truth, built from
+the merge of .env + .env.local + .env.production.local. Do NOT `gh secret set
+DOTENV_PRODUCTION < .env.production` — that file lacks ALERT_WEBHOOK_URL.)
 
 ## 🔜 Loose ends (small)
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
