@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -30,14 +30,26 @@ export function UpgradeOverlay() {
     const [selected, setSelected] = useState<TierKey | null>(null);
     const [contactOpen, setContactOpen] = useState(false);
 
+    // The default self-serve tier to preselect for a group: the highlighted one,
+    // else the first self-serve tier — so the Subscribe button is active on open
+    // (and after switching views) instead of sitting disabled until a click.
+    const defaultTierFor = useCallback(
+        (group: "individual" | "business"): TierKey | null => {
+            const inView = (data?.tiers ?? []).filter((t) => t.group === group && t.selfServe);
+            return (inView.find((t) => t.highlighted) ?? inView[0])?.key ?? null;
+        },
+        [data],
+    );
+
     // Land on the right view / preselection when opened.
     useEffect(() => {
         if (!open) return;
         const group = initialTier ? data?.tiers.find((t) => t.key === initialTier)?.group : undefined;
-        setView(group === "business" ? "business" : "individual");
-        setSelected(initialTier ?? null);
+        const startView = group === "business" ? "business" : "individual";
+        setView(startView);
+        setSelected(initialTier ?? defaultTierFor(startView));
         setContactOpen(false);
-    }, [open, initialTier, data]);
+    }, [open, initialTier, data, defaultTierFor]);
 
     // Close on Escape + lock body scroll while the full-page overlay is open
     useEffect(() => {
@@ -132,11 +144,11 @@ export function UpgradeOverlay() {
                             </div>
 
                             {view === "individual" && (
-                                <BusinessBanner onExplore={() => { setView("business"); setSelected(null); }} />
+                                <BusinessBanner onExplore={() => { setView("business"); setSelected(defaultTierFor("business")); }} />
                             )}
                             {view === "business" && (
                                 <button
-                                    onClick={() => { setView("individual"); setSelected(null); }}
+                                    onClick={() => { setView("individual"); setSelected(defaultTierFor("individual")); }}
                                     className="mt-2 flex flex-row items-center gap-2 mx-auto block text-sm font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
                                 >
                                     <ArrowLeftIcon className="size-4" /> Back to individual plans
