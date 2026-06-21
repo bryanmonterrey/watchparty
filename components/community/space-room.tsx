@@ -26,12 +26,21 @@ type Props = {
 export function SpaceRoom({ spaceId, onLeave }: Props) {
     const { data: session } = useAuthSession();
     const utils = trpc.useUtils();
-    const { data, isLoading } = trpc.spaces.get.useQuery({ spaceId });
+    // Realtime roster-change is the fast path, but never rely on it alone: poll as
+    // a safety net so promotions/raised hands sync within a few seconds even if a
+    // client's WS event is missed.
+    const { data, isLoading } = trpc.spaces.get.useQuery(
+        { spaceId },
+        { refetchInterval: 5000, refetchOnWindowFocus: true },
+    );
 
+    // Refetch immediately after my own action so the actor sees instant feedback
+    // (don't wait for the round-trip realtime event).
+    const refetchRoster = () => utils.spaces.get.invalidate({ spaceId });
     const leave = trpc.spaces.leave.useMutation({ onSettled: onLeave });
     const end = trpc.spaces.end.useMutation({ onSettled: onLeave });
-    const setRole = trpc.spaces.setRole.useMutation();
-    const requestToSpeak = trpc.spaces.requestToSpeak.useMutation();
+    const setRole = trpc.spaces.setRole.useMutation({ onSuccess: refetchRoster });
+    const requestToSpeak = trpc.spaces.requestToSpeak.useMutation({ onSuccess: refetchRoster });
 
     // Live roster: refetch when the space router publishes a roster/status change.
     useRealtimeRoom(spaceId ? rooms.space(spaceId) : null, {
