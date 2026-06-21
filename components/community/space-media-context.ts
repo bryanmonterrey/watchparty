@@ -16,13 +16,18 @@ export type SpaceMediaState = {
   /** Whether the caller's role (HOST/SPEAKER) is allowed to publish audio. */
   canSpeak: boolean;
   toggleMic: () => void;
+  /** userIds of participants currently active + unmuted (drives speaking rings). */
+  speakingUserIds: Set<string>;
 };
+
+const EMPTY = new Set<string>();
 
 const DEFAULT: SpaceMediaState = {
   status: "connecting",
   micEnabled: false,
   canSpeak: false,
   toggleMic: () => {},
+  speakingUserIds: EMPTY,
 };
 
 export const SpaceMediaContext = createContext<SpaceMediaState>(DEFAULT);

@@ -52,12 +52,16 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
     const { space, participants } = data;
     const isHost = space.hostId === session?.user?.id;
     const ended = space.status === "ENDED";
+    // Keying the media provider by the caller's role makes a host promotion
+    // (LISTENER → SPEAKER, delivered via DO roster-change) remount it with a
+    // fresh speaker-preset token — i.e. go live without a manual refresh.
+    const myRole = participants.find((p) => p.userId === session?.user?.id)?.role ?? "LISTENER";
 
     const speakers = participants.filter((p) => p.role === "HOST" || p.role === "SPEAKER");
     const listeners = participants.filter((p) => p.role === "LISTENER");
 
     return (
-        <SpaceMediaProvider spaceId={spaceId}>
+        <SpaceMediaProvider key={myRole} spaceId={spaceId}>
         <div className="flex flex-col h-full bg-black">
             {/* top bar */}
             <div className="h-14 shrink-0 px-4 flex items-center gap-3 border-b border-flexwhite/15">
@@ -85,7 +89,7 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
                     </h3>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-5 mb-10">
                         {speakers.map((p) => (
-                            <Participant key={p.id} p={p} speaking />
+                            <Participant key={p.id} p={p} />
                         ))}
                     </div>
 
@@ -192,11 +196,11 @@ function SpaceMicButton() {
 
 function Participant({
     p,
-    speaking,
 }: {
     p: { userId: string; role: string; name: string | null; username: string | null; avatar_url: string | null };
-    speaking?: boolean;
 }) {
+    const { speakingUserIds } = useSpaceMedia();
+    const speaking = speakingUserIds.has(p.userId);
     return (
         <div className="flex flex-col items-center gap-2 text-center">
             <div className="relative">
