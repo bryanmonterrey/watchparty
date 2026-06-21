@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useRealtimeKitClient,
   RealtimeKitProvider,
   useRealtimeKitSelector,
 } from "@cloudflare/realtimekit-react";
 import type RealtimeKitClient from "@cloudflare/realtimekit";
+import type { RTKParticipant } from "@cloudflare/realtimekit";
 import { trpc } from "@/lib/trpc/client";
 import { SpaceMediaContext, type SpaceMediaStatus } from "./space-media-context";
 
@@ -84,11 +85,55 @@ export function SpaceMediaProvider({
 
   return (
     <RealtimeKitProvider value={meeting}>
+      {/* Plays remote participants' audio — without this, everyone connects but
+          hears nothing (the SDK does not auto-attach remote tracks). */}
+      <ParticipantsAudio meeting={meeting} />
       <MediaState meeting={meeting} status={status} canSpeak={canSpeak}>
         {children}
       </MediaState>
     </RealtimeKitProvider>
   );
+}
+
+/** Renders a hidden <audio> per joined participant and attaches their track. */
+function ParticipantsAudio({ meeting }: { meeting: RealtimeKitClient }) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const joined = meeting.participants.joined;
+    const refresh = () => force((n) => n + 1);
+    joined.on("participantJoined", refresh);
+    joined.on("participantLeft", refresh);
+    joined.on("audioUpdate", refresh);
+    return () => {
+      joined.off("participantJoined", refresh);
+      joined.off("participantLeft", refresh);
+      joined.off("audioUpdate", refresh);
+    };
+  }, [meeting]);
+
+  const participants = [...meeting.participants.joined.values()];
+  return (
+    <>
+      {participants.map((p) => (
+        <ParticipantAudio key={p.id} participant={p} />
+      ))}
+    </>
+  );
+}
+
+function ParticipantAudio({ participant }: { participant: RTKParticipant }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (participant.audioEnabled && participant.audioTrack) {
+      el.srcObject = new MediaStream([participant.audioTrack]);
+      el.play().catch(() => {});
+    } else {
+      el.srcObject = null;
+    }
+  }, [participant.audioEnabled, participant.audioTrack]);
+  return <audio ref={ref} autoPlay playsInline className="hidden" />;
 }
 
 /** Reactive layer: reads self mic + active speakers from the RealtimeKit store. */
