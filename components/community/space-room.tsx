@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import { ArrowLeft, Mic, MicOff, Hand, Radio, Loader2, PhoneOff } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
+import { useRealtimeRoom } from "@/hooks/use-realtime-room";
+import { rooms, type ServerEvent } from "@/lib/realtime/protocol";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -22,33 +22,15 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
     const leave = trpc.spaces.leave.useMutation({ onSettled: onLeave });
     const end = trpc.spaces.end.useMutation({ onSettled: onLeave });
 
-    // Live roster: refetch on any participant change for this space.
-    useEffect(() => {
-        if (!session?.user) return;
-        let channel: ReturnType<ReturnType<typeof getRealtimeClient>["channel"]> | null = null;
-        let cancelled = false;
-        (async () => {
-            const client = getRealtimeClient();
-            try {
-                await authenticateRealtimeClient();
-            } catch {
-                return;
+    // Live roster: refetch when the space router publishes a roster/status change.
+    useRealtimeRoom(spaceId ? rooms.space(spaceId) : null, {
+        enabled: !!session?.user,
+        onEvent: (e: ServerEvent) => {
+            if (e.t === "event" && e.name === "roster-change") {
+                utils.spaces.get.invalidate({ spaceId });
             }
-            if (cancelled) return;
-            channel = client
-                .channel(`space:${spaceId}`)
-                .on(
-                    "postgres_changes",
-                    { event: "*", schema: "public", table: "community_space_participants", filter: `space_id=eq.${spaceId}` },
-                    () => utils.spaces.get.invalidate({ spaceId })
-                )
-                .subscribe();
-        })();
-        return () => {
-            cancelled = true;
-            if (channel) getRealtimeClient().removeChannel(channel);
-        };
-    }, [spaceId, session?.user?.id, utils]);
+        },
+    });
 
     if (isLoading || !data) {
         return (

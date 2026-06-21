@@ -8,6 +8,17 @@ import {
 import { user } from "@/db/schema";
 import { eq, and, desc, count } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { publishToRoom } from "@/lib/realtime/publish";
+import { rooms } from "@/lib/realtime/protocol";
+
+/** Tell everyone in a space its roster/status changed → they refetch. */
+function notifySpaceChange(spaceId: string) {
+    return publishToRoom(rooms.space(spaceId), {
+        t: "event",
+        name: "roster-change",
+        payload: null,
+    });
+}
 
 /**
  * Spaces = live audio rooms. This router owns the room lifecycle + participant
@@ -120,6 +131,7 @@ export const spacesRouter = router({
                 .insert(communitySpaceParticipants)
                 .values({ spaceId: input.spaceId, userId: ctx.user.id, role: "LISTENER" })
                 .onConflictDoNothing();
+            await notifySpaceChange(input.spaceId);
             return { success: true };
         }),
 
@@ -147,8 +159,10 @@ export const spacesRouter = router({
                     .update(communitySpaces)
                     .set({ status: "ENDED", endedAt: new Date() })
                     .where(eq(communitySpaces.id, input.spaceId));
+                await notifySpaceChange(input.spaceId);
                 return { success: true, ended: true };
             }
+            await notifySpaceChange(input.spaceId);
             return { success: true, ended: false };
         }),
 
@@ -169,6 +183,7 @@ export const spacesRouter = router({
                 .update(communitySpaces)
                 .set({ status: "ENDED", endedAt: new Date() })
                 .where(eq(communitySpaces.id, input.spaceId));
+            await notifySpaceChange(input.spaceId);
             return { success: true };
         }),
 
@@ -199,6 +214,7 @@ export const spacesRouter = router({
                         eq(communitySpaceParticipants.userId, input.userId)
                     )
                 );
+            await notifySpaceChange(input.spaceId);
             return { success: true };
         }),
 });
