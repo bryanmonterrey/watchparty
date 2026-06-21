@@ -5,9 +5,15 @@
 GitHub Actions deploy working. It is functional but should be **rotated** so no
 live credential lingers in a chat transcript.
 
-Token at risk (rotate, don't reuse): the `cfat_…` token created from the
-**"Edit Cloudflare Workers"** template, stored as the GitHub Actions secret
-`CLOUDFLARE_API_TOKEN` on `bryanmonterrey/watchparty`.
+**Two `cfat_…` tokens were pasted into chat on 2026-06-20/21 — revoke both:**
+1. The original "Edit Cloudflare Workers" token ending `…e29e12f6` — later edited
+   down to DNS-only; now unused. Just **revoke** it.
+2. The token ending `…1f1abf86` (Account · Workers Scripts · Edit) — currently the
+   **live** GitHub Actions secret `CLOUDFLARE_API_TOKEN` on
+   `bryanmonterrey/watchparty` and what CI deploys with. **Replace then revoke.**
+
+Note: neither token has both Workers + DNS. CI only needs Workers (token #2 is
+fine for deploys). DNS edits during setup used token #1.
 
 ## When
 Any time after launch is verified stable. Not urgent (the token is an encrypted
