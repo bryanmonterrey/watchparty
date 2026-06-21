@@ -1,0 +1,17 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "watchparty-realtime",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-04-15",
+  "compatibility_flags": ["nodejs_compat"],
+  // The single Chat room class. Binding name MUST equal the class name so
+  // partyserver routes /parties/chat/:room → this DO.
+  "durable_objects": {
+    "bindings": [{ "name": "Chat", "class_name": "Chat" }]
+  },
+  // SQLite-backed DOs (required for partyserver hibernation + storage).
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Chat"] }],
+  "observability": { "enabled": true }
+  // REALTIME_SECRET is a secret, set out-of-band (not committed):
+  //   wrangler secret put REALTIME_SECRET   (run inside realtime/)
+}

@@ -11,7 +11,6 @@ import { MorphMenuIcon } from "@/components/marketing/morph-menu-icon";
 const NAV_LINKS = [
   { label: "Explore", href: "#explore" },
   { label: "Creators", href: "#creators" },
-  { label: "Pricing", href: "#pricing" },
   { label: "About", href: "#about" },
 ];
 

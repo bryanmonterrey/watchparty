@@ -1,0 +1,10 @@
+{
+  "name": "watchparty-realtime",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  }
+}

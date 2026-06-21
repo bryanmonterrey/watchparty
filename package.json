@@ -107,6 +107,8 @@
     "nextjs-toploader": "^3.9.17",
     "nuqs": "^2.8.9",
     "open-graph-scraper": "^6.11.0",
+    "partyserver": "^0.5.8",
+    "partysocket": "^1.2.0",
     "pg": "^8.22.0",
     "postcss": "^8.5.15",
     "postgres": "^3.4.9",

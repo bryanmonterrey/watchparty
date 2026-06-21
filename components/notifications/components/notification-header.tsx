@@ -23,7 +23,7 @@ export function NotificationHeader({ unreadCount, onMarkAllRead, onClose }: Noti
                 {unreadCount > 0 && (
                     <button
                         onClick={onMarkAllRead}
-                        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors px-2 py-1 rounded-full hover:bg-white/5 cursor-pointer"
+                        className="flex hidden items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors px-2 py-1 rounded-full hover:bg-white/5 cursor-pointer"
                     >
                         <CheckCheck className="w-3.5 h-3.5" /> Mark all read
                     </button>
