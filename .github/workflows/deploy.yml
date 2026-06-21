@@ -102,3 +102,37 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # Cron Triggers worker (premium collect + treasury sweep). Calls the app's
+  # guarded /api/cron/* routes on schedule with CRON_SECRET. Standalone worker.
+  deploy-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Restore .env
+        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        env:
+          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+
+      - name: Deploy cron worker
+        run: bunx wrangler deploy --config cron/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Generate cron secrets bundle
+        run: node scripts/cf/gen-cron-secrets.mjs
+
+      - name: Push CRON_SECRET to the cron worker
+        run: bunx wrangler secret bulk cron/.cf-secrets.json --config cron/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

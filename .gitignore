@@ -58,3 +58,6 @@ kick_categories.json
 .dev.vars
 cloudflare-env.d.ts
 .cf-secrets.json
+
+# cron worker generated secrets bundle
+cron/.cf-secrets.json
