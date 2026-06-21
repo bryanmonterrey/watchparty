@@ -52,10 +52,11 @@ async function call(method, path, body) {
   if (!res.ok || json.success === false) {
     throw new Error(`${method} ${path} → ${res.status}: ${JSON.stringify(json.errors ?? json)}`);
   }
-  return json.result ?? json;
+  // RealtimeKit wraps payloads in `data`.
+  return json.data ?? json.result ?? json;
 }
 
-const asArray = (r) => (Array.isArray(r) ? r : Array.isArray(r?.apps) ? r.apps : r ? [r] : []);
+const asArray = (r) => (Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : r ? [r] : []);
 
 async function main() {
   console.log(`Account: ${ACCOUNT}\nLooking for RealtimeKit app "${APP_NAME}"…\n`);
@@ -70,7 +71,8 @@ async function main() {
     console.log(`(list apps failed, will try create) ${e.message}`);
   }
   if (!app) {
-    app = await call("POST", "/apps", { name: APP_NAME });
+    const created = await call("POST", "/apps", { name: APP_NAME });
+    app = created.app ?? created; // create wraps the app under data.app
     console.log(`Created app: ${app.name ?? APP_NAME} (${app.id})`);
   }
   const appId = app.id;

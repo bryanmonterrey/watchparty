@@ -245,7 +245,7 @@ function WalletButtonInner() {
                 onClick={handleButtonClick}
                 disabled={isProcessing}
                 variant="default"
-                className="bg-darkfantasy text-white2 h-11 text-[18px] backdrop-blur-xs font-medium hover:bg-twitter cursor-pointer px-6 gap-3"
+                className="bg-twitter2 text-white2 h-11 text-[18px] backdrop-blur-xs font-medium hover:bg-twitter cursor-pointer px-6 gap-3"
             >
                 <span>{buttonText}</span>
             </Button>

@@ -35,12 +35,12 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "content-type": "application/json", authorization: `Bearer ${API_TOKEN}` },
     body: JSON.stringify(body),
   });
-  const json = (await res.json()) as { success?: boolean; result?: T; errors?: unknown } & Record<string, unknown>;
+  const json = (await res.json()) as { success?: boolean; data?: T; result?: T; errors?: unknown } & Record<string, unknown>;
   if (!res.ok || json.success === false) {
     throw new Error(`RealtimeKit ${path} failed (${res.status}): ${JSON.stringify(json.errors ?? json)}`);
   }
-  // CF API v4 wraps payloads in `result`; fall back to the raw body.
-  return (json.result ?? (json as unknown)) as T;
+  // RealtimeKit wraps payloads in `data` (CF v4 elsewhere uses `result`).
+  return (json.data ?? json.result ?? (json as unknown)) as T;
 }
 
 /** Create a meeting; returns its id. Call once per space, then persist the id. */
