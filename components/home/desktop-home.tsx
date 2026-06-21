@@ -576,7 +576,7 @@ function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
                 <Button
                     variant="ghost"
                     onClick={() => setExpanded((e) => !e)}
-                    className="text-sm font-extrabold text-white/70 hover:bg-transparent hover:text-white"
+                    className="text-sm font-extrabold text-vice-purple/85 hover:bg-transparent hover:text-vice-purple"
                 >
                     {expanded ? "Show less" : "Show all"}
                 </Button>
