@@ -2,62 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { trpc } from "@/lib/trpc/client";
 import { Send2Icon } from "../icons";
+import { useStreamChat } from "@/hooks/use-stream-chat";
 
 interface StreamChatProps {
     hostUserId: string;
     isLive: boolean;
-    chatRoomArn: string | null;
+    /** @deprecated IVS chat ARN — unused now that chat runs on the realtime DO. */
+    chatRoomArn?: string | null;
     isLoading?: boolean;
 }
 
-interface ChatMessage {
-    id: string;
-    sender: string;
-    content: string;
-}
-
-export function StreamChat({ hostUserId, isLive, chatRoomArn, isLoading }: StreamChatProps) {
-    const [chatToken, setChatToken] = useState<{ token: string; chatRoomArn: string } | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
     const [input, setInput] = useState("");
-    const wsRef = useRef<WebSocket | null>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
-    const getChatToken = trpc.stream.getChatToken.useMutation({
-        onSuccess: (data) => setChatToken(data),
-    });
-
-    useEffect(() => {
-        if (isLoading) return;
-        if (isLive && chatRoomArn) {
-            getChatToken.mutate({ hostUserId });
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isLive, chatRoomArn, hostUserId, isLoading]);
-
-    useEffect(() => {
-        if (isLoading || !chatToken) return;
-        const region = chatToken.chatRoomArn.split(":")[3];
-        const ws = new WebSocket(`wss://edge.ivschat.${region}.amazonaws.com`, chatToken.token);
-        wsRef.current = ws;
-
-        ws.onmessage = (e) => {
-            try {
-                const msg = JSON.parse(e.data);
-                if (msg.Type === "MESSAGE") {
-                    setMessages(prev => [...prev.slice(-199), {
-                        id: msg.Id,
-                        sender: msg.Sender?.Attributes?.username ?? "Guest",
-                        content: msg.Content,
-                    }]);
-                }
-            } catch { /* ignore */ }
-        };
-
-        return () => ws.close();
-    }, [chatToken, isLoading]);
+    const { messages, send, connected } = useStreamChat(hostUserId, !!isLive && !isLoading);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -66,8 +26,8 @@ export function StreamChat({ hostUserId, isLive, chatRoomArn, isLoading }: Strea
     }, [messages]);
 
     const sendMessage = () => {
-        if (!input.trim() || wsRef.current?.readyState !== WebSocket.OPEN) return;
-        wsRef.current.send(JSON.stringify({ Action: "SEND_MESSAGE", Content: input.trim() }));
+        if (!input.trim()) return;
+        send(input);
         setInput("");
     };
 
@@ -112,7 +72,7 @@ export function StreamChat({ hostUserId, isLive, chatRoomArn, isLoading }: Strea
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2.5 min-h-0 scrollbar-hide">
                 {messages.length === 0 && (
                     <p className="text-xs text-zinc-500 text-center pt-8 font-medium">
-                        {isLive ? (chatToken ? "Welcome to live chat!" : "Connecting to chat…") : "Chat is disabled for offline streams."}
+                        {isLive ? (connected ? "Welcome to live chat!" : "Connecting to chat…") : "Chat is disabled for offline streams."}
                     </p>
                 )}
                 {messages.map((m, i) => (
@@ -134,13 +94,13 @@ export function StreamChat({ hostUserId, isLive, chatRoomArn, isLoading }: Strea
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && sendMessage()}
-                        placeholder={isLive ? (chatToken ? "Chat..." : "Sign in to chat") : "Offline"}
-                        disabled={!chatToken || !isLive}
+                        placeholder={isLive ? (connected ? "Chat..." : "Connecting…") : "Offline"}
+                        disabled={!connected || !isLive}
                         className="flex-1 bg-zinc-800/80 text-sm font-medium text-zinc-200 px-3.5 py-2.5 rounded-full placeholder:text-zinc-500 border border-transparent focus:border-zinc-700 focus:outline-none focus:ring-0 disabled:opacity-50 transition-colors"
                     />
                     <button
                         onClick={sendMessage}
-                        disabled={!input.trim() || !chatToken || !isLive}
+                        disabled={!input.trim() || !connected || !isLive}
                         className="p-2.5 rounded-full bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-40 transition-colors shrink-0"
                     >
                         <Send2Icon className="w-[18px] h-[18px]" />

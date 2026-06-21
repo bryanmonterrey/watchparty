@@ -6,7 +6,11 @@ import {
   type WSMessage,
 } from "partyserver";
 import { verifyRealtimeToken } from "./auth";
-import type { ClientMessage, PresenceUser, ServerEvent } from "../../lib/realtime/protocol";
+import { CHAT_MAX_LEN, type ClientMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
+
+// Per-connection chat rate limit: max N lines per window.
+const CHAT_RATE_MAX = 5;
+const CHAT_RATE_WINDOW_MS = 5000;
 
 export type Env = {
   Chat: DurableObjectNamespace<Chat>;
@@ -34,6 +38,14 @@ type ConnState = { userId: string; name: string };
 export class Chat extends Server<Env> {
   static options = { hibernate: true };
 
+  /** Best-effort per-connection chat throttle (in-memory; resets on hibernation). */
+  private chatHits = new Map<string, number[]>();
+
+  /** High fan-out rooms (live stream chat) skip per-viewer presence to avoid O(N²) storms. */
+  private get isHighFanout(): boolean {
+    return this.name.startsWith("stream-chat:");
+  }
+
   async onConnect(connection: Connection<ConnState>, ctx: ConnectionContext) {
     const token = new URL(ctx.request.url).searchParams.get("token");
     const claims = token ? await verifyRealtimeToken(token, this.env.REALTIME_SECRET) : null;
@@ -46,6 +58,7 @@ export class Chat extends Server<Env> {
   }
 
   onClose(connection: Connection<ConnState>) {
+    this.chatHits.delete(connection.id);
     this.broadcastPresence();
   }
 
@@ -67,7 +80,35 @@ export class Chat extends Server<Env> {
       this.relay({ t: "stop-typing", userId: state.userId, channelId: msg.channelId }, connection.id);
     } else if (msg.t === "event") {
       this.relay({ t: "event", name: msg.name, payload: msg.payload }, connection.id);
+    } else if (msg.t === "chat") {
+      if (!this.allowChat(connection.id)) return;
+      const text = typeof msg.text === "string" ? msg.text.trim().slice(0, CHAT_MAX_LEN) : "";
+      if (!text) return;
+      // Identity is stamped from verified connection state — clients can't spoof it.
+      // Broadcast to everyone incl. sender so all clients share one authoritative order.
+      this.broadcast(
+        JSON.stringify({
+          t: "chat",
+          id: crypto.randomUUID(),
+          userId: state.userId,
+          name: state.name,
+          text,
+          ts: Date.now(),
+        } satisfies ServerEvent),
+      );
     }
+  }
+
+  private allowChat(id: string): boolean {
+    const now = Date.now();
+    const hits = (this.chatHits.get(id) ?? []).filter((t) => now - t < CHAT_RATE_WINDOW_MS);
+    if (hits.length >= CHAT_RATE_MAX) {
+      this.chatHits.set(id, hits);
+      return false;
+    }
+    hits.push(now);
+    this.chatHits.set(id, hits);
+    return true;
   }
 
   /** Authoritative server publish: POST /parties/chat/:room from tRPC. */
@@ -91,6 +132,7 @@ export class Chat extends Server<Env> {
   }
 
   private broadcastPresence() {
+    if (this.isHighFanout) return;
     const seen = new Map<string, PresenceUser>();
     for (const c of this.getConnections<ConnState>()) {
       if (c.state) seen.set(c.state.userId, { userId: c.state.userId, userName: c.state.name });

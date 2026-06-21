@@ -22,13 +22,20 @@ export type ServerEvent =
   | { t: "typing"; userId: string; userName: string; channelId?: string }
   | { t: "stop-typing"; userId: string; channelId?: string }
   | { t: "message"; payload: unknown }
-  | { t: "event"; name: string; payload: unknown };
+  | { t: "event"; name: string; payload: unknown }
+  // Live stream chat: ephemeral, identity stamped by the DO (not spoofable).
+  | { t: "chat"; id: string; userId: string; name: string; text: string; ts: number };
 
 /** Messages a client sends UP to the room. Relayed to peers; never persisted. */
 export type ClientMessage =
   | { t: "typing"; channelId?: string }
   | { t: "stop-typing"; channelId?: string }
-  | { t: "event"; name: string; payload: unknown };
+  | { t: "event"; name: string; payload: unknown }
+  // Send a live stream chat line; the DO stamps sender + id + ts.
+  | { t: "chat"; text: string };
+
+/** Max length the DO enforces on a stream chat line. */
+export const CHAT_MAX_LEN = 500;
 
 /** Short-lived auth token claims minted by the Next app, verified by the DO. */
 export type RealtimeClaims = {
