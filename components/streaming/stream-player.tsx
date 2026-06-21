@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
 import { X, MessageCircle, PictureInPicture2 } from "lucide-react";
 import { AmbientGlow } from "video-ambient-glow";
+import { StreamOverlayAd } from "@/components/ads/stream-overlay-ad";
 
 interface StreamPlayerProps {
     playbackUrl: string | null;
@@ -112,6 +113,9 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
                     {showChat ? <X className="w-[18px] h-[18px]" /> : <MessageCircle className="w-[18px] h-[18px]" />}
                 </button>
             </div>
+
+            {/* Sponsored overlay — only on a live stream; self-hides when unfilled. */}
+            {isLive && <StreamOverlayAd />}
         </div>
     );
 }

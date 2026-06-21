@@ -8,6 +8,8 @@ import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { PostComposer } from "./post-composer";
 import { FeedTab } from "./feed-tab";
+import { SponsoredCard } from "@/components/ads/sponsored-card";
+import { FEED_AD_INTERVAL } from "@/lib/ads/config";
 import React from "react";
 import { ArrowUp, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -494,22 +496,32 @@ export function BrowseFeed() {
     }, [repostedPostIds, activeTab]);
 
     // ── renderItem ────────────────────────────────────────────────────────────
+    // Maps each rendered item key → its position in the window, so renderItem can
+    // inject a sponsored card every Nth row WITHOUT adding ad entries to the
+    // virtualized dataset (which would corrupt keys/pagination/caches).
+    const indexByKeyRef = useRef<Map<string, number>>(new Map());
     const renderItem = useCallback((item: FeedItem) => {
+        const key = keyOf(item);
+        const idx = indexByKeyRef.current.get(key) ?? -1;
+        const showAd = idx > 0 && idx % FEED_AD_INTERVAL === 0;
         // Prefer server-embedded interaction state (zero latency).
         // Fall back to ref-based bulk query data for any post the server didn't annotate.
         const liked = item.data.isLiked ?? likedPostIdsRef.current?.likedIds.includes(item.data.id) ?? false;
         const bookmarked = item.data.isBookmarked ?? bookmarkedPostIdsRef.current?.bookmarkedIds.includes(item.data.id) ?? false;
         const reposted = item.data.isReposted ?? repostedPostIdsRef.current?.repostedIds.includes(item.data.id) ?? false;
         return (
-            <PostCard
-                post={item.data}
-                initialLiked={liked}
-                initialBookmarked={bookmarked}
-                initialReposted={reposted}
-                isOwnPost={item.data.userId === session?.user?.id}
-                connectTop={item.data.connectTop}
-                connectBottom={item.data.connectBottom}
-            />
+            <>
+                {showAd && <SponsoredCard />}
+                <PostCard
+                    post={item.data}
+                    initialLiked={liked}
+                    initialBookmarked={bookmarked}
+                    initialReposted={reposted}
+                    isOwnPost={item.data.userId === session?.user?.id}
+                    connectTop={item.data.connectTop}
+                    connectBottom={item.data.connectBottom}
+                />
+            </>
         );
     }, [session?.user?.id]); // Depends on session so isOwnPost is correct
 
@@ -595,6 +607,8 @@ export function BrowseFeed() {
                     }
                 }
                 const uniqueItems = Array.from(uniqueMap.values());
+                // Refresh the key→index map so renderItem can place sponsored cards.
+                indexByKeyRef.current = new Map(uniqueItems.map((it, i) => [keyOf(it), i]));
 
                 // The window's edges vs the full dataset decide whether the list
                 // may scroll further. hasPrevious lets evicted-newer items be

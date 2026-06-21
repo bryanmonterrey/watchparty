@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { useMiniPlayer } from "@/contexts/mini-player-context";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { ADS_ENABLED } from "@/lib/ads/config";
 import { VideoPlayer } from "./video-player";
 import { VideoMetadata } from "./video-metadata";
 import { UpNextSidebar } from "./up-next-sidebar";
@@ -17,9 +19,17 @@ interface VideoWatchPageProps {
 export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps) {
     const { data: video, isLoading } = trpc.content.getVideoById.useQuery({ postId });
     const { miniPlayerData, enterMiniPlayer, exitMiniPlayer } = useMiniPlayer();
+    const { data: session } = useAuthSession();
     const pathname = usePathname();
 
     const isGlobalMiniActive = miniPlayerData?.postId === postId;
+
+    // VMAP tag (pre + mid-roll) served by our first-party /api/ad/vast route; the
+    // player's IMA path consumes it. Undefined when ads are disabled (path stays dormant).
+    const adTagUrl = useMemo(() => {
+        if (!ADS_ENABLED || typeof window === "undefined") return undefined;
+        return `${window.location.origin}/api/ad/vast?uid=${encodeURIComponent(session?.user?.id ?? "")}`;
+    }, [session?.user?.id]);
 
     const handleEnterMiniPlayer = useCallback((currentTime: number) => {
         enterMiniPlayer({
@@ -73,6 +83,7 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
                                 videoUrl={video?.videoUrl ?? null}
                                 thumbnailUrl={video?.thumbnailUrl ?? null}
                                 isLoading={isLoading}
+                                adTagUrl={adTagUrl}
                                 onEnterMiniPlayer={handleEnterMiniPlayer}
                             />
                         </div>
