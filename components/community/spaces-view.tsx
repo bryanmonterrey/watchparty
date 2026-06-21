@@ -46,7 +46,7 @@ export function SpacesView() {
     const spaces = live.data ?? [];
 
     return (
-        <ScrollArea className="flex-1 bg-black">
+        <ScrollArea className="flex-1 bg-background">
             <div className="flex flex-col p-6 pt-5 max-w-5xl mx-auto">
                 {/* Header — title only (matches Communities), with the action beside it */}
                 <div className="flex items-end gap-4 mb-8">

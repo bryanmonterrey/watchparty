@@ -108,6 +108,7 @@ export const spacesRouter = router({
                     id: communitySpaceParticipants.id,
                     userId: communitySpaceParticipants.userId,
                     role: communitySpaceParticipants.role,
+                    handRaised: communitySpaceParticipants.handRaised,
                     joinedAt: communitySpaceParticipants.joinedAt,
                     name: user.name,
                     username: user.username,
@@ -213,11 +214,43 @@ export const spacesRouter = router({
 
             await db
                 .update(communitySpaceParticipants)
-                .set({ role: input.role })
+                // Clear any raised hand on a role change (promote answers the request).
+                .set({ role: input.role, handRaised: false })
                 .where(
                     and(
                         eq(communitySpaceParticipants.spaceId, input.spaceId),
                         eq(communitySpaceParticipants.userId, input.userId)
+                    )
+                );
+            await notifySpaceChange(input.spaceId);
+            return { success: true };
+        }),
+
+    /** Listener raises/lowers their hand to request speaking. */
+    requestToSpeak: protectedProcedure
+        .input(z.object({ spaceId: z.string().uuid(), raised: z.boolean().default(true) }))
+        .mutation(async ({ ctx, input }) => {
+            const [me] = await db
+                .select({ role: communitySpaceParticipants.role })
+                .from(communitySpaceParticipants)
+                .where(
+                    and(
+                        eq(communitySpaceParticipants.spaceId, input.spaceId),
+                        eq(communitySpaceParticipants.userId, ctx.user.id)
+                    )
+                )
+                .limit(1);
+            if (!me) throw new TRPCError({ code: "FORBIDDEN", message: "Join the space first" });
+            if (me.role !== "LISTENER")
+                throw new TRPCError({ code: "BAD_REQUEST", message: "You can already speak" });
+
+            await db
+                .update(communitySpaceParticipants)
+                .set({ handRaised: input.raised })
+                .where(
+                    and(
+                        eq(communitySpaceParticipants.spaceId, input.spaceId),
+                        eq(communitySpaceParticipants.userId, ctx.user.id)
                     )
                 );
             await notifySpaceChange(input.spaceId);

@@ -30,6 +30,8 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
 
     const leave = trpc.spaces.leave.useMutation({ onSettled: onLeave });
     const end = trpc.spaces.end.useMutation({ onSettled: onLeave });
+    const setRole = trpc.spaces.setRole.useMutation();
+    const requestToSpeak = trpc.spaces.requestToSpeak.useMutation();
 
     // Live roster: refetch when the space router publishes a roster/status change.
     useRealtimeRoom(spaceId ? rooms.space(spaceId) : null, {
@@ -43,7 +45,7 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
 
     if (isLoading || !data) {
         return (
-            <div className="flex flex-1 items-center justify-center bg-black">
+            <div className="flex flex-1 items-center justify-center bg-background">
                 <Loader2 className="h-7 w-7 text-flexwhite/40 animate-spin" />
             </div>
         );
@@ -55,14 +57,23 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
     // Keying the media provider by the caller's role makes a host promotion
     // (LISTENER → SPEAKER, delivered via DO roster-change) remount it with a
     // fresh speaker-preset token — i.e. go live without a manual refresh.
-    const myRole = participants.find((p) => p.userId === session?.user?.id)?.role ?? "LISTENER";
+    const me = participants.find((p) => p.userId === session?.user?.id);
+    const myRole = me?.role ?? "LISTENER";
+    const myHandRaised = !!me?.handRaised;
 
     const speakers = participants.filter((p) => p.role === "HOST" || p.role === "SPEAKER");
-    const listeners = participants.filter((p) => p.role === "LISTENER");
+    // Hand-raised listeners float to the top so the host sees requests first.
+    const listeners = participants
+        .filter((p) => p.role === "LISTENER")
+        .sort((a, b) => Number(!!b.handRaised) - Number(!!a.handRaised));
+    const pendingRequests = isHost ? listeners.filter((p) => p.handRaised).length : 0;
+
+    const inviteUp = (userId: string) => setRole.mutate({ spaceId, userId, role: "SPEAKER" });
+    const moveDown = (userId: string) => setRole.mutate({ spaceId, userId, role: "LISTENER" });
 
     return (
         <SpaceMediaProvider key={myRole} spaceId={spaceId}>
-        <div className="flex flex-col h-full bg-black">
+        <div className="flex flex-col h-full bg-background">
             {/* top bar */}
             <div className="h-14 shrink-0 px-4 flex items-center gap-3 border-b border-flexwhite/15">
                 <button
@@ -89,7 +100,12 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
                     </h3>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-5 mb-10">
                         {speakers.map((p) => (
-                            <Participant key={p.id} p={p} />
+                            <Participant
+                                key={p.id}
+                                p={p}
+                                canManage={isHost && p.role !== "HOST"}
+                                onDemote={() => moveDown(p.userId)}
+                            />
                         ))}
                     </div>
 
@@ -97,10 +113,18 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
                         <>
                             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-flexwhite/40 mb-4 px-1">
                                 Listeners — {listeners.length}
+                                {pendingRequests > 0 && (
+                                    <span className="ml-2 text-darkfantasy">· {pendingRequests} want to speak</span>
+                                )}
                             </h3>
                             <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
                                 {listeners.map((p) => (
-                                    <Participant key={p.id} p={p} />
+                                    <Participant
+                                        key={p.id}
+                                        p={p}
+                                        canManage={isHost}
+                                        onInvite={() => inviteUp(p.userId)}
+                                    />
                                 ))}
                             </div>
                         </>
@@ -111,13 +135,19 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
             {/* control bar */}
             <div className="shrink-0 border-t border-flexwhite/15 px-4 py-3 flex items-center justify-center gap-3">
                 <SpaceMicButton />
-                {!isHost && (
+                {!isHost && myRole === "LISTENER" && (
                     <button
-                        disabled
-                        title="Request to speak (coming soon)"
-                        className="h-11 px-5 flex items-center gap-2 rounded-full bg-white/5 text-flexwhite/50 font-semibold text-sm cursor-not-allowed"
+                        onClick={() => requestToSpeak.mutate({ spaceId, raised: !myHandRaised })}
+                        disabled={requestToSpeak.isPending || ended}
+                        title={myHandRaised ? "Cancel your request" : "Ask the host to let you speak"}
+                        className={cn(
+                            "h-11 px-5 flex items-center gap-2 rounded-full font-semibold text-sm transition-all active:scale-95 disabled:opacity-50",
+                            myHandRaised
+                                ? "bg-darkfantasy/20 text-darkfantasy"
+                                : "bg-white/10 text-flexwhite hover:bg-white/15",
+                        )}
                     >
-                        <Hand className="size-4" /> Request
+                        <Hand className="size-4" /> {myHandRaised ? "Requested" : "Request"}
                     </button>
                 )}
                 {isHost ? (
@@ -196,11 +226,18 @@ function SpaceMicButton() {
 
 function Participant({
     p,
+    canManage = false,
+    onInvite,
+    onDemote,
 }: {
-    p: { userId: string; role: string; name: string | null; username: string | null; avatar_url: string | null };
+    p: { userId: string; role: string; handRaised?: boolean; name: string | null; username: string | null; avatar_url: string | null };
+    canManage?: boolean;
+    onInvite?: () => void;
+    onDemote?: () => void;
 }) {
     const { speakingUserIds } = useSpaceMedia();
     const speaking = speakingUserIds.has(p.userId);
+    const isListener = p.role === "LISTENER";
     return (
         <div className="flex flex-col items-center gap-2 text-center">
             <div className="relative">
@@ -215,10 +252,36 @@ function Participant({
                         Host
                     </span>
                 )}
+                {isListener && p.handRaised && (
+                    <span className="absolute -top-1 -right-1 grid place-items-center size-5 rounded-full bg-darkfantasy text-white">
+                        <Hand className="size-3" />
+                    </span>
+                )}
             </div>
             <span className="text-xs font-medium text-flexwhite/80 truncate max-w-full">
                 {p.name ?? p.username ?? "Unknown"}
             </span>
+            {canManage && isListener && onInvite && (
+                <button
+                    onClick={onInvite}
+                    className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors",
+                        p.handRaised
+                            ? "bg-darkfantasy text-white hover:opacity-90"
+                            : "bg-white/10 text-flexwhite/80 hover:bg-white/20",
+                    )}
+                >
+                    Invite up
+                </button>
+            )}
+            {canManage && !isListener && onDemote && (
+                <button
+                    onClick={onDemote}
+                    className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-flexwhite/60 hover:bg-white/20 transition-colors"
+                >
+                    Move down
+                </button>
+            )}
         </div>
     );
 }

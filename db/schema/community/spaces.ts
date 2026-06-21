@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, pgPolicy, uuid, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, pgPolicy, uuid, text, timestamp, index, uniqueIndex, boolean } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { user } from '../auth/user';
 import { communityServers } from './index';
@@ -44,6 +44,9 @@ export const communitySpaceParticipants = pgTable('community_space_participants'
         .references(() => user.id, { onDelete: 'cascade' })
         .notNull(),
     role: communitySpaceRole('role').default('LISTENER').notNull(),
+    // Listener raised their hand to speak; host sees it and can invite them up.
+    // Cleared on any role change.
+    handRaised: boolean('hand_raised').default(false).notNull(),
     joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
     index('idx_space_participants_space').on(table.spaceId),
