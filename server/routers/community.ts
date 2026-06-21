@@ -11,6 +11,17 @@ import { user } from "@/db/schema";
 import { eq, and, desc, asc, sql, lt, count } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
+import { publishToRoom } from "@/lib/realtime/publish";
+import { rooms } from "@/lib/realtime/protocol";
+
+/** Notify connected clients that a channel's messages changed → they refetch. */
+function notifyChannelChange(channelId: string) {
+    return publishToRoom(rooms.communityChannel(channelId), {
+        t: "event",
+        name: "message-change",
+        payload: null,
+    });
+}
 
 export const communityRouter = router({
     // ─── Server CRUD ─────────────────────────────────────
@@ -496,6 +507,7 @@ export const communityRouter = router({
                 })
                 .returning();
 
+            await notifyChannelChange(input.channelId);
             return message;
         }),
 
@@ -528,6 +540,7 @@ export const communityRouter = router({
                 .where(eq(communityMessages.id, input.messageId))
                 .returning();
 
+            if (updated) await notifyChannelChange(updated.channelId);
             return updated;
         }),
 
@@ -566,6 +579,7 @@ export const communityRouter = router({
                 .where(eq(communityMessages.id, input.messageId))
                 .returning();
 
+            if (updated) await notifyChannelChange(updated.channelId);
             return updated;
         }),
 });
