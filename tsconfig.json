@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "mobile", "realtime", "cloudflare-env.d.ts"]
+  "exclude": ["node_modules", "mobile", "realtime", "cron", "cloudflare-env.d.ts"]
 }
