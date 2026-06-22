@@ -48,11 +48,21 @@ run the **retrieval candidate tower** over our posts + live streams → store ve
 (Vectorize/pgvector) instead of a full matmul. The shipped corpus is X sports posts — must be
 replaced with watchparty content; shipped embeddings are X-content-specific (retrain in Phase 3).
 
-## Serving (Phase 2)
+## Serving (Phase 2) — ✅ LIVE
 
-Wrap in FastAPI on GCP Cloud Run (mirror liteads). `POST /rank` {user_id, surface, history,
-candidates} → per-candidate {score, actions}; `POST /embed` for corpus building. Client:
-`lib/feed-ranker/server.ts` (`rankCandidates`), null-safe fallback to chronological.
+FastAPI on GCP Cloud Run (`services/phoenix/`), deployed and verified end-to-end.
+
+- **URL:** `https://phoenix-979878773946.us-west1.run.app` (project `watchparty-ads`, region
+  `us-west1`). Public + **shared-secret** guarded: `/rank` and `/embed` require header
+  `x-phoenix-secret`; `/health` open for probes.
+- **Resources:** `--memory 8Gi --cpu 4 --min-instances 1 --cpu-boost` (4Gi OOMs — two 1.4GB
+  embedding tables peak ~4.5GB at load).
+- **Client:** `lib/feed-ranker/server.ts` (`rankCandidates`), null-safe fallback to chronological.
+  `lib/feed-ranker/ids.ts` hashes string nanoids → uint64 (verified byte-identical to the service).
+- **Env (set on both sides):** `PHOENIX_API_URL`, `FEED_RANKER_ENABLED=true`, `PHOENIX_SHARED_SECRET`.
+  Local: in `.env.local` (gitignored). **Production (Cloudflare): must be added to the
+  `DOTENV_PRODUCTION` GitHub secret** — not yet done.
+- **Deploy:** see `services/phoenix/README.md` (self-fetching build; `.gcloudignore` is critical).
 
 ## Local run (reproduce Phase 0)
 
