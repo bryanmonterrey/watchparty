@@ -11,13 +11,15 @@ import { FEED_RANKER_ENABLED } from "./config";
 // follows/recency window. This is the "tweet-mixer" half of X's 50/50 in/out
 // network split. Returns candidate ids (ranking happens downstream in /rank).
 
-export interface RetrievedCandidate {
+// type alias (not interface) so it satisfies db.execute's Record<string, unknown>
+// constraint — `next build` enforces this even though root tsc doesn't.
+export type RetrievedCandidate = {
     id: string;
     userId: string;            // author
     subjectType: "post" | "stream";
     ticker: string | null;
     tokenStatus: string | null;
-}
+};
 
 export async function retrieveOutOfNetwork(
     userId: string,
