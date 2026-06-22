@@ -106,3 +106,61 @@ export async function rankCandidates(input: RankInput): Promise<RankedCandidate[
         return null;
     }
 }
+
+const secretHeaders = () =>
+    PHOENIX_SHARED_SECRET ? { "x-phoenix-secret": PHOENIX_SHARED_SECRET } : {};
+
+/** Item-tower embeddings (128-d) for building the corpus. Used by the corpus cron. */
+export async function embedItems(
+    items: Array<{ subjectId: string; subjectType: "post" | "stream"; authorId: string | null; surface?: string }>,
+): Promise<Array<{ ref: string; vector: number[] }> | null> {
+    if (!PHOENIX_API_URL || items.length === 0) return [];
+    try {
+        const res = await fetch(`${PHOENIX_API_URL}/embed`, {
+            method: "POST",
+            headers: { "content-type": "application/json", ...secretHeaders() },
+            body: JSON.stringify({
+                items: items.map((it) => ({
+                    ref: it.subjectId,
+                    id: toNumericIdString(it.subjectId),
+                    author_id: toNumericIdString(it.authorId),
+                    product_surface: surfaceId(it.surface ?? "home"),
+                })),
+            }),
+            signal: AbortSignal.timeout(30_000), // batch job, generous
+        });
+        if (!res.ok) return null;
+        const data = (await res.json()) as { embeddings?: Array<{ ref: string; vector: number[] }> };
+        return data.embeddings ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/** User-tower vector (unit-norm 128-d) to ANN-search the corpus for out-of-network candidates. */
+export async function getUserVector(
+    userId: string,
+    history: HistoryItem[],
+): Promise<number[] | null> {
+    if (!FEED_RANKER_ENABLED) return null;
+    try {
+        const res = await fetch(`${PHOENIX_API_URL}/user_vector`, {
+            method: "POST",
+            headers: { "content-type": "application/json", ...secretHeaders() },
+            body: JSON.stringify({
+                user_id: toNumericIdString(userId),
+                history: history.map((h) => ({
+                    post_id: toNumericIdString(h.postId),
+                    author_id: toNumericIdString(h.authorId),
+                    actions: h.actions,
+                })),
+            }),
+            signal: AbortSignal.timeout(FEED_RANKER_TIMEOUT_MS),
+        });
+        if (!res.ok) return null;
+        const data = (await res.json()) as { vector?: number[] };
+        return data.vector ?? null;
+    } catch {
+        return null;
+    }
+}

@@ -96,6 +96,7 @@ def _load():
         rank_fn=rank_fn,
         ret_params=ret_params,
         ret_emb=ret_emb,
+        ret_hash_user=ret_hash_user,
         ret_hash_item=ret_hash_item,
         ret_hash_author=ret_hash_author,
         emb_size=rank_cfg["emb_size"],
@@ -241,6 +242,88 @@ def rank(req: RankRequest, x_phoenix_secret: str | None = Header(default=None)):
         for k in order
     ]
     return {"ranked": ranked}
+
+
+class UserVectorRequest(BaseModel):
+    user_id: int
+    history: list[HistoryItem] = Field(default_factory=list)
+
+
+@app.post("/user_vector")
+def user_vector(req: UserVectorRequest, x_phoenix_secret: str | None = Header(default=None)):
+    """User-tower representation for ANN retrieval against the post_embeddings corpus.
+
+    Mirrors run_pipeline.py's retrieval forward: build_user_representation, with a
+    dummy candidate pass so all params (incl. log_temperature) are registered.
+    Returns a unit-norm 128-d vector to cosine-search the corpus.
+    """
+    _require_secret(x_phoenix_secret)
+    ret_cfg = STATE["ret_cfg"]
+    emb_size = STATE["emb_size"]
+    hist_len, num_actions, cand_len = STATE["hist_len"], STATE["num_actions"], STATE["cand_len"]
+    ret_emb = STATE["ret_emb"]
+    ret_model_config = build_model_config(ret_cfg, PhoenixRetrievalModelConfig)
+
+    h_post, h_author, h_actions = _history_arrays(req.history)
+    user_h = STATE["ret_hash_user"](np.array([req.user_id], dtype=np.uint64))
+    hist_post_h = STATE["ret_hash_item"](h_post).reshape(1, hist_len, -1)
+    hist_author_h = STATE["ret_hash_author"](h_author).reshape(1, hist_len, -1)
+
+    N_neg = 64
+
+    def ret_forward(batch, embeddings, gn_post, gn_auth):
+        model = ret_model_config.make()
+        user_repr, _ = model.build_user_representation(batch, embeddings)
+        combined_post = jnp.concatenate([embeddings.candidate_post_embeddings, gn_post], axis=1)
+        combined_auth = jnp.concatenate([embeddings.candidate_author_embeddings, gn_auth], axis=1)
+        combined_emb = RecsysEmbeddings(
+            user_embeddings=embeddings.user_embeddings,
+            history_post_embeddings=embeddings.history_post_embeddings,
+            candidate_post_embeddings=combined_post,
+            history_author_embeddings=embeddings.history_author_embeddings,
+            candidate_author_embeddings=combined_auth,
+        )
+        gn_ph = jnp.ones((1, N_neg, 2), dtype=jnp.int32)
+        gn_ah = jnp.ones((1, N_neg, 2), dtype=jnp.int32)
+        comb_ph = jnp.concatenate([batch.candidate_post_hashes, gn_ph], axis=1)
+        comb_ah = jnp.concatenate([batch.candidate_author_hashes, gn_ah], axis=1)
+        comb_ps = jnp.concatenate(
+            [batch.candidate_product_surface, jnp.zeros((1, N_neg), dtype=jnp.int32)], axis=1
+        )
+        comb_batch = batch._replace(
+            candidate_post_hashes=comb_ph, candidate_author_hashes=comb_ah,
+            candidate_product_surface=comb_ps,
+        )
+        model.build_candidate_representation(comb_batch, combined_emb)
+        _ = hk.get_parameter("log_temperature", [], init=hk.initializers.Constant(0.0))
+        return user_repr
+
+    ret_fn = hk.without_apply_rng(hk.transform(ret_forward))
+    C = cand_len
+    dummy_post_h = np.ones((1, C, 2), dtype=np.int32)
+    dummy_auth_h = np.ones((1, C, 2), dtype=np.int32)
+    batch = RecsysBatch(
+        user_hashes=jnp.asarray(user_h),
+        history_post_hashes=jnp.asarray(hist_post_h),
+        history_author_hashes=jnp.asarray(hist_author_h),
+        history_actions=jnp.asarray(h_actions.reshape(1, hist_len, num_actions)),
+        history_product_surface=jnp.zeros((1, hist_len), dtype=jnp.int32),
+        candidate_post_hashes=jnp.asarray(dummy_post_h),
+        candidate_author_hashes=jnp.asarray(dummy_auth_h),
+        candidate_product_surface=jnp.zeros((1, C), dtype=jnp.int32),
+    )
+    emb = RecsysEmbeddings(
+        user_embeddings=jnp.asarray(ret_emb[user_h]),
+        history_post_embeddings=jnp.asarray(ret_emb[hist_post_h]),
+        candidate_post_embeddings=jnp.asarray(ret_emb[dummy_post_h]),
+        history_author_embeddings=jnp.asarray(ret_emb[hist_author_h]),
+        candidate_author_embeddings=jnp.asarray(ret_emb[dummy_auth_h]),
+    )
+    # candidate embeddings carry a num_hashes dim: (1, seq, num_hashes, emb_size)
+    gn_post = jnp.zeros((1, N_neg, 2, emb_size))
+    gn_auth = jnp.zeros((1, N_neg, 2, emb_size))
+    repr_ = np.asarray(ret_fn.apply(STATE["ret_params"], batch, emb, gn_post, gn_auth)[0])
+    return {"dim": emb_size, "vector": repr_.tolist()}
 
 
 @app.post("/embed")

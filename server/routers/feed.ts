@@ -6,6 +6,7 @@ import { eq, desc, and, lt, sql, inArray, or, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { rankFeedRows } from "@/lib/feed-ranker/rank-feed";
+import { retrieveOutOfNetwork } from "@/lib/feed-ranker/retrieval";
 import { FEED_RANKER_ENABLED } from "@/lib/feed-ranker/config";
 
 // Candidate pool size sourced for ranking (then re-ranked + paginated client-side).
@@ -147,7 +148,8 @@ export const feedRouter = router({
                         : new Date();
                     const offset = isRankCursor ? Number(input.cursor!.slice(input.cursor!.lastIndexOf(":") + 1)) : 0;
 
-                    const pool = (await baseJoins(
+                    // In-network / recent pool.
+                    const inNetwork = (await baseJoins(
                         db.select(selectFields).from(posts)
                     ).where(and(
                         eq(posts.status, "published"),
@@ -156,6 +158,27 @@ export const feedRouter = router({
                     )).orderBy(desc(posts.createdAt))
                         .limit(FEED_POOL_SIZE))
                         .filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
+
+                    // Out-of-network discovery (corpus ANN) — only on the first page,
+                    // merged + deduped into the pool. Best-effort: empty on cold-start
+                    // or if retrieval is unavailable.
+                    let pool = inNetwork;
+                    if (offset === 0) {
+                        const oonIds = (await retrieveOutOfNetwork(ctx.user.id, 100))
+                            .map((c) => c.id)
+                            .filter((id) => !inNetwork.some((p: any) => p.id === id));
+                        if (oonIds.length > 0) {
+                            const extra = (await baseJoins(
+                                db.select(selectFields).from(posts)
+                            ).where(and(
+                                eq(posts.status, "published"),
+                                eq(posts.visibility, "public"),
+                                inArray(posts.id, oonIds),
+                            )))
+                                .filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
+                            pool = [...inNetwork, ...extra];
+                        }
+                    }
 
                     const reordered = await rankFeedRows(ctx.user.id, "for-you", pool as any[]);
                     if (reordered) {
