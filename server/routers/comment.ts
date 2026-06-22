@@ -6,6 +6,7 @@ import { user } from "@/db/schema/auth";
 import { eq, desc, and, asc, sql, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { createNotification } from "@/server/lib/notify";
+import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { follows } from "@/db/schema/content/follow";
 import { upsertPost, deletePost } from "@/lib/typesense/sync";
 
@@ -165,6 +166,12 @@ export const commentRouter = router({
                     postId: actualReplyToId,
                 });
             }
+            await recordSignal({
+                userId: ctx.user.id,
+                subjectId: actualReplyToId,
+                authorId: parent?.userId ?? null,
+                actionType: ACTION.REPLY,
+            });
 
             return { id: replyId };
         }),

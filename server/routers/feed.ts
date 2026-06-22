@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { db } from "@/db";
 import { posts, user, mutes, blocks, follows } from "@/db/schema";
 import { eq, desc, and, lt, sql, inArray, or, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 
 export const feedRouter = router({
     getFeed: publicProcedure
@@ -500,5 +501,57 @@ export const feedRouter = router({
                 shorts,
                 nextCursor: hasMore ? rawItems[rawItems.length - 1].createdAt.toISOString() : undefined,
             };
+        }),
+
+    // ── Phoenix ranker signals ────────────────────────────────────────────
+    // "Not interested" / report — strong negative signal that downranks this
+    // author/content for the user in the ranker (and feeds training labels).
+    notInterested: protectedProcedure
+        .input(z.object({
+            subjectId: z.string(),
+            subjectType: z.enum(["post", "stream"]).default("post"),
+            authorId: z.string().optional(),
+            surface: z.string().default("home"),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            await recordSignal({
+                userId: ctx.user.id,
+                subjectId: input.subjectId,
+                subjectType: input.subjectType,
+                authorId: input.authorId ?? null,
+                actionType: ACTION.NEGATIVE,
+                surface: input.surface,
+                // one negative mark per (user, content) is enough
+                dedupeKey: `neg_${ctx.user.id}_${input.subjectId}`,
+            });
+            return { success: true };
+        }),
+
+    // Dwell — accumulated visible time on a feed card, sent by the client
+    // (IntersectionObserver). Batched: the client posts one row per card per
+    // session-ish window. value = seconds visible.
+    recordDwell: protectedProcedure
+        .input(z.object({
+            items: z.array(z.object({
+                subjectId: z.string(),
+                subjectType: z.enum(["post", "stream"]).default("post"),
+                authorId: z.string().optional(),
+                seconds: z.number().min(0).max(3600),
+                surface: z.string().default("home"),
+            })).max(50),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            await Promise.all(input.items
+                .filter((it) => it.seconds >= 1) // ignore fly-by scrolls
+                .map((it) => recordSignal({
+                    userId: ctx.user.id,
+                    subjectId: it.subjectId,
+                    subjectType: it.subjectType,
+                    authorId: it.authorId ?? null,
+                    actionType: ACTION.DWELL,
+                    value: it.seconds,
+                    surface: it.surface,
+                })));
+            return { success: true };
         }),
 });

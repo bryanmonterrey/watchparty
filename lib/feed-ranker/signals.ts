@@ -1,0 +1,58 @@
+import "server-only";
+import { nanoid } from "nanoid";
+import { db } from "@/db";
+import { feedSignals } from "@/db/schema/content";
+
+// Records engagement events into feed_signals for the Phoenix ranker. Action
+// indices match Phoenix's vocabulary (see db/schema/content/feed_signals.ts).
+//
+// Best-effort: a signal write must NEVER fail or slow a user action, so errors
+// are swallowed. Callers await it (a single cheap insert) rather than dangling
+// the promise, since background work can be cut off on Workers.
+
+export const ACTION = {
+    FAVORITE: 1,
+    REPLY: 4,
+    QUOTE: 5,
+    REPOST: 6,
+    DWELL: 11,
+    VIDEO_VIEW: 13,
+    NEGATIVE: 20, // "not interested" / report — downranks
+    TRADE: 21, // reserved, not logged in v1
+} as const;
+
+export async function recordSignal(p: {
+    userId: string;
+    subjectId: string;
+    subjectType?: "post" | "stream";
+    authorId?: string | null;
+    actionType: number;
+    value?: number;
+    surface?: string;
+    /**
+     * When set, the row id is deterministic and a duplicate insert is a no-op.
+     * Use for "once per (user, content)" signals (e.g. a video quality view)
+     * emitted from high-frequency mutations, to avoid flooding the log.
+     */
+    dedupeKey?: string;
+}): Promise<void> {
+    try {
+        const row = {
+            id: p.dedupeKey ?? nanoid(),
+            userId: p.userId,
+            subjectId: p.subjectId,
+            subjectType: p.subjectType ?? "post",
+            authorId: p.authorId ?? null,
+            actionType: p.actionType,
+            value: p.value ?? 1,
+            surface: p.surface ?? "home",
+        };
+        if (p.dedupeKey) {
+            await db.insert(feedSignals).values(row).onConflictDoNothing({ target: feedSignals.id });
+        } else {
+            await db.insert(feedSignals).values(row);
+        }
+    } catch {
+        // best-effort; signal loss is acceptable, blocking the user action is not
+    }
+}

@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { withCache, invalidateCache, TTL } from "@/lib/cache";
 import { createNotification } from "@/server/lib/notify";
 import { typesenseClient } from "@/lib/typesense/client";
+import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, upsertToken, deletePost, upsertUser } from "@/lib/typesense/sync";
 
 export const contentRouter = router({
@@ -530,6 +531,25 @@ export const contentRouter = router({
                     target: [videoProgress.userId, videoProgress.postId],
                     set: { currentTime: input.currentTime, updatedAt: new Date() },
                 });
+
+            // Mark a video-quality-view once the viewer crosses a meaningful watch
+            // threshold (~30s). Deterministic id → recorded at most once per (user, post),
+            // so the high-frequency progress saves don't flood the signal log.
+            if (input.currentTime >= 30) {
+                const authorId = (await db.query.posts.findFirst({
+                    where: eq(posts.id, input.postId),
+                    columns: { userId: true },
+                }))?.userId ?? null;
+                await recordSignal({
+                    userId: ctx.session.user.id,
+                    subjectId: input.postId,
+                    authorId,
+                    actionType: ACTION.VIDEO_VIEW,
+                    value: input.currentTime,
+                    surface: "shorts",
+                    dedupeKey: `vqv_${ctx.session.user.id}_${input.postId}`,
+                });
+            }
             return { success: true };
         }),
 
@@ -644,7 +664,10 @@ export const contentRouter = router({
                     baseScore: sql`(${posts.likes} + 1) * 3.0 + ${posts.reposts} * 2.0 + ${posts.comments} * 2.0 + ${posts.views} * 0.1`,
                 }).where(eq(posts.id, input.postId));
                 const post = await db.query.posts.findFirst({ where: eq(posts.id, input.postId) });
-                if (post) await createNotification({ userId: post.userId, actorId: ctx.user.id, type: "like", postId: input.postId });
+                if (post) {
+                    await createNotification({ userId: post.userId, actorId: ctx.user.id, type: "like", postId: input.postId });
+                    await recordSignal({ userId: ctx.user.id, subjectId: input.postId, authorId: post.userId, actionType: ACTION.FAVORITE });
+                }
                 return { liked: true };
             }
         }),
@@ -901,6 +924,12 @@ export const contentRouter = router({
                     postId: input.postId,
                 });
             }
+            await recordSignal({
+                userId: ctx.user.id,
+                subjectId: input.postId,
+                authorId: origPost?.userId ?? null,
+                actionType: input.quoteContent ? ACTION.QUOTE : ACTION.REPOST,
+            });
 
             await Promise.all([
                 invalidateCache("db:feed:v2:for-you:initial:20"),
