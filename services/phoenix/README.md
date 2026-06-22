@@ -32,6 +32,15 @@ gcloud run deploy phoenix \
 `cloudbuild.yaml` here builds with context `.` — when building from a clone's
 `phoenix/` dir instead, the same files apply (service.py is the only input).
 
+### Gotcha: `gcloud builds submit` uses `.gcloudignore`, NOT `.dockerignore`
+
+The build-context UPLOAD is filtered by `.gcloudignore`; `.dockerignore` only
+affects what `COPY`/`ADD` see during the build. Without a `.gcloudignore`,
+`gcloud builds submit` tars and uploads the **entire** dir — including the 2.9 GB
+`artifacts/` from a clone — which stalls for 20+ min on a home uplink. Both files
+are present here and must stay in sync (both exclude everything but `service.py`
++ `Dockerfile`).
+
 Then set `PHOENIX_API_URL` (the Cloud Run URL) + `FEED_RANKER_ENABLED=true` in
 the watchparty env.
 

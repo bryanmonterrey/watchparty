@@ -1,0 +1,8 @@
+# gcloud builds submit uses THIS file (not .dockerignore) to decide what to
+# upload as build context. The Dockerfile self-fetches model code + weights from
+# GitHub, so the only file the build needs is service.py — exclude everything
+# else (esp. the 2.9 GB artifacts/) to keep the upload to a few KB.
+*
+!service.py
+!Dockerfile
+!cloudbuild.yaml
