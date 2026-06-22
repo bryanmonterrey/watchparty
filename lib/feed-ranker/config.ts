@@ -22,5 +22,8 @@ export const FEED_RANKER_ENABLED =
 /** Hard timeout for a rank call — keep the feed responsive; fall back on slow. */
 export const FEED_RANKER_TIMEOUT_MS = Number(process.env.FEED_RANKER_TIMEOUT_MS ?? 2500);
 
+/** Shared secret sent as x-phoenix-secret; the service rejects calls without it. */
+export const PHOENIX_SHARED_SECRET = process.env.PHOENIX_SHARED_SECRET ?? "";
+
 /** Most-recent-N engagement events assembled into the user-history sequence. */
 export const HISTORY_LENGTH = 127;

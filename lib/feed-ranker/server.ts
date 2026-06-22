@@ -1,5 +1,5 @@
 import "server-only";
-import { PHOENIX_API_URL, FEED_RANKER_ENABLED, FEED_RANKER_TIMEOUT_MS } from "./config";
+import { PHOENIX_API_URL, FEED_RANKER_ENABLED, FEED_RANKER_TIMEOUT_MS, PHOENIX_SHARED_SECRET } from "./config";
 import { toNumericIdString } from "./ids";
 
 // Maps a watchparty surface name to Phoenix's small-int product_surface vocab.
@@ -69,7 +69,10 @@ export async function rankCandidates(input: RankInput): Promise<RankedCandidate[
     try {
         const res = await fetch(`${PHOENIX_API_URL}/rank`, {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: {
+                "content-type": "application/json",
+                ...(PHOENIX_SHARED_SECRET ? { "x-phoenix-secret": PHOENIX_SHARED_SECRET } : {}),
+            },
             body: JSON.stringify({
                 user_id: toNumericIdString(input.userId),
                 history: input.history.map((h) => ({

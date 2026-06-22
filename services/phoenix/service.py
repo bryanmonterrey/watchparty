@@ -24,7 +24,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from grok import TransformerConfig
@@ -40,6 +40,16 @@ logging.getLogger("jax").setLevel(logging.WARNING)
 log = logging.getLogger("phoenix-service")
 
 ARTIFACTS = os.environ.get("PHOENIX_ARTIFACTS", "./artifacts/oss-phoenix-artifacts")
+
+# Shared secret. The service is publicly reachable (like liteads) but /rank and
+# /embed require this header, which only the watchparty edge sends. If unset
+# (local dev), the check is skipped. /health is always open for Cloud Run probes.
+PHOENIX_SHARED_SECRET = os.environ.get("PHOENIX_SHARED_SECRET", "")
+
+
+def _require_secret(provided: str | None):
+    if PHOENIX_SHARED_SECRET and provided != PHOENIX_SHARED_SECRET:
+        raise HTTPException(status_code=401, detail="unauthorized")
 
 # Default engagement weights (watchparty re-weights + adds crypto boost on its
 # side; these are a sensible fallback matching the reference demo).
@@ -161,7 +171,8 @@ def health():
 
 
 @app.post("/rank")
-def rank(req: RankRequest):
+def rank(req: RankRequest, x_phoenix_secret: str | None = Header(default=None)):
+    _require_secret(x_phoenix_secret)
     if not req.candidates:
         return {"ranked": []}
 
@@ -233,8 +244,9 @@ def rank(req: RankRequest):
 
 
 @app.post("/embed")
-def embed(req: EmbedRequest):
+def embed(req: EmbedRequest, x_phoenix_secret: str | None = Header(default=None)):
     """Item-tower candidate representations for building the retrieval corpus."""
+    _require_secret(x_phoenix_secret)
     if not req.items:
         return {"embeddings": []}
     ret_cfg = STATE["ret_cfg"]
