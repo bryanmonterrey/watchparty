@@ -335,7 +335,17 @@ export const feedRouter = router({
             category: z.string().optional()
         }))
         .query(async ({ ctx, input }) => {
-            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            // Ranked path (homepage carousels) uses an anchor cursor like for-you;
+            // chronological otherwise. See the for-you branch for the cursor shape.
+            const rankEligible = FEED_RANKER_ENABLED && !!ctx.user;
+            const isRankCursor = input.cursor?.startsWith("r:");
+            const rankAnchor = isRankCursor
+                ? new Date(input.cursor!.slice(2, input.cursor!.lastIndexOf(":")))
+                : new Date();
+            const rankOffset = isRankCursor ? Number(input.cursor!.slice(input.cursor!.lastIndexOf(":") + 1)) : 0;
+            const cursorDate = input.cursor && !isRankCursor ? new Date(input.cursor) : undefined;
+            const effectiveCursorDate = rankEligible ? rankAnchor : cursorDate;
+            const fetchLimit = rankEligible ? FEED_POOL_SIZE : input.limit + 1;
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
 
@@ -396,15 +406,17 @@ export const feedRouter = router({
                 .where(and(
                     eq(posts.status, "published"),
                     or(isNotNull(posts.videoUrl), isNotNull(origPosts.videoUrl)),
-                    cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
+                    effectiveCursorDate ? lt(posts.createdAt, effectiveCursorDate) : undefined,
                     input.category ? eq(posts.category, input.category) : undefined,
                 ))
                 .orderBy(desc(posts.createdAt))
-                .limit(input.limit + 1);
+                .limit(fetchLimit);
 
-            const hasMore = results.length > input.limit;
-            const rawItems = hasMore ? results.slice(0, input.limit) : results;
-            
+            // Chronological pagination (used as-is when not ranking; the ranked
+            // path re-slices + overrides nextCursor below).
+            const hasMore = !rankEligible && results.length > input.limit;
+            const rawItems = !rankEligible && results.length > input.limit ? results.slice(0, input.limit) : results;
+
             const videos = rawItems.map(s => {
                 if (s.repostOfId && s.origId) {
                     return {
@@ -433,6 +445,27 @@ export const feedRouter = router({
                 };
             });
 
+            // Ranked path: reorder the pool via Phoenix and paginate by offset.
+            if (rankEligible) {
+                const surface = input.category ? "categories" : "trending";
+                const reordered = await rankFeedRows(ctx.user!.id, surface, videos as any[]);
+                if (reordered) {
+                    const page = (reordered as typeof videos).slice(rankOffset, rankOffset + input.limit);
+                    return {
+                        videos: page,
+                        nextCursor: rankOffset + input.limit < reordered.length
+                            ? `r:${rankAnchor.toISOString()}:${rankOffset + input.limit}`
+                            : undefined,
+                    };
+                }
+                // ranker unavailable → chronological fallback over the fetched pool
+                const fb = results.length > input.limit;
+                return {
+                    videos: (videos as typeof videos).slice(0, input.limit),
+                    nextCursor: fb ? rawItems[input.limit - 1]?.createdAt.toISOString() : undefined,
+                };
+            }
+
             return {
                 videos,
                 nextCursor: hasMore ? rawItems[rawItems.length - 1].createdAt.toISOString() : undefined,
@@ -442,7 +475,15 @@ export const feedRouter = router({
     getShortsFeed: publicProcedure
         .input(z.object({ cursor: z.string().optional(), limit: z.number().min(1).max(50).default(20) }))
         .query(async ({ ctx, input }) => {
-            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            const rankEligible = FEED_RANKER_ENABLED && !!ctx.user;
+            const isRankCursor = input.cursor?.startsWith("r:");
+            const rankAnchor = isRankCursor
+                ? new Date(input.cursor!.slice(2, input.cursor!.lastIndexOf(":")))
+                : new Date();
+            const rankOffset = isRankCursor ? Number(input.cursor!.slice(input.cursor!.lastIndexOf(":") + 1)) : 0;
+            const cursorDate = input.cursor && !isRankCursor ? new Date(input.cursor) : undefined;
+            const effectiveCursorDate = rankEligible ? rankAnchor : cursorDate;
+            const fetchLimit = rankEligible ? FEED_POOL_SIZE : input.limit + 1;
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
             const parentPosts = alias(posts, "parent_posts");
@@ -500,14 +541,14 @@ export const feedRouter = router({
                 .where(and(
                     eq(posts.status, "published"),
                     or(isNotNull(posts.videoUrl), isNotNull(origPosts.videoUrl)),
-                    cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
+                    effectiveCursorDate ? lt(posts.createdAt, effectiveCursorDate) : undefined,
                 ))
                 .orderBy(desc(posts.createdAt))
-                .limit(input.limit + 1);
+                .limit(fetchLimit);
 
-            const hasMore = results.length > input.limit;
-            const rawItems = hasMore ? results.slice(0, input.limit) : results;
-            
+            const hasMore = !rankEligible && results.length > input.limit;
+            const rawItems = !rankEligible && results.length > input.limit ? results.slice(0, input.limit) : results;
+
             const shorts = rawItems.map(s => {
                 if (s.repostOfId && s.origId) {
                     return {
@@ -535,6 +576,24 @@ export const feedRouter = router({
                     parentUserId: s.parentUserId
                 };
             });
+
+            if (rankEligible) {
+                const reordered = await rankFeedRows(ctx.user!.id, "shorts", shorts as any[]);
+                if (reordered) {
+                    const page = (reordered as typeof shorts).slice(rankOffset, rankOffset + input.limit);
+                    return {
+                        shorts: page,
+                        nextCursor: rankOffset + input.limit < reordered.length
+                            ? `r:${rankAnchor.toISOString()}:${rankOffset + input.limit}`
+                            : undefined,
+                    };
+                }
+                const fb = results.length > input.limit;
+                return {
+                    shorts: (shorts as typeof shorts).slice(0, input.limit),
+                    nextCursor: fb ? rawItems[input.limit - 1]?.createdAt.toISOString() : undefined,
+                };
+            }
 
             return {
                 shorts,
