@@ -4,6 +4,7 @@ export * from "./escrow";
 export * from "./token";
 export * from "./follow";
 export * from "./engagement";
+export * from "./feed_signals";
 export * from "./poll";
 export * from "./story";
 export * from "./post_unlock";
