@@ -6,7 +6,8 @@
 // the shared CRON_SECRET. Kept separate from the OpenNext worker because that
 // worker has no scheduled() handler.
 //
-// Schedules (wrangler.jsonc): collect "0 * * * *" (hourly), sweep "*/30 * * * *".
+// Schedules (wrangler.jsonc): collect "0 * * * *" (hourly), sweep "*/30 * * * *",
+// feed-corpus "17 * * * *" (hourly, Phoenix ranker corpus refresh).
 
 interface Env {
     CRON_SECRET: string;
@@ -27,6 +28,10 @@ export default {
         // At :00 both crons fire as separate events — dispatch by which one triggered.
         if (event.cron === "*/30 * * * *") {
             ctx.waitUntil(call(env, "/api/cron/treasury-sweep"));
+        } else if (event.cron === "17 * * * *") {
+            // Phoenix feed ranker: refresh the candidate corpus (embed recent
+            // posts + live streams into post_embeddings).
+            ctx.waitUntil(call(env, "/api/cron/feed-corpus"));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }
