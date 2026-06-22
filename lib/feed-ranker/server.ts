@@ -1,5 +1,12 @@
 import "server-only";
 import { PHOENIX_API_URL, FEED_RANKER_ENABLED, FEED_RANKER_TIMEOUT_MS } from "./config";
+import { toNumericIdString } from "./ids";
+
+// Maps a watchparty surface name to Phoenix's small-int product_surface vocab.
+const SURFACE_IDS: Record<string, number> = {
+    home: 0, "for-you": 1, following: 2, trending: 3, shorts: 4, categories: 5, stream: 6, profile: 7,
+};
+const surfaceId = (s: string) => SURFACE_IDS[s] ?? 0;
 
 // Server-side bridge to the Phoenix ranking service (FastAPI on Cloud Run).
 // Called only from the feed router / /api/feed/* handlers, never the browser —
@@ -40,8 +47,7 @@ export interface RankedCandidate {
 
 interface PhoenixRankResponse {
     ranked?: Array<{
-        subject_id: string;
-        subject_type?: "post" | "stream";
+        ref: string; // watchparty subjectId, echoed back untouched
         score: number;
         actions?: Record<string, number>;
     }>;
@@ -55,22 +61,27 @@ export async function rankCandidates(input: RankInput): Promise<RankedCandidate[
     if (!FEED_RANKER_ENABLED) return null;
     if (input.candidates.length === 0) return [];
 
+    // Remember each candidate's type by its (unique) subjectId so we can restore
+    // it on the response — Phoenix only echoes the opaque `ref`.
+    const typeByRef = new Map(input.candidates.map((c) => [c.subjectId, c.subjectType]));
+    const ps = surfaceId(input.surface);
+
     try {
         const res = await fetch(`${PHOENIX_API_URL}/rank`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
-                user_id: input.userId,
-                surface: input.surface,
+                user_id: toNumericIdString(input.userId),
                 history: input.history.map((h) => ({
-                    post_id: h.postId,
-                    author_id: h.authorId,
+                    post_id: toNumericIdString(h.postId),
+                    author_id: toNumericIdString(h.authorId),
                     actions: h.actions,
                 })),
                 candidates: input.candidates.map((c) => ({
-                    subject_id: c.subjectId,
-                    subject_type: c.subjectType,
-                    author_id: c.authorId,
+                    ref: c.subjectId,
+                    id: toNumericIdString(c.subjectId),
+                    author_id: toNumericIdString(c.authorId),
+                    product_surface: ps,
                 })),
             }),
             signal: AbortSignal.timeout(FEED_RANKER_TIMEOUT_MS),
@@ -81,8 +92,8 @@ export async function rankCandidates(input: RankInput): Promise<RankedCandidate[
         if (!data.ranked) return null;
 
         return data.ranked.map((r) => ({
-            subjectId: r.subject_id,
-            subjectType: r.subject_type ?? "post",
+            subjectId: r.ref,
+            subjectType: typeByRef.get(r.ref) ?? "post",
             score: r.score,
             actions: r.actions
                 ? Object.fromEntries(Object.entries(r.actions).map(([k, v]) => [Number(k), v]))
