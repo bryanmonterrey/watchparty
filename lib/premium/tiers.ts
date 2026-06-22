@@ -28,6 +28,13 @@ export interface PremiumTier {
     tagline: string;
     /** Monthly price in whole USD. 0 for contact-sales (biz_custom). */
     monthlyUsd: number;
+    /**
+     * Ad credits (in whole USD; 1 credit = $1) included each billing period. The
+     * subscription collector grants this to the subscriber on every successful
+     * charge (annual cycles grant 12× — a year of monthly allowance). These are
+     * non-refundable and expire at period end. Tune freely; 0 = none included.
+     */
+    adCreditsMonthly: number;
     /** Self-serve tiers get on-chain plans; biz_custom is contact-sales only. */
     selfServe: boolean;
     /** Center/recommended card in its group. */
@@ -48,6 +55,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         name: "Basic",
         tagline: "For everyday viewers",
         monthlyUsd: 9,
+        adCreditsMonthly: 10,
         selfServe: true,
         planIdMonthly: 1,
         features: [
@@ -64,6 +72,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         name: "Premium",
         tagline: "For power users & creators",
         monthlyUsd: 36,
+        adCreditsMonthly: 50,
         selfServe: true,
         highlighted: true,
         planIdMonthly: 3,
@@ -82,6 +91,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         name: "Business Basic",
         tagline: "For growing teams",
         monthlyUsd: 199,
+        adCreditsMonthly: 200,
         selfServe: true,
         planIdMonthly: 5,
         features: [
@@ -97,6 +107,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         name: "Business Pro",
         tagline: "For established brands",
         monthlyUsd: 999,
+        adCreditsMonthly: 1000,
         selfServe: true,
         highlighted: true,
         planIdMonthly: 7,
@@ -113,6 +124,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         name: "Enterprise",
         tagline: "For large organizations",
         monthlyUsd: 0,
+        adCreditsMonthly: 0,
         selfServe: false,
         planIdMonthly: 0,
         features: [

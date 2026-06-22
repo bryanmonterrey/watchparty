@@ -9,7 +9,8 @@ import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { chargeSubscriber } from "@/lib/chains/solana/subscriptions/collector";
 import { getMerchantAddress } from "@/lib/chains/solana/subscriptions/constants";
-import { PERIOD_HOURS } from "@/lib/premium/tiers";
+import { PERIOD_HOURS, TIERS } from "@/lib/premium/tiers";
+import { grantCreditsToUser } from "@/lib/ads/grant-credits";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -83,6 +84,27 @@ export async function GET(req: NextRequest) {
                 })
                 .where(eq(premiumSubscriptions.id, sub.id));
             charged++;
+
+            // Grant the tier's included ad credits for this period (annual = 12×
+            // a monthly allowance, granted up front). Non-refundable; credits
+            // stay valid for 1 year from grant. Best-effort: a grant failure must
+            // not fail the charge that succeeded.
+            const monthly = (TIERS as Record<string, { adCreditsMonthly: number }>)[sub.tierKey]?.adCreditsMonthly ?? 0;
+            const credits = sub.billingCycle === "annual" ? monthly * 12 : monthly;
+            if (credits > 0) {
+                const creditExpiry = new Date(now.getTime() + 365 * 24 * 3600 * 1000);
+                try {
+                    await grantCreditsToUser({
+                        userId: sub.userId,
+                        amountUsd: credits,
+                        source: "subscription",
+                        expiresAt: creditExpiry,
+                        reference: `premium:${sub.id}:${periodEnd.toISOString()}`,
+                    });
+                } catch (e) {
+                    errors.push({ id: sub.id, error: `credit grant failed: ${String(e)}` });
+                }
+            }
         } catch (e) {
             const attempts = sub.failedAttempts + 1;
             const giveUp = attempts >= MAX_ATTEMPTS;
