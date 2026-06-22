@@ -6,7 +6,7 @@ import { trpc } from "@/lib/trpc/client";
 import {
     Flag, Pin, PinOff,
     UserMinus, UserPlus,
-    VolumeX, Ban,
+    VolumeX, Ban, EyeOff,
     BarChart3, Code, Megaphone, Trash2, Sparkles, Info, MessageCircle, ListPlus, X
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -83,6 +83,13 @@ export function PostOptionsMenu({
     const submitReport = trpc.moderation.submitReport.useMutation();
     const pinPost = trpc.content.pinPost.useMutation({ onSuccess: onClose });
     const unpinPost = trpc.content.unpinPost.useMutation({ onSuccess: onClose });
+    const notInterested = trpc.content.notInterested.useMutation();
+
+    const handleNotInterested = () => {
+        notInterested.mutate({ subjectId: postId, authorId: userId ?? undefined, surface: "home" });
+        onHide?.(); // optimistically remove the card
+        onClose();
+    };
 
     const handleReport = async (reasonText: string) => {
         const reason = REPORT_REASON_MAP[reasonText] ?? "other";
@@ -156,6 +163,7 @@ export function PostOptionsMenu({
                         </>
                     ) : (
                         <>
+                            <MenuItem icon={EyeOff} label="Not interested in this post" onClick={handleNotInterested} />
                             <MenuItem icon={UserMinus} label={`Unfollow @${username || "user"}`} />
                             <MenuItem icon={UserPlus} label={`Subscribe to @${username || "user"}`} />
                             <MenuItem icon={ListPlus} label="Add/remove from Lists" />

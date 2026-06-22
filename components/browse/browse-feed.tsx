@@ -15,6 +15,7 @@ import { ArrowUp, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useFeedDwell } from "@/hooks/use-feed-dwell";
 
 type FeedType = "for-you" | "following" | "news";
 type FeedItem = { type: "post"; createdAt: Date; data: any };
@@ -373,6 +374,9 @@ export function BrowseFeed() {
         }
     };
 
+    // ── Dwell tracking (Phoenix ranker signal) ────────────────────────────────
+    const { track: trackDwell } = useFeedDwell("home");
+
     // ── Seen-posts debounced batch ────────────────────────────────────────────
     const markSeen = trpc.content.markPostsSeen.useMutation();
     const pendingSeenIds = useRef(new Set<string>());
@@ -512,18 +516,20 @@ export function BrowseFeed() {
         return (
             <>
                 {showAd && <SponsoredCard />}
-                <PostCard
-                    post={item.data}
-                    initialLiked={liked}
-                    initialBookmarked={bookmarked}
-                    initialReposted={reposted}
-                    isOwnPost={item.data.userId === session?.user?.id}
-                    connectTop={item.data.connectTop}
-                    connectBottom={item.data.connectBottom}
-                />
+                <div ref={trackDwell({ subjectId: item.data.id, authorId: item.data.userId })}>
+                    <PostCard
+                        post={item.data}
+                        initialLiked={liked}
+                        initialBookmarked={bookmarked}
+                        initialReposted={reposted}
+                        isOwnPost={item.data.userId === session?.user?.id}
+                        connectTop={item.data.connectTop}
+                        connectBottom={item.data.connectBottom}
+                    />
+                </div>
             </>
         );
-    }, [session?.user?.id]); // Depends on session so isOwnPost is correct
+    }, [session?.user?.id, trackDwell]); // session so isOwnPost is correct; trackDwell is stable
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
