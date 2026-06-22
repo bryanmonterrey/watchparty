@@ -19,13 +19,15 @@ import { ArrowLeftIcon, SolanaMarkIcon } from "@/components/icons";
 export default function WalletStep({
   onRegisterBack,
   onExit,
+  redirectTo,
 }: {
   onRegisterBack?: (fn: () => boolean) => void;
   onExit?: () => void;
+  redirectTo?: string;
 }) {
   return (
     <SolanaProvider>
-      <WalletFlow onRegisterBack={onRegisterBack} onExit={onExit} />
+      <WalletFlow onRegisterBack={onRegisterBack} onExit={onExit} redirectTo={redirectTo} />
     </SolanaProvider>
   );
 }
@@ -35,9 +37,11 @@ type View = "list" | "waiting";
 function WalletFlow({
   onRegisterBack,
   onExit,
+  redirectTo = POST_LOGIN_REDIRECT,
 }: {
   onRegisterBack?: (fn: () => boolean) => void;
   onExit?: () => void;
+  redirectTo?: string;
 }) {
   const sol = useWallet();
 
@@ -138,7 +142,7 @@ function WalletFlow({
     // Hard navigation, not client routing: after the mobile wallet hand-off the
     // tab/session state can be stale and router.push/refresh fails ("this page
     // couldn't load"). A full load reliably picks up the new session cookie.
-    window.location.href = POST_LOGIN_REDIRECT;
+    window.location.href = redirectTo;
   }
   function failed(e: unknown) {
     // Cancellation or real error alike: never surface a raw message in the UI —

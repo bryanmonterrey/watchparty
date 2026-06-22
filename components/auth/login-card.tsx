@@ -8,7 +8,7 @@ import { Star2Icon } from "@/components/icons";
 import { authClient, sendEmailOtp } from "@/lib/auth/client";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { HapticButton } from "@/components/ui/haptic-button";
-import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
+import { resolvePostLoginRedirect } from "@/lib/auth/constants";
 import { ConfirmEmailStep } from "./confirm-email-step";
 import { WaitingStep, FingerprintIcon } from "./waiting-step";
 import { Squircle } from "@/components/ui/squircle";
@@ -33,7 +33,6 @@ const PROVIDERS = [
   { id: "discord", provider: "discord", label: "Continue with Discord", Icon: DiscordIcon, w: 33, h: 26 },
 ] as const;
 
-const REDIRECT_TO = POST_LOGIN_REDIRECT;
 const tap = { scale: 0.97 };
 const transition = { duration: 0.18 };
 
@@ -46,8 +45,20 @@ interface Waiting {
   retry: () => void;
 }
 
-export function LoginCard() {
+export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter();
+  // Resolved, origin-validated post-login target. May be a relative path (use the
+  // router) or an absolute https URL on a watchparty.xyz subdomain (e.g. the ads
+  // dashboard delegating login here — use a hard navigation to cross origins).
+  const redirectTo = resolvePostLoginRedirect(callbackUrl);
+  const goAfterLogin = () => {
+    if (redirectTo.startsWith("/")) {
+      router.push(redirectTo);
+      router.refresh();
+    } else {
+      window.location.href = redirectTo;
+    }
+  };
   const [step, setStep] = useState<Step>("methods");
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -87,7 +98,7 @@ export function LoginCard() {
     setStep("waiting");
     const { error } = await authClient.signIn.social({
       provider: provider as Parameters<typeof authClient.signIn.social>[0]["provider"],
-      callbackURL: REDIRECT_TO,
+      callbackURL: redirectTo,
     });
     // On success the browser is redirected to the provider. On failure, return
     // to the options quietly — no raw error on screen (details to the console).
@@ -112,7 +123,7 @@ export function LoginCard() {
         setStep("methods");
         return;
       }
-      router.push(REDIRECT_TO);
+      goAfterLogin();
       router.refresh();
     } catch (e) {
       // Cancellation or real error alike: return to the options, no UI message.
@@ -237,13 +248,13 @@ export function LoginCard() {
 
           {step === "confirm" && (
             <motion.div key="confirm" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition}>
-              <ConfirmEmailStep email={email} />
+              <ConfirmEmailStep email={email} redirectTo={redirectTo} />
             </motion.div>
           )}
 
           {step === "wallet" && (
             <motion.div key="wallet" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition}>
-              <WalletStep onExit={() => setStep("methods")} />
+              <WalletStep onExit={() => setStep("methods")} redirectTo={redirectTo} />
             </motion.div>
           )}
 

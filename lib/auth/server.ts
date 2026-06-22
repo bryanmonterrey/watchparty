@@ -33,6 +33,8 @@ const config = {
     "http://localhost:3000",
     "http://localhost:3001",
     "https://watchparty.xyz",
+    // Ads dashboard subdomain — delegates login here; OAuth callbackURL returns to it.
+    "https://ads.watchparty.xyz",
     // React Native app (mobile/): release scheme + Expo Go dev client.
     "watchparty://",
     "exp://",

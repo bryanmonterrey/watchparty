@@ -10,7 +10,15 @@ import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 const RESEND_COOLDOWN = 60;
 
 // A full-page state of the login screen (not a modal) — same dark layout.
-export function ConfirmEmailStep({ email }: { email: string }) {
+// `redirectTo` is the resolved post-login target (relative path or an absolute
+// https watchparty.xyz-subdomain URL when login was delegated, e.g. ads dashboard).
+export function ConfirmEmailStep({
+  email,
+  redirectTo = POST_LOGIN_REDIRECT,
+}: {
+  email: string;
+  redirectTo?: string;
+}) {
   const router = useRouter();
   const [otp, setOtp] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -52,8 +60,12 @@ export function ConfirmEmailStep({ email }: { email: string }) {
       setOtp("");
       return;
     }
-    router.push(POST_LOGIN_REDIRECT);
-    router.refresh();
+    if (redirectTo.startsWith("/")) {
+      router.push(redirectTo);
+      router.refresh();
+    } else {
+      window.location.href = redirectTo;
+    }
   }
 
   async function resend() {
