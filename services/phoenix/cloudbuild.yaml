@@ -1,0 +1,18 @@
+# Builds the Phoenix feed-ranker image and pushes to Artifact Registry.
+#   gcloud builds submit --config cloudbuild.yaml --project watchparty-ads
+# Build context is phoenix/ (run from this dir). The ~3 GB extracted artifacts
+# must exist at artifacts/oss-phoenix-artifacts/ before submitting (unzip the
+# LFS archive). High-CPU machine + long timeout because the image is large.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - us-west1-docker.pkg.dev/watchparty-ads/phoenix/phoenix:latest
+      - .
+images:
+  - us-west1-docker.pkg.dev/watchparty-ads/phoenix/phoenix:latest
+options:
+  machineType: E2_HIGHCPU_8
+  diskSizeGb: 100
+timeout: 3000s

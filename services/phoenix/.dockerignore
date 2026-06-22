@@ -1,0 +1,17 @@
+# Keep the build context small + the image lean.
+# Exclude the raw LFS zip (we COPY the *extracted* artifacts instead).
+artifacts/oss-phoenix-artifacts.zip
+artifacts/*.zip
+
+# Python / tooling cruft
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+uv.lock
+pyproject.toml
+test_*.py
+
+# The reference CLI runners we don't serve
+run_ranker.py
+run_retrieval.py
