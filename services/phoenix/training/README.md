@@ -25,22 +25,43 @@ ranker learns *your* users' patterns instead of only X's.
    ANN corpus search surface content the user engages with, rather than frozen-X
    semantics. Exports tuned `retrieval/` weights. Needs ≥2 engaged pairs per batch.
 
-## Run
+## The guarded loop (recommended) — one command, safe
+
+`scripts/feed-ranker/retrain.mjs` orchestrates the whole thing with safety rails so
+it can NEVER ship a worse model:
 
 ```sh
-# 1. export (from watchparty repo)
-bun scripts/feed-ranker/export-training-data.mjs > training.jsonl
-
-# 2. train both towers (from an x-algorithm/phoenix clone with these overlaid)
-uv run train.py            --data training.jsonl --epochs 5 --out artifacts/tuned  # ranker
-uv run train_retrieval.py  --data training.jsonl --epochs 5 --out artifacts/tuned  # retrieval
-
-# 3. assemble a full artifacts dir: tuned ranker + original retrieval/ + corpus
-cp -r artifacts/oss-phoenix-artifacts/retrieval artifacts/tuned/retrieval
-cp artifacts/oss-phoenix-artifacts/sports_corpus.npz artifacts/tuned/   # or your corpus
-
-# 4. rebuild/redeploy the service pointing PHOENIX_ARTIFACTS at the tuned dir
+# dry run (trains + reports RCE delta, promotes nothing)
+PHX=../x-algorithm/phoenix bun scripts/feed-ranker/retrain.mjs
+# promote tuned weights ONLY if they beat baseline on held-out data
+PHX=../x-algorithm/phoenix bun scripts/feed-ranker/retrain.mjs --promote
 ```
+
+It: (1) **guards on data volume** (`RETRAIN_MIN_EXAMPLES`, default 500 — aborts on
+noise); (2) exports + does a **temporal train/val split** (train on older, eval on
+newer — no leakage); (3) trains both towers; (4) computes **RCE on the held-out set**
+for baseline vs tuned (`evaluate.py`); (5) **promotes only if RCE improved**. A worse
+model is rejected (verified: on tiny data the tuned model overfits and scores worse on
+held-out → gate correctly refuses).
+
+After `--promote` succeeds, rebuild/redeploy the service with `PHOENIX_ARTIFACTS`
+pointing at the tuned dir (bake `artifacts/tuned` into the image — see
+`services/phoenix/README.md`).
+
+## Manual steps (what the loop wraps)
+
+```sh
+bun scripts/feed-ranker/export-training-data.mjs > training.jsonl   # from watchparty repo
+uv run train.py           --data training.jsonl --epochs 5 --out artifacts/tuned   # ranker
+uv run train_retrieval.py --data training.jsonl --epochs 5 --out artifacts/tuned   # retrieval
+uv run evaluate.py --artifacts_dir artifacts/tuned --data val.jsonl   # RCE on held-out
+```
+
+`evaluate.py` reports **RCE** (relative cross entropy, the metric from
+`the-algorithm-ml`): `100*(1 - model_bce/baseline_bce)` vs a base-rate straw man.
+>0 = better than base rate, higher = better, negative = worse/un-calibrated. **The
+published X checkpoint scores NEGATIVE RCE on watchparty data** — quantifying the
+frozen-checkpoint limitation: X's model is mis-calibrated for our content until tuned.
 
 ## Honest status & limits
 

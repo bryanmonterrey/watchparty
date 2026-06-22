@@ -61,6 +61,10 @@ for (const [userId, rows] of byUser) {
     const positives = [...posByPost.values()];
     if (positives.length === 0) continue;
 
+    // Latest engagement time for this example — used for the temporal train/val
+    // split (train on older examples, evaluate on newer = no future leakage).
+    const ts = Math.max(...rows.map((r) => new Date(r.createdAt).getTime()));
+
     const candidatePostIds = new Set(positives.map((p) => p._raw));
 
     // History = signals on OTHER posts (exclude candidates → no leakage), newest N.
@@ -80,7 +84,7 @@ for (const [userId, rows] of byUser) {
         .map((n) => ({ post_id: toId(n.postId), author_id: toId(n.authorId), actions: {} }));
 
     const candidates = [...positives.map(({ post_id, author_id, actions }) => ({ post_id, author_id, actions })), ...negs];
-    process.stdout.write(JSON.stringify({ user_id: toId(userId), history, candidates }) + "\n");
+    process.stdout.write(JSON.stringify({ user_id: toId(userId), ts, history, candidates }) + "\n");
     written++;
 }
 
