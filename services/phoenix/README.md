@@ -6,32 +6,31 @@ retrieval + Grok-1-derived transformer ranker — in a FastAPI app on GCP Cloud 
 Mirrors the liteads (openadserver) deployment pattern; called server-side from
 `lib/feed-ranker/server.ts`. See `docs/feed-ranker-phoenix.md` for model I/O.
 
-## These files are an overlay on the x-algorithm clone
+## Self-fetching build (no multi-GB upload)
 
-The model code + 3 GB artifacts are NOT vendored here (too large; Apache-2.0,
-Grok-1-derived — keep at the source). The files in this dir are copied INTO a
-local clone of the repo to build/deploy:
+The model code + 3 GB weights are NOT vendored here and are NOT uploaded from a
+dev box. The Dockerfile clones `xai-org/x-algorithm` and `git lfs pull`s the
+weights DURING the build — Cloud Build runs in-datacenter, so the 3 GB fetch is
+fast, and the build context is just `service.py` (a few KB). This avoids the
+home-uplink bottleneck (uploading 2.9 GB as build context took 20+ min and
+stalled).
 
 ```sh
-# 1. clone + pull the model weights (~3 GB LFS), unzip artifacts
-git clone https://github.com/xai-org/x-algorithm.git ../x-algorithm
-cd ../x-algorithm/phoenix
-git lfs pull
-unzip -o artifacts/oss-phoenix-artifacts.zip -d artifacts/
-
-# 2. overlay these service files
-cp <watchparty>/services/phoenix/{service.py,Dockerfile,cloudbuild.yaml,.dockerignore} .
-
-# 3. build the image (uploads ~2.9 GB context, bakes artifacts into the image)
+# Build context = this dir; only service.py + Dockerfile are sent (.dockerignore
+# excludes everything else). The image is built entirely from GitHub-fetched code.
+cd services/phoenix
 gcloud builds submit --config cloudbuild.yaml --project watchparty-ads
 
-# 4. deploy to Cloud Run
+# Deploy to Cloud Run (4Gi for the ~3 GB model; warm instance to avoid cold starts)
 gcloud run deploy phoenix \
   --image us-west1-docker.pkg.dev/watchparty-ads/phoenix/phoenix:latest \
   --region us-west1 --project watchparty-ads \
   --memory 4Gi --cpu 2 --concurrency 8 --min-instances 1 --timeout 30 \
   --allow-unauthenticated
 ```
+
+`cloudbuild.yaml` here builds with context `.` — when building from a clone's
+`phoenix/` dir instead, the same files apply (service.py is the only input).
 
 Then set `PHOENIX_API_URL` (the Cloud Run URL) + `FEED_RANKER_ENABLED=true` in
 the watchparty env.
