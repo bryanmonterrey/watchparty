@@ -107,7 +107,7 @@ export async function rankCandidates(input: RankInput): Promise<RankedCandidate[
     }
 }
 
-const secretHeaders = () =>
+const secretHeaders = (): Record<string, string> =>
     PHOENIX_SHARED_SECRET ? { "x-phoenix-secret": PHOENIX_SHARED_SECRET } : {};
 
 /** Item-tower embeddings (128-d) for building the corpus. Used by the corpus cron. */
