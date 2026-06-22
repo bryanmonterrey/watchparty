@@ -1,12 +1,14 @@
-// Ad platform integration config (OpenAdServer — ads.watchparty.xyz).
+// Ad platform integration config (liteads decision service on Cloud Run).
 //
 // watchparty talks to the ad server ONLY through its own first-party
 // `/api/ad/*` routes (see app/api/ad/). The browser never hits the ad origin
 // directly — that keeps requests same-origin (no CORS), lets us inject geo from
 // Cloudflare headers server-side, and hides the backend URL.
 
-/** Server-side origin of the OpenAdServer Next.js delivery API (ads.watchparty.xyz). */
-export const ADS_API_URL = (process.env.ADS_API_URL ?? "https://ads.watchparty.xyz").replace(/\/$/, "");
+/** Server-side origin of the liteads FastAPI decision service (GCP Cloud Run). */
+export const ADS_API_URL = (
+    process.env.ADS_API_URL ?? "https://liteads-979878773946.us-west1.run.app"
+).replace(/\/$/, "");
 
 /** Client flag — ads run by default; set NEXT_PUBLIC_ADS_ENABLED="false" to disable. */
 export const ADS_ENABLED = process.env.NEXT_PUBLIC_ADS_ENABLED !== "false";
