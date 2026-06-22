@@ -5,6 +5,11 @@ import { posts, user, mutes, blocks, follows } from "@/db/schema";
 import { eq, desc, and, lt, sql, inArray, or, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
+import { rankFeedRows } from "@/lib/feed-ranker/rank-feed";
+import { FEED_RANKER_ENABLED } from "@/lib/feed-ranker/config";
+
+// Candidate pool size sourced for ranking (then re-ranked + paginated client-side).
+const FEED_POOL_SIZE = 200;
 
 export const feedRouter = router({
     getFeed: publicProcedure
@@ -118,10 +123,9 @@ export const feedRouter = router({
             let nextCursor: string | undefined = undefined;
 
             if (input.type === "for-you") {
-                const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
                 let mutedIds = new Set<string>();
                 let blockedIds = new Set<string>();
-                
+
                 if (ctx.user) {
                     const [mutedRows, blockedRows] = await Promise.all([
                         db.select({ mutedId: mutes.mutedId }).from(mutes).where(eq(mutes.muterId, ctx.user.id)),
@@ -131,22 +135,57 @@ export const feedRouter = router({
                     blockedIds = new Set(blockedRows.map(r => r.blockedId));
                 }
 
-                const results = await baseJoins(
-                    db.select(selectFields).from(posts)
-                ).where(and(
-                    eq(posts.status, "published"),
-                    eq(posts.visibility, "public"),
-                    cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
-                )).orderBy(desc(posts.createdAt))
-                    .limit(input.limit + 5);
+                // Ranked path: cursor "r:<anchorISO>:<offset>" pins a candidate pool
+                // (posts as of the anchor time) so pagination is stable while we
+                // re-rank. Falls through to chronological if the ranker is off or
+                // the service is unavailable.
+                let ranked = false;
+                if (FEED_RANKER_ENABLED && ctx.user) {
+                    const isRankCursor = input.cursor?.startsWith("r:");
+                    const anchor = isRankCursor
+                        ? new Date(input.cursor!.slice(2, input.cursor!.lastIndexOf(":")))
+                        : new Date();
+                    const offset = isRankCursor ? Number(input.cursor!.slice(input.cursor!.lastIndexOf(":") + 1)) : 0;
 
-                const filtered = results.filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
+                    const pool = (await baseJoins(
+                        db.select(selectFields).from(posts)
+                    ).where(and(
+                        eq(posts.status, "published"),
+                        eq(posts.visibility, "public"),
+                        lt(posts.createdAt, anchor),
+                    )).orderBy(desc(posts.createdAt))
+                        .limit(FEED_POOL_SIZE))
+                        .filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
 
-                if (filtered.length > input.limit) {
-                    const nextItem = filtered[input.limit];
-                    nextCursor = nextItem?.createdAt.toISOString();
+                    const reordered = await rankFeedRows(ctx.user.id, "for-you", pool as any[]);
+                    if (reordered) {
+                        postsResults = reordered.slice(offset, offset + input.limit);
+                        if (offset + input.limit < reordered.length) {
+                            nextCursor = `r:${anchor.toISOString()}:${offset + input.limit}`;
+                        }
+                        ranked = true;
+                    }
                 }
-                postsResults = filtered.slice(0, input.limit);
+
+                if (!ranked) {
+                    const cursorDate = input.cursor && !input.cursor.startsWith("r:") ? new Date(input.cursor) : undefined;
+                    const results = await baseJoins(
+                        db.select(selectFields).from(posts)
+                    ).where(and(
+                        eq(posts.status, "published"),
+                        eq(posts.visibility, "public"),
+                        cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
+                    )).orderBy(desc(posts.createdAt))
+                        .limit(input.limit + 5);
+
+                    const filtered = results.filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
+
+                    if (filtered.length > input.limit) {
+                        const nextItem = filtered[input.limit];
+                        nextCursor = nextItem?.createdAt.toISOString();
+                    }
+                    postsResults = filtered.slice(0, input.limit);
+                }
             } else if (input.type === "following") {
                 if (!ctx.user) return { posts: [], nextCursor: undefined };
 
