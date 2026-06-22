@@ -3,7 +3,7 @@
 import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 import { TIERS, type TierKey } from "@/lib/premium/tiers";
-import { Crown, Loader2 } from "lucide-react";
+import { Crown, Loader2, Megaphone, ArrowUpRight } from "lucide-react";
 import { appToast } from "@/components/app-ui/app-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -81,6 +81,41 @@ export function PremiumSettings() {
                     )}
                 </div>
             </div>
+
+            {/* Premium features you can manage. Ads opens the ad dashboard, where
+                you create campaigns funded by ad credits — your plan includes a
+                monthly allowance, and you can buy more there. */}
+            {/* Ads — a manageable premium feature. Double-bezel: outer shell (tray)
+                holds an inner core (plate). Opens the ad dashboard, where campaigns
+                are funded by ad credits (plan includes a monthly allowance). */}
+            <a
+                href="https://ads.watchparty.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block rounded-[1.75rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.99]"
+            >
+                <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-gradient-to-b from-zinc-900 to-zinc-950 p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
+                    {/* ambient glow */}
+                    <div className="pointer-events-none absolute -right-12 -top-16 size-40 rounded-full bg-twitter/20 blur-3xl transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] opacity-60 group-hover:opacity-100" />
+                    <div className="relative flex items-center gap-4">
+                        <div className="grid size-11 place-items-center rounded-2xl bg-white/[0.04] text-twitter ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                            <Megaphone className="size-5" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <p className="text-[15px] font-semibold tracking-tight text-white">Ads</p>
+                            <p className="mt-0.5 text-xs text-zinc-400">
+                                {(tier?.adCreditsMonthly ?? 0) > 0
+                                    ? `Includes $${tier!.adCreditsMonthly}/mo in ad credits · manage campaigns`
+                                    : "Create & manage ad campaigns"}
+                            </p>
+                        </div>
+                    </div>
+                    {/* button-in-button trailing arrow */}
+                    <div className="relative grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06] text-zinc-300 ring-1 ring-white/10 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:bg-white group-hover:text-black group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                        <ArrowUpRight className="size-4" strokeWidth={1.75} />
+                    </div>
+                </div>
+            </a>
         </div>
     );
 }
