@@ -1,7 +1,16 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { rankCandidates } from "./server";
 import { getUserHistory } from "./history";
 import { FEED_RANKER_ENABLED } from "./config";
+import { withCache } from "@/lib/cache";
+
+// Cache the expensive part (history assembly + Phoenix /rank) per
+// (user, surface, candidate-set). Repeated feed loads + pagination over the same
+// pool reuse one ranking instead of re-hitting Phoenix every time — the hot-path
+// mitigation. Short TTL so engagement still moves the feed quickly. The cheap
+// crypto-boost + reorder run fresh on every call (not cached).
+const RANK_TTL = 45; // seconds
 
 // Reorders a pool of candidate rows by Phoenix ranking. Surface-agnostic so the
 // for-you feed, homepage carousels, and shorts can all share it. Returns the
@@ -32,16 +41,28 @@ export async function rankFeedRows<T extends RankableRow>(
 ): Promise<T[] | null> {
     if (!FEED_RANKER_ENABLED || !userId || rows.length === 0) return null;
 
-    const history = await getUserHistory(userId);
-    const ranked = await rankCandidates({
-        userId,
-        surface,
-        history,
-        candidates: rows.map((r) => ({
-            subjectId: r.id,
-            subjectType: r.subjectType ?? "post",
-            authorId: r.userId,
-        })),
+    // Content-addressed cache key: same user + surface + candidate set → same
+    // ranking, regardless of anchor-timestamp jitter between requests.
+    const candKey = createHash("sha1")
+        .update(rows.map((r) => r.id).sort().join(","))
+        .digest("hex")
+        .slice(0, 16);
+    const cacheKey = `feedrank:${userId}:${surface}:${candKey}`;
+
+    // On a miss, assemble history + call Phoenix. A null result (service down) is
+    // treated by withCache as a miss, so failures aren't cached and retry next call.
+    const ranked = await withCache(cacheKey, RANK_TTL, async () => {
+        const history = await getUserHistory(userId);
+        return rankCandidates({
+            userId,
+            surface,
+            history,
+            candidates: rows.map((r) => ({
+                subjectId: r.id,
+                subjectType: r.subjectType ?? "post",
+                authorId: r.userId,
+            })),
+        });
     });
     if (!ranked) return null; // service down → caller keeps chronological order
 
