@@ -3,7 +3,7 @@
 import React from "react";
 import { Link, Mail, Upload, BookmarkPlus, Download, Feather, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Share2Icon } from "@/components/icons";
+import { LinkIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 interface ShareMenuProps {
@@ -38,7 +38,7 @@ export function ShareMenu({ post, bookmarked, handleBookmark }: ShareMenuProps) 
                         open && "text-white bg-twitter2/[12%]"
                     )}
                 >
-                    <Share2Icon className="w-[18px] h-[18px]" />
+                    <LinkIcon className="w-[18px] h-[18px]" />
                 </button>
             </PopoverTrigger>
             <PopoverContent
