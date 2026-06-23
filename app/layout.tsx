@@ -46,7 +46,15 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${geistPixel.variable} h-full antialiased`}
+      // Bake the dark default into the server-rendered <html>: next-themes only
+      // sets the class client-side, so without this the first paint is the
+      // browser's white canvas + light `:root` before the script swaps in dark
+      // (the flash on refresh). `colorScheme: dark` makes the browser paint a
+      // dark canvas from byte zero; the `dark` class starts the CSS vars dark.
+      // next-themes still owns it at runtime and flips it only for users who
+      // picked Light/System-light (suppressHydrationWarning covers that swap).
+      style={{ colorScheme: "dark" }}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${geistPixel.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/*
