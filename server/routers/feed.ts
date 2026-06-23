@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { posts, user, mutes, blocks, follows } from "@/db/schema";
 import { eq, desc, and, lt, sql, inArray, or, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
+import { recordSignal, accumulateDwell, ACTION } from "@/lib/feed-ranker/signals";
 import { rankFeedRows } from "@/lib/feed-ranker/rank-feed";
 import { retrieveOutOfNetwork } from "@/lib/feed-ranker/retrieval";
 import { FEED_RANKER_ENABLED } from "@/lib/feed-ranker/config";
@@ -648,9 +648,10 @@ export const feedRouter = router({
             return { success: true };
         }),
 
-    // Dwell — accumulated visible time on a feed card, sent by the client
-    // (IntersectionObserver). Batched: the client posts one row per card per
-    // session-ish window. value = seconds visible.
+    // Dwell — visible time on a feed card, sent incrementally by the client
+    // (IntersectionObserver). Accumulated server-side into ONE capped row per
+    // (user, subject) via accumulateDwell, so a long/idle session can't create
+    // thousands of rows or inflate the signal.
     recordDwell: protectedProcedure
         .input(z.object({
             items: z.array(z.object({
@@ -664,13 +665,12 @@ export const feedRouter = router({
         .mutation(async ({ ctx, input }) => {
             await Promise.all(input.items
                 .filter((it) => it.seconds >= 1) // ignore fly-by scrolls
-                .map((it) => recordSignal({
+                .map((it) => accumulateDwell({
                     userId: ctx.user.id,
                     subjectId: it.subjectId,
                     subjectType: it.subjectType,
                     authorId: it.authorId ?? null,
-                    actionType: ACTION.DWELL,
-                    value: it.seconds,
+                    seconds: it.seconds,
                     surface: it.surface,
                 })));
             return { success: true };

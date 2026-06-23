@@ -27,6 +27,7 @@ interface TrackedCard extends CardMeta {
 
 const VISIBILITY_THRESHOLD = 0.5; // ≥50% on screen counts as "visible"
 const FLUSH_INTERVAL_MS = 15_000;
+const IDLE_MS = 30_000; // no pointer/key/scroll for this long → stop counting dwell
 
 export function useFeedDwell(surface: string = "home") {
     // feedRouter is merged into the `content` namespace (see server/routers/index.ts).
@@ -35,14 +36,21 @@ export function useFeedDwell(surface: string = "home") {
     const cards = useRef(new Map<Element, TrackedCard>());
     const elements = useRef(new Map<string, Element>()); // subjectId → element
     const callbacks = useRef(new Map<string, (el: Element | null) => void>());
+    const lastActivity = useRef(Date.now());
 
-    // Settle currently-visible time into `accumulated` (called on flush + on hide).
+    // Settle currently-visible time into `accumulated`. Counts only time while the
+    // user was actually active AND the tab visible — so a left-open/backgrounded
+    // tab stops accruing dwell after IDLE_MS instead of logging hours of phantom
+    // attention (root cause of the dwell-row explosion: 883 rows from one idle tab).
     const settle = useCallback((el: Element, now: number) => {
         const c = cards.current.get(el);
-        if (c && c.visibleSince != null) {
-            c.accumulated += (now - c.visibleSince) / 1000;
-            c.visibleSince = now;
-        }
+        if (!c || c.visibleSince == null) return;
+        const hidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+        const activeUntil = lastActivity.current + IDLE_MS;
+        const effectiveNow = hidden ? c.visibleSince : Math.min(now, activeUntil);
+        const inc = (effectiveNow - c.visibleSince) / 1000;
+        if (inc > 0) c.accumulated += inc;
+        c.visibleSince = now;
     }, []);
 
     const flush = useCallback(() => {
@@ -85,7 +93,7 @@ export function useFeedDwell(surface: string = "home") {
                     if (visible && c.visibleSince == null) {
                         c.visibleSince = now;
                     } else if (!visible && c.visibleSince != null) {
-                        c.accumulated += (now - c.visibleSince) / 1000;
+                        settle(entry.target, now); // idle-aware accrual
                         c.visibleSince = null;
                     }
                 }
@@ -100,14 +108,29 @@ export function useFeedDwell(surface: string = "home") {
         const onHide = () => { if (document.visibilityState === "hidden") flush(); };
         document.addEventListener("visibilitychange", onHide);
 
+        // Mark the user active on real interaction; settle() stops counting dwell
+        // once Date.now() is more than IDLE_MS past this.
+        const bump = () => { lastActivity.current = Date.now(); };
+        const opts = { passive: true } as const;
+        window.addEventListener("pointermove", bump, opts);
+        window.addEventListener("pointerdown", bump, opts);
+        window.addEventListener("keydown", bump, opts);
+        window.addEventListener("scroll", bump, opts);
+        window.addEventListener("wheel", bump, opts);
+
         return () => {
             clearInterval(interval);
             document.removeEventListener("visibilitychange", onHide);
+            window.removeEventListener("pointermove", bump);
+            window.removeEventListener("pointerdown", bump);
+            window.removeEventListener("keydown", bump);
+            window.removeEventListener("scroll", bump);
+            window.removeEventListener("wheel", bump);
             flush();
             obs.disconnect();
             observer.current = null;
         };
-    }, [flush]);
+    }, [flush, settle]);
 
     const track = useCallback((meta: CardMeta) => {
         const key = meta.subjectId;
