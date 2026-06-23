@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, ViewTransition } from "react";
 import { useRouter } from "next/navigation";
-import { SearchIcon, MicIcon, ArrowRightIcon } from "@/components/icons";
+import { SearchIcon, AudioWavesIcon, ArrowRightIcon } from "@/components/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { SearchDropdown } from "@/components/home/video-feed/search-dropdown";
@@ -104,7 +104,7 @@ export function GlobalSearch({
                                 </motion.span>
                             ) : (
                                 <motion.span key="live" initial={{ opacity: 1, scale: 1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 1, scale: 1 }} transition={{ duration: 0.125 }}>
-                                    <MicIcon className="w-5 h-5" />
+                                    <AudioWavesIcon className="w-5 h-5" />
                                 </motion.span>
                             )}
                         </AnimatePresence>
