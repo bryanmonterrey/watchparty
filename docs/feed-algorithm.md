@@ -66,6 +66,9 @@ posts + live streams via `/embed` hourly. Out-of-network retrieval cosine-search
 | Corpus + out-of-network ANN retrieval | ✅ live; `feed-corpus` cron hourly :17 |
 | Crypto/ticker boost | ✅ live (post-rank, tunable, no redeploy) |
 | Training pipeline (ranker + retrieval two-tower) | ✅ built + verified, not yet run on real volume |
+| Guarded retrain loop (`retrain.mjs`) + RCE eval gate | ✅ built + verified (rejects worse models) |
+| Ranking cache (Redis, 45s) | ✅ live |
+| Dwell idle-tab bug (cap + activity-gating) | ✅ fixed + live; prod rows cleaned |
 
 Production env (`PHOENIX_API_URL`, `FEED_RANKER_ENABLED`, `PHOENIX_SHARED_SECRET`)
 is in the `DOTENV_PRODUCTION` GitHub secret; deploys are push-to-main via
