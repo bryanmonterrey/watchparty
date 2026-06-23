@@ -6,7 +6,6 @@ import { SolanaProvider } from "@/components/solana/solana-provider";
 import { ClusterProvider } from "@/components/cluster/cluster-data-access";
 import { EvmProvider } from "@/lib/chains/evm/evm-provider";
 import { ReactQueryProvider } from "@/components/react-query-provider";
-import { ThemeProvider } from "@/components/theme/theme-provider";
 import { TrayProvider } from "@/components/providers/tray-provider";
 import { HeartbeatProvider } from "@/components/app-ui/heartbeat-provider";
 
@@ -20,21 +19,19 @@ import { HeartbeatProvider } from "@/components/app-ui/heartbeat-provider";
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <NuqsAdapter>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <ReactQueryProvider>
-          <ClusterProvider>
-            <SolanaProvider>
-              <EvmProvider>
-                <TrayProvider>
-                  <HeartbeatProvider />
-                  {children}
-                  <Toaster position="bottom-center" />
-                </TrayProvider>
-              </EvmProvider>
-            </SolanaProvider>
-          </ClusterProvider>
-        </ReactQueryProvider>
-      </ThemeProvider>
+      <ReactQueryProvider>
+        <ClusterProvider>
+          <SolanaProvider>
+            <EvmProvider>
+              <TrayProvider>
+                <HeartbeatProvider />
+                {children}
+                <Toaster position="bottom-center" />
+              </TrayProvider>
+            </EvmProvider>
+          </SolanaProvider>
+        </ClusterProvider>
+      </ReactQueryProvider>
     </NuqsAdapter>
   );
 }

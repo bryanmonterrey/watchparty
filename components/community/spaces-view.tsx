@@ -111,7 +111,7 @@ export function SpacesView() {
                     <SpacesSkeleton />
                 ) : spaces.length === 0 ? (
                     <div className="relative rounded-[28px] border border-flexwhite/10 overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-darkfantasy/10 via-transparent to-twitter/5" />
+                        <div className="absolute inset-0 bg-zinc-900/60" />
                         <div className="relative flex flex-col items-center justify-center py-20 px-6 text-center">
                             <div className="size-20 rounded-full bg-white/5 border border-flexwhite/10 flex items-center justify-center mb-6">
                                 <Radio className="size-9 text-flexwhite/30" />

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,24 +48,28 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${geistPixel.variable} h-full antialiased`}
     >
-      <head>
+      <body className="min-h-full flex flex-col">
         {/*
-          Pre-paint theme script. next-themes' own inline script ships with the
-          ThemeProvider, which lives in (app)/layout behind an async session
-          check — so on a cold load the <html> paints the light `:root`
-          background before that script runs (a flash of light → dark, visible
-          on Cloudflare where the session await adds edge latency). Setting the
-          class here, in the root <head>, applies the resolved theme before the
-          first paint. Mirrors next-themes (attribute="class", storageKey
-          "theme", defaultTheme "system", enableSystem).
+          ThemeProvider lives at the root (not in (app)/AppProviders) so
+          next-themes' own pre-paint script renders synchronously here, before
+          any async boundary. Previously it sat behind (app)/layout's
+          `await getServerSession()`, so on a cold load the <html> painted the
+          light `:root` background while the session resolved, then flipped to
+          dark — the flash, amplified on Cloudflare by edge→DB latency.
+          next-themes is ~2KB with no network calls, so it doesn't pull the
+          wallet/query/data SDKs the speed rule guards against into marketing/
+          login. defaultTheme="dark" makes dark the default; Light/System stay
+          selectable via the theme switcher.
         */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement,t=localStorage.getItem('theme')||'system',r=t==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t;d.classList.remove('light','dark');d.classList.add(r);d.style.colorScheme=r;}catch(e){}})();`,
-          }}
-        />
-      </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

@@ -13,8 +13,10 @@ import { UpgradeOverlay } from "@/components/premium/upgrade-overlay";
 // hosts the app's provider stack + sidebar frame.
 //
 // Consolidation vs sidebar's layout:
-// - AppProviders (Query/tRPC/theme/cluster/Solana) lives HERE, not the root
+// - AppProviders (Query/tRPC/cluster/Solana) lives HERE, not the root
 //   layout — so login/landing never load the wallet SDK (the speed rewrite).
+//   ThemeProvider is the exception: it sits in the root layout so next-themes'
+//   pre-paint script runs before this async session check (no theme flash).
 // - MiniPlayerShell mounts here so an opened mini player persists across
 //   every (app) route; the player chunk itself stays lazy inside the shell.
 
