@@ -61,3 +61,8 @@ cloudflare-env.d.ts
 
 # cron worker generated secrets bundle
 cron/.cf-secrets.json
+
+# Local agent / MCP tooling — do not commit
+.headroom/
+.serena/
+.mcp.json
