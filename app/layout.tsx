@@ -47,6 +47,23 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${geistPixel.variable} h-full antialiased`}
     >
+      <head>
+        {/*
+          Pre-paint theme script. next-themes' own inline script ships with the
+          ThemeProvider, which lives in (app)/layout behind an async session
+          check — so on a cold load the <html> paints the light `:root`
+          background before that script runs (a flash of light → dark, visible
+          on Cloudflare where the session await adds edge latency). Setting the
+          class here, in the root <head>, applies the resolved theme before the
+          first paint. Mirrors next-themes (attribute="class", storageKey
+          "theme", defaultTheme "system", enableSystem).
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var d=document.documentElement,t=localStorage.getItem('theme')||'system',r=t==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t;d.classList.remove('light','dark');d.classList.add(r);d.style.colorScheme=r;}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
