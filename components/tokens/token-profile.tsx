@@ -1,6 +1,7 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Token } from "@/db/schema/content"
 import { TokenHeader } from "./token-header"
 import { TokenMarketOverview } from "./token-market-overview"
@@ -25,30 +26,74 @@ interface TokenProfileProps {
 }
 
 export function TokenProfile({ token }: TokenProfileProps) {
-    return (
-        <div className="w-full max-w-[1400px] mx-auto p-2 pt-16 md:pt-16 lg:pt-16 flex flex-col gap-6 text-zinc-100 min-h-screen">
-            
+    const [activeTab, setActiveTab] = useState<"holders" | "trades">("holders")
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 items-start">
+    const holderCount = token.holderCount || 342
+
+    return (
+        <div className="w-full px-4 mx-auto p-2 pt-header flex flex-col gap-6 text-zinc-100 min-h-screen">
+            <div className="grid grid-cols-1 lg:grid-cols-10 items-start gap-3">
                 
                 {/* Left Column */}
-                <div className="lg:col-span-8 flex flex-col gap-6 pr-2 ">
-                    <div className=" rounded-b-2xl  flex flex-col gap-2">
-                        <TokenHeader token={token} />               
-                        <TokenMarketOverview />
-                    </div>
-                    <TokenStatsGrid />
+                <div className="lg:col-span-7 flex flex-col gap-3">
+                    <TokenHeader token={token} />               
+                    <TokenMarketOverview token={token} />
+                    <TokenStatsGrid token={token} />
                     <TokenDescription token={token} />
-                    <TokenTradesTable token={token} />
+
+                    {/* Apple-style Segment Control Tabs */}
+                    <div className="flex flex-col gap-4 mt-2">
+                        <div className="relative inline-flex rounded-full bg-[#16181c] p-1 text-sm font-semibold shadow-inner self-start">
+                            {(["holders", "trades"] as const).map((tab) => {
+                                const active = activeTab === tab;
+                                return (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`relative z-10 px-5 py-3 rounded-full capitalize text-xs sm:text-sm font-bold transition-colors duration-200 select-none cursor-pointer focus:outline-none min-w-[90px] sm:min-w-[110px] ${
+                                            active ? "text-black" : "text-zinc-400 hover:text-white"
+                                        }`}
+                                    >
+                                        {tab === "holders" ? `Holders (${holderCount})` : "Trades"}
+                                        {active && (
+                                            <motion.div
+                                                layoutId="profile-toggle-bg"
+                                                className="absolute inset-0 bg-white rounded-full -z-10"
+                                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                            />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Animated Tab Content Transition */}
+                        <div className="w-full">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={activeTab}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.15, ease: "easeInOut" }}
+                                >
+                                    {activeTab === "holders" ? (
+                                        <TokenHoldersTable token={token} />
+                                    ) : (
+                                        <TokenTradesTable token={token} />
+                                    )}
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right Column */}
-                <div className="lg:col-span-4 pl-2 flex flex-col gap-4">
+                <div className="lg:col-span-3 flex flex-col gap-3">
                     <TokenSwapCard />
                     <TokenBondingCurve />
                     <TokenChatCard token={token} />
                     <TokenNotifiedBanner />
-                    <TokenHoldersTable />
                 </div>
             </div>
         </div>

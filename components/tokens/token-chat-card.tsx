@@ -4,7 +4,7 @@ import { Token } from "@/db/schema/content"
 
 export function TokenChatCard({ token }: { token: Token }) {
     return (
-        <div className="bg-black rounded-3xl border border-flexborder p-4 flex items-center justify-between group cursor-pointer hover:border-zinc-700 transition-colors">
+        <div className="bg-card rounded-[25px] p-5 flex items-center justify-between group cursor-pointer transition-all hover:bg-card/90">
             <div className="flex items-center gap-3">
                 <div className="size-10 rounded-full bg-zinc-800 overflow-hidden shrink-0">
                     {token.imageUrl && <img src={token.imageUrl} alt={token.name} className="object-cover size-full" />}
