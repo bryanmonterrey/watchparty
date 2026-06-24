@@ -36,7 +36,7 @@ export function TokenHeader({ token }: TokenHeaderProps) {
     const telegramUrl = `https://t.me/${token.ticker.toLowerCase()}`
 
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 p-6 bg-card rounded-[25px]">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-5 p-6 bg-card rounded-[25px]">
             <div className="flex flex-col sm:flex-row gap-5 items-start">
                 <div className="size-16 sm:size-20 rounded-2xl bg-zinc-800/85 border border-zinc-700/30 overflow-hidden shrink-0 shadow-md">
                     {token.imageUrl ? (
@@ -114,7 +114,7 @@ export function TokenHeader({ token }: TokenHeaderProps) {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+            <div className="flex items-start justify-start gap-2 md:gap-3 flex-wrap">
                 <button 
                     className="cursor-pointer flex items-center gap-2 py-2.5 bg-white text-black hover:bg-zinc-100 font-bold rounded-full px-5 text-sm transition-all shadow-md active:scale-95"
                 >
