@@ -29,7 +29,7 @@ import { ScheduleDialog } from "@/components/browse/schedule-dialog";
 import { ScheduledPostsDrawer } from "@/components/browse/scheduled-posts-drawer";
 import { LinkPreviewCard } from "@/components/browse/link-preview-card";
 import { useLinkPreview } from "@/hooks/use-link-preview";
-import { TokenLaunchTrigger, TokenLaunchState } from "@/components/browse/token-launch";
+import { TokenLaunchTrigger, TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/components/browse/token-launch";
 import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 import { useTokenLaunch } from "@/hooks/use-token-launch";
 import { nanoid } from "nanoid";
@@ -99,8 +99,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
 
     // ── Token launch ──────────────────────────────────────────────────────────
     const [tokenLaunch, setTokenLaunch] = useState<TokenLaunchState>({
-        earningsEnabled: false, ticker: "", creatorFee: 5, splits: [],
-        buyAmount: undefined, isTickerManuallyEdited: false,
+        ...DEFAULT_TOKEN_LAUNCH, earningsEnabled: false,
     });
     const [isEditingTicker, setIsEditingTicker] = useState(false);
 
@@ -118,6 +117,14 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
             setTokenLaunch(prev => ({ ...prev, ticker: auto }));
         }
     }, [content, tokenLaunch.isTickerManuallyEdited]);
+
+    // Auto-generate token name from content
+    useEffect(() => {
+        if (!tokenLaunch.isNameManuallyEdited) {
+            const autoName = content.trim().replace(/\s+/g, " ").slice(0, 32);
+            setTokenLaunch(prev => ({ ...prev, name: autoName }));
+        }
+    }, [content, tokenLaunch.isNameManuallyEdited]);
 
     // ── Mutations ─────────────────────────────────────────────────────────────
     const createPost = trpc.content.createPost.useMutation({
@@ -147,7 +154,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
         setShowVoiceRecorder(false); setVoiceBlob(null); setVoiceDuration(0);
         setHasContentWarning(false); setContentWarningText("");
         setScheduledFor(undefined); setDismissedPreview(false);
-        setTokenLaunch({ earningsEnabled: false, ticker: "", creatorFee: 5, splits: [], buyAmount: undefined, isTickerManuallyEdited: false });
+        setTokenLaunch({ ...DEFAULT_TOKEN_LAUNCH, earningsEnabled: false });
         clearPreview?.();
     };
 
@@ -216,6 +223,11 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                 replyToId: mode === "comment" ? post?.id : undefined,
                 repostOfId: mode === "quote" ? post?.id : undefined,
                 ticker: tokenLaunch.ticker || undefined,
+                tokenName: tokenLaunch.name || undefined,
+                token_image: imageUrl?.split(',')[0] || session?.user?.avatar_url || session?.user?.image || undefined,
+                twitterUrl: tokenLaunch.twitterUrl || undefined,
+                telegramUrl: tokenLaunch.telegramUrl || undefined,
+                websiteUrl: tokenLaunch.websiteUrl || undefined,
                 earningsEnabled: tokenLaunch.earningsEnabled || hasBuy,
                 tokenStatus,
                 tokenAddress,

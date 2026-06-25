@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { ChevronLeft, Sparkles, Plus, Trash2, X } from "lucide-react"
-import { XIcon, KickIcon, TwitchIcon, SolanaIcon, AtIcon } from "@/components/icons"
+import { XIcon, KickIcon, TwitchIcon, SolanaIcon, AtIcon, TelegramIcon, GlobeIcon } from "@/components/icons"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -128,6 +128,39 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                     <p className="text-zinc-500 text-sm text-center">
                         Tickers are short nicknames that others will see when trading your content.
                     </p>
+
+                    {/* Token Name */}
+                    <div className="space-y-2">
+                        <Label className="text-base font-medium text-zinc-300">Token Name</Label>
+                        <Input
+                            value={localState.name}
+                            onChange={(e) => updateState({ name: e.target.value.slice(0, 32), isNameManuallyEdited: true })}
+                            placeholder="e.g. Diamond Hands"
+                            maxLength={32}
+                            className="bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 rounded-2xl text-base"
+                        />
+                        <p className="text-[11px] text-zinc-500">Leave blank to auto-name it from your post.</p>
+                    </div>
+
+                    {/* Socials (Optional) */}
+                    <div className="space-y-3">
+                        <Label className="text-base font-medium text-zinc-300">Socials (Optional)</Label>
+                        {([
+                            { key: "twitterUrl" as const, Icon: XIcon, placeholder: "x.com/yourtoken" },
+                            { key: "telegramUrl" as const, Icon: TelegramIcon, placeholder: "t.me/yourtoken" },
+                            { key: "websiteUrl" as const, Icon: GlobeIcon, placeholder: "yourtoken.xyz" },
+                        ]).map(({ key, Icon, placeholder }) => (
+                            <div key={key} className="relative">
+                                <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                <Input
+                                    value={localState[key]}
+                                    onChange={(e) => updateState({ [key]: e.target.value } as Partial<TokenLaunchState>)}
+                                    placeholder={placeholder}
+                                    className="pl-11 bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 rounded-2xl text-base"
+                                />
+                            </div>
+                        ))}
+                    </div>
 
                     {/* Creator Fee Slider */}
                     <div className="space-y-4">

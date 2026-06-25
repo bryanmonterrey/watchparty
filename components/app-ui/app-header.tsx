@@ -122,7 +122,7 @@ export function AppHeader() {
               aria-label="Search"
               className="flex size-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <SearchIcon className="size-6" />
+              <SearchIcon className="size-7" />
             </Link>
           )}
         </div>

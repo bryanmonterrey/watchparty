@@ -24,7 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { EmojiPicker } from "@/components/messages/emoji-picker";
 import { GifPicker } from "@/components/messages/gif-picker";
 import { supabase } from "@/lib/supabase/client";
-import { TokenLaunchTrigger, TokenLaunchState } from "@/components/browse/token-launch";
+import { TokenLaunchTrigger, TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/components/browse/token-launch";
 import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 import { useTokenLaunch } from "@/hooks/use-token-launch";
 import { DraftsDrawer } from "@/components/browse/drafts-drawer";
@@ -44,12 +44,8 @@ export function PostComposer() {
     const [audience, setAudience] = useState<"everyone" | "followers" | "verified" | "token_holders" | "vip">("everyone");
     const [replyPrivacy, setReplyPrivacy] = useState<"everyone" | "followers" | "verified" | "token_holders">("everyone");
     const [tokenLaunch, setTokenLaunch] = useState<TokenLaunchState>({
+        ...DEFAULT_TOKEN_LAUNCH,
         earningsEnabled: false,
-        ticker: "",
-        creatorFee: 5,
-        splits: [],
-        buyAmount: undefined,
-        isTickerManuallyEdited: false,
     });
     const [isEditingTicker, setIsEditingTicker] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,6 +84,12 @@ export function PostComposer() {
             .slice(0, 10);
         setTokenLaunch((prev) => ({ ...prev, ticker: autoTicker }));
     }, [content, tokenLaunch.isTickerManuallyEdited]);
+
+    useEffect(() => {
+        if (tokenLaunch.isNameManuallyEdited) return;
+        const autoName = content.trim().replace(/\s+/g, " ").slice(0, 32);
+        setTokenLaunch((prev) => ({ ...prev, name: autoName }));
+    }, [content, tokenLaunch.isNameManuallyEdited]);
 
     useEffect(() => {
         setIsMounted(true);
@@ -141,7 +143,7 @@ export function PostComposer() {
             setVoiceBlob(null);
             setVoiceDuration(0);
             setShowVoiceRecorder(false);
-            setTokenLaunch({ earningsEnabled: false, ticker: "", creatorFee: 5, splits: [], buyAmount: undefined, isTickerManuallyEdited: false });
+            setTokenLaunch({ ...DEFAULT_TOKEN_LAUNCH, earningsEnabled: false });
             setIsSubmitting(false);
             toast.success(vars.status === "scheduled" ? "Post scheduled!" : "Banger posted!");
 
@@ -326,7 +328,11 @@ export function PostComposer() {
             audience,
             replyPrivacy,
             ticker: tokenLaunch.ticker || undefined,
-            token_image: generatedOgUrl,
+            tokenName: tokenLaunch.name || undefined,
+            token_image: imageUrl?.split(',')[0] || session?.user?.avatar_url || session?.user?.image || undefined,
+            twitterUrl: tokenLaunch.twitterUrl || undefined,
+            telegramUrl: tokenLaunch.telegramUrl || undefined,
+            websiteUrl: tokenLaunch.websiteUrl || undefined,
             earningsEnabled: tokenLaunch.earningsEnabled || hasBuy,
             tokenStatus,
             tokenAddress,

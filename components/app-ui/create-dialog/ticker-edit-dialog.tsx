@@ -135,9 +135,9 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                         <Input
                             value={localState.name}
                             onChange={(e) => updateState({ name: e.target.value.slice(0, 32), isNameManuallyEdited: true })}
-                            placeholder="Auto-generated from your post"
+                            placeholder="e.g. Diamond Hands"
                             maxLength={32}
-                            className="bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-12 rounded-[24px] text-base"
+                            className="bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 rounded-2xl text-base"
                         />
                         <p className="text-[11px] text-zinc-500">Leave blank to auto-name it from your post.</p>
                     </div>
@@ -156,7 +156,7 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                                     value={localState[key]}
                                     onChange={(e) => updateState({ [key]: e.target.value } as Partial<TokenLaunchState>)}
                                     placeholder={placeholder}
-                                    className="pl-11 bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-12 rounded-[24px] text-base"
+                                    className="pl-11 bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 rounded-2xl text-base"
                                 />
                             </div>
                         ))}
