@@ -50,7 +50,9 @@ export function TokenCandlestickChart({ mint, className }: TokenCandlestickChart
             layout: {
                 background: { type: ColorType.Solid, color: "transparent" },
                 textColor: "#71717a",
-                attributionLogo: false,
+                // Satisfies the lightweight-charts attribution requirement (small
+                // TradingView logo linking to tradingview.com) — no separate credit needed.
+                attributionLogo: true,
             },
             width: containerRef.current.clientWidth,
             height: containerRef.current.clientHeight,
