@@ -10,6 +10,7 @@ import { headers } from "next/headers";
 import { TRPCError } from "@trpc/server";
 import { Keypair, Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { withCache, invalidateCache, TTL } from "@/lib/cache";
+import { resolvePool } from "@/lib/tokens/udf-datafeed";
 
 const subtle = globalThis.crypto?.subtle;
 
@@ -2561,10 +2562,19 @@ export const walletRouter = router({
                         if (!res.ok) throw new Error(`ohlcv ${res.status}`);
                         const json = await res.json();
                         const candles: number[][] = json.data?.attributes?.ohlcv_list ?? [];
-                        return candles.map(([time, , , , close]) => ({ time: time as number, value: close }));
+                        // GeckoTerminal ohlcv_list rows: [time, open, high, low, close, volume].
+                        // Keep `value` (close) for backward compat with the area chart that reads d.value.
+                        return candles.map(([time, open, high, low, close]) => ({
+                            time: time as number,
+                            open,
+                            high,
+                            low,
+                            close,
+                            value: close,
+                        }));
                     };
 
-                    let data: { time: number; value: number }[];
+                    let data: { time: number; open: number; high: number; low: number; close: number; value: number }[];
 
                     if (input.timeframe === "ALL") {
                         const page1 = await fetchPage();
@@ -2590,7 +2600,14 @@ export const walletRouter = router({
                         const candles: number[][] = json.data?.attributes?.ohlcv_list ?? [];
                         data = candles
                             .sort((a, b) => a[0] - b[0])
-                            .map(([time, , , , close]) => ({ time: time as number, value: close }));
+                            .map(([time, open, high, low, close]) => ({
+                                time: time as number,
+                                open,
+                                high,
+                                low,
+                                close,
+                                value: close,
+                            }));
                     }
 
                     // Deduplicate timestamps (can occur at page boundaries)
@@ -2603,6 +2620,56 @@ export const walletRouter = router({
                 });
             } catch (err) {
                 console.error("getChartData failed:", err);
+                return [];
+            }
+        }),
+
+    /**
+     * Recent on-chain trades for a token, from GeckoTerminal's pool trades feed.
+     * Reuses the cached `gt:pool:{mint}` lookup. Side (buy/sell) and token amount
+     * are resolved relative to OUR mint (which may be base or quote of the pool).
+     */
+    getTokenTrades: protectedProcedure
+        .input(z.object({ mint: z.string() }))
+        .query(async ({ input }) => {
+            const GT = "https://api.geckoterminal.com/api/v2/networks/solana";
+            const gtHeaders = { Accept: "application/json;version=20230302" };
+            try {
+                return await withCache(`gt:trades:${input.mint}`, 30, async () => {
+                    const pool = await resolvePool(input.mint);
+                    if (!pool) return [];
+
+                    const res = await fetch(
+                        `${GT}/pools/${pool.address}/trades?trade_volume_in_usd_greater_than=0`,
+                        { headers: gtHeaders, signal: AbortSignal.timeout(8000) }
+                    );
+                    if (!res.ok) throw new Error(`trades ${res.status}`);
+                    const json = await res.json();
+                    const rows: { attributes: Record<string, string | number> }[] = json.data ?? [];
+
+                    return rows.map((row) => {
+                        const a = row.attributes;
+                        const fromAddr = String(a.from_token_address ?? "");
+                        const buysOurToken = String(a.to_token_address ?? "") === input.mint;
+                        const sellsOurToken = fromAddr === input.mint;
+                        // Fall back to GT's `kind` when neither side matches the raw mint.
+                        const isBuy = buysOurToken ? true : sellsOurToken ? false : a.kind === "buy";
+                        const tokenAmount = buysOurToken
+                            ? Number(a.to_token_amount ?? 0)
+                            : Number(a.from_token_amount ?? 0);
+
+                        return {
+                            account: String(a.tx_from_address ?? ""),
+                            isBuy,
+                            usdValue: Number(a.volume_in_usd ?? 0),
+                            tokenAmount,
+                            ts: a.block_timestamp ? Math.floor(Date.parse(String(a.block_timestamp)) / 1000) : 0,
+                            txHash: String(a.tx_hash ?? ""),
+                        };
+                    });
+                });
+            } catch (err) {
+                console.error("getTokenTrades failed:", err);
                 return [];
             }
         }),

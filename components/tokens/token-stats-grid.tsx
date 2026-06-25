@@ -6,24 +6,21 @@ interface TokenStatsGridProps {
 }
 
 export function TokenStatsGrid({ token }: TokenStatsGridProps) {
-    const vol24h = token.volume24hUsd || 32900
-    const price = token.priceUsd || 0.00000340
-    
-    // Dynamic price intervals derived from 24h change for realistic variation
-    const change24h = token.priceChange24h !== null && token.priceChange24h !== undefined ? token.priceChange24h : -42.47
-    
-    // Deriving variations for short-term timeframes
-    const change5m = change24h * 0.12
-    const change1h = change24h * 0.35
-    const change6h = change24h * 0.70
+    const vol24h = token.volume24hUsd ?? null
+    const price = token.priceUsd ?? null
+    const change24h = token.priceChange24h ?? null
+    const holders = token.holderCount ?? null
+    const txns = token.txCount24h ?? null
 
-    const formatVol = (val: number) => {
+    const formatVol = (val: number | null) => {
+        if (val === null) return "—"
         if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`
         if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`
         return `$${val.toFixed(2)}`
     }
 
-    const formatPrice = (val: number) => {
+    const formatPrice = (val: number | null) => {
+        if (val === null) return "—"
         if (val === 0) return "$0.00"
         if (val < 0.00001) return `$${val.toFixed(8)}`
         if (val < 0.01) return `$${val.toFixed(6)}`
@@ -31,21 +28,23 @@ export function TokenStatsGrid({ token }: TokenStatsGridProps) {
         return `$${val.toFixed(2)}`
     }
 
-    const formatChange = (val: number) => {
+    const formatCount = (val: number | null) =>
+        val === null ? "—" : val >= 1000 ? `${(val / 1000).toFixed(1)}K` : String(val)
+
+    const formatChange = (val: number | null) => {
+        if (val === null) return "—"
         const sign = val >= 0 ? "+" : ""
         return `${sign}${val.toFixed(2)}%`
     }
 
-    const getChangeColor = (val: number) => {
-        return val >= 0 ? "text-emerald-500" : "text-pastelred"
-    }
+    const changeColor = change24h === null ? "text-zinc-200" : change24h >= 0 ? "text-emerald-500" : "text-pastelred"
 
     const stats = [
         { label: "Vol 24h", value: formatVol(vol24h), color: "text-zinc-200" },
         { label: "Price", value: formatPrice(price), color: "text-zinc-200" },
-        { label: "5m", value: formatChange(change5m), color: getChangeColor(change5m) },
-        { label: "1h", value: formatChange(change1h), color: getChangeColor(change1h) },
-        { label: "6h", value: formatChange(change6h), color: getChangeColor(change6h) }
+        { label: "24h", value: formatChange(change24h), color: changeColor },
+        { label: "Holders", value: formatCount(holders), color: "text-zinc-200" },
+        { label: "Txns 24h", value: formatCount(txns), color: "text-zinc-200" }
     ]
 
     return (

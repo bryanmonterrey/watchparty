@@ -1,29 +1,23 @@
+"use client"
+
 import React, { useState } from "react"
 import { Settings, Copy, Check, ExternalLink } from "lucide-react"
+import { formatDistanceToNowStrict } from "date-fns"
 import { Token } from "@/db/schema/content"
 import { Switch } from "@/components/ui/switch"
-import { SolanaIcon } from "../icons"
+import { trpc } from "@/lib/trpc/client"
 
 export function TokenTradesTable({ token }: { token: Token }) {
-    const [filterSize, setFilterSize] = useState(true)
+    const [filterSize, setFilterSize] = useState(false)
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
-    const allTrades = [
-        { acc: "Fi1wCu99HAsb728hXWUz982hjAh", type: "Buy", sol: 0.19585185, tickerAmt: "4.75M", time: "1s ago", txn: "KnFbqd", isBuy: true },
-        { acc: "opXcGM8912hASDz9812hjas1239", type: "Sell", sol: 1.25522062, tickerAmt: "27.28M", time: "5s ago", txn: "5hmLPp", isBuy: false },
-        { acc: "ixWVTd12389hJASDz9812hasd12", type: "Sell", sol: 1.36310353, tickerAmt: "27.05M", time: "12s ago", txn: "4LENKo", isBuy: false },
-        { acc: "J2nerb8219hHASD9821hjas123h", type: "Buy", sol: 0.90666666, tickerAmt: "19.21M", time: "18s ago", txn: "5xrvud", isBuy: true },
-        { acc: "8Ebb8kto8912hJKAsd123981hja", type: "Sell", sol: 1.24363199, tickerAmt: "23.04M", time: "25s ago", txn: "5ixuRL", isBuy: false },
-        { acc: "2AsdK2hz12389hJASDz98123has", type: "Buy", sol: 0.02105123, tickerAmt: "480K", time: "40s ago", txn: "9xkJ2a", isBuy: true },
-        { acc: "L8sHjk89123hJASDz98123hasd8", type: "Buy", sol: 0.04500000, tickerAmt: "980K", time: "1m ago", txn: "3hJKas", isBuy: true },
-        { acc: "Mn8Kjd12389hASDz9812hjas123", type: "Sell", sol: 0.01250000, tickerAmt: "250K", time: "2m ago", txn: "4jKl2a", isBuy: false },
-        { acc: "Kl2sHjhJASDz98123hasd89123h", type: "Buy", sol: 0.09852000, tickerAmt: "2.10M", time: "3m ago", txn: "5HjKas", isBuy: true },
-        { acc: "Op9sKa8219hHASD9821hjas123h", type: "Sell", sol: 0.04892000, tickerAmt: "1.00M", time: "4m ago", txn: "8JkLas", isBuy: false }
-    ]
+    const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
+        { mint: token.tokenAddress! },
+        { enabled: !!token.tokenAddress, staleTime: 30_000, refetchInterval: 30_000, retry: 1 }
+    )
 
-    const filteredTrades = filterSize 
-        ? allTrades.filter(t => t.sol >= 0.05) 
-        : allTrades
+    // "Filter by size" = trades worth more than $100.
+    const filteredTrades = filterSize ? trades.filter((t) => t.usdValue >= 100) : trades
 
     const copyToClipboard = (address: string, index: number) => {
         navigator.clipboard.writeText(address)
@@ -31,9 +25,18 @@ export function TokenTradesTable({ token }: { token: Token }) {
         setTimeout(() => setCopiedIndex(null), 2000)
     }
 
-    const truncateAddress = (addr: string) => {
-        if (addr.length <= 12) return addr
-        return `${addr.slice(0, 5)}...${addr.slice(-5)}`
+    const truncateAddress = (addr: string) =>
+        addr.length <= 12 ? addr : `${addr.slice(0, 5)}...${addr.slice(-5)}`
+
+    const formatUsd = (val: number) => {
+        if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`
+        return `$${val.toFixed(2)}`
+    }
+
+    const formatAmount = (val: number) => {
+        if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(2)}M`
+        if (val >= 1_000) return `${(val / 1_000).toFixed(1)}K`
+        return val.toFixed(2)
     }
 
     return (
@@ -42,17 +45,17 @@ export function TokenTradesTable({ token }: { token: Token }) {
             <div className="p-5 border-b border-zinc-800/40 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <span className="text-sm font-extrabold text-zinc-300">Filter by size</span>
-                    <Switch 
-                        checked={filterSize} 
-                        onCheckedChange={setFilterSize} 
-                        className="data-[state=checked]:bg-emerald-500" 
+                    <Switch
+                        checked={filterSize}
+                        onCheckedChange={setFilterSize}
+                        className="data-[state=checked]:bg-emerald-500"
                     />
                     <div className="bg-zinc-850 border border-zinc-800 rounded-full px-3 py-1 text-xs text-zinc-300 flex items-center gap-1.5 font-bold shadow-inner">
-                        <SolanaIcon className="size-3.5" /> 0.05 SOL
+                        &gt; $100
                     </div>
                 </div>
                 <span className="text-xs text-zinc-500 font-medium">
-                    {filterSize ? "Showing trades > 0.05 SOL" : "Showing all trades"}
+                    {filterSize ? "Showing trades > $100" : "Showing all trades"}
                 </span>
             </div>
 
@@ -63,7 +66,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                         <tr>
                             <th className="px-5 py-4">Account</th>
                             <th className="px-5 py-4">Type</th>
-                            <th className="px-5 py-4">Amount (SOL)</th>
+                            <th className="px-5 py-4">Value (USD)</th>
                             <th className="px-5 py-4">Amount ({token.ticker})</th>
                             <th className="px-5 py-4">
                                 <div className="flex items-center gap-1">
@@ -76,18 +79,18 @@ export function TokenTradesTable({ token }: { token: Token }) {
                     </thead>
                     <tbody className="divide-y divide-zinc-800/30">
                         {filteredTrades.map((trade, idx) => (
-                            <tr key={idx} className="hover:bg-zinc-800/10 transition-colors group">
+                            <tr key={trade.txHash || idx} className="hover:bg-zinc-800/10 transition-colors group">
                                 {/* Account Column */}
                                 <td className="px-5 py-4">
                                     <div className="flex items-center gap-2">
                                         <div className={`size-2.5 rounded-full shrink-0 ${
                                             trade.isBuy ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-pastelred shadow-[0_0_8px_rgba(255,116,108,0.5)]'
                                         }`} />
-                                        <div 
-                                            onClick={() => copyToClipboard(trade.acc, idx)}
+                                        <div
+                                            onClick={() => copyToClipboard(trade.account, idx)}
                                             className="flex items-center gap-1.5 font-bold text-zinc-300 hover:text-zinc-100 text-sm cursor-pointer transition-colors"
                                         >
-                                            <span>{truncateAddress(trade.acc)}</span>
+                                            <span>{truncateAddress(trade.account)}</span>
                                             {copiedIndex === idx ? (
                                                 <Check className="size-3.5 text-emerald-500" />
                                             ) : (
@@ -102,14 +105,14 @@ export function TokenTradesTable({ token }: { token: Token }) {
                                     <span className={`font-extrabold text-sm ${
                                         trade.isBuy ? 'text-emerald-500' : 'text-pastelred'
                                     }`}>
-                                        {trade.type}
+                                        {trade.isBuy ? "Buy" : "Sell"}
                                     </span>
                                 </td>
 
-                                {/* Amount (SOL) Column */}
+                                {/* Value (USD) Column */}
                                 <td className="px-5 py-4">
                                     <span className="font-extrabold text-zinc-300 text-sm">
-                                        {trade.sol.toFixed(5)}
+                                        {formatUsd(trade.usdValue)}
                                     </span>
                                 </td>
 
@@ -118,26 +121,26 @@ export function TokenTradesTable({ token }: { token: Token }) {
                                     <span className={`font-extrabold text-sm ${
                                         trade.isBuy ? 'text-emerald-500' : 'text-pastelred'
                                     }`}>
-                                        {trade.tickerAmt}
+                                        {formatAmount(trade.tokenAmount)}
                                     </span>
                                 </td>
 
                                 {/* Time Column */}
                                 <td className="px-5 py-4">
                                     <span className="font-medium text-zinc-500 text-sm">
-                                        {trade.time}
+                                        {trade.ts ? `${formatDistanceToNowStrict(new Date(trade.ts * 1000))} ago` : "—"}
                                     </span>
                                 </td>
 
                                 {/* Txn Column */}
                                 <td className="px-5 py-4 text-right">
-                                    <a 
-                                        href={`https://solscan.io/tx/${trade.txn}`}
-                                        target="_blank" 
+                                    <a
+                                        href={`https://solscan.io/tx/${trade.txHash}`}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1 font-semibold text-zinc-500 hover:text-zinc-300 text-sm cursor-pointer transition-colors"
                                     >
-                                        <span>{trade.txn}</span>
+                                        <span>{trade.txHash ? truncateAddress(trade.txHash) : "—"}</span>
                                         <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </a>
                                 </td>
@@ -145,6 +148,16 @@ export function TokenTradesTable({ token }: { token: Token }) {
                         ))}
                     </tbody>
                 </table>
+
+                {/* Empty / loading states */}
+                {isLoading && (
+                    <div className="p-10 text-center text-zinc-600 text-sm">Loading trades…</div>
+                )}
+                {!isLoading && filteredTrades.length === 0 && (
+                    <div className="p-10 text-center text-zinc-600 text-sm">
+                        {token.tokenAddress ? "No trades yet" : "Trades appear once trading goes live"}
+                    </div>
+                )}
             </div>
         </div>
     )
