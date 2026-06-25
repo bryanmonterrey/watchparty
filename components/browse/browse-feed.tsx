@@ -504,10 +504,23 @@ export function BrowseFeed() {
     // inject a sponsored card every Nth row WITHOUT adding ad entries to the
     // virtualized dataset (which would corrupt keys/pagination/caches).
     const indexByKeyRef = useRef<Map<string, number>>(new Map());
+    // Number of items in the currently-rendered window — used to detect the
+    // window's bottom edge so we don't draw a thread line that points off-screen.
+    const windowCountRef = useRef(0);
     const renderItem = useCallback((item: FeedItem) => {
         const key = keyOf(item);
         const idx = indexByKeyRef.current.get(key) ?? -1;
-        const showAd = idx > 0 && idx % FEED_AD_INTERVAL === 0;
+        // Thread edges: a connector is only valid when its counterpart is also
+        // rendered. At the window's top edge the parent has been trimmed off, and
+        // at the bottom edge the reply hasn't loaded yet — in both cases drop the
+        // dangling line so the card renders as a normal standalone post (matches X).
+        const isFirst = idx === 0;
+        const isLast = idx === windowCountRef.current - 1;
+        const connectTop = !!item.data.connectTop && !isFirst;
+        const connectBottom = !!item.data.connectBottom && !isLast;
+        // Never inject an ad in the middle of a thread (between a parent and its
+        // reply) — it would break the connecting line.
+        const showAd = idx > 0 && idx % FEED_AD_INTERVAL === 0 && !connectTop;
         // Prefer server-embedded interaction state (zero latency).
         // Fall back to ref-based bulk query data for any post the server didn't annotate.
         const liked = item.data.isLiked ?? likedPostIdsRef.current?.likedIds.includes(item.data.id) ?? false;
@@ -523,8 +536,8 @@ export function BrowseFeed() {
                         initialBookmarked={bookmarked}
                         initialReposted={reposted}
                         isOwnPost={item.data.userId === session?.user?.id}
-                        connectTop={item.data.connectTop}
-                        connectBottom={item.data.connectBottom}
+                        connectTop={connectTop}
+                        connectBottom={connectBottom}
                     />
                 </div>
             </>
@@ -615,6 +628,7 @@ export function BrowseFeed() {
                 const uniqueItems = Array.from(uniqueMap.values());
                 // Refresh the key→index map so renderItem can place sponsored cards.
                 indexByKeyRef.current = new Map(uniqueItems.map((it, i) => [keyOf(it), i]));
+                windowCountRef.current = uniqueItems.length;
 
                 // The window's edges vs the full dataset decide whether the list
                 // may scroll further. hasPrevious lets evicted-newer items be

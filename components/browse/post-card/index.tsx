@@ -308,7 +308,7 @@ export function PostCard({
                             setIsHidden={setIsHidden}
                         />
 
-                        {post.parentUsername && (
+                        {post.parentUsername && !connectTop && (
                             <div className="text-[15px] text-postgray mb-1 -mt-1">
                                 Replying to <span className="text-twitter2 hover:underline cursor-pointer">@{post.parentUsername}</span>
                             </div>
