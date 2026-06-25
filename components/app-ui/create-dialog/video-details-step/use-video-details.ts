@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useTokenLaunch } from "@/hooks/use-token-launch"
 import type { TokenLaunchState } from "../token-launch-section"
+import { DEFAULT_TOKEN_LAUNCH } from "../token-launch-section"
 import type { DraftCard } from "@/components/video/cards"
 import type { EndScreenElement } from "@/components/video/end-screen"
 import type { VideoDetailsStepProps, StepType, Collaborator, AllowedCommenter } from "./types"
@@ -22,14 +23,7 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
     const [selectedPlaylists, setSelectedPlaylists] = React.useState<string[]>([])
 
     // Token Launch State
-    const [tokenLaunch, setTokenLaunch] = React.useState<TokenLaunchState>({
-        earningsEnabled: true,
-        ticker: "",
-        creatorFee: 5,
-        splits: [],
-        buyAmount: undefined,
-        isTickerManuallyEdited: false
-    })
+    const [tokenLaunch, setTokenLaunch] = React.useState<TokenLaunchState>({ ...DEFAULT_TOKEN_LAUNCH })
 
     const { launchToken, isLaunching: isTokenLaunching } = useTokenLaunch()
 

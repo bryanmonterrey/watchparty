@@ -17,7 +17,7 @@ import { trpc } from "@/lib/trpc/client"
 import { GifIcon, MicIcon, CalendarIcon, LockIcon, EmojiIcon, AlertIcon } from "@/components/icons"
 import { Switch } from "@/components/ui/switch"
 import { VideoDetailsStep } from "./create-dialog/video-details-step"
-import { TokenLaunchState, TokenLaunchTrigger } from "./create-dialog/token-launch-section"
+import { TokenLaunchState, TokenLaunchTrigger, DEFAULT_TOKEN_LAUNCH } from "./create-dialog/token-launch-section"
 import { TickerEditDialog } from "./create-dialog/ticker-edit-dialog"
 import { useTokenLaunch } from "@/hooks/use-token-launch"
 import { EmojiPicker } from "@/components/messages/emoji-picker"
@@ -63,14 +63,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
     const postImageInputRef = React.useRef<HTMLInputElement>(null)
 
     // Token Launch State (Post)
-    const [tokenLaunch, setTokenLaunch] = React.useState<TokenLaunchState>({
-        earningsEnabled: true,
-        ticker: "",
-        creatorFee: 5,
-        splits: [],
-        buyAmount: undefined,
-        isTickerManuallyEdited: false
-    })
+    const [tokenLaunch, setTokenLaunch] = React.useState<TokenLaunchState>({ ...DEFAULT_TOKEN_LAUNCH })
     const [isEditingTicker, setIsEditingTicker] = React.useState(false)
 
     const { launchToken, isLaunching: isTokenLaunching } = useTokenLaunch()
@@ -126,6 +119,15 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
         }
     }, [postContent, tokenLaunch.isTickerManuallyEdited])
 
+    // Auto-generate token name from post content (first line, title-cased, capped),
+    // unless the user set one explicitly in the ticker dialog.
+    React.useEffect(() => {
+        if (!tokenLaunch.isNameManuallyEdited && postContent) {
+            const autoName = postContent.split('\n')[0].trim().slice(0, 32)
+            setTokenLaunch(prev => ({ ...prev, name: autoName }))
+        }
+    }, [postContent, tokenLaunch.isNameManuallyEdited])
+
     // Reset state when dialog is closed with a slight delay to allow exit animation
     React.useEffect(() => {
         if (!open) {
@@ -142,14 +144,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                 setPostGif(null)
                 setIsPosting(false)
                 setIsEditingTicker(false)
-                setTokenLaunch({
-                    earningsEnabled: true,
-                    ticker: "",
-                    creatorFee: 5,
-                    splits: [],
-                    buyAmount: undefined,
-                    isTickerManuallyEdited: false
-                })
+                setTokenLaunch({ ...DEFAULT_TOKEN_LAUNCH })
                 setAudience("everyone")
                 setReplyPrivacy("everyone")
                 setShowPoll(false)
@@ -180,12 +175,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
             setPostImages([])
             setPostGif(null)
             setIsPosting(false)
-            setTokenLaunch(prev => ({
-                ...prev,
-                earningsEnabled: true,
-                ticker: "",
-                buyAmount: undefined,
-            }))
+            setTokenLaunch({ ...DEFAULT_TOKEN_LAUNCH })
         },
         onError: (error) => {
             appToast.error(error.message)
@@ -343,15 +333,24 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
             }
 
             const validPollOptions = pollOptions.filter(o => o.text.trim())
+            const postImageUrl = imageUrls.length > 0 ? imageUrls.join(',') : (postGif || primaryImageUrl || undefined)
+            // Token image fallback chain: post media (first image/gif) -> user avatar.
+            // (Video posts set their token image from the thumbnail in the video flow.)
+            const tokenImage = (postImageUrl?.split(',')[0]) || session?.user?.avatar_url || undefined
             const payload = {
                 content: postContent,
-                imageUrl: imageUrls.length > 0 ? imageUrls.join(',') : (postGif || primaryImageUrl || undefined),
+                imageUrl: postImageUrl,
                 visibility: "public" as const,
                 audience: audience,
                 replyPrivacy: replyPrivacy,
                 // Token Launch Data
                 earningsEnabled: tokenLaunch.earningsEnabled,
                 ticker: tokenLaunch.ticker || undefined,
+                tokenName: tokenLaunch.name?.trim() || undefined,
+                token_image: tokenImage,
+                twitterUrl: tokenLaunch.twitterUrl?.trim() || undefined,
+                telegramUrl: tokenLaunch.telegramUrl?.trim() || undefined,
+                websiteUrl: tokenLaunch.websiteUrl?.trim() || undefined,
                 creatorFeePercent: tokenLaunch.earningsEnabled ? tokenLaunch.creatorFee : undefined,
                 tokenAddress: tokenData.tokenAddress,
                 poolAddress: tokenData.poolAddress,

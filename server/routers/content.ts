@@ -13,6 +13,14 @@ import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, upsertToken, deletePost, upsertUser } from "@/lib/typesense/sync";
 
+// Normalize a user-entered social link to a full URL (bare domains get https://).
+// Returns null for empty input so the column stays null rather than "".
+function normalizeUrl(raw?: string): string | null {
+    const v = raw?.trim();
+    if (!v) return null;
+    return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
 export const contentRouter = router({
     createVideo: protectedProcedure
         .input(
@@ -34,6 +42,10 @@ export const contentRouter = router({
                 earningsEnabled: z.boolean().optional(),
                 splits: z.array(z.any()).optional(),
                 ticker: z.string().optional(),
+                tokenName: z.string().optional(),
+                twitterUrl: z.string().optional(),
+                telegramUrl: z.string().optional(),
+                websiteUrl: z.string().optional(),
                 // Audience & permissions
                 audience: z.enum(["everyone", "followers", "verified", "token_holders"]).default("everyone"),
                 whoCanComment: z.enum(["everyone", "followers", "verified", "none"]).default("everyone"),
@@ -63,21 +75,30 @@ export const contentRouter = router({
             if (input.earningsEnabled && input.ticker) {
                 tokenId = input.tokenStatus === "live" ? (input.tokenAddress || nanoid()) : nanoid();
 
+                // Token name: explicit override -> video title -> ticker.
+                const tokenName = input.tokenName?.trim() || input.title.slice(0, 32) || input.ticker;
+                // Token image: video thumbnail -> creator avatar.
+                const sessionUser = ctx.session.user as { avatar_url?: string | null; image?: string | null };
+                const tokenImage = input.thumbnailUrl || sessionUser.avatar_url || sessionUser.image || undefined;
+
                 await db.insert(tokens).values({
                     id: tokenId,
                     tokenAddress: input.tokenAddress,
                     poolAddress: input.poolAddress,
                     ticker: input.ticker,
-                    name: input.title.slice(0, 32) || "Video Token",
+                    name: tokenName,
                     description: input.description,
-                    imageUrl: input.thumbnailUrl,
+                    imageUrl: tokenImage,
+                    twitterUrl: normalizeUrl(input.twitterUrl),
+                    telegramUrl: normalizeUrl(input.telegramUrl),
+                    websiteUrl: normalizeUrl(input.websiteUrl),
                     creatorFeePercent: input.creatorFeePercent,
                     status: input.tokenStatus || "draft",
                     earningsEnabled: input.earningsEnabled,
                     splits: input.splits,
                     creatorId: ctx.session.user.id,
                 });
-                upsertToken({ id: tokenId, name: input.title.slice(0, 32) || "Video Token", ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: input.thumbnailUrl, createdAt: new Date() });
+                upsertToken({ id: tokenId, name: tokenName, ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: tokenImage, createdAt: new Date() });
             }
 
             await db.insert(posts).values({
@@ -167,7 +188,11 @@ export const contentRouter = router({
                 earningsEnabled: z.boolean().optional(),
                 splits: z.array(z.any()).optional(),
                 ticker: z.string().optional(),
+                tokenName: z.string().optional(),
                 token_image: z.string().optional(),
+                twitterUrl: z.string().optional(),
+                telegramUrl: z.string().optional(),
+                websiteUrl: z.string().optional(),
                 // Pay-Per-View
                 isPaywalled: z.boolean().optional(),
                 paywallPrice: z.number().optional(), // lamports
@@ -210,21 +235,32 @@ export const contentRouter = router({
             if (input.ticker) {
                 tokenId = input.tokenStatus === "live" ? (input.tokenAddress || nanoid()) : nanoid();
 
+                // Token name: explicit override -> first line of post -> ticker.
+                const tokenName =
+                    input.tokenName?.trim() ||
+                    input.content?.split('\n')[0]?.trim().slice(0, 32) ||
+                    input.ticker;
+                // Token image: client already resolved post media -> avatar into token_image.
+                const tokenImage = input.token_image || input.imageUrl?.split(',')[0];
+
                 await db.insert(tokens).values({
                     id: tokenId,
                     tokenAddress: input.tokenAddress,
                     poolAddress: input.poolAddress,
                     ticker: input.ticker,
-                    name: input.content ? input.content.slice(0, 32) : "Post Token",
+                    name: tokenName,
                     description: input.content,
-                    imageUrl: input.imageUrl?.split(',')[0],
+                    imageUrl: tokenImage,
+                    twitterUrl: normalizeUrl(input.twitterUrl),
+                    telegramUrl: normalizeUrl(input.telegramUrl),
+                    websiteUrl: normalizeUrl(input.websiteUrl),
                     creatorFeePercent: input.creatorFeePercent,
                     status: input.tokenStatus || "draft",
                     earningsEnabled: input.earningsEnabled,
                     splits: input.splits,
                     creatorId: ctx.session.user.id,
                 });
-                upsertToken({ id: tokenId, name: input.content ? input.content.slice(0, 32) : "Post Token", ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: input.imageUrl?.split(',')[0], createdAt: new Date() });
+                upsertToken({ id: tokenId, name: tokenName, ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: tokenImage, createdAt: new Date() });
             }
 
             await db.insert(posts).values({

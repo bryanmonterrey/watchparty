@@ -19,10 +19,29 @@ export interface SplitShare {
 export interface TokenLaunchState {
     earningsEnabled: boolean
     ticker: string
+    name: string
     creatorFee: number
     splits: SplitShare[]
     buyAmount: number | undefined
     isTickerManuallyEdited: boolean
+    isNameManuallyEdited: boolean
+    twitterUrl: string
+    telegramUrl: string
+    websiteUrl: string
+}
+
+export const DEFAULT_TOKEN_LAUNCH: TokenLaunchState = {
+    earningsEnabled: true,
+    ticker: "",
+    name: "",
+    creatorFee: 5,
+    splits: [],
+    buyAmount: undefined,
+    isTickerManuallyEdited: false,
+    isNameManuallyEdited: false,
+    twitterUrl: "",
+    telegramUrl: "",
+    websiteUrl: "",
 }
 
 interface TokenLaunchSectionProps {

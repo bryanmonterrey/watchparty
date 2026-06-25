@@ -99,10 +99,15 @@ export function VideoDetailsStep({ file, uploadedUrl, isUploading, uploadProgres
     const [tokenLaunch, setTokenLaunch] = React.useState<TokenLaunchState>({
         earningsEnabled: true,
         ticker: "",
+        name: "",
         creatorFee: 5,
         splits: [],
         buyAmount: undefined,
-        isTickerManuallyEdited: false
+        isTickerManuallyEdited: false,
+        isNameManuallyEdited: false,
+        twitterUrl: "",
+        telegramUrl: "",
+        websiteUrl: "",
     })
 
     const { launchToken, isLaunching: isTokenLaunching } = useTokenLaunch()

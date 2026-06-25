@@ -31,9 +31,11 @@ export function TokenHeader({ token }: TokenHeaderProps) {
         ? `${token.tokenAddress.slice(0, 4)}...${token.tokenAddress.slice(-4)}` 
         : "Draft"
 
-    const websiteUrl = `https://${token.name.toLowerCase().replace(/[^a-z0-9]/g, "") || "token"}.xyz`
-    const twitterUrl = `https://x.com/${token.ticker.toLowerCase()}`
-    const telegramUrl = `https://t.me/${token.ticker.toLowerCase()}`
+    const socials = [
+        token.twitterUrl ? { href: token.twitterUrl, Icon: XIcon, label: `@${token.ticker}` } : null,
+        token.telegramUrl ? { href: token.telegramUrl, Icon: TelegramIcon, label: "Telegram" } : null,
+        token.websiteUrl ? { href: token.websiteUrl, Icon: GlobeIcon, label: "Website" } : null,
+    ].filter((s): s is { href: string; Icon: typeof XIcon; label: string } => s !== null)
 
     return (
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-5 p-6 bg-card rounded-[25px]">
@@ -85,36 +87,23 @@ export function TokenHeader({ token }: TokenHeaderProps) {
                     </div>
                 </div>
 
-                {/* Social pills (aligned with image left edge) */}
-                <div className="flex items-center gap-2 flex-wrap">
-                    <a 
-                        href={twitterUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 py-1.5 px-3.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700/50 text-zinc-300 hover:text-white rounded-full text-xs font-semibold tracking-wide transition-all"
-                    >
-                        <XIcon className="size-3.5" />
-                        <span>@{token.ticker}</span>
-                    </a>
-                    <a 
-                        href={telegramUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 py-1.5 px-3.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700/50 text-zinc-300 hover:text-white rounded-full text-xs font-semibold tracking-wide transition-all"
-                    >
-                        <TelegramIcon className="size-3.5" />
-                        <span>Telegram</span>
-                    </a>
-                    <a 
-                        href={websiteUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 py-1.5 px-3.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700/50 text-zinc-300 hover:text-white rounded-full text-xs font-semibold tracking-wide transition-all"
-                    >
-                        <GlobeIcon className="size-3.5" />
-                        <span>Website</span>
-                    </a>
-                </div>
+                {/* Social pills (aligned with image left edge) — only render links that exist */}
+                {socials.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {socials.map(({ href, Icon, label }) => (
+                            <a
+                                key={href}
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 py-1.5 px-3.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700/50 text-zinc-300 hover:text-white rounded-full text-xs font-semibold tracking-wide transition-all"
+                            >
+                                <Icon className="size-3.5" />
+                                <span>{label}</span>
+                            </a>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="flex items-start justify-start gap-2 md:gap-3 flex-wrap">
