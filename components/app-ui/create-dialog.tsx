@@ -965,7 +965,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                             <button
                                                                 className={cn(
                                                                     "p-2 cursor-pointer rounded-full transition-colors",
-                                                                    scheduledFor ? "text-lantern bg-lantern/10 hover:bg-lantern/20" : "text-twitter2 hover:text-twitter hover:bg-white/10"
+                                                                    scheduledFor ? "text-lantern bg-lantern/10" : "hover:bg-white/10"
                                                                 )}
                                                                 title="Schedule"
                                                             >

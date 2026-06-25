@@ -93,13 +93,13 @@ export function TokenLaunchTrigger({ state, onClick, className }: TokenLaunchTri
         <button
             onClick={onClick}
             className={cn(
-                "flex items-center ease-in-out cursor-pointer px-6 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-900 transition-all group",
+                "flex items-center ease-in-out cursor-pointer gap-2 px-5 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-900 transition-all group",
                 className
             )}
         >
 
-            <span className="text-zinc-400 text-md font-bold uppercase">
-                ${state.ticker || "ticker"}
+            <span className="text-zinc-400 text-base font-extrabold tracking-tighter px-2 uppercase">
+                ${state.ticker || " • • • • • • •"}
             </span>
         </button>
     )
