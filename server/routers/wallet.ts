@@ -2564,17 +2564,18 @@ export const walletRouter = router({
                         const candles: number[][] = json.data?.attributes?.ohlcv_list ?? [];
                         // GeckoTerminal ohlcv_list rows: [time, open, high, low, close, volume].
                         // Keep `value` (close) for backward compat with the area chart that reads d.value.
-                        return candles.map(([time, open, high, low, close]) => ({
+                        return candles.map(([time, open, high, low, close, volume]) => ({
                             time: time as number,
                             open,
                             high,
                             low,
                             close,
+                            volume: volume ?? 0,
                             value: close,
                         }));
                     };
 
-                    let data: { time: number; open: number; high: number; low: number; close: number; value: number }[];
+                    let data: { time: number; open: number; high: number; low: number; close: number; volume: number; value: number }[];
 
                     if (input.timeframe === "ALL") {
                         const page1 = await fetchPage();
@@ -2600,12 +2601,13 @@ export const walletRouter = router({
                         const candles: number[][] = json.data?.attributes?.ohlcv_list ?? [];
                         data = candles
                             .sort((a, b) => a[0] - b[0])
-                            .map(([time, open, high, low, close]) => ({
+                            .map(([time, open, high, low, close, volume]) => ({
                                 time: time as number,
                                 open,
                                 high,
                                 low,
                                 close,
+                                volume: volume ?? 0,
                                 value: close,
                             }));
                     }

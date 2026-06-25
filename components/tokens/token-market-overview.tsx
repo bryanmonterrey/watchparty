@@ -1,6 +1,6 @@
 import React from "react"
 import { Token } from "@/db/schema/content"
-import { TokenTradingViewChart } from "./token-tradingview-chart"
+import { TokenCandlestickChart } from "./token-candlestick-chart"
 
 interface TokenMarketOverviewProps {
     token: Token
@@ -43,11 +43,10 @@ export function TokenMarketOverview({ token }: TokenMarketOverviewProps) {
                 )}
             </div>
 
-            {/* Chart Area — TradingView Charting Library owns its own toolbar/timeframes */}
-            <TokenTradingViewChart
+            {/* Chart Area — candlesticks + volume on lightweight-charts */}
+            <TokenCandlestickChart
                 mint={token.tokenAddress}
-                name={token.name}
-                className="w-full h-[320px] sm:h-[420px] bg-zinc-950/80 rounded-2xl border border-zinc-800/50 overflow-hidden"
+                className="w-full h-[320px] sm:h-[420px] bg-zinc-950/80 rounded-2xl border border-zinc-800/50 overflow-hidden p-2"
             />
         </div>
     )
