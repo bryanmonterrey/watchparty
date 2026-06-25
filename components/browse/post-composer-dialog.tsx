@@ -590,28 +590,28 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-0.5 text-twitter2">
+                                <div className="flex items-center gap-0.5 text-pastelgray">
                                     <input type="file" multiple ref={imageInputRef} className="hidden" accept="image/*"
                                         onChange={e => { if (e.target.files?.length) setImages(prev => [...prev, ...Array.from(e.target.files!)].slice(0, 4)); }}
                                     />
                                     <button onClick={() => imageInputRef.current?.click()} className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                                        <ImageIcon className="w-4.5 h-4.5" />
+                                        <ImageIcon className="w-[22px] h-[22px]" />
                                     </button>
                                     <GifPicker onGifSelect={url => setGif(url)}>
                                         <button className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                                            <GifIcon className="w-4.5 h-4.5" />
+                                            <GifIcon className="w-[22px] h-[22px]" />
                                         </button>
                                     </GifPicker>
                                     <EmojiPicker onEmojiSelect={emoji => setContent(prev => prev + emoji.native)}>
                                         <button className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                                            <EmojiIcon className="w-4.5 h-4.5" />
+                                            <EmojiIcon className="w-[22px] h-[22px]" />
                                         </button>
                                     </EmojiPicker>
                                     <button onClick={() => setShowPoll(p => !p)} className={cn("p-2 cursor-pointer rounded-full transition-colors", showPoll ? "text-lantern bg-lantern/10" : "hover:bg-white/10")} title="Poll">
-                                        <BarChart2 className="w-4.5 h-4.5" />
+                                        <BarChart2 className="w-[22px] h-[22px]" />
                                     </button>
                                     <button onClick={() => setIsPaywalled(p => !p)} className={cn("p-2 cursor-pointer rounded-full transition-colors", isPaywalled ? "text-lantern bg-lantern/10" : "hover:bg-white/10")} title="Pay-per-view">
-                                        <LockIcon className="w-4.5 h-4.5" />
+                                        <LockIcon className="w-[22px] h-[22px]" />
                                     </button>
                                     <VoiceRecorderTrigger
                                         active={showVoiceRecorder || !!voiceBlob}
@@ -620,7 +620,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <button className={cn("p-2 cursor-pointer rounded-full transition-colors", scheduledFor ? "text-lantern bg-lantern/10" : "hover:bg-white/10")} title="Schedule">
-                                                <CalendarIcon className="w-4.5 h-4.5" />
+                                                <CalendarIcon className="w-[20px] h-[20px]" />
                                             </button>
                                         </PopoverTrigger>
                                         <PopoverContent

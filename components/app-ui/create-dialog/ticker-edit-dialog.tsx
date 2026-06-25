@@ -12,6 +12,7 @@ import { AnimatedSlider } from "@/components/ui/motion-slider"
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import { TokenLaunchState, SplitShare } from "./token-launch-section"
 import { AnimatePresence, motion } from "framer-motion"
+import { Squircle } from "@/components/ui/squircle"
 import { cn } from "@/lib/utils"
 
 interface TickerEditDialogProps {
@@ -113,16 +114,18 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                     {/* Input Area */}
                     <div className="flex flex-col items-center gap-2 mb-4">
                         <div className="relative w-full flex justify-center">
-                            <Input
-                                value={localState.ticker}
-                                onChange={(e) => updateState({
-                                    ticker: e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 15),
-                                    isTickerManuallyEdited: true
-                                })}
-                                className="bg-zinc-850 border-0 rounded-2xl focus-visible:ring-0 !text-center !text-5xl font-bold tracking-wider text-white placeholder:text-5xl placeholder:text-zinc-700 w-full h-24 p-0 selection:bg-lantern/30"
-                                placeholder="$•••••"
-                                autoFocus
-                            />
+                            <Squircle asChild radius={20}>
+                                <Input
+                                    value={localState.ticker}
+                                    onChange={(e) => updateState({
+                                        ticker: e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 15),
+                                        isTickerManuallyEdited: true
+                                    })}
+                                    className="bg-zinc-850 border-0 focus-visible:ring-0 !text-center !text-5xl font-bold tracking-wider text-white placeholder:text-5xl placeholder:text-zinc-700 w-full h-24 p-0 selection:bg-lantern/30"
+                                    placeholder="$•••••"
+                                    autoFocus
+                                />
+                            </Squircle>
                         </div>
                     </div>
                     <p className="text-zinc-500 text-sm text-center">
@@ -132,13 +135,15 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                     {/* Token Name */}
                     <div className="space-y-2">
                         <Label className="text-base font-medium text-zinc-300">Token Name</Label>
-                        <Input
-                            value={localState.name}
-                            onChange={(e) => updateState({ name: e.target.value.slice(0, 32), isNameManuallyEdited: true })}
-                            placeholder="e.g. Diamond Hands"
-                            maxLength={32}
-                            className="bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 rounded-2xl text-base"
-                        />
+                        <Squircle asChild radius={16}>
+                            <Input
+                                value={localState.name}
+                                onChange={(e) => updateState({ name: e.target.value.slice(0, 32), isNameManuallyEdited: true })}
+                                placeholder="e.g. Diamond Hands"
+                                maxLength={32}
+                                className="bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 text-base"
+                            />
+                        </Squircle>
                         <p className="text-[11px] text-zinc-500">Leave blank to auto-name it from your post.</p>
                     </div>
 
@@ -151,13 +156,15 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                             { key: "websiteUrl" as const, Icon: GlobeIcon, placeholder: "yourtoken.xyz" },
                         ]).map(({ key, Icon, placeholder }) => (
                             <div key={key} className="relative">
-                                <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                                <Input
-                                    value={localState[key]}
-                                    onChange={(e) => updateState({ [key]: e.target.value } as Partial<TokenLaunchState>)}
-                                    placeholder={placeholder}
-                                    className="pl-11 bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 rounded-2xl text-base"
-                                />
+                                <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 z-10 pointer-events-none" />
+                                <Squircle asChild radius={16}>
+                                    <Input
+                                        value={localState[key]}
+                                        onChange={(e) => updateState({ [key]: e.target.value } as Partial<TokenLaunchState>)}
+                                        placeholder={placeholder}
+                                        className="pl-11 bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-14 text-base"
+                                    />
+                                </Squircle>
                             </div>
                         ))}
                     </div>
@@ -192,16 +199,18 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                             </p>
                         </div>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-base">SOL</span>
-                            <Input
-                                type="number"
-                                value={localState.buyAmount === undefined ? "" : localState.buyAmount}
-                                onChange={(e) => updateState({ buyAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
-                                className="pl-13 bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-12 rounded-[24px] text-base [&::-webkit-inner-spin-button]:appearance-none"
-                                placeholder="0.00"
-                                step="0.01"
-                                min="0"
-                            />
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-base z-10 pointer-events-none">SOL</span>
+                            <Squircle asChild radius={24}>
+                                <Input
+                                    type="number"
+                                    value={localState.buyAmount === undefined ? "" : localState.buyAmount}
+                                    onChange={(e) => updateState({ buyAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                    className="pl-13 bg-zinc-900/50 border-zinc-800/50 focus:border-lantern/50 h-12 text-base [&::-webkit-inner-spin-button]:appearance-none"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                />
+                            </Squircle>
                         </div>
                     </div>
 
@@ -275,12 +284,14 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                                         </div>
 
                                         <div className="relative">
-                                            <Input
-                                                value={split.address}
-                                                onChange={(e) => updateSplit(index, { address: e.target.value })}
-                                                placeholder={split.platform === 'solana' ? "Wallet Address" : "@username"}
-                                                className="bg-black border-zinc-800 rounded-[18px] h-12 pl-4 text-sm focus:border-lantern/50 transition-colors"
-                                            />
+                                            <Squircle asChild radius={18}>
+                                                <Input
+                                                    value={split.address}
+                                                    onChange={(e) => updateSplit(index, { address: e.target.value })}
+                                                    placeholder={split.platform === 'solana' ? "Wallet Address" : "@username"}
+                                                    className="bg-black border-zinc-800 h-12 pl-4 text-sm focus:border-lantern/50 transition-colors"
+                                                />
+                                            </Squircle>
                                         </div>
 
                                         <div className="flex items-center justify-between pt-1">
@@ -300,13 +311,15 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                                                 </button>
                                             ))}
                                             <div className="flex-1 flex items-center relative">
-                                                <Input
-                                                    type="number"
-                                                    value={split.percentage === 0 ? "" : split.percentage}
-                                                    onChange={(e) => updateSplit(index, { percentage: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })}
-                                                    placeholder="Custom"
-                                                    className="w-full py-1.5 h-auto min-h-0 rounded-lg border border-zinc-800 bg-zinc-900/50 text-xs font-medium text-zinc-400 hover:bg-zinc-800 transition-colors px-2 text-center text-ellipsis"
-                                                />
+                                                <Squircle asChild radius={8}>
+                                                    <Input
+                                                        type="number"
+                                                        value={split.percentage === 0 ? "" : split.percentage}
+                                                        onChange={(e) => updateSplit(index, { percentage: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })}
+                                                        placeholder="Custom"
+                                                        className="w-full py-1.5 h-auto min-h-0 border border-zinc-800 bg-zinc-900/50 text-xs font-medium text-zinc-400 hover:bg-zinc-800 transition-colors px-2 text-center text-ellipsis"
+                                                    />
+                                                </Squircle>
                                             </div>
                                         </div>
 
