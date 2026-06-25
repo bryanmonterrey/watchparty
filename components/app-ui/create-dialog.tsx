@@ -926,7 +926,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                             )}
 
                                             <div className="flex items-center justify-between mt-2">
-                                                <div className="flex items-center gap-0.5 text-twitter2">
+                                                <div className="flex items-center gap-0.5 text-pastelgray">
                                                     <input
                                                         type="file"
                                                         multiple
@@ -944,20 +944,20 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                         onClick={() => postImageInputRef.current?.click()}
                                                         className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors"
                                                     >
-                                                        <ImageIcon className="w-4.5 h-4.5" />
+                                                        <ImageIcon className="w-[22px] h-[22px]" />
                                                     </button>
                                                     <GifPicker onGifSelect={(url) => setPostGif(url)}>
                                                         <button className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                                                            <GifIcon className="w-4.5 h-4.5" />
+                                                            <GifIcon className="w-[22px] h-[22px]" />
                                                         </button>
                                                     </GifPicker>
                                                     <EmojiPicker onEmojiSelect={(emoji) => setPostContent(prev => prev + emoji.native)}>
                                                         <button className="p-2 hover:bg-white/10 cursor-pointer rounded-full transition-colors">
-                                                            <EmojiIcon className="w-4.5 h-4.5" />
+                                                            <EmojiIcon className="w-[22px] h-[22px]" />
                                                         </button>
                                                     </EmojiPicker>
                                                     <button onClick={() => setShowPoll(p => !p)} className={cn("p-2 cursor-pointer rounded-full transition-colors", showPoll ? "text-lantern bg-lantern/10" : "hover:bg-white/10")}>
-                                                        <BarChart2 className="w-4.5 h-4.5" />
+                                                        <BarChart2 className="w-[22px] h-[22px]" />
                                                     </button>
                                                     <VoiceRecorderTrigger onClick={() => setShowVoiceRecorder(p => !p)} active={showVoiceRecorder} />
                                                     <Popover>
@@ -969,7 +969,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                                 )}
                                                                 title="Schedule"
                                                             >
-                                                                <CalendarIcon className="w-4.5 h-4.5" />
+                                                                <CalendarIcon className="w-[20px] h-[20px]" />
                                                             </button>
                                                         </PopoverTrigger>
                                                         <PopoverContent className="w-48 p-1 bg-zinc-900 border border-white/10 rounded-xl shadow-xl" align="start" side="top">
@@ -993,7 +993,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                         </PopoverContent>
                                                     </Popover>
                                                     <button onClick={() => setIsPaywalled(p => !p)} className={cn("p-2 cursor-pointer rounded-full transition-colors", isPaywalled ? "text-lantern bg-lantern/10" : "hover:bg-white/10")}>
-                                                        <LockIcon className="w-4.5 h-4.5" />
+                                                        <LockIcon className="w-[22px] h-[22px]" />
                                                     </button>
                                                 </div>
                                                 <div className="flex items-center gap-2">
