@@ -1,0 +1,14 @@
+-- Enable Row Level Security on the better-auth twoFactor table.
+--
+-- Why: Supabase's security advisor flagged public."twoFactor" as the only table
+-- with RLS disabled, meaning the anon/authenticated PostgREST roles (anyone with
+-- the anon key) could read/write every row. Every other table already has RLS on.
+--
+-- Safe with no policies: this table is accessed ONLY by better-auth via the
+-- Drizzle adapter over a direct postgres.js connection (DATABASE_URL/Hyperdrive),
+-- which runs as the table owner and BYPASSES RLS. No supabase-js anon/authenticated
+-- path touches it. Enabling RLS with no policies therefore denies the client roles
+-- (the desired outcome) without affecting auth. Reversible: DISABLE ROW LEVEL SECURITY.
+--
+-- Applied 2026-06-24 against the shared dev/prod Supabase DB.
+ALTER TABLE public."twoFactor" ENABLE ROW LEVEL SECURITY;
