@@ -117,10 +117,17 @@ export function BrowseFeed() {
                 // If it's not in the batch, we are "injecting" a virtual one.
                 const parentInBatch = rawPosts.find(bp => bp.id === p.replyToId);
 
-                // Inject the parent (either the real data or the virtual metadata)
+                // Inject the parent (either the real data or the virtual metadata).
+                // Sort it to sit DIRECTLY above its reply by using the reply's time
+                // + 1ms — NOT the parent's real (older) time. Every downstream
+                // newest-first re-sort (dedupNewestFirst, when seeding the window or
+                // merging new posts) would otherwise drop the older parent far below
+                // its reply, splitting the thread and leaving dangling connector lines
+                // (parent's bottom line ends with no reply beneath; reply shows an
+                // orphan top line). A self-thread correctly floats to its latest post.
                 allItems.push({
                     type: "post",
-                    createdAt: new Date(p.parentCreatedAt || p.createdAt),
+                    createdAt: new Date(new Date(p.createdAt).getTime() + 1),
                     data: parentInBatch ? {
                         ...parentInBatch,
                         connectBottom: true,

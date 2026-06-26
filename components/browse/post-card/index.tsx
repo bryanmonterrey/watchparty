@@ -36,8 +36,13 @@ export function PostCard({
     } = post;
     const router = useRouter();
 
-    // For interactions, always target the original post if this is a repost
-    const targetId = repostOfId || id;
+    // Interaction target. A pure repost is already normalized by the feed router so
+    // its `id` IS the original post — interact with that. A QUOTE is its own post (it
+    // also carries a non-null `repostOfId` pointing at the quoted tweet), so its
+    // likes/reposts/bookmarks must hit the quote's own id, NOT the quoted original —
+    // matching X, where the embedded quote has no action buttons of its own. Hence
+    // quotes target `id`; everything else falls back to `repostOfId || id`.
+    const targetId = quotedPost ? id : (repostOfId || id);
 
     // ── UI state ─────────────────────────────────────────────────────────────
     const [showCommentDialog, setShowCommentDialog] = useState(false);
