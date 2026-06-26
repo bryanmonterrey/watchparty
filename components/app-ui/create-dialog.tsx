@@ -578,7 +578,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                             <h3 className="text-lg font-medium text-white mb-2">
                                                 {isDragActive ? "Drop video here" : "Upload Video"}
                                             </h3>
-                                            <Button variant="secondary" className="bg-white text-black hover:bg-zinc-200 rounded-full px-8 font-semibold mb-8">
+                                            <Button variant="secondary" className="bg-white h-11 text-black hover:bg-zinc-200 rounded-full px-8 font-semibold mb-8">
                                                 select files
                                             </Button>
                                             <p className="text-xs text-zinc-500 text-center max-w-sm leading-relaxed px-4">

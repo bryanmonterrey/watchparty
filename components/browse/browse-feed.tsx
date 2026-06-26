@@ -213,6 +213,11 @@ export function BrowseFeed() {
             if (prev.length === 0) return full.slice(0, VIEW_COUNT);
             const topIdx = full.findIndex((i) => keyOf(i) === keyOf(prev[0]));
             if (topIdx <= 0) return prev; // window top is already the newest
+            // Don't inject newer posts into the visible list while the user is
+            // scrolled down — that shifts content under them (the bug). They stay
+            // in `full` (reachable by scrolling up) and are surfaced by the
+            // "new posts" pill. Only auto-fold when the user is already at the top.
+            if (!composerVisibleRef.current) return prev;
             const newer = full.slice(0, topIdx);
             const merged = dedupNewestFirst([...newer, ...prev]);
             tabItemsCache.current.set(activeTab, merged);
@@ -240,10 +245,16 @@ export function BrowseFeed() {
     // ── Composer visibility (for floating pill) ───────────────────────────────
     const composerRef = useRef<HTMLDivElement>(null);
     const [composerVisible, setComposerVisible] = useState(true);
+    // Mirror visibility into a ref so the (feedItems-keyed) merge effect can read
+    // the latest value without depending on it / going stale.
+    const composerVisibleRef = useRef(true);
     useEffect(() => {
         const el = composerRef.current;
         if (!el) return;
-        const observer = new IntersectionObserver(([entry]) => setComposerVisible(entry.isIntersecting), { threshold: 0 });
+        const observer = new IntersectionObserver(([entry]) => {
+            composerVisibleRef.current = entry.isIntersecting;
+            setComposerVisible(entry.isIntersecting);
+        }, { threshold: 0 });
         observer.observe(el);
         return () => observer.disconnect();
     }, []);
