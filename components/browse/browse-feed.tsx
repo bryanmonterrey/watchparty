@@ -54,6 +54,110 @@ function dedupNewestFirst(items: FeedItem[]): FeedItem[] {
     return out.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
+// Assemble raw feed posts into renderable items: lift self-thread parents directly
+// above their reply and tag avatar-to-avatar connector flags. Pure so it can run on
+// BOTH the full infinite-query set (feedItems) AND a freshly-paginated page inside
+// onLoadMore — otherwise deep-scrolled (paginated) self-threads would never connect,
+// because raw paginated items bypass this lift.
+function assembleFeed(rawPosts: any[]): FeedItem[] {
+    const allItems: FeedItem[] = [];
+    // Track IDs lifted to be a parent of a newer reply, to skip their standalone copy.
+    const liftedIds = new Set<string>();
+
+    // Sort raw posts newest-first before lifting.
+    const sortedPosts = [...rawPosts].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    for (const p of sortedPosts) {
+        if (liftedIds.has(p.id)) continue;
+
+        // Only SELF-THREADS connect (author replying to their own post), matching X.
+        // A reply to someone else's post stays a standalone card — it still shows the
+        // "Replying to @x" label (driven by parentUsername) but no lifted parent and
+        // no connector line.
+        const isSelfThread = p.replyToId && p.parentUsername && p.parentUserId === p.userId;
+        if (isSelfThread) {
+            // If the parent is in the batch we "lift" it; otherwise inject a virtual one.
+            const parentInBatch = rawPosts.find((bp) => bp.id === p.replyToId);
+
+            // Sort it to sit DIRECTLY above its reply by using the reply's time + 1ms —
+            // NOT the parent's real (older) time. Every downstream newest-first re-sort
+            // (dedupNewestFirst, when seeding the window or merging new posts) would
+            // otherwise drop the older parent far below its reply, splitting the thread
+            // and leaving dangling connector lines. A self-thread correctly floats to
+            // its latest post.
+            allItems.push({
+                type: "post",
+                createdAt: new Date(new Date(p.createdAt).getTime() + 1),
+                data: parentInBatch ? {
+                    ...parentInBatch,
+                    connectBottom: true,
+                } : {
+                    id: p.replyToId,
+                    userId: p.parentUserId,
+                    content: p.parentContent,
+                    imageUrl: p.parentImageUrl,
+                    media: p.parentMedia,
+                    createdAt: p.parentCreatedAt,
+                    user: {
+                        id: p.parentUserId,
+                        name: p.parentUserName,
+                        username: p.parentUsername,
+                        avatar_url: p.parentUserAvatar,
+                        verifiedTier: p.parentUserVerifiedTier,
+                    },
+                    isVirtual: true,
+                    feedKey: `virtual-parent-${p.replyToId}-${p.id}`,
+                }
+            });
+
+            liftedIds.add(p.replyToId);
+        }
+
+        allItems.push({
+            type: "post",
+            createdAt: new Date(p.createdAt),
+            data: p,
+        });
+    }
+
+    const uniqueSeen = new Set<string>();
+    const filtered = allItems.filter((item) => {
+        const key = item.data.feedKey ?? item.data.id;
+        if (uniqueSeen.has(key)) return false;
+        uniqueSeen.add(key);
+        return true;
+    });
+
+    // Add thread connectivity metadata based on the (lifted) adjacency.
+    return filtered.map((item, i, arr) => {
+        const next = arr[i + 1];
+        const prev = arr[i - 1];
+
+        // Connect only SELF-threads (same author): if the item below is the current
+        // author's reply to us, connect bottom. Check both id and feedKey to handle
+        // reposts and virtual (lifted) parents correctly.
+        const isNextReplyToUs = next && next.data.userId === item.data.userId && (
+            next.data.replyToId === item.data.id ||
+            (item.data.feedKey && next.data.replyToId === item.data.feedKey)
+        );
+        const connectBottom = !!isNextReplyToUs;
+
+        // If we are this author's reply to the item above us, connect top.
+        const isWeReplyToPrev = prev && prev.data.userId === item.data.userId && (
+            item.data.replyToId === prev.data.id ||
+            (prev.data.feedKey && item.data.replyToId === prev.data.feedKey)
+        );
+        const connectTop = !!isWeReplyToPrev;
+
+        return {
+            ...item,
+            data: { ...item.data, connectTop, connectBottom },
+        };
+    });
+}
+
 export function BrowseFeed() {
     const [activeTab, setActiveTab] = useState<FeedType>("for-you");
     const markedPageCount = useRef(0);
@@ -91,114 +195,12 @@ export function BrowseFeed() {
     const populatedTabs = useRef<Set<FeedType>>(new Set());
 
     // ── Merged feed items (tRPC source of truth) ──────────────────────────────
-    const feedItems = useMemo(() => {
-        const rawPosts = (postData?.pages.flatMap((p) => p.posts) ?? []);
-        const allItems: FeedItem[] = [];
-
-        // Track IDs that have been "lifted" to be parents of replies
-        const liftedIds = new Set<string>();
-        // Track all post IDs in the current batch for quick lookup
-        const batchIds = new Set(rawPosts.map(p => p.id));
-
-        // Sort raw posts by date first
-        const sortedPosts = [...rawPosts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-        for (const p of sortedPosts) {
-            // If this post was already lifted to be a parent of a newer reply, skip its standalone occurrence
-            if (liftedIds.has(p.id)) continue;
-
-            // Only SELF-THREADS connect (author replying to their own post), matching X.
-            // A reply to someone else's post is left as a standalone card — it still shows
-            // the "Replying to @x" label (driven by parentUsername) but no lifted parent
-            // and no connector line.
-            const isSelfThread = p.replyToId && p.parentUsername && p.parentUserId === p.userId;
-            if (isSelfThread) {
-                // If the parent is in the batch, we are "lifting" it. 
-                // If it's not in the batch, we are "injecting" a virtual one.
-                const parentInBatch = rawPosts.find(bp => bp.id === p.replyToId);
-
-                // Inject the parent (either the real data or the virtual metadata).
-                // Sort it to sit DIRECTLY above its reply by using the reply's time
-                // + 1ms — NOT the parent's real (older) time. Every downstream
-                // newest-first re-sort (dedupNewestFirst, when seeding the window or
-                // merging new posts) would otherwise drop the older parent far below
-                // its reply, splitting the thread and leaving dangling connector lines
-                // (parent's bottom line ends with no reply beneath; reply shows an
-                // orphan top line). A self-thread correctly floats to its latest post.
-                allItems.push({
-                    type: "post",
-                    createdAt: new Date(new Date(p.createdAt).getTime() + 1),
-                    data: parentInBatch ? {
-                        ...parentInBatch,
-                        connectBottom: true,
-                    } : {
-                        id: p.replyToId,
-                        userId: p.parentUserId,
-                        content: p.parentContent,
-                        imageUrl: p.parentImageUrl,
-                        media: p.parentMedia,
-                        createdAt: p.parentCreatedAt,
-                        user: {
-                            id: p.parentUserId,
-                            name: p.parentUserName,
-                            username: p.parentUsername,
-                            avatar_url: p.parentUserAvatar,
-                            verifiedTier: p.parentUserVerifiedTier,
-                        },
-                        isVirtual: true,
-                        feedKey: `virtual-parent-${p.replyToId}-${p.id}`,
-                    }
-                });
-
-                liftedIds.add(p.replyToId);
-            }
-
-            allItems.push({
-                type: "post",
-                createdAt: new Date(p.createdAt),
-                data: p,
-            });
-        }
-
-        const uniqueSeen = new Set<string>();
-        const filtered = allItems.filter((item) => {
-            const key = item.data.feedKey ?? item.data.id;
-            if (uniqueSeen.has(key)) return false;
-            uniqueSeen.add(key);
-            return true;
-        });
-
-        // Add thread connectivity metadata
-        return filtered.map((item, i, arr) => {
-            const next = arr[i + 1];
-            const prev = arr[i - 1];
-
-            // Connect only SELF-threads (same author): if the item below is the
-            // current author's reply to us, connect bottom. Check both id and feedKey
-            // to handle reposts and virtual (lifted) parents correctly.
-            const isNextReplyToUs = next && next.data.userId === item.data.userId && (
-                next.data.replyToId === item.data.id ||
-                (item.data.feedKey && next.data.replyToId === item.data.feedKey)
-            );
-            const connectBottom = !!isNextReplyToUs;
-
-            // If we are this author's reply to the item above us, connect top.
-            const isWeReplyToPrev = prev && prev.data.userId === item.data.userId && (
-                item.data.replyToId === prev.data.id ||
-                (prev.data.feedKey && item.data.replyToId === prev.data.feedKey)
-            );
-            const connectTop = !!isWeReplyToPrev;
-
-            return {
-                ...item,
-                data: {
-                    ...item.data,
-                    connectTop,
-                    connectBottom,
-                }
-            };
-        });
-    }, [postData]);
+    // assembleFeed (module-level) does the thread lift + connector tagging across
+    // ALL loaded pages; onLoadMore reuses it so paginated threads connect too.
+    const feedItems = useMemo(
+        () => assembleFeed(postData?.pages.flatMap((p) => p.posts) ?? []),
+        [postData]
+    );
 
     // Keep the full per-tab dataset synced from the infinite query, then seed (or
     // top-up) the rendered window from it. Pagination of OLDER posts flows through
@@ -437,12 +439,6 @@ export function BrowseFeed() {
     }, []);
 
     // ── onLoadMore: fetch next page, return new items for the library ─────────
-    // Track how many pages are already in the cache so we only return truly new items
-    const pagesLoadedRef = useRef(0);
-    useEffect(() => {
-        if (postData?.pages.length) pagesLoadedRef.current = postData.pages.length;
-    }, [postData]);
-
     const onLoadMore = useCallback(async (direction: "up" | "down", refItem: FeedItem) => {
         const full = fullItemsRef.current.get(activeTab) ?? [];
         const idx = full.findIndex((i) => keyOf(i) === keyOf(refItem));
@@ -458,25 +454,24 @@ export function BrowseFeed() {
             return full.slice(idx + 1, idx + 1 + PAGE_SIZE);
         }
 
-        // Ran off the end of what's loaded — pull the next page, fold it into the
-        // full dataset, and hand the library the items older than the edge.
+        // Ran off the end of what's loaded — pull the next page, then RE-ASSEMBLE the
+        // entire loaded set through assembleFeed so the new page's self-threads get
+        // their parents lifted/connected too (raw paginated items would otherwise
+        // bypass the lift and show disconnected). Fold local prepends back in the same
+        // way the merge effect does, then hand the library the items positioned BELOW
+        // the edge — sliced by index, not timestamp, so a lifted parent (time = reply
+        // + 1ms) is never split from its reply across the page boundary.
         if (!hasNextPosts) return [];
-        const before = pagesLoadedRef.current;
         const result = await fetchNextPosts();
         if (!result.data) return [];
-        const newRaw = result.data.pages.slice(before).flatMap((page: any) =>
-            (page.posts ?? []).map((p: any) => ({
-                type: "post" as const,
-                createdAt: new Date(p.createdAt),
-                data: p,
-            }))
-        ) as FeedItem[];
-        fullItemsRef.current.set(
-            activeTab,
-            dedupNewestFirst([...(fullItemsRef.current.get(activeTab) ?? []), ...newRaw]),
-        );
-        const refTime = refItem.createdAt.getTime();
-        return newRaw.filter((i) => i.createdAt.getTime() < refTime);
+        const assembled = assembleFeed(result.data.pages.flatMap((page: any) => page.posts ?? []));
+        const assembledKeys = new Set(assembled.map(keyOf));
+        const localPrepends = (fullItemsRef.current.get(activeTab) ?? []).filter((i) => !assembledKeys.has(keyOf(i)));
+        const newFull = dedupNewestFirst([...localPrepends, ...assembled]);
+        fullItemsRef.current.set(activeTab, newFull);
+        const refIdx = newFull.findIndex((i) => keyOf(i) === keyOf(refItem));
+        if (refIdx < 0) return [];
+        return newFull.slice(refIdx + 1, refIdx + 1 + PAGE_SIZE);
     }, [activeTab, hasNextPosts, fetchNextPosts]);
 
     // ── Bulk interaction queries (keyed on all loaded items) ──────────────────
