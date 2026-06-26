@@ -121,8 +121,14 @@ export function PostCard({
     const bookmarked = optBookmarked ?? serverBookmarked;
     const reposted = optReposted ?? serverReposted;
 
-    const [likeCount, setLikeCount] = useState(likes);
-    const [repostCount, setRepostCount] = useState(reposts);
+    // Counts are DERIVED, not stored: the live `likes`/`reposts` props (patched by
+    // the optimistic cache writes AND the realtime channel) plus the optimistic delta
+    // — the difference between the pending toggle and server truth. Holding these in
+    // `useState(likes)` silently dropped realtime count updates on already-mounted
+    // cards, because useState ignores later prop changes. Deriving keeps one source of
+    // truth. React guidance: https://react.dev/learn/you-might-not-need-an-effect
+    const likeCount = Math.max(0, likes + (optLiked === null ? 0 : (optLiked ? 1 : 0) - (serverLiked ? 1 : 0)));
+    const repostCount = Math.max(0, reposts + (optReposted === null ? 0 : (optReposted ? 1 : 0) - (serverReposted ? 1 : 0)));
 
     // ── Cache patchers ───────────────────────────────────────────────────────
     const patchFeedLike = (liked: boolean) => {
@@ -166,9 +172,7 @@ export function PostCard({
     // ── Mutations ────────────────────────────────────────────────────────────
     const toggleLike = trpc.content.toggleLike.useMutation({
         onMutate: () => {
-            const next = !liked;
-            setOptLiked(next);
-            setLikeCount(prev => next ? prev + 1 : Math.max(0, prev - 1));
+            setOptLiked(!liked);
         },
         onSuccess: async (data) => {
             patchFeedLike(data.liked);
@@ -178,18 +182,14 @@ export function PostCard({
             );
             setOptLiked(null);
         },
-        onError: () => { 
-            setOptLiked(null); 
-            // Re-sync with actual data on error
-            setLikeCount(likes); 
+        onError: () => {
+            setOptLiked(null);
         },
     });
 
     const toggleRepost = trpc.content.repost.useMutation({
         onMutate: () => {
-            const next = !reposted;
-            setOptReposted(next);
-            setRepostCount(prev => next ? prev + 1 : Math.max(0, prev - 1));
+            setOptReposted(!reposted);
         },
         onSuccess: async (data) => {
             patchFeedRepost(data.reposted);
@@ -199,9 +199,8 @@ export function PostCard({
             );
             setOptReposted(null);
         },
-        onError: () => { 
-            setOptReposted(null); 
-            setRepostCount(reposts); 
+        onError: () => {
+            setOptReposted(null);
         },
     });
 
@@ -337,7 +336,7 @@ export function PostCard({
                             liked={liked}
                             bookmarked={bookmarked}
                             likeCount={likeCount}
-                            reposts={reposts}
+                            reposts={repostCount}
                             views={views}
                             comments={comments}
                             setIsUnlocked={setIsUnlocked}
