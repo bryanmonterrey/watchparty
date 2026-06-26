@@ -63,7 +63,7 @@ export function PostCardBody({
         <>
             {/* Body text */}
             {content && (
-                <div className="text-[15px] bg-black text-zinc-200 leading-normal mb-1 -mt-1.5 whitespace-pre-wrap break-words">
+                <div className="text-[15px] text-zinc-200 leading-normal mb-1 -mt-1.5 whitespace-pre-wrap break-words">
                     {content}
                 </div>
             )}

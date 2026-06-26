@@ -275,12 +275,18 @@ export function PostCard({
                 className={cn(
                     "group cursor-pointer px-4 pt-2.5 pb-1.5 transition-colors relative bg-background flex flex-col",
                     connectBottom ? "border-none pb-0" : "border-b border-soft-gray/[0.12]",
-                    connectTop ? "pt-0" : "pt-2.5"
+                    connectTop ? "pt-3" : "pt-2.5"
                 )}
                 style={{ animationDelay: `${index * 50}ms`, animationFillMode: "both" }}
             >
+                {/* Thread line top — card-level so it spans the reply's top padding
+                    and still meets the parent's bottom line at the card boundary. */}
+                {connectTop && (
+                    <div className="absolute top-0 left-[38px] -translate-x-1/2 w-0.5 h-7 bg-zinc-700/50 z-20" />
+                )}
+
                 <StatusBanners post={post} />
-                
+
                 <div className="flex flex-row items-start space-x-2.5 w-full h-full">
                     <div 
                         onClick={(e) => {
@@ -295,7 +301,7 @@ export function PostCard({
                         )}
                         
                         <UserHoverCard userId={post.userId}>
-                            <PostCardAvatar user={user} userId={post.userId} connectTop={connectTop} connectBottom={false} />
+                            <PostCardAvatar user={user} userId={post.userId} />
                         </UserHoverCard>
                     </div>
                     
