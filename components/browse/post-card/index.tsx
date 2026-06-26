@@ -285,7 +285,9 @@ export function PostCard({
                     <div className="absolute top-0 left-[38px] -translate-x-1/2 w-0.5 h-7 bg-zinc-700/50 z-20" />
                 )}
 
-                <StatusBanners post={post} />
+                {/* A threaded reply (member below its parent) never shows a
+                    "reposted"/"Pinned" banner — that label belongs to standalone items. */}
+                {!connectTop && <StatusBanners post={post} />}
 
                 <div className="flex flex-row items-start space-x-2.5 w-full h-full">
                     <div 
@@ -295,11 +297,15 @@ export function PostCard({
                         }} 
                         className="cursor-pointer self-stretch relative flex flex-col items-center"
                     >
-                        {/* Thread line bottom - moved here for full-height coverage */}
+                        {/* Thread line bottom — from just below the avatar to the card's
+                            bottom edge (pb-0 when connectBottom). Meets the next card's
+                            top line at the zero-gap boundary for one continuous line.
+                            The next card's "reposted"/"Replying" banner is suppressed
+                            (see StatusBanners gate) so nothing offsets the join. */}
                         {connectBottom && (
                             <div className="absolute top-[52px] bottom-0 left-[22px] -translate-x-1/2 w-0.5 bg-zinc-700/50 z-20" />
                         )}
-                        
+
                         <UserHoverCard userId={post.userId}>
                             <PostCardAvatar user={user} userId={post.userId} />
                         </UserHoverCard>

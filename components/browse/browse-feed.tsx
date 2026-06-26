@@ -35,7 +35,12 @@ type FeedItem = { type: "post"; createdAt: Date; data: any };
 // PAGE_SIZE: how many items the window advances per onLoadMore step. To load
 //   more posts PER NETWORK FETCH at scale (target ~100), also raise the server
 //   page in the getFeed useInfiniteQuery `limit` below — they should match.
-const VIEW_COUNT = 60; // at scale: 120
+// Keep this comfortably above the number of items a normal session loads so the
+// window never trims newer items off the top. Trimming + the large prefetch
+// threshold below would otherwise re-load those newer items at the TOP on any
+// upward momentum while scrolling down — which reads as "new posts loaded at the
+// top." X keeps already-seen items mounted; so do we until the at-scale cap.
+const VIEW_COUNT = 120;
 const LOAD_THRESHOLD_PX = 1200;
 const PAGE_SIZE = 20; // at scale: 100 (keep in sync with getFeed `limit`)
 const keyOf = (i: FeedItem) => i.data.feedKey ?? i.data.id;
@@ -102,8 +107,12 @@ export function BrowseFeed() {
             // If this post was already lifted to be a parent of a newer reply, skip its standalone occurrence
             if (liftedIds.has(p.id)) continue;
 
-            // If this is a reply and it has parent metadata, we might want to inject/lift the parent
-            if (p.replyToId && p.parentUsername) {
+            // Only SELF-THREADS connect (author replying to their own post), matching X.
+            // A reply to someone else's post is left as a standalone card — it still shows
+            // the "Replying to @x" label (driven by parentUsername) but no lifted parent
+            // and no connector line.
+            const isSelfThread = p.replyToId && p.parentUsername && p.parentUserId === p.userId;
+            if (isSelfThread) {
                 // If the parent is in the batch, we are "lifting" it. 
                 // If it's not in the batch, we are "injecting" a virtual one.
                 const parentInBatch = rawPosts.find(bp => bp.id === p.replyToId);
@@ -157,16 +166,17 @@ export function BrowseFeed() {
             const next = arr[i + 1];
             const prev = arr[i - 1];
 
-            // If the item below us is a reply to us, connect bottom
-            // Check both id and feedKey to handle reposts and virtual posts correctly
-            const isNextReplyToUs = next && (
+            // Connect only SELF-threads (same author): if the item below is the
+            // current author's reply to us, connect bottom. Check both id and feedKey
+            // to handle reposts and virtual (lifted) parents correctly.
+            const isNextReplyToUs = next && next.data.userId === item.data.userId && (
                 next.data.replyToId === item.data.id ||
                 (item.data.feedKey && next.data.replyToId === item.data.feedKey)
             );
             const connectBottom = !!isNextReplyToUs;
 
-            // If we are a reply to the item above us, connect top
-            const isWeReplyToPrev = prev && (
+            // If we are this author's reply to the item above us, connect top.
+            const isWeReplyToPrev = prev && prev.data.userId === item.data.userId && (
                 item.data.replyToId === prev.data.id ||
                 (prev.data.feedKey && item.data.replyToId === prev.data.feedKey)
             );
