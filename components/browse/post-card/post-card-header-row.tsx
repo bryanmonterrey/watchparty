@@ -83,8 +83,10 @@ export function PostCardHeaderRow({
                 )}
             </div>
 
-            {/* Actions (Gemini + Options) */}
-            <div className="flex items-center shrink-0 gap-0.5">
+            {/* Actions (Gemini + Options). -mr-1.5 matches the bottom action bar's
+                right inset so the More button aligns vertically above Share, and
+                Gemini above Bookmark. */}
+            <div className="flex items-center shrink-0 gap-0.5 -mr-1.5">
                 <button className="text-postgray hover:bg-twitter2/[12%] cursor-pointer hover:text-zinc-100 p-1.5 rounded-full transition-colors">
                     <GeminiIcon className="w-[18px] h-[18px]" />
                 </button>

@@ -22,7 +22,8 @@ export function FeedTab({ label, isActive, onClick, suffix, className }: FeedTab
         >
             {/* Invisible spacer mirrors the suffix width to keep label centered */}
             {suffix && <span className="ml-1 flex items-center opacity-0 pointer-events-none">{suffix}</span>}
-            {/* Label + underline — underline is anchored to this container only */}
+            {/* Label + icon + underline — the suffix lives inside this container so the
+                underline (inset-x-0) spans both the title and the icon. */}
             <div className="relative h-full flex items-center">
                 <span className={cn(
                     "text-[15px] font-bold transition-colors",
@@ -30,14 +31,12 @@ export function FeedTab({ label, isActive, onClick, suffix, className }: FeedTab
                 )}>
                     {label}
                 </span>
+                {suffix && <span className="ml-1 flex items-center">{suffix}</span>}
                 <div className={cn(
-                    "absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] w-16 bg-twitter2 rounded-full transition-opacity duration-200",
+                    "absolute bottom-0 inset-x-0 h-[4px] bg-twitter2 rounded-full transition-opacity duration-200",
                     isActive ? "opacity-100" : "opacity-0"
                 )} />
             </div>
-            {suffix && (
-                <span className="ml-1 flex items-center">{suffix}</span>
-            )}
         </button>
     );
 }
