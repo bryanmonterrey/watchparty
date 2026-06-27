@@ -193,6 +193,19 @@ export function BrowseFeed() {
     const [listKey, setListKey] = useState(0);
     // Tracks which tabs have been populated at least once
     const populatedTabs = useRef<Set<FeedType>>(new Set());
+    // The key of the feed's ESTABLISHED top per tab — the newest item present when
+    // the tab first loaded (advanced only by the "new posts" pill). Scrolling up may
+    // restore items the user already passed (between this and the window top) but must
+    // NEVER surface anything sorted ABOVE it. Without this pin, a repost pulled in by
+    // downward pagination (newer createdAt → re-sorted to full[0]) leaks to the top on
+    // scroll-up — the bug. X keeps the top fixed; newer content waits behind the pill.
+    const establishedTopKeyRef = useRef<Map<FeedType, string>>(new Map());
+    const establishedTopIdx = (full: FeedItem[]) => {
+        const k = establishedTopKeyRef.current.get(activeTab);
+        if (!k) return 0;
+        const i = full.findIndex((it) => keyOf(it) === k);
+        return i < 0 ? 0 : i;
+    };
 
     // ── Merged feed items (tRPC source of truth) ──────────────────────────────
     // assembleFeed (module-level) does the thread lift + connector tagging across
@@ -220,6 +233,7 @@ export function BrowseFeed() {
         if (isFirstLoad) {
             populatedTabs.current.add(activeTab);
             const window = full.slice(0, VIEW_COUNT);
+            if (full[0]) establishedTopKeyRef.current.set(activeTab, keyOf(full[0]));
             tabItemsCache.current.set(activeTab, window);
             setListItems(window);
             return;
@@ -237,7 +251,13 @@ export function BrowseFeed() {
             // in `full` (reachable by scrolling up) and are surfaced by the
             // "new posts" pill. Only auto-fold when the user is already at the top.
             if (!composerVisibleRef.current) return prev;
-            const newer = full.slice(0, topIdx);
+            // Even at the top, never fold in items sorted ABOVE the established top
+            // (e.g. a repost dragged up by a later page's newer createdAt) — those
+            // belong behind the pill. Only restore seen items between the pinned top
+            // and the window top.
+            const estIdx = establishedTopIdx(full);
+            if (estIdx >= topIdx) return prev;
+            const newer = full.slice(estIdx, topIdx);
             const merged = dedupNewestFirst([...newer, ...prev]);
             tabItemsCache.current.set(activeTab, merged);
             return merged;
@@ -317,7 +337,10 @@ export function BrowseFeed() {
             tabItemsCache.current.set(activeTab, dedupNewestFirst([...uniqueNewForCache, ...cached]));
 
             const full = fullItemsRef.current.get(activeTab) ?? [];
-            fullItemsRef.current.set(activeTab, dedupNewestFirst([...newPosts, ...full]));
+            const updatedFull = dedupNewestFirst([...newPosts, ...full]);
+            fullItemsRef.current.set(activeTab, updatedFull);
+            // The pill is the ONLY way the established top advances — adopt the new top.
+            if (updatedFull[0]) establishedTopKeyRef.current.set(activeTab, keyOf(updatedFull[0]));
         }
 
         // Always scroll to top when manually loading new posts
@@ -444,9 +467,15 @@ export function BrowseFeed() {
         const idx = full.findIndex((i) => keyOf(i) === keyOf(refItem));
 
         if (direction === "up") {
-            // Restore newer items that were windowed out above the current top.
+            // Restore seen items that were windowed out above the current top — but
+            // never go above the ESTABLISHED top. Anything sorted above it (a repost
+            // dragged up by a later page's newer createdAt) must not appear on
+            // scroll-up; it waits behind the pill. This is the top-injection fix.
             if (idx <= 0) return [];
-            return full.slice(Math.max(0, idx - PAGE_SIZE), idx);
+            const floor = establishedTopIdx(full);
+            const start = Math.max(idx - PAGE_SIZE, floor);
+            if (start >= idx) return [];
+            return full.slice(start, idx);
         }
 
         // direction === "down": older items below the bottom edge.
@@ -660,7 +689,12 @@ export function BrowseFeed() {
                 const full = fullItemsRef.current.get(activeTab) ?? [];
                 const windowTop = uniqueItems[0];
                 const windowBottom = uniqueItems[uniqueItems.length - 1];
-                const hasPrevious = !!windowTop && full.length > 0 && keyOf(full[0]) !== keyOf(windowTop);
+                // Only allow scroll-up loading when there are SEEN items between the
+                // pinned established top and the current window top. Comparing against
+                // full[0] (not the established top) would let a leapfrogged repost
+                // re-enable upward loading and inject at the top.
+                const windowTopIdx = windowTop ? full.findIndex((i) => keyOf(i) === keyOf(windowTop)) : -1;
+                const hasPrevious = windowTopIdx > establishedTopIdx(full);
                 const atLoadedEnd = !!windowBottom && full.length > 0 && keyOf(full[full.length - 1]) === keyOf(windowBottom);
                 const hasNext = !atLoadedEnd || !!hasNextPosts;
 
