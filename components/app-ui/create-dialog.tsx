@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
-import { Upload, X, Image as ImageIcon, Smile, Calendar, MapPin, Globe, ChevronDown, BarChart2, FileVideo, Trash2, Coins, Users, Medal, Check, BadgeCheck, Plus, Lock, Crown } from "lucide-react"
+import { Upload, X, Smile, Calendar, MapPin, Globe, ChevronDown, BarChart2, FileVideo, Trash2, Coins, Users, Medal, Check, BadgeCheck, Plus, Lock, Crown } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
@@ -14,7 +14,7 @@ import { appToast } from "@/components/app-ui/app-toast"
 import { supabase } from "@/lib/supabase/client"
 import { trpc } from "@/lib/trpc/client"
 
-import { GifIcon, MicIcon, CalendarIcon, LockIcon, EmojiIcon, AlertIcon } from "@/components/icons"
+import { GifIcon, ImageIcon, MicIcon, CalendarIcon, LockIcon, EmojiIcon, AlertIcon } from "@/components/icons"
 import { Switch } from "@/components/ui/switch"
 import { VideoDetailsStep } from "./create-dialog/video-details-step"
 import { TokenLaunchState, TokenLaunchTrigger, DEFAULT_TOKEN_LAUNCH } from "./create-dialog/token-launch-section"
@@ -959,6 +959,9 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                     <button onClick={() => setShowPoll(p => !p)} className={cn("p-2 cursor-pointer rounded-full transition-colors", showPoll ? "text-lantern bg-lantern/10" : "hover:bg-white/10")}>
                                                         <BarChart2 className="w-[22px] h-[22px]" />
                                                     </button>
+                                                    <button onClick={() => setIsPaywalled(p => !p)} className={cn("p-2 cursor-pointer rounded-full transition-colors", isPaywalled ? "text-lantern bg-lantern/10" : "hover:bg-white/10")}>
+                                                        <LockIcon className="w-[22px] h-[22px]" />
+                                                    </button>
                                                     <VoiceRecorderTrigger onClick={() => setShowVoiceRecorder(p => !p)} active={showVoiceRecorder} />
                                                     <Popover>
                                                         <PopoverTrigger asChild>
@@ -992,9 +995,6 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                             </button>
                                                         </PopoverContent>
                                                     </Popover>
-                                                    <button onClick={() => setIsPaywalled(p => !p)} className={cn("p-2 cursor-pointer rounded-full transition-colors", isPaywalled ? "text-lantern bg-lantern/10" : "hover:bg-white/10")}>
-                                                        <LockIcon className="w-[22px] h-[22px]" />
-                                                    </button>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {postContent.length >= 125 && (
