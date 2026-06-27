@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated Cloudflare/OpenNext build output — not source, and crawling it
+    // makes lint crawl-slow (it was also the file the eslint crash first hit).
+    ".open-next/**",
   ]),
 ]);
 

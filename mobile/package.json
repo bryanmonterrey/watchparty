@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@better-auth/expo": "1.6.16",
+    "@better-auth/expo": "1.6.22",
     "@expo/ui": "~56.0.17",
     "@noble/ciphers": "^2.2.0",
     "@noble/curves": "^2.2.0",
@@ -11,7 +11,7 @@
     "@trpc/client": "^11.17.0",
     "@trpc/react-query": "^11.17.0",
     "@trpc/server": "^11.17.0",
-    "better-auth": "1.6.16",
+    "better-auth": "1.6.22",
     "bs58": "^6.0.0",
     "expo": "~56.0.11",
     "expo-blur": "~56.0.3",
