@@ -53,14 +53,27 @@ Server code is already ported from `../sidebar` (`server/routers/stream.ts`,
 - ⬜ Implement chat on user pages that works **in unison with the `/live`
   livestream chat** (shared chat component / room model).
 
-## 5. Profile page ⬜
-- ⬜ Complete the profile page (`app/(app)/[slug]`).
+## 5. Profile page 🟡
+- Audit (2026-06-28): `UserProfile` is fully assembled (banner, avatar, header,
+  tabs, tab content, about, stats, edit + followers dialogs) and rendered via
+  `app/(app)/[slug]`. No stubs found — needs a visual polish pass, not building.
 
-## 6. Token page ⬜
-- ⬜ Complete the token page.
+## 6. Token page 🟡
+- Audit (2026-06-28): `TokenProfile` is fully assembled (header, market overview,
+  stats, description, swap card, charts, trades table) and rendered via
+  `app/(app)/[slug]`. Trades use real tRPC.
+- ⬜ **Holders breakdown** is the one real gap — `token-holders-table` is a
+  "coming soon" stub needing an on-chain indexer (Helius DAS / Birdeye). Blocked
+  until tokens are live on mainnet (most are drafts). See the `helius` skill.
 
-## 7. Trade page ⬜
-- ⬜ Complete the trade page (`app/(app)/trade`).
+## 6b. Video watch page — comments 🟢
+- 🟢 Wired the real `CommentSection` (tRPC `comment.*`) into the video page,
+  replacing the "Comments coming soon" stub. (Found during the token audit.)
+
+## 7. Trade page 🟢
+- Audit (2026-06-28): trade board built (`TradeView` → `TradeFeed`/`MobileTrade`)
+  and reads live `trpc.trade.getFeed`. Removed the unused `mock-data.ts` (dead
+  code, no importers). Looks complete; revisit only for polish.
 
 ## 8. Home carousel — ambient mode 🟢
 - 🟢 Ambient glow behind the hero strip: the active video's frame, heavily

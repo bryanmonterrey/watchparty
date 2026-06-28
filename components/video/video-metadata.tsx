@@ -9,6 +9,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileAvatar } from "@/components/video/profile-avatar";
 import { UserType } from "@/db/schema/auth/user";
+import { CommentSection } from "@/components/browse/comment-section";
 
 interface VideoAuthor {
     id: string;
@@ -182,9 +183,7 @@ export function VideoMetadata({
                 <p className="text-lg font-bold text-white mb-4">
                     {formatViewers(comments)} Comments
                 </p>
-                <div className="text-center py-12 text-zinc-500 font-medium text-sm">
-                    Comments coming soon
-                </div>
+                <CommentSection postId={postId} />
             </div>
         </div>
     );
