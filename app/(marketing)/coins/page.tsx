@@ -3,7 +3,7 @@ import {
     Rocket01Icon, Analytics01Icon, DollarCircleIcon,
     Wallet01Icon, UserGroupIcon, Coins01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, StepFlow, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 import { HeroTrade, EarningsCard } from "@/components/marketing/mocks";
 
@@ -47,6 +47,23 @@ export default function CoinsPage() {
                 }
             />
 
+            <StepFlow
+                eyebrow="How it works"
+                title="Launch in three taps"
+                sub="No contracts, no setup. Name your coin and it's live on a fair bonding curve."
+                steps={STEPS.map(([title, body]) => ({ title, body }))}
+            />
+
+            <BoldBlock
+                tone="bg-soft-blue"
+                dark={false}
+                title="Trade right in the feed"
+                body="Spot a coin in the timeline and buy it in the same tap — live charts, market cap, and a wallet built into every account."
+                ctaLabel="See it live"
+                ctaHref="/explore"
+                visual={<HeroTrade />}
+            />
+
             <BoldBlock
                 tone="bg-black"
                 reverse
@@ -56,18 +73,6 @@ export default function CoinsPage() {
                 ctaHref="/login"
                 visual={<EarningsCard />}
             />
-
-            <BandSection title="Launch in three taps" sub="No contracts, no setup. Name your coin and it's live on a fair bonding curve.">
-                <div className="grid gap-4 sm:grid-cols-3">
-                    {STEPS.map(([t, b], i) => (
-                        <div key={t} className="rounded-3xl bg-white p-7 ring-1 ring-black/[0.06]">
-                            <p className="font-pixel text-2xl tracking-tighter text-black/25">{String(i + 1).padStart(2, "0")}</p>
-                            <p className="mt-3 text-xl font-extrabold tracking-tight text-black">{t}</p>
-                            <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{b}</p>
-                        </div>
-                    ))}
-                </div>
-            </BandSection>
 
             <BandSection className="bg-white" title="Tokens, made simple">
                 <FeatureGrid features={FEATURES} />

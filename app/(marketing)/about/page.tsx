@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import { LiveStreaming01Icon, Wallet01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
-import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { MarketingHero, BigStatement, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { type Feature } from "@/components/marketing/feature-card";
 import { HeroBento, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "About" };
@@ -31,13 +32,25 @@ export default function AboutPage() {
                 visual={<HeroBento />}
             />
 
-            <BandSection title="Why we built it">
-                <p className="max-w-2xl text-xl font-semibold leading-relaxed text-black/70">
-                    The timeline lives in one app, streaming in another, and your wallet somewhere
-                    else entirely. watchparty puts them in the same place, so you can watch a stream,
-                    post a take, back a creator, and trade a coin without ever switching tabs. Same
-                    algorithm you love, now with a stage and a wallet.
-                </p>
+            <BigStatement>
+                The timeline lives in one app, streaming in another, and your wallet somewhere else
+                entirely. <span className="text-black/40">watchparty puts them in the same place</span> — watch a
+                stream, post a take, back a creator, and trade a coin without ever switching tabs.
+            </BigStatement>
+
+            <BandSection title="Three things, one app">
+                <div className="grid gap-x-8 gap-y-10 sm:grid-cols-3">
+                    {PILLARS.map((p, i) => (
+                        <div key={p.title} className="border-t-2 border-black/10 pt-5">
+                            <div className="flex items-center gap-3">
+                                <span className="font-pixel text-3xl tracking-tighter text-black/20">{String(i + 1).padStart(2, "0")}</span>
+                                <HugeiconsIcon icon={p.icon} size={26} strokeWidth={1.8} className={p.accent} />
+                            </div>
+                            <p className="mt-4 text-2xl font-extrabold tracking-tight text-black">{p.title}</p>
+                            <p className="mt-2 text-[15px] font-semibold leading-snug text-black/60">{p.body}</p>
+                        </div>
+                    ))}
+                </div>
             </BandSection>
 
             <BoldBlock
@@ -49,10 +62,6 @@ export default function AboutPage() {
                 ctaHref="/creators"
                 visual={<EarningsCard />}
             />
-
-            <BandSection className="bg-white" title="Three things, one app">
-                <FeatureGrid features={PILLARS} />
-            </BandSection>
 
             <ExploreMore currentHref="/about" className="bg-white" />
             <Faq items={FAQ} />

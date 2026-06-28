@@ -3,7 +3,7 @@ import {
     LiveStreaming01Icon, Comment01Icon, Tv01Icon,
     DollarCircleIcon, CameraVideoIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, StepFlow, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 import { HeroLandscape, EarningsCard } from "@/components/marketing/mocks";
 
@@ -37,6 +37,17 @@ export default function LivePage() {
                 visual={<HeroLandscape />}
             />
 
+            <StepFlow
+                eyebrow="How it works"
+                title="On air in three steps"
+                sub="No gear, no setup. From your pocket to your audience in under a minute."
+                steps={[
+                    { title: "Open the app", body: "Tap go live from your phone, or plug in OBS on desktop for a full rig." },
+                    { title: "Go live", body: "You're streaming to your audience in seconds, with live chat from the first viewer." },
+                    { title: "Keep the replay", body: "Every broadcast saves as a VOD automatically, so nobody misses it." },
+                ]}
+            />
+
             <BoldBlock
                 tone="bg-black"
                 reverse
@@ -46,21 +57,6 @@ export default function LivePage() {
                 ctaHref="/login"
                 visual={<EarningsCard />}
             />
-
-            <BandSection title="Broadcast from anywhere" sub="Start from your phone in a tap, or plug in OBS on desktop for a full production setup.">
-                <div className="grid gap-4 sm:grid-cols-3">
-                    {[
-                        ["Phone", "Tap go live and you're streaming in seconds."],
-                        ["Desktop + OBS", "Use your stream key for a full production rig."],
-                        ["Every replay", "Streams save as VODs for anyone who missed it."],
-                    ].map(([t, b]) => (
-                        <div key={t} className="rounded-3xl bg-white p-7 ring-1 ring-black/[0.06]">
-                            <p className="text-xl font-extrabold tracking-tight text-black">{t}</p>
-                            <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{b}</p>
-                        </div>
-                    ))}
-                </div>
-            </BandSection>
 
             <BandSection className="bg-white" title="Streaming, built in">
                 <FeatureGrid features={FEATURES} />

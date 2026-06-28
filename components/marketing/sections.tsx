@@ -299,6 +299,124 @@ export function CenterFeature({
     );
 }
 
+// Numbered process flow (Cash App pattern) — big ghost numerals over short
+// steps. A distinct "how it works" spine, not another card grid.
+export function StepFlow({
+    eyebrow,
+    title,
+    sub,
+    steps,
+    tone = "bg-white",
+}: {
+    eyebrow?: string;
+    title: string;
+    sub?: string;
+    steps: { title: string; body: string }[];
+    tone?: string;
+}) {
+    return (
+        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+            <div className="mx-auto w-full max-w-6xl">
+                <Reveal>
+                    {eyebrow && (
+                        <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
+                    )}
+                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>
+                    {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
+                </Reveal>
+                <div className="mt-12 grid gap-x-6 gap-y-10 sm:grid-cols-3">
+                    {steps.map((s, i) => (
+                        <Reveal key={s.title} delay={i * 0.08}>
+                            <div className="border-t-2 border-black/10 pt-5">
+                                <span className="font-pixel text-5xl leading-none tracking-tighter text-black/20 sm:text-6xl">
+                                    {String(i + 1).padStart(2, "0")}
+                                </span>
+                                <p className="mt-4 text-xl font-extrabold tracking-tight text-black">{s.title}</p>
+                                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{s.body}</p>
+                            </div>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// Asymmetric bento grid (Phantom/Apple pattern) — mixed-size pastel cards. A
+// distinct, visual-forward spine vs. the uniform FeatureGrid.
+export function BentoGrid({
+    eyebrow,
+    title,
+    sub,
+    items,
+    tone = "bg-white",
+}: {
+    eyebrow?: string;
+    title?: string;
+    sub?: string;
+    items: { icon: IconSvgElement; title: string; body: string; bg: string; accent: string; span?: "wide" | "tall" | "big" }[];
+    tone?: string;
+}) {
+    return (
+        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+            <div className="mx-auto w-full max-w-6xl">
+                {(eyebrow || title || sub) && (
+                    <Reveal>
+                        {eyebrow && (
+                            <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
+                        )}
+                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>}
+                        {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
+                    </Reveal>
+                )}
+                <div className="mt-10 grid auto-rows-[176px] grid-cols-2 gap-4 sm:grid-cols-4">
+                    {items.map((it, i) => (
+                        <Reveal
+                            key={it.title}
+                            delay={i * 0.05}
+                            className={cn(
+                                it.span === "big" && "col-span-2 row-span-2",
+                                it.span === "wide" && "col-span-2",
+                                it.span === "tall" && "row-span-2",
+                            )}
+                        >
+                            <div className={cn("flex h-full flex-col overflow-hidden rounded-[24px] p-6 ring-1 ring-black/[0.04]", it.bg)}>
+                                <span className="grid size-11 place-items-center rounded-2xl bg-white/70">
+                                    <HugeiconsIcon icon={it.icon} size={24} strokeWidth={1.8} className={it.accent} />
+                                </span>
+                                <p className="mt-auto pt-5 text-lg font-extrabold tracking-tight text-black">{it.title}</p>
+                                <p className="mt-1 text-[15px] font-semibold leading-snug text-black/60">{it.body}</p>
+                            </div>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// Big editorial statement (Phantom/Stripe pattern) — one oversized line of copy,
+// generous space. A manifesto beat, not a card.
+export function BigStatement({
+    children,
+    tone,
+    className,
+}: {
+    children: React.ReactNode;
+    tone?: string;
+    className?: string;
+}) {
+    return (
+        <section className={cn("px-6 py-20 sm:py-32", tone, className)}>
+            <div className="mx-auto max-w-4xl">
+                <Reveal>
+                    <p className="font-extrabold text-3xl leading-[1.15] tracking-tight text-black sm:text-5xl">{children}</p>
+                </Reveal>
+            </div>
+        </section>
+    );
+}
+
 // Solid-band section (flat surface via className), for a feature grid etc.
 export function BandSection({
     children,

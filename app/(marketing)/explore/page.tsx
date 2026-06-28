@@ -3,8 +3,8 @@ import {
     LiveStreaming01Icon, CameraVideoIcon, Compass01Icon,
     AiSearchIcon, PlayListIcon, GridIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
-import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { MarketingHero, BentoGrid, BoldBlock, CenterFeature, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { type Feature } from "@/components/marketing/feature-card";
 import { HeroCollage, PhoneMock, CoinScreen } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Explore" };
@@ -19,6 +19,16 @@ const FEATURES: Feature[] = [
 ];
 
 const CATEGORIES = ["Just Chatting", "GTA VI", "Music", "Esports", "IRL", "Crypto", "Sports", "Pranks", "Tech"];
+
+// Per-tile bento styling, parallel to FEATURES (mixed sizes for an asymmetric grid).
+const BENTO_STYLE = [
+    { bg: "bg-soft-pink", accent: "text-pastelred", span: "big" },
+    { bg: "bg-soft-blue", accent: "text-twitter" },
+    { bg: "bg-pastel-yellow", accent: "text-jewel" },
+    { bg: "bg-lantern/30", accent: "text-sunset", span: "wide" },
+    { bg: "bg-soft-blue", accent: "text-twitter", span: "wide" },
+    { bg: "bg-soft-pink", accent: "text-pastelred", span: "wide" },
+] as const;
 
 const FAQ = [
     { q: "Is watchparty free to use?", a: "Yes. Watching, posting, and following are free. Premium adds extras like verified badges and higher limits." },
@@ -36,6 +46,12 @@ export default function ExplorePage() {
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
                 visual={<HeroCollage />}
+            />
+
+            <BentoGrid
+                eyebrow="What's inside"
+                title="Everything worth watching"
+                items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
             />
 
             <BoldBlock
@@ -59,31 +75,17 @@ export default function ExplorePage() {
                 }
             />
 
-            <BandSection title="Trade as you scroll" sub="Spot a coin in the feed and buy it in the same tap, with a wallet built into every account.">
-                <div className="grid items-center gap-10 lg:grid-cols-2">
-                    <div className="grid place-items-center overflow-hidden rounded-[36px] bg-soft-pink px-6 py-12">
-                        <PhoneMock className="rotate-[3deg]">
-                            <CoinScreen />
-                        </PhoneMock>
-                    </div>
-                    <div className="grid gap-4">
-                        {[
-                            ["In-feed trading", "Buy and sell without leaving the timeline."],
-                            ["Live prices", "Charts and market caps update in real time."],
-                            ["Built-in wallet", "Every account ships with a secure wallet."],
-                        ].map(([t, b]) => (
-                            <div key={t} className="rounded-2xl bg-white p-5 ring-1 ring-black/[0.06]">
-                                <p className="text-lg font-extrabold tracking-tight text-black">{t}</p>
-                                <p className="mt-1 text-[15px] font-semibold leading-snug text-black/60">{b}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </BandSection>
-
-            <BandSection className="bg-white" title="Everything worth watching">
-                <FeatureGrid features={FEATURES} />
-            </BandSection>
+            <CenterFeature
+                tone="bg-soft-pink"
+                eyebrow="Trade as you scroll"
+                title="Spot it, buy it, in one tap"
+                sub="See a coin in the feed and buy it without leaving the timeline — a secure wallet ships with every account."
+                visual={
+                    <PhoneMock className="rotate-[-3deg]">
+                        <CoinScreen />
+                    </PhoneMock>
+                }
+            />
 
             <ExploreMore currentHref="/explore" className="bg-white" />
             <Faq items={FAQ} />

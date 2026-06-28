@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { HeroCreatorCluster, PhoneMock, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
+import { HeroCreatorCluster, HeroTrade, PhoneMock, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Creators" };
 
@@ -39,7 +39,22 @@ export default function CreatorsPage() {
             />
 
             <BoldBlock
+                tone="bg-soft-pink"
+                dark={false}
+                title="Go live in seconds"
+                body="Stream from your phone, chat with your audience in real time, and keep every broadcast as a replay."
+                ctaLabel="Start streaming"
+                ctaHref="/live"
+                visual={
+                    <PhoneMock className="rotate-[-3deg]">
+                        <LiveScreen />
+                    </PhoneMock>
+                }
+            />
+
+            <BoldBlock
                 tone="bg-black"
+                reverse
                 title="Get paid to create"
                 body="Turn followers into income with subscriptions, tips, and creator fees, all settled in USDC and claimed straight to your wallet."
                 ctaLabel="Start earning"
@@ -47,27 +62,15 @@ export default function CreatorsPage() {
                 visual={<EarningsCard />}
             />
 
-            <BandSection title="Go live in seconds" sub="Stream from your phone, chat with your audience in real time, and keep every broadcast as a replay.">
-                <div className="grid items-center gap-10 lg:grid-cols-2">
-                    <div className="order-2 lg:order-1 grid gap-4">
-                        {[
-                            ["One-tap broadcast", "Go live from your phone or plug in OBS on desktop."],
-                            ["Live chat", "Talk with your audience as you stream."],
-                            ["Every replay saved", "Streams become VODs automatically."],
-                        ].map(([t, b]) => (
-                            <div key={t} className="rounded-2xl bg-white p-5 ring-1 ring-black/[0.06]">
-                                <p className="text-lg font-extrabold tracking-tight text-black">{t}</p>
-                                <p className="mt-1 text-[15px] font-semibold leading-snug text-black/60">{b}</p>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="order-1 lg:order-2 grid place-items-center overflow-hidden rounded-[36px] bg-soft-blue px-6 py-12">
-                        <PhoneMock className="rotate-[3deg]">
-                            <LiveScreen />
-                        </PhoneMock>
-                    </div>
-                </div>
-            </BandSection>
+            <BoldBlock
+                tone="bg-soft-blue"
+                dark={false}
+                title="Launch a coin for your community"
+                body="Give your audience a token to rally around, trade it in-app, and earn a fee on every swap."
+                ctaLabel="Launch a coin"
+                ctaHref="/coins"
+                visual={<HeroTrade />}
+            />
 
             <BandSection className="bg-white" title="Your creator toolkit">
                 <FeatureGrid features={FEATURES} />

@@ -3,8 +3,8 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
-import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { MarketingHero, BentoGrid, BoldBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Communities" };
 
@@ -16,6 +16,16 @@ const FEATURES: Feature[] = [
     { icon: SecurityCheckIcon, title: "Moderation", body: "Roles, mods, and tools to keep it healthy.", accent: "text-twitter" },
     { icon: Compass01Icon, title: "Discover", body: "Find communities built around what you love.", accent: "text-pastelred" },
 ];
+
+// Per-tile bento styling, parallel to FEATURES (mixed sizes).
+const BENTO_STYLE = [
+    { bg: "bg-soft-blue", accent: "text-twitter", span: "big" },
+    { bg: "bg-soft-pink", accent: "text-pastelred" },
+    { bg: "bg-pastel-yellow", accent: "text-jewel" },
+    { bg: "bg-lantern/30", accent: "text-sunset", span: "wide" },
+    { bg: "bg-soft-blue", accent: "text-twitter", span: "wide" },
+    { bg: "bg-soft-pink", accent: "text-pastelred", span: "wide" },
+] as const;
 
 const BOTS = [
     ["Welcome bot", "Greets new members and assigns roles."],
@@ -52,6 +62,12 @@ export default function CommunityPage() {
                 }
             />
 
+            <BentoGrid
+                eyebrow="What's inside"
+                title="Built for belonging"
+                items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
+            />
+
             <BoldBlock
                 tone="bg-black"
                 reverse
@@ -70,10 +86,6 @@ export default function CommunityPage() {
                     </div>
                 }
             />
-
-            <BandSection className="bg-white" title="Built for belonging">
-                <FeatureGrid features={FEATURES} />
-            </BandSection>
 
             <ExploreMore currentHref="/community" className="bg-white" />
             <Faq items={FAQ} />
