@@ -135,8 +135,23 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Explore */}
-      <section id="explore" className="bg-soft-pink px-6 py-28 sm:py-36">
+      {/* ─────────────────────────────────────────────────────────────────────
+          DESIGN-PRINCIPLES PROOF (easily removable): the three sections below
+          apply docs/design-principles.md — gradient atmospheres that dissolve
+          to white, color-identity rounded cards, inset-highlight depth (no drop
+          shadows), aggressive rounding, hover lift. To revert, `git revert` the
+          commit that introduced this block; it's isolated to this file.
+          ───────────────────────────────────────────────────────────────────── */}
+
+      {/* Explore — gradient atmosphere dissolving to white */}
+      <section
+        id="explore"
+        className="relative overflow-hidden px-6 py-28 sm:py-36"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 50% 100%, var(--color-soft-blue) 0%, var(--color-soft-pink) 38%, #ffffff 100%)",
+        }}
+      >
         <div className="mx-auto max-w-5xl">
           <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
             Watch what&apos;s happening
@@ -148,37 +163,40 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Creators */}
+      {/* Creators — color-identity rounded cards, inset-highlight depth */}
       <section id="creators" className="bg-pastel-yellow px-6 py-28 sm:py-36">
         <div className="mx-auto max-w-5xl">
           <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
             Built for creators
           </h2>
-          <div className="mt-10 grid gap-10 sm:grid-cols-3">
-            <div>
-              <p className="font-pixel text-2xl tracking-tighter text-black">Go live</p>
-              <p className="mt-2 text-base font-semibold text-black/70">
-                Broadcast in seconds and bring your audience with you.
-              </p>
-            </div>
-            <div>
-              <p className="font-pixel text-2xl tracking-tighter text-black">Get paid</p>
-              <p className="mt-2 text-base font-semibold text-black/70">
-                Subscriptions and creator payouts, settled in USDC.
-              </p>
-            </div>
-            <div>
-              <p className="font-pixel text-2xl tracking-tighter text-black">Launch a coin</p>
-              <p className="mt-2 text-base font-semibold text-black/70">
-                Spin up a token for your community in a tap.
-              </p>
-            </div>
+          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            {[
+              { title: "Go live", body: "Broadcast in seconds and bring your audience with you.", fill: "var(--color-soft-pink)" },
+              { title: "Get paid", body: "Subscriptions and creator payouts, settled in USDC.", fill: "var(--color-soft-blue)" },
+              { title: "Launch a coin", body: "Spin up a token for your community in a tap.", fill: "#ffffff" },
+            ].map((c) => (
+              <div
+                key={c.title}
+                style={{ backgroundColor: c.fill }}
+                className="rounded-[28px] p-7 shadow-[inset_0_2px_0_rgba(255,255,255,0.65),inset_0_-3px_10px_rgba(0,0,0,0.04)] transition-transform duration-200 ease-out hover:-translate-y-1"
+              >
+                <p className="font-pixel text-2xl tracking-tighter text-black">{c.title}</p>
+                <p className="mt-2 text-base font-semibold text-black/70">{c.body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* About */}
-      <section id="about" className="bg-soft-blue px-6 py-28 sm:py-36">
+      {/* About — gradient atmosphere + CTA */}
+      <section
+        id="about"
+        className="relative overflow-hidden px-6 py-28 sm:py-36"
+        style={{
+          background:
+            "radial-gradient(110% 90% at 50% 0%, var(--color-pastel-yellow) 0%, var(--color-soft-pink) 45%, #ffffff 100%)",
+        }}
+      >
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
             Crypto Twitter, leveled up
