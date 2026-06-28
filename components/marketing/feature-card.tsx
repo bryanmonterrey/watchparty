@@ -18,7 +18,7 @@ export function FeatureCard({ icon, title, body, accent = "text-twitter" }: Feat
             <span className={cn("mb-3 grid size-9 place-items-center rounded-xl bg-current/10", accent)}>
                 <HugeiconsIcon icon={icon} size={20} strokeWidth={1.8} className={accent} />
             </span>
-            <p className="font-pixel text-lg tracking-tighter text-black">{title}</p>
+            <p className="text-base font-bold tracking-tight text-black">{title}</p>
             <p className="mt-1 text-sm font-semibold leading-snug text-black/65">{body}</p>
         </div>
     );

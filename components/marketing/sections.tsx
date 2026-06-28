@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-// Marketing section kit — Cash App-shaped: big LEFT-aligned pixel headlines,
-// asymmetric splits (text one side, image panel the other), full-bleed SOLID
-// bands (no gradients), pill CTAs. Image panels are tasteful placeholders sized
-// for real app mockups dropped in later. See docs/design-principles.md.
+// Marketing section kit — Cash App-shaped: big LEFT-aligned Geist headlines
+// (font-pixel is the small accent on eyebrows + the logo, not the headlines, for
+// legibility at scale); asymmetric splits (text one side, image panel the
+// other); full-bleed SOLID bands (no gradients); pill CTAs. Image panels are
+// placeholders sized for real app mockups dropped in later. See
+// docs/design-principles.md.
 
 // Rounded placeholder panel where a real product mockup (phone screen / render)
 // will go. Solid-fill, aggressive radius, with a phone-shaped inner frame.
@@ -59,9 +61,9 @@ export function MarketingHero({
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
                 <div>
                     {eyebrow && (
-                        <p className="mb-4 text-sm font-bold uppercase tracking-[0.15em] text-black/50">{eyebrow}</p>
+                        <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/50">{eyebrow}</p>
                     )}
-                    <h1 className="font-pixel text-4xl leading-[1.05] tracking-tighter text-black sm:text-6xl lg:text-7xl">
+                    <h1 className="font-extrabold text-4xl leading-[1.05] tracking-tight text-black sm:text-6xl lg:text-7xl">
                         {title}
                     </h1>
                     <p className="mt-5 max-w-md text-lg font-semibold leading-snug text-black/70 sm:text-xl">
@@ -114,7 +116,7 @@ export function ShowcaseRow({
         <section className={cn("px-6 py-16 sm:py-24", className)}>
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
                 <div className={cn(reverse && "lg:order-2")}>
-                    <h2 className="font-pixel text-3xl leading-[1.08] tracking-tighter text-black sm:text-5xl">
+                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-black sm:text-5xl">
                         {title}
                     </h2>
                     <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-black/65">{body}</p>
@@ -149,7 +151,7 @@ export function BandSection({
         <section className={cn("px-6 py-16 sm:py-24", className)}>
             <div className="mx-auto w-full max-w-6xl">
                 {title && (
-                    <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">{title}</h2>
+                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>
                 )}
                 {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
                 {children && <div className={cn(title || sub ? "mt-10" : "")}>{children}</div>}
@@ -162,7 +164,7 @@ export function Faq({ items, className }: { items: { q: string; a: string }[]; c
     return (
         <section className={cn("px-6 py-16 sm:py-24", className)}>
             <div className="mx-auto w-full max-w-3xl">
-                <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
+                <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">
                     Questions, answered
                 </h2>
                 <div className="mt-8 divide-y divide-black/[0.08] border-y border-black/[0.08]">
@@ -198,7 +200,7 @@ export function ClosingCta({
     return (
         <section className="bg-black px-6 py-20 sm:py-28">
             <div className="mx-auto w-full max-w-6xl">
-                <h2 className="font-pixel text-4xl leading-[1.05] tracking-tighter text-white sm:text-6xl">{title}</h2>
+                <h2 className="font-extrabold text-4xl leading-[1.05] tracking-tight text-white sm:text-6xl">{title}</h2>
                 {sub && <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/70">{sub}</p>}
                 <Link
                     href={ctaHref}
