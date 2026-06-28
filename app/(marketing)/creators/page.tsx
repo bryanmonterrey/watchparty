@@ -1,33 +1,53 @@
 import { Metadata } from "next";
+import {
+    LiveStreaming01Icon, Wallet01Icon, Rocket01Icon,
+    Analytics01Icon, UserGroupIcon, SparklesIcon,
+} from "@hugeicons/core-free-icons";
+import { MarketingHero, BandSection, StepRow, Faq, ClosingCta } from "@/components/marketing/sections";
+import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Creators" };
 
-const PILLARS = [
-    { title: "Go live", body: "Broadcast in seconds and bring your audience with you.", fill: "var(--color-soft-pink)" },
-    { title: "Get paid", body: "Subscriptions and creator payouts, settled in USDC.", fill: "var(--color-soft-blue)" },
-    { title: "Launch a coin", body: "Spin up a token for your community in a tap.", fill: "var(--color-pastel-yellow)" },
+const FEATURES: Feature[] = [
+    { icon: LiveStreaming01Icon, title: "Go live", body: "Broadcast in seconds and bring your audience with you.", accent: "text-pastelred" },
+    { icon: Wallet01Icon, title: "Get paid", body: "Subscriptions and creator payouts, settled in USDC.", accent: "text-twitter" },
+    { icon: Rocket01Icon, title: "Launch a coin", body: "Spin up a token for your community in a tap.", accent: "text-sunset" },
+    { icon: Analytics01Icon, title: "Know your audience", body: "Analytics and insights on what's landing.", accent: "text-jewel" },
+    { icon: UserGroupIcon, title: "Build community", body: "Servers, spaces, and group chats around your work.", accent: "text-twitter" },
+    { icon: SparklesIcon, title: "Stand out", body: "Verified badges and reply boost on Premium.", accent: "text-pastelred" },
+];
+
+const STEPS = [
+    { title: "Claim your handle", body: "Sign up, set up your profile, and connect a wallet." },
+    { title: "Post or go live", body: "Share clips, write posts, or start streaming instantly." },
+    { title: "Get paid", body: "Turn on subscriptions and payouts, settled in USDC." },
+];
+
+const FAQ = [
+    { q: "How do payouts work?", a: "Fans subscribe or tip in USDC; you claim your balance minus a small platform fee, straight to your wallet." },
+    { q: "Do I need special gear to stream?", a: "No. Go live from the app, or plug in OBS on desktop for a full production setup." },
+    { q: "What does it cost?", a: "Creating is free. Premium unlocks higher limits, analytics, and the largest reply boost." },
 ];
 
 export default function CreatorsPage() {
     return (
-        <section className="flex min-h-[70svh] items-center px-6 py-24 sm:py-32">
-            <div className="mx-auto w-full max-w-5xl">
-                <h1 className="font-pixel text-4xl tracking-tighter text-black sm:text-6xl">
-                    Built for creators
-                </h1>
-                <div className="mt-10 grid gap-6 sm:grid-cols-3">
-                    {PILLARS.map((c) => (
-                        <div
-                            key={c.title}
-                            style={{ backgroundColor: c.fill }}
-                            className="rounded-[28px] p-7 shadow-[inset_0_2px_0_rgba(255,255,255,0.65),inset_0_-3px_10px_rgba(0,0,0,0.04)] transition-transform duration-200 ease-out hover:-translate-y-1"
-                        >
-                            <p className="font-pixel text-2xl tracking-tighter text-black">{c.title}</p>
-                            <p className="mt-2 text-base font-semibold text-black/70">{c.body}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </section>
+        <>
+            <MarketingHero
+                eyebrow="Creators"
+                title={<>Built for creators</>}
+                sub="Everything you need to go live, grow, and get paid, without leaving the timeline."
+                ctaLabel="Start creating"
+                secondaryLabel="Launch a coin"
+                secondaryHref="/coins"
+            />
+            <BandSection className="bg-white" title="Your creator toolkit">
+                <FeatureGrid features={FEATURES} />
+            </BandSection>
+            <BandSection title="From zero to live">
+                <StepRow steps={STEPS} />
+            </BandSection>
+            <Faq items={FAQ} className="bg-white" />
+            <ClosingCta title="Start creating" sub="Your audience is already here." ctaLabel="Start creating" />
+        </>
     );
 }

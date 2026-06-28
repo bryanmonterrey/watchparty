@@ -10,7 +10,11 @@ import { MorphMenuIcon } from "@/components/marketing/morph-menu-icon";
 // ── EDIT ME: the menu links ──────────────────────────────────────────────
 const NAV_LINKS = [
   { label: "Explore", href: "/explore" },
+  { label: "Go live", href: "/live" },
   { label: "Creators", href: "/creators" },
+  { label: "Coins", href: "/coins" },
+  { label: "Communities", href: "/community" },
+  { label: "Safety", href: "/safety" },
   { label: "About", href: "/about" },
 ];
 

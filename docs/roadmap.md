@@ -92,8 +92,17 @@ Server code is already ported from `../sidebar` (`server/routers/stream.ts`,
 - ⬜ **Bot integration** (Discord-style).
 - ⬜ General polish — make community pages and the app overall better.
 
-## 12. Marketing landing page 🟡
-- ⬜ Complete the marketing landing page (`app/(marketing)`).
+## 12. Marketing site 🟡
+- 🟢 Landing (`app/page.tsx`) with hero choreography + footer.
+- 🟢 Real marketing routes (not anchors) under `app/(marketing)/`: `/explore`,
+  `/live`, `/creators`, `/coins`, `/community` (singular — `/communities` is the
+  authed app route), `/safety`, `/about`. Shared layout (redirect-if-authed),
+  SiteHeader + footer nav wired, all added to `publicRoutes`.
+- 🟢 Design: flat solid bands (Cash App / Phantom style, NO gradients), neutral
+  compact white feature cards with HugeIcons, font-pixel display, solid-black
+  closing CTA. Reusable kit in `components/marketing/` (sections, feature-card).
+- ⬜ Later: company/legal/learn pages (careers, press, contact, /legal/*), and
+  real imagery/mockups when available.
 
 ## 13. iOS app — full completion ⬜
 - ⬜ Complete the Expo iOS app (`mobile/`) end-to-end.

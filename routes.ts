@@ -3,7 +3,16 @@
 // Routes anyone can visit without a session. Includes the public marketing
 // pages (the (marketing) route group); the signed-in redirect to /home happens
 // in (marketing)/layout, not here.
-export const publicRoutes: string[] = ["/", "/explore", "/creators", "/about"];
+export const publicRoutes: string[] = [
+  "/",
+  "/explore",
+  "/live",
+  "/creators",
+  "/coins",
+  "/community",
+  "/safety",
+  "/about",
+];
 
 // Auth routes — a signed-in user hitting these is sent to the app instead.
 export const authRoutes: string[] = ["/login"];
