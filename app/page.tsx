@@ -102,7 +102,7 @@ export default async function Home() {
             data-goggles-reveal
             className="max-w-3xl text-center font-pixel text-3xl tracking-tighter text-white opacity-0 sm:text-[55px]"
           >
-            Something wildly impressive goes here
+            Stream it. Post it. Trade it.
           </p>
         </div>
 
@@ -119,12 +119,96 @@ export default async function Home() {
         data-canvas-next
         className="relative z-30 flex h-svh items-center justify-center overflow-hidden bg-soft-blue"
       >
-        <div data-canvas-next-content>
-          <p className="px-6 text-center font-pixel text-2xl tracking-tighter text-black/30 sm:text-4xl">
-            Next canvas goes here
+        <div data-canvas-next-content className="flex flex-col items-center gap-6 px-6 text-center">
+          <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl lg:text-6xl">
+            All your internet,<br />one feed.
+          </h2>
+          <p className="max-w-md text-base font-semibold leading-snug text-black/70 sm:text-lg">
+            Go live, post your takes, launch a coin, and grow a community, all without leaving the timeline.
+          </p>
+          <Link
+            href="/login"
+            className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+          >
+            Get started
+          </Link>
+        </div>
+      </section>
+
+      {/* Explore */}
+      <section id="explore" className="bg-soft-pink px-6 py-28 sm:py-36">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
+            Watch what&apos;s happening
+          </h2>
+          <p className="mt-5 max-w-xl text-lg font-semibold leading-snug text-black/70 sm:text-2xl">
+            Live streams, shorts, and the timeline you already know, ranked by the same open
+            algorithm. The whole show, in one place.
           </p>
         </div>
       </section>
+
+      {/* Creators */}
+      <section id="creators" className="bg-pastel-yellow px-6 py-28 sm:py-36">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
+            Built for creators
+          </h2>
+          <div className="mt-10 grid gap-10 sm:grid-cols-3">
+            <div>
+              <p className="font-pixel text-2xl tracking-tighter text-black">Go live</p>
+              <p className="mt-2 text-base font-semibold text-black/70">
+                Broadcast in seconds and bring your audience with you.
+              </p>
+            </div>
+            <div>
+              <p className="font-pixel text-2xl tracking-tighter text-black">Get paid</p>
+              <p className="mt-2 text-base font-semibold text-black/70">
+                Subscriptions and creator payouts, settled in USDC.
+              </p>
+            </div>
+            <div>
+              <p className="font-pixel text-2xl tracking-tighter text-black">Launch a coin</p>
+              <p className="mt-2 text-base font-semibold text-black/70">
+                Spin up a token for your community in a tap.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About */}
+      <section id="about" className="bg-soft-blue px-6 py-28 sm:py-36">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
+            Crypto Twitter, leveled up
+          </h2>
+          <p className="mt-5 text-lg font-semibold leading-snug text-black/70 sm:text-2xl">
+            watchparty is where the timeline, the stream, and the trade finally live together. The
+            same algorithm you love, now with a stage and a wallet.
+          </p>
+          <Link
+            href="/login"
+            className="mt-8 inline-block rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+          >
+            Get started
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-black px-6 py-14 text-white">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 sm:flex-row sm:justify-between">
+          <span className="font-pixel text-xl tracking-tighter">watchparty</span>
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-semibold text-white/70">
+            <Link href="#explore" className="transition-colors hover:text-white">Explore</Link>
+            <Link href="#creators" className="transition-colors hover:text-white">Creators</Link>
+            <Link href="#about" className="transition-colors hover:text-white">About</Link>
+            <Link href="/login" className="transition-colors hover:text-white">Log in</Link>
+          </nav>
+          <span className="text-sm text-white/50">© 2026 watchparty</span>
+        </div>
+      </footer>
     </div>
   );
 }
