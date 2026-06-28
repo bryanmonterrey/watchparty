@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { MarketingHero, CenterFeature, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { PhoneMock, WalletScreen, StackedCard, BlobArt, InsetInfoCard } from "@/components/marketing/mocks";
+import { SecurityCard, StackedCard, BlobArt, InsetInfoCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Safety" };
 
@@ -28,6 +28,7 @@ export default function SafetyPage() {
     return (
         <>
             <MarketingHero
+                variant="reverse"
                 eyebrow="Safety"
                 title={<>Your wallet, secured</>}
                 sub="Non-custodial wallets, encrypted messages, and scam protection, on by default."
@@ -35,10 +36,8 @@ export default function SafetyPage() {
                 secondaryLabel="About us"
                 secondaryHref="/about"
                 visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-blue px-6 py-12">
-                        <PhoneMock className="rotate-[-3deg]">
-                            <WalletScreen />
-                        </PhoneMock>
+                    <div className="grid place-items-center rounded-[36px] bg-soft-blue px-6 py-14">
+                        <SecurityCard />
                     </div>
                 }
             />

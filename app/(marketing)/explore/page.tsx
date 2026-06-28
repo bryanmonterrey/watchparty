@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { PhoneMock, FeedScreen, CoinScreen } from "@/components/marketing/mocks";
+import { HeroCollage, PhoneMock, CoinScreen } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Explore" };
 
@@ -35,13 +35,7 @@ export default function ExplorePage() {
                 sub="Live streams, shorts, and the timeline you already know, all in one feed."
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
-                visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-blue px-6 py-12">
-                        <PhoneMock className="rotate-[-3deg]">
-                            <FeedScreen />
-                        </PhoneMock>
-                    </div>
-                }
+                visual={<HeroCollage />}
             />
 
             <BoldBlock

@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { PhoneMock, CreatorScreen, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
+import { HeroCreatorCluster, PhoneMock, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Creators" };
 
@@ -31,16 +31,11 @@ export default function CreatorsPage() {
                 eyebrow="Creators"
                 title={<>Built for creators</>}
                 sub="Everything you need to go live, grow, and get paid, without leaving the timeline."
+                variant="reverse"
                 ctaLabel="Start creating"
                 secondaryLabel="Launch a coin"
                 secondaryHref="/coins"
-                visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-pink px-6 py-12">
-                        <PhoneMock className="rotate-[-3deg]">
-                            <CreatorScreen />
-                        </PhoneMock>
-                    </div>
-                }
+                visual={<HeroCreatorCluster />}
             />
 
             <BoldBlock

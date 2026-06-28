@@ -261,6 +261,164 @@ export function BlobArt({ className }: { className?: string }) {
     );
 }
 
+// ---- Hero visuals: a DISTINCT composition per marketing page, so no two
+// heroes share the same "tilted phone in a pastel box" shape. Each is
+// self-contained and sized to fill a hero column / centered slot. ----
+
+// LIVE — a wide 16:9 player card with a floating live-chat card overlapping it.
+export function HeroLandscape({ className }: { className?: string }) {
+    return (
+        <div className={cn("relative mx-auto w-full max-w-[500px]", className)}>
+            <div className="relative aspect-video overflow-hidden rounded-[28px] bg-gray1 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
+                <span className="absolute left-4 top-4 flex items-center gap-1 rounded-lg bg-red2 px-2 py-1 text-[11px] font-bold uppercase text-white">
+                    <HugeiconsIcon icon={LiveStreaming01Icon} size={12} /> Live
+                </span>
+                <span className="absolute right-4 top-4 rounded-lg bg-black/55 px-2 py-1 text-[11px] font-bold text-white">3.4K watching</span>
+                <div className="absolute inset-0 grid place-items-center">
+                    <span className="grid size-16 place-items-center rounded-full bg-white/90 ring-1 ring-black/5">
+                        <HugeiconsIcon icon={PlayIcon} size={28} className="text-black" />
+                    </span>
+                </div>
+            </div>
+            <div className="absolute -bottom-6 right-2 hidden w-[210px] rounded-2xl bg-white p-3 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] sm:block">
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-black/40">Live chat</p>
+                {([["taylor", "this is fire 🔥", "bg-twitter"], ["nova", "gm everyone", "bg-sunset"]] as const).map(([u, m, c]) => (
+                    <div key={u} className="flex items-center gap-2 py-0.5">
+                        <span className={cn("size-5 rounded-full", c)} />
+                        <span className="text-[11px] font-bold">{u}</span>
+                        <span className="truncate text-[11px] font-semibold text-black/55">{m}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// COINS — a wide trade card: token header, big price, chart, buy/sell.
+export function HeroTrade({ className }: { className?: string }) {
+    return (
+        <div className={cn("mx-auto w-full max-w-[440px] rounded-[28px] bg-white p-7 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-2">
+                <span className="size-10 rounded-full bg-sunset" />
+                <div>
+                    <p className="text-base font-extrabold tracking-tight">$WAVE</p>
+                    <p className="text-[11px] font-semibold text-black/45">Wave Coin</p>
+                </div>
+                <span className="ml-auto rounded-full bg-lantern/20 px-2.5 py-1 text-[11px] font-bold text-jewel">+18.4%</span>
+            </div>
+            <p className="mt-4 text-4xl font-extrabold tracking-tight">$0.0428</p>
+            <svg viewBox="0 0 200 70" className="mt-2 h-24 w-full" preserveAspectRatio="none">
+                <polyline points="0,55 25,48 50,52 75,38 100,42 125,28 150,30 175,16 200,10" fill="none" stroke="var(--color-lantern)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-full bg-lantern py-3 text-center text-sm font-bold">Buy</div>
+                <div className="rounded-full bg-black py-3 text-center text-sm font-bold text-white">Sell</div>
+            </div>
+        </div>
+    );
+}
+
+// EXPLORE — a staggered masonry collage of feed/short tiles (a discovery grid,
+// not a phone).
+function CollageTile({ bg, ar, live }: { bg: string; ar: string; live?: boolean }) {
+    return (
+        <div className={cn("relative overflow-hidden rounded-2xl ring-1 ring-black/[0.05]", bg, ar)}>
+            <div className="absolute inset-0 grid place-items-center">
+                <span className="grid size-10 place-items-center rounded-full bg-white/80">
+                    <HugeiconsIcon icon={PlayIcon} size={18} className="text-black" />
+                </span>
+            </div>
+            {live && <span className="absolute left-2 top-2 rounded bg-red2 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">Live</span>}
+        </div>
+    );
+}
+
+export function HeroCollage({ className }: { className?: string }) {
+    return (
+        <div className={cn("mx-auto flex w-full max-w-[420px] gap-3", className)}>
+            <div className="flex flex-1 flex-col gap-3">
+                <CollageTile bg="bg-soft-blue" ar="aspect-[3/4]" live />
+                <CollageTile bg="bg-soft-pink" ar="aspect-square" />
+            </div>
+            <div className="mt-8 flex flex-1 flex-col gap-3">
+                <CollageTile bg="bg-pastel-yellow" ar="aspect-square" />
+                <CollageTile bg="bg-lantern/30" ar="aspect-[3/4]" live />
+            </div>
+        </div>
+    );
+}
+
+// CREATORS — the CreatorScreen phone with a floating payouts card overlapping.
+export function HeroCreatorCluster({ className }: { className?: string }) {
+    return (
+        <div className={cn("relative mx-auto w-[260px] sm:w-[300px]", className)}>
+            <PhoneMock className="w-full">
+                <CreatorScreen />
+            </PhoneMock>
+            <div className="absolute -bottom-6 -right-6 hidden w-[210px] rounded-[24px] bg-white p-4 text-black ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] sm:block">
+                <div className="flex items-center gap-2">
+                    <span className="grid size-8 place-items-center rounded-lg bg-lantern/15">
+                        <HugeiconsIcon icon={DollarCircleIcon} size={18} className="text-jewel" strokeWidth={1.8} />
+                    </span>
+                    <span className="text-xs font-bold">Payouts</span>
+                    <span className="ml-auto rounded-full bg-lantern/15 px-2 py-0.5 text-[10px] font-bold text-jewel">USDC</span>
+                </div>
+                <p className="mt-3 text-2xl font-extrabold tracking-tight">$2,180.50</p>
+                <p className="text-[11px] font-semibold text-black/45">Available to claim</p>
+            </div>
+        </div>
+    );
+}
+
+// ABOUT — a colorful 3-card bento (timeline + stream + trade, all in one app).
+export function HeroBento({ className }: { className?: string }) {
+    return (
+        <div className={cn("mx-auto grid w-full max-w-3xl gap-4 sm:grid-cols-3", className)}>
+            {/* timeline */}
+            <div className="rounded-[24px] bg-soft-blue p-4 text-left text-black ring-1 ring-black/[0.04]">
+                <div className="flex items-center gap-2">
+                    <span className="size-7 rounded-full bg-twitter" />
+                    <span className="text-xs font-extrabold">wave</span>
+                    <HugeiconsIcon icon={CheckmarkBadge01Icon} size={12} className="text-twitter" />
+                </div>
+                <p className="mt-2 text-xs font-semibold leading-snug">new set just dropped 🎧</p>
+                <div className="mt-2 flex aspect-[16/10] items-center justify-center rounded-xl bg-white/60">
+                    <HugeiconsIcon icon={Image01Icon} size={22} className="text-black/20" />
+                </div>
+                <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-black/45">
+                    <HugeiconsIcon icon={FavouriteIcon} size={13} className="text-pastelred" /> 842
+                </div>
+            </div>
+            {/* stream */}
+            <div className="rounded-[24px] bg-pastel-yellow p-4 text-left text-black ring-1 ring-black/[0.04]">
+                <span className="flex w-fit items-center gap-1 rounded-md bg-red2 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+                    <HugeiconsIcon icon={LiveStreaming01Icon} size={11} /> Live
+                </span>
+                <div className="mt-2 grid aspect-square place-items-center rounded-xl bg-white/60">
+                    <span className="grid size-10 place-items-center rounded-full bg-white">
+                        <HugeiconsIcon icon={PlayIcon} size={18} className="text-black" />
+                    </span>
+                </div>
+                <p className="mt-2 text-xs font-bold">Friday freestyle</p>
+                <p className="text-[11px] font-semibold text-black/45">1.2K watching</p>
+            </div>
+            {/* trade */}
+            <div className="rounded-[24px] bg-soft-pink p-4 text-left text-black ring-1 ring-black/[0.04]">
+                <div className="flex items-center gap-2">
+                    <span className="size-7 rounded-full bg-sunset" />
+                    <span className="text-xs font-extrabold">$WAVE</span>
+                    <span className="ml-auto rounded-full bg-lantern/30 px-1.5 py-0.5 text-[10px] font-bold text-jewel">+18%</span>
+                </div>
+                <p className="mt-2 text-xl font-extrabold tracking-tight">$0.0428</p>
+                <svg viewBox="0 0 120 44" className="mt-1 h-12 w-full" preserveAspectRatio="none">
+                    <polyline points="0,34 20,30 40,32 60,22 80,26 100,12 120,8" fill="none" stroke="var(--color-jewel)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div className="mt-2 rounded-full bg-black py-2 text-center text-[11px] font-bold text-white">Trade</div>
+            </div>
+        </div>
+    );
+}
+
 // Dark inset info card (Phantom "Your privacy matters") — sits on a colored
 // band, darker than its surroundings, with icon, copy and a pill CTA.
 export function InsetInfoCard({

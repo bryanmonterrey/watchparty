@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { LiveStreaming01Icon, Wallet01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { PhoneMock, FeedScreen, EarningsCard } from "@/components/marketing/mocks";
+import { HeroBento, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "About" };
 
@@ -22,18 +22,13 @@ export default function AboutPage() {
     return (
         <>
             <MarketingHero
+                variant="centered"
                 eyebrow="About"
                 title={<>Crypto Twitter, leveled up</>}
                 sub="watchparty brings the timeline, the stream, and the trade together in one app."
                 secondaryLabel="Explore"
                 secondaryHref="/explore"
-                visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-pastel-yellow px-6 py-12">
-                        <PhoneMock className="rotate-[-3deg]">
-                            <FeedScreen />
-                        </PhoneMock>
-                    </div>
-                }
+                visual={<HeroBento />}
             />
 
             <BandSection title="Why we built it">

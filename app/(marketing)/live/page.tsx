@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { PhoneMock, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
+import { HeroLandscape, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Go live" };
 
@@ -34,13 +34,7 @@ export default function LivePage() {
                 ctaLabel="Start streaming"
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
-                visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-pastel-yellow px-6 py-12">
-                        <PhoneMock className="rotate-[-3deg]">
-                            <LiveScreen />
-                        </PhoneMock>
-                    </div>
-                }
+                visual={<HeroLandscape />}
             />
 
             <BoldBlock

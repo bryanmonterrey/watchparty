@@ -5,7 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { PhoneMock, CoinScreen, EarningsCard } from "@/components/marketing/mocks";
+import { HeroTrade, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Coins" };
 
@@ -41,10 +41,8 @@ export default function CoinsPage() {
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
                 visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-blue px-6 py-12">
-                        <PhoneMock className="rotate-[-3deg]">
-                            <CoinScreen />
-                        </PhoneMock>
+                    <div className="grid place-items-center rounded-[36px] bg-soft-blue px-6 py-14">
+                        <HeroTrade />
                     </div>
                 }
             />
