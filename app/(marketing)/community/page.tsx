@@ -3,7 +3,7 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BandSection, StepRow, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Communities" };
@@ -17,19 +17,13 @@ const FEATURES: Feature[] = [
     { icon: Compass01Icon, title: "Discover", body: "Find communities built around what you love.", accent: "text-pastelred" },
 ];
 
-const STEPS = [
-    { title: "Start a server", body: "Create channels for chat, voice, and announcements." },
-    { title: "Invite your people", body: "Share a link and bring your community over." },
-    { title: "Bring it to life", body: "Add bots, host live spaces, and set up roles." },
-];
-
 const FAQ = [
     { q: "How are communities different from group chats?", a: "Group chats are private threads; communities are full servers with channels, roles, live spaces, and bots." },
     { q: "Can I add bots?", a: "Yes. Communities support Discord-style bots for automation, moderation, and integrations." },
     { q: "Are messages private?", a: "Direct and group messages are end-to-end encrypted." },
 ];
 
-export default function CommunitiesPage() {
+export default function CommunityPage() {
     return (
         <>
             <MarketingHero
@@ -39,14 +33,26 @@ export default function CommunitiesPage() {
                 ctaLabel="Join a community"
                 secondaryLabel="Explore"
                 secondaryHref="/explore"
+                panelTone="bg-soft-pink"
+                panelLabel="Communities"
             />
-            <BandSection className="bg-white" title="More than a group chat">
+            <ShowcaseRow
+                title="More than a group chat"
+                body="Full servers with channels, roles, and live audio spaces, the place your community actually lives."
+                panelTone="bg-soft-blue"
+                panelLabel="Server view"
+            />
+            <ShowcaseRow
+                reverse
+                title="Automate the boring parts"
+                body="Add Discord-style bots for moderation, welcomes, and integrations, so you can focus on the people."
+                panelTone="bg-pastel-yellow"
+                panelLabel="Bots"
+            />
+            <BandSection className="bg-white" title="Built for belonging">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
-            <BandSection title="How it works">
-                <StepRow steps={STEPS} />
-            </BandSection>
-            <Faq items={FAQ} className="bg-white" />
+            <Faq items={FAQ} />
             <ClosingCta title="Build your community" sub="Your people are already here." ctaLabel="Get started" />
         </>
     );

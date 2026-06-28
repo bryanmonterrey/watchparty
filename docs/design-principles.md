@@ -42,6 +42,31 @@ References (in `docs/references/`, named by what they exemplify):
   (`<Squircle asChild radius={20}>…`) — do NOT also add `rounded-*` to a
   squircled element. Pick one radius scale per surface and hold it.
 
+## 1.5 Learnings from real reference sites (screenshotted 2026-06-28)
+
+Captured Cash App (cash.app) + Phantom (phantom.com) live and studied them:
+
+- **Cash App**: huge LEFT-aligned headlines (the headline is the biggest thing
+  on screen); asymmetric splits (text one side, big product visual the other);
+  image-first heroes (phone mockups, glossy 3D renders); full-bleed SOLID color
+  blocks (black hero, white, solid sky-blue) — no gradients; pill buttons, one
+  accent (green); rounded image panels (~28-32px).
+- **Phantom**: floating PILL nav (rounded capsule, not a full-width bar); big
+  rounded-friendly headlines, often CENTERED, with the mascot dropped INLINE in
+  the headline; a giant rounded hero panel with art inside; full-bleed SOLID
+  color sections (e.g. whole-page violet) — no gradients; aggressive rounding +
+  pills everywhere.
+
+**Applied to watchparty marketing** (`components/marketing/sections.tsx`): big
+left-aligned `font-pixel` headlines, asymmetric `ShowcaseRow` splits with rounded
+`ShowcasePanel` placeholders (sized for real app mockups), solid bands, solid-
+black closing block, pill CTAs. Heroes are light (the shared SiteHeader's black
+buttons need a light bg); the black moment is the closing CTA.
+
+**Worth borrowing next**: floating pill nav (Phantom), inline brand mark in a
+headline (Phantom), real product imagery in the panels (both) — drop real app
+screenshots into `ShowcasePanel`.
+
 ## 2. Patterns we borrow (the Phantom takeaways)
 
 ### Card-forward layouts

@@ -3,7 +3,7 @@ import {
     ShieldKeyIcon, Key01Icon, SecurityLockIcon,
     Shield01Icon, CheckmarkBadge01Icon, SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BandSection, StepRow, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Safety" };
@@ -15,12 +15,6 @@ const FEATURES: Feature[] = [
     { icon: Shield01Icon, title: "Scam protection", body: "Built-in checks help you spot and avoid scams.", accent: "text-sunset" },
     { icon: CheckmarkBadge01Icon, title: "Verified badges", body: "Know who you're really talking to.", accent: "text-twitter" },
     { icon: SecurityCheckIcon, title: "Safe by default", body: "Sensible protections on from the first tap.", accent: "text-jewel" },
-];
-
-const STEPS = [
-    { title: "Sign in safely", body: "No seed phrase to leak; your wallet is secured by multi-party keys." },
-    { title: "Stay protected", body: "Scam checks and verified badges work quietly in the background." },
-    { title: "Stay in control", body: "It's non-custodial, so your funds are always yours to move." },
 ];
 
 const FAQ = [
@@ -39,14 +33,26 @@ export default function SafetyPage() {
                 ctaLabel="Get started"
                 secondaryLabel="About us"
                 secondaryHref="/about"
+                panelTone="bg-soft-blue"
+                panelLabel="Wallet"
+            />
+            <ShowcaseRow
+                title="No seed phrase to lose"
+                body="Swig wallets use multi-party cryptography, so there's no single phrase to leak, and it's non-custodial."
+                panelTone="bg-pastel-yellow"
+                panelLabel="Swig wallet"
+            />
+            <ShowcaseRow
+                reverse
+                title="Protected as you go"
+                body="Scam checks, verified badges, and end-to-end encrypted messages work quietly in the background."
+                panelTone="bg-soft-pink"
+                panelLabel="Protection"
             />
             <BandSection className="bg-white" title="Security you don't think about">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
-            <BandSection title="How it works">
-                <StepRow steps={STEPS} />
-            </BandSection>
-            <Faq items={FAQ} className="bg-white" />
+            <Faq items={FAQ} />
             <ClosingCta title="Safe from the start" sub="Real security, none of the homework." />
         </>
     );

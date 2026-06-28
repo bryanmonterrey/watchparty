@@ -3,24 +3,18 @@ import {
     LiveStreaming01Icon, Wallet01Icon, Rocket01Icon,
     Analytics01Icon, UserGroupIcon, SparklesIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BandSection, StepRow, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Creators" };
 
 const FEATURES: Feature[] = [
     { icon: LiveStreaming01Icon, title: "Go live", body: "Broadcast in seconds and bring your audience with you.", accent: "text-pastelred" },
-    { icon: Wallet01Icon, title: "Get paid", body: "Subscriptions and creator payouts, settled in USDC.", accent: "text-twitter" },
+    { icon: Wallet01Icon, title: "Get paid", body: "Subscriptions and payouts, settled in USDC.", accent: "text-twitter" },
     { icon: Rocket01Icon, title: "Launch a coin", body: "Spin up a token for your community in a tap.", accent: "text-sunset" },
     { icon: Analytics01Icon, title: "Know your audience", body: "Analytics and insights on what's landing.", accent: "text-jewel" },
     { icon: UserGroupIcon, title: "Build community", body: "Servers, spaces, and group chats around your work.", accent: "text-twitter" },
     { icon: SparklesIcon, title: "Stand out", body: "Verified badges and reply boost on Premium.", accent: "text-pastelred" },
-];
-
-const STEPS = [
-    { title: "Claim your handle", body: "Sign up, set up your profile, and connect a wallet." },
-    { title: "Post or go live", body: "Share clips, write posts, or start streaming instantly." },
-    { title: "Get paid", body: "Turn on subscriptions and payouts, settled in USDC." },
 ];
 
 const FAQ = [
@@ -39,14 +33,28 @@ export default function CreatorsPage() {
                 ctaLabel="Start creating"
                 secondaryLabel="Launch a coin"
                 secondaryHref="/coins"
+                panelTone="bg-soft-pink"
+                panelLabel="Creator profile"
+            />
+            <ShowcaseRow
+                title="Go live, get paid"
+                body="Stream to your audience and earn from subscriptions and tips the moment you go live."
+                ctaLabel="Start streaming"
+                ctaHref="/live"
+                panelTone="bg-soft-blue"
+                panelLabel="Live + payouts"
+            />
+            <ShowcaseRow
+                reverse
+                title="Own your community"
+                body="Launch a coin, spin up a server, and give your fans a place to rally, all in one app."
+                panelTone="bg-pastel-yellow"
+                panelLabel="Community"
             />
             <BandSection className="bg-white" title="Your creator toolkit">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
-            <BandSection title="From zero to live">
-                <StepRow steps={STEPS} />
-            </BandSection>
-            <Faq items={FAQ} className="bg-white" />
+            <Faq items={FAQ} />
             <ClosingCta title="Start creating" sub="Your audience is already here." ctaLabel="Start creating" />
         </>
     );

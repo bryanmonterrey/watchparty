@@ -3,7 +3,7 @@ import {
     Rocket01Icon, Analytics01Icon, DollarCircleIcon,
     Wallet01Icon, UserGroupIcon, Coins01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BandSection, StepRow, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Coins" };
@@ -15,12 +15,6 @@ const FEATURES: Feature[] = [
     { icon: Wallet01Icon, title: "Wallet built in", body: "A secure wallet ships with every account.", accent: "text-jewel" },
     { icon: UserGroupIcon, title: "Your community's coin", body: "Give your audience a token to rally around.", accent: "text-twitter" },
     { icon: Coins01Icon, title: "Fair launch", body: "Bonding-curve pricing, transparent from the first buy.", accent: "text-pastelred" },
-];
-
-const STEPS = [
-    { title: "Name your coin", body: "Pick a ticker and image; we handle the on-chain setup." },
-    { title: "Launch it", body: "Your token goes live on a fair bonding curve in one tap." },
-    { title: "Earn", body: "Collect creator fees on every trade, straight to your wallet." },
 ];
 
 const FAQ = [
@@ -39,14 +33,26 @@ export default function CoinsPage() {
                 ctaLabel="Launch a coin"
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
+                panelTone="bg-soft-blue"
+                panelLabel="Token launch"
+            />
+            <ShowcaseRow
+                title="Your community, tokenized"
+                body="Name it, pick an image, and launch on a fair bonding curve. We handle the on-chain setup."
+                panelTone="bg-pastel-yellow"
+                panelLabel="Launch flow"
+            />
+            <ShowcaseRow
+                reverse
+                title="Trade without leaving"
+                body="Buy, sell, and track your coins in-app, with a secure wallet built into every account."
+                panelTone="bg-soft-pink"
+                panelLabel="Trade view"
             />
             <BandSection className="bg-white" title="Tokens, made simple">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
-            <BandSection title="How it works">
-                <StepRow steps={STEPS} />
-            </BandSection>
-            <Faq items={FAQ} className="bg-white" />
+            <Faq items={FAQ} />
             <ClosingCta title="Launch your coin" sub="Your community's token is one tap away." ctaLabel="Launch a coin" />
         </>
     );

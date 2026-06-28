@@ -1,11 +1,37 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-// Shared marketing section primitives (server components, pure CSS) so every
-// marketing page is rich + consistent. Brand: pastel canvas, font-pixel display,
-// aggressive rounding. NO gradients — flat solid bands only (Cash App / Phantom
-// style): alternate pastel solids + white, with a confident solid-black closing
-// block. No gray/black drop shadows (see docs/design-principles.md).
+// Marketing section kit — Cash App-shaped: big LEFT-aligned pixel headlines,
+// asymmetric splits (text one side, image panel the other), full-bleed SOLID
+// bands (no gradients), pill CTAs. Image panels are tasteful placeholders sized
+// for real app mockups dropped in later. See docs/design-principles.md.
+
+// Rounded placeholder panel where a real product mockup (phone screen / render)
+// will go. Solid-fill, aggressive radius, with a phone-shaped inner frame.
+export function ShowcasePanel({
+    tone = "bg-soft-blue",
+    label = "App preview",
+    className,
+}: {
+    tone?: string;
+    label?: string;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                "relative grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-[32px]",
+                tone,
+                className,
+            )}
+        >
+            {/* phone silhouette — swap this block for a real <img> mockup */}
+            <div className="grid aspect-[9/19] h-[82%] place-items-center rounded-[2rem] bg-black/[0.04] ring-1 ring-black/10">
+                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/30">{label}</span>
+            </div>
+        </div>
+    );
+}
 
 export function MarketingHero({
     eyebrow,
@@ -15,6 +41,8 @@ export function MarketingHero({
     ctaHref = "/login",
     secondaryLabel,
     secondaryHref,
+    panelTone = "bg-soft-blue",
+    panelLabel,
 }: {
     eyebrow?: string;
     title: React.ReactNode;
@@ -23,43 +51,89 @@ export function MarketingHero({
     ctaHref?: string;
     secondaryLabel?: string;
     secondaryHref?: string;
+    panelTone?: string;
+    panelLabel?: string;
 }) {
     return (
-        <section className="px-6 pt-10 pb-20 sm:pt-16 sm:pb-28">
-            <div className="mx-auto w-full max-w-3xl text-center">
-                {eyebrow && (
-                    <p className="mb-4 text-sm font-bold uppercase tracking-[0.15em] text-black/50">{eyebrow}</p>
-                )}
-                <h1 className="font-pixel text-4xl leading-[1.05] tracking-tighter text-black sm:text-6xl">
-                    {title}
-                </h1>
-                <p className="mx-auto mt-5 max-w-xl text-lg font-semibold leading-snug text-black/70 sm:text-2xl">
-                    {sub}
-                </p>
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                    <Link
-                        href={ctaHref}
-                        className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
-                    >
-                        {ctaLabel}
-                    </Link>
-                    {secondaryLabel && secondaryHref && (
-                        <Link
-                            href={secondaryHref}
-                            className="rounded-full bg-white px-8 py-4 text-base font-bold text-black ring-1 ring-black/[0.06] transition-transform duration-200 hover:scale-[1.03] active:scale-95"
-                        >
-                            {secondaryLabel}
-                        </Link>
+        <section className="px-6 pt-6 pb-16 sm:pb-24">
+            <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
+                <div>
+                    {eyebrow && (
+                        <p className="mb-4 text-sm font-bold uppercase tracking-[0.15em] text-black/50">{eyebrow}</p>
                     )}
+                    <h1 className="font-pixel text-4xl leading-[1.05] tracking-tighter text-black sm:text-6xl lg:text-7xl">
+                        {title}
+                    </h1>
+                    <p className="mt-5 max-w-md text-lg font-semibold leading-snug text-black/70 sm:text-xl">
+                        {sub}
+                    </p>
+                    <div className="mt-8 flex flex-wrap items-center gap-3">
+                        <Link
+                            href={ctaHref}
+                            className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                        >
+                            {ctaLabel}
+                        </Link>
+                        {secondaryLabel && secondaryHref && (
+                            <Link
+                                href={secondaryHref}
+                                className="rounded-full bg-white px-8 py-4 text-base font-bold text-black ring-1 ring-black/[0.08] transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                            >
+                                {secondaryLabel}
+                            </Link>
+                        )}
+                    </div>
                 </div>
+                <ShowcasePanel tone={panelTone} label={panelLabel} />
             </div>
         </section>
     );
 }
 
-// Solid-band section. Pass a flat surface via `className` (e.g. "bg-white",
-// "bg-soft-blue", "bg-pastel-yellow"); default is transparent (inherits the
-// page's pastel canvas). Never a gradient.
+// Asymmetric text + panel split. Alternate `reverse` down the page for rhythm.
+export function ShowcaseRow({
+    title,
+    body,
+    ctaLabel,
+    ctaHref,
+    panelTone = "bg-soft-pink",
+    panelLabel,
+    reverse = false,
+    className,
+}: {
+    title: string;
+    body: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    panelTone?: string;
+    panelLabel?: string;
+    reverse?: boolean;
+    className?: string;
+}) {
+    return (
+        <section className={cn("px-6 py-16 sm:py-24", className)}>
+            <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
+                <div className={cn(reverse && "lg:order-2")}>
+                    <h2 className="font-pixel text-3xl leading-[1.08] tracking-tighter text-black sm:text-5xl">
+                        {title}
+                    </h2>
+                    <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-black/65">{body}</p>
+                    {ctaLabel && ctaHref && (
+                        <Link
+                            href={ctaHref}
+                            className="mt-7 inline-block rounded-full bg-black px-7 py-3.5 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                        >
+                            {ctaLabel}
+                        </Link>
+                    )}
+                </div>
+                <ShowcasePanel tone={panelTone} label={panelLabel} className={cn(reverse && "lg:order-1")} />
+            </div>
+        </section>
+    );
+}
+
+// Solid-band section (flat surface via className), for a feature grid etc.
 export function BandSection({
     children,
     className,
@@ -72,10 +146,10 @@ export function BandSection({
     sub?: string;
 }) {
     return (
-        <section className={cn("px-6 py-20 sm:py-28", className)}>
-            <div className="mx-auto w-full max-w-5xl">
+        <section className={cn("px-6 py-16 sm:py-24", className)}>
+            <div className="mx-auto w-full max-w-6xl">
                 {title && (
-                    <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-4xl">{title}</h2>
+                    <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">{title}</h2>
                 )}
                 {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
                 {children && <div className={cn(title || sub ? "mt-10" : "")}>{children}</div>}
@@ -84,28 +158,11 @@ export function BandSection({
     );
 }
 
-// Numbered "how it works" steps — flat, pixel numerals, no cards/gradients.
-export function StepRow({ steps }: { steps: { title: string; body: string }[] }) {
-    return (
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
-            {steps.map((s, i) => (
-                <div key={s.title}>
-                    <p className="font-pixel text-3xl tracking-tighter text-black/30">
-                        {String(i + 1).padStart(2, "0")}
-                    </p>
-                    <p className="mt-3 font-pixel text-xl tracking-tighter text-black">{s.title}</p>
-                    <p className="mt-2 text-base font-semibold leading-snug text-black/65">{s.body}</p>
-                </div>
-            ))}
-        </div>
-    );
-}
-
 export function Faq({ items, className }: { items: { q: string; a: string }[]; className?: string }) {
     return (
-        <section className={cn("px-6 py-20 sm:py-28", className)}>
+        <section className={cn("px-6 py-16 sm:py-24", className)}>
             <div className="mx-auto w-full max-w-3xl">
-                <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-4xl">
+                <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
                     Questions, answered
                 </h2>
                 <div className="mt-8 divide-y divide-black/[0.08] border-y border-black/[0.08]">
@@ -126,8 +183,7 @@ export function Faq({ items, className }: { items: { q: string; a: string }[]; c
     );
 }
 
-// Confident solid-black closing block (Cash App style) — white pixel headline,
-// white pill button. Flat, no gradient.
+// Confident solid-black closing block (Cash App style), left-aligned big.
 export function ClosingCta({
     title,
     sub,
@@ -140,10 +196,10 @@ export function ClosingCta({
     ctaHref?: string;
 }) {
     return (
-        <section className="bg-black px-6 py-24 sm:py-32">
-            <div className="mx-auto w-full max-w-2xl text-center">
-                <h2 className="font-pixel text-3xl tracking-tighter text-white sm:text-5xl">{title}</h2>
-                {sub && <p className="mx-auto mt-4 max-w-md text-lg font-semibold leading-snug text-white/70">{sub}</p>}
+        <section className="bg-black px-6 py-20 sm:py-28">
+            <div className="mx-auto w-full max-w-6xl">
+                <h2 className="font-pixel text-4xl leading-[1.05] tracking-tighter text-white sm:text-6xl">{title}</h2>
+                {sub && <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/70">{sub}</p>}
                 <Link
                     href={ctaHref}
                     className="mt-8 inline-block rounded-full bg-white px-8 py-4 text-base font-bold text-black transition-transform duration-200 hover:scale-[1.03] active:scale-95"
