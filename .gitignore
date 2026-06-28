@@ -66,3 +66,7 @@ cron/.cf-secrets.json
 .headroom/
 .serena/
 .mcp.json
+
+# Agent skills (installed globally, not per-project)
+.agents/
+skills-lock.json
