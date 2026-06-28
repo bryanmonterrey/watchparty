@@ -247,6 +247,8 @@ export const postRouter = router({
                     origHasContentWarning: origPosts.hasContentWarning,
                     origContentWarningText: origPosts.contentWarningText,
                     origIsPinned: origPosts.isPinned,
+                    title: posts.title,
+                    origTitle: origPosts.title,
                     parentUsername: parentUser.username,
                     parentUserId: parentUser.id,
                 })
@@ -258,7 +260,10 @@ export const postRouter = router({
                 .leftJoin(parentUser, eq(parentPosts.userId, parentUser.id))
                 .where(and(
                     eq(posts.status, "published"),
-                    ilike(posts.content, pattern),
+                    // Match the query against the body OR the title — videos are
+                    // titled with empty content, so a content-only filter never
+                    // surfaced them (Videos/Media tabs came up empty).
+                    or(ilike(posts.content, pattern), ilike(posts.title, pattern)),
                     input.onlyMedia ? or(sql`${posts.media} IS NOT NULL AND jsonb_array_length(${posts.media}) > 0`, sql`${posts.imageUrl} IS NOT NULL`, sql`${posts.videoUrl} IS NOT NULL`) : undefined,
                     cursorValue ? lt(input.sort === "top" ? posts.baseScore : posts.createdAt, cursorValue as any) : undefined,
                 ))
@@ -300,6 +305,8 @@ export const postRouter = router({
                         feedKey: row.id,
                         userId: row.origUserId ?? row.userId,
                         content: row.origContent,
+                        title: row.origTitle || null,
+                        videoUrl: row.origVideoUrl || null,
                         imageUrl: row.origImageUrl || null,
                         token_image: row.origTokenImage || null,
                         media: row.origMedia || [],
