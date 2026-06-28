@@ -10,21 +10,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PostCard } from "@/components/browse/post-card";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useIsMobileOrUndefined } from "@/hooks/use-mobile";
 
-// Mounted (and its chunk downloaded) only on measured-mobile viewports — CSS
-// hiding alone left it fetching its live/categories queries on desktop.
-const MobileSearchHome = dynamic(() => import("@/components/search/mobile-search-home").then(m => m.MobileSearchHome), { ssr: false });
+// Discovery (Live + categories) shown while the query is empty. Lazy + ssr:false
+// so its feed queries aren't part of the initial search payload; the inline
+// object literal is required (Turbopack statically analyzes dynamic() options).
+const SearchLanding = dynamic(() => import("@/components/search/search-landing").then(m => m.SearchLanding), { ssr: false });
 
 // Port of sidebar's (browse)/search/page.tsx — header-driven search results
 // (people + posts), reading ?q= from the URL. Mobile additions per the design:
 // an in-page search pill (desktop types in the header's GlobalSearch instead)
-// and Live/Categories discovery rows while the query is empty.
+// and a Live/Categories discovery landing while the query is empty.
 
 export default function SearchPage() {
     const [q, setQ] = useQueryState("q", searchParams.q);
     const [inputValue, setInputValue] = useState(q ?? "");
-    const isMobile = useIsMobileOrUndefined();
     // Single debounce off the live input — debouncing q (already written 350ms
     // after typing) stacked two delays into ~700ms before the query fired. The
     // URL write below still debounces, but in parallel with the query now.
@@ -124,15 +123,7 @@ export default function SearchPage() {
                     )}
                 </div>
             ) : (
-                <>
-                    <div className="md:hidden">
-                        {isMobile && <MobileSearchHome />}
-                    </div>
-                    <div className="flex flex-col items-center justify-center py-24 text-zinc-600 max-md:hidden">
-                        <SearchIcon className="w-8 h-8 mb-3" />
-                        <p className="text-sm font-medium">Search for people, posts, and more</p>
-                    </div>
-                </>
+                <SearchLanding />
             )}
         </div>
     );

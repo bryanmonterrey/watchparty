@@ -20,6 +20,7 @@ import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
 import { useAudioOwner } from "@/lib/audio-bus";
 import { HomeCarousel, HomeCarouselSkeleton } from "./home-carousel";
 import { HOME_CATEGORIES } from "@/lib/data/home-categories";
+import { CategoryCard } from "@/components/categories/category-card";
 
 // Desktop home per desktopdesigns/homepage.svg: full-bleed hero carousel,
 // then Trending / Categories / IRL sections. Same feed procedures as before —
@@ -451,44 +452,8 @@ function CardRowSkeleton() {
 
 // Category tile: artwork on top with a staggered pulse placeholder that fades
 // to the image once it loads, then the title and tag badges below it.
-function CategoryCard({ c, index, count }: { c: (typeof HOME_CATEGORIES)[number]; index: number; count: number }) {
-    const [loaded, setLoaded] = useState(false);
-    return (
-        <Link href={c.slug} className="group block w-36 shrink-0">
-            <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-muted">
-                {!loaded && (
-                    <div className="absolute inset-0 bg-zinc-800" style={staggerPulse(index, count)} />
-                )}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                    src={c.thumbnailUrl}
-                    alt={c.title}
-                    loading="lazy"
-                    onLoad={() => setLoaded(true)}
-                    className={cn(
-                        "absolute inset-0 size-full object-cover transition-transform duration-300",
-                        loaded ? "opacity-100" : "opacity-0"
-                    )}
-                />
-            </div>
-            <div className="pt-2">
-                <p className="truncate text-sm font-extrabold text-white">{c.title}</p>
-                {c.tags.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                        {c.tags.slice(0, 2).map((t) => (
-                            <span
-                                key={t}
-                                className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/70"
-                            >
-                                {t}
-                            </span>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </Link>
-    );
-}
+// CategoryCard now lives in components/categories/category-card.tsx (shared
+// with the /category index and the search landing).
 
 // Full-height edge control, matching the hero carousel's arrows: a flat
 // black/blurred bar that fades in on carousel hover (not a rounded button).
