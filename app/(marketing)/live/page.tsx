@@ -3,8 +3,9 @@ import {
     LiveStreaming01Icon, Comment01Icon, Tv01Icon,
     DollarCircleIcon, CameraVideoIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { PhoneMock, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Go live" };
 
@@ -33,28 +34,44 @@ export default function LivePage() {
                 ctaLabel="Start streaming"
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
-                panelTone="bg-pastel-yellow"
-                panelLabel="Live stream"
-                panelIcon={LiveStreaming01Icon}
+                visual={
+                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-pastel-yellow px-6 py-12">
+                        <PhoneMock className="rotate-[-3deg]">
+                            <LiveScreen />
+                        </PhoneMock>
+                    </div>
+                }
             />
-            <ShowcaseRow
-                title="Broadcast from anywhere"
-                body="Start from your phone in one tap, or plug in OBS on desktop for a full production setup."
-                panelTone="bg-soft-blue"
-                panelLabel="Go live"
-                panelIcon={CameraVideoIcon}
-            />
-            <ShowcaseRow
+
+            <BoldBlock
+                tone="bg-black"
                 reverse
-                title="Keep every replay"
-                body="Streams save as VODs automatically, so anyone who missed it can still watch."
-                panelTone="bg-soft-pink"
-                panelLabel="VOD library"
-                panelIcon={Tv01Icon}
+                title="Earn while you're live"
+                body="Subscriptions, tips, and creator fees land in your wallet in real time, settled in USDC. Going live pays."
+                ctaLabel="Start earning"
+                ctaHref="/login"
+                visual={<EarningsCard />}
             />
+
+            <BandSection title="Broadcast from anywhere" sub="Start from your phone in a tap, or plug in OBS on desktop for a full production setup.">
+                <div className="grid gap-4 sm:grid-cols-3">
+                    {[
+                        ["Phone", "Tap go live and you're streaming in seconds."],
+                        ["Desktop + OBS", "Use your stream key for a full production rig."],
+                        ["Every replay", "Streams save as VODs for anyone who missed it."],
+                    ].map(([t, b]) => (
+                        <div key={t} className="rounded-3xl bg-white p-7 ring-1 ring-black/[0.06]">
+                            <p className="text-xl font-extrabold tracking-tight text-black">{t}</p>
+                            <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{b}</p>
+                        </div>
+                    ))}
+                </div>
+            </BandSection>
+
             <BandSection className="bg-white" title="Streaming, built in">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+
             <ExploreMore currentHref="/live" className="bg-white" />
             <Faq items={FAQ} />
             <ClosingCta

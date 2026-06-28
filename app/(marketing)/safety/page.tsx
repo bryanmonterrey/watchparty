@@ -3,8 +3,9 @@ import {
     ShieldKeyIcon, Key01Icon, SecurityLockIcon,
     Shield01Icon, CheckmarkBadge01Icon, SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { PhoneMock, WalletScreen, SecurityCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Safety" };
 
@@ -33,28 +34,29 @@ export default function SafetyPage() {
                 ctaLabel="Get started"
                 secondaryLabel="About us"
                 secondaryHref="/about"
-                panelTone="bg-soft-blue"
-                panelLabel="Wallet"
-                panelIcon={ShieldKeyIcon}
+                visual={
+                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-blue px-6 py-12">
+                        <PhoneMock className="rotate-[-3deg]">
+                            <WalletScreen />
+                        </PhoneMock>
+                    </div>
+                }
             />
-            <ShowcaseRow
-                title="No seed phrase to lose"
-                body="Swig wallets use multi-party cryptography, so there's no single phrase to leak, and it's non-custodial."
-                panelTone="bg-pastel-yellow"
-                panelLabel="Swig wallet"
-                panelIcon={Key01Icon}
-            />
-            <ShowcaseRow
+
+            <BoldBlock
+                tone="bg-black"
                 reverse
-                title="Protected as you go"
-                body="Scam checks, verified badges, and end-to-end encrypted messages work quietly in the background."
-                panelTone="bg-soft-pink"
-                panelLabel="Protection"
-                panelIcon={SecurityLockIcon}
+                title="No seed phrase to lose"
+                body="Swig wallets are secured by multi-party cryptography, there's no single phrase to leak, and they're non-custodial, so your coins are always yours."
+                ctaLabel="Get started"
+                ctaHref="/login"
+                visual={<SecurityCard />}
             />
+
             <BandSection className="bg-white" title="Security you don't think about">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+
             <ExploreMore currentHref="/safety" className="bg-white" />
             <Faq items={FAQ} />
             <ClosingCta

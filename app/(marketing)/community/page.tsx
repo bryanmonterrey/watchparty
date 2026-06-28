@@ -3,7 +3,7 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Communities" };
@@ -15,6 +15,12 @@ const FEATURES: Feature[] = [
     { icon: AiMagicIcon, title: "Bots", body: "Discord-style automation and integrations.", accent: "text-sunset" },
     { icon: SecurityCheckIcon, title: "Moderation", body: "Roles, mods, and tools to keep it healthy.", accent: "text-twitter" },
     { icon: Compass01Icon, title: "Discover", body: "Find communities built around what you love.", accent: "text-pastelred" },
+];
+
+const BOTS = [
+    ["Welcome bot", "Greets new members and assigns roles."],
+    ["Mod bot", "Auto-moderation, filters, and slow mode."],
+    ["Drop bot", "Token-gated perks and giveaways."],
 ];
 
 const FAQ = [
@@ -33,28 +39,42 @@ export default function CommunityPage() {
                 ctaLabel="Join a community"
                 secondaryLabel="Explore"
                 secondaryHref="/explore"
-                panelTone="bg-soft-pink"
-                panelLabel="Communities"
-                panelIcon={UserGroupIcon}
+                visual={
+                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-pink px-6 pt-12">
+                        {/* Real app screen of the Communities tab. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src="/communitydesign.png"
+                            alt="The watchparty Communities screen"
+                            className="w-[230px] rotate-[-3deg] rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.12)]"
+                        />
+                    </div>
+                }
             />
-            <ShowcaseRow
-                title="More than a group chat"
-                body="Full servers with channels, roles, and live audio spaces, the place your community actually lives."
-                panelTone="bg-soft-blue"
-                panelLabel="Server view"
-                panelIcon={Mic01Icon}
-            />
-            <ShowcaseRow
+
+            <BoldBlock
+                tone="bg-black"
                 reverse
                 title="Automate the boring parts"
-                body="Add Discord-style bots for moderation, welcomes, and integrations, so you can focus on the people."
-                panelTone="bg-pastel-yellow"
-                panelLabel="Bots"
-                panelIcon={AiMagicIcon}
+                body="Add Discord-style bots for welcomes, moderation, and token-gated perks, so you can focus on the people, not the busywork."
+                ctaLabel="Build your server"
+                ctaHref="/login"
+                visual={
+                    <div className="w-full max-w-sm space-y-3">
+                        {BOTS.map(([t, b]) => (
+                            <div key={t} className="rounded-2xl bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                                <p className="text-sm font-extrabold tracking-tight text-black">{t}</p>
+                                <p className="mt-0.5 text-xs font-semibold text-black/55">{b}</p>
+                            </div>
+                        ))}
+                    </div>
+                }
             />
+
             <BandSection className="bg-white" title="Built for belonging">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+
             <ExploreMore currentHref="/community" className="bg-white" />
             <Faq items={FAQ} />
             <ClosingCta

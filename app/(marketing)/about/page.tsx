@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import { LiveStreaming01Icon, Wallet01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { PhoneMock, FeedScreen, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "About" };
 
@@ -26,28 +27,38 @@ export default function AboutPage() {
                 sub="watchparty brings the timeline, the stream, and the trade together in one app."
                 secondaryLabel="Explore"
                 secondaryHref="/explore"
-                panelTone="bg-pastel-yellow"
-                panelLabel="watchparty"
-                panelIcon={LiveStreaming01Icon}
+                visual={
+                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-pastel-yellow px-6 py-12">
+                        <PhoneMock className="rotate-[-3deg]">
+                            <FeedScreen />
+                        </PhoneMock>
+                    </div>
+                }
             />
-            <ShowcaseRow
-                title="The timeline you know"
-                body="Same feed, same open algorithm, now with a stage to go live on and a wallet to get paid through."
-                panelTone="bg-soft-pink"
-                panelLabel="Timeline"
-                panelIcon={UserGroupIcon}
-            />
-            <ShowcaseRow
+
+            <BandSection title="Why we built it">
+                <p className="max-w-2xl text-xl font-semibold leading-relaxed text-black/70">
+                    The timeline lives in one app, streaming in another, and your wallet somewhere
+                    else entirely. watchparty puts them in the same place, so you can watch a stream,
+                    post a take, back a creator, and trade a coin without ever switching tabs. Same
+                    algorithm you love, now with a stage and a wallet.
+                </p>
+            </BandSection>
+
+            <BoldBlock
+                tone="bg-black"
                 reverse
-                title="No more tab-switching"
-                body="Watch a stream, post a take, back a creator, and trade a coin, all without leaving the app."
-                panelTone="bg-soft-blue"
-                panelLabel="One app"
-                panelIcon={Wallet01Icon}
+                title="Get paid for what you make"
+                body="Creators earn from subscriptions, tips, and creator fees, settled in USDC and claimed straight to a wallet built into every account."
+                ctaLabel="Start creating"
+                ctaHref="/creators"
+                visual={<EarningsCard />}
             />
+
             <BandSection className="bg-white" title="Three things, one app">
                 <FeatureGrid features={PILLARS} />
             </BandSection>
+
             <ExploreMore currentHref="/about" className="bg-white" />
             <Faq items={FAQ} />
             <ClosingCta

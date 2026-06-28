@@ -3,8 +3,9 @@ import {
     Rocket01Icon, Analytics01Icon, DollarCircleIcon,
     Wallet01Icon, UserGroupIcon, Coins01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { PhoneMock, CoinScreen, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Coins" };
 
@@ -15,6 +16,12 @@ const FEATURES: Feature[] = [
     { icon: Wallet01Icon, title: "Wallet built in", body: "A secure wallet ships with every account.", accent: "text-jewel" },
     { icon: UserGroupIcon, title: "Your community's coin", body: "Give your audience a token to rally around.", accent: "text-twitter" },
     { icon: Coins01Icon, title: "Fair launch", body: "Bonding-curve pricing, transparent from the first buy.", accent: "text-pastelred" },
+];
+
+const STEPS = [
+    ["Name it", "Pick a ticker and image."],
+    ["Launch it", "Goes live on a fair bonding curve."],
+    ["Earn", "Collect a fee on every trade."],
 ];
 
 const FAQ = [
@@ -33,28 +40,41 @@ export default function CoinsPage() {
                 ctaLabel="Launch a coin"
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
-                panelTone="bg-soft-blue"
-                panelLabel="Token launch"
-                panelIcon={Rocket01Icon}
+                visual={
+                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-blue px-6 py-12">
+                        <PhoneMock className="rotate-[-3deg]">
+                            <CoinScreen />
+                        </PhoneMock>
+                    </div>
+                }
             />
-            <ShowcaseRow
-                title="Your community, tokenized"
-                body="Name it, pick an image, and launch on a fair bonding curve. We handle the on-chain setup."
-                panelTone="bg-pastel-yellow"
-                panelLabel="Launch flow"
-                panelIcon={Coins01Icon}
-            />
-            <ShowcaseRow
+
+            <BoldBlock
+                tone="bg-black"
                 reverse
-                title="Trade without leaving"
-                body="Buy, sell, and track your coins in-app, with a secure wallet built into every account."
-                panelTone="bg-soft-pink"
-                panelLabel="Trade view"
-                panelIcon={Analytics01Icon}
+                title="Earn on every trade"
+                body="Set a creator fee and take a cut of every buy and sell on your coin, routed straight to your wallet in USDC."
+                ctaLabel="Launch a coin"
+                ctaHref="/login"
+                visual={<EarningsCard />}
             />
+
+            <BandSection title="Launch in three taps" sub="No contracts, no setup. Name your coin and it's live on a fair bonding curve.">
+                <div className="grid gap-4 sm:grid-cols-3">
+                    {STEPS.map(([t, b], i) => (
+                        <div key={t} className="rounded-3xl bg-white p-7 ring-1 ring-black/[0.06]">
+                            <p className="font-pixel text-2xl tracking-tighter text-black/25">{String(i + 1).padStart(2, "0")}</p>
+                            <p className="mt-3 text-xl font-extrabold tracking-tight text-black">{t}</p>
+                            <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{b}</p>
+                        </div>
+                    ))}
+                </div>
+            </BandSection>
+
             <BandSection className="bg-white" title="Tokens, made simple">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+
             <ExploreMore currentHref="/coins" className="bg-white" />
             <Faq items={FAQ} />
             <ClosingCta
