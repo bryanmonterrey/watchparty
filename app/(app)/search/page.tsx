@@ -72,15 +72,35 @@ export default function SearchPage() {
     // Result tab filter. "all" shows every non-empty section; the rest scope to
     // one. Reset to "all" when the query changes (adjust-during-render pattern,
     // so no effect is needed).
-    const [tab, setTab] = useState<"all" | "people" | "posts" | "categories">("all");
+    const [tab, setTab] = useState<"all" | "people" | "videos" | "media" | "posts" | "categories">("all");
     const [tabQuery, setTabQuery] = useState(debouncedQuery);
     if (tabQuery !== debouncedQuery) {
         setTabQuery(debouncedQuery);
         setTab("all");
     }
 
+    // Classify results by content type for the Videos / Media / Posts tabs.
+    // Reposts carry their content on the original, so fall back to orig fields.
+    const hasVideo = (p: { videoUrl?: string | null; origVideoUrl?: string | null }) =>
+        !!(p.videoUrl ?? p.origVideoUrl);
+    const hasMedia = (p: { media?: unknown; origMedia?: unknown; imageUrl?: string | null; origImageUrl?: string | null }) => {
+        const media = p.media ?? p.origMedia;
+        const image = p.imageUrl ?? p.origImageUrl;
+        return (Array.isArray(media) && media.length > 0) || !!image;
+    };
+    const videos = postItems.filter(hasVideo);
+    const mediaPosts = postItems.filter((p) => !hasVideo(p) && hasMedia(p));
+    const textPosts = postItems.filter((p) => !hasVideo(p) && !hasMedia(p));
+
+    const postSubset =
+        tab === "videos" ? videos :
+        tab === "media" ? mediaPosts :
+        tab === "posts" ? textPosts :
+        postItems;
+    const postSectionLabel = tab === "videos" ? "Videos" : tab === "media" ? "Media" : "Posts";
+
     const showPeople = (tab === "all" || tab === "people") && users.length > 0;
-    const showPosts = (tab === "all" || tab === "posts") && postItems.length > 0;
+    const showPosts = (tab === "all" || tab === "videos" || tab === "media" || tab === "posts") && postSubset.length > 0;
     const showCategories = (tab === "all" || tab === "categories") && matchedCategories.length > 0;
     const nothing = users.length === 0 && postItems.length === 0 && matchedCategories.length === 0;
 
@@ -105,19 +125,22 @@ export default function SearchPage() {
                         Results for &ldquo;{debouncedQuery}&rdquo;
                     </h1>
 
-                    {/* Result tabs — counts come from the data already fetched. */}
-                    <div className="flex gap-1 border-b border-border px-4">
+                    {/* Result tabs — counts come from the data already fetched.
+                        Horizontally scrollable so the six tabs don't wrap on mobile. */}
+                    <div className="hidden-scrollbar flex gap-1 overflow-x-auto border-b border-border px-4">
                         {([
                             ["all", "All", users.length + postItems.length + matchedCategories.length],
                             ["people", "People", users.length],
-                            ["posts", "Posts", postItems.length],
+                            ["videos", "Videos", videos.length],
+                            ["media", "Media", mediaPosts.length],
+                            ["posts", "Posts", textPosts.length],
                             ["categories", "Categories", matchedCategories.length],
                         ] as const).map(([key, label, count]) => (
                             <button
                                 key={key}
                                 onClick={() => setTab(key)}
                                 className={cn(
-                                    "relative px-3 py-3 text-sm font-semibold transition-colors",
+                                    "relative shrink-0 px-3 py-3 text-sm font-semibold transition-colors",
                                     tab === key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
@@ -173,11 +196,11 @@ export default function SearchPage() {
 
                             {showPosts && (
                                 <div className={showPeople || showCategories ? "mt-2 border-t border-border" : ""}>
-                                    <p className="px-6 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Posts</p>
-                                    {postItems.map(p => (
+                                    <p className="px-6 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{postSectionLabel}</p>
+                                    {postSubset.map(p => (
                                         <PostCard key={p.id} post={p as any} />
                                     ))}
-                                    {(tab === "all" || tab === "posts") && hasNextPage && (
+                                    {(tab === "all" || tab === "videos" || tab === "media" || tab === "posts") && hasNextPage && (
                                         <button
                                             onClick={() => fetchNextPage()}
                                             className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"

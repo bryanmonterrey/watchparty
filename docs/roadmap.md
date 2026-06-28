@@ -25,12 +25,16 @@ Server code is already ported from `../sidebar` (`server/routers/stream.ts`,
 - ⬜ End-to-end smoke test: go live → viewer sees stream → chat works → VOD saved.
 
 ## 2. Search page 🟡
-- 🟢 **Categories**: `/category` index + `/category/[slug]` detail (also fixes the
-  home page's previously-dead category links); shared `CategoryCard`.
+- 🟢 **Categories**: `/category` index (full 612-category catalog from
+  `kick_categories.json` via `lib/data/all-categories.ts`) + `/category/[slug]`
+  detail (resolves any catalog slug; also fixes the home page's previously-dead
+  category links). `HOME_CATEGORIES` stays the curated home-row subset. Shared
+  `CategoryCard`.
 - 🟢 Unified search-landing discovery (Live rail + categories preview) for mobile
   + desktop, replacing the old mobile-only home / bare desktop empty state.
-- 🟢 Result tabs (All / People / Posts / Categories) with counts; categories
-  matched client-side against the browse list.
+- 🟢 Result tabs (All / People / Videos / Media / Posts / Categories) with
+  counts; results classified by content type (video / media / text) client-side,
+  categories matched against the catalog. Tab bar scrolls on mobile.
 - 🟢 Fixed `getVideoFeed` category filter: `"Live"` now means `isLive=true` (the
   Live rail was matching a literal category before); other categories match
   case-insensitively. NOTE: 0/54 posts are currently categorized, so category

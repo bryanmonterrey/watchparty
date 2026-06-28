@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { HOME_CATEGORIES } from "@/lib/data/home-categories";
+import { ALL_CATEGORIES } from "@/lib/data/all-categories";
 import { CategoryDetail } from "@/components/categories/category-detail";
 
-// Category slugs are stored as full paths in HOME_CATEGORIES (e.g.
+// Category slugs are stored as full paths in the catalog (e.g.
 // "/category/grand-theft-auto-v"), so match against `/category/${slug}`.
 function findCategory(slug: string) {
-    return HOME_CATEGORIES.find((c) => c.slug === `/category/${slug}`);
+    return ALL_CATEGORIES.find((c) => c.slug === `/category/${slug}`);
 }
 
 export async function generateMetadata({
