@@ -150,6 +150,22 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
 
     return (
         <div className="group/carousel relative w-full">
+            {/* Ambient mode: the active video's frame, heavily blurred and bled
+                out behind the strip, so the hero glows with the current video's
+                colors (YouTube-style). One static blurred layer keyed to the
+                active thumbnail — no per-frame work; clipped horizontally so it
+                never widens the page. */}
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-4 -bottom-10 z-0 overflow-hidden">
+                {videos[active]?.thumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                        key={videos[active].id}
+                        src={videos[active].thumbnailUrl ?? undefined}
+                        alt=""
+                        className="size-full scale-110 object-cover opacity-50 blur-[72px] saturate-150 transition-opacity duration-700"
+                    />
+                )}
+            </div>
             <div
                 ref={scrollerRef}
                 onScroll={recenter}
@@ -158,7 +174,7 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
                 onDragStart={(e) => e.preventDefault()}
-                className="hidden-scrollbar flex h-[clamp(260px,23vw,360px)] cursor-grab gap-4 overflow-x-auto px-[3%] select-none active:cursor-grabbing"
+                className="hidden-scrollbar relative z-10 flex h-[clamp(260px,23vw,360px)] cursor-grab gap-4 overflow-x-auto px-[3%] select-none active:cursor-grabbing"
             >
                 {Array.from({ length: COPIES }).flatMap((_, copy) =>
                     videos.map((v, i) => {

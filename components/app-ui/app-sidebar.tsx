@@ -52,7 +52,6 @@ import { CreateDialog } from "./create-dialog"
 import { NotificationsPanel } from "@/components/notifications/notifications-panel"
 import * as CommandMenu from "@/components/ui/command-menu"
 import { useAuthSession } from "@/hooks/use-auth-session"
-import { usePremiumOverlay } from "@/lib/premium/overlay-store"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 const items = [
@@ -101,7 +100,7 @@ const items = [
     },
     {
         title: "Premium",
-        url: "#",
+        url: "/premium",
         icon: VerifiedIcon,
         protected: true,
     },
@@ -135,7 +134,6 @@ export function AppSidebar() {
     }, [])
     const [notificationsOpen, setNotificationsOpen] = React.useState(false)
     const [moreOpen, setMoreOpen] = React.useState(false)
-    const openPremium = usePremiumOverlay((s) => s.openOverlay)
     const { data: unreadNotifs } = trpc.notification.getUnreadCount.useQuery(undefined, { enabled: !!session?.user })
     const { data: unreadMessages } = trpc.conversation.getUnreadCount.useQuery(undefined, { enabled: !!session?.user, refetchInterval: 30_000 })
     const [searchOpen, setSearchOpen] = React.useState(false)
@@ -326,10 +324,10 @@ export function AppSidebar() {
                                                     }
 
                                                     if (item.title === "Premium") {
-                                                        e.preventDefault();
+                                                        // Navigates to the /premium hub; the page's
+                                                        // CTAs open the upgrade overlay.
                                                         setOpen(false);
                                                         setOpenMobile(false);
-                                                        openPremium();
                                                     }
 
                                                     if (isSearch) {

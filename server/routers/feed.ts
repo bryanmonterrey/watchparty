@@ -430,7 +430,15 @@ export const feedRouter = router({
                     eq(posts.status, "published"),
                     or(isNotNull(posts.videoUrl), isNotNull(origPosts.videoUrl)),
                     effectiveCursorDate ? lt(posts.createdAt, effectiveCursorDate) : undefined,
-                    input.category ? eq(posts.category, input.category) : undefined,
+                    // "Live" is a pseudo-category meaning live streams (isLive),
+                    // not a literal category value. Other categories match
+                    // case-insensitively so creator-entered casing/whitespace
+                    // doesn't hide content.
+                    input.category
+                        ? (input.category.toLowerCase() === "live"
+                            ? eq(posts.isLive, true)
+                            : sql`lower(${posts.category}) = lower(${input.category})`)
+                        : undefined,
                 ))
                 .orderBy(desc(posts.createdAt))
                 .limit(fetchLimit);

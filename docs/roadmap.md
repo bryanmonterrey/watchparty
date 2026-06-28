@@ -29,11 +29,21 @@ Server code is already ported from `../sidebar` (`server/routers/stream.ts`,
   home page's previously-dead category links); shared `CategoryCard`.
 - 🟢 Unified search-landing discovery (Live rail + categories preview) for mobile
   + desktop, replacing the old mobile-only home / bare desktop empty state.
-- ⬜ Optional polish: result tabs (People / Posts / Categories), result filters.
+- 🟢 Result tabs (All / People / Posts / Categories) with counts; categories
+  matched client-side against the browse list.
+- 🟢 Fixed `getVideoFeed` category filter: `"Live"` now means `isLive=true` (the
+  Live rail was matching a literal category before); other categories match
+  case-insensitively. NOTE: 0/54 posts are currently categorized, so category
+  detail pages stay empty until creators tag content.
 
-## 3. Premium page 🟡
-- ⬜ Finish premium signup overlay (almost done).
-- ⬜ Complete the premium page itself end-to-end.
+## 3. Premium page 🟢
+- 🟢 `/premium` hub (sidebar "Premium" now routes here instead of opening the
+  modal): marketing hero, "What you get" highlights, individual plan cards, and
+  a business teaser — all opening the existing UpgradeOverlay for checkout.
+- 🟢 Subscriber view: current plan, renew/end date, Change plan, Manage ads,
+  Cancel auto-renew (reuses `premium.getStatus` / `premium.cancel`).
+- The signup overlay + on-chain subscribe flow already existed; this adds the
+  page destination around it.
 
 ## 4. Chat on profile/user pages 🟡
 - ⬜ Implement chat on user pages that works **in unison with the `/live`
@@ -48,8 +58,10 @@ Server code is already ported from `../sidebar` (`server/routers/stream.ts`,
 ## 7. Trade page ⬜
 - ⬜ Complete the trade page (`app/(app)/trade`).
 
-## 8. Home carousel — ambient mode ⬜
-- ⬜ Ambient mode for the active video in the home carousel.
+## 8. Home carousel — ambient mode 🟢
+- 🟢 Ambient glow behind the hero strip: the active video's frame, heavily
+  blurred + saturated + bled out, keyed to the active thumbnail (one static
+  layer, no per-frame work; clipped horizontally so it never widens the page).
 
 ## 9. Mobile web → app redirect ⬜
 - ⬜ Mobile browser hitting the site shows a **redirect/landing page** pointing to

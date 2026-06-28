@@ -10,6 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PostCard } from "@/components/browse/post-card";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/use-debounce";
+import { cn } from "@/lib/utils";
+import { HOME_CATEGORIES } from "@/lib/data/home-categories";
+import { CategoryCard } from "@/components/categories/category-card";
 
 // Discovery (Live + categories) shown while the query is empty. Lazy + ssr:false
 // so its feed queries aren't part of the initial search payload; the inline
@@ -54,6 +57,33 @@ export default function SearchPage() {
     const postItems = postsData?.pages.flatMap(p => (p as any).posts) ?? [];
     const isLoading = usersLoading || postsLoading;
 
+    // Categories are matched client-side against the static browse list (title
+    // or tags contain the query) — no extra request.
+    const matchedCategories = enabled
+        ? HOME_CATEGORIES.filter((c) => {
+            const needle = debouncedQuery.toLowerCase();
+            return (
+                c.title.toLowerCase().includes(needle) ||
+                c.tags.some((t) => t.toLowerCase().includes(needle))
+            );
+        })
+        : [];
+
+    // Result tab filter. "all" shows every non-empty section; the rest scope to
+    // one. Reset to "all" when the query changes (adjust-during-render pattern,
+    // so no effect is needed).
+    const [tab, setTab] = useState<"all" | "people" | "posts" | "categories">("all");
+    const [tabQuery, setTabQuery] = useState(debouncedQuery);
+    if (tabQuery !== debouncedQuery) {
+        setTabQuery(debouncedQuery);
+        setTab("all");
+    }
+
+    const showPeople = (tab === "all" || tab === "people") && users.length > 0;
+    const showPosts = (tab === "all" || tab === "posts") && postItems.length > 0;
+    const showCategories = (tab === "all" || tab === "categories") && matchedCategories.length > 0;
+    const nothing = users.length === 0 && postItems.length === 0 && matchedCategories.length === 0;
+
     return (
         <div className="flex flex-col w-full pt-16">
             {/* Mobile search pill (desktop searches from the header) */}
@@ -71,9 +101,36 @@ export default function SearchPage() {
 
             {debouncedQuery.length >= 2 ? (
                 <div className="w-full">
-                    <h1 className="text-xl font-bold text-white px-6 pt-4 pb-2">
+                    <h1 className="text-xl font-bold text-foreground px-6 pt-4 pb-2">
                         Results for &ldquo;{debouncedQuery}&rdquo;
                     </h1>
+
+                    {/* Result tabs — counts come from the data already fetched. */}
+                    <div className="flex gap-1 border-b border-border px-4">
+                        {([
+                            ["all", "All", users.length + postItems.length + matchedCategories.length],
+                            ["people", "People", users.length],
+                            ["posts", "Posts", postItems.length],
+                            ["categories", "Categories", matchedCategories.length],
+                        ] as const).map(([key, label, count]) => (
+                            <button
+                                key={key}
+                                onClick={() => setTab(key)}
+                                className={cn(
+                                    "relative px-3 py-3 text-sm font-semibold transition-colors",
+                                    tab === key ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                {label}
+                                {key !== "all" && count > 0 && (
+                                    <span className="ml-1.5 text-xs text-muted-foreground">{count}</span>
+                                )}
+                                {tab === key && (
+                                    <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-foreground" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
 
                     {isLoading ? (
                         <div className="px-6 py-4 space-y-4">
@@ -87,36 +144,54 @@ export default function SearchPage() {
                                 </div>
                             ))}
                         </div>
-                    ) : users.length === 0 && postItems.length === 0 ? (
+                    ) : nothing ? (
                         <div className="flex flex-col items-center justify-center py-16 gap-3">
-                            <SearchIcon className="w-6 h-6 text-zinc-600" />
-                            <p className="text-sm text-zinc-500">No results for &ldquo;{debouncedQuery}&rdquo;</p>
+                            <SearchIcon className="w-6 h-6 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">No results for &ldquo;{debouncedQuery}&rdquo;</p>
                         </div>
                     ) : (
                         <>
-                            {users.length > 0 && (
-                                <div>
-                                    <p className="px-6 pt-2 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wide">People</p>
+                            {showCategories && (
+                                <div className="px-6 pt-4">
+                                    <p className="pb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Categories</p>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                                        {matchedCategories.map((c, i) => (
+                                            <CategoryCard key={c.slug} c={c} index={i} count={matchedCategories.length} className="w-full shrink" />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {showPeople && (
+                                <div className={showCategories ? "mt-4 border-t border-border" : ""}>
+                                    <p className="px-6 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">People</p>
                                     {users.map(u => (
                                         <UserRow key={u.id} user={u} />
                                     ))}
                                 </div>
                             )}
 
-                            {postItems.length > 0 && (
-                                <div className={users.length > 0 ? "mt-2 border-t border-white/5" : ""}>
-                                    <p className="px-6 pt-3 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wide">Posts</p>
+                            {showPosts && (
+                                <div className={showPeople || showCategories ? "mt-2 border-t border-border" : ""}>
+                                    <p className="px-6 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Posts</p>
                                     {postItems.map(p => (
                                         <PostCard key={p.id} post={p as any} />
                                     ))}
-                                    {hasNextPage && (
+                                    {(tab === "all" || tab === "posts") && hasNextPage && (
                                         <button
                                             onClick={() => fetchNextPage()}
-                                            className="w-full py-3 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                                            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
                                         >
                                             Load more
                                         </button>
                                     )}
+                                </div>
+                            )}
+
+                            {/* Scoped tab with no matches in that section. */}
+                            {!showPeople && !showPosts && !showCategories && (
+                                <div className="flex flex-col items-center justify-center py-16 gap-2">
+                                    <p className="text-sm text-muted-foreground">No {tab} for &ldquo;{debouncedQuery}&rdquo;</p>
                                 </div>
                             )}
                         </>
