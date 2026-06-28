@@ -63,9 +63,14 @@ left-aligned `font-pixel` headlines, asymmetric `ShowcaseRow` splits with rounde
 black closing block, pill CTAs. Heroes are light (the shared SiteHeader's black
 buttons need a light bg); the black moment is the closing CTA.
 
-**Worth borrowing next**: floating pill nav (Phantom), inline brand mark in a
-headline (Phantom), real product imagery in the panels (both) — drop real app
-screenshots into `ShowcasePanel`.
+**Worth borrowing next**: inline brand mark in a headline (Phantom), real
+product imagery in the panels (both) — drop real app screenshots into
+`ShowcasePanel`, "Explore more" cross-link card row + stats closing band
+(Cash App).
+
+**Explicitly NOT borrowing**: Phantom's **floating pill nav** — user vetoed it.
+Keep watchparty's existing SiteHeader (logo + Log in + menu), do not convert the
+nav into a rounded capsule.
 
 ## 2. Patterns we borrow (the Phantom takeaways)
 
