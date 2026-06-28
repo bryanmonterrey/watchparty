@@ -37,13 +37,14 @@ export function AppHeader() {
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
 
-  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'discover', 'notifications'];
+  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'discover', 'notifications', 'search'];
   const segments = pathname.split('/');
   const firstSegment = segments[1] ?? '';
 
+  // Note: /search is intentionally excluded — that page owns its own in-page
+  // search bar, so the header doesn't show a duplicate.
   const showSearch = pathname === '/' ||
                      pathname === '/trade' ||
-                     pathname === '/search' ||
                      ((segments.length === 2 || segments.length === 3) && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment));
 
   const isWatchPage = segments.length === 3 && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment);
