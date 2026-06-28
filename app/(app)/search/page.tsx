@@ -106,16 +106,14 @@ export default function SearchPage() {
 
     return (
         <div className="flex flex-col w-full pt-16">
-            {/* In-page search bar (all breakpoints) — autofocused so you can
-                type the moment you land here; results update live as you type. */}
-            <div className="px-5 pb-6 pt-2 md:px-8">
-                <label className="flex h-12 items-center gap-3 rounded-full bg-card px-4 ring-1 ring-border md:max-w-xl">
+            {/* Mobile search pill (desktop searches live from the header bar). */}
+            <div className="px-5 pb-6 pt-2 md:hidden">
+                <label className="flex h-12 items-center gap-3 rounded-full bg-card px-4 ring-1 ring-border">
                     <SearchIcon className="size-5 shrink-0 text-muted-foreground" />
                     <input
-                        autoFocus
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Search people, videos, posts and more"
+                        placeholder="Search"
                         className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
                     />
                 </label>

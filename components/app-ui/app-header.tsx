@@ -13,6 +13,8 @@ import { CreateDialog } from './create-dialog'
 import { WithAuth } from '@/components/auth/with-auth'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { useQueryState } from 'nuqs'
+import { searchParams } from '@/lib/searchParams'
 import { GlobalSearch } from './global-search'
 import Link from 'next/link'
  
@@ -31,20 +33,23 @@ function CreateButtonSkeleton() {
 
 export function AppHeader() {
   const pathname = usePathname()
+  const isSearchPage = pathname === '/search'
+  // On /search the header bar drives results live: every keystroke updates ?q
+  // (which the search page reads), instead of only navigating on Enter.
+  const [searchQ, setSearchQ] = useQueryState('q', searchParams.q)
   const { data: session, isLoading } = useAuthSession()
   const { toggleSidebar } = useSidebar()
   const [mounted, setMounted] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
 
-  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'discover', 'notifications', 'search'];
+  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'discover', 'notifications'];
   const segments = pathname.split('/');
   const firstSegment = segments[1] ?? '';
 
-  // Note: /search is intentionally excluded — that page owns its own in-page
-  // search bar, so the header doesn't show a duplicate.
   const showSearch = pathname === '/' ||
                      pathname === '/trade' ||
+                     pathname === '/search' ||
                      ((segments.length === 2 || segments.length === 3) && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment));
 
   const isWatchPage = segments.length === 3 && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment);
@@ -133,7 +138,18 @@ export function AppHeader() {
       {showSearch && (
         <div className="relative z-10 flex-[2] flex items-center justify-center">
            <div className="w-full max-w-[560px] pointer-events-auto">
-              <GlobalSearch placeholder="Search" />
+              {isSearchPage ? (
+                // Live mode: type → updates ?q → page shows results immediately.
+                // Page renders the results, so the in-bar dropdown is suppressed.
+                <GlobalSearch
+                  placeholder="Search"
+                  initialValue={searchQ ?? ""}
+                  onSearch={(v) => setSearchQ(v || null)}
+                  showDropdown={false}
+                />
+              ) : (
+                <GlobalSearch placeholder="Search" />
+              )}
            </div>
         </div>
       )}
