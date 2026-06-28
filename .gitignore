@@ -43,8 +43,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# kick scraping
-kick_categories.json
+# kick_categories.json is committed — lib/data/all-categories.ts imports it at
+# build time, so CI needs it in the repo (do not re-ignore it).
 *.png
 # public/thumbnails/ is committed — category cards serve from it in production
 .expo/

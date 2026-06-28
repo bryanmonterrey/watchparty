@@ -1,0 +1,6634 @@
+[
+  {
+    "title": "Grand Theft Auto V (GTA)",
+    "slug": "/category/grand-theft-auto-v",
+    "thumbnailUrl": "/thumbnails/grand-theft-auto-v.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Just Chatting",
+    "slug": "/category/just-chatting",
+    "thumbnailUrl": "/thumbnails/just-chatting.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL",
+      "Casual"
+    ]
+  },
+  {
+    "title": "Rust",
+    "slug": "/category/rust",
+    "thumbnailUrl": "/thumbnails/rust.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Survival",
+      "Open World"
+    ]
+  },
+  {
+    "title": "IRL",
+    "slug": "/category/irl",
+    "thumbnailUrl": "/thumbnails/irl.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Slots & Casino",
+    "slug": "/category/slots",
+    "thumbnailUrl": "/thumbnails/slots.webp",
+    "viewers": "0",
+    "tags": [
+      "Gambling"
+    ]
+  },
+  {
+    "title": "Counter-Strike 2",
+    "slug": "/category/counter-strike-2",
+    "thumbnailUrl": "/thumbnails/counter-strike-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "League of Legends",
+    "slug": "/category/league-of-legends",
+    "thumbnailUrl": "/thumbnails/league-of-legends.webp",
+    "viewers": "0",
+    "tags": [
+      "MOBA",
+      "Action"
+    ]
+  },
+  {
+    "title": "World Cup 2026",
+    "slug": "/category/world-cup-2026",
+    "thumbnailUrl": "/thumbnails/world-cup-2026.webp",
+    "viewers": "0",
+    "tags": [
+      "Sports"
+    ]
+  },
+  {
+    "title": "Marvel's Spider-Man 2",
+    "slug": "/category/marvels-spider-man-2",
+    "thumbnailUrl": "/thumbnails/marvels-spider-man-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Open World",
+      "Action",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Nightmare Shift",
+    "slug": "/category/nightmare-shift",
+    "thumbnailUrl": "/thumbnails/nightmare-shift.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Adventure",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Minecraft",
+    "slug": "/category/minecraft",
+    "thumbnailUrl": "/thumbnails/minecraft.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "MMO",
+      "Survival",
+      "Open World"
+    ]
+  },
+  {
+    "title": "PUBG Mobile",
+    "slug": "/category/pubg-mobile",
+    "thumbnailUrl": "/thumbnails/pubg-mobile.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "FPS",
+      "Indie Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "PUBG: Battlegrounds",
+    "slug": "/category/pubg-battlegrounds",
+    "thumbnailUrl": "/thumbnails/pubg-battlegrounds.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "FPS",
+      "Indie Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Sports",
+    "slug": "/category/sports",
+    "thumbnailUrl": "/thumbnails/sports.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "VALORANT",
+    "slug": "/category/valorant",
+    "thumbnailUrl": "/thumbnails/valorant.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "FPS"
+    ]
+  },
+  {
+    "title": "Devour",
+    "slug": "/category/devour",
+    "thumbnailUrl": "/thumbnails/devour.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Survival",
+      "Stealth",
+      "Indie",
+      "Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Old School RuneScape",
+    "slug": "/category/old-school-runescape",
+    "thumbnailUrl": "/thumbnails/old-school-runescape.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "MMO",
+      "Open World",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Garena Free Fire",
+    "slug": "/category/Garena-Free-Fire",
+    "thumbnailUrl": "/thumbnails/Garena-Free-Fire.webp",
+    "viewers": "0",
+    "tags": [
+      "Mobile Game",
+      "Adventure Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "EA Sports FC 26",
+    "slug": "/category/ea-sports-fc-26",
+    "thumbnailUrl": "/thumbnails/ea-sports-fc-26.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Gothic 1 Remake",
+    "slug": "/category/gothic-1-remake",
+    "thumbnailUrl": "/thumbnails/gothic-1-remake.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Dota 2",
+    "slug": "/category/dota-2",
+    "thumbnailUrl": "/thumbnails/dota-2.webp",
+    "viewers": "0",
+    "tags": [
+      "MOBA",
+      "Action",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Fortnite",
+    "slug": "/category/fortnite",
+    "thumbnailUrl": "/thumbnails/fortnite.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Battle Royale"
+    ]
+  },
+  {
+    "title": "Tibia",
+    "slug": "/category/Tibia",
+    "thumbnailUrl": "/thumbnails/Tibia.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Pools, Hot Tubs & Bikinis",
+    "slug": "/category/pools-hot-tubs-bikinis",
+    "thumbnailUrl": "/thumbnails/pools-hot-tubs-bikinis.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Forza Horizon 6",
+    "slug": "/category/forza-horizon-6",
+    "thumbnailUrl": "/thumbnails/forza-horizon-6.webp",
+    "viewers": "0",
+    "tags": [
+      "Arcade",
+      "Sport",
+      "Simulator",
+      "Racing"
+    ]
+  },
+  {
+    "title": "Call of Duty: Warzone",
+    "slug": "/category/call-of-duty-warzone",
+    "thumbnailUrl": "/thumbnails/call-of-duty-warzone.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Roblox",
+    "slug": "/category/Roblox",
+    "thumbnailUrl": "/thumbnails/Roblox.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation"
+    ]
+  },
+  {
+    "title": "ARC Raiders",
+    "slug": "/category/arc-raiders",
+    "thumbnailUrl": "/thumbnails/arc-raiders.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Science fiction"
+    ]
+  },
+  {
+    "title": "The Elder Scrolls IV: Oblivion Remastered",
+    "slug": "/category/the-elder-scrolls-iv-oblivion-remastered",
+    "thumbnailUrl": "/thumbnails/the-elder-scrolls-iv-oblivion-remastered.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Fantasy",
+      "Role-playing"
+    ]
+  },
+  {
+    "title": "Movierooms",
+    "slug": "/category/movierooms",
+    "thumbnailUrl": "/thumbnails/movierooms.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "eFootball",
+    "slug": "/category/efootball",
+    "thumbnailUrl": "/thumbnails/efootball.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Meccha Chameleon",
+    "slug": "/category/meccha-chameleon",
+    "thumbnailUrl": "/thumbnails/meccha-chameleon.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie"
+    ]
+  },
+  {
+    "title": "Chat Roulette",
+    "slug": "/category/chat-roulette",
+    "thumbnailUrl": "/thumbnails/chat-roulette.webp",
+    "viewers": "0",
+    "tags": [
+      "Casual"
+    ]
+  },
+  {
+    "title": "Resident Evil Village",
+    "slug": "/category/resident-evil-village",
+    "thumbnailUrl": "/thumbnails/resident-evil-village.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Action",
+      "Adventure Game",
+      "FPS",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "007 First Light",
+    "slug": "/category/007-first-light",
+    "thumbnailUrl": "/thumbnails/007-first-light.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Music Stations",
+    "slug": "/category/music-stations",
+    "thumbnailUrl": "/thumbnails/music-stations.webp",
+    "viewers": "0",
+    "tags": [
+      "Music"
+    ]
+  },
+  {
+    "title": "Lineage II",
+    "slug": "/category/lineage-ii",
+    "thumbnailUrl": "/thumbnails/lineage-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Path of Exile 2",
+    "slug": "/category/path-of-exile-2",
+    "thumbnailUrl": "/thumbnails/path-of-exile-2.webp",
+    "viewers": "0",
+    "tags": [
+      "action",
+      "fantasy"
+    ]
+  },
+  {
+    "title": "Dead By Daylight",
+    "slug": "/category/dead-by-daylight",
+    "thumbnailUrl": "/thumbnails/dead-by-daylight.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Marvel Rivals",
+    "slug": "/category/marvel-rivals",
+    "thumbnailUrl": "/thumbnails/marvel-rivals.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Strategy",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Mobile Legends: Bang Bang",
+    "slug": "/category/mobile-legends: - bang-bang",
+    "thumbnailUrl": "/thumbnails/mobile-legends__-_bang-bang.webp",
+    "viewers": "0",
+    "tags": [
+      "MOBA",
+      "Strategy",
+      "Multiplayer"
+    ]
+  },
+  {
+    "title": "Moonshiner Simulator",
+    "slug": "/category/moonshiner-simulator",
+    "thumbnailUrl": "/thumbnails/moonshiner-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "ASMR",
+    "slug": "/category/asmr",
+    "thumbnailUrl": "/thumbnails/asmr.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Reaction",
+    "slug": "/category/reaction",
+    "thumbnailUrl": "/thumbnails/reaction.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Grand Theft Auto: San Andreas - The Definitive Edition",
+    "slug": "/category/grand-theft-auto-san-andreas-the-definitive-edition",
+    "thumbnailUrl": "/thumbnails/grand-theft-auto-san-andreas-the-definitive-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Racing",
+      "Shooter",
+      "Action",
+      "Open world"
+    ]
+  },
+  {
+    "title": "Escape From Tarkov",
+    "slug": "/category/escape-from-tarkov",
+    "thumbnailUrl": "/thumbnails/escape-from-tarkov.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "FPS",
+      "Action"
+    ]
+  },
+  {
+    "title": "Albion Online",
+    "slug": "/category/Albion-Online",
+    "thumbnailUrl": "/thumbnails/Albion-Online.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "MMO",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Starcraft II",
+    "slug": "/category/Starcraft-II",
+    "thumbnailUrl": "/thumbnails/Starcraft-II.webp",
+    "viewers": "0",
+    "tags": [
+      "RTS",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Trading Cards",
+    "slug": "/category/trading-cards",
+    "thumbnailUrl": "/thumbnails/trading-cards.webp",
+    "viewers": "0",
+    "tags": [
+      "cards",
+      "trading",
+      "trading cards",
+      "card trading"
+    ]
+  },
+  {
+    "title": "World of Warcraft Classic Hardcore",
+    "slug": "/category/world-of-warcraft-classic-hardcore",
+    "thumbnailUrl": "/thumbnails/world-of-warcraft-classic-hardcore.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Fears to Fathom: Scratch Creek",
+    "slug": "/category/fears-to-fathom-scratch-creek",
+    "thumbnailUrl": "/thumbnails/fears-to-fathom-scratch-creek.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "VRChat",
+    "slug": "/category/vrchat",
+    "thumbnailUrl": "/thumbnails/vrchat.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Adventure Game",
+      "MMO"
+    ]
+  },
+  {
+    "title": "TBH: Task Bar Hero",
+    "slug": "/category/tbh-task-bar-hero",
+    "thumbnailUrl": "/thumbnails/tbh-task-bar-hero.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Platform",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Space Station 13",
+    "slug": "/category/space-station-13",
+    "thumbnailUrl": "/thumbnails/space-station-13.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-Play (RPG)",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Black Desert Online",
+    "slug": "/category/black-desert-online",
+    "thumbnailUrl": "/thumbnails/black-desert-online.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Strategy",
+      "MMO"
+    ]
+  },
+  {
+    "title": "Call of Duty: Black Ops 7",
+    "slug": "/category/call-of-duty-black-ops-7",
+    "thumbnailUrl": "/thumbnails/call-of-duty-black-ops-7.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Warfare"
+    ]
+  },
+  {
+    "title": "Games + Demos",
+    "slug": "/category/games-+-demos",
+    "thumbnailUrl": "/thumbnails/games-_-demos.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Fighting",
+      "Action",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Project Zomboid",
+    "slug": "/category/Project-Zomboid",
+    "thumbnailUrl": "/thumbnails/Project-Zomboid.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "RPG",
+      "Horror",
+      "Survival",
+      "Indie Game"
+    ]
+  },
+  {
+    "title": "Elden Ring",
+    "slug": "/category/elden-ring",
+    "thumbnailUrl": "/thumbnails/elden-ring.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Open World",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "VTubers",
+    "slug": "/category/vtubers",
+    "thumbnailUrl": "/thumbnails/vtubers.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Puzzle",
+      "Adventure Games",
+      "Shooter",
+      "FPS"
+    ]
+  },
+  {
+    "title": "Battlefield 6",
+    "slug": "/category/battlefield-6",
+    "thumbnailUrl": "/thumbnails/battlefield-6.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "FPS",
+      "Action"
+    ]
+  },
+  {
+    "title": "DayZ",
+    "slug": "/category/DayZ",
+    "thumbnailUrl": "/thumbnails/DayZ.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "FPS",
+      "Shooter",
+      "RPG",
+      "Indie Game"
+    ]
+  },
+  {
+    "title": "Stumble Guys",
+    "slug": "/category/stumble-guys",
+    "thumbnailUrl": "/thumbnails/stumble-guys.webp",
+    "viewers": "0",
+    "tags": [
+      "Platformer",
+      "Indie Game",
+      "MMO",
+      "Action"
+    ]
+  },
+  {
+    "title": "Crab Game",
+    "slug": "/category/crab-game",
+    "thumbnailUrl": "/thumbnails/crab-game.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Strategy",
+      "Arcade",
+      "Indie Game",
+      "Driving/Racing Game"
+    ]
+  },
+  {
+    "title": "Diablo IV",
+    "slug": "/category/diablo-iv",
+    "thumbnailUrl": "/thumbnails/diablo-iv.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Blood Strike",
+    "slug": "/category/blood-strike",
+    "thumbnailUrl": "/thumbnails/blood-strike.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Teamfight Tactics",
+    "slug": "/category/teamfight-tactics",
+    "thumbnailUrl": "/thumbnails/teamfight-tactics.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Card & Board Game"
+    ]
+  },
+  {
+    "title": "Cities: Skylines II",
+    "slug": "/category/cities-skylines-ii",
+    "thumbnailUrl": "/thumbnails/cities-skylines-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sandbox",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Chess",
+    "slug": "/category/chess",
+    "thumbnailUrl": "/thumbnails/chess.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Action"
+    ]
+  },
+  {
+    "title": "Destiny 2",
+    "slug": "/category/destiny-2",
+    "thumbnailUrl": "/thumbnails/destiny-2.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Apex Legends",
+    "slug": "/category/apex-legends",
+    "thumbnailUrl": "/thumbnails/apex-legends.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Battle Royale"
+    ]
+  },
+  {
+    "title": "Vampire Survivors",
+    "slug": "/category/vampire-survivors",
+    "thumbnailUrl": "/thumbnails/vampire-survivors.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Indie Game",
+      "Arcade",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Arena Breakout: Infinite",
+    "slug": "/category/arena-breakout-infinite",
+    "thumbnailUrl": "/thumbnails/arena-breakout-infinite.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Action"
+    ]
+  },
+  {
+    "title": "Sports Betting",
+    "slug": "/category/sports-betting",
+    "thumbnailUrl": "/thumbnails/sports-betting.webp",
+    "viewers": "0",
+    "tags": [
+      "Gambling",
+      "Sports",
+      "Sportsbook",
+      "Betting"
+    ]
+  },
+  {
+    "title": "Euro Truck Simulator 2",
+    "slug": "/category/euro-truck-simulator-2",
+    "thumbnailUrl": "/thumbnails/euro-truck-simulator-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Open World",
+      "Driving"
+    ]
+  },
+  {
+    "title": "Tom Clancy's Rainbow Six Siege X",
+    "slug": "/category/Tom-Clancy's-Rainbow-Six-Siege-x",
+    "thumbnailUrl": "/thumbnails/Tom-Clancy_s-Rainbow-Six-Siege-x.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Action",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Wuthering Waves",
+    "slug": "/category/wuthering-waves",
+    "thumbnailUrl": "/thumbnails/wuthering-waves.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Podcasts",
+    "slug": "/category/podcasts",
+    "thumbnailUrl": "/thumbnails/podcasts.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "World of Warcraft",
+    "slug": "/category/world-of-warcraft",
+    "thumbnailUrl": "/thumbnails/world-of-warcraft.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure Game",
+      "MMO",
+      "Action",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Rocket League",
+    "slug": "/category/rocket-league",
+    "thumbnailUrl": "/thumbnails/rocket-league.webp",
+    "viewers": "0",
+    "tags": [
+      "Sports",
+      "Action"
+    ]
+  },
+  {
+    "title": "Grand Theft Auto VI (GTA)",
+    "slug": "/category/grand-theft-auto-vi",
+    "thumbnailUrl": "/thumbnails/grand-theft-auto-vi.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Adventure",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Red Dead Redemption II",
+    "slug": "/category/red-dead-redemption-ii",
+    "thumbnailUrl": "/thumbnails/red-dead-redemption-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Action"
+    ]
+  },
+  {
+    "title": "ArcheAge",
+    "slug": "/category/archeage",
+    "thumbnailUrl": "/thumbnails/archeage.webp",
+    "viewers": "0",
+    "tags": [
+      "MMO",
+      "Action",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Animals & Nature",
+    "slug": "/category/animals-nature",
+    "thumbnailUrl": "/thumbnails/animals-nature.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Fall Guys",
+    "slug": "/category/fall-guys",
+    "thumbnailUrl": "/thumbnails/fall-guys.webp",
+    "viewers": "0",
+    "tags": [
+      "Action"
+    ]
+  },
+  {
+    "title": "Indie Games",
+    "slug": "/category/indie-games",
+    "thumbnailUrl": "/thumbnails/indie-games.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie"
+    ]
+  },
+  {
+    "title": "Hogwarts Legacy",
+    "slug": "/category/hogwarts-legacy",
+    "thumbnailUrl": "/thumbnails/hogwarts-legacy.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Open World",
+      "Action",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Hello Neighbor",
+    "slug": "/category/hello-neighbor",
+    "thumbnailUrl": "/thumbnails/hello-neighbor.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Puzzle",
+      "Role-playing (RPG)",
+      "Strategy",
+      "Action",
+      "Comedy",
+      "Horror",
+      "Open world",
+      "Sandbox",
+      "Stealth",
+      "Thriller"
+    ]
+  },
+  {
+    "title": "Arcane Merchant",
+    "slug": "/category/arcane-merchant",
+    "thumbnailUrl": "/thumbnails/arcane-merchant.webp",
+    "viewers": "0",
+    "tags": [
+      "simulator",
+      "indie"
+    ]
+  },
+  {
+    "title": "Red Dead RP",
+    "slug": "/category/red-dead-rp",
+    "thumbnailUrl": "/thumbnails/red-dead-rp.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Simulation"
+    ]
+  },
+  {
+    "title": "God of War: Chains of Olympus",
+    "slug": "/category/god-of-war: - chains-of-olympus",
+    "thumbnailUrl": "/thumbnails/god-of-war__-_chains-of-olympus.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Hack and slash/Beat 'em up"
+    ]
+  },
+  {
+    "title": "Retro Games",
+    "slug": "/category/retro-games",
+    "thumbnailUrl": "/thumbnails/retro-games.webp",
+    "viewers": "0",
+    "tags": [
+      "Retro"
+    ]
+  },
+  {
+    "title": "FIFA Soccer 11",
+    "slug": "/category/fifa-soccer-11",
+    "thumbnailUrl": "/thumbnails/fifa-soccer-11.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Overwatch",
+    "slug": "/category/overwatch",
+    "thumbnailUrl": "/thumbnails/overwatch.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Action"
+    ]
+  },
+  {
+    "title": "7 Days to Die",
+    "slug": "/category/seven-days-to-die",
+    "thumbnailUrl": "/thumbnails/seven-days-to-die.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "RPG",
+      "Simulation",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Supermarket Simulator",
+    "slug": "/category/supermarket-simulator",
+    "thumbnailUrl": "/thumbnails/supermarket-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Just Sleeping",
+    "slug": "/category/just-sleeping",
+    "thumbnailUrl": "/thumbnails/just-sleeping.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL",
+      "Sleeping"
+    ]
+  },
+  {
+    "title": "Left 4 Dead 2",
+    "slug": "/category/Left-4-Dead-2",
+    "thumbnailUrl": "/thumbnails/Left-4-Dead-2.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Horror",
+      "Action",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Bloons TD 6",
+    "slug": "/category/bloods-td-6",
+    "thumbnailUrl": "/thumbnails/bloods-td-6.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Action"
+    ]
+  },
+  {
+    "title": "Mortal Kombat 1",
+    "slug": "/category/mortal-kombat-1",
+    "thumbnailUrl": "/thumbnails/mortal-kombat-1.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Fighting"
+    ]
+  },
+  {
+    "title": "Video Production",
+    "slug": "/category/video-production",
+    "thumbnailUrl": "/thumbnails/video-production.webp",
+    "viewers": "0",
+    "tags": [
+      "Creative"
+    ]
+  },
+  {
+    "title": "Ghost of Yotei",
+    "slug": "/category/ghost-of-yotei",
+    "thumbnailUrl": "/thumbnails/ghost-of-yotei.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing(RPG)",
+      "Adventure",
+      "Action"
+    ]
+  },
+  {
+    "title": "Phasmophobia",
+    "slug": "/category/Phasmophobia",
+    "thumbnailUrl": "/thumbnails/Phasmophobia.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Horror",
+      "Indie Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Crypto & Trading",
+    "slug": "/category/crypto-and-trading",
+    "thumbnailUrl": "/thumbnails/crypto-and-trading.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL",
+      "Crypto"
+    ]
+  },
+  {
+    "title": "Wuchang: Fallen Feathers",
+    "slug": "/category/wuchang-fallen-feathers",
+    "thumbnailUrl": "/thumbnails/wuchang-fallen-feathers.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Action"
+    ]
+  },
+  {
+    "title": "Coromon",
+    "slug": "/category/coromon",
+    "thumbnailUrl": "/thumbnails/coromon.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Fighting",
+      "Indie",
+      "Puzzle",
+      "Turn-based strategy (TBS)",
+      "Role-playing (RPG), Strategy"
+    ]
+  },
+  {
+    "title": "Gartic Phone",
+    "slug": "/category/gartic-phone",
+    "thumbnailUrl": "/thumbnails/gartic-phone.webp",
+    "viewers": "0",
+    "tags": [
+      "Quiz / Trivia"
+    ]
+  },
+  {
+    "title": "Grand Theft Auto: San Andreas",
+    "slug": "/category/Grand-Theft-Auto:-San-Andreas",
+    "thumbnailUrl": "/thumbnails/Grand-Theft-Auto_-San-Andreas.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "FPS",
+      "Shooter",
+      "Driving/Racing Game"
+    ]
+  },
+  {
+    "title": "Burglin' Gnomes",
+    "slug": "/category/burglin-gnomes",
+    "thumbnailUrl": "/thumbnails/burglin-gnomes.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Resident Evil Requiem",
+    "slug": "/category/resident-evil-requiem",
+    "thumbnailUrl": "/thumbnails/resident-evil-requiem.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Horror",
+      "Survival"
+    ]
+  },
+  {
+    "title": "God of War",
+    "slug": "/category/god-of-war",
+    "thumbnailUrl": "/thumbnails/god-of-war.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Age of Empires IV",
+    "slug": "/category/age-of-empires-iv",
+    "thumbnailUrl": "/thumbnails/age-of-empires-iv.webp",
+    "viewers": "0",
+    "tags": [
+      "RTS",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Live DJ",
+    "slug": "/category/live-dj",
+    "thumbnailUrl": "/thumbnails/live-dj.webp",
+    "viewers": "0",
+    "tags": [
+      "Music"
+    ]
+  },
+  {
+    "title": "Dark and Darker",
+    "slug": "/category/dark-and-darker",
+    "thumbnailUrl": "/thumbnails/dark-and-darker.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "FPS",
+      "Shooter",
+      "RPG"
+    ]
+  },
+  {
+    "title": "I'm Only Sleeping",
+    "slug": "/category/im-only-sleeping",
+    "thumbnailUrl": "/thumbnails/im-only-sleeping.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Point-and-Click"
+    ]
+  },
+  {
+    "title": "PEAK",
+    "slug": "/category/peak-1",
+    "thumbnailUrl": "/thumbnails/peak-1.webp",
+    "viewers": "0",
+    "tags": [
+      "Platform",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Age of Empires II: Definitive Edition",
+    "slug": "/category/age-of-empires-II:-definitive-edition",
+    "thumbnailUrl": "/thumbnails/age-of-empires-II_-definitive-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "RTS",
+      "Strategy",
+      "City Builder",
+      "Multiplayer",
+      "Classic"
+    ]
+  },
+  {
+    "title": "The Finals",
+    "slug": "/category/the-finals",
+    "thumbnailUrl": "/thumbnails/the-finals.webp",
+    "viewers": "0",
+    "tags": [
+      "shooter",
+      "action"
+    ]
+  },
+  {
+    "title": "The Last of Us",
+    "slug": "/category/The-Last-of-Us",
+    "thumbnailUrl": "/thumbnails/The-Last-of-Us.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Adventure Game",
+      "Action",
+      "Horror",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Kakele Online: MMORPG",
+    "slug": "/category/kakele-online-mmorpg",
+    "thumbnailUrl": "/thumbnails/kakele-online-mmorpg.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "NBA The Run",
+    "slug": "/category/nba-the-run",
+    "thumbnailUrl": "/thumbnails/nba-the-run.webp",
+    "viewers": "0",
+    "tags": [
+      "Sport",
+      "Arcade"
+    ]
+  },
+  {
+    "title": "The Seven Deadly Sins: Origin",
+    "slug": "/category/the-seven-deadly-sins-origin",
+    "thumbnailUrl": "/thumbnails/the-seven-deadly-sins-origin.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Adventure",
+      "Action",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Poker",
+    "slug": "/category/poker",
+    "thumbnailUrl": "/thumbnails/poker.webp",
+    "viewers": "0",
+    "tags": [
+      "Gambling",
+      "Cards"
+    ]
+  },
+  {
+    "title": "NBA 2K26",
+    "slug": "/category/nba-2k26",
+    "thumbnailUrl": "/thumbnails/nba-2k26.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Comedy Night",
+    "slug": "/category/comedy-night",
+    "thumbnailUrl": "/thumbnails/comedy-night.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulation"
+    ]
+  },
+  {
+    "title": "Heroes of Might & Magic: Olden Era",
+    "slug": "/category/heroes-of-might-and-magic-olden-era",
+    "thumbnailUrl": "/thumbnails/heroes-of-might-and-magic-olden-era.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Fantasy",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Subnautica 2",
+    "slug": "/category/subnautica-2",
+    "thumbnailUrl": "/thumbnails/subnautica-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Pokémon Champions",
+    "slug": "/category/pokemon-champions",
+    "thumbnailUrl": "/thumbnails/pokemon-champions.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Fantasy",
+      "Action"
+    ]
+  },
+  {
+    "title": "Fortune Mill",
+    "slug": "/category/fortune-mill",
+    "thumbnailUrl": "/thumbnails/fortune-mill.webp",
+    "viewers": "0",
+    "tags": [
+      "Incremental",
+      "Gambling",
+      "Simulation",
+      "Idling"
+    ]
+  },
+  {
+    "title": "Genshin Impact",
+    "slug": "/category/Genshin-Impact",
+    "thumbnailUrl": "/thumbnails/Genshin-Impact.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "RPG",
+      "Open World",
+      "Adventure Game",
+      "MMO"
+    ]
+  },
+  {
+    "title": "News",
+    "slug": "/category/news",
+    "thumbnailUrl": "/thumbnails/news.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Brawl Stars",
+    "slug": "/category/brawl-stars",
+    "thumbnailUrl": "/thumbnails/brawl-stars.webp",
+    "viewers": "0",
+    "tags": [
+      "Mobile Game",
+      "Strategy",
+      "Action",
+      "Shooter",
+      "MOBA"
+    ]
+  },
+  {
+    "title": "StarCraft: Remastered",
+    "slug": "/category/starcraft-remastered",
+    "thumbnailUrl": "/thumbnails/starcraft-remastered.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Real-Time-Strategy (RTS)",
+      "Science Fiction"
+    ]
+  },
+  {
+    "title": "Little Nightmares",
+    "slug": "/category/little-nightmares",
+    "thumbnailUrl": "/thumbnails/little-nightmares.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Platform",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Call of Duty: Mobile",
+    "slug": "/category/call-of-duty:-mobile",
+    "thumbnailUrl": "/thumbnails/call-of-duty_-mobile.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Shooter",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Ark: Survival Ascended",
+    "slug": "/category/ark-survival-ascended",
+    "thumbnailUrl": "/thumbnails/ark-survival-ascended.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)",
+      "Shooter",
+      "Simulator",
+      "Action",
+      "Open world",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Lost Ark",
+    "slug": "/category/Lost-Ark",
+    "thumbnailUrl": "/thumbnails/Lost-Ark.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "MMO"
+    ]
+  },
+  {
+    "title": "Blazing Sails",
+    "slug": "/category/blazing-sails",
+    "thumbnailUrl": "/thumbnails/blazing-sails.webp",
+    "viewers": "0",
+    "tags": [
+      "indie",
+      "shooter",
+      "tactical",
+      "adventure"
+    ]
+  },
+  {
+    "title": "Tomb Raider",
+    "slug": "/category/tomb-raider",
+    "thumbnailUrl": "/thumbnails/tomb-raider.webp",
+    "viewers": "0",
+    "tags": [
+      "Platformer",
+      "Action",
+      "Adventure Game",
+      "Shooter",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Cooking",
+    "slug": "/category/cooking",
+    "thumbnailUrl": "/thumbnails/cooking.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "R.E.P.O.",
+    "slug": "/category/repo",
+    "thumbnailUrl": "/thumbnails/repo.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie"
+    ]
+  },
+  {
+    "title": "Star Wars Outlaws",
+    "slug": "/category/star-wars-outlaws",
+    "thumbnailUrl": "/thumbnails/star-wars-outlaws.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action"
+    ]
+  },
+  {
+    "title": "Once Human",
+    "slug": "/category/once-human",
+    "thumbnailUrl": "/thumbnails/once-human.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Survival",
+      "PVE",
+      "Multiplayer"
+    ]
+  },
+  {
+    "title": "Disco Elysium",
+    "slug": "/category/disco-elysium",
+    "thumbnailUrl": "/thumbnails/disco-elysium.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG",
+      "Turn-based strategy"
+    ]
+  },
+  {
+    "title": "Escape the Backrooms",
+    "slug": "/category/escape-the-backrooms",
+    "thumbnailUrl": "/thumbnails/escape-the-backrooms.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Acts of Blood",
+    "slug": "/category/acts-of-blood",
+    "thumbnailUrl": "/thumbnails/acts-of-blood.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Hack and slash/Beat 'em up",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Warcraft III: The Frozen Throne",
+    "slug": "/category/warcraft-iii-the-frozen-throne",
+    "thumbnailUrl": "/thumbnails/warcraft-iii-the-frozen-throne.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Call of Duty: Black Ops 6",
+    "slug": "/category/call-of-duty-black-ops-6",
+    "thumbnailUrl": "/thumbnails/call-of-duty-black-ops-6.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action"
+    ]
+  },
+  {
+    "title": "Fallout 4",
+    "slug": "/category/Fallout-4",
+    "thumbnailUrl": "/thumbnails/Fallout-4.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Shooter",
+      "FPS",
+      "Action",
+      "Survival"
+    ]
+  },
+  {
+    "title": "DCS World",
+    "slug": "/category/dcs-world",
+    "thumbnailUrl": "/thumbnails/dcs-world.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Flight",
+      "Free to Play",
+      "Multiplayer",
+      "VR"
+    ]
+  },
+  {
+    "title": "MLB The Show 26",
+    "slug": "/category/mlb-the-show-26",
+    "thumbnailUrl": "/thumbnails/mlb-the-show-26.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Broken Ranks",
+    "slug": "/category/broken-ranks",
+    "thumbnailUrl": "/thumbnails/broken-ranks.webp",
+    "viewers": "0",
+    "tags": []
+  },
+  {
+    "title": "Mount & Blade II: Bannerlord",
+    "slug": "/category/Mount-&-Blade-II:-Bannerlord",
+    "thumbnailUrl": "/thumbnails/Mount-_-Blade-II_-Bannerlord.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "RPG",
+      "Simulation",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Lost Soul Aside",
+    "slug": "/category/lost-soul-aside",
+    "thumbnailUrl": "/thumbnails/lost-soul-aside.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Hack and slash/Beat 'em up"
+    ]
+  },
+  {
+    "title": "Tom Clancy's Rainbow Six",
+    "slug": "/category/tom-clancy-s-rainbow-six",
+    "thumbnailUrl": "/thumbnails/tom-clancy-s-rainbow-six.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Simulator",
+      "Strategy",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "MapleStory",
+    "slug": "/category/MapleStory",
+    "thumbnailUrl": "/thumbnails/MapleStory.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Platformer",
+      "RPG",
+      "MMO"
+    ]
+  },
+  {
+    "title": "Delta Force",
+    "slug": "/category/delta-force",
+    "thumbnailUrl": "/thumbnails/delta-force.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "Casino Boss Simulator",
+    "slug": "/category/casino-boss-simulator",
+    "thumbnailUrl": "/thumbnails/casino-boss-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Rise of the Tomb Raider",
+    "slug": "/category/rise-of-the-tomb-raider",
+    "thumbnailUrl": "/thumbnails/rise-of-the-tomb-raider.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Adventure Game",
+      "FPS",
+      "Survival"
+    ]
+  },
+  {
+    "title": "PowerWash Simulator",
+    "slug": "/category/powerwash-simulator",
+    "thumbnailUrl": "/thumbnails/powerwash-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator",
+      "Business",
+      "Sandbox"
+    ]
+  },
+  {
+    "title": "Disney Speedstorm",
+    "slug": "/category/disney-speedstorm",
+    "thumbnailUrl": "/thumbnails/disney-speedstorm.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Arcade",
+      "Racing",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Sekiro: Shadows Die Twice",
+    "slug": "/category/sekiro:-shadows-die-twice",
+    "thumbnailUrl": "/thumbnails/sekiro_-shadows-die-twice.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Action",
+      "Stealth"
+    ]
+  },
+  {
+    "title": "Akinator",
+    "slug": "/category/akinator",
+    "thumbnailUrl": "/thumbnails/akinator.webp",
+    "viewers": "0",
+    "tags": [
+      "Quiz/Trivia"
+    ]
+  },
+  {
+    "title": "Star Citizen",
+    "slug": "/category/star-citizen",
+    "thumbnailUrl": "/thumbnails/star-citizen.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Simulation",
+      "FPS",
+      "RPG",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Super Battle Golf",
+    "slug": "/category/super-battle-golf",
+    "thumbnailUrl": "/thumbnails/super-battle-golf.webp",
+    "viewers": "0",
+    "tags": [
+      "Sport",
+      "Shooter",
+      "Party"
+    ]
+  },
+  {
+    "title": "Dead Island 2",
+    "slug": "/category/dead-island-2",
+    "thumbnailUrl": "/thumbnails/dead-island-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Hack and slash/Beat 'em up",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Pummel Party",
+    "slug": "/category/pummel-party",
+    "thumbnailUrl": "/thumbnails/pummel-party.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Comedy",
+      "Party"
+    ]
+  },
+  {
+    "title": "Resident Evil 2 (2019)",
+    "slug": "/category/resident-evil-2-(2019)",
+    "thumbnailUrl": "/thumbnails/resident-evil-2-_2019_.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Spider-Man 2",
+    "slug": "/category/spider-man-2",
+    "thumbnailUrl": "/thumbnails/spider-man-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Black Myth: Wukong",
+    "slug": "/category/black-myth-wukong",
+    "thumbnailUrl": "/thumbnails/black-myth-wukong.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Blasphemous II",
+    "slug": "/category/blasphemous-ii",
+    "thumbnailUrl": "/thumbnails/blasphemous-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Platform",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Cyberpunk 2077",
+    "slug": "/category/cyberpunk-2077",
+    "thumbnailUrl": "/thumbnails/cyberpunk-2077.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "FPS",
+      "Shooter",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Metin 2",
+    "slug": "/category/metin-2",
+    "thumbnailUrl": "/thumbnails/metin-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)",
+      "Action"
+    ]
+  },
+  {
+    "title": "Hunt: Showdown",
+    "slug": "/category/hunt:-showdown",
+    "thumbnailUrl": "/thumbnails/hunt_-showdown.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Action"
+    ]
+  },
+  {
+    "title": "Where Winds Meet",
+    "slug": "/category/where-winds-meet",
+    "thumbnailUrl": "/thumbnails/where-winds-meet.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-Playing(RPG)"
+    ]
+  },
+  {
+    "title": "eFootball PES 2021",
+    "slug": "/category/efootball-pes-2021",
+    "thumbnailUrl": "/thumbnails/efootball-pes-2021.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Diablo II: Resurrected",
+    "slug": "/category/Diablo-II:-Resurrected",
+    "thumbnailUrl": "/thumbnails/Diablo-II_-Resurrected.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action"
+    ]
+  },
+  {
+    "title": "Battlefield REDSEC",
+    "slug": "/category/battlefield-redsec",
+    "thumbnailUrl": "/thumbnails/battlefield-redsec.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "UFL",
+    "slug": "/category/ufl",
+    "thumbnailUrl": "/thumbnails/ufl.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Ready or Not",
+    "slug": "/category/ready-or-not",
+    "thumbnailUrl": "/thumbnails/ready-or-not.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "The Quarry",
+    "slug": "/category/the-quarry",
+    "thumbnailUrl": "/thumbnails/the-quarry.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action",
+      "Horror",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Dark Souls: Remastered",
+    "slug": "/category/dark-souls:-remastered",
+    "thumbnailUrl": "/thumbnails/dark-souls_-remastered.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Goose Goose Duck",
+    "slug": "/category/goose-goose-duck",
+    "thumbnailUrl": "/thumbnails/goose-goose-duck.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Witchspire",
+    "slug": "/category/witchspire",
+    "thumbnailUrl": "/thumbnails/witchspire.webp",
+    "viewers": "0",
+    "tags": [
+      "Fantasy",
+      "Survival",
+      "Open world"
+    ]
+  },
+  {
+    "title": "No Man's Sky",
+    "slug": "/category/no-mans-sky",
+    "thumbnailUrl": "/thumbnails/no-mans-sky.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Adventure Game",
+      "RPG",
+      "Indie Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Fears to Fathom: Carson House",
+    "slug": "/category/fears-to-fathom-carson-house",
+    "thumbnailUrl": "/thumbnails/fears-to-fathom-carson-house.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "World of Warcraft Classic",
+    "slug": "/category/world-of-warcraft-classic",
+    "thumbnailUrl": "/thumbnails/world-of-warcraft-classic.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "FIFA 17",
+    "slug": "/category/fifa-17",
+    "thumbnailUrl": "/thumbnails/fifa-17.webp",
+    "viewers": "0",
+    "tags": [
+      "Sport",
+      "Soccer"
+    ]
+  },
+  {
+    "title": "Jump King Quest",
+    "slug": "/category/jump-king-quest",
+    "thumbnailUrl": "/thumbnails/jump-king-quest.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Sons of the Forest",
+    "slug": "/category/sons-of-the-forest",
+    "thumbnailUrl": "/thumbnails/sons-of-the-forest.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Knight Online",
+    "slug": "/category/knight-online",
+    "thumbnailUrl": "/thumbnails/knight-online.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure Game",
+      "MMO",
+      "Action"
+    ]
+  },
+  {
+    "title": "Helldivers II",
+    "slug": "/category/helldivers-ii",
+    "thumbnailUrl": "/thumbnails/helldivers-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "The Isle",
+    "slug": "/category/the-isle",
+    "thumbnailUrl": "/thumbnails/the-isle.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Fighting"
+    ]
+  },
+  {
+    "title": "With Your Destiny",
+    "slug": "/category/with-your-destiny",
+    "thumbnailUrl": "/thumbnails/with-your-destiny.webp",
+    "viewers": "0",
+    "tags": [
+      "Massive Multiplayer Online (MMO)",
+      "Role-playing (RPG)",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Backrooms: Escape Together",
+    "slug": "/category/backrooms-escape-together",
+    "thumbnailUrl": "/thumbnails/backrooms-escape-together.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Tekken 8",
+    "slug": "/category/tekken-8",
+    "thumbnailUrl": "/thumbnails/tekken-8.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting"
+    ]
+  },
+  {
+    "title": "Silkroad Online",
+    "slug": "/category/silkroad-online",
+    "thumbnailUrl": "/thumbnails/silkroad-online.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Turmoil",
+    "slug": "/category/turmoil",
+    "thumbnailUrl": "/thumbnails/turmoil.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Conqueror's Blade",
+    "slug": "/category/conquerors-blade",
+    "thumbnailUrl": "/thumbnails/conquerors-blade.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Strategy",
+      "MMO",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Neverness to Everness",
+    "slug": "/category/neverness-to-everness",
+    "thumbnailUrl": "/thumbnails/neverness-to-everness.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action"
+    ]
+  },
+  {
+    "title": "Stardew Valley",
+    "slug": "/category/stardew-valley",
+    "thumbnailUrl": "/thumbnails/stardew-valley.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Indie",
+      "Simulator",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Raid: Shadow Legends",
+    "slug": "/category/raid-shadow-legends",
+    "thumbnailUrl": "/thumbnails/raid-shadow-legends.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Strategy",
+      "Turn-based strategy (TBS)",
+      "Action",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Art",
+    "slug": "/category/art",
+    "thumbnailUrl": "/thumbnails/art.webp",
+    "viewers": "0",
+    "tags": [
+      "Creative",
+      "art"
+    ]
+  },
+  {
+    "title": "Retro",
+    "slug": "/category/retro",
+    "thumbnailUrl": "/thumbnails/retro.webp",
+    "viewers": "0",
+    "tags": [
+      "Arcade"
+    ]
+  },
+  {
+    "title": "Resident Evil 3",
+    "slug": "/category/Resident-Evil-3",
+    "thumbnailUrl": "/thumbnails/Resident-Evil-3.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Adventure Game",
+      "Horror",
+      "Survival",
+      "Action"
+    ]
+  },
+  {
+    "title": "Gothic II",
+    "slug": "/category/gothic-II",
+    "thumbnailUrl": "/thumbnails/gothic-II.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "The Sims 4",
+    "slug": "/category/The-Sims-4",
+    "thumbnailUrl": "/thumbnails/The-Sims-4.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Open World",
+      "RPG"
+    ]
+  },
+  {
+    "title": "The Evil Within 2",
+    "slug": "/category/the-evil-within-2",
+    "thumbnailUrl": "/thumbnails/the-evil-within-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Horror",
+      "RPG",
+      "Action"
+    ]
+  },
+  {
+    "title": "Backroom Loop",
+    "slug": "/category/backroom-loop",
+    "thumbnailUrl": "/thumbnails/backroom-loop.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Puzzle",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Card Games",
+    "slug": "/category/card-games",
+    "thumbnailUrl": "/thumbnails/card-games.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Grand Theft Auto IV",
+    "slug": "/category/grand-theft-auto-iv",
+    "thumbnailUrl": "/thumbnails/grand-theft-auto-iv.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Open World",
+      "Driving/Racing Game",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Palworld",
+    "slug": "/category/palworld",
+    "thumbnailUrl": "/thumbnails/palworld.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Shooter",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Arena Breakout",
+    "slug": "/category/arena-breakout",
+    "thumbnailUrl": "/thumbnails/arena-breakout.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "The Legend of Zelda: Ocarina of Time",
+    "slug": "/category/the-legend-of-zelda:-ocarina-of-time",
+    "thumbnailUrl": "/thumbnails/the-legend-of-zelda_-ocarina-of-time.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Puzzle",
+      "RPG",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Total Overdose",
+    "slug": "/category/total-overdose",
+    "thumbnailUrl": "/thumbnails/total-overdose.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Poppy Playtime: Chapter 3 - Deep Sleep",
+    "slug": "/category/poppy-playtime-chapter-3-deep-sleep",
+    "thumbnailUrl": "/thumbnails/poppy-playtime-chapter-3-deep-sleep.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Survival",
+      "Indie"
+    ]
+  },
+  {
+    "title": "The Legend of Zelda: Echoes of Wisdom",
+    "slug": "/category/the-legend-of-zelda-echoes-of-wisdom",
+    "thumbnailUrl": "/thumbnails/the-legend-of-zelda-echoes-of-wisdom.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Fantasy",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Kings League",
+    "slug": "/category/kings-league",
+    "thumbnailUrl": "/thumbnails/kings-league.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Farming Simulator 2025",
+    "slug": "/category/farming-simulator-2025",
+    "thumbnailUrl": "/thumbnails/farming-simulator-2025.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Music Production",
+    "slug": "/category/music-production",
+    "thumbnailUrl": "/thumbnails/music-production.webp",
+    "viewers": "0",
+    "tags": [
+      "music",
+      "music production"
+    ]
+  },
+  {
+    "title": "Fast Food Simulator",
+    "slug": "/category/fast-food-simulator",
+    "thumbnailUrl": "/thumbnails/fast-food-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "FC Mobile",
+    "slug": "/category/fc-mobile",
+    "thumbnailUrl": "/thumbnails/fc-mobile.webp",
+    "viewers": "0",
+    "tags": [
+      "Sport"
+    ]
+  },
+  {
+    "title": "Don't Starve Together",
+    "slug": "/category/dont-starve-together",
+    "thumbnailUrl": "/thumbnails/dont-starve-together.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "JudgeSim",
+    "slug": "/category/judgesim",
+    "thumbnailUrl": "/thumbnails/judgesim.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Mortal Shell II",
+    "slug": "/category/mortal-shell-ii",
+    "thumbnailUrl": "/thumbnails/mortal-shell-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action",
+      "Role-playing (RPG)",
+      "Open world",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Feign",
+    "slug": "/category/feign",
+    "thumbnailUrl": "/thumbnails/feign.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "RPG",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "WWE 2K26",
+    "slug": "/category/wwe-2k26",
+    "thumbnailUrl": "/thumbnails/wwe-2k26.webp",
+    "viewers": "0",
+    "tags": [
+      "Sport",
+      "Simulator",
+      "Fighting"
+    ]
+  },
+  {
+    "title": "Remothered: Tormented Fathers",
+    "slug": "/category/remothered-tormented-fathers",
+    "thumbnailUrl": "/thumbnails/remothered-tormented-fathers.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "God of War III",
+    "slug": "/category/god-of-war-III",
+    "thumbnailUrl": "/thumbnails/god-of-war-III.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Hack and slash/Beat 'em up"
+    ]
+  },
+  {
+    "title": "Wolf Team",
+    "slug": "/category/wolf-team",
+    "thumbnailUrl": "/thumbnails/wolf-team.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Warfare"
+    ]
+  },
+  {
+    "title": "Viewfinder",
+    "slug": "/category/viewfinder",
+    "thumbnailUrl": "/thumbnails/viewfinder.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Platform",
+      "Indie",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Digital Art",
+    "slug": "/category/digital-art",
+    "thumbnailUrl": "/thumbnails/digital-art.webp",
+    "viewers": "0",
+    "tags": [
+      "Creative"
+    ]
+  },
+  {
+    "title": "Fears to Fathom: Woodbury Getaway",
+    "slug": "/category/fears-to-fathom-woodbury-getaway",
+    "thumbnailUrl": "/thumbnails/fears-to-fathom-woodbury-getaway.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Deadlock",
+    "slug": "/category/deadlock",
+    "thumbnailUrl": "/thumbnails/deadlock.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Strategy",
+      "MOBA"
+    ]
+  },
+  {
+    "title": "Arma Reforger",
+    "slug": "/category/arma-reforger",
+    "thumbnailUrl": "/thumbnails/arma-reforger.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Simulator",
+      "Strategy",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "EVE Online",
+    "slug": "/category/eve-online",
+    "thumbnailUrl": "/thumbnails/eve-online.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Simulator",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "EngineFall",
+    "slug": "/category/enginefall",
+    "thumbnailUrl": "/thumbnails/enginefall.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Control",
+    "slug": "/category/control",
+    "thumbnailUrl": "/thumbnails/control.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Hacked: The Streamer",
+    "slug": "/category/hacked-the-streamer",
+    "thumbnailUrl": "/thumbnails/hacked-the-streamer.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Drama",
+      "Mystery"
+    ]
+  },
+  {
+    "title": "Predecessor",
+    "slug": "/category/predecessor",
+    "thumbnailUrl": "/thumbnails/predecessor.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Live Music",
+    "slug": "/category/live-music",
+    "thumbnailUrl": "/thumbnails/live-music.webp",
+    "viewers": "0",
+    "tags": [
+      "Music"
+    ]
+  },
+  {
+    "title": "Call of Duty: Warzone 2.0",
+    "slug": "/category/call-of-duty-warzone-2.0",
+    "thumbnailUrl": "/thumbnails/call-of-duty-warzone-2_0.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Battle Royale"
+    ]
+  },
+  {
+    "title": "Songbattle.io",
+    "slug": "/category/songbattle.io",
+    "thumbnailUrl": "/thumbnails/songbattle_io.webp",
+    "viewers": "0",
+    "tags": [
+      "Music"
+    ]
+  },
+  {
+    "title": "Football Manager 26",
+    "slug": "/category/football-manager-26",
+    "thumbnailUrl": "/thumbnails/football-manager-26.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "F1 25",
+    "slug": "/category/f1-25",
+    "thumbnailUrl": "/thumbnails/f1-25.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing",
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "LEGO Batman: Legacy of the Dark Knight",
+    "slug": "/category/lego-batman-legacy-of-the-dark-knight",
+    "thumbnailUrl": "/thumbnails/lego-batman-legacy-of-the-dark-knight.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Gamble With Your Friends",
+    "slug": "/category/gamble-with-your-friends",
+    "thumbnailUrl": "/thumbnails/gamble-with-your-friends.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator",
+      "Adventure",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Minecraft Dungeons",
+    "slug": "/category/minecraft-dunegons",
+    "thumbnailUrl": "/thumbnails/minecraft-dunegons.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Party Animals",
+    "slug": "/category/party-animals",
+    "thumbnailUrl": "/thumbnails/party-animals.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Mir 4",
+    "slug": "/category/mir-4",
+    "thumbnailUrl": "/thumbnails/mir-4.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Warframe",
+    "slug": "/category/warframe",
+    "thumbnailUrl": "/thumbnails/warframe.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "RPG",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Windrose",
+    "slug": "/category/windrose",
+    "thumbnailUrl": "/thumbnails/windrose.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Mafia: Definitive Edition",
+    "slug": "/category/mafia:definitive-edition",
+    "thumbnailUrl": "/thumbnails/mafia_definitive-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Shooter",
+      "Action",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Detroit: Become Human",
+    "slug": "/category/detroit-become-human",
+    "thumbnailUrl": "/thumbnails/detroit-become-human.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "CABAL Online",
+    "slug": "/category/cabal-online",
+    "thumbnailUrl": "/thumbnails/cabal-online.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Action",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Satisfactory",
+    "slug": "/category/satisfactory",
+    "thumbnailUrl": "/thumbnails/satisfactory.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Open World",
+      "Strategy",
+      "Simulation",
+      "Indie Game"
+    ]
+  },
+  {
+    "title": "Outlast",
+    "slug": "/category/outlast",
+    "thumbnailUrl": "/thumbnails/outlast.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Chivalry 2",
+    "slug": "/category/chivalry-2",
+    "thumbnailUrl": "/thumbnails/chivalry-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Indie"
+    ]
+  },
+  {
+    "title": "FIFA 14",
+    "slug": "/category/fifa-14",
+    "thumbnailUrl": "/thumbnails/fifa-14.webp",
+    "viewers": "0",
+    "tags": [
+      "Sports",
+      "Non-fiction"
+    ]
+  },
+  {
+    "title": "Asphalt Legends Unite",
+    "slug": "/category/asphalt-legends-unite",
+    "thumbnailUrl": "/thumbnails/asphalt-legends-unite.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing",
+      "Sport",
+      "Arcade"
+    ]
+  },
+  {
+    "title": "Call of Duty: Warzone - Mobile",
+    "slug": "/category/call-of-duty-warzone-mobile",
+    "thumbnailUrl": "/thumbnails/call-of-duty-warzone-mobile.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "Sea of Thieves",
+    "slug": "/category/Sea-of-Thieves",
+    "thumbnailUrl": "/thumbnails/Sea-of-Thieves.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Open World",
+      "Simulation"
+    ]
+  },
+  {
+    "title": "Sandwich Simulator",
+    "slug": "/category/sandwich-simulator",
+    "thumbnailUrl": "/thumbnails/sandwich-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Comedy",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Resident Evil 0",
+    "slug": "/category/resident-evil-0",
+    "thumbnailUrl": "/thumbnails/resident-evil-0.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Horror"
+    ]
+  },
+  {
+    "title": "MU Online",
+    "slug": "/category/mu-online",
+    "thumbnailUrl": "/thumbnails/mu-online.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Fantasy",
+      "RPG",
+      "Strategy",
+      "TBS"
+    ]
+  },
+  {
+    "title": "The King of Fighters '98",
+    "slug": "/category/the-king-of-fighters-98",
+    "thumbnailUrl": "/thumbnails/the-king-of-fighters-98.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Arcade",
+      "Action"
+    ]
+  },
+  {
+    "title": "Microsoft Flight Simulator 2024",
+    "slug": "/category/microsoft-flight-simulator-2024",
+    "thumbnailUrl": "/thumbnails/microsoft-flight-simulator-2024.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Mafia",
+    "slug": "/category/mafia",
+    "thumbnailUrl": "/thumbnails/mafia.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Fighting",
+      "Racing",
+      "Shooter",
+      "Action",
+      "Open world"
+    ]
+  },
+  {
+    "title": "The Forest",
+    "slug": "/category/The-Forest",
+    "thumbnailUrl": "/thumbnails/The-Forest.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Puzzle",
+      "Simulation",
+      "Indie Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Resident Evil 4",
+    "slug": "/category/Resident-Evil-4",
+    "thumbnailUrl": "/thumbnails/Resident-Evil-4.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Horror",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Platform 8",
+    "slug": "/category/platform-8",
+    "thumbnailUrl": "/thumbnails/platform-8.webp",
+    "viewers": "0",
+    "tags": [
+      "Platform",
+      "Puzzle",
+      "Simulator",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Dave the Diver",
+    "slug": "/category/dave the-diver",
+    "thumbnailUrl": "/thumbnails/dave_the-diver.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Business",
+      "Fantasy",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Pratfall",
+    "slug": "/category/pratfall",
+    "thumbnailUrl": "/thumbnails/pratfall.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "STREAM",
+    "slug": "/category/stream",
+    "thumbnailUrl": "/thumbnails/stream.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL",
+      "Special Events"
+    ]
+  },
+  {
+    "title": "Superliminal",
+    "slug": "/category/superliminal",
+    "thumbnailUrl": "/thumbnails/superliminal.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Puzzle",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Overcooked! 2",
+    "slug": "/category/overcooked-2",
+    "thumbnailUrl": "/thumbnails/overcooked-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Multiplayer",
+      "Online Co-Op"
+    ]
+  },
+  {
+    "title": "EA Sports FC 24",
+    "slug": "/category/ea-sports-fc-24",
+    "thumbnailUrl": "/thumbnails/ea-sports-fc-24.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Tom Clancy's The Division 2",
+    "slug": "/category/tom-clancy's-the-division-2",
+    "thumbnailUrl": "/thumbnails/tom-clancy_s-the-division-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Open World",
+      "MMO",
+      "Action"
+    ]
+  },
+  {
+    "title": "Mario Kart World",
+    "slug": "/category/mario-kart-world",
+    "thumbnailUrl": "/thumbnails/mario-kart-world.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing"
+    ]
+  },
+  {
+    "title": "Words on Stream",
+    "slug": "/category/words-on-stream",
+    "thumbnailUrl": "/thumbnails/words-on-stream.webp",
+    "viewers": "0",
+    "tags": [
+      "Quiz/Trivia",
+      "Party"
+    ]
+  },
+  {
+    "title": "REMATCH",
+    "slug": "/category/rematch--1",
+    "thumbnailUrl": "/thumbnails/rematch--1.webp",
+    "viewers": "0",
+    "tags": [
+      "Sport",
+      "Indie"
+    ]
+  },
+  {
+    "title": "League of Legends: Wild Rift",
+    "slug": "/category/league-of-legends-wild-rift",
+    "thumbnailUrl": "/thumbnails/league-of-legends-wild-rift.webp",
+    "viewers": "0",
+    "tags": [
+      "MOBA"
+    ]
+  },
+  {
+    "title": "American Truck Simulator",
+    "slug": "/category/american-truck-simulator",
+    "thumbnailUrl": "/thumbnails/american-truck-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Driving/Racing Game",
+      "Simulation",
+      "Indie Game",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Dofus Retro",
+    "slug": "/category/dofus-retro",
+    "thumbnailUrl": "/thumbnails/dofus-retro.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Crimson Desert",
+    "slug": "/category/crimson-desert",
+    "thumbnailUrl": "/thumbnails/crimson-desert.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action"
+    ]
+  },
+  {
+    "title": "Road to Empress",
+    "slug": "/category/road-to-empress",
+    "thumbnailUrl": "/thumbnails/road-to-empress.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Reading",
+    "slug": "/category/reading",
+    "thumbnailUrl": "/thumbnails/reading.webp",
+    "viewers": "0",
+    "tags": []
+  },
+  {
+    "title": "Codenames",
+    "slug": "/category/codenames",
+    "thumbnailUrl": "/thumbnails/codenames.webp",
+    "viewers": "0",
+    "tags": [
+      "Card & Board Game",
+      "Mystery",
+      "Party"
+    ]
+  },
+  {
+    "title": "Fortnite Zero Build",
+    "slug": "/category/fortnite-zero-build",
+    "thumbnailUrl": "/thumbnails/fortnite-zero-build.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Battle Royale"
+    ]
+  },
+  {
+    "title": "The Elder Scrolls V: Skyrim",
+    "slug": "/category/the-elder-scrolls-v-skyrim",
+    "thumbnailUrl": "/thumbnails/the-elder-scrolls-v-skyrim.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Open World",
+      "Action",
+      "Adventure Game",
+      "Stealth"
+    ]
+  },
+  {
+    "title": "Star Fox",
+    "slug": "/category/star-fox--5",
+    "thumbnailUrl": "/thumbnails/star-fox--5.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Chill Corner",
+    "slug": "/category/chill-corner",
+    "thumbnailUrl": "/thumbnails/chill-corner.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Platform",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Politics",
+    "slug": "/category/politics",
+    "thumbnailUrl": "/thumbnails/politics.webp",
+    "viewers": "0",
+    "tags": [
+      "Other"
+    ]
+  },
+  {
+    "title": "Mass Effect Legendary Edition",
+    "slug": "/category/mass-effect-legendary-edition",
+    "thumbnailUrl": "/thumbnails/mass-effect-legendary-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Shooter",
+      "Action",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Resident Evil 4 Remake",
+    "slug": "/category/resident-evil-4-remake",
+    "thumbnailUrl": "/thumbnails/resident-evil-4-remake.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Puzzle",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "The Binding of Isaac: Repentance",
+    "slug": "/category/the-binding-of-isaac:-repentance",
+    "thumbnailUrl": "/thumbnails/the-binding-of-isaac_-repentance.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Role-playing (RPG)",
+      "Indie",
+      "Arcade",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Romestead",
+    "slug": "/category/romestead",
+    "thumbnailUrl": "/thumbnails/romestead.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Russian Fishing 4",
+    "slug": "/category/russian-fishing-4",
+    "thumbnailUrl": "/thumbnails/russian-fishing-4.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Sports Game",
+      "Simulation",
+      "Adventure Game",
+      "MMO"
+    ]
+  },
+  {
+    "title": "Gartic Show",
+    "slug": "/category/gartic-show",
+    "thumbnailUrl": "/thumbnails/gartic-show.webp",
+    "viewers": "0",
+    "tags": [
+      "Party",
+      "Quiz/Trivia"
+    ]
+  },
+  {
+    "title": "Resident Evil Zero",
+    "slug": "/category/resident-evil-zero",
+    "thumbnailUrl": "/thumbnails/resident-evil-zero.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Project: BloodStrike",
+    "slug": "/category/project-bloodstrike",
+    "thumbnailUrl": "/thumbnails/project-bloodstrike.webp",
+    "viewers": "0",
+    "tags": [
+      "Action"
+    ]
+  },
+  {
+    "title": "NBA 2K25",
+    "slug": "/category/nba-2k25",
+    "thumbnailUrl": "/thumbnails/nba-2k25.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Dungeons & Dragons",
+    "slug": "/category/dungeons-and-dragons",
+    "thumbnailUrl": "/thumbnails/dungeons-and-dragons.webp",
+    "viewers": "0",
+    "tags": [
+      "RTS",
+      "Tabletop"
+    ]
+  },
+  {
+    "title": "PlateUp!",
+    "slug": "/category/plateup!",
+    "thumbnailUrl": "/thumbnails/plateup_.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Party",
+      "Simulator",
+      "Strategy",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Mafia II: Definitive Edition",
+    "slug": "/category/mafia-II:-definitive-edition",
+    "thumbnailUrl": "/thumbnails/mafia-II_-definitive-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Crime"
+    ]
+  },
+  {
+    "title": "Software Development",
+    "slug": "/category/software-development",
+    "thumbnailUrl": "/thumbnails/software-development.webp",
+    "viewers": "0",
+    "tags": [
+      "Creative"
+    ]
+  },
+  {
+    "title": "The Elder Scrolls Online",
+    "slug": "/category/The-Elder-Scrolls-Online",
+    "thumbnailUrl": "/thumbnails/The-Elder-Scrolls-Online.webp",
+    "viewers": "0",
+    "tags": [
+      "Open World",
+      "RPG",
+      "MMO",
+      "Action",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Madden NFL 26",
+    "slug": "/category/madden-nfl-26",
+    "thumbnailUrl": "/thumbnails/madden-nfl-26.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Anime Squad",
+    "slug": "/category/anime-squad",
+    "thumbnailUrl": "/thumbnails/anime-squad.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie"
+    ]
+  },
+  {
+    "title": "My Summer Car",
+    "slug": "/category/my-summer-car",
+    "thumbnailUrl": "/thumbnails/my-summer-car.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing",
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "World of Tanks",
+    "slug": "/category/World-of-Tanks",
+    "thumbnailUrl": "/thumbnails/World-of-Tanks.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "FPS",
+      "Shooter",
+      "Strategy",
+      "Arcade"
+    ]
+  },
+  {
+    "title": "Chained Together",
+    "slug": "/category/chained-together",
+    "thumbnailUrl": "/thumbnails/chained-together.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Subnautica",
+    "slug": "/category/subnautica",
+    "thumbnailUrl": "/thumbnails/subnautica.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Open World",
+      "Survival",
+      "Indie Game"
+    ]
+  },
+  {
+    "title": "War Thunder",
+    "slug": "/category/war-thunder",
+    "thumbnailUrl": "/thumbnails/war-thunder.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "MMO",
+      "Action",
+      "Flight Simulator"
+    ]
+  },
+  {
+    "title": "EA Sports FC 25",
+    "slug": "/category/ea-sports-fc-25",
+    "thumbnailUrl": "/thumbnails/ea-sports-fc-25.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Indiana Jones and the Great Circle",
+    "slug": "/category/indiana-jones-and-the-great-circle",
+    "thumbnailUrl": "/thumbnails/indiana-jones-and-the-great-circle.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action"
+    ]
+  },
+  {
+    "title": "Kahoot!",
+    "slug": "/category/kahoot!",
+    "thumbnailUrl": "/thumbnails/kahoot_.webp",
+    "viewers": "0",
+    "tags": [
+      "Quiz/Trivia",
+      "Educational"
+    ]
+  },
+  {
+    "title": "Final Fantasy XIV",
+    "slug": "/category/final-fantasy-xiv",
+    "thumbnailUrl": "/thumbnails/final-fantasy-xiv.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Dark Souls III",
+    "slug": "/category/Dark-Souls-III",
+    "thumbnailUrl": "/thumbnails/Dark-Souls-III.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Adventure Game",
+      "Open World"
+    ]
+  },
+  {
+    "title": "LiveStream",
+    "slug": "/category/livestream",
+    "thumbnailUrl": "/thumbnails/livestream.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Star Wars Jedi: Survivor",
+    "slug": "/category/star-wars-jedi:-survivor",
+    "thumbnailUrl": "/thumbnails/star-wars-jedi_-survivor.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Grand Theft Auto: Vice City",
+    "slug": "/category/grand-theft-auto:-vice-city",
+    "thumbnailUrl": "/thumbnails/grand-theft-auto_-vice-city.webp",
+    "viewers": "0",
+    "tags": [
+      "Driving/Racing Game",
+      "Action",
+      "Adventure Game",
+      "Shooter",
+      "Arcade"
+    ]
+  },
+  {
+    "title": "RimWorld",
+    "slug": "/category/RimWorld",
+    "thumbnailUrl": "/thumbnails/RimWorld.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Simulation",
+      "RTS",
+      "Indie Game",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Storebound",
+    "slug": "/category/storebound-1",
+    "thumbnailUrl": "/thumbnails/storebound-1.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Action"
+    ]
+  },
+  {
+    "title": "Coffee Talk",
+    "slug": "/category/coffee-talk",
+    "thumbnailUrl": "/thumbnails/coffee-talk.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie",
+      "Visual Novel",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Into the Dead: Our Darkest Days",
+    "slug": "/category/into-the-dead-our-darkest-days",
+    "thumbnailUrl": "/thumbnails/into-the-dead-our-darkest-days.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Strategy",
+      "Indie",
+      "Survival",
+      "Action"
+    ]
+  },
+  {
+    "title": "Sports Bar VR",
+    "slug": "/category/sports-bar-vr",
+    "thumbnailUrl": "/thumbnails/sports-bar-vr.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Clair Obscur: Expedition 33",
+    "slug": "/category/clair-obscur-expedition-33",
+    "thumbnailUrl": "/thumbnails/clair-obscur-expedition-33.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "The RPG",
+    "slug": "/category/the-rpg",
+    "thumbnailUrl": "/thumbnails/the-rpg.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "The Witcher 3: Wild Hunt",
+    "slug": "/category/the-witcher-3:-wild-hunt",
+    "thumbnailUrl": "/thumbnails/the-witcher-3_-wild-hunt.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Adventure Game",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Resident Evil 6",
+    "slug": "/category/resident-evil-6",
+    "thumbnailUrl": "/thumbnails/resident-evil-6.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "The 7th Guest: 25th Anniversary Edition",
+    "slug": "/category/the-7th-guest-25th-anniversary-edition",
+    "thumbnailUrl": "/thumbnails/the-7th-guest-25th-anniversary-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Adventure",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Valheim",
+    "slug": "/category/Valheim",
+    "thumbnailUrl": "/thumbnails/Valheim.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Indie Game",
+      "RPG",
+      "Survival"
+    ]
+  },
+  {
+    "title": "iRacing",
+    "slug": "/category/iracing",
+    "thumbnailUrl": "/thumbnails/iracing.webp",
+    "viewers": "0",
+    "tags": [
+      "Driving/Racing Game"
+    ]
+  },
+  {
+    "title": "Meditation & Mindfulness",
+    "slug": "/category/meditation-and-mindfulness",
+    "thumbnailUrl": "/thumbnails/meditation-and-mindfulness.webp",
+    "viewers": "0",
+    "tags": []
+  },
+  {
+    "title": "Uncharted 4: A Thief's End",
+    "slug": "/category/uncharted-4-a-thief-s-end",
+    "thumbnailUrl": "/thumbnails/uncharted-4-a-thief-s-end.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "God of War Ragnarök",
+    "slug": "/category/god-of-war-ragnarok",
+    "thumbnailUrl": "/thumbnails/god-of-war-ragnarok.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Baldur's Gate 3",
+    "slug": "/category/baldurs-gate-3",
+    "thumbnailUrl": "/thumbnails/baldurs-gate-3.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Fantasy",
+      "RPG",
+      "TBS"
+    ]
+  },
+  {
+    "title": "Game Development",
+    "slug": "/category/game-development",
+    "thumbnailUrl": "/thumbnails/game-development.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL",
+      "Creative"
+    ]
+  },
+  {
+    "title": "Feather Party",
+    "slug": "/category/feather-party",
+    "thumbnailUrl": "/thumbnails/feather-party.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Platform"
+    ]
+  },
+  {
+    "title": "SCUM",
+    "slug": "/category/SCUM",
+    "thumbnailUrl": "/thumbnails/SCUM.webp",
+    "viewers": "0",
+    "tags": [
+      "MMO",
+      "Action",
+      "Survival",
+      "Indie Game",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Persona 5 Royal",
+    "slug": "/category/persona-5-royal",
+    "thumbnailUrl": "/thumbnails/persona-5-royal.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)",
+      "Turn-based strategy (TBS)",
+      "Action",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Heavy Rain",
+    "slug": "/category/heavy-rain",
+    "thumbnailUrl": "/thumbnails/heavy-rain.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Story"
+    ]
+  },
+  {
+    "title": "Final Doom",
+    "slug": "/category/final-doom",
+    "thumbnailUrl": "/thumbnails/final-doom.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Horror",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "The Lord of the Rings: The Battle for Middle-earth II - The Rise of the Witch-king",
+    "slug": "/category/the-lord-of-the-rings-the-battle-for-middle-earth-ii-the-rise-of-the-witch-king",
+    "thumbnailUrl": "/thumbnails/the-lord-of-the-rings-the-battle-for-middle-earth-ii-the-rise-of-the-witch-king.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Fighting",
+      "Real Time Strategy (RTS)",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "The Bingo Room",
+    "slug": "/category/the-bingo-room",
+    "thumbnailUrl": "/thumbnails/the-bingo-room.webp",
+    "viewers": "0",
+    "tags": [
+      "Board game"
+    ]
+  },
+  {
+    "title": "Forza Horizon 5",
+    "slug": "/category/forza-horizon-5",
+    "thumbnailUrl": "/thumbnails/forza-horizon-5.webp",
+    "viewers": "0",
+    "tags": [
+      "Driving/Racing Game",
+      "Open World",
+      "Action"
+    ]
+  },
+  {
+    "title": "Grounded 2",
+    "slug": "/category/grounded-2",
+    "thumbnailUrl": "/thumbnails/grounded-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Survival",
+      "Action"
+    ]
+  },
+  {
+    "title": "Jet Set Radio Future",
+    "slug": "/category/jet-set-radio-future",
+    "thumbnailUrl": "/thumbnails/jet-set-radio-future.webp",
+    "viewers": "0",
+    "tags": [
+      "Music",
+      "Platform",
+      "Sport",
+      "Racing"
+    ]
+  },
+  {
+    "title": "Aska",
+    "slug": "/category/aska",
+    "thumbnailUrl": "/thumbnails/aska.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Action"
+    ]
+  },
+  {
+    "title": "Gakuen Idolmaster",
+    "slug": "/category/gakuen-idolmaster",
+    "thumbnailUrl": "/thumbnails/gakuen-idolmaster.webp",
+    "viewers": "0",
+    "tags": [
+      "Music"
+    ]
+  },
+  {
+    "title": "Stellar Blade",
+    "slug": "/category/stellar-blade",
+    "thumbnailUrl": "/thumbnails/stellar-blade.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Smite 2",
+    "slug": "/category/smite-2",
+    "thumbnailUrl": "/thumbnails/smite-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Undisputed",
+    "slug": "/category/undisputed",
+    "thumbnailUrl": "/thumbnails/undisputed.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting"
+    ]
+  },
+  {
+    "title": "Enshrouded",
+    "slug": "/category/enshrouded",
+    "thumbnailUrl": "/thumbnails/enshrouded.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Call of Duty: Black Ops III",
+    "slug": "/category/call-of-duty:-black-ops-III",
+    "thumbnailUrl": "/thumbnails/call-of-duty_-black-ops-III.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Adventure Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Conan Exiles",
+    "slug": "/category/conan-exiles",
+    "thumbnailUrl": "/thumbnails/conan-exiles.webp",
+    "viewers": "0",
+    "tags": [
+      "MMO",
+      "RPG",
+      "Fighting",
+      "Simulation",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "The First Descendant",
+    "slug": "/category/the-first-descendant",
+    "thumbnailUrl": "/thumbnails/the-first-descendant.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Lethal Company",
+    "slug": "/category/lethal-company",
+    "thumbnailUrl": "/thumbnails/lethal-company.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Terraria",
+    "slug": "/category/terraria",
+    "thumbnailUrl": "/thumbnails/terraria.webp",
+    "viewers": "0",
+    "tags": [
+      "Platformer",
+      "Adventure Game",
+      "RPG",
+      "Strategy",
+      "Indie Game"
+    ]
+  },
+  {
+    "title": "It Takes Two",
+    "slug": "/category/it-takes-two",
+    "thumbnailUrl": "/thumbnails/it-takes-two.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Puzzle",
+      "Action"
+    ]
+  },
+  {
+    "title": "Wrap House Simulator",
+    "slug": "/category/wrap-house-simulator",
+    "thumbnailUrl": "/thumbnails/wrap-house-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Raft",
+    "slug": "/category/raft",
+    "thumbnailUrl": "/thumbnails/raft.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Simulation",
+      "Indie Game",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Resident Evil",
+    "slug": "/category/resident-evil",
+    "thumbnailUrl": "/thumbnails/resident-evil.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Survival",
+      "Action",
+      "Puzzle",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Sea of Thieves: The Legend of Monkey Island",
+    "slug": "/category/sea-of-thieves-the-legend-of-monkey-island",
+    "thumbnailUrl": "/thumbnails/sea-of-thieves-the-legend-of-monkey-island.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Silent Hill f",
+    "slug": "/category/silent-hill-f",
+    "thumbnailUrl": "/thumbnails/silent-hill-f.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Adventure",
+      "Horror",
+      "Action"
+    ]
+  },
+  {
+    "title": "Tom Clancy's Ghost Recon: Breakpoint",
+    "slug": "/category/tom-clancys-ghost-recon-breakpoint",
+    "thumbnailUrl": "/thumbnails/tom-clancys-ghost-recon-breakpoint.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "3D Printing",
+    "slug": "/category/3d-printing",
+    "thumbnailUrl": "/thumbnails/3d-printing.webp",
+    "viewers": "0",
+    "tags": [
+      "3D Print",
+      "Machinery",
+      "Design"
+    ]
+  },
+  {
+    "title": "The Escapists 2",
+    "slug": "/category/the-escapists-2",
+    "thumbnailUrl": "/thumbnails/the-escapists-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Co-op"
+    ]
+  },
+  {
+    "title": "Grand Theft Auto: Vice City - The Definitive Edition",
+    "slug": "/category/grand-theft-auto:-vice-city-the-definitive-edition",
+    "thumbnailUrl": "/thumbnails/grand-theft-auto_-vice-city-the-definitive-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Action",
+      "Open world"
+    ]
+  },
+  {
+    "title": "Elite: Dangerous",
+    "slug": "/category/elite-dangerous",
+    "thumbnailUrl": "/thumbnails/elite-dangerous.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "RPG",
+      "FPS",
+      "Shooter",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "KICK Bounties",
+    "slug": "/category/kick-bounties",
+    "thumbnailUrl": "/thumbnails/kick-bounties.webp",
+    "viewers": "0",
+    "tags": [
+      "Community",
+      "Bounties"
+    ]
+  },
+  {
+    "title": "Jump King",
+    "slug": "/category/jump-king",
+    "thumbnailUrl": "/thumbnails/jump-king.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Indie",
+      "Platform",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Warhammer 40,000: Space Marine II",
+    "slug": "/category/warhammer-40000-space-marine-II",
+    "thumbnailUrl": "/thumbnails/warhammer-40000-space-marine-II.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Marathon",
+    "slug": "/category/marathon",
+    "thumbnailUrl": "/thumbnails/marathon.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Science Fiction"
+    ]
+  },
+  {
+    "title": "She Was 98",
+    "slug": "/category/she-was-98",
+    "thumbnailUrl": "/thumbnails/she-was-98.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Indie",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Warsaken",
+    "slug": "/category/warsaken",
+    "thumbnailUrl": "/thumbnails/warsaken.webp",
+    "viewers": "0",
+    "tags": [
+      "Card & Board Game",
+      "Collecting Card Game - CCG"
+    ]
+  },
+  {
+    "title": "The Outlast Trials",
+    "slug": "/category/the-outlast-trials",
+    "thumbnailUrl": "/thumbnails/the-outlast-trials.webp",
+    "viewers": "0",
+    "tags": [
+      "adventure",
+      "indie",
+      "horror",
+      "action"
+    ]
+  },
+  {
+    "title": "L.A. Noire",
+    "slug": "/category/l-a-noire",
+    "thumbnailUrl": "/thumbnails/l-a-noire.webp",
+    "viewers": "0",
+    "tags": [
+      "Open World",
+      "Action",
+      "Adventure Game",
+      "Strategy",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Garry's Mod",
+    "slug": "/category/garry's-mod",
+    "thumbnailUrl": "/thumbnails/garry_s-mod.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Indie Game",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Makers & Crafting",
+    "slug": "/category/makers-&-crafting",
+    "thumbnailUrl": "/thumbnails/makers-_-crafting.webp",
+    "viewers": "0",
+    "tags": [
+      "Creative"
+    ]
+  },
+  {
+    "title": "Motorsports",
+    "slug": "/category/motorsports",
+    "thumbnailUrl": "/thumbnails/motorsports.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing",
+      "IRL"
+    ]
+  },
+  {
+    "title": "Fever Meme",
+    "slug": "/category/fever-meme",
+    "thumbnailUrl": "/thumbnails/fever-meme.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Action",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Food & Drink",
+    "slug": "/category/food-drink",
+    "thumbnailUrl": "/thumbnails/food-drink.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Kingdom Come: Deliverance",
+    "slug": "/category/kingdom-come:-deliverance",
+    "thumbnailUrl": "/thumbnails/kingdom-come_-deliverance.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Wreckfest",
+    "slug": "/category/wreckfast",
+    "thumbnailUrl": "/thumbnails/wreckfast.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Racing",
+      "Simulator",
+      "Sport",
+      "Racing"
+    ]
+  },
+  {
+    "title": "Dice",
+    "slug": "/category/dice",
+    "thumbnailUrl": "/thumbnails/dice.webp",
+    "viewers": "0",
+    "tags": [
+      "Gambling"
+    ]
+  },
+  {
+    "title": "Visage",
+    "slug": "/category/visage",
+    "thumbnailUrl": "/thumbnails/visage.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Adventure",
+      "Action",
+      "Puzzle",
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Cure: A Hospital Simulator",
+    "slug": "/category/cure-a-hospital-simulator",
+    "thumbnailUrl": "/thumbnails/cure-a-hospital-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Tormented Souls II",
+    "slug": "/category/tormented-souls-ii",
+    "thumbnailUrl": "/thumbnails/tormented-souls-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Monster Super League",
+    "slug": "/category/monster-super-league",
+    "thumbnailUrl": "/thumbnails/monster-super-league.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Simulator",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Iblis3: Phenomena",
+    "slug": "/category/iblis3-phenomena",
+    "thumbnailUrl": "/thumbnails/iblis3-phenomena.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Dealer's Life Legend",
+    "slug": "/category/dealers-life-legend",
+    "thumbnailUrl": "/thumbnails/dealers-life-legend.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Farlight 84",
+    "slug": "/category/farlight-84",
+    "thumbnailUrl": "/thumbnails/farlight-84.webp",
+    "viewers": "0",
+    "tags": [
+      "MOBA",
+      "RPG",
+      "Shooter",
+      "Action",
+      "Survivor"
+    ]
+  },
+  {
+    "title": "Brno Transit",
+    "slug": "/category/brno-transit",
+    "thumbnailUrl": "/thumbnails/brno-transit.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Fat Princess",
+    "slug": "/category/fat-princess",
+    "thumbnailUrl": "/thumbnails/fat-princess.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Action",
+      "Comedy"
+    ]
+  },
+  {
+    "title": "Clash Royale",
+    "slug": "/category/Clash-Royale",
+    "thumbnailUrl": "/thumbnails/Clash-Royale.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "RTS",
+      "Card & Board Game",
+      "Mobile Game"
+    ]
+  },
+  {
+    "title": "San Andreas Multiplayer",
+    "slug": "/category/san-andreas-multiplayer",
+    "thumbnailUrl": "/thumbnails/san-andreas-multiplayer.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Science & Technology",
+    "slug": "/category/science-technology",
+    "thumbnailUrl": "/thumbnails/science-technology.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Gray Zone Warfare",
+    "slug": "/category/gray-zone-warfare",
+    "thumbnailUrl": "/thumbnails/gray-zone-warfare.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Action"
+    ]
+  },
+  {
+    "title": "Sleeping Dogs: Definitive Edition",
+    "slug": "/category/sleeping-dogs-definitive-edition",
+    "thumbnailUrl": "/thumbnails/sleeping-dogs-definitive-edition.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action",
+      "Open World",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Sid Meier's Civilization VI",
+    "slug": "/category/Sid-Meier's-Civilization-VI",
+    "thumbnailUrl": "/thumbnails/Sid-Meier_s-Civilization-VI.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Simulation"
+    ]
+  },
+  {
+    "title": "Need for Speed: Most Wanted (2005)",
+    "slug": "/category/need-for-speed-most-wanted-2005",
+    "thumbnailUrl": "/thumbnails/need-for-speed-most-wanted-2005.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing"
+    ]
+  },
+  {
+    "title": "Red Dead Redemption",
+    "slug": "/category/red-dead-redemption",
+    "thumbnailUrl": "/thumbnails/red-dead-redemption.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Open World",
+      "Adventure Game",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Quizei",
+    "slug": "/category/quizei",
+    "thumbnailUrl": "/thumbnails/quizei.webp",
+    "viewers": "0",
+    "tags": [
+      "Quiz"
+    ]
+  },
+  {
+    "title": "Resident Evil 7: Biohazard",
+    "slug": "/category/Resident-Evil-7:-Biohazard",
+    "thumbnailUrl": "/thumbnails/Resident-Evil-7_-Biohazard.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Horror",
+      "Adventure Game",
+      "FPS",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Evolit",
+    "slug": "/category/evolit",
+    "thumbnailUrl": "/thumbnails/evolit.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Pragmata",
+    "slug": "/category/pragmata",
+    "thumbnailUrl": "/thumbnails/pragmata.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "EverQuest",
+    "slug": "/category/everquest",
+    "thumbnailUrl": "/thumbnails/everquest.webp",
+    "viewers": "0",
+    "tags": [
+      "MMO",
+      "Open World",
+      "RPG",
+      "Adventure Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Ninja Gaiden II Black",
+    "slug": "/category/ninja-gaiden-ii-black",
+    "thumbnailUrl": "/thumbnails/ninja-gaiden-ii-black.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Hack and Slash",
+      "Action"
+    ]
+  },
+  {
+    "title": "Gears 5",
+    "slug": "/category/gears-5",
+    "thumbnailUrl": "/thumbnails/gears-5.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Horror",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Schedule I",
+    "slug": "/category/schedule-i",
+    "thumbnailUrl": "/thumbnails/schedule-i.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator"
+    ]
+  },
+  {
+    "title": "James Bond 007: Everything or Nothing",
+    "slug": "/category/james-bond-007:-everything-or-nothing",
+    "thumbnailUrl": "/thumbnails/james-bond-007_-everything-or-nothing.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Sport",
+      "Action"
+    ]
+  },
+  {
+    "title": "Final Fantasy VII",
+    "slug": "/category/final-fantasy-vii-og",
+    "thumbnailUrl": "/thumbnails/final-fantasy-vii-og.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Factorio",
+    "slug": "/category/factorio",
+    "thumbnailUrl": "/thumbnails/factorio.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Simulation",
+      "Indie Game",
+      "Survival",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Planet Crafter",
+    "slug": "/category/planet-crafter",
+    "thumbnailUrl": "/thumbnails/planet-crafter.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Survival",
+      "Open World",
+      "Simulation"
+    ]
+  },
+  {
+    "title": "Tabletop RPGs",
+    "slug": "/category/tabletop-rpgs",
+    "thumbnailUrl": "/thumbnails/tabletop-rpgs.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG"
+    ]
+  },
+  {
+    "title": "Ranch Simulator",
+    "slug": "/category/ranch-simulator",
+    "thumbnailUrl": "/thumbnails/ranch-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Indie Game",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Megabonk",
+    "slug": "/category/megabonk",
+    "thumbnailUrl": "/thumbnails/megabonk.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Play Things",
+    "slug": "/category/play-things",
+    "thumbnailUrl": "/thumbnails/play-things.webp",
+    "viewers": "0",
+    "tags": []
+  },
+  {
+    "title": "Fitness and Health",
+    "slug": "/category/fitness-and-health",
+    "thumbnailUrl": "/thumbnails/fitness-and-health.webp",
+    "viewers": "0",
+    "tags": [
+      "IRL"
+    ]
+  },
+  {
+    "title": "Sexy Sniper",
+    "slug": "/category/sexy-sniper",
+    "thumbnailUrl": "/thumbnails/sexy-sniper.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Action"
+    ]
+  },
+  {
+    "title": "Construction Simulator",
+    "slug": "/category/construction-simulator",
+    "thumbnailUrl": "/thumbnails/construction-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Multiplayer",
+      "Online Co-Op"
+    ]
+  },
+  {
+    "title": "Solarpunk",
+    "slug": "/category/solarpunk",
+    "thumbnailUrl": "/thumbnails/solarpunk.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Resident Evil 3: Nemesis",
+    "slug": "/category/Resident-Evil-3:-Nemesis",
+    "thumbnailUrl": "/thumbnails/Resident-Evil-3_-Nemesis.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Survival",
+      "Adventure Game",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Marvel Cosmic Invasion",
+    "slug": "/category/marvel-cosmic-invasion",
+    "thumbnailUrl": "/thumbnails/marvel-cosmic-invasion.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Hack and slash",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Call of Duty: Modern Warfare II",
+    "slug": "/category/call-of-duty-modern-warfare-ii",
+    "thumbnailUrl": "/thumbnails/call-of-duty-modern-warfare-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Action"
+    ]
+  },
+  {
+    "title": "Marvel Contest of Champions",
+    "slug": "/category/marvel-contest-of-champions",
+    "thumbnailUrl": "/thumbnails/marvel-contest-of-champions.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Fighting",
+      "Action"
+    ]
+  },
+  {
+    "title": "Skate.",
+    "slug": "/category/skate",
+    "thumbnailUrl": "/thumbnails/skate.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Supermarket Together",
+    "slug": "/category/supermarket-together",
+    "thumbnailUrl": "/thumbnails/supermarket-together.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie"
+    ]
+  },
+  {
+    "title": "Lies of P",
+    "slug": "/category/lies-of-pi",
+    "thumbnailUrl": "/thumbnails/lies-of-pi.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Action",
+      "Horror",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Call of Duty: Modern Warfare III",
+    "slug": "/category/call-of-duty-modern-warfare-iii",
+    "thumbnailUrl": "/thumbnails/call-of-duty-modern-warfare-iii.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Warfare"
+    ]
+  },
+  {
+    "title": "Goals",
+    "slug": "/category/goals",
+    "thumbnailUrl": "/thumbnails/goals.webp",
+    "viewers": "0",
+    "tags": [
+      "Sport",
+      "Multiplayer"
+    ]
+  },
+  {
+    "title": "For Honor",
+    "slug": "/category/for-honor",
+    "thumbnailUrl": "/thumbnails/for-honor.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Fighting"
+    ]
+  },
+  {
+    "title": "Tomb Raider IV•V•VI Remastered",
+    "slug": "/category/tomb-raider-iv-star-v-star-vi-remastered",
+    "thumbnailUrl": "/thumbnails/tomb-raider-iv-star-v-star-vi-remastered.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Strategy",
+      "Puzzle",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Dead Space (2023)",
+    "slug": "/category/dead-space-2023",
+    "thumbnailUrl": "/thumbnails/dead-space-2023.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Horror",
+      "Shooter",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Arcade Paradise",
+    "slug": "/category/arcade-paradise",
+    "thumbnailUrl": "/thumbnails/arcade-paradise.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Arcade",
+      "Indie",
+      "Puzzle",
+      "Action"
+    ]
+  },
+  {
+    "title": "Deep Rock Galactic: Survivor",
+    "slug": "/category/deep-rock-galactic:-survivor",
+    "thumbnailUrl": "/thumbnails/deep-rock-galactic_-survivor.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Mouse: P.I. For Hire",
+    "slug": "/category/mouse-pi-for-hire",
+    "thumbnailUrl": "/thumbnails/mouse-pi-for-hire.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Gang Beasts",
+    "slug": "/category/gang-beasts",
+    "thumbnailUrl": "/thumbnails/gang-beasts.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Comedy",
+      "Party",
+      "FIghting",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Heroes of Might and Magic III: Horn of the Abyss",
+    "slug": "/category/heroes-of-might-and-magic-iii:-horn-of-the-abyss",
+    "thumbnailUrl": "/thumbnails/heroes-of-might-and-magic-iii_-horn-of-the-abyss.webp",
+    "viewers": "0",
+    "tags": [
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Hollow Knight",
+    "slug": "/category/hollow-knight",
+    "thumbnailUrl": "/thumbnails/hollow-knight.webp",
+    "viewers": "0",
+    "tags": [
+      "Platformer",
+      "Action",
+      "Indie Game",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "The Occultist",
+    "slug": "/category/the-occultist",
+    "thumbnailUrl": "/thumbnails/the-occultist.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Indie",
+      "Horror",
+      "Mystery"
+    ]
+  },
+  {
+    "title": "CS2D",
+    "slug": "/category/cs2d",
+    "thumbnailUrl": "/thumbnails/cs2d.webp",
+    "viewers": "0",
+    "tags": [
+      "Tactical",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Final Fantasy XVI",
+    "slug": "/category/final-fantasy-xvi",
+    "thumbnailUrl": "/thumbnails/final-fantasy-xvi.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Action",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Call Of Duty: Modern Warfare",
+    "slug": "/category/call-of-duty:-modern-warfare",
+    "thumbnailUrl": "/thumbnails/call-of-duty_-modern-warfare.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Action"
+    ]
+  },
+  {
+    "title": "Star Wars Battlefront II",
+    "slug": "/category/Star-Wars-Battlefront-II",
+    "thumbnailUrl": "/thumbnails/Star-Wars-Battlefront-II.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "FPS",
+      "Shooter",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "GeoGuessr",
+    "slug": "/category/geoguessr",
+    "thumbnailUrl": "/thumbnails/geoguessr.webp",
+    "viewers": "0",
+    "tags": [
+      "Educational Game",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Kompete",
+    "slug": "/category/kompete",
+    "thumbnailUrl": "/thumbnails/kompete.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Sport",
+      "Racing"
+    ]
+  },
+  {
+    "title": "Green Hell",
+    "slug": "/category/green-hell",
+    "thumbnailUrl": "/thumbnails/green-hell.webp",
+    "viewers": "0",
+    "tags": [
+      "Open World",
+      "Survival",
+      "Online Co-Op"
+    ]
+  },
+  {
+    "title": "Jurassic World Evolution 2",
+    "slug": "/category/jurrasic-world-evolution-2",
+    "thumbnailUrl": "/thumbnails/jurrasic-world-evolution-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Call of Duty: WWII",
+    "slug": "/category/call-of-duty:-wwii",
+    "thumbnailUrl": "/thumbnails/call-of-duty_-wwii.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "SOMA",
+    "slug": "/category/soma",
+    "thumbnailUrl": "/thumbnails/soma.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Horror Indie",
+      "Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Hearthstone",
+    "slug": "/category/Hearthstone",
+    "thumbnailUrl": "/thumbnails/Hearthstone.webp",
+    "viewers": "0",
+    "tags": [
+      "Card & Board Game"
+    ]
+  },
+  {
+    "title": "Little Nightmares II",
+    "slug": "/category/little-nightmares-II",
+    "thumbnailUrl": "/thumbnails/little-nightmares-II.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Platform",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Elden Ring: Nightreign",
+    "slug": "/category/elden-ring-nightreign",
+    "thumbnailUrl": "/thumbnails/elden-ring-nightreign.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG"
+    ]
+  },
+  {
+    "title": "Car Dealer Simulator",
+    "slug": "/category/car-dealer-simulator",
+    "thumbnailUrl": "/thumbnails/car-dealer-simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Strategy",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Ghost Janitors",
+    "slug": "/category/ghost-janitors",
+    "thumbnailUrl": "/thumbnails/ghost-janitors.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Indie",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Pokemon Unite",
+    "slug": "/category/pokemon-unite",
+    "thumbnailUrl": "/thumbnails/pokemon-unite.webp",
+    "viewers": "0",
+    "tags": [
+      "MOBA",
+      "Action"
+    ]
+  },
+  {
+    "title": "Monster Hunter Wilds",
+    "slug": "/category/monster-hunter-wilds",
+    "thumbnailUrl": "/thumbnails/monster-hunter-wilds.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "RPG",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Uncharted: Legacy of Thieves Collection",
+    "slug": "/category/uncharted:legacy-of-thieves-collection",
+    "thumbnailUrl": "/thumbnails/uncharted_legacy-of-thieves-collection.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Shooter",
+      "Stealth",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Captain of Industry",
+    "slug": "/category/captain-of-industry",
+    "thumbnailUrl": "/thumbnails/captain-of-industry.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "DmC: Devil May Cry",
+    "slug": "/category/dmc:devil-may-cry",
+    "thumbnailUrl": "/thumbnails/dmc_devil-may-cry.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Alien: Isolation",
+    "slug": "/category/alien:-isolation",
+    "thumbnailUrl": "/thumbnails/alien_-isolation.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Horror",
+      "Adventure Game",
+      "Stealth",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Dark Souls II: Scholar of the First Sin",
+    "slug": "/category/dark-souls-ii-scholar-of-the-first-sin",
+    "thumbnailUrl": "/thumbnails/dark-souls-ii-scholar-of-the-first-sin.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Slay the Spire II",
+    "slug": "/category/slay-the-spire-ii",
+    "thumbnailUrl": "/thumbnails/slay-the-spire-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Card & Board Game",
+      "Indie",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Forever Skies",
+    "slug": "/category/forever-skies",
+    "thumbnailUrl": "/thumbnails/forever-skies.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Zenless Zone Zero",
+    "slug": "/category/zenless-zone-zero",
+    "thumbnailUrl": "/thumbnails/zenless-zone-zero.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-Playing (RPG)",
+      "Action",
+      "Fantasy",
+      "Science Fiction"
+    ]
+  },
+  {
+    "title": "Librarian: Tidy Up the Arcane Library!",
+    "slug": "/category/librarian-tidy-up-the-arcane-library",
+    "thumbnailUrl": "/thumbnails/librarian-tidy-up-the-arcane-library.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Lords of the Fallen",
+    "slug": "/category/lords-of-the-fallen",
+    "thumbnailUrl": "/thumbnails/lords-of-the-fallen.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing(RPG)",
+      "Action"
+    ]
+  },
+  {
+    "title": "Sonic Unleashed",
+    "slug": "/category/sonic-onleashed",
+    "thumbnailUrl": "/thumbnails/sonic-onleashed.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Platform",
+      "HackAndSlash"
+    ]
+  },
+  {
+    "title": "Ark: Survival Evolved",
+    "slug": "/category/Ark:-Survival-Evolved",
+    "thumbnailUrl": "/thumbnails/Ark_-Survival-Evolved.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "FPS"
+    ]
+  },
+  {
+    "title": "The Walking Dead: Season Two",
+    "slug": "/category/the-walking-dead-season-two",
+    "thumbnailUrl": "/thumbnails/the-walking-dead-season-two.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Point-and-click",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Palia",
+    "slug": "/category/palia",
+    "thumbnailUrl": "/thumbnails/palia.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Metro Exodus",
+    "slug": "/category/metro-exodus",
+    "thumbnailUrl": "/thumbnails/metro-exodus.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "SnowRunner",
+    "slug": "/category/snowrunner",
+    "thumbnailUrl": "/thumbnails/snowrunner.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Driving/Racing Game",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Destiny",
+    "slug": "/category/destiny",
+    "thumbnailUrl": "/thumbnails/destiny.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Grounded",
+    "slug": "/category/grounded",
+    "thumbnailUrl": "/thumbnails/grounded.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "Action",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Dying Light",
+    "slug": "/category/dying-light",
+    "thumbnailUrl": "/thumbnails/dying-light.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Resident Evil Code: Veronica",
+    "slug": "/category/resident-evil-code-veronica",
+    "thumbnailUrl": "/thumbnails/resident-evil-code-veronica.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Horror",
+      "Survival",
+      "Action"
+    ]
+  },
+  {
+    "title": "Quarantine Zone: The Last Check",
+    "slug": "/category/quarantine-zone-the-last-check",
+    "thumbnailUrl": "/thumbnails/quarantine-zone-the-last-check.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Hollow Knight: Silksong",
+    "slug": "/category/hollow-knight-silksong",
+    "thumbnailUrl": "/thumbnails/hollow-knight-silksong.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Platform"
+    ]
+  },
+  {
+    "title": "The Binding of Isaac: Rebirth",
+    "slug": "/category/the-binding-of-isaac:rebirth",
+    "thumbnailUrl": "/thumbnails/the-binding-of-isaac_rebirth.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "RPG",
+      "Adventure Game",
+      "Arcade",
+      "Indie Game"
+    ]
+  },
+  {
+    "title": "Oh Demon! Fix my TV",
+    "slug": "/category/oh-demon-fix-my-tv",
+    "thumbnailUrl": "/thumbnails/oh-demon-fix-my-tv.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Indie",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Cuphead",
+    "slug": "/category/Cuphead",
+    "thumbnailUrl": "/thumbnails/Cuphead.webp",
+    "viewers": "0",
+    "tags": [
+      "Platformer"
+    ]
+  },
+  {
+    "title": "Farming Simulator 22",
+    "slug": "/category/farming-simulator-22",
+    "thumbnailUrl": "/thumbnails/farming-simulator-22.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Open World"
+    ]
+  },
+  {
+    "title": "World of Warships",
+    "slug": "/category/World-of-Warships",
+    "thumbnailUrl": "/thumbnails/World-of-Warships.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "FPS",
+      "Shooter",
+      "RTS",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Sonic Blast Man",
+    "slug": "/category/sonic-blast-man",
+    "thumbnailUrl": "/thumbnails/sonic-blast-man.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Fighting",
+      "Arcade"
+    ]
+  },
+  {
+    "title": "Silent Hill 2 Remake",
+    "slug": "/category/silent-hill-2--1",
+    "thumbnailUrl": "/thumbnails/silent-hill-2--1.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Happy's Humble Burger Farm",
+    "slug": "/category/happys-humble-burger-farm",
+    "thumbnailUrl": "/thumbnails/happys-humble-burger-farm.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Arcade",
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Team Fortress 2",
+    "slug": "/category/team-fortress-2",
+    "thumbnailUrl": "/thumbnails/team-fortress-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Abiotic Factor",
+    "slug": "/category/abiotic-factor",
+    "thumbnailUrl": "/thumbnails/abiotic-factor.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "RPG",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Tom Clancy's Ghost Recon Wildlands",
+    "slug": "/category/tom-clancy's-ghost-recon-wildlands",
+    "thumbnailUrl": "/thumbnails/tom-clancy_s-ghost-recon-wildlands.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "FPS",
+      "Adventure Game",
+      "Action",
+      "Stealth"
+    ]
+  },
+  {
+    "title": "Garena Free Fire Max",
+    "slug": "/category/garena-free-fire-max",
+    "thumbnailUrl": "/thumbnails/garena-free-fire-max.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action"
+    ]
+  },
+  {
+    "title": "Cult of the Lamb",
+    "slug": "/category/cult-of-the-lamb",
+    "thumbnailUrl": "/thumbnails/cult-of-the-lamb.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Hack and slash",
+      "Indie",
+      "RPG",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Dune: Awakening",
+    "slug": "/category/dune-awakening",
+    "thumbnailUrl": "/thumbnails/dune-awakening.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Gran Turismo 7",
+    "slug": "/category/gran-turismo-7",
+    "thumbnailUrl": "/thumbnails/gran-turismo-7.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Driving/Racing Game",
+      "Sports Game"
+    ]
+  },
+  {
+    "title": "Vintage Story",
+    "slug": "/category/vintage-story",
+    "thumbnailUrl": "/thumbnails/vintage-story.webp",
+    "viewers": "0",
+    "tags": [
+      "Survival",
+      "Singleplayer",
+      "Multiplayer"
+    ]
+  },
+  {
+    "title": "Battlegrounds Mobile India",
+    "slug": "/category/battlegrounds-mobile-india",
+    "thumbnailUrl": "/thumbnails/battlegrounds-mobile-india.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Adventure",
+      "Action"
+    ]
+  },
+  {
+    "title": "Street Fighter 6",
+    "slug": "/category/Street-Fighter-6",
+    "thumbnailUrl": "/thumbnails/Street-Fighter-6.webp",
+    "viewers": "0",
+    "tags": [
+      "Arcade",
+      "Fighting"
+    ]
+  },
+  {
+    "title": "Split Fiction",
+    "slug": "/category/split-fiction",
+    "thumbnailUrl": "/thumbnails/split-fiction.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Assassin's Creed Shadows",
+    "slug": "/category/assassins-creed-shadows",
+    "thumbnailUrl": "/thumbnails/assassins-creed-shadows.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Coin Pusher Casino",
+    "slug": "/category/coin-pusher-casino",
+    "thumbnailUrl": "/thumbnails/coin-pusher-casino.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Microsoft Flight Simulator",
+    "slug": "/category/Microsoft-Flight-Simulator",
+    "thumbnailUrl": "/thumbnails/Microsoft-Flight-Simulator.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Flight Simulator"
+    ]
+  },
+  {
+    "title": "Heroes of the Storm",
+    "slug": "/category/heroes-of-the-storm",
+    "thumbnailUrl": "/thumbnails/heroes-of-the-storm.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Fantasy",
+      "MOBA",
+      "Sci-fi"
+    ]
+  },
+  {
+    "title": "Pokemon Scarlet/Violet",
+    "slug": "/category/pokemon-scarlet-violet",
+    "thumbnailUrl": "/thumbnails/pokemon-scarlet-violet.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure Game"
+    ]
+  },
+  {
+    "title": "Pokemon Legends: Z-A",
+    "slug": "/category/pokemon-legends-z-a",
+    "thumbnailUrl": "/thumbnails/pokemon-legends-z-a.webp",
+    "viewers": "0",
+    "tags": []
+  },
+  {
+    "title": "Roblox Studio",
+    "slug": "/category/roblox-studio",
+    "thumbnailUrl": "/thumbnails/roblox-studio.webp",
+    "viewers": "0",
+    "tags": []
+  },
+  {
+    "title": "Life is Strange: Reunion",
+    "slug": "/category/life-is-strange-reunion",
+    "thumbnailUrl": "/thumbnails/life-is-strange-reunion.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Mafia 3",
+    "slug": "/category/mafia-3",
+    "thumbnailUrl": "/thumbnails/mafia-3.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Need for Speed Unbound",
+    "slug": "/category/Need-for-Speed-Unbound",
+    "thumbnailUrl": "/thumbnails/Need-for-Speed-Unbound.webp",
+    "viewers": "0",
+    "tags": [
+      "Driving/Racing Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Escape from Tarkov: Arena",
+    "slug": "/category/escape-from-tarkov-arena",
+    "thumbnailUrl": "/thumbnails/escape-from-tarkov-arena.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Strategy",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "Ragnarok Online",
+    "slug": "/category/ragnarok-online",
+    "thumbnailUrl": "/thumbnails/ragnarok-online.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-Playing (RPG)"
+    ]
+  },
+  {
+    "title": "Hover: Revolt of Gamers",
+    "slug": "/category/hover:revolt-of-gamers",
+    "thumbnailUrl": "/thumbnails/hover_revolt-of-gamers.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Platform",
+      "Racing"
+    ]
+  },
+  {
+    "title": "Madison",
+    "slug": "/category/madison",
+    "thumbnailUrl": "/thumbnails/madison.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Puzzle",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Fortnite: Save the World",
+    "slug": "/category/fortnite-save-the-world",
+    "thumbnailUrl": "/thumbnails/fortnite-save-the-world.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Kingdom Two Crowns",
+    "slug": "/category/kingdom-two-crowns",
+    "thumbnailUrl": "/thumbnails/kingdom-two-crowns.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Arcade",
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "The Last Caretaker",
+    "slug": "/category/the-last-caretaker",
+    "thumbnailUrl": "/thumbnails/the-last-caretaker.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Action",
+      "Science Fiction"
+    ]
+  },
+  {
+    "title": "Geometry Dash",
+    "slug": "/category/geometry-dash",
+    "thumbnailUrl": "/thumbnails/geometry-dash.webp",
+    "viewers": "0",
+    "tags": [
+      "Singleplayer",
+      "Arcade",
+      "Platformer"
+    ]
+  },
+  {
+    "title": "Heartopia",
+    "slug": "/category/heartopia",
+    "thumbnailUrl": "/thumbnails/heartopia.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulation",
+      "Indie Game"
+    ]
+  },
+  {
+    "title": "Uncharted: Drake's Fortune",
+    "slug": "/category/uncharted:-drakes-fortune",
+    "thumbnailUrl": "/thumbnails/uncharted_-drakes-fortune.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Platform",
+      "Shooter",
+      "Action",
+      "Fantasy",
+      "Historical"
+    ]
+  },
+  {
+    "title": "The Evil Within",
+    "slug": "/category/the-evil-within",
+    "thumbnailUrl": "/thumbnails/the-evil-within.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Shooter",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Age of Empires II",
+    "slug": "/category/age-of-empires-ii",
+    "thumbnailUrl": "/thumbnails/age-of-empires-ii.webp",
+    "viewers": "0",
+    "tags": [
+      "Strategy",
+      "RTS"
+    ]
+  },
+  {
+    "title": "Throne and Liberty",
+    "slug": "/category/throne-and-liberty",
+    "thumbnailUrl": "/thumbnails/throne-and-liberty.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "RISK: Global Domination",
+    "slug": "/category/risk:-global-domination",
+    "thumbnailUrl": "/thumbnails/risk_-global-domination.webp",
+    "viewers": "0",
+    "tags": [
+      "Card & Board Game",
+      "Strategy",
+      "Historical"
+    ]
+  },
+  {
+    "title": "Redmatch 2",
+    "slug": "/category/redmatch-2",
+    "thumbnailUrl": "/thumbnails/redmatch-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Gothic",
+    "slug": "/category/gothic",
+    "thumbnailUrl": "/thumbnails/gothic.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "SpongeBob SquarePants: Battle For Bikini Bottom",
+    "slug": "/category/spongebob-squarepants-battle-for-bikini-bottom",
+    "thumbnailUrl": "/thumbnails/spongebob-squarepants-battle-for-bikini-bottom.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Comedy"
+    ]
+  },
+  {
+    "title": "Dispatch",
+    "slug": "/category/dispatch--3",
+    "thumbnailUrl": "/thumbnails/dispatch--3.webp",
+    "viewers": "0",
+    "tags": [
+      "Point-and-click",
+      "Strategy",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Silent Hill 2",
+    "slug": "/category/Silent-Hill-2",
+    "thumbnailUrl": "/thumbnails/Silent-Hill-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Horror",
+      "Adventure Game",
+      "Puzzle",
+      "Survival",
+      "Mystery"
+    ]
+  },
+  {
+    "title": "The Mortuary Assistant",
+    "slug": "/category/the-mortuary-assistant",
+    "thumbnailUrl": "/thumbnails/the-mortuary-assistant.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Call of Duty: Black Ops",
+    "slug": "/category/call-of-duty:-black-ops",
+    "thumbnailUrl": "/thumbnails/call-of-duty_-black-ops.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "FPS",
+      "Action",
+      "Horror",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Risk of Rain Returns",
+    "slug": "/category/risk-of-rain-returns",
+    "thumbnailUrl": "/thumbnails/risk-of-rain-returns.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure game",
+      "Roguelike",
+      "Platformer",
+      "Indie Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "EA Sports College Football 26",
+    "slug": "/category/ea-sports-college-football-26",
+    "thumbnailUrl": "/thumbnails/ea-sports-college-football-26.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Wobbly Life",
+    "slug": "/category/wobbly-life",
+    "thumbnailUrl": "/thumbnails/wobbly-life.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG",
+      "Action",
+      "Comedy"
+    ]
+  },
+  {
+    "title": "Dragon Age: The Veilguard",
+    "slug": "/category/dragon-age-the-veilguard",
+    "thumbnailUrl": "/thumbnails/dragon-age-the-veilguard.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-Playing (RPG)",
+      "Strategy",
+      "Adventure",
+      "Action",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Max Payne 2: The Fall of Max Payne",
+    "slug": "/category/may-payne-2: - the-fall-of-max-payne",
+    "thumbnailUrl": "/thumbnails/may-payne-2__-_the-fall-of-max-payne.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action"
+    ]
+  },
+  {
+    "title": "Kristala",
+    "slug": "/category/kristala",
+    "thumbnailUrl": "/thumbnails/kristala.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Honkai: Star Rail",
+    "slug": "/category/honkai:-star-rail",
+    "thumbnailUrl": "/thumbnails/honkai_-star-rail.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)",
+      "Turn-based strategy (TBS)",
+      "Action",
+      "Fantasy",
+      "Science fiction"
+    ]
+  },
+  {
+    "title": "Blackwake",
+    "slug": "/category/blackwake",
+    "thumbnailUrl": "/thumbnails/blackwake.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Battleship",
+      "Action",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Ghost of Tsushima",
+    "slug": "/category/ghost-of-tsushima",
+    "thumbnailUrl": "/thumbnails/ghost-of-tsushima.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Open World",
+      "Stealth",
+      "Historical",
+      "Drama"
+    ]
+  },
+  {
+    "title": "Battlefield 1",
+    "slug": "/category/battlefield-1",
+    "thumbnailUrl": "/thumbnails/battlefield-1.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "DOOM",
+    "slug": "/category/doom",
+    "thumbnailUrl": "/thumbnails/doom.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "FPS",
+      "Horror",
+      "Action"
+    ]
+  },
+  {
+    "title": "Identity V",
+    "slug": "/category/identity-v",
+    "thumbnailUrl": "/thumbnails/identity-v.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "State of Decay 2",
+    "slug": "/category/state-of-decay-2",
+    "thumbnailUrl": "/thumbnails/state-of-decay-2.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Simulation"
+    ]
+  },
+  {
+    "title": "No More Room in Hell",
+    "slug": "/category/no-more-room-in-hell",
+    "thumbnailUrl": "/thumbnails/no-more-room-in-hell.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Resident Evil: Revelations 2",
+    "slug": "/category/resident-evil-revelations-2",
+    "thumbnailUrl": "/thumbnails/resident-evil-revelations-2.webp",
+    "viewers": "0",
+    "tags": [
+      "zombie",
+      "horror",
+      "survival",
+      "adventure",
+      "shooter"
+    ]
+  },
+  {
+    "title": "Growtopia",
+    "slug": "/category/growtopia",
+    "thumbnailUrl": "/thumbnails/growtopia.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Platform",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Medieval Dynasty",
+    "slug": "/category/medieval-dynasty",
+    "thumbnailUrl": "/thumbnails/medieval-dynasty.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Role-playing (RPG)",
+      "Simulator",
+      "Action",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Dofus",
+    "slug": "/category/dofus",
+    "thumbnailUrl": "/thumbnails/dofus.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Assassin's Creed IV Black Flag",
+    "slug": "/category/assassin's-creed-iv-black-flag",
+    "thumbnailUrl": "/thumbnails/assassin_s-creed-iv-black-flag.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Fantasy",
+      "Open World",
+      "Sandbox",
+      "Stealth"
+    ]
+  },
+  {
+    "title": "Soulframe",
+    "slug": "/category/soulframe",
+    "thumbnailUrl": "/thumbnails/soulframe.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Goddess of Victory: Nikke",
+    "slug": "/category/goddess-of-victory:-nikke",
+    "thumbnailUrl": "/thumbnails/goddess-of-victory_-nikke.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Digimon Masters",
+    "slug": "/category/digimon-masters",
+    "thumbnailUrl": "/thumbnails/digimon-masters.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Rise Online",
+    "slug": "/category/rise-online",
+    "thumbnailUrl": "/thumbnails/rise-online.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Fantasy",
+      "Open world"
+    ]
+  },
+  {
+    "title": "Assassin's Creed Odyssey",
+    "slug": "/category/assassins's-creed-odyssey",
+    "thumbnailUrl": "/thumbnails/assassins_s-creed-odyssey.webp",
+    "viewers": "0",
+    "tags": [
+      "Open World",
+      "RPG",
+      "Singleplayer",
+      "Assassin"
+    ]
+  },
+  {
+    "title": "Inscryption",
+    "slug": "/category/inscryption",
+    "thumbnailUrl": "/thumbnails/inscryption.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Crime Scene Cleaner",
+    "slug": "/category/crime-scene-cleaner",
+    "thumbnailUrl": "/thumbnails/crime-scene-cleaner.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Simulator",
+      "Action"
+    ]
+  },
+  {
+    "title": "ObsCure",
+    "slug": "/category/obscure",
+    "thumbnailUrl": "/thumbnails/obscure.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Mazebound: Hunt, Gather, Run!",
+    "slug": "/category/mazebound-hunt-gather-run",
+    "thumbnailUrl": "/thumbnails/mazebound-hunt-gather-run.webp",
+    "viewers": "0",
+    "tags": [
+      "adventure",
+      "indie"
+    ]
+  },
+  {
+    "title": "Assetto Corsa Competizione",
+    "slug": "/category/assetto-corsa-competizione",
+    "thumbnailUrl": "/thumbnails/assetto-corsa-competizione.webp",
+    "viewers": "0",
+    "tags": [
+      "Driving/Racing Game",
+      "Simulation",
+      "Open World"
+    ]
+  },
+  {
+    "title": "April 24th",
+    "slug": "/category/april-24th",
+    "thumbnailUrl": "/thumbnails/april-24th.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Nioh 3",
+    "slug": "/category/nioh-3",
+    "thumbnailUrl": "/thumbnails/nioh-3.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "osu!",
+    "slug": "/category/osu!",
+    "thumbnailUrl": "/thumbnails/osu_.webp",
+    "viewers": "0",
+    "tags": [
+      "Rhythm & Music Game",
+      "Indie Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Meltopia",
+    "slug": "/category/meltopia",
+    "thumbnailUrl": "/thumbnails/meltopia.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Fight Night Champion",
+    "slug": "/category/fight-night-champion",
+    "thumbnailUrl": "/thumbnails/fight-night-champion.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Simulator",
+      "Sport",
+      "Action",
+      "Drama"
+    ]
+  },
+  {
+    "title": "Dying Light 2: Stay Human",
+    "slug": "/category/dying-light-2:stay-human",
+    "thumbnailUrl": "/thumbnails/dying-light-2_stay-human.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Hytale",
+    "slug": "/category/hytale",
+    "thumbnailUrl": "/thumbnails/hytale.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "All Hail the Orb",
+    "slug": "/category/all-hail-the-orb",
+    "thumbnailUrl": "/thumbnails/all-hail-the-orb.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Marvel's Spider-Man Remastered",
+    "slug": "/category/marvels-spider-man-remastered",
+    "thumbnailUrl": "/thumbnails/marvels-spider-man-remastered.webp",
+    "viewers": "0",
+    "tags": [
+      "Hack and slash/Beat 'em up",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Project Motor Racing",
+    "slug": "/category/project-motor-racing",
+    "thumbnailUrl": "/thumbnails/project-motor-racing.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Star Wars: Jedi Knight - Dark Forces II",
+    "slug": "/category/star-wars-jedi-knight-dark-forces-2",
+    "thumbnailUrl": "/thumbnails/star-wars-jedi-knight-dark-forces-2.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Undertale",
+    "slug": "/category/Undertale",
+    "thumbnailUrl": "/thumbnails/Undertale.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Adventure Game",
+      "Indie Game",
+      "Strategy",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Mir Tankov",
+    "slug": "/category/mir-tankov",
+    "thumbnailUrl": "/thumbnails/mir-tankov.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Action",
+      "Tactical",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Legend of Ymir",
+    "slug": "/category/legend-of-ymir",
+    "thumbnailUrl": "/thumbnails/legend-of-ymir.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Days Gone",
+    "slug": "/category/days-gone",
+    "thumbnailUrl": "/thumbnails/days-gone.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Shooter",
+      "Horror",
+      "Survival"
+    ]
+  },
+  {
+    "title": "Counter-Strike: Global Offensive",
+    "slug": "/category/counter-strike-global-offensive",
+    "thumbnailUrl": "/thumbnails/counter-strike-global-offensive.webp",
+    "viewers": "0",
+    "tags": [
+      "FPS",
+      "Shooter",
+      "Action"
+    ]
+  },
+  {
+    "title": "RV There Yet?",
+    "slug": "/category/rv-there-yet--1",
+    "thumbnailUrl": "/thumbnails/rv-there-yet--1.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Atomic Heart",
+    "slug": "/category/atomic-heart",
+    "thumbnailUrl": "/thumbnails/atomic-heart.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "RPG",
+      "Shooter"
+    ]
+  },
+  {
+    "title": "Pathfinder: Kingmaker",
+    "slug": "/category/pathfinder:-kingmaker",
+    "thumbnailUrl": "/thumbnails/pathfinder_-kingmaker.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Tactical"
+    ]
+  },
+  {
+    "title": "Valor Mortis",
+    "slug": "/category/valor-mortis",
+    "thumbnailUrl": "/thumbnails/valor-mortis.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Backrooms",
+    "slug": "/category/backrooms",
+    "thumbnailUrl": "/thumbnails/backrooms.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Monster Hunter Stories 2: Wings of Ruin",
+    "slug": "/category/monster-hunter-stories-2-wings-of-ruin",
+    "thumbnailUrl": "/thumbnails/monster-hunter-stories-2-wings-of-ruin.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Formula Evolution 2024",
+    "slug": "/category/formula-evolution-2024",
+    "thumbnailUrl": "/thumbnails/formula-evolution-2024.webp",
+    "viewers": "0",
+    "tags": [
+      "Racing",
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "EA Sports UFC 6",
+    "slug": "/category/ea-sports-ufc-6",
+    "thumbnailUrl": "/thumbnails/ea-sports-ufc-6.webp",
+    "viewers": "0",
+    "tags": [
+      "Fighting",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "NHL 26",
+    "slug": "/category/nhl-26",
+    "thumbnailUrl": "/thumbnails/nhl-26.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Fe",
+    "slug": "/category/fe",
+    "thumbnailUrl": "/thumbnails/fe.webp",
+    "viewers": "0",
+    "tags": [
+      "Platform",
+      "Adventure",
+      "Fantasy"
+    ]
+  },
+  {
+    "title": "Borderlands 4",
+    "slug": "/category/borderlands-4",
+    "thumbnailUrl": "/thumbnails/borderlands-4.webp",
+    "viewers": "0",
+    "tags": [
+      "Shooter",
+      "Role-playing (RPG)",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Fallout: New Vegas",
+    "slug": "/category/fallout:-new-vegas",
+    "thumbnailUrl": "/thumbnails/fallout_-new-vegas.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "Open World"
+    ]
+  },
+  {
+    "title": "Mall Simulator 2025",
+    "slug": "/category/mall-simulator-2025-",
+    "thumbnailUrl": "/thumbnails/mall-simulator-2025-.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Marvel's Spider-Man: Miles Morales",
+    "slug": "/category/Marvel's-Spider-Man:-Miles-Morales",
+    "thumbnailUrl": "/thumbnails/Marvel_s-Spider-Man_-Miles-Morales.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure Game",
+      "Open World",
+      "Stealth"
+    ]
+  },
+  {
+    "title": "Lost Odyssey",
+    "slug": "/category/lost-odyssey",
+    "thumbnailUrl": "/thumbnails/lost-odyssey.webp",
+    "viewers": "0",
+    "tags": [
+      "Role-playing (RPG)",
+      "Turn-based strategy (TBS)"
+    ]
+  },
+  {
+    "title": "Puyo Puyo Tetris",
+    "slug": "/category/puyo-puyo-tetris",
+    "thumbnailUrl": "/thumbnails/puyo-puyo-tetris.webp",
+    "viewers": "0",
+    "tags": [
+      "Puzzle",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "Devil May Cry 5",
+    "slug": "/category/devil-may-cry-5",
+    "thumbnailUrl": "/thumbnails/devil-may-cry-5.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "Adventure",
+      "Horror"
+    ]
+  },
+  {
+    "title": "Donkey Kong Bananza",
+    "slug": "/category/donkey-kong-bananza",
+    "thumbnailUrl": "/thumbnails/donkey-kong-bananza.webp",
+    "viewers": "0",
+    "tags": [
+      "Platform",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Bunny Guys!",
+    "slug": "/category/bunny-guys",
+    "thumbnailUrl": "/thumbnails/bunny-guys.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Sport",
+      "Adventure",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Granblue Fantasy",
+    "slug": "/category/granblue-fantasy",
+    "thumbnailUrl": "/thumbnails/granblue-fantasy.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG",
+      "TBS"
+    ]
+  },
+  {
+    "title": "Captain Tsubasa: Rise of New Champions",
+    "slug": "/category/captain-tsubasa-rise-of-new-champions",
+    "thumbnailUrl": "/thumbnails/captain-tsubasa-rise-of-new-champions.webp",
+    "viewers": "0",
+    "tags": [
+      "Arcade",
+      "Sport"
+    ]
+  },
+  {
+    "title": "Ori and the Blind Forest",
+    "slug": "/category/ori-and-the-blind-forest",
+    "thumbnailUrl": "/thumbnails/ori-and-the-blind-forest.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Platform",
+      "Puzzle"
+    ]
+  },
+  {
+    "title": "Celeste",
+    "slug": "/category/celeste",
+    "thumbnailUrl": "/thumbnails/celeste.webp",
+    "viewers": "0",
+    "tags": [
+      "Platformer",
+      "Indie Game",
+      "Adventure Game",
+      "Action"
+    ]
+  },
+  {
+    "title": "Tekken",
+    "slug": "/category/tekken",
+    "thumbnailUrl": "/thumbnails/tekken.webp",
+    "viewers": "0",
+    "tags": [
+      "tekken"
+    ]
+  },
+  {
+    "title": "Pillars of Eternity",
+    "slug": "/category/pillars-of-enternity",
+    "thumbnailUrl": "/thumbnails/pillars-of-enternity.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Indie",
+      "Strategy",
+      "Role-playing (RPG)"
+    ]
+  },
+  {
+    "title": "Scritchy Scratchy",
+    "slug": "/category/scritchy-scratchy",
+    "thumbnailUrl": "/thumbnails/scritchy-scratchy.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Pacify",
+    "slug": "/category/pacify",
+    "thumbnailUrl": "/thumbnails/pacify.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie"
+    ]
+  },
+  {
+    "title": "Path of Exile",
+    "slug": "/category/path-of-exile",
+    "thumbnailUrl": "/thumbnails/path-of-exile.webp",
+    "viewers": "0",
+    "tags": [
+      "Action",
+      "RPG"
+    ]
+  },
+  {
+    "title": "Streamer Daily",
+    "slug": "/category/streamer-daily",
+    "thumbnailUrl": "/thumbnails/streamer-daily.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Strategy",
+      "Indie",
+      "Adventure"
+    ]
+  },
+  {
+    "title": "Leaf it Alone",
+    "slug": "/category/Leaf it Alone",
+    "thumbnailUrl": "/thumbnails/Leaf_it_Alone.webp",
+    "viewers": "0",
+    "tags": [
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Don't Scream Together",
+    "slug": "/category/dont-scream-together",
+    "thumbnailUrl": "/thumbnails/dont-scream-together.webp",
+    "viewers": "0",
+    "tags": [
+      "Indie",
+      "Horror",
+      "Simulator"
+    ]
+  },
+  {
+    "title": "Runescape",
+    "slug": "/category/runescape",
+    "thumbnailUrl": "/thumbnails/runescape.webp",
+    "viewers": "0",
+    "tags": [
+      "RPG"
+    ]
+  },
+  {
+    "title": "The Long Dark",
+    "slug": "/category/the-long-dark",
+    "thumbnailUrl": "/thumbnails/the-long-dark.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure Game",
+      "FPS",
+      "Shooter",
+      "Simulation",
+      "Strategy"
+    ]
+  },
+  {
+    "title": "World of Sea Battle",
+    "slug": "/category/world-of-sea-battle",
+    "thumbnailUrl": "/thumbnails/world-of-sea-battle.webp",
+    "viewers": "0",
+    "tags": [
+      "Adventure",
+      "Simulator",
+      "Indie"
+    ]
+  },
+  {
+    "title": "Legion TD 2",
+    "slug": "/category/Legion-TD-2",
+    "thumbnailUrl": "/thumbnails/Legion-TD-2.webp",
+    "viewers": "0",
+    "tags": [
+      "fantasy",
+      "real-time strategy",
+      "tower defense",
+      "autobattler"
+    ]
+  }
+]
