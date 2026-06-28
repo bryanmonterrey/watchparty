@@ -101,8 +101,13 @@ Server code is already ported from `../sidebar` (`server/routers/stream.ts`,
 - 🟢 Design: flat solid bands (Cash App / Phantom style, NO gradients), neutral
   compact white feature cards with HugeIcons, font-pixel display, solid-black
   closing CTA. Reusable kit in `components/marketing/` (sections, feature-card).
-- ⬜ Later: company/legal/learn pages (careers, press, contact, /legal/*), and
-  real imagery/mockups when available.
+- 🟢 Design pass (studied cash.app + phantom.com full-page, screenshots in
+  `docs/references/screenshots/`): Cash App-shaped — big left-aligned Geist
+  headlines (pixel = accent only), asymmetric ShowcaseRow splits with iconned
+  panels, neutral feature-card grids, "Explore more" cross-links, Cash App-style
+  closing band (honest value tiles + accent CTA card). No gradients, no pill nav.
+- ⬜ Later: real product imagery in the ShowcasePanel placeholders (drop in app
+  screenshots); company/legal/learn pages (careers, press, contact, /legal/*).
 
 ## 13. iOS app — full completion ⬜
 - ⬜ Complete the Expo iOS app (`mobile/`) end-to-end.
