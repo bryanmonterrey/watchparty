@@ -3,7 +3,7 @@ import {
     ShieldKeyIcon, Key01Icon, SecurityLockIcon,
     Shield01Icon, CheckmarkBadge01Icon, SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Safety" };
@@ -35,12 +35,14 @@ export default function SafetyPage() {
                 secondaryHref="/about"
                 panelTone="bg-soft-blue"
                 panelLabel="Wallet"
+                panelIcon={ShieldKeyIcon}
             />
             <ShowcaseRow
                 title="No seed phrase to lose"
                 body="Swig wallets use multi-party cryptography, so there's no single phrase to leak, and it's non-custodial."
                 panelTone="bg-pastel-yellow"
                 panelLabel="Swig wallet"
+                panelIcon={Key01Icon}
             />
             <ShowcaseRow
                 reverse
@@ -48,12 +50,22 @@ export default function SafetyPage() {
                 body="Scam checks, verified badges, and end-to-end encrypted messages work quietly in the background."
                 panelTone="bg-soft-pink"
                 panelLabel="Protection"
+                panelIcon={SecurityLockIcon}
             />
             <BandSection className="bg-white" title="Security you don't think about">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+            <ExploreMore currentHref="/safety" className="bg-white" />
             <Faq items={FAQ} />
-            <ClosingCta title="Safe from the start" sub="Real security, none of the homework." />
+            <ClosingCta
+                title="Safe from the start"
+                sub="Real security, none of the homework."
+                tiles={[
+                    { title: "Non-custodial", body: "Your keys, your coins." },
+                    { title: "No seed phrase", body: "Swig multi-party wallets." },
+                    { title: "Encrypted", body: "Messages are end-to-end." },
+                ]}
+            />
         </>
     );
 }

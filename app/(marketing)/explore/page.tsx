@@ -3,7 +3,7 @@ import {
     LiveStreaming01Icon, CameraVideoIcon, Compass01Icon,
     AiSearchIcon, PlayListIcon, GridIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Explore" };
@@ -34,12 +34,14 @@ export default function ExplorePage() {
                 secondaryHref="/creators"
                 panelTone="bg-soft-blue"
                 panelLabel="Feed preview"
+                panelIcon={Compass01Icon}
             />
             <ShowcaseRow
                 title="One feed for everything"
                 body="Streams, shorts, and posts in a single timeline, ranked by an open algorithm tuned to you."
                 panelTone="bg-soft-pink"
                 panelLabel="Timeline"
+                panelIcon={GridIcon}
             />
             <ShowcaseRow
                 reverse
@@ -47,12 +49,22 @@ export default function ExplorePage() {
                 body="Live streams surface the instant they start, and save as replays for anyone who missed it."
                 panelTone="bg-pastel-yellow"
                 panelLabel="Live now"
+                panelIcon={LiveStreaming01Icon}
             />
             <BandSection className="bg-white" title="Everything worth watching">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+            <ExploreMore currentHref="/explore" className="bg-white" />
             <Faq items={FAQ} />
-            <ClosingCta title="Jump in" sub="Your feed is waiting." />
+            <ClosingCta
+                title="Jump in"
+                sub="Your feed is waiting."
+                tiles={[
+                    { title: "One feed", body: "Streams, shorts, and posts together." },
+                    { title: "Open algorithm", body: "Ranked by what you actually watch." },
+                    { title: "Always free", body: "Watching and posting cost nothing." },
+                ]}
+            />
         </>
     );
 }

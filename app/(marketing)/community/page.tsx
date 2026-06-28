@@ -3,7 +3,7 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Communities" };
@@ -35,12 +35,14 @@ export default function CommunityPage() {
                 secondaryHref="/explore"
                 panelTone="bg-soft-pink"
                 panelLabel="Communities"
+                panelIcon={UserGroupIcon}
             />
             <ShowcaseRow
                 title="More than a group chat"
                 body="Full servers with channels, roles, and live audio spaces, the place your community actually lives."
                 panelTone="bg-soft-blue"
                 panelLabel="Server view"
+                panelIcon={Mic01Icon}
             />
             <ShowcaseRow
                 reverse
@@ -48,12 +50,23 @@ export default function CommunityPage() {
                 body="Add Discord-style bots for moderation, welcomes, and integrations, so you can focus on the people."
                 panelTone="bg-pastel-yellow"
                 panelLabel="Bots"
+                panelIcon={AiMagicIcon}
             />
             <BandSection className="bg-white" title="Built for belonging">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+            <ExploreMore currentHref="/community" className="bg-white" />
             <Faq items={FAQ} />
-            <ClosingCta title="Build your community" sub="Your people are already here." ctaLabel="Get started" />
+            <ClosingCta
+                title="Build your community"
+                sub="Your people are already here."
+                ctaLabel="Get started"
+                tiles={[
+                    { title: "Servers", body: "Channels for everything you're into." },
+                    { title: "Live spaces", body: "Drop into live audio rooms." },
+                    { title: "Bots", body: "Discord-style automation built in." },
+                ]}
+            />
         </>
     );
 }

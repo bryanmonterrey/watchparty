@@ -3,7 +3,7 @@ import {
     Rocket01Icon, Analytics01Icon, DollarCircleIcon,
     Wallet01Icon, UserGroupIcon, Coins01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Coins" };
@@ -35,12 +35,14 @@ export default function CoinsPage() {
                 secondaryHref="/creators"
                 panelTone="bg-soft-blue"
                 panelLabel="Token launch"
+                panelIcon={Rocket01Icon}
             />
             <ShowcaseRow
                 title="Your community, tokenized"
                 body="Name it, pick an image, and launch on a fair bonding curve. We handle the on-chain setup."
                 panelTone="bg-pastel-yellow"
                 panelLabel="Launch flow"
+                panelIcon={Coins01Icon}
             />
             <ShowcaseRow
                 reverse
@@ -48,12 +50,23 @@ export default function CoinsPage() {
                 body="Buy, sell, and track your coins in-app, with a secure wallet built into every account."
                 panelTone="bg-soft-pink"
                 panelLabel="Trade view"
+                panelIcon={Analytics01Icon}
             />
             <BandSection className="bg-white" title="Tokens, made simple">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+            <ExploreMore currentHref="/coins" className="bg-white" />
             <Faq items={FAQ} />
-            <ClosingCta title="Launch your coin" sub="Your community's token is one tap away." ctaLabel="Launch a coin" />
+            <ClosingCta
+                title="Launch your coin"
+                sub="Your community's token is one tap away."
+                ctaLabel="Launch a coin"
+                tiles={[
+                    { title: "One tap", body: "Launch on a fair bonding curve." },
+                    { title: "Earn fees", body: "Take a cut of every trade." },
+                    { title: "Built-in wallet", body: "Trade right from your account." },
+                ]}
+            />
         </>
     );
 }

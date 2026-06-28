@@ -3,7 +3,7 @@ import {
     LiveStreaming01Icon, Wallet01Icon, Rocket01Icon,
     Analytics01Icon, UserGroupIcon, SparklesIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
 
 export const metadata: Metadata = { title: "Creators" };
@@ -35,6 +35,7 @@ export default function CreatorsPage() {
                 secondaryHref="/coins"
                 panelTone="bg-soft-pink"
                 panelLabel="Creator profile"
+                panelIcon={SparklesIcon}
             />
             <ShowcaseRow
                 title="Go live, get paid"
@@ -43,6 +44,7 @@ export default function CreatorsPage() {
                 ctaHref="/live"
                 panelTone="bg-soft-blue"
                 panelLabel="Live + payouts"
+                panelIcon={LiveStreaming01Icon}
             />
             <ShowcaseRow
                 reverse
@@ -50,12 +52,23 @@ export default function CreatorsPage() {
                 body="Launch a coin, spin up a server, and give your fans a place to rally, all in one app."
                 panelTone="bg-pastel-yellow"
                 panelLabel="Community"
+                panelIcon={UserGroupIcon}
             />
             <BandSection className="bg-white" title="Your creator toolkit">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+            <ExploreMore currentHref="/creators" className="bg-white" />
             <Faq items={FAQ} />
-            <ClosingCta title="Start creating" sub="Your audience is already here." ctaLabel="Start creating" />
+            <ClosingCta
+                title="Start creating"
+                sub="Your audience is already here."
+                ctaLabel="Start creating"
+                tiles={[
+                    { title: "Go live", body: "Stream to an audience that's already here." },
+                    { title: "Get paid", body: "Subscriptions and tips in USDC." },
+                    { title: "Grow", body: "Analytics, reply boost, and verified badges." },
+                ]}
+            />
         </>
     );
 }
