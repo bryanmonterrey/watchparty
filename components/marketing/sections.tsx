@@ -3,6 +3,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { MARKETING_FEATURES } from "./nav-data";
+import { Reveal, Parallax } from "./motion";
 
 // Marketing section kit — Cash App-shaped: big LEFT-aligned Geist headlines
 // (font-pixel is the small accent on eyebrows + the logo, not the headlines, for
@@ -69,7 +70,7 @@ export function MarketingHero({
     return (
         <section className="px-6 pt-6 pb-16 sm:pb-24">
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
-                <div>
+                <Reveal>
                     {eyebrow && (
                         <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/50">{eyebrow}</p>
                     )}
@@ -95,8 +96,12 @@ export function MarketingHero({
                             </Link>
                         )}
                     </div>
-                </div>
-                {visual ?? <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} />}
+                </Reveal>
+                <Reveal delay={0.1}>
+                    <Parallax amount={28}>
+                        {visual ?? <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} />}
+                    </Parallax>
+                </Reveal>
             </div>
         </section>
     );
@@ -172,7 +177,7 @@ export function BoldBlock({
     return (
         <section className={cn("px-6 py-16 sm:py-24", tone)}>
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
-                <div className={cn(reverse && "lg:order-2")}>
+                <Reveal className={cn(reverse && "lg:order-2")}>
                     <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl", dark ? "text-white" : "text-black")}>
                         {title}
                     </h2>
@@ -188,8 +193,8 @@ export function BoldBlock({
                             {ctaLabel}
                         </Link>
                     )}
-                </div>
-                <div className={cn("flex justify-center", reverse && "lg:order-1")}>{visual}</div>
+                </Reveal>
+                <Reveal delay={0.1} className={cn("flex justify-center", reverse && "lg:order-1")}>{visual}</Reveal>
             </div>
         </section>
     );
@@ -210,11 +215,15 @@ export function BandSection({
     return (
         <section className={cn("px-6 py-16 sm:py-24", className)}>
             <div className="mx-auto w-full max-w-6xl">
-                {title && (
-                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>
+                {(title || sub) && (
+                    <Reveal>
+                        {title && (
+                            <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>
+                        )}
+                        {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
+                    </Reveal>
                 )}
-                {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
-                {children && <div className={cn(title || sub ? "mt-10" : "")}>{children}</div>}
+                {children && <Reveal delay={0.05} className={cn(title || sub ? "mt-10" : "")}>{children}</Reveal>}
             </div>
         </section>
     );
@@ -228,24 +237,27 @@ export function ExploreMore({ currentHref, className }: { currentHref: string; c
     return (
         <section className={cn("px-6 py-16 sm:py-24", className)}>
             <div className="mx-auto w-full max-w-6xl">
-                <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">Explore more</h2>
+                <Reveal>
+                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">Explore more</h2>
+                </Reveal>
                 <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    {links.map((f) => (
-                        <Link
-                            key={f.href}
-                            href={f.href}
-                            className="group flex flex-col rounded-2xl bg-white p-6 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-200 ease-out hover:-translate-y-1"
-                        >
-                            <span className={cn("mb-4 grid size-10 place-items-center rounded-xl bg-current/10", f.tone)}>
-                                <HugeiconsIcon icon={f.icon} size={22} strokeWidth={1.8} className={f.tone} />
-                            </span>
-                            <p className="text-lg font-bold tracking-tight text-black">{f.title}</p>
-                            <p className="mt-1 flex-1 text-sm font-semibold leading-snug text-black/65">{f.blurb}</p>
-                            <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-black">
-                                Learn more
-                                <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2.2} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-                            </span>
-                        </Link>
+                    {links.map((f, i) => (
+                        <Reveal key={f.href} delay={i * 0.06}>
+                            <Link
+                                href={f.href}
+                                className="group flex h-full flex-col rounded-2xl bg-white p-6 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-200 ease-out hover:-translate-y-1"
+                            >
+                                <span className={cn("mb-4 grid size-10 place-items-center rounded-xl bg-current/10", f.tone)}>
+                                    <HugeiconsIcon icon={f.icon} size={22} strokeWidth={1.8} className={f.tone} />
+                                </span>
+                                <p className="text-lg font-bold tracking-tight text-black">{f.title}</p>
+                                <p className="mt-1 flex-1 text-sm font-semibold leading-snug text-black/65">{f.blurb}</p>
+                                <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-black">
+                                    Learn more
+                                    <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2.2} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                                </span>
+                            </Link>
+                        </Reveal>
                     ))}
                 </div>
             </div>
@@ -297,26 +309,32 @@ export function ClosingCta({
     return (
         <section className="bg-black px-6 py-20 sm:py-28">
             <div className="mx-auto w-full max-w-6xl">
-                <h2 className="max-w-2xl font-extrabold text-4xl leading-[1.05] tracking-tight text-white sm:text-6xl">{title}</h2>
-                {sub && <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/70">{sub}</p>}
+                <Reveal>
+                    <h2 className="max-w-2xl font-extrabold text-4xl leading-[1.05] tracking-tight text-white sm:text-6xl">{title}</h2>
+                    {sub && <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/70">{sub}</p>}
+                </Reveal>
 
                 {tiles && tiles.length > 0 ? (
                     <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {tiles.map((t) => (
-                            <div key={t.title} className="rounded-2xl p-6 ring-1 ring-white/10">
-                                <p className="font-extrabold text-xl tracking-tight text-white">{t.title}</p>
-                                <p className="mt-2 text-sm font-semibold leading-snug text-white/55">{t.body}</p>
-                            </div>
+                        {tiles.map((t, i) => (
+                            <Reveal key={t.title} delay={i * 0.06}>
+                                <div className="h-full rounded-2xl p-6 ring-1 ring-white/10">
+                                    <p className="font-extrabold text-xl tracking-tight text-white">{t.title}</p>
+                                    <p className="mt-2 text-sm font-semibold leading-snug text-white/55">{t.body}</p>
+                                </div>
+                            </Reveal>
                         ))}
-                        <Link
-                            href={ctaHref}
-                            className="group flex flex-col justify-between rounded-2xl bg-lantern p-6 text-black transition-transform duration-200 hover:-translate-y-1"
-                        >
-                            <p className="font-extrabold text-xl tracking-tight">{ctaLabel}</p>
-                            <span className="mt-8 inline-flex size-10 items-center justify-center rounded-full bg-black/10">
-                                <HugeiconsIcon icon={ArrowRight01Icon} size={20} strokeWidth={2.4} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-                            </span>
-                        </Link>
+                        <Reveal delay={tiles.length * 0.06}>
+                            <Link
+                                href={ctaHref}
+                                className="group flex h-full flex-col justify-between rounded-2xl bg-lantern p-6 text-black transition-transform duration-200 hover:-translate-y-1"
+                            >
+                                <p className="font-extrabold text-xl tracking-tight">{ctaLabel}</p>
+                                <span className="mt-8 inline-flex size-10 items-center justify-center rounded-full bg-black/10">
+                                    <HugeiconsIcon icon={ArrowRight01Icon} size={20} strokeWidth={2.4} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                                </span>
+                            </Link>
+                        </Reveal>
                     </div>
                 ) : (
                     <Link
