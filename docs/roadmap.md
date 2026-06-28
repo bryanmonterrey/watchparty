@@ -101,11 +101,14 @@ Server code is already ported from `../sidebar` (`server/routers/stream.ts`,
 - 🟢 Design: flat solid bands (Cash App / Phantom style, NO gradients), neutral
   compact white feature cards with HugeIcons, font-pixel display, solid-black
   closing CTA. Reusable kit in `components/marketing/` (sections, feature-card).
-- 🟢 Design pass (studied cash.app + phantom.com full-page, screenshots in
-  `docs/references/screenshots/`): Cash App-shaped — big left-aligned Geist
-  headlines (pixel = accent only), asymmetric ShowcaseRow splits with iconned
-  panels, neutral feature-card grids, "Explore more" cross-links, Cash App-style
-  closing band (honest value tiles + accent CTA card). No gradients, no pill nav.
+- 🟢 Design pass v2 (studied cash.app + phantom.com full-page, screenshots in
+  `docs/references/screenshots/`): each feature page now has its OWN product-UI
+  mock (`components/marketing/mocks.tsx`: phone feed/live/coin/wallet screens,
+  earnings/security cards; `/community` uses the real `communitydesign.png`) +
+  accent + a bold full-bleed black `BoldBlock`, so pages are rich and distinct.
+  Big left-aligned Geist headlines (pixel = accent), bigger feature cards,
+  "Explore more" cross-links, Cash App-style closing band. No gradients, no pill
+  nav. Remaining lever: swap mocks for real app screenshots when ready.
 - ⬜ Later: real product imagery in the ShowcasePanel placeholders (drop in app
   screenshots); company/legal/learn pages (careers, press, contact, /legal/*).
 
