@@ -54,6 +54,7 @@ export function MarketingHero({
     panelLabel,
     panelIcon,
     visual,
+    variant = "split",
 }: {
     eyebrow?: string;
     title: React.ReactNode;
@@ -66,42 +67,83 @@ export function MarketingHero({
     panelLabel?: string;
     panelIcon?: IconSvgElement;
     visual?: React.ReactNode;
+    /** split = text left / visual right (default). reverse = visual left.
+        centered = big centered headline with the visual below (manifesto). */
+    variant?: "split" | "reverse" | "centered";
 }) {
+    const centered = variant === "centered";
+    const copy = (
+        <Reveal className={cn(centered && "mx-auto max-w-3xl text-center")}>
+            {eyebrow && (
+                <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/50">{eyebrow}</p>
+            )}
+            <h1
+                className={cn(
+                    "font-extrabold leading-[1.02] tracking-tight text-black",
+                    centered ? "text-5xl sm:text-7xl lg:text-8xl" : "text-4xl sm:text-6xl lg:text-7xl",
+                )}
+            >
+                {title}
+            </h1>
+            <p
+                className={cn(
+                    "mt-5 text-lg font-semibold leading-snug text-black/70 sm:text-xl",
+                    centered ? "mx-auto max-w-xl" : "max-w-md",
+                )}
+            >
+                {sub}
+            </p>
+            <div className={cn("mt-8 flex flex-wrap items-center gap-3", centered && "justify-center")}>
+                <Link
+                    href={ctaHref}
+                    className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                >
+                    {ctaLabel}
+                </Link>
+                {secondaryLabel && secondaryHref && (
+                    <Link
+                        href={secondaryHref}
+                        className="rounded-full bg-white px-8 py-4 text-base font-bold text-black ring-1 ring-black/[0.08] transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                    >
+                        {secondaryLabel}
+                    </Link>
+                )}
+            </div>
+        </Reveal>
+    );
+    const art = (
+        <Reveal delay={0.1} className={cn(centered && "flex justify-center")}>
+            <Parallax amount={28}>
+                {visual ?? <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} />}
+            </Parallax>
+        </Reveal>
+    );
+
+    if (centered) {
+        return (
+            <section className="px-6 pt-10 pb-16 sm:pt-16 sm:pb-24">
+                <div className="mx-auto w-full max-w-6xl">
+                    {copy}
+                    <div className="mt-14">{art}</div>
+                </div>
+            </section>
+        );
+    }
+
     return (
         <section className="px-6 pt-6 pb-16 sm:pb-24">
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
-                <Reveal>
-                    {eyebrow && (
-                        <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/50">{eyebrow}</p>
-                    )}
-                    <h1 className="font-extrabold text-4xl leading-[1.05] tracking-tight text-black sm:text-6xl lg:text-7xl">
-                        {title}
-                    </h1>
-                    <p className="mt-5 max-w-md text-lg font-semibold leading-snug text-black/70 sm:text-xl">
-                        {sub}
-                    </p>
-                    <div className="mt-8 flex flex-wrap items-center gap-3">
-                        <Link
-                            href={ctaHref}
-                            className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
-                        >
-                            {ctaLabel}
-                        </Link>
-                        {secondaryLabel && secondaryHref && (
-                            <Link
-                                href={secondaryHref}
-                                className="rounded-full bg-white px-8 py-4 text-base font-bold text-black ring-1 ring-black/[0.08] transition-transform duration-200 hover:scale-[1.03] active:scale-95"
-                            >
-                                {secondaryLabel}
-                            </Link>
-                        )}
-                    </div>
-                </Reveal>
-                <Reveal delay={0.1}>
-                    <Parallax amount={28}>
-                        {visual ?? <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} />}
-                    </Parallax>
-                </Reveal>
+                {variant === "reverse" ? (
+                    <>
+                        <div className="lg:order-2">{copy}</div>
+                        <div className="lg:order-1">{art}</div>
+                    </>
+                ) : (
+                    <>
+                        {copy}
+                        {art}
+                    </>
+                )}
             </div>
         </section>
     );
