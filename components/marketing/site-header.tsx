@@ -9,9 +9,9 @@ import { MorphMenuIcon } from "@/components/marketing/morph-menu-icon";
 
 // ── EDIT ME: the menu links ──────────────────────────────────────────────
 const NAV_LINKS = [
-  { label: "Explore", href: "#explore" },
-  { label: "Creators", href: "#creators" },
-  { label: "About", href: "#about" },
+  { label: "Explore", href: "/explore" },
+  { label: "Creators", href: "/creators" },
+  { label: "About", href: "/about" },
 ];
 
 export function SiteHeader() {

@@ -8,6 +8,7 @@ import { TextAnimate } from "@/components/ui/text-animate"
 import { BlurInImage } from "@/components/marketing/blur-in-image"
 import { GogglesZoom } from "@/components/marketing/goggles-zoom"
 import { SkaterStack } from "@/components/marketing/skater-stack"
+import { MarketingFooter } from "@/components/marketing/footer"
 
 // Reads the session cookie to bounce signed-in visitors straight to the app,
 // so this route renders per request (no static prerender of the landing page).
@@ -135,98 +136,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ─────────────────────────────────────────────────────────────────────
-          DESIGN-PRINCIPLES PROOF (easily removable): the three sections below
-          apply docs/design-principles.md — gradient atmospheres that dissolve
-          to white, color-identity rounded cards, inset-highlight depth (no drop
-          shadows), aggressive rounding, hover lift. To revert, `git revert` the
-          commit that introduced this block; it's isolated to this file.
-          ───────────────────────────────────────────────────────────────────── */}
+      {/* Explore / Creators / About are real routes now (app/(marketing)/*),
+          reached from the SiteHeader + footer — not in-page anchors. */}
 
-      {/* Explore — gradient atmosphere dissolving to white */}
-      <section
-        id="explore"
-        className="relative overflow-hidden px-6 py-28 sm:py-36"
-        style={{
-          background:
-            "radial-gradient(120% 90% at 50% 100%, var(--color-soft-blue) 0%, var(--color-soft-pink) 38%, #ffffff 100%)",
-        }}
-      >
-        <div className="mx-auto max-w-5xl">
-          <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
-            Watch what&apos;s happening
-          </h2>
-          <p className="mt-5 max-w-xl text-lg font-semibold leading-snug text-black/70 sm:text-2xl">
-            Live streams, shorts, and the timeline you already know, ranked by the same open
-            algorithm. The whole show, in one place.
-          </p>
-        </div>
-      </section>
-
-      {/* Creators — color-identity rounded cards, inset-highlight depth */}
-      <section id="creators" className="bg-pastel-yellow px-6 py-28 sm:py-36">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
-            Built for creators
-          </h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-3">
-            {[
-              { title: "Go live", body: "Broadcast in seconds and bring your audience with you.", fill: "var(--color-soft-pink)" },
-              { title: "Get paid", body: "Subscriptions and creator payouts, settled in USDC.", fill: "var(--color-soft-blue)" },
-              { title: "Launch a coin", body: "Spin up a token for your community in a tap.", fill: "#ffffff" },
-            ].map((c) => (
-              <div
-                key={c.title}
-                style={{ backgroundColor: c.fill }}
-                className="rounded-[28px] p-7 shadow-[inset_0_2px_0_rgba(255,255,255,0.65),inset_0_-3px_10px_rgba(0,0,0,0.04)] transition-transform duration-200 ease-out hover:-translate-y-1"
-              >
-                <p className="font-pixel text-2xl tracking-tighter text-black">{c.title}</p>
-                <p className="mt-2 text-base font-semibold text-black/70">{c.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* About — gradient atmosphere + CTA */}
-      <section
-        id="about"
-        className="relative overflow-hidden px-6 py-28 sm:py-36"
-        style={{
-          background:
-            "radial-gradient(110% 90% at 50% 0%, var(--color-pastel-yellow) 0%, var(--color-soft-pink) 45%, #ffffff 100%)",
-        }}
-      >
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-pixel text-3xl tracking-tighter text-black sm:text-5xl">
-            Crypto Twitter, leveled up
-          </h2>
-          <p className="mt-5 text-lg font-semibold leading-snug text-black/70 sm:text-2xl">
-            watchparty is where the timeline, the stream, and the trade finally live together. The
-            same algorithm you love, now with a stage and a wallet.
-          </p>
-          <Link
-            href="/login"
-            className="mt-8 inline-block rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
-          >
-            Get started
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-black px-6 py-14 text-white">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 sm:flex-row sm:justify-between">
-          <span className="font-pixel text-xl tracking-tighter">watchparty</span>
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-semibold text-white/70">
-            <Link href="#explore" className="transition-colors hover:text-white">Explore</Link>
-            <Link href="#creators" className="transition-colors hover:text-white">Creators</Link>
-            <Link href="#about" className="transition-colors hover:text-white">About</Link>
-            <Link href="/login" className="transition-colors hover:text-white">Log in</Link>
-          </nav>
-          <span className="text-sm text-white/50">© 2026 watchparty</span>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
