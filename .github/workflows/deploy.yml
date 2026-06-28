@@ -136,3 +136,38 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # Loud failure signal: if any deploy job above fails, open (or append to) a
+  # sticky GitHub issue so a broken build can't silently leave production stale.
+  # A failed deploy means prod keeps serving the last *successful* build.
+  notify-failure:
+    needs: [deploy, deploy-realtime, deploy-cron]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or append the deploy-failure issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          short="${COMMIT_SHA:0:7}"
+          subject="${COMMIT_MSG%%$'\n'*}"
+          body="Deploy **failed** for \`${short}\` — ${subject:-(manual run)}
+
+          Run log: ${RUN_URL}
+
+          ⚠️ Production keeps serving the last *successful* build until this is fixed."
+          # Ensure the label exists (idempotent), then sticky: comment on an open
+          # issue if one exists, otherwise create one.
+          gh label create deploy-failure --color B60205 --description "CI deploy to Cloudflare failed" --force || true
+          existing="$(gh issue list --label deploy-failure --state open --json number --jq '.[0].number' || true)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "🚨 Production deploy failed" --label deploy-failure --body "$body"
+          fi

@@ -55,11 +55,11 @@ export function AppHeader() {
   const isWatchPage = segments.length === 3 && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment);
   const isTokenPage = segments.length === 2 && firstSegment.length >= 21;
   const isMediaPage = isWatchPage || isTokenPage;
-  // The scroll-in backdrop only exists on media-style pages (watch/token +
-  // the /home feed); everywhere else the header stays as-is on scroll. NOT on
+  // The scroll-in backdrop exists on media-style pages (watch/token), the /home
+  // feed, and /search; everywhere else the header stays as-is on scroll. NOT on
   // /discover: the app shell stacks the fixed header above all page content, so
   // a backdrop there would sit over the feed — the feed must stay unobstructed.
-  const showScrollBackdrop = isMediaPage || pathname === '/home';
+  const showScrollBackdrop = isMediaPage || pathname === '/home' || pathname === '/search';
 
   useEffect(() => {
     if (!showScrollBackdrop) return
