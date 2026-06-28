@@ -3,8 +3,9 @@ import {
     LiveStreaming01Icon, Wallet01Icon, Rocket01Icon,
     Analytics01Icon, UserGroupIcon, SparklesIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, ShowcaseRow, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
+import { PhoneMock, CreatorScreen, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Creators" };
 
@@ -33,30 +34,50 @@ export default function CreatorsPage() {
                 ctaLabel="Start creating"
                 secondaryLabel="Launch a coin"
                 secondaryHref="/coins"
-                panelTone="bg-soft-pink"
-                panelLabel="Creator profile"
-                panelIcon={SparklesIcon}
+                visual={
+                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-pink px-6 py-12">
+                        <PhoneMock className="rotate-[-3deg]">
+                            <CreatorScreen />
+                        </PhoneMock>
+                    </div>
+                }
             />
-            <ShowcaseRow
-                title="Go live, get paid"
-                body="Stream to your audience and earn from subscriptions and tips the moment you go live."
-                ctaLabel="Start streaming"
-                ctaHref="/live"
-                panelTone="bg-soft-blue"
-                panelLabel="Live + payouts"
-                panelIcon={LiveStreaming01Icon}
+
+            <BoldBlock
+                tone="bg-black"
+                title="Get paid to create"
+                body="Turn followers into income with subscriptions, tips, and creator fees, all settled in USDC and claimed straight to your wallet."
+                ctaLabel="Start earning"
+                ctaHref="/login"
+                visual={<EarningsCard />}
             />
-            <ShowcaseRow
-                reverse
-                title="Own your community"
-                body="Launch a coin, spin up a server, and give your fans a place to rally, all in one app."
-                panelTone="bg-pastel-yellow"
-                panelLabel="Community"
-                panelIcon={UserGroupIcon}
-            />
+
+            <BandSection title="Go live in seconds" sub="Stream from your phone, chat with your audience in real time, and keep every broadcast as a replay.">
+                <div className="grid items-center gap-10 lg:grid-cols-2">
+                    <div className="order-2 lg:order-1 grid gap-4">
+                        {[
+                            ["One-tap broadcast", "Go live from your phone or plug in OBS on desktop."],
+                            ["Live chat", "Talk with your audience as you stream."],
+                            ["Every replay saved", "Streams become VODs automatically."],
+                        ].map(([t, b]) => (
+                            <div key={t} className="rounded-2xl bg-white p-5 ring-1 ring-black/[0.06]">
+                                <p className="text-lg font-extrabold tracking-tight text-black">{t}</p>
+                                <p className="mt-1 text-[15px] font-semibold leading-snug text-black/60">{b}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="order-1 lg:order-2 grid place-items-center overflow-hidden rounded-[36px] bg-soft-blue px-6 py-12">
+                        <PhoneMock className="rotate-[3deg]">
+                            <LiveScreen />
+                        </PhoneMock>
+                    </div>
+                </div>
+            </BandSection>
+
             <BandSection className="bg-white" title="Your creator toolkit">
                 <FeatureGrid features={FEATURES} />
             </BandSection>
+
             <ExploreMore currentHref="/creators" className="bg-white" />
             <Faq items={FAQ} />
             <ClosingCta

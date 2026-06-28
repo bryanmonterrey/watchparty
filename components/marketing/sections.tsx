@@ -52,6 +52,7 @@ export function MarketingHero({
     panelTone = "bg-soft-blue",
     panelLabel,
     panelIcon,
+    visual,
 }: {
     eyebrow?: string;
     title: React.ReactNode;
@@ -63,6 +64,7 @@ export function MarketingHero({
     panelTone?: string;
     panelLabel?: string;
     panelIcon?: IconSvgElement;
+    visual?: React.ReactNode;
 }) {
     return (
         <section className="px-6 pt-6 pb-16 sm:pb-24">
@@ -94,7 +96,7 @@ export function MarketingHero({
                         )}
                     </div>
                 </div>
-                <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} />
+                {visual ?? <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} />}
             </div>
         </section>
     );
@@ -140,6 +142,54 @@ export function ShowcaseRow({
                     )}
                 </div>
                 <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} className={cn(reverse && "lg:order-1")} />
+            </div>
+        </section>
+    );
+}
+
+// Bold full-bleed block (Cash App's "green section" energy): a strong solid
+// color band with a headline/CTA on one side and a content visual on the other.
+// Dark or accent; breaks up the page rhythm.
+export function BoldBlock({
+    title,
+    body,
+    ctaLabel,
+    ctaHref,
+    visual,
+    tone = "bg-black",
+    dark = true,
+    reverse = false,
+}: {
+    title: string;
+    body: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    visual: React.ReactNode;
+    tone?: string;
+    dark?: boolean;
+    reverse?: boolean;
+}) {
+    return (
+        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+            <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
+                <div className={cn(reverse && "lg:order-2")}>
+                    <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl", dark ? "text-white" : "text-black")}>
+                        {title}
+                    </h2>
+                    <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", dark ? "text-white/70" : "text-black/70")}>{body}</p>
+                    {ctaLabel && ctaHref && (
+                        <Link
+                            href={ctaHref}
+                            className={cn(
+                                "mt-7 inline-block rounded-full px-7 py-3.5 text-base font-bold transition-transform duration-200 hover:scale-[1.03] active:scale-95",
+                                dark ? "bg-white text-black" : "bg-black text-white",
+                            )}
+                        >
+                            {ctaLabel}
+                        </Link>
+                    )}
+                </div>
+                <div className={cn("flex justify-center", reverse && "lg:order-1")}>{visual}</div>
             </div>
         </section>
     );

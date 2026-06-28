@@ -14,12 +14,12 @@ export interface Feature {
 
 export function FeatureCard({ icon, title, body, accent = "text-twitter" }: Feature) {
     return (
-        <div className="rounded-2xl bg-white p-5 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-200 ease-out hover:-translate-y-0.5">
-            <span className={cn("mb-3 grid size-9 place-items-center rounded-xl bg-current/10", accent)}>
-                <HugeiconsIcon icon={icon} size={20} strokeWidth={1.8} className={accent} />
+        <div className="rounded-3xl bg-white p-7 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-200 ease-out hover:-translate-y-1">
+            <span className={cn("mb-5 grid size-12 place-items-center rounded-2xl bg-current/10", accent)}>
+                <HugeiconsIcon icon={icon} size={26} strokeWidth={1.8} className={accent} />
             </span>
-            <p className="text-base font-bold tracking-tight text-black">{title}</p>
-            <p className="mt-1 text-sm font-semibold leading-snug text-black/65">{body}</p>
+            <p className="text-xl font-extrabold tracking-tight text-black">{title}</p>
+            <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{body}</p>
         </div>
     );
 }
