@@ -74,6 +74,16 @@ Note: everything under `(app)` is login-gated, including `/[slug]` profiles and 
 ### Responsive: mobile-first, all breakpoints
 Unlike the old app (desktop-focused), every component here must work mobile + tablet + desktop. Build **mobile-first**: unprefixed classes are the mobile layout; `sm:`+ holds the desktop values from the Figma frame. Example from `components/auth/login-card.tsx`: `h-14 sm:h-[61px]`, `max-w-[442px]` column collapsing to full-width below it.
 
+## Design language
+
+**Read `docs/design-principles.md` before building or restyling any UI.** It's
+the canonical, distilled design reference: borrow *patterns* from the references
+in `docs/references/*.md` (Phantom = cards + scroll; Rainbow = gradients +
+rounding) but express them in watchparty's own identity (pastels, `font-pixel`
+display, Lisse squircle). Load-bearing rules: aggressive rounding, and **never
+gray/black drop shadows** (use inset highlights, brand-tinted glow, or inner
+hairlines). Model in-app UI on the upgrade-overlay aesthetic, not settings.
+
 ## Conventions
 
 - **Path alias:** `@/*` maps to repo root (e.g. `@/components/auth/login-card`).
