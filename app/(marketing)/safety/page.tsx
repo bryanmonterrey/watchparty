@@ -3,9 +3,9 @@ import {
     ShieldKeyIcon, Key01Icon, SecurityLockIcon,
     Shield01Icon, CheckmarkBadge01Icon, SecurityCheckIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, CenterFeature, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
 import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { PhoneMock, WalletScreen, SecurityCard } from "@/components/marketing/mocks";
+import { PhoneMock, WalletScreen, StackedCard, BlobArt, InsetInfoCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Safety" };
 
@@ -43,14 +43,47 @@ export default function SafetyPage() {
                 }
             />
 
-            <BoldBlock
-                tone="bg-black"
-                reverse
-                title="No seed phrase to lose"
-                body="Swig wallets are secured by multi-party cryptography, there's no single phrase to leak, and they're non-custodial, so your coins are always yours."
-                ctaLabel="Get started"
-                ctaHref="/login"
-                visual={<SecurityCard />}
+            {/* Big centered stacked card alone on a band — Phantom rhythm. */}
+            <CenterFeature
+                tone="bg-soft-blue"
+                title={<>We&apos;ve got your back, always</>}
+                sub="Self-custodial means you control your funds. We never have access."
+                visual={
+                    <StackedCard
+                        title="Self-custodial means you control your funds. We never have access."
+                        art={<BlobArt />}
+                        sheets={["bg-pastelred/40", "bg-lantern/50"]}
+                    />
+                }
+            />
+
+            {/* A second, differently-sized card — variety down the page. */}
+            <CenterFeature
+                tone="bg-soft-pink"
+                title="Spam, gone for good"
+                sub="Burn unwanted spam tokens and NFTs in a tap, your wallet stays clean."
+                visual={
+                    <StackedCard
+                        tone="bg-lantern/30"
+                        sheets={["bg-white", "bg-soft-blue"]}
+                        className="w-[260px] sm:w-[300px]"
+                        title="Burn unwanted spam NFTs for good."
+                    />
+                }
+            />
+
+            {/* Dark inset card on a colored band. */}
+            <CenterFeature
+                tone="bg-soft-gray"
+                title="Your privacy matters"
+                visual={
+                    <InsetInfoCard
+                        icon={ShieldKeyIcon}
+                        title="Your privacy matters"
+                        body="We never track any personally identifiable information or asset balances. What's yours stays yours."
+                        ctaLabel="Read our privacy policy"
+                    />
+                }
             />
 
             <BandSection className="bg-white" title="Security you don't think about">

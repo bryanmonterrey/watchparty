@@ -242,6 +242,63 @@ export function BoldBlock({
     );
 }
 
+// Phantom-style centered feature: a big centered headline + one large centered
+// visual on a full-bleed colored band, with generous vertical breathing room.
+// Use this to break the split-row monotony — a single hero card stands alone.
+export function CenterFeature({
+    eyebrow,
+    title,
+    sub,
+    ctaLabel,
+    ctaHref,
+    visual,
+    tone = "bg-soft-blue",
+    dark = false,
+}: {
+    eyebrow?: string;
+    title: React.ReactNode;
+    sub?: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    visual?: React.ReactNode;
+    tone?: string;
+    dark?: boolean;
+}) {
+    return (
+        <section className={cn("px-6 py-24 sm:py-32", tone)}>
+            <div className="mx-auto w-full max-w-3xl text-center">
+                <Reveal>
+                    {eyebrow && (
+                        <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", dark ? "text-white/50" : "text-black/45")}>{eyebrow}</p>
+                    )}
+                    <h2 className={cn("font-extrabold text-4xl leading-[1.05] tracking-tight sm:text-6xl", dark ? "text-white" : "text-black")}>
+                        {title}
+                    </h2>
+                    {sub && (
+                        <p className={cn("mx-auto mt-5 max-w-md text-lg font-semibold leading-snug sm:text-xl", dark ? "text-white/65" : "text-black/65")}>{sub}</p>
+                    )}
+                    {ctaLabel && ctaHref && (
+                        <Link
+                            href={ctaHref}
+                            className={cn(
+                                "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-200 hover:scale-[1.03] active:scale-95",
+                                dark ? "bg-white text-black" : "bg-black text-white",
+                            )}
+                        >
+                            {ctaLabel}
+                        </Link>
+                    )}
+                </Reveal>
+                {visual && (
+                    <Reveal delay={0.1} className="mt-16 flex justify-center sm:mt-20">
+                        <Parallax amount={24}>{visual}</Parallax>
+                    </Reveal>
+                )}
+            </div>
+        </section>
+    );
+}
+
 // Solid-band section (flat surface via className), for a feature grid etc.
 export function BandSection({
     children,
