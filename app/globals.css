@@ -266,7 +266,7 @@
 }
 
 body {
-  background: var(--background);
+  background: oklch(0.95 0.0253 240);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
