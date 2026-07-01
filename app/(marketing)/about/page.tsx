@@ -1,13 +1,12 @@
 import { Metadata } from "next";
 import { LiveStreaming01Icon, Wallet01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, BigStatement, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { type Feature } from "@/components/marketing/feature-card";
-import { HeroBento, EarningsCard } from "@/components/marketing/mocks";
+import { MarketingHero, BigStatement, StepFlow, CaptionCards, InsetBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { GradientPage } from "@/components/marketing/gradient-page";
+import { HeroBento, EarningsCard, MiniLive, MiniFeed, MiniChart } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "About" };
 
-const PILLARS: Feature[] = [
+const PILLARS = [
     { icon: LiveStreaming01Icon, title: "A stage", body: "Go live and stream to an audience that's already here.", accent: "text-pastelred" },
     { icon: UserGroupIcon, title: "A timeline", body: "The social feed you know, ranked by an open algorithm.", accent: "text-twitter" },
     { icon: Wallet01Icon, title: "A wallet", body: "Trade, tip, and get paid, built into every account.", accent: "text-jewel" },
@@ -21,7 +20,15 @@ const FAQ = [
 
 export default function AboutPage() {
     return (
-        <>
+        <GradientPage
+            className="pt-28 sm:pt-32"
+            stops={[
+                "var(--color-soft-pink)",
+                "var(--color-pastel-yellow) 38%",
+                "var(--color-soft-blue) 72%",
+                "var(--color-soft-gray)",
+            ]}
+        >
             <MarketingHero
                 variant="centered"
                 eyebrow="About"
@@ -38,32 +45,35 @@ export default function AboutPage() {
                 stream, post a take, back a creator, and trade a coin without ever switching tabs.
             </BigStatement>
 
-            <BandSection title="Three things, one app">
-                <div className="grid gap-x-8 gap-y-10 sm:grid-cols-3">
-                    {PILLARS.map((p, i) => (
-                        <div key={p.title} className="border-t-2 border-black/10 pt-5">
-                            <div className="flex items-center gap-3">
-                                <span className="font-pixel text-3xl tracking-tighter text-black/20">{String(i + 1).padStart(2, "0")}</span>
-                                <HugeiconsIcon icon={p.icon} size={26} strokeWidth={1.8} className={p.accent} />
-                            </div>
-                            <p className="mt-4 text-2xl font-extrabold tracking-tight text-black">{p.title}</p>
-                            <p className="mt-2 text-[15px] font-semibold leading-snug text-black/60">{p.body}</p>
-                        </div>
-                    ))}
-                </div>
-            </BandSection>
+            <StepFlow
+                eyebrow="The idea"
+                title="Three things, one app"
+                sub="A stage, a timeline, and a wallet — finally in the same place."
+                steps={PILLARS.map((p) => ({ title: p.title, body: p.body }))}
+            />
 
-            <BoldBlock
-                tone="bg-black"
+            <CaptionCards
+                eyebrow="See it"
+                title="Watch, post, and trade — side by side"
+                sub="The three things you'd juggle across apps, sharing a single feed."
+                cards={[
+                    { visual: <MiniLive />, bg: "bg-white", title: "A stage", body: "Go live and stream to an audience that's already here." },
+                    { visual: <MiniFeed />, bg: "bg-white", title: "A timeline", body: "The social feed you know, ranked by an open algorithm." },
+                    { visual: <MiniChart />, bg: "bg-white", title: "A wallet", body: "Trade, tip, and get paid — built into every account." },
+                ]}
+            />
+
+            <InsetBlock
                 reverse
+                eyebrow="For creators"
                 title="Get paid for what you make"
-                body="Creators earn from subscriptions, tips, and creator fees, settled in USDC and claimed straight to a wallet built into every account."
+                body="Creators earn from subscriptions, tips, and creator fees — settled in USDC and claimed straight to a wallet built into every account."
                 ctaLabel="Start creating"
                 ctaHref="/creators"
                 visual={<EarningsCard />}
             />
 
-            <ExploreMore currentHref="/about" className="bg-white" />
+            <ExploreMore currentHref="/about" />
             <Faq items={FAQ} />
             <ClosingCta
                 title="Come hang out"
@@ -74,6 +84,6 @@ export default function AboutPage() {
                     { title: "Own", body: "A wallet built into every account." },
                 ]}
             />
-        </>
+        </GradientPage>
     );
 }

@@ -1,22 +1,12 @@
 import { Metadata } from "next";
+import { MarketingHero, TwoUpBold, CaptionCards, InsetBlock, CenterFeature, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { GradientPage } from "@/components/marketing/gradient-page";
 import {
-    LiveStreaming01Icon, Wallet01Icon, Rocket01Icon,
-    Analytics01Icon, UserGroupIcon, SparklesIcon,
-} from "@hugeicons/core-free-icons";
-import { MarketingHero, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
-import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { HeroCreatorCluster, HeroTrade, PhoneMock, LiveScreen, EarningsCard } from "@/components/marketing/mocks";
+    HeroCreatorCluster, HeroTrade, PhoneMock, LiveScreen, EarningsCard,
+    MiniLive, MiniVerified, MiniFees, StackedCard, BlobArt,
+} from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Creators" };
-
-const FEATURES: Feature[] = [
-    { icon: LiveStreaming01Icon, title: "Go live", body: "Broadcast in seconds and bring your audience with you.", accent: "text-pastelred" },
-    { icon: Wallet01Icon, title: "Get paid", body: "Subscriptions and payouts, settled in USDC.", accent: "text-twitter" },
-    { icon: Rocket01Icon, title: "Launch a coin", body: "Spin up a token for your community in a tap.", accent: "text-sunset" },
-    { icon: Analytics01Icon, title: "Know your audience", body: "Analytics and insights on what's landing.", accent: "text-jewel" },
-    { icon: UserGroupIcon, title: "Build community", body: "Servers, spaces, and group chats around your work.", accent: "text-twitter" },
-    { icon: SparklesIcon, title: "Stand out", body: "Verified badges and reply boost on Premium.", accent: "text-pastelred" },
-];
 
 const FAQ = [
     { q: "How do payouts work?", a: "Fans subscribe or tip in USDC; you claim your balance minus a small platform fee, straight to your wallet." },
@@ -26,7 +16,15 @@ const FAQ = [
 
 export default function CreatorsPage() {
     return (
-        <>
+        <GradientPage
+            className="pt-28 sm:pt-32"
+            stops={[
+                "var(--color-pastel-yellow)",
+                "var(--color-soft-pink) 40%",
+                "var(--color-soft-blue) 72%",
+                "var(--color-soft-gray)",
+            ]}
+        >
             <MarketingHero
                 eyebrow="Creators"
                 title={<>Built for creators</>}
@@ -38,45 +36,51 @@ export default function CreatorsPage() {
                 visual={<HeroCreatorCluster />}
             />
 
-            <BoldBlock
-                tone="bg-soft-pink"
-                dark={false}
-                title="Go live in seconds"
-                body="Stream from your phone, chat with your audience in real time, and keep every broadcast as a replay."
-                ctaLabel="Start streaming"
-                ctaHref="/live"
-                visual={
-                    <PhoneMock className="rotate-[-3deg]">
-                        <LiveScreen />
-                    </PhoneMock>
-                }
+            <TwoUpBold
+                items={[
+                    { title: "Go live in seconds", body: "Stream from your phone, chat in real time, and keep every broadcast as a replay.", bg: "bg-soft-pink", visual: <PhoneMock className="w-[180px]"><LiveScreen /></PhoneMock> },
+                    { title: "Launch a coin for your people", body: "Give your community a token to rally around, trade it in-app, and earn a fee on every swap.", bg: "bg-black", dark: true, visual: <HeroTrade className="max-w-[300px]" /> },
+                ]}
             />
 
-            <BoldBlock
-                tone="bg-black"
+            <CaptionCards
+                eyebrow="Your toolkit"
+                title="A creator business in one app"
+                sub="Broadcast, verify, and earn — the whole operation lives where your audience already is."
+                cards={[
+                    { visual: <MiniLive />, bg: "bg-white", title: "Go live", body: "Broadcast in seconds from phone or desktop, and bring your audience with you." },
+                    { visual: <MiniVerified />, bg: "bg-white", title: "Stand out", body: "Verified badges and reply boost so the right people know it's really you." },
+                    { visual: <MiniFees />, bg: "bg-white", title: "Earn on trades", body: "Launch a coin and take a cut of every swap, routed to your wallet in USDC." },
+                ]}
+            />
+
+            <InsetBlock
                 reverse
+                eyebrow="Payouts"
                 title="Get paid to create"
-                body="Turn followers into income with subscriptions, tips, and creator fees, all settled in USDC and claimed straight to your wallet."
+                body="Turn followers into income with subscriptions, tips, and creator fees — all settled in USDC and claimed straight to your wallet."
                 ctaLabel="Start earning"
                 ctaHref="/login"
                 visual={<EarningsCard />}
             />
 
-            <BoldBlock
-                tone="bg-soft-blue"
-                dark={false}
-                title="Launch a coin for your community"
-                body="Give your audience a token to rally around, trade it in-app, and earn a fee on every swap."
-                ctaLabel="Launch a coin"
-                ctaHref="/coins"
-                visual={<HeroTrade />}
+            <CenterFeature
+                eyebrow="Your community"
+                title="Grow something that's yours"
+                sub="A stage, a timeline, and a wallet in one place — so your audience, your content, and your income all live together."
+                ctaLabel="Start creating"
+                ctaHref="/login"
+                visual={
+                    <StackedCard
+                        title="Your channel, your coin, your community"
+                        art={<BlobArt />}
+                        tone="bg-white"
+                        sheets={["bg-soft-blue", "bg-pastel-yellow"]}
+                    />
+                }
             />
 
-            <BandSection className="bg-white" title="Your creator toolkit">
-                <FeatureGrid features={FEATURES} />
-            </BandSection>
-
-            <ExploreMore currentHref="/creators" className="bg-white" />
+            <ExploreMore currentHref="/creators" />
             <Faq items={FAQ} />
             <ClosingCta
                 title="Start creating"
@@ -88,6 +92,6 @@ export default function CreatorsPage() {
                     { title: "Grow", body: "Analytics, reply boost, and verified badges." },
                 ]}
             />
-        </>
+        </GradientPage>
     );
 }

@@ -3,6 +3,7 @@ import {
     LiveStreaming01Icon, Comment01Icon, FavouriteIcon, CheckmarkBadge01Icon,
     PlayIcon, DollarCircleIcon, RepeatIcon, Image01Icon,
     ShieldKeyIcon, ArrowUp01Icon, ArrowDown01Icon,
+    Mic01Icon, SecurityLockIcon, SentIcon, UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
@@ -511,6 +512,154 @@ export function MiniFees({ className }: { className?: string }) {
                         <span className="font-extrabold text-jewel">{v}</span>
                     </div>
                 ))}
+            </div>
+        </div>
+    );
+}
+
+// Live player tile — a compact 16:9 with LIVE badge + viewers + play.
+export function MiniLive({ className }: { className?: string }) {
+    return (
+        <div className={cn("relative aspect-video w-full max-w-[230px] overflow-hidden rounded-2xl bg-gray1 ring-1 ring-black/10", className)}>
+            <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-md bg-red2 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+                <HugeiconsIcon icon={LiveStreaming01Icon} size={11} /> Live
+            </span>
+            <span className="absolute right-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white">3.4K</span>
+            <div className="absolute inset-0 grid place-items-center">
+                <span className="grid size-11 place-items-center rounded-full bg-white/90"><HugeiconsIcon icon={PlayIcon} size={20} className="text-black" /></span>
+            </div>
+        </div>
+    );
+}
+
+// Vertical short tile.
+export function MiniShort({ className, bg = "bg-soft-blue" }: { className?: string; bg?: string }) {
+    return (
+        <div className={cn("relative aspect-[9/16] w-[120px] overflow-hidden rounded-2xl ring-1 ring-black/[0.06]", bg, className)}>
+            <div className="absolute inset-0 grid place-items-center">
+                <span className="grid size-9 place-items-center rounded-full bg-white/85"><HugeiconsIcon icon={PlayIcon} size={16} className="text-black" /></span>
+            </div>
+            <span className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] font-bold text-black/60"><HugeiconsIcon icon={FavouriteIcon} size={11} className="text-pastelred" /> 12K</span>
+        </div>
+    );
+}
+
+// A mini feed post card.
+export function MiniFeed({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-3.5 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-2">
+                <span className="size-6 rounded-full bg-twitter" />
+                <span className="text-[11px] font-extrabold">wave</span>
+                <HugeiconsIcon icon={CheckmarkBadge01Icon} size={11} className="text-twitter" />
+                <span className="text-[10px] font-semibold text-black/40">· 2h</span>
+            </div>
+            <p className="mt-2 text-[11px] font-semibold leading-snug">new set just dropped 🎧</p>
+            <div className="mt-2 flex aspect-[16/10] items-center justify-center rounded-lg bg-soft-blue">
+                <HugeiconsIcon icon={Image01Icon} size={22} className="text-black/20" />
+            </div>
+            <div className="mt-2 flex items-center gap-4 text-black/40">
+                <span className="flex items-center gap-1 text-[10px] font-semibold"><HugeiconsIcon icon={FavouriteIcon} size={12} className="text-pastelred" /> 842</span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold"><HugeiconsIcon icon={Comment01Icon} size={12} /> 96</span>
+                <span className="flex items-center gap-1 text-[10px] font-semibold"><HugeiconsIcon icon={RepeatIcon} size={12} /> 31</span>
+            </div>
+        </div>
+    );
+}
+
+// Mini encrypted chat card.
+export function MiniChat({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-3.5 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-1.5">
+                <HugeiconsIcon icon={SecurityLockIcon} size={13} className="text-jewel" strokeWidth={1.8} />
+                <span className="text-[10px] font-bold uppercase tracking-wide text-black/40">Encrypted</span>
+            </div>
+            <div className="mt-2.5 space-y-2">
+                <div className="flex justify-start"><span className="max-w-[75%] rounded-2xl rounded-tl-sm bg-soft-gray px-2.5 py-1.5 text-[11px] font-semibold">gm, you live tonight?</span></div>
+                <div className="flex justify-end"><span className="max-w-[75%] rounded-2xl rounded-tr-sm bg-twitter px-2.5 py-1.5 text-[11px] font-semibold text-white">9pm, come thru 🔥</span></div>
+            </div>
+            <div className="mt-2.5 flex items-center gap-2 rounded-full bg-soft-gray px-3 py-1.5 text-[11px] font-semibold text-black/40">
+                Message… <HugeiconsIcon icon={SentIcon} size={13} className="ml-auto text-twitter" />
+            </div>
+        </div>
+    );
+}
+
+// Mini live-audio space — avatars with speaking rings.
+export function MiniSpace({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1 rounded-md bg-red2 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white"><HugeiconsIcon icon={LiveStreaming01Icon} size={10} /> Live</span>
+                <span className="text-[11px] font-bold">Founders AMA</span>
+            </div>
+            <div className="mt-3 flex justify-center gap-3">
+                {["bg-twitter", "bg-pastelred", "bg-sunset"].map((c, i) => (
+                    <div key={c} className="flex flex-col items-center gap-1">
+                        <span className={cn("size-11 rounded-full ring-2", c, i === 0 ? "ring-lantern" : "ring-transparent")} />
+                        <span className="text-[9px] font-semibold text-black/45">{["host", "nova", "taylor"][i]}</span>
+                    </div>
+                ))}
+            </div>
+            <div className="mt-3 flex items-center justify-center gap-1 rounded-full bg-lantern/15 py-1.5 text-[11px] font-bold text-jewel">
+                <HugeiconsIcon icon={Mic01Icon} size={13} /> Speaking
+            </div>
+        </div>
+    );
+}
+
+// Mini community server — channel list.
+export function MiniServer({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-xl bg-pastelred/15"><HugeiconsIcon icon={UserGroupIcon} size={16} className="text-pastelred" strokeWidth={1.8} /></span>
+                <span className="text-xs font-extrabold">Degen HQ</span>
+                <span className="ml-auto text-[10px] font-semibold text-black/40">4.2K</span>
+            </div>
+            <div className="mt-3 space-y-1.5">
+                {["# general", "# memes", "# alpha", "🔊 lounge"].map((c, i) => (
+                    <div key={c} className={cn("rounded-lg px-2.5 py-1.5 text-[11px] font-bold", i === 0 ? "bg-soft-blue text-black" : "text-black/45")}>{c}</div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// Mini security checklist.
+export function MiniShield({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <span className="grid size-10 place-items-center rounded-2xl bg-twitter/10"><HugeiconsIcon icon={ShieldKeyIcon} size={22} className="text-twitter" strokeWidth={1.8} /></span>
+            <p className="mt-3 text-sm font-extrabold tracking-tight">Wallet secured</p>
+            <div className="mt-2.5 space-y-1.5">
+                {["No seed phrase", "Multi-party keys", "Encrypted by default"].map((t) => (
+                    <div key={t} className="flex items-center gap-1.5 text-[11px] font-semibold">
+                        <span className="grid size-4 place-items-center rounded-full bg-lantern/20 text-[9px] text-jewel">✓</span>{t}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// Mini verified profile.
+export function MiniVerified({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-2.5">
+                <span className="size-11 rounded-full bg-sunset" />
+                <div>
+                    <div className="flex items-center gap-1">
+                        <span className="text-[13px] font-extrabold">midnight</span>
+                        <HugeiconsIcon icon={CheckmarkBadge01Icon} size={14} className="text-twitter" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-black/45">Verified creator</span>
+                </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-twitter/10 px-3 py-2 text-[11px] font-bold text-twitter">
+                <HugeiconsIcon icon={CheckmarkBadge01Icon} size={13} /> Real person, verified
             </div>
         </div>
     );

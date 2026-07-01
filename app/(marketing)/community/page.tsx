@@ -3,8 +3,10 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BentoGrid, BoldBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { GradientPage } from "@/components/marketing/gradient-page";
 import { type Feature } from "@/components/marketing/feature-card";
+import { MiniServer, MiniSpace, MiniChat } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Communities" };
 
@@ -17,14 +19,13 @@ const FEATURES: Feature[] = [
     { icon: Compass01Icon, title: "Discover", body: "Find communities built around what you love.", accent: "text-pastelred" },
 ];
 
-// Per-tile bento styling, parallel to FEATURES (mixed sizes).
 const BENTO_STYLE = [
-    { bg: "bg-soft-blue", accent: "text-twitter", span: "big" },
-    { bg: "bg-soft-pink", accent: "text-pastelred" },
-    { bg: "bg-pastel-yellow", accent: "text-jewel" },
-    { bg: "bg-lantern/30", accent: "text-sunset", span: "wide" },
-    { bg: "bg-soft-blue", accent: "text-twitter", span: "wide" },
-    { bg: "bg-soft-pink", accent: "text-pastelred", span: "wide" },
+    { bg: "bg-white", accent: "text-twitter", span: "big" },
+    { bg: "bg-white", accent: "text-pastelred" },
+    { bg: "bg-white", accent: "text-jewel" },
+    { bg: "bg-white", accent: "text-sunset", span: "wide" },
+    { bg: "bg-white", accent: "text-twitter", span: "wide" },
+    { bg: "bg-white", accent: "text-pastelred", span: "wide" },
 ] as const;
 
 const BOTS = [
@@ -41,7 +42,15 @@ const FAQ = [
 
 export default function CommunityPage() {
     return (
-        <>
+        <GradientPage
+            className="pt-28 sm:pt-32"
+            stops={[
+                "var(--color-soft-blue)",
+                "var(--color-soft-pink) 40%",
+                "color-mix(in oklch, var(--color-lantern) 20%, white) 72%",
+                "#ffffff",
+            ]}
+        >
             <MarketingHero
                 eyebrow="Communities"
                 title={<>Find your people</>}
@@ -50,16 +59,27 @@ export default function CommunityPage() {
                 secondaryLabel="Explore"
                 secondaryHref="/explore"
                 visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-soft-pink px-6 pt-12">
+                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-white/50 px-6 pt-12 ring-1 ring-black/[0.04]">
                         {/* Real app screen of the Communities tab. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src="/communitydesign.png"
                             alt="The watchparty Communities screen"
-                            className="w-[230px] rotate-[-3deg] rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.12)]"
+                            className="w-[230px] rotate-[-3deg] rounded-[2rem]"
                         />
                     </div>
                 }
+            />
+
+            <CaptionCards
+                eyebrow="Under one roof"
+                title="Servers, spaces, and chats in one place"
+                sub="Everything Discord does — plus live audio and encrypted DMs — right where your audience already is."
+                cards={[
+                    { visual: <MiniServer />, bg: "bg-white", title: "Servers", body: "Channels for everything your community is into, with roles and mods." },
+                    { visual: <MiniSpace />, bg: "bg-white", title: "Live spaces", body: "Drop into live audio rooms and talk to your people in real time." },
+                    { visual: <MiniChat />, bg: "bg-white", title: "Group chats", body: "Direct, end-to-end encrypted conversations with the crew." },
+                ]}
             />
 
             <BentoGrid
@@ -68,11 +88,11 @@ export default function CommunityPage() {
                 items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
             />
 
-            <BoldBlock
-                tone="bg-black"
+            <InsetBlock
                 reverse
+                eyebrow="Automation"
                 title="Automate the boring parts"
-                body="Add Discord-style bots for welcomes, moderation, and token-gated perks, so you can focus on the people, not the busywork."
+                body="Add Discord-style bots for welcomes, moderation, and token-gated perks — so you can focus on the people, not the busywork."
                 ctaLabel="Build your server"
                 ctaHref="/login"
                 visual={
@@ -87,7 +107,7 @@ export default function CommunityPage() {
                 }
             />
 
-            <ExploreMore currentHref="/community" className="bg-white" />
+            <ExploreMore currentHref="/community" />
             <Faq items={FAQ} />
             <ClosingCta
                 title="Build your community"
@@ -99,6 +119,6 @@ export default function CommunityPage() {
                     { title: "Bots", body: "Discord-style automation built in." },
                 ]}
             />
-        </>
+        </GradientPage>
     );
 }

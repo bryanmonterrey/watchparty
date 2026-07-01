@@ -3,9 +3,10 @@ import {
     LiveStreaming01Icon, CameraVideoIcon, Compass01Icon,
     AiSearchIcon, PlayListIcon, GridIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BentoGrid, BoldBlock, CenterFeature, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, CenterFeature, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { GradientPage } from "@/components/marketing/gradient-page";
 import { type Feature } from "@/components/marketing/feature-card";
-import { HeroCollage, PhoneMock, CoinScreen } from "@/components/marketing/mocks";
+import { HeroCollage, PhoneMock, CoinScreen, MiniLive, MiniShort, MiniFeed } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Explore" };
 
@@ -20,14 +21,13 @@ const FEATURES: Feature[] = [
 
 const CATEGORIES = ["Just Chatting", "GTA VI", "Music", "Esports", "IRL", "Crypto", "Sports", "Pranks", "Tech"];
 
-// Per-tile bento styling, parallel to FEATURES (mixed sizes for an asymmetric grid).
 const BENTO_STYLE = [
-    { bg: "bg-soft-pink", accent: "text-pastelred", span: "big" },
-    { bg: "bg-soft-blue", accent: "text-twitter" },
-    { bg: "bg-pastel-yellow", accent: "text-jewel" },
-    { bg: "bg-lantern/30", accent: "text-sunset", span: "wide" },
-    { bg: "bg-soft-blue", accent: "text-twitter", span: "wide" },
-    { bg: "bg-soft-pink", accent: "text-pastelred", span: "wide" },
+    { bg: "bg-white", accent: "text-pastelred", span: "big" },
+    { bg: "bg-white", accent: "text-twitter" },
+    { bg: "bg-white", accent: "text-jewel" },
+    { bg: "bg-white", accent: "text-sunset", span: "wide" },
+    { bg: "bg-white", accent: "text-twitter", span: "wide" },
+    { bg: "bg-white", accent: "text-pastelred", span: "wide" },
 ] as const;
 
 const FAQ = [
@@ -38,7 +38,15 @@ const FAQ = [
 
 export default function ExplorePage() {
     return (
-        <>
+        <GradientPage
+            className="pt-28 sm:pt-32"
+            stops={[
+                "var(--color-soft-blue)",
+                "var(--color-soft-pink) 42%",
+                "var(--color-pastel-yellow) 74%",
+                "#ffffff",
+            ]}
+        >
             <MarketingHero
                 eyebrow="Explore"
                 title={<>Watch what&apos;s happening</>}
@@ -48,17 +56,22 @@ export default function ExplorePage() {
                 visual={<HeroCollage />}
             />
 
-            <BentoGrid
-                eyebrow="What's inside"
-                title="Everything worth watching"
-                items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
+            <CaptionCards
+                eyebrow="One feed"
+                title="Everything worth watching, together"
+                sub="Streams, shorts, and posts share the same timeline — no apps to switch between."
+                cards={[
+                    { visual: <MiniLive />, bg: "bg-white", title: "Live now", body: "Tune into streams the moment they start, with chat from the first viewer." },
+                    { visual: <MiniShort />, bg: "bg-white", title: "Shorts", body: "Quick clips and an endless scroll, right beside the streams." },
+                    { visual: <MiniFeed />, bg: "bg-white", title: "For You", body: "A timeline ranked by the same open algorithm you already know." },
+                ]}
             />
 
-            <BoldBlock
-                tone="bg-black"
+            <InsetBlock
                 reverse
+                eyebrow="The feed"
                 title="Ranked for you, not for ads"
-                body="One open algorithm powers the whole feed, tuned to what you actually watch, so the good stuff finds you."
+                body="One open algorithm powers the whole feed, tuned to what you actually watch — so the good stuff finds you."
                 ctaLabel="See your feed"
                 ctaHref="/login"
                 visual={
@@ -75,8 +88,13 @@ export default function ExplorePage() {
                 }
             />
 
+            <BentoGrid
+                eyebrow="What's inside"
+                title="A whole home for watching"
+                items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
+            />
+
             <CenterFeature
-                tone="bg-soft-pink"
                 eyebrow="Trade as you scroll"
                 title="Spot it, buy it, in one tap"
                 sub="See a coin in the feed and buy it without leaving the timeline — a secure wallet ships with every account."
@@ -87,7 +105,7 @@ export default function ExplorePage() {
                 }
             />
 
-            <ExploreMore currentHref="/explore" className="bg-white" />
+            <ExploreMore currentHref="/explore" />
             <Faq items={FAQ} />
             <ClosingCta
                 title="Jump in"
@@ -98,6 +116,6 @@ export default function ExplorePage() {
                     { title: "Always free", body: "Watching and posting cost nothing." },
                 ]}
             />
-        </>
+        </GradientPage>
     );
 }

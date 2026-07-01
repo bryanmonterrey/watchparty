@@ -242,6 +242,70 @@ export function BoldBlock({
     );
 }
 
+// Floating inset block (Phantom "Your privacy matters") — a big rounded panel
+// that FLOATS on the page gradient instead of cutting a full-bleed band, so dark
+// moments don't create a visible section seam. Split: copy one side, visual the
+// other. Use this for the money/earn/highlight beat on a GradientPage.
+export function InsetBlock({
+    eyebrow,
+    title,
+    body,
+    ctaLabel,
+    ctaHref,
+    visual,
+    tone = "bg-black",
+    dark = true,
+    reverse = false,
+}: {
+    eyebrow?: string;
+    title: string;
+    body: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    visual: React.ReactNode;
+    tone?: string;
+    dark?: boolean;
+    reverse?: boolean;
+}) {
+    return (
+        <section className="px-6 py-12 sm:py-16">
+            <Reveal>
+                <div
+                    className={cn(
+                        "mx-auto grid w-full max-w-6xl items-center gap-10 overflow-hidden rounded-[40px] p-8 sm:p-12 lg:grid-cols-2 lg:gap-14 lg:p-16",
+                        tone,
+                        dark
+                            ? "ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                            : "ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+                    )}
+                >
+                    <div className={cn(reverse && "lg:order-2")}>
+                        {eyebrow && (
+                            <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", dark ? "text-white/45" : "text-black/45")}>{eyebrow}</p>
+                        )}
+                        <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl", dark ? "text-white" : "text-black")}>
+                            {title}
+                        </h2>
+                        <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", dark ? "text-white/65" : "text-black/65")}>{body}</p>
+                        {ctaLabel && ctaHref && (
+                            <Link
+                                href={ctaHref}
+                                className={cn(
+                                    "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-200 hover:scale-[1.03] active:scale-95",
+                                    dark ? "bg-white text-black" : "bg-black text-white",
+                                )}
+                            >
+                                {ctaLabel}
+                            </Link>
+                        )}
+                    </div>
+                    <div className={cn("flex justify-center", reverse && "lg:order-1")}>{visual}</div>
+                </div>
+            </Reveal>
+        </section>
+    );
+}
+
 // Phantom-style centered feature: a big centered headline + one large centered
 // visual on a full-bleed colored band, with generous vertical breathing room.
 // Use this to break the split-row monotony — a single hero card stands alone.
@@ -252,7 +316,7 @@ export function CenterFeature({
     ctaLabel,
     ctaHref,
     visual,
-    tone = "bg-soft-blue",
+    tone = "bg-transparent",
     dark = false,
 }: {
     eyebrow?: string;
@@ -306,7 +370,7 @@ export function StepFlow({
     title,
     sub,
     steps,
-    tone = "bg-white",
+    tone = "bg-transparent",
 }: {
     eyebrow?: string;
     title: string;
@@ -349,7 +413,7 @@ export function BentoGrid({
     title,
     sub,
     items,
-    tone = "bg-white",
+    tone = "bg-transparent",
 }: {
     eyebrow?: string;
     title?: string;
@@ -405,7 +469,7 @@ export function CaptionCards({
     title,
     sub,
     cards,
-    tone = "bg-white",
+    tone = "bg-transparent",
     columns = 3,
 }: {
     eyebrow?: string;
@@ -455,7 +519,7 @@ export function CaptionCards({
 // optional mini visual. A punchier alternative to a split row.
 export function TwoUpBold({
     items,
-    tone = "bg-white",
+    tone = "bg-transparent",
 }: {
     items: { title: string; body: string; visual?: React.ReactNode; bg: string; dark?: boolean }[];
     tone?: string;
@@ -608,8 +672,8 @@ export function ClosingCta({
     tiles?: { title: string; body: string }[];
 }) {
     return (
-        <section className="bg-black px-6 py-20 sm:py-28">
-            <div className="mx-auto w-full max-w-6xl">
+        <section className="px-4 py-12 sm:px-6 sm:py-16">
+            <div className="mx-auto w-full max-w-8xl overflow-hidden rounded-[40px] bg-black px-6 py-16 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-20">
                 <Reveal>
                     <h2 className="max-w-2xl font-extrabold text-4xl leading-[1.05] tracking-tight text-white sm:text-6xl">{title}</h2>
                     {sub && <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/70">{sub}</p>}

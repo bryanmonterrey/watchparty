@@ -1,22 +1,10 @@
 import { Metadata } from "next";
-import {
-    ShieldKeyIcon, Key01Icon, SecurityLockIcon,
-    Shield01Icon, CheckmarkBadge01Icon, SecurityCheckIcon,
-} from "@hugeicons/core-free-icons";
-import { MarketingHero, CenterFeature, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
-import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { SecurityCard, StackedCard, BlobArt, InsetInfoCard } from "@/components/marketing/mocks";
+import { ShieldKeyIcon } from "@hugeicons/core-free-icons";
+import { MarketingHero, CenterFeature, CaptionCards, InsetBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { GradientPage } from "@/components/marketing/gradient-page";
+import { SecurityCard, StackedCard, BlobArt, InsetInfoCard, MiniShield, MiniChat, MiniVerified } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Safety" };
-
-const FEATURES: Feature[] = [
-    { icon: ShieldKeyIcon, title: "Swig wallets", body: "Multi-party (FROST) wallets, no seed phrase to lose.", accent: "text-twitter" },
-    { icon: Key01Icon, title: "You hold the keys", body: "Non-custodial by design. Your coins stay yours.", accent: "text-jewel" },
-    { icon: SecurityLockIcon, title: "Encrypted messages", body: "Direct and group chats are end-to-end encrypted.", accent: "text-pastelred" },
-    { icon: Shield01Icon, title: "Scam protection", body: "Built-in checks help you spot and avoid scams.", accent: "text-sunset" },
-    { icon: CheckmarkBadge01Icon, title: "Verified badges", body: "Know who you're really talking to.", accent: "text-twitter" },
-    { icon: SecurityCheckIcon, title: "Safe by default", body: "Sensible protections on from the first tap.", accent: "text-jewel" },
-];
 
 const FAQ = [
     { q: "What is a Swig wallet?", a: "A wallet secured by multi-party (FROST) cryptography, so there's no single seed phrase to lose or leak." },
@@ -26,7 +14,15 @@ const FAQ = [
 
 export default function SafetyPage() {
     return (
-        <>
+        <GradientPage
+            className="pt-28 sm:pt-32"
+            stops={[
+                "var(--color-soft-blue)",
+                "var(--color-soft-gray) 40%",
+                "var(--color-soft-pink) 74%",
+                "#ffffff",
+            ]}
+        >
             <MarketingHero
                 variant="reverse"
                 eyebrow="Safety"
@@ -36,15 +32,14 @@ export default function SafetyPage() {
                 secondaryLabel="About us"
                 secondaryHref="/about"
                 visual={
-                    <div className="grid place-items-center rounded-[36px] bg-soft-blue px-6 py-14">
+                    <div className="grid place-items-center rounded-[36px] bg-white/50 px-6 py-14 ring-1 ring-black/[0.04]">
                         <SecurityCard />
                     </div>
                 }
             />
 
-            {/* Big centered stacked card alone on a band — Phantom rhythm. */}
+            {/* Big centered stacked card alone — Phantom rhythm, on the gradient. */}
             <CenterFeature
-                tone="bg-soft-blue"
                 title={<>We&apos;ve got your back, always</>}
                 sub="Self-custodial means you control your funds. We never have access."
                 visual={
@@ -56,9 +51,35 @@ export default function SafetyPage() {
                 }
             />
 
-            {/* A second, differently-sized card — variety down the page. */}
+            <CaptionCards
+                eyebrow="On by default"
+                title="Security you don't think about"
+                sub="The safe choice is the default — no settings to hunt for, no homework."
+                cards={[
+                    { visual: <MiniShield />, bg: "bg-white", title: "Swig wallets", body: "Multi-party (FROST) keys — non-custodial, with no seed phrase to lose." },
+                    { visual: <MiniChat />, bg: "bg-white", title: "Encrypted messages", body: "Direct and group chats are end-to-end encrypted by default." },
+                    { visual: <MiniVerified />, bg: "bg-white", title: "Verified & protected", body: "Verified badges and built-in scam checks so you know who's real." },
+                ]}
+            />
+
+            {/* Dark inset card floating on the gradient. */}
+            <InsetBlock
+                eyebrow="Privacy"
+                title="Your privacy matters"
+                body="We never track any personally identifiable information or asset balances. What's yours stays yours — on-chain and off."
+                ctaLabel="Read our privacy policy"
+                ctaHref="/about"
+                visual={
+                    <InsetInfoCard
+                        icon={ShieldKeyIcon}
+                        title="Nothing to track"
+                        body="No personal data, no asset-balance snooping. Your activity is yours."
+                    />
+                }
+            />
+
+            {/* A second, differently-sized stacked card — variety down the page. */}
             <CenterFeature
-                tone="bg-soft-pink"
                 title="Spam, gone for good"
                 sub="Burn unwanted spam tokens and NFTs in a tap, your wallet stays clean."
                 visual={
@@ -71,25 +92,7 @@ export default function SafetyPage() {
                 }
             />
 
-            {/* Dark inset card on a colored band. */}
-            <CenterFeature
-                tone="bg-soft-gray"
-                title="Your privacy matters"
-                visual={
-                    <InsetInfoCard
-                        icon={ShieldKeyIcon}
-                        title="Your privacy matters"
-                        body="We never track any personally identifiable information or asset balances. What's yours stays yours."
-                        ctaLabel="Read our privacy policy"
-                    />
-                }
-            />
-
-            <BandSection className="bg-white" title="Security you don't think about">
-                <FeatureGrid features={FEATURES} />
-            </BandSection>
-
-            <ExploreMore currentHref="/safety" className="bg-white" />
+            <ExploreMore currentHref="/safety" />
             <Faq items={FAQ} />
             <ClosingCta
                 title="Safe from the start"
@@ -100,6 +103,6 @@ export default function SafetyPage() {
                     { title: "Encrypted", body: "Messages are end-to-end." },
                 ]}
             />
-        </>
+        </GradientPage>
     );
 }
