@@ -24,7 +24,7 @@ export default async function Home() {
   // contributes nothing to document height, which swallows the pin-spacer
   // scroll distance ScrollTrigger adds for the goggles zoom).
   return (
-    <div className="relative flex min-h-svh flex-col bg-soft-pink text-black">
+    <div className="relative flex min-h-svh flex-col bg-soft-blue text-black">
       <SiteHeader />
 
       {/* Hero — replace with your skateboarder composition. */}
