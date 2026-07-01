@@ -1,28 +1,27 @@
 import { Metadata } from "next";
 import {
-    Rocket01Icon, Analytics01Icon, DollarCircleIcon,
-    Wallet01Icon, UserGroupIcon, Coins01Icon,
-} from "@hugeicons/core-free-icons";
-import { MarketingHero, StepFlow, BoldBlock, BandSection, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
-import { FeatureGrid, type Feature } from "@/components/marketing/feature-card";
-import { HeroTrade, EarningsCard } from "@/components/marketing/mocks";
+    MarketingHero,
+    CaptionCards,
+    TwoUpBold,
+    CenterFeature,
+    BoldBlock,
+    ExploreMore,
+    Faq,
+    ClosingCta,
+} from "@/components/marketing/sections";
+import {
+    HeroTrade,
+    EarningsCard,
+    MiniLaunch,
+    MiniChart,
+    MiniFees,
+    StackedCard,
+    BlobArt,
+    PhoneMock,
+    CoinScreen,
+} from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Coins" };
-
-const FEATURES: Feature[] = [
-    { icon: Rocket01Icon, title: "Launch in a tap", body: "Spin up a token for your content or community instantly.", accent: "text-pastelred" },
-    { icon: Analytics01Icon, title: "Trade in-app", body: "Buy and sell without leaving the app.", accent: "text-twitter" },
-    { icon: DollarCircleIcon, title: "Earn creator fees", body: "Take a cut of every trade on your coin.", accent: "text-sunset" },
-    { icon: Wallet01Icon, title: "Wallet built in", body: "A secure wallet ships with every account.", accent: "text-jewel" },
-    { icon: UserGroupIcon, title: "Your community's coin", body: "Give your audience a token to rally around.", accent: "text-twitter" },
-    { icon: Coins01Icon, title: "Fair launch", body: "Bonding-curve pricing, transparent from the first buy.", accent: "text-pastelred" },
-];
-
-const STEPS = [
-    ["Name it", "Pick a ticker and image."],
-    ["Launch it", "Goes live on a fair bonding curve."],
-    ["Earn", "Collect a fee on every trade."],
-];
 
 const FAQ = [
     { q: "What chain are coins on?", a: "Coins launch on Solana, with trading and fees handled in-app." },
@@ -33,53 +32,77 @@ const FAQ = [
 export default function CoinsPage() {
     return (
         <>
+            {/* Hero — big, airy, one confident visual. */}
             <MarketingHero
                 eyebrow="Coins"
-                title={<>Launch a coin in a tap</>}
-                sub="Give your community a token, trade it in-app, and earn on every swap."
+                title={<>Launch a coin<br />in a single tap</>}
+                sub="Give your community a token, trade it right in the feed, and earn on every swap. No contracts, no setup."
                 ctaLabel="Launch a coin"
                 secondaryLabel="For creators"
                 secondaryHref="/creators"
                 visual={
-                    <div className="grid place-items-center rounded-[36px] bg-soft-blue px-6 py-14">
-                        <HeroTrade />
+                    <div className="relative grid place-items-center rounded-[40px] bg-soft-blue px-6 py-20">
+                        {/* ambient brand-tinted glow (no gray/black shadow) */}
+                        <div className="pointer-events-none absolute inset-x-10 bottom-6 h-40 rounded-full bg-lantern/25 blur-3xl" />
+                        <HeroTrade className="relative" />
                     </div>
                 }
             />
 
-            <StepFlow
+            {/* Everything a coin needs — realistic mini-UI, captioned. Replaces
+                the old uniform tile grid. */}
+            <CaptionCards
+                tone="bg-white"
                 eyebrow="How it works"
-                title="Launch in three taps"
-                sub="No contracts, no setup. Name your coin and it's live on a fair bonding curve."
-                steps={STEPS.map(([title, body]) => ({ title, body }))}
+                title="Everything a coin needs, built in"
+                sub="Name it, launch it on a fair bonding curve, and start earning — the whole loop lives inside the app."
+                cards={[
+                    { visual: <MiniLaunch />, bg: "bg-soft-pink", title: "Launch in a tap", body: "Pick a ticker and image. It's live on a fair bonding curve — no contracts to write." },
+                    { visual: <MiniChart />, bg: "bg-soft-blue", title: "Trade in the feed", body: "Live charts and market caps, right in the timeline. Buy and sell without leaving the app." },
+                    { visual: <MiniFees />, bg: "bg-pastel-yellow", title: "Earn on every swap", body: "Set a creator fee and take a cut of every buy and sell, routed straight to your wallet." },
+                ]}
             />
 
-            <BoldBlock
+            {/* Phantom-style big centered stacked moment — lots of air. */}
+            <CenterFeature
                 tone="bg-soft-blue"
-                dark={false}
-                title="Trade right in the feed"
-                body="Spot a coin in the timeline and buy it in the same tap — live charts, market cap, and a wallet built into every account."
-                ctaLabel="See it live"
-                ctaHref="/explore"
-                visual={<HeroTrade />}
+                eyebrow="Your community's coin"
+                title="A token your people rally around"
+                sub="Give your audience something to hold, trade, and grow together — native to the feed they already live in."
+                ctaLabel="Launch a coin"
+                ctaHref="/login"
+                visual={
+                    <StackedCard
+                        title="$WAVE — the community coin"
+                        art={<BlobArt />}
+                        tone="bg-white"
+                        sheets={["bg-soft-pink", "bg-pastel-yellow"]}
+                    />
+                }
             />
 
+            {/* Two-up bold cards (Cash App full-reserve / access energy). */}
+            <TwoUpBold
+                tone="bg-white"
+                items={[
+                    { title: "Fair launch, from the first buy", body: "Bonding-curve pricing means transparent, predictable value — no insider allocations, no rug.", bg: "bg-lantern", visual: <MiniChart /> },
+                    { title: "A wallet on every account", body: "Trade the moment you sign up. No exchange, no bridge, no seed phrase to manage.", bg: "bg-black", dark: true, visual: <PhoneMock className="w-[190px]"><CoinScreen /></PhoneMock> },
+                ]}
+            />
+
+            {/* Earn — the money moment on black. */}
             <BoldBlock
                 tone="bg-black"
                 reverse
-                title="Earn on every trade"
-                body="Set a creator fee and take a cut of every buy and sell on your coin, routed straight to your wallet in USDC."
-                ctaLabel="Launch a coin"
-                ctaHref="/login"
+                title="Get paid on every trade"
+                body="Creator fees settle in USDC and land straight in your wallet. Claim any time — the platform takes a flat 5%, nothing more."
+                ctaLabel="Start earning"
+                ctaHref="/creators"
                 visual={<EarningsCard />}
             />
 
-            <BandSection className="bg-white" title="Tokens, made simple">
-                <FeatureGrid features={FEATURES} />
-            </BandSection>
-
-            <ExploreMore currentHref="/coins" className="bg-white" />
-            <Faq items={FAQ} />
+            <ExploreMore currentHref="/coins" className="bg-soft-gray" />
+            <Faq items={FAQ} className="bg-white" />
             <ClosingCta
                 title="Launch your coin"
                 sub="Your community's token is one tap away."

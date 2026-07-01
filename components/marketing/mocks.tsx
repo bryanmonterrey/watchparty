@@ -448,6 +448,74 @@ export function InsetInfoCard({
     );
 }
 
+// ── Compact "chip" visuals for CaptionCards rows — small, realistic slices of
+// product UI sized to sit inside a ~220px caption-card surface. ----
+
+// Launch a coin — a mini "create token" form.
+export function MiniLaunch({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-2.5">
+                <span className="grid size-10 place-items-center rounded-full bg-sunset text-base font-extrabold">$</span>
+                <div className="min-w-0 flex-1">
+                    <div className="h-2.5 w-16 rounded-full bg-black/80" />
+                    <div className="mt-1.5 h-2 w-10 rounded-full bg-black/15" />
+                </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-xl bg-soft-gray px-3 py-2">
+                <span className="text-[11px] font-semibold text-black/45">Ticker</span>
+                <span className="text-[12px] font-extrabold">$WAVE</span>
+            </div>
+            <div className="mt-2 rounded-full bg-lantern py-2 text-center text-[12px] font-bold text-black">Launch</div>
+        </div>
+    );
+}
+
+// Live in-feed chart — token price + green sparkline + market cap.
+export function MiniChart({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center justify-between">
+                <span className="text-[13px] font-extrabold tracking-tight">$WAVE</span>
+                <span className="rounded-full bg-lantern/20 px-2 py-0.5 text-[10px] font-bold text-jewel">+18.4%</span>
+            </div>
+            <p className="mt-1 text-xl font-extrabold tracking-tight">$0.0428</p>
+            <svg viewBox="0 0 200 60" className="mt-1 h-12 w-full" preserveAspectRatio="none">
+                <polyline points="0,48 25,42 50,45 75,32 100,36 125,24 150,26 175,12 200,8" fill="none" stroke="var(--color-lantern)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div className="mt-2 flex items-center justify-between rounded-xl bg-soft-gray px-3 py-1.5 text-[11px]">
+                <span className="font-semibold text-black/45">Market cap</span>
+                <span className="font-extrabold">$1.2M</span>
+            </div>
+        </div>
+    );
+}
+
+// Creator fees — a mini "you earn on every trade" chip.
+export function MiniFees({ className }: { className?: string }) {
+    return (
+        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+            <div className="flex items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-xl bg-lantern/15">
+                    <HugeiconsIcon icon={DollarCircleIcon} size={18} className="text-jewel" strokeWidth={1.8} />
+                </span>
+                <span className="text-xs font-bold">You earn</span>
+                <span className="ml-auto rounded-full bg-lantern/15 px-2 py-0.5 text-[10px] font-bold text-jewel">1% fee</span>
+            </div>
+            <p className="mt-3 text-2xl font-extrabold tracking-tight">+$0.42</p>
+            <p className="text-[11px] font-semibold text-black/45">on this trade</p>
+            <div className="mt-3 space-y-1.5">
+                {[["Buy · nova", "+$0.18"], ["Buy · taylor", "+$0.12"], ["Sell · wave", "+$0.12"]].map(([l, v]) => (
+                    <div key={l} className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-black/50">{l}</span>
+                        <span className="font-extrabold text-jewel">{v}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // Wallet/security summary card — for a bold dark section.
 export function SecurityCard({ className }: { className?: string }) {
     return (

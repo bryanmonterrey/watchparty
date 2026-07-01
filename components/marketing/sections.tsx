@@ -395,6 +395,90 @@ export function BentoGrid({
     );
 }
 
+// Caption cards (Cash App "built for security" band) — a titled band with a row
+// of REAL mini-UI visuals, each with a caption title + body underneath. This is
+// the premium replacement for the uniform white FeatureGrid: the visual does the
+// talking (looks like real product), the caption just labels it. Each card
+// carries its own surface tone so the row varies like the references.
+export function CaptionCards({
+    eyebrow,
+    title,
+    sub,
+    cards,
+    tone = "bg-white",
+    columns = 3,
+}: {
+    eyebrow?: string;
+    title?: string;
+    sub?: string;
+    cards: { visual: React.ReactNode; title: string; body: string; bg?: string }[];
+    tone?: string;
+    columns?: 2 | 3;
+}) {
+    return (
+        <section className={cn("px-6 py-24 sm:py-32", tone)}>
+            <div className="mx-auto w-full max-w-6xl">
+                {(eyebrow || title || sub) && (
+                    <Reveal className="max-w-3xl">
+                        {eyebrow && (
+                            <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
+                        )}
+                        {title && <h2 className="font-extrabold text-3xl leading-[1.06] tracking-tight text-black sm:text-5xl">{title}</h2>}
+                        {sub && <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">{sub}</p>}
+                    </Reveal>
+                )}
+                <div className={cn("mt-14 grid gap-6 sm:mt-16", columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+                    {cards.map((c, i) => (
+                        <Reveal key={c.title} delay={i * 0.08}>
+                            <div className="flex h-full flex-col">
+                                <div
+                                    className={cn(
+                                        "grid min-h-[220px] place-items-center overflow-hidden rounded-[28px] p-6 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]",
+                                        c.bg ?? "bg-soft-gray",
+                                    )}
+                                >
+                                    {c.visual}
+                                </div>
+                                <p className="mt-6 text-xl font-extrabold tracking-tight text-black">{c.title}</p>
+                                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{c.body}</p>
+                            </div>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// Two-up bold cards (Cash App "full reserve / access to bitcoin") — two large
+// side-by-side panels, each its own accent surface with a headline, body, and an
+// optional mini visual. A punchier alternative to a split row.
+export function TwoUpBold({
+    items,
+    tone = "bg-white",
+}: {
+    items: { title: string; body: string; visual?: React.ReactNode; bg: string; dark?: boolean }[];
+    tone?: string;
+}) {
+    return (
+        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+            <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-2">
+                {items.map((it, i) => (
+                    <Reveal key={it.title} delay={i * 0.08}>
+                        <div className={cn("flex h-full flex-col justify-between overflow-hidden rounded-[32px] p-8 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] sm:p-10", it.bg)}>
+                            <div>
+                                <p className={cn("text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl", it.dark ? "text-white" : "text-black")}>{it.title}</p>
+                                <p className={cn("mt-3 max-w-sm text-[15px] font-semibold leading-snug", it.dark ? "text-white/65" : "text-black/60")}>{it.body}</p>
+                            </div>
+                            {it.visual && <div className="mt-8">{it.visual}</div>}
+                        </div>
+                    </Reveal>
+                ))}
+            </div>
+        </section>
+    );
+}
+
 // Big editorial statement (Phantom/Stripe pattern) — one oversized line of copy,
 // generous space. A manifesto beat, not a card.
 export function BigStatement({
