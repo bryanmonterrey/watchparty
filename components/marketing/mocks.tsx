@@ -455,7 +455,7 @@ export function InsetInfoCard({
 // Launch a coin — a mini "create token" form.
 export function MiniLaunch({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center gap-2.5">
                 <span className="grid size-10 place-items-center rounded-full bg-sunset text-base font-extrabold">$</span>
                 <div className="min-w-0 flex-1">
@@ -475,7 +475,7 @@ export function MiniLaunch({ className }: { className?: string }) {
 // Live in-feed chart — token price + green sparkline + market cap.
 export function MiniChart({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold tracking-tight">$WAVE</span>
                 <span className="rounded-full bg-lantern/20 px-2 py-0.5 text-[10px] font-bold text-jewel">+18.4%</span>
@@ -495,7 +495,7 @@ export function MiniChart({ className }: { className?: string }) {
 // Creator fees — a mini "you earn on every trade" chip.
 export function MiniFees({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center gap-2">
                 <span className="grid size-8 place-items-center rounded-xl bg-lantern/15">
                     <HugeiconsIcon icon={DollarCircleIcon} size={18} className="text-jewel" strokeWidth={1.8} />
@@ -520,7 +520,7 @@ export function MiniFees({ className }: { className?: string }) {
 // Live player tile — a compact 16:9 with LIVE badge + viewers + play.
 export function MiniLive({ className }: { className?: string }) {
     return (
-        <div className={cn("relative aspect-video w-full max-w-[230px] overflow-hidden rounded-2xl bg-gray1 ring-1 ring-black/10", className)}>
+        <div className={cn("relative aspect-video w-full max-w-[240px] overflow-hidden rounded-2xl bg-gray1 ring-1 ring-black/10", className)}>
             <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-md bg-red2 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
                 <HugeiconsIcon icon={LiveStreaming01Icon} size={11} /> Live
             </span>
@@ -535,7 +535,7 @@ export function MiniLive({ className }: { className?: string }) {
 // Vertical short tile.
 export function MiniShort({ className, bg = "bg-soft-blue" }: { className?: string; bg?: string }) {
     return (
-        <div className={cn("relative aspect-[9/16] w-[120px] overflow-hidden rounded-2xl ring-1 ring-black/[0.06]", bg, className)}>
+        <div className={cn("relative aspect-[9/16] w-[140px] overflow-hidden rounded-2xl ring-1 ring-black/[0.06]", bg, className)}>
             <div className="absolute inset-0 grid place-items-center">
                 <span className="grid size-9 place-items-center rounded-full bg-white/85"><HugeiconsIcon icon={PlayIcon} size={16} className="text-black" /></span>
             </div>
@@ -547,7 +547,7 @@ export function MiniShort({ className, bg = "bg-soft-blue" }: { className?: stri
 // A mini feed post card.
 export function MiniFeed({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-3.5 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-3.5 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center gap-2">
                 <span className="size-6 rounded-full bg-twitter" />
                 <span className="text-[11px] font-extrabold">wave</span>
@@ -570,7 +570,7 @@ export function MiniFeed({ className }: { className?: string }) {
 // Mini encrypted chat card.
 export function MiniChat({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-3.5 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-3.5 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center gap-1.5">
                 <HugeiconsIcon icon={SecurityLockIcon} size={13} className="text-jewel" strokeWidth={1.8} />
                 <span className="text-[10px] font-bold uppercase tracking-wide text-black/40">Encrypted</span>
@@ -589,7 +589,7 @@ export function MiniChat({ className }: { className?: string }) {
 // Mini live-audio space — avatars with speaking rings.
 export function MiniSpace({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center gap-1.5">
                 <span className="flex items-center gap-1 rounded-md bg-red2 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white"><HugeiconsIcon icon={LiveStreaming01Icon} size={10} /> Live</span>
                 <span className="text-[11px] font-bold">Founders AMA</span>
@@ -612,7 +612,7 @@ export function MiniSpace({ className }: { className?: string }) {
 // Mini community server — channel list.
 export function MiniServer({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center gap-2">
                 <span className="grid size-8 place-items-center rounded-xl bg-pastelred/15"><HugeiconsIcon icon={UserGroupIcon} size={16} className="text-pastelred" strokeWidth={1.8} /></span>
                 <span className="text-xs font-extrabold">Degen HQ</span>
@@ -630,7 +630,7 @@ export function MiniServer({ className }: { className?: string }) {
 // Mini security checklist.
 export function MiniShield({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <span className="grid size-10 place-items-center rounded-2xl bg-twitter/10"><HugeiconsIcon icon={ShieldKeyIcon} size={22} className="text-twitter" strokeWidth={1.8} /></span>
             <p className="mt-3 text-sm font-extrabold tracking-tight">Wallet secured</p>
             <div className="mt-2.5 space-y-1.5">
@@ -647,7 +647,7 @@ export function MiniShield({ className }: { className?: string }) {
 // Mini verified profile.
 export function MiniVerified({ className }: { className?: string }) {
     return (
-        <div className={cn("w-full max-w-[220px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
+        <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>
             <div className="flex items-center gap-2.5">
                 <span className="size-11 rounded-full bg-sunset" />
                 <div>
