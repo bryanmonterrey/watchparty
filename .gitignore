@@ -70,3 +70,5 @@ cron/.cf-secrets.json
 # Agent skills (installed globally, not per-project)
 .agents/
 skills-lock.json
+.claude/skills/
+.claude/scheduled_tasks.lock

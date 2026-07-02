@@ -5,7 +5,8 @@ import Link from "next/link";
 // + caption + Sign up) on the right with the link columns beneath it; an
 // "operational" status pill bottom-left; and © + legal OUTSIDE the panel.
 // The whole footer fills ~one screen: min-h-svh with a ~spacing-7 frame around
-// the panel, content pushed apart and a giant wordmark closing the bottom.
+// the panel; the space UNDER the link columns is deliberate breathing room
+// (the user hid the giant wordmark that used to sit there — keep it out).
 
 const COLUMNS: { heading: string; links: { label: string; href: string; external?: boolean }[] }[] = [
     {
@@ -48,12 +49,9 @@ export function MarketingFooter() {
             <div className="mx-auto flex w-full max-w-8xl flex-1 flex-col">
                 <div className="flex flex-1 flex-col justify-between overflow-hidden rounded-[40px] bg-black px-6 py-12 text-white ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-14">
                     <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
-                        {/* Left rail — wordmark + status pill (pinned bottom on desktop). */}
-                        <div className="flex flex-col justify-between gap-10 lg:w-56">
+                        {/* Left rail — wordmark. */}
+                        <div className="lg:w-56">
                             <Link href="/" className="font-pixel text-3xl tracking-tighter">watchparty</Link>
-                            <span className="hidden w-fit items-center gap-2 rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/60 ring-1 ring-white/10 lg:inline-flex">
-                                <span className="size-2 rounded-full bg-lantern" /> All systems operational
-                            </span>
                         </div>
 
                         {/* Right — big email card, then the link columns beneath it. */}
@@ -75,7 +73,7 @@ export function MarketingFooter() {
                                     </p>
                                     <button
                                         type="submit"
-                                        className="shrink-0 self-start rounded-full bg-lantern px-7 py-3 text-sm font-bold text-black transition-transform duration-200 hover:scale-[1.03] active:scale-95 sm:self-auto"
+                                        className="shrink-0 self-start rounded-full bg-lantern px-7 py-3 text-sm font-bold text-black transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97] sm:self-auto"
                                     >
                                         Sign up
                                     </button>
@@ -109,19 +107,11 @@ export function MarketingFooter() {
                         </div>
                     </div>
 
-                    {/* Status pill on mobile (desktop shows it on the left rail). */}
-                    <span className="mt-12 inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/60 ring-1 ring-white/10 lg:hidden">
+                    {/* Status pill anchors the panel's bottom-left; everything
+                        above it breathes. */}
+                    <span className="mt-12 inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/60 ring-1 ring-white/10">
                         <span className="size-2 rounded-full bg-lantern" /> All systems operational
                     </span>
-
-                    {/* Giant wordmark closes the panel — the brand moment that
-                        earns the full-screen height. */}
-                    <p
-                        aria-hidden
-                        className="mt-14 select-none font-pixel text-[clamp(3rem,11.5vw,10.5rem)] leading-[0.85] tracking-tighter text-white"
-                    >
-                        watchparty
-                    </p>
                 </div>
 
                 {/* Legal — outside the panel on the light page base, like Phantom. */}

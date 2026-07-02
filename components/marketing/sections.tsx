@@ -3,7 +3,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { MARKETING_FEATURES } from "./nav-data";
-import { Reveal, Parallax } from "./motion";
+import { Reveal, Parallax, WordReveal } from "./motion";
 
 // Marketing section kit — Cash App-shaped: big LEFT-aligned Geist headlines
 // (font-pixel is the small accent on eyebrows + the logo, not the headlines, for
@@ -79,47 +79,55 @@ export function MarketingHero({
     variant?: "split" | "reverse" | "centered";
 }) {
     const centered = variant === "centered";
+    // Staggered entrance: eyebrow → headline → sub → CTAs cascade in (60ms
+    // steps), instead of the whole block arriving as one slab.
     const copy = (
-        <Reveal className={cn(centered && "mx-auto max-w-3xl text-center")}>
+        <div className={cn(centered && "mx-auto max-w-3xl text-center")}>
             {eyebrow && (
-                <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/50">{eyebrow}</p>
+                <Reveal y={14}>
+                    <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/50">{eyebrow}</p>
+                </Reveal>
             )}
-            <h1
-                className={cn(
-                    "font-extrabold leading-[1.02] tracking-tight text-black",
-                    centered ? "text-5xl sm:text-7xl lg:text-8xl" : "text-4xl sm:text-6xl lg:text-7xl",
-                )}
-            >
-                {title}
-            </h1>
-            <p
-                className={cn(
-                    "mt-6 text-lg font-semibold leading-snug text-black/70 sm:text-xl",
-                    centered ? "mx-auto max-w-xl" : "max-w-md",
-                )}
-            >
-                {sub}
-            </p>
-            <div className={cn("mt-10 flex flex-wrap items-center gap-3", centered && "justify-center")}>
+            <Reveal y={18} delay={0.06}>
+                <h1
+                    className={cn(
+                        "font-extrabold leading-[1.02] tracking-tight text-black",
+                        centered ? "text-5xl sm:text-7xl lg:text-8xl" : "text-4xl sm:text-6xl lg:text-7xl",
+                    )}
+                >
+                    {title}
+                </h1>
+            </Reveal>
+            <Reveal y={18} delay={0.12}>
+                <p
+                    className={cn(
+                        "mt-6 text-lg font-semibold leading-snug text-black/70 sm:text-xl",
+                        centered ? "mx-auto max-w-xl" : "max-w-md",
+                    )}
+                >
+                    {sub}
+                </p>
+            </Reveal>
+            <Reveal y={14} delay={0.18} className={cn("mt-10 flex flex-wrap items-center gap-3", centered && "justify-center")}>
                 <Link
                     href={ctaHref}
-                    className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                    className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                 >
                     {ctaLabel}
                 </Link>
                 {secondaryLabel && secondaryHref && (
                     <Link
                         href={secondaryHref}
-                        className="rounded-full bg-white px-8 py-4 text-base font-bold text-black ring-1 ring-black/[0.08] transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                        className="rounded-full bg-white px-8 py-4 text-base font-bold text-black ring-1 ring-black/[0.08] transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                     >
                         {secondaryLabel}
                     </Link>
                 )}
-            </div>
-        </Reveal>
+            </Reveal>
+        </div>
     );
     const art = (
-        <Reveal delay={0.1} className={cn(centered && "flex justify-center")}>
+        <Reveal delay={0.22} className={cn(centered && "flex justify-center")}>
             <Parallax amount={28}>
                 {visual ?? <ShowcasePanel tone={panelTone} label={panelLabel} icon={panelIcon} />}
             </Parallax>
@@ -190,7 +198,7 @@ export function ShowcaseRow({
                     {ctaLabel && ctaHref && (
                         <Link
                             href={ctaHref}
-                            className="mt-7 inline-block rounded-full bg-black px-7 py-3.5 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                            className="mt-7 inline-block rounded-full bg-black px-7 py-3.5 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                         >
                             {ctaLabel}
                         </Link>
@@ -236,7 +244,7 @@ export function BoldBlock({
                         <Link
                             href={ctaHref}
                             className={cn(
-                                "mt-7 inline-block rounded-full px-7 py-3.5 text-base font-bold transition-transform duration-200 hover:scale-[1.03] active:scale-95",
+                                "mt-7 inline-block rounded-full px-7 py-3.5 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
                                 dark ? "bg-white text-black" : "bg-black text-white",
                             )}
                         >
@@ -300,7 +308,7 @@ export function InsetBlock({
                             <Link
                                 href={ctaHref}
                                 className={cn(
-                                    "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-200 hover:scale-[1.03] active:scale-95",
+                                    "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
                                     dark ? "bg-white text-black" : "bg-black text-white",
                                 )}
                             >
@@ -354,7 +362,7 @@ export function CenterFeature({
                         <Link
                             href={ctaHref}
                             className={cn(
-                                "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-200 hover:scale-[1.03] active:scale-95",
+                                "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
                                 dark ? "bg-white text-black" : "bg-black text-white",
                             )}
                         >
@@ -553,7 +561,8 @@ export function TwoUpBold({
 }
 
 // Big editorial statement (Phantom/Stripe pattern) — one oversized line of copy,
-// generous space. A manifesto beat, not a card.
+// generous space. A manifesto beat, not a card. Words brighten one by one as
+// the block scrolls through the viewport (scroll-scrubbed, see WordReveal).
 export function BigStatement({
     children,
     tone,
@@ -566,9 +575,9 @@ export function BigStatement({
     return (
         <section className={cn("flex min-h-[80svh] flex-col justify-center px-6 py-12", tone, className)}>
             <div className="mx-auto max-w-5xl">
-                <Reveal>
-                    <p className="font-extrabold text-3xl leading-[1.15] tracking-tight text-black sm:text-5xl lg:text-6xl">{children}</p>
-                </Reveal>
+                <WordReveal className="font-extrabold text-3xl leading-[1.15] tracking-tight text-black sm:text-5xl lg:text-6xl">
+                    {children}
+                </WordReveal>
             </div>
         </section>
     );
@@ -619,7 +628,7 @@ export function ExploreMore({ currentHref, className }: { currentHref: string; c
                         <Reveal key={f.href} delay={i * 0.06}>
                             <Link
                                 href={f.href}
-                                className="group flex h-full flex-col rounded-2xl bg-white p-6 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-200 ease-out hover:-translate-y-1"
+                                className="group flex h-full flex-col rounded-2xl bg-white p-6 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-200 ease-out hover:-translate-y-1 active:scale-[0.98]"
                             >
                                 <span className={cn("mb-4 grid size-10 place-items-center rounded-xl bg-current/10", f.tone)}>
                                     <HugeiconsIcon icon={f.icon} size={22} strokeWidth={1.8} className={f.tone} />
@@ -701,7 +710,7 @@ export function ClosingCta({
                         <Reveal delay={tiles.length * 0.06}>
                             <Link
                                 href={ctaHref}
-                                className="group flex h-full flex-col justify-between rounded-2xl bg-lantern p-6 text-black transition-transform duration-200 hover:-translate-y-1"
+                                className="group flex h-full flex-col justify-between rounded-2xl bg-lantern p-6 text-black transition-transform duration-200 ease-out hover:-translate-y-1 active:scale-[0.98]"
                             >
                                 <p className="font-extrabold text-xl tracking-tight">{ctaLabel}</p>
                                 <span className="mt-8 inline-flex size-10 items-center justify-center rounded-full bg-black/10">
@@ -713,7 +722,7 @@ export function ClosingCta({
                 ) : (
                     <Link
                         href={ctaHref}
-                        className="mt-8 inline-block rounded-full bg-white px-8 py-4 text-base font-bold text-black transition-transform duration-200 hover:scale-[1.03] active:scale-95"
+                        className="mt-8 inline-block rounded-full bg-white px-8 py-4 text-base font-bold text-black transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                     >
                         {ctaLabel}
                     </Link>

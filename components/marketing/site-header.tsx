@@ -43,17 +43,25 @@ export function SiteHeader() {
           <nav
             id="site-menu"
             aria-label="Main"
-            className="flex h-full flex-col items-center justify-center gap-3"
+            className="flex h-full flex-col items-center justify-center gap-4 sm:gap-5"
           >
-            {NAV_LINKS.map((link) => (
-              <Link
+            {/* Links cascade in fast (30ms steps, ~250ms total) while the black
+                canvas itself stays instant. */}
+            {NAV_LINKS.map((link, i) => (
+              <motion.div
                 key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="px-4 py-1 text-4xl font-semibold tracking-tight text-white transition-colors hover:text-white/60 sm:text-6xl"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03, duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
               >
-                {link.label}
-              </Link>
+                <Link
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="block px-4 py-1 text-4xl font-semibold tracking-tight text-white transition-colors duration-150 hover:text-white/60 sm:text-6xl"
+                >
+                  {link.label}
+                </Link>
+              </motion.div>
             ))}
           </nav>
         </div>
@@ -83,7 +91,7 @@ export function SiteHeader() {
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/login"
-              className={`rounded-full px-5 py-3.5 text-lg font-semibold tracking-tight transition-colors duration-300 ease-out sm:h-[55px] sm:px-12 ${
+              className={`rounded-full px-5 py-3.5 text-lg font-semibold tracking-tight active:scale-[0.97] [transition:background-color_.3s_ease-out,color_.3s_ease-out,transform_.16s_ease-out] sm:h-[55px] sm:px-12 ${
                 open ? "bg-white text-black hover:bg-white/80" : "bg-black text-white hover:bg-black/90"
               }`}
             >
@@ -96,7 +104,7 @@ export function SiteHeader() {
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               aria-controls="site-menu"
-              className={`grid place-items-center h-[55px] w-[55px] rounded-full transition-colors duration-300 ease-out sm:h-[55px] sm:w-[55px] ${
+              className={`grid place-items-center h-[55px] w-[55px] rounded-full active:scale-[0.94] [transition:background-color_.3s_ease-out,color_.3s_ease-out,transform_.16s_ease-out] sm:h-[55px] sm:w-[55px] ${
                 open ? "bg-white text-black hover:bg-white/80" : "bg-black text-white hover:bg-black/90"
               }`}
             >
