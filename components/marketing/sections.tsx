@@ -243,9 +243,10 @@ export function BoldBlock({
 }
 
 // Floating inset block (Phantom "Your privacy matters") — a big rounded panel
-// that FLOATS on the page gradient instead of cutting a full-bleed band, so dark
-// moments don't create a visible section seam. Split: copy one side, visual the
-// other. Use this for the money/earn/highlight beat on a GradientPage.
+// that FLOATS on the page background instead of cutting a full-bleed band, so
+// dark moments don't create a visible section seam. Split: copy one side,
+// visual the other. Use this for the money/earn/highlight beat on a
+// ColorScrollPage.
 export function InsetBlock({
     eyebrow,
     title,

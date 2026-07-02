@@ -14,10 +14,11 @@ export default async function MarketingLayout({
     const session = await getServerSession();
     if (session) redirect("/home");
 
-    // Neutral base: each page paints its own continuous gradient (GradientPage),
-    // which covers main top-to-bottom, so the header floats over the page's own
-    // first color and there are no band seams. Top padding lives inside each
-    // page's GradientPage so the gradient also fills the header clearance.
+    // Neutral base: each page paints its own scroll-reactive background
+    // (ColorScrollPage), which covers main top-to-bottom, so the header floats
+    // over the page's own first color and there are no band seams. Top padding
+    // lives inside each page's ColorScrollPage so the background also fills the
+    // header clearance.
     return (
         <div className="relative flex min-h-svh flex-col bg-white text-black">
             <SiteHeader />

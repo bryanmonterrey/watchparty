@@ -3,8 +3,9 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
-import { GradientPage } from "@/components/marketing/gradient-page";
+import { MarketingHero, BentoGrid, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
+import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
+import { CardCarousel } from "@/components/marketing/card-carousel";
 import { type Feature } from "@/components/marketing/feature-card";
 import { MiniServer, MiniSpace, MiniChat } from "@/components/marketing/mocks";
 
@@ -42,73 +43,73 @@ const FAQ = [
 
 export default function CommunityPage() {
     return (
-        <GradientPage
-            className="pt-28 sm:pt-32"
-            stops={[
-                "var(--color-soft-blue)",
-                "var(--color-soft-pink) 40%",
-                "color-mix(in oklch, var(--color-lantern) 20%, white) 72%",
-                "#ffffff",
-            ]}
-        >
-            <MarketingHero
-                eyebrow="Communities"
-                title={<>Find your people</>}
-                sub="Servers, live spaces, group chats, and bots, for the communities you actually care about."
-                ctaLabel="Join a community"
-                secondaryLabel="Explore"
-                secondaryHref="/explore"
-                visual={
-                    <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-white/50 px-6 pt-12 ring-1 ring-black/[0.04]">
-                        {/* Real app screen of the Communities tab. */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src="/communitydesign.png"
-                            alt="The watchparty Communities screen"
-                            className="w-[230px] rotate-[-3deg] rounded-[2rem]"
-                        />
-                    </div>
-                }
-            />
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-blue)">
+            <BgZone bg="var(--color-soft-blue)">
+                <MarketingHero
+                    eyebrow="Communities"
+                    title={<>Find your people</>}
+                    sub="Servers, live spaces, group chats, and bots, for the communities you actually care about."
+                    ctaLabel="Join a community"
+                    secondaryLabel="Explore"
+                    secondaryHref="/explore"
+                    visual={
+                        <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-white/50 px-6 pt-12 ring-1 ring-black/[0.04]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src="/communitydesign.png"
+                                alt="The watchparty Communities screen"
+                                className="w-[230px] rotate-[-3deg] rounded-[2rem]"
+                            />
+                        </div>
+                    }
+                />
+            </BgZone>
 
-            <CaptionCards
-                eyebrow="Under one roof"
-                title="Servers, spaces, and chats in one place"
-                sub="Everything Discord does — plus live audio and encrypted DMs — right where your audience already is."
-                cards={[
-                    { visual: <MiniServer />, bg: "bg-white", title: "Servers", body: "Channels for everything your community is into, with roles and mods." },
-                    { visual: <MiniSpace />, bg: "bg-white", title: "Live spaces", body: "Drop into live audio rooms and talk to your people in real time." },
-                    { visual: <MiniChat />, bg: "bg-white", title: "Group chats", body: "Direct, end-to-end encrypted conversations with the crew." },
-                ]}
-            />
+            <BgZone bg="#0e0f13">
+                <CardCarousel
+                    dark
+                    eyebrow="Under one roof"
+                    title="Servers, spaces, and chats"
+                    sub="Everything Discord does — plus live audio and encrypted DMs — right where your audience already is."
+                    cards={[
+                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Servers</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniServer /></div></>) },
+                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Live spaces</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniSpace /></div></>) },
+                        { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Group chats</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
+                    ]}
+                />
+            </BgZone>
 
-            <BentoGrid
-                eyebrow="What's inside"
-                title="Built for belonging"
-                items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
-            />
+            <BgZone bg="var(--color-soft-pink)">
+                <BentoGrid
+                    eyebrow="What's inside"
+                    title="Built for belonging"
+                    items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
+                />
 
-            <InsetBlock
-                reverse
-                eyebrow="Automation"
-                title="Automate the boring parts"
-                body="Add Discord-style bots for welcomes, moderation, and token-gated perks — so you can focus on the people, not the busywork."
-                ctaLabel="Build your server"
-                ctaHref="/login"
-                visual={
-                    <div className="w-full max-w-sm space-y-3">
-                        {BOTS.map(([t, b]) => (
-                            <div key={t} className="rounded-2xl bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                                <p className="text-sm font-extrabold tracking-tight text-black">{t}</p>
-                                <p className="mt-0.5 text-xs font-semibold text-black/55">{b}</p>
-                            </div>
-                        ))}
-                    </div>
-                }
-            />
+                <InsetBlock
+                    reverse
+                    eyebrow="Automation"
+                    title="Automate the boring parts"
+                    body="Add Discord-style bots for welcomes, moderation, and token-gated perks — so you can focus on the people, not the busywork."
+                    ctaLabel="Build your server"
+                    ctaHref="/login"
+                    visual={
+                        <div className="w-full max-w-sm space-y-3">
+                            {BOTS.map(([t, b]) => (
+                                <div key={t} className="rounded-2xl bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                                    <p className="text-sm font-extrabold tracking-tight text-black">{t}</p>
+                                    <p className="mt-0.5 text-xs font-semibold text-black/55">{b}</p>
+                                </div>
+                            ))}
+                        </div>
+                    }
+                />
+            </BgZone>
 
-            <ExploreMore currentHref="/community" />
-            <Faq items={FAQ} />
-        </GradientPage>
+            <BgZone bg="#ffffff">
+                <ExploreMore currentHref="/community" />
+                <Faq items={FAQ} />
+            </BgZone>
+        </ColorScrollPage>
     );
 }

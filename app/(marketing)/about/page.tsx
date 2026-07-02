@@ -1,15 +1,16 @@
 import { Metadata } from "next";
 import { LiveStreaming01Icon, Wallet01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, BigStatement, StepFlow, CaptionCards, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
-import { GradientPage } from "@/components/marketing/gradient-page";
+import { MarketingHero, BigStatement, StepFlow, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
+import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
+import { CardCarousel } from "@/components/marketing/card-carousel";
 import { HeroBento, EarningsCard, MiniLive, MiniFeed, MiniChart } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "About" };
 
 const PILLARS = [
-    { icon: LiveStreaming01Icon, title: "A stage", body: "Go live and stream to an audience that's already here.", accent: "text-pastelred" },
-    { icon: UserGroupIcon, title: "A timeline", body: "The social feed you know, ranked by an open algorithm.", accent: "text-twitter" },
-    { icon: Wallet01Icon, title: "A wallet", body: "Trade, tip, and get paid, built into every account.", accent: "text-jewel" },
+    { icon: LiveStreaming01Icon, title: "A stage", body: "Go live and stream to an audience that's already here." },
+    { icon: UserGroupIcon, title: "A timeline", body: "The social feed you know, ranked by an open algorithm." },
+    { icon: Wallet01Icon, title: "A wallet", body: "Trade, tip, and get paid, built into every account." },
 ];
 
 const FAQ = [
@@ -20,61 +21,62 @@ const FAQ = [
 
 export default function AboutPage() {
     return (
-        <GradientPage
-            className="pt-28 sm:pt-32"
-            stops={[
-                "var(--color-soft-pink)",
-                "var(--color-pastel-yellow) 38%",
-                "var(--color-soft-blue) 72%",
-                "var(--color-soft-gray)",
-            ]}
-        >
-            <MarketingHero
-                variant="centered"
-                eyebrow="About"
-                title={<>Crypto Twitter, leveled up</>}
-                sub="watchparty brings the timeline, the stream, and the trade together in one app."
-                secondaryLabel="Explore"
-                secondaryHref="/explore"
-                visual={<HeroBento />}
-            />
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-pink)">
+            <BgZone bg="var(--color-soft-pink)">
+                <MarketingHero
+                    variant="centered"
+                    eyebrow="About"
+                    title={<>Crypto Twitter, leveled up</>}
+                    sub="watchparty brings the timeline, the stream, and the trade together in one app."
+                    secondaryLabel="Explore"
+                    secondaryHref="/explore"
+                    visual={<HeroBento />}
+                />
 
-            <BigStatement>
-                The timeline lives in one app, streaming in another, and your wallet somewhere else
-                entirely. <span className="text-black/40">watchparty puts them in the same place</span> — watch a
-                stream, post a take, back a creator, and trade a coin without ever switching tabs.
-            </BigStatement>
+                <BigStatement>
+                    The timeline lives in one app, streaming in another, and your wallet somewhere else
+                    entirely. <span className="text-black/40">watchparty puts them in the same place</span> — watch a
+                    stream, post a take, back a creator, and trade a coin without ever switching tabs.
+                </BigStatement>
+            </BgZone>
 
-            <StepFlow
-                eyebrow="The idea"
-                title="Three things, one app"
-                sub="A stage, a timeline, and a wallet — finally in the same place."
-                steps={PILLARS.map((p) => ({ title: p.title, body: p.body }))}
-            />
+            <BgZone bg="#0e0f13">
+                <CardCarousel
+                    dark
+                    eyebrow="See it"
+                    title="Watch, post, and trade — together"
+                    sub="The three things you'd juggle across apps, sharing a single feed."
+                    cards={[
+                        { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">A stage</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
+                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">A timeline</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniFeed /></div></>) },
+                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">A wallet</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChart /></div></>) },
+                    ]}
+                />
+            </BgZone>
 
-            <CaptionCards
-                eyebrow="See it"
-                title="Watch, post, and trade — side by side"
-                sub="The three things you'd juggle across apps, sharing a single feed."
-                cards={[
-                    { visual: <MiniLive />, bg: "bg-white", title: "A stage", body: "Go live and stream to an audience that's already here." },
-                    { visual: <MiniFeed />, bg: "bg-white", title: "A timeline", body: "The social feed you know, ranked by an open algorithm." },
-                    { visual: <MiniChart />, bg: "bg-white", title: "A wallet", body: "Trade, tip, and get paid — built into every account." },
-                ]}
-            />
+            <BgZone bg="var(--color-pastel-yellow)">
+                <StepFlow
+                    eyebrow="The idea"
+                    title="Three things, one app"
+                    sub="A stage, a timeline, and a wallet — finally in the same place."
+                    steps={PILLARS.map((p) => ({ title: p.title, body: p.body }))}
+                />
+            </BgZone>
 
-            <InsetBlock
-                reverse
-                eyebrow="For creators"
-                title="Get paid for what you make"
-                body="Creators earn from subscriptions, tips, and creator fees — settled in USDC and claimed straight to a wallet built into every account."
-                ctaLabel="Start creating"
-                ctaHref="/creators"
-                visual={<EarningsCard />}
-            />
+            <BgZone bg="var(--color-soft-gray)">
+                <InsetBlock
+                    reverse
+                    eyebrow="For creators"
+                    title="Get paid for what you make"
+                    body="Creators earn from subscriptions, tips, and creator fees — settled in USDC and claimed straight to a wallet built into every account."
+                    ctaLabel="Start creating"
+                    ctaHref="/creators"
+                    visual={<EarningsCard />}
+                />
 
-            <ExploreMore currentHref="/about" />
-            <Faq items={FAQ} />
-        </GradientPage>
+                <ExploreMore currentHref="/about" />
+                <Faq items={FAQ} />
+            </BgZone>
+        </ColorScrollPage>
     );
 }

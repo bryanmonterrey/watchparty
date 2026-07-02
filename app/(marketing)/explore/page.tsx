@@ -3,8 +3,9 @@ import {
     LiveStreaming01Icon, CameraVideoIcon, Compass01Icon,
     AiSearchIcon, PlayListIcon, GridIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, CenterFeature, ExploreMore, Faq } from "@/components/marketing/sections";
-import { GradientPage } from "@/components/marketing/gradient-page";
+import { MarketingHero, BentoGrid, InsetBlock, CenterFeature, ExploreMore, Faq } from "@/components/marketing/sections";
+import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
+import { CardCarousel } from "@/components/marketing/card-carousel";
 import { type Feature } from "@/components/marketing/feature-card";
 import { HeroCollage, PhoneMock, CoinScreen, MiniLive, MiniShort, MiniFeed } from "@/components/marketing/mocks";
 
@@ -38,75 +39,76 @@ const FAQ = [
 
 export default function ExplorePage() {
     return (
-        <GradientPage
-            className="pt-28 sm:pt-32"
-            stops={[
-                "var(--color-soft-blue)",
-                "var(--color-soft-pink) 42%",
-                "var(--color-pastel-yellow) 74%",
-                "#ffffff",
-            ]}
-        >
-            <MarketingHero
-                eyebrow="Explore"
-                title={<>Watch what&apos;s happening</>}
-                sub="Live streams, shorts, and the timeline you already know, all in one feed."
-                secondaryLabel="For creators"
-                secondaryHref="/creators"
-                visual={<HeroCollage />}
-            />
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-blue)">
+            <BgZone bg="var(--color-soft-blue)">
+                <MarketingHero
+                    eyebrow="Explore"
+                    title={<>Watch what&apos;s happening</>}
+                    sub="Live streams, shorts, and the timeline you already know, all in one feed."
+                    secondaryLabel="For creators"
+                    secondaryHref="/creators"
+                    visual={<HeroCollage />}
+                />
+            </BgZone>
 
-            <CaptionCards
-                eyebrow="One feed"
-                title="Everything worth watching, together"
-                sub="Streams, shorts, and posts share the same timeline — no apps to switch between."
-                cards={[
-                    { visual: <MiniLive />, bg: "bg-white", title: "Live now", body: "Tune into streams the moment they start, with chat from the first viewer." },
-                    { visual: <MiniShort />, bg: "bg-white", title: "Shorts", body: "Quick clips and an endless scroll, right beside the streams." },
-                    { visual: <MiniFeed />, bg: "bg-white", title: "For You", body: "A timeline ranked by the same open algorithm you already know." },
-                ]}
-            />
+            <BgZone bg="#0e0f13">
+                <CardCarousel
+                    dark
+                    eyebrow="One feed"
+                    title="Everything worth watching"
+                    sub="Streams, shorts, and posts share the same timeline — no apps to switch between."
+                    cards={[
+                        { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Live now</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
+                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Shorts</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShort /></div></>) },
+                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">For You</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniFeed /></div></>) },
+                    ]}
+                />
+            </BgZone>
 
-            <InsetBlock
-                reverse
-                eyebrow="The feed"
-                title="Ranked for you, not for ads"
-                body="One open algorithm powers the whole feed, tuned to what you actually watch — so the good stuff finds you."
-                ctaLabel="See your feed"
-                ctaHref="/login"
-                visual={
-                    <div className="flex max-w-sm flex-wrap justify-center gap-2.5">
-                        {CATEGORIES.map((c, i) => (
-                            <span
-                                key={c}
-                                className={`rounded-full px-4 py-2.5 text-sm font-bold text-black ${["bg-soft-pink", "bg-soft-blue", "bg-pastel-yellow", "bg-lantern"][i % 4]}`}
-                            >
-                                {c}
-                            </span>
-                        ))}
-                    </div>
-                }
-            />
+            <BgZone bg="var(--color-soft-pink)">
+                <InsetBlock
+                    reverse
+                    eyebrow="The feed"
+                    title="Ranked for you, not for ads"
+                    body="One open algorithm powers the whole feed, tuned to what you actually watch — so the good stuff finds you."
+                    ctaLabel="See your feed"
+                    ctaHref="/login"
+                    visual={
+                        <div className="flex max-w-sm flex-wrap justify-center gap-2.5">
+                            {CATEGORIES.map((c, i) => (
+                                <span
+                                    key={c}
+                                    className={`rounded-full px-4 py-2.5 text-sm font-bold text-black ${["bg-soft-pink", "bg-soft-blue", "bg-pastel-yellow", "bg-lantern"][i % 4]}`}
+                                >
+                                    {c}
+                                </span>
+                            ))}
+                        </div>
+                    }
+                />
 
-            <BentoGrid
-                eyebrow="What's inside"
-                title="A whole home for watching"
-                items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
-            />
+                <BentoGrid
+                    eyebrow="What's inside"
+                    title="A whole home for watching"
+                    items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
+                />
+            </BgZone>
 
-            <CenterFeature
-                eyebrow="Trade as you scroll"
-                title="Spot it, buy it, in one tap"
-                sub="See a coin in the feed and buy it without leaving the timeline — a secure wallet ships with every account."
-                visual={
-                    <PhoneMock className="rotate-[-3deg]">
-                        <CoinScreen />
-                    </PhoneMock>
-                }
-            />
+            <BgZone bg="#ffffff">
+                <CenterFeature
+                    eyebrow="Trade as you scroll"
+                    title="Spot it, buy it, in one tap"
+                    sub="See a coin in the feed and buy it without leaving the timeline — a secure wallet ships with every account."
+                    visual={
+                        <PhoneMock className="rotate-[-3deg]">
+                            <CoinScreen />
+                        </PhoneMock>
+                    }
+                />
 
-            <ExploreMore currentHref="/explore" />
-            <Faq items={FAQ} />
-        </GradientPage>
+                <ExploreMore currentHref="/explore" />
+                <Faq items={FAQ} />
+            </BgZone>
+        </ColorScrollPage>
     );
 }
