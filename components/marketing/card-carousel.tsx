@@ -37,11 +37,11 @@ function CardFrame({ tone, children }: { tone: string; children: React.ReactNode
 
 function Header({ eyebrow, title, sub, dark }: { eyebrow?: string; title: string; sub?: string; dark?: boolean }) {
     return (
-        <Reveal className="mx-auto mb-12 max-w-2xl text-center">
+        <Reveal className="mx-auto mb-16 max-w-2xl text-center">
             {eyebrow && (
                 <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", dark ? "text-white/45" : "text-black/45")}>{eyebrow}</p>
             )}
-            <h2 className={cn("font-extrabold text-3xl leading-[1.05] tracking-tight sm:text-5xl", dark ? "text-white" : "text-black")}>{title}</h2>
+            <h2 className={cn("font-extrabold text-3xl leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl", dark ? "text-white" : "text-black")}>{title}</h2>
             {sub && <p className={cn("mx-auto mt-4 max-w-lg text-lg font-semibold leading-snug", dark ? "text-white/60" : "text-black/60")}>{sub}</p>}
         </Reveal>
     );

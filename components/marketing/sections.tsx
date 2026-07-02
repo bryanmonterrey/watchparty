@@ -94,13 +94,13 @@ export function MarketingHero({
             </h1>
             <p
                 className={cn(
-                    "mt-5 text-lg font-semibold leading-snug text-black/70 sm:text-xl",
+                    "mt-6 text-lg font-semibold leading-snug text-black/70 sm:text-xl",
                     centered ? "mx-auto max-w-xl" : "max-w-md",
                 )}
             >
                 {sub}
             </p>
-            <div className={cn("mt-8 flex flex-wrap items-center gap-3", centered && "justify-center")}>
+            <div className={cn("mt-10 flex flex-wrap items-center gap-3", centered && "justify-center")}>
                 <Link
                     href={ctaHref}
                     className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-200 hover:scale-[1.03] active:scale-95"
@@ -132,7 +132,7 @@ export function MarketingHero({
             <section className="flex min-h-[86svh] flex-col justify-center px-6 py-10">
                 <div className="mx-auto w-full max-w-6xl">
                     {copy}
-                    <div className="mt-14">{art}</div>
+                    <div className="mt-16 sm:mt-20">{art}</div>
                 </div>
             </section>
         );
@@ -140,7 +140,7 @@ export function MarketingHero({
 
     return (
         <section className="flex min-h-[86svh] flex-col justify-center px-6 py-10">
-            <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
+            <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
                 {variant === "reverse" ? (
                     <>
                         <div className="lg:order-2">{copy}</div>
@@ -181,9 +181,9 @@ export function ShowcaseRow({
 }) {
     return (
         <section className={cn(BEAT, "px-6 py-12", className)}>
-            <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
+            <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
                 <div className={cn(reverse && "lg:order-2")}>
-                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-black sm:text-5xl">
+                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-black sm:text-5xl lg:text-6xl">
                         {title}
                     </h2>
                     <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-black/65">{body}</p>
@@ -226,9 +226,9 @@ export function BoldBlock({
 }) {
     return (
         <section className={cn(BEAT, "px-6 py-12", tone)}>
-            <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
+            <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
                 <Reveal className={cn(reverse && "lg:order-2")}>
-                    <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl", dark ? "text-white" : "text-black")}>
+                    <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl", dark ? "text-white" : "text-black")}>
                         {title}
                     </h2>
                     <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", dark ? "text-white/70" : "text-black/70")}>{body}</p>
@@ -281,7 +281,7 @@ export function InsetBlock({
             <Reveal>
                 <div
                     className={cn(
-                        "mx-auto grid w-full max-w-6xl items-center gap-10 overflow-hidden rounded-[40px] p-8 sm:p-12 lg:grid-cols-2 lg:gap-14 lg:p-16",
+                        "mx-auto grid w-full max-w-6xl items-center gap-10 overflow-hidden rounded-[40px] p-8 sm:p-12 lg:grid-cols-2 lg:gap-20 lg:p-20",
                         tone,
                         dark
                             ? "ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
@@ -292,7 +292,7 @@ export function InsetBlock({
                         {eyebrow && (
                             <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", dark ? "text-white/45" : "text-black/45")}>{eyebrow}</p>
                         )}
-                        <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl", dark ? "text-white" : "text-black")}>
+                        <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl", dark ? "text-white" : "text-black")}>
                             {title}
                         </h2>
                         <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", dark ? "text-white/65" : "text-black/65")}>{body}</p>
@@ -394,10 +394,10 @@ export function StepFlow({
                     {eyebrow && (
                         <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
                     )}
-                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>
+                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>
                     {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
                 </Reveal>
-                <div className="mt-12 grid gap-x-6 gap-y-10 sm:grid-cols-3">
+                <div className="mt-16 grid gap-x-10 gap-y-12 sm:grid-cols-3">
                     {steps.map((s, i) => (
                         <Reveal key={s.title} delay={i * 0.08}>
                             <div className="border-t-2 border-black/10 pt-5">
@@ -438,11 +438,11 @@ export function BentoGrid({
                         {eyebrow && (
                             <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
                         )}
-                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>}
+                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>}
                         {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
                     </Reveal>
                 )}
-                <div className="mt-10 grid auto-rows-[176px] grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="mt-14 grid auto-rows-[176px] grid-cols-2 gap-4 sm:grid-cols-4">
                     {items.map((it, i) => (
                         <Reveal
                             key={it.title}
@@ -496,11 +496,11 @@ export function CaptionCards({
                         {eyebrow && (
                             <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
                         )}
-                        {title && <h2 className="font-extrabold text-3xl leading-[1.06] tracking-tight text-black sm:text-5xl">{title}</h2>}
+                        {title && <h2 className="font-extrabold text-3xl leading-[1.06] tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>}
                         {sub && <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">{sub}</p>}
                     </Reveal>
                 )}
-                <div className={cn("mt-14 grid gap-6 sm:mt-16", columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+                <div className={cn("mt-16 grid gap-8 sm:mt-20", columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
                     {cards.map((c, i) => (
                         <Reveal key={c.title} delay={i * 0.08}>
                             <div className="flex h-full flex-col">
@@ -535,7 +535,7 @@ export function TwoUpBold({
 }) {
     return (
         <section className={cn(BEAT, "px-6 py-12", tone)}>
-            <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-2">
+            <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
                 {items.map((it, i) => (
                     <Reveal key={it.title} delay={i * 0.08}>
                         <div className={cn("flex h-full flex-col justify-between overflow-hidden rounded-[32px] p-8 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] sm:p-10", it.bg)}>
@@ -565,9 +565,9 @@ export function BigStatement({
 }) {
     return (
         <section className={cn("flex min-h-[80svh] flex-col justify-center px-6 py-12", tone, className)}>
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-5xl">
                 <Reveal>
-                    <p className="font-extrabold text-3xl leading-[1.15] tracking-tight text-black sm:text-5xl">{children}</p>
+                    <p className="font-extrabold text-3xl leading-[1.15] tracking-tight text-black sm:text-5xl lg:text-6xl">{children}</p>
                 </Reveal>
             </div>
         </section>
@@ -592,7 +592,7 @@ export function BandSection({
                 {(title || sub) && (
                     <Reveal>
                         {title && (
-                            <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">{title}</h2>
+                            <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>
                         )}
                         {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
                     </Reveal>
@@ -614,7 +614,7 @@ export function ExploreMore({ currentHref, className }: { currentHref: string; c
                 <Reveal>
                     <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">Explore more</h2>
                 </Reveal>
-                <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {links.map((f, i) => (
                         <Reveal key={f.href} delay={i * 0.06}>
                             <Link
@@ -682,7 +682,7 @@ export function ClosingCta({
 }) {
     return (
         <section className="flex min-h-[85svh] flex-col justify-center px-4 py-12 sm:px-6">
-            <div className="mx-auto w-full max-w-8xl overflow-hidden rounded-[40px] bg-black px-6 py-16 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-20">
+            <div className="mx-auto flex min-h-[70svh] w-full max-w-8xl flex-col justify-center overflow-hidden rounded-[40px] bg-black px-6 py-16 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-20">
                 <Reveal>
                     <h2 className="max-w-2xl font-extrabold text-4xl leading-[1.05] tracking-tight text-white sm:text-6xl">{title}</h2>
                     {sub && <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/70">{sub}</p>}

@@ -4,6 +4,8 @@ import Link from "next/link";
 // panel with the wordmark on a left rail; a large email "card" (giant placeholder
 // + caption + Sign up) on the right with the link columns beneath it; an
 // "operational" status pill bottom-left; and © + legal OUTSIDE the panel.
+// The whole footer fills ~one screen: min-h-svh with a ~spacing-7 frame around
+// the panel, content pushed apart and a giant wordmark closing the bottom.
 
 const COLUMNS: { heading: string; links: { label: string; href: string; external?: boolean }[] }[] = [
     {
@@ -42,9 +44,9 @@ const COLUMNS: { heading: string; links: { label: string; href: string; external
 
 export function MarketingFooter() {
     return (
-        <footer className="px-4 pb-8 pt-4 sm:px-6">
-            <div className="mx-auto w-full max-w-8xl">
-                <div className="overflow-hidden rounded-[40px] bg-black px-6 py-12 text-white ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-14">
+        <footer className="flex min-h-svh flex-col p-4 sm:p-7">
+            <div className="mx-auto flex w-full max-w-8xl flex-1 flex-col">
+                <div className="flex flex-1 flex-col justify-between overflow-hidden rounded-[40px] bg-black px-6 py-12 text-white ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-14">
                     <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
                         {/* Left rail — wordmark + status pill (pinned bottom on desktop). */}
                         <div className="flex flex-col justify-between gap-10 lg:w-56">
@@ -111,10 +113,19 @@ export function MarketingFooter() {
                     <span className="mt-12 inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/60 ring-1 ring-white/10 lg:hidden">
                         <span className="size-2 rounded-full bg-lantern" /> All systems operational
                     </span>
+
+                    {/* Giant wordmark closes the panel — the brand moment that
+                        earns the full-screen height. */}
+                    <p
+                        aria-hidden
+                        className="mt-14 select-none font-pixel text-[clamp(3rem,11.5vw,10.5rem)] leading-[0.85] tracking-tighter text-white"
+                    >
+                        watchparty
+                    </p>
                 </div>
 
                 {/* Legal — outside the panel on the light page base, like Phantom. */}
-                <div className="mt-6 flex flex-col gap-3 px-2 text-xs font-semibold text-black/40 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-5 flex flex-col gap-3 px-2 text-xs font-semibold text-black/40 sm:flex-row sm:items-center sm:justify-between">
                     <span>© 2026 watchparty</span>
                     <div className="flex items-center gap-5">
                         <Link href="/safety" className="transition-colors hover:text-black/70">Terms</Link>
