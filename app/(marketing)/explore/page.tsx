@@ -3,7 +3,7 @@ import {
     LiveStreaming01Icon, CameraVideoIcon, Compass01Icon,
     AiSearchIcon, PlayListIcon, GridIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, CenterFeature, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, CenterFeature, ExploreMore, Faq } from "@/components/marketing/sections";
 import { GradientPage } from "@/components/marketing/gradient-page";
 import { type Feature } from "@/components/marketing/feature-card";
 import { HeroCollage, PhoneMock, CoinScreen, MiniLive, MiniShort, MiniFeed } from "@/components/marketing/mocks";
@@ -107,15 +107,6 @@ export default function ExplorePage() {
 
             <ExploreMore currentHref="/explore" />
             <Faq items={FAQ} />
-            <ClosingCta
-                title="Jump in"
-                sub="Your feed is waiting."
-                tiles={[
-                    { title: "One feed", body: "Streams, shorts, and posts together." },
-                    { title: "Open algorithm", body: "Ranked by what you actually watch." },
-                    { title: "Always free", body: "Watching and posting cost nothing." },
-                ]}
-            />
         </GradientPage>
     );
 }

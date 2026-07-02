@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { MarketingHero, TwoUpBold, CaptionCards, InsetBlock, CenterFeature, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, TwoUpBold, CaptionCards, InsetBlock, CenterFeature, ExploreMore, Faq } from "@/components/marketing/sections";
 import { GradientPage } from "@/components/marketing/gradient-page";
 import {
     HeroCreatorCluster, HeroTrade, PhoneMock, LiveScreen, EarningsCard,
@@ -82,16 +82,6 @@ export default function CreatorsPage() {
 
             <ExploreMore currentHref="/creators" />
             <Faq items={FAQ} />
-            <ClosingCta
-                title="Start creating"
-                sub="Your audience is already here."
-                ctaLabel="Start creating"
-                tiles={[
-                    { title: "Go live", body: "Stream to an audience that's already here." },
-                    { title: "Get paid", body: "Subscriptions and tips in USDC." },
-                    { title: "Grow", body: "Analytics, reply boost, and verified badges." },
-                ]}
-            />
         </GradientPage>
     );
 }

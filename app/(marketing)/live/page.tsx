@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { MarketingHero, StepFlow, CaptionCards, InsetBlock, CenterFeature, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, StepFlow, CaptionCards, InsetBlock, CenterFeature, ExploreMore, Faq } from "@/components/marketing/sections";
 import { GradientPage } from "@/components/marketing/gradient-page";
 import { HeroLandscape, EarningsCard, MiniLive, MiniChat, MiniShort, StackedCard, BlobArt } from "@/components/marketing/mocks";
 
@@ -80,16 +80,6 @@ export default function LivePage() {
 
             <ExploreMore currentHref="/live" />
             <Faq items={FAQ} />
-            <ClosingCta
-                title="Go live today"
-                sub="Your first stream is one tap away."
-                ctaLabel="Start streaming"
-                tiles={[
-                    { title: "One tap", body: "Go live from your phone in seconds." },
-                    { title: "Earn live", body: "Subscriptions and tips while you stream." },
-                    { title: "Every replay", body: "Streams save as VODs automatically." },
-                ]}
-            />
         </GradientPage>
     );
 }

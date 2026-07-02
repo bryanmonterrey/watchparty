@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { ShieldKeyIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, CenterFeature, CaptionCards, InsetBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, CenterFeature, CaptionCards, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
 import { GradientPage } from "@/components/marketing/gradient-page";
 import { SecurityCard, StackedCard, BlobArt, InsetInfoCard, MiniShield, MiniChat, MiniVerified } from "@/components/marketing/mocks";
 
@@ -94,15 +94,6 @@ export default function SafetyPage() {
 
             <ExploreMore currentHref="/safety" />
             <Faq items={FAQ} />
-            <ClosingCta
-                title="Safe from the start"
-                sub="Real security, none of the homework."
-                tiles={[
-                    { title: "Non-custodial", body: "Your keys, your coins." },
-                    { title: "No seed phrase", body: "Swig multi-party wallets." },
-                    { title: "Encrypted", body: "Messages are end-to-end." },
-                ]}
-            />
         </GradientPage>
     );
 }

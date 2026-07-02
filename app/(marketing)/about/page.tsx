@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { LiveStreaming01Icon, Wallet01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, BigStatement, StepFlow, CaptionCards, InsetBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, BigStatement, StepFlow, CaptionCards, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
 import { GradientPage } from "@/components/marketing/gradient-page";
 import { HeroBento, EarningsCard, MiniLive, MiniFeed, MiniChart } from "@/components/marketing/mocks";
 
@@ -75,15 +75,6 @@ export default function AboutPage() {
 
             <ExploreMore currentHref="/about" />
             <Faq items={FAQ} />
-            <ClosingCta
-                title="Come hang out"
-                sub="The whole show, in one place."
-                tiles={[
-                    { title: "Watch", body: "Streams, shorts, and your timeline." },
-                    { title: "Create", body: "Go live and get paid in USDC." },
-                    { title: "Own", body: "A wallet built into every account." },
-                ]}
-            />
         </GradientPage>
     );
 }

@@ -3,7 +3,7 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, ExploreMore, Faq, ClosingCta } from "@/components/marketing/sections";
+import { MarketingHero, CaptionCards, BentoGrid, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
 import { GradientPage } from "@/components/marketing/gradient-page";
 import { type Feature } from "@/components/marketing/feature-card";
 import { MiniServer, MiniSpace, MiniChat } from "@/components/marketing/mocks";
@@ -109,16 +109,6 @@ export default function CommunityPage() {
 
             <ExploreMore currentHref="/community" />
             <Faq items={FAQ} />
-            <ClosingCta
-                title="Build your community"
-                sub="Your people are already here."
-                ctaLabel="Get started"
-                tiles={[
-                    { title: "Servers", body: "Channels for everything you're into." },
-                    { title: "Live spaces", body: "Drop into live audio rooms." },
-                    { title: "Bots", body: "Discord-style automation built in." },
-                ]}
-            />
         </GradientPage>
     );
 }

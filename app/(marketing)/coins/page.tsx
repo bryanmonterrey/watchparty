@@ -7,7 +7,6 @@ import {
     InsetBlock,
     ExploreMore,
     Faq,
-    ClosingCta,
 } from "@/components/marketing/sections";
 import { GradientPage } from "@/components/marketing/gradient-page";
 import {
@@ -102,16 +101,6 @@ export default function CoinsPage() {
 
             <ExploreMore currentHref="/coins" />
             <Faq items={FAQ} />
-            <ClosingCta
-                title="Launch your coin"
-                sub="Your community's token is one tap away."
-                ctaLabel="Launch a coin"
-                tiles={[
-                    { title: "One tap", body: "Launch on a fair bonding curve." },
-                    { title: "Earn fees", body: "Take a cut of every trade." },
-                    { title: "Built-in wallet", body: "Trade right from your account." },
-                ]}
-            />
         </GradientPage>
     );
 }
