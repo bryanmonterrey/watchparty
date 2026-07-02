@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth/get-session";
 import AppProviders from "@/components/app-ui/app-providers";
@@ -8,6 +9,7 @@ import { AppContainer } from "@/components/app-ui/app-container";
 import { MobileChrome } from "@/components/app-ui/mobile/mobile-chrome";
 import { MiniPlayerShell } from "@/components/app-ui/mini-player-shell";
 import { UpgradeOverlay } from "@/components/premium/upgrade-overlay";
+import OnboardingDialog from "@/components/app-ui/app-onboarding";
 
 // Authenticated app shell. Guards every (app) route (no session -> /login) and
 // hosts the app's provider stack + sidebar frame.
@@ -44,6 +46,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </SidebarInset>
         </SidebarProvider>
         <UpgradeOverlay />
+        {/* New-user onboarding (username + avatar). Suspense because the
+            dialog reads useSearchParams for its debug mode. */}
+        <Suspense>
+          <OnboardingDialog />
+        </Suspense>
       </MiniPlayerShell>
     </AppProviders>
   );
