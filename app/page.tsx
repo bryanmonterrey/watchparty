@@ -20,6 +20,10 @@ export default async function Home() {
   const session = await getServerSession();
   if (session) redirect("/home");
 
+  // Marketing landing is parked for now — send everyone to login.
+  // Delete this line to bring the landing page back.
+  redirect("/login");
+
   // min-h-svh + content-driven height (NOT flex-1: a basis-0 flex child
   // contributes nothing to document height, which swallows the pin-spacer
   // scroll distance ScrollTrigger adds for the goggles zoom).
