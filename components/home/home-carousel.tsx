@@ -150,22 +150,6 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
 
     return (
         <div className="group/carousel relative w-full">
-            {/* Ambient mode: the active video's frame, heavily blurred and bled
-                out behind the strip, so the hero glows with the current video's
-                colors (YouTube-style). One static blurred layer keyed to the
-                active thumbnail — no per-frame work; clipped horizontally so it
-                never widens the page. */}
-            <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-4 -bottom-10 z-0 overflow-hidden">
-                {videos[active]?.thumbnailUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                        key={videos[active].id}
-                        src={videos[active].thumbnailUrl ?? undefined}
-                        alt=""
-                        className="size-full scale-110 object-cover opacity-50 blur-[72px] saturate-150 transition-opacity duration-700"
-                    />
-                )}
-            </div>
             <div
                 ref={scrollerRef}
                 onScroll={recenter}
