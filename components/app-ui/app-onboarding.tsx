@@ -200,7 +200,7 @@ export default function OnboardingDialog() {
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent
-                className="sm:max-w-md rounded-4xl"
+                className="sm:max-w-xl rounded-4xl border-none p-8 gap-6"
                 showCloseButton={step === "complete"}
             >
                 {step === "username_setup" && (
