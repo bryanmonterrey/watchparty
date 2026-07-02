@@ -29,6 +29,17 @@ import { RefreshIcon } from '@/components/icons';
 
 import 'react-image-crop/dist/ReactCrop.css';
 
+const percentToPixelCrop = (
+  crop: PercentCrop,
+  img: HTMLImageElement
+): PixelCrop => ({
+  unit: 'px',
+  x: (crop.x / 100) * img.width,
+  y: (crop.y / 100) * img.height,
+  width: (crop.width / 100) * img.width,
+  height: (crop.height / 100) * img.height,
+});
+
 const centerAspectCrop = (
   mediaWidth: number,
   mediaHeight: number,
@@ -165,6 +176,10 @@ export const ImageCrop = ({
       const newCrop = centerAspectCrop(width, height, reactCropProps.aspect);
       setCrop(newCrop);
       setInitialCrop(newCrop);
+      // Seed the completed crop so Apply works immediately — react-image-crop
+      // only fires onComplete after a drag, so without this the initial
+      // centered crop can never be applied.
+      setCompletedCrop(percentToPixelCrop(newCrop, e.currentTarget));
     },
     [reactCropProps.aspect]
   );
@@ -201,7 +216,9 @@ export const ImageCrop = ({
   const resetCrop = () => {
     if (initialCrop) {
       setCrop(initialCrop);
-      setCompletedCrop(null);
+      setCompletedCrop(
+        imgRef.current ? percentToPixelCrop(initialCrop, imgRef.current) : null
+      );
     }
   };
 
@@ -254,7 +271,7 @@ export const ImageCropContent = ({
 
   return (
     <ReactCrop
-      className={cn('max-h-[277px] max-w-full', className)}
+      className={cn('max-w-full', className)}
       crop={crop}
       onChange={handleChange}
       onComplete={handleComplete}
@@ -262,9 +279,10 @@ export const ImageCropContent = ({
       {...reactCropProps}
     >
       {imgSrc && (
+        // Natural aspect ratio, capped by height — never stretched to fill.
         <img
           alt="crop"
-          className="size-full"
+          className="mx-auto max-h-[min(55svh,420px)] w-auto max-w-full"
           onLoad={onImageLoad}
           ref={imgRef}
           src={imgSrc}

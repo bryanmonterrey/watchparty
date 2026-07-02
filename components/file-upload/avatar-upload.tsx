@@ -156,10 +156,11 @@ export default function AvatarUpload({
         )}
       </div>
 
-      {/* Crop Dialog */}
+      {/* Crop Dialog. Dismissing without applying (esc / outside click) is a
+          cancel — otherwise the preview shows a photo the parent never received. */}
       {selectedFile && (
-        <Dialog open={showCropDialog} onOpenChange={setShowCropDialog}>
-          <DialogContent className="sm:max-w-md">
+        <Dialog open={showCropDialog} onOpenChange={(open) => { if (!open) handleCancelCrop(); }}>
+          <DialogContent className="sm:max-w-lg rounded-4xl border-none" showCloseButton={false}>
             <DialogHeader>
               <DialogTitle>Crop Avatar</DialogTitle>
             </DialogHeader>
@@ -175,10 +176,12 @@ export default function AvatarUpload({
                   <Button className='rounded-full py-6 px-8 bg-zinc-600/30 cursor-pointer hover:bg-zinc-600/40 font-semibold text-lg text-white' onClick={handleCancelCrop}>
                     Cancel
                   </Button>
-                  <div className="flex gap-2">
-                    <ImageCropReset />
+                  <div className="flex items-center gap-2">
+                    <ImageCropReset className="rounded-full" />
                     <ImageCropApply asChild>
-                      <Button>Apply Crop</Button>
+                      <Button className="rounded-full py-6 px-8 bg-white text-black hover:bg-white/85 font-semibold text-lg cursor-pointer">
+                        Apply Crop
+                      </Button>
                     </ImageCropApply>
                   </div>
                 </DialogFooter>

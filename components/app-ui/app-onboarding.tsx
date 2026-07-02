@@ -85,8 +85,8 @@ export default function OnboardingDialog() {
             return;
         }
 
-        if (username.length < 4 || username.length > 15) {
-            setError("Username must be between 4 and 15 characters");
+        if (username.length < 3 || username.length > 20) {
+            setError("Username must be between 3 and 20 characters");
             return;
         }
 
@@ -216,7 +216,13 @@ export default function OnboardingDialog() {
                                 This will be your unique identifier
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4">
+                        <form
+                            className="space-y-4"
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleUsernameSubmit();
+                            }}
+                        >
                             <div>
                                 <input
                                     type="text"
@@ -226,6 +232,7 @@ export default function OnboardingDialog() {
                                         setError("");
                                     }}
                                     placeholder="Enter username"
+                                    autoFocus
                                     className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-white placeholder:text-zinc-500 focus:outline-none focus:ring-none"
                                 />
                                 {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
@@ -234,14 +241,14 @@ export default function OnboardingDialog() {
                                 </p>
                             </div>
                             <Button
-                                onClick={handleUsernameSubmit}
+                                type="submit"
                                 size="lg"
                                 className="w-full bg-zinc-900 border border-zinc-600/10 hover:bg-zinc-800 text-white text-lg font-semibold py-6 rounded-full"
-                                disabled={!username.trim()}
+                                disabled={loading || !username.trim()}
                             >
-                                Next
+                                {loading ? "Saving..." : "Next"}
                             </Button>
-                        </div>
+                        </form>
                     </>
                 )}
 
