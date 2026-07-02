@@ -1,17 +1,14 @@
 import { Metadata } from "next";
-import { LiveStreaming01Icon, Wallet01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, BigStatement, StepFlow, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
+import { MarketingHero, BigStatement, FeatureLedger, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
 import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
 import { CardCarousel } from "@/components/marketing/card-carousel";
 import { HeroBento, EarningsCard, MiniLive, MiniFeed, MiniChart } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "About" };
 
-const PILLARS = [
-    { icon: LiveStreaming01Icon, title: "A stage", body: "Go live and stream to an audience that's already here." },
-    { icon: UserGroupIcon, title: "A timeline", body: "The social feed you know, ranked by an open algorithm." },
-    { icon: Wallet01Icon, title: "A wallet", body: "Trade, tip, and get paid, built into every account." },
-];
+// The manifesto page: centered hero, word-reveal statement, the card spread,
+// then an editorial ledger. Spine is deliberately different from every other
+// marketing page.
 
 const FAQ = [
     { q: "What is watchparty?", a: "A single app where the timeline, live streaming, and a crypto wallet finally live together." },
@@ -35,7 +32,7 @@ export default function AboutPage() {
 
                 <BigStatement>
                     The timeline lives in one app, streaming in another, and your wallet somewhere else
-                    entirely. <span className="text-black/40">watchparty puts them in the same place</span> — watch a
+                    entirely. <span className="text-black/40">watchparty puts them in the same place.</span> Watch a
                     stream, post a take, back a creator, and trade a coin without ever switching tabs.
                 </BigStatement>
             </BgZone>
@@ -43,8 +40,7 @@ export default function AboutPage() {
             <BgZone bg="#0e0f13">
                 <CardCarousel
                     dark
-                    eyebrow="See it"
-                    title="Watch, post, and trade — together"
+                    title="Watch, post, and trade together"
                     sub="The three things you'd juggle across apps, sharing a single feed."
                     cards={[
                         { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">A stage</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
@@ -55,20 +51,20 @@ export default function AboutPage() {
             </BgZone>
 
             <BgZone bg="var(--color-pastel-yellow)">
-                <StepFlow
-                    eyebrow="The idea"
-                    title="Three things, one app"
-                    sub="A stage, a timeline, and a wallet — finally in the same place."
-                    steps={PILLARS.map((p) => ({ title: p.title, body: p.body }))}
+                <FeatureLedger
+                    rows={[
+                        { title: "A stage", body: "Go live and stream to an audience that's already here, no second app required." },
+                        { title: "A timeline", body: "The social feed you know, ranked by an open algorithm you can actually read." },
+                        { title: "A wallet", body: "Trade, tip, and get paid, built into every account from day one." },
+                    ]}
                 />
             </BgZone>
 
             <BgZone bg="var(--color-soft-gray)">
                 <InsetBlock
                     reverse
-                    eyebrow="For creators"
                     title="Get paid for what you make"
-                    body="Creators earn from subscriptions, tips, and creator fees — settled in USDC and claimed straight to a wallet built into every account."
+                    body="Creators earn from subscriptions, tips, and creator fees, settled in USDC and claimed straight to a wallet built into every account."
                     ctaLabel="Start creating"
                     ctaHref="/creators"
                     visual={<EarningsCard />}

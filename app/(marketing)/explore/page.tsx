@@ -3,13 +3,16 @@ import {
     LiveStreaming01Icon, CameraVideoIcon, Compass01Icon,
     AiSearchIcon, PlayListIcon, GridIcon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BentoGrid, InsetBlock, CenterFeature, ExploreMore, Faq } from "@/components/marketing/sections";
+import { MarketingHero, BentoGrid, SplitShowcase, PosterPanel, MarqueeBand, Faq } from "@/components/marketing/sections";
 import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
 import { CardCarousel } from "@/components/marketing/card-carousel";
 import { type Feature } from "@/components/marketing/feature-card";
 import { HeroCollage, PhoneMock, CoinScreen, MiniLive, MiniShort, MiniFeed } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Explore" };
+
+// The discovery page: split hero, kinetic marquee divider, card spread, an
+// asymmetric feed showcase, varied bento, and a dark poster close.
 
 const FEATURES: Feature[] = [
     { icon: LiveStreaming01Icon, title: "Live now", body: "Tune into streams the moment they start.", accent: "text-pastelred" },
@@ -22,12 +25,13 @@ const FEATURES: Feature[] = [
 
 const CATEGORIES = ["Just Chatting", "GTA VI", "Music", "Esports", "IRL", "Crypto", "Sports", "Pranks", "Tech"];
 
+// Varied fills so the grid reads as color-as-identity, not white-on-white tiles.
 const BENTO_STYLE = [
-    { bg: "bg-white", accent: "text-pastelred", span: "big" },
+    { bg: "bg-soft-pink", accent: "text-pastelred", span: "big" },
     { bg: "bg-white", accent: "text-twitter" },
-    { bg: "bg-white", accent: "text-jewel" },
+    { bg: "bg-pastel-yellow", accent: "text-jewel" },
     { bg: "bg-white", accent: "text-sunset", span: "wide" },
-    { bg: "bg-white", accent: "text-twitter", span: "wide" },
+    { bg: "bg-soft-blue", accent: "text-twitter", span: "wide" },
     { bg: "bg-white", accent: "text-pastelred", span: "wide" },
 ] as const;
 
@@ -54,9 +58,8 @@ export default function ExplorePage() {
             <BgZone bg="#0e0f13">
                 <CardCarousel
                     dark
-                    eyebrow="One feed"
                     title="Everything worth watching"
-                    sub="Streams, shorts, and posts share the same timeline — no apps to switch between."
+                    sub="Streams, shorts, and posts share the same timeline. No apps to switch between."
                     cards={[
                         { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Live now</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
                         { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Shorts</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShort /></div></>) },
@@ -66,15 +69,14 @@ export default function ExplorePage() {
             </BgZone>
 
             <BgZone bg="var(--color-soft-pink)">
-                <InsetBlock
-                    reverse
-                    eyebrow="The feed"
+                <SplitShowcase
                     title="Ranked for you, not for ads"
-                    body="One open algorithm powers the whole feed, tuned to what you actually watch — so the good stuff finds you."
+                    body="One open algorithm powers the whole feed, tuned to what you actually watch, so the good stuff finds you."
                     ctaLabel="See your feed"
                     ctaHref="/login"
+                    tone="bg-white"
                     visual={
-                        <div className="flex max-w-sm flex-wrap justify-center gap-2.5">
+                        <div className="flex max-w-md flex-wrap justify-center gap-2.5">
                             {CATEGORIES.map((c, i) => (
                                 <span
                                     key={c}
@@ -87,18 +89,23 @@ export default function ExplorePage() {
                     }
                 />
 
+                {/* Kinetic divider: keep it between two LIGHT zones — at a
+                    light/dark boundary the bg flips while the black type is
+                    still on screen and the band goes unreadable. */}
+                <MarqueeBand items={["Live", "Shorts", "Spaces", "Coins", "Timeline"]} />
+
                 <BentoGrid
-                    eyebrow="What's inside"
                     title="A whole home for watching"
                     items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
                 />
             </BgZone>
 
             <BgZone bg="#ffffff">
-                <CenterFeature
-                    eyebrow="Trade as you scroll"
+                <PosterPanel
                     title="Spot it, buy it, in one tap"
-                    sub="See a coin in the feed and buy it without leaving the timeline — a secure wallet ships with every account."
+                    body="See a coin in the feed and buy it without leaving the timeline. A secure wallet ships with every account."
+                    ctaLabel="Get started"
+                    ctaHref="/login"
                     visual={
                         <PhoneMock className="rotate-[-3deg]">
                             <CoinScreen />
@@ -106,7 +113,6 @@ export default function ExplorePage() {
                     }
                 />
 
-                <ExploreMore currentHref="/explore" />
                 <Faq items={FAQ} />
             </BgZone>
         </ColorScrollPage>

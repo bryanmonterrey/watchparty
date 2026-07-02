@@ -4,7 +4,6 @@ import {
     CaptionCards,
     TwoUpBold,
     InsetBlock,
-    ExploreMore,
     Faq,
 } from "@/components/marketing/sections";
 import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
@@ -49,11 +48,10 @@ export default function CoinsPage() {
                 />
 
                 <CaptionCards
-                    eyebrow="How it works"
                     title="Everything a coin needs, built in"
-                    sub="Name it, launch it on a fair bonding curve, and start earning — the whole loop lives inside the app."
+                    sub="Name it, launch it on a fair bonding curve, and start earning. The whole loop lives inside the app."
                     cards={[
-                        { visual: <MiniLaunch />, bg: "bg-white", title: "Launch in a tap", body: "Pick a ticker and image. It's live on a fair bonding curve — no contracts to write." },
+                        { visual: <MiniLaunch />, bg: "bg-white", title: "Launch in a tap", body: "Pick a ticker and image. It's live on a fair bonding curve, no contracts to write." },
                         { visual: <MiniChart />, bg: "bg-white", title: "Trade in the feed", body: "Live charts and market caps, right in the timeline. Buy and sell without leaving the app." },
                         { visual: <MiniFees />, bg: "bg-white", title: "Earn on every swap", body: "Set a creator fee and take a cut of every buy and sell, routed straight to your wallet." },
                     ]}
@@ -64,9 +62,8 @@ export default function CoinsPage() {
             <BgZone bg="#0e0f13">
                 <CardCarousel
                     dark
-                    eyebrow="Your community's coin"
                     title="One token, everything it does"
-                    sub="Launch it, trade it in the feed, and earn on every swap — a whole loop your people rally around."
+                    sub="Launch it, trade it in the feed, and earn on every swap. A whole loop your people rally around."
                     cards={[
                         {
                             tone: "bg-soft-blue",
@@ -81,7 +78,7 @@ export default function CoinsPage() {
                             tone: "bg-white",
                             node: (
                                 <>
-                                    <p className="text-lg font-extrabold tracking-tight text-black">$WAVE — your coin</p>
+                                    <p className="text-lg font-extrabold tracking-tight text-black">$WAVE, your coin</p>
                                     <BlobArt />
                                 </>
                             ),
@@ -103,22 +100,20 @@ export default function CoinsPage() {
             <BgZone bg="var(--color-soft-gray)">
                 <TwoUpBold
                     items={[
-                        { title: "Fair launch, from the first buy", body: "Bonding-curve pricing means transparent, predictable value — no insider allocations, no rug.", bg: "bg-lantern", visual: <MiniChart /> },
+                        { title: "Fair launch, from the first buy", body: "Bonding-curve pricing means transparent, predictable value. No insider allocations, no rug.", bg: "bg-lantern", visual: <MiniChart /> },
                         { title: "A wallet on every account", body: "Trade the moment you sign up. No exchange, no bridge, no seed phrase to manage.", bg: "bg-black", dark: true, visual: <PhoneMock className="w-[190px]"><CoinScreen /></PhoneMock> },
                     ]}
                 />
 
                 <InsetBlock
                     reverse
-                    eyebrow="Payouts"
                     title="Get paid on every trade"
-                    body="Creator fees settle in USDC and land straight in your wallet. Claim any time — the platform takes a flat 5%, nothing more."
+                    body="Creator fees settle in USDC and land straight in your wallet. Claim any time. The platform takes a flat 5%, nothing more."
                     ctaLabel="Start earning"
                     ctaHref="/creators"
                     visual={<EarningsCard />}
                 />
 
-                <ExploreMore currentHref="/coins" />
                 <Faq items={FAQ} />
             </BgZone>
         </ColorScrollPage>

@@ -1,11 +1,14 @@
 import { Metadata } from "next";
-import { ShieldKeyIcon } from "@hugeicons/core-free-icons";
-import { MarketingHero, CenterFeature, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
+import { MarketingHero, BigStatement, FeatureLedger, InsetBlock, Faq } from "@/components/marketing/sections";
 import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
 import { CardCarousel } from "@/components/marketing/card-carousel";
-import { SecurityCard, StackedCard, BlobArt, InsetInfoCard, MiniShield, MiniChat, MiniVerified } from "@/components/marketing/mocks";
+import { ShieldKeyIcon } from "@hugeicons/core-free-icons";
+import { SecurityCard, InsetInfoCard, MiniShield, MiniChat, MiniVerified } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Safety" };
+
+// The trust page: reverse hero, word-reveal promise, card spread, an editorial
+// ledger of the guarantees, and a floating privacy panel. Calm and factual.
 
 const FAQ = [
     { q: "What is a Swig wallet?", a: "A wallet secured by multi-party (FROST) cryptography, so there's no single seed phrase to lose or leak." },
@@ -32,25 +35,18 @@ export default function SafetyPage() {
                     }
                 />
 
-                <CenterFeature
-                    title={<>We&apos;ve got your back, always</>}
-                    sub="Self-custodial means you control your funds. We never have access."
-                    visual={
-                        <StackedCard
-                            title="Self-custodial means you control your funds. We never have access."
-                            art={<BlobArt />}
-                            sheets={["bg-pastelred/40", "bg-lantern/50"]}
-                        />
-                    }
-                />
+                <BigStatement>
+                    Self-custodial means you control your funds.{" "}
+                    <span className="text-black/40">We never have access.</span> No seed phrase to
+                    lose, no balance snooping, and the safe choice is always the default.
+                </BigStatement>
             </BgZone>
 
             <BgZone bg="#0e0f13">
                 <CardCarousel
                     dark
-                    eyebrow="On by default"
                     title="Security you don't think about"
-                    sub="The safe choice is the default — no settings to hunt for, no homework."
+                    sub="The safe choice is the default. No settings to hunt for, no homework."
                     cards={[
                         { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Swig wallets</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShield /></div></>) },
                         { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Encrypted messages</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
@@ -60,10 +56,19 @@ export default function SafetyPage() {
             </BgZone>
 
             <BgZone bg="var(--color-soft-gray)">
+                <FeatureLedger
+                    rows={[
+                        { title: "Nothing to track", body: "No personally identifiable information, no asset-balance snooping. Your activity is yours." },
+                        { title: "Encrypted by default", body: "Direct and group messages are end-to-end encrypted, always." },
+                        { title: "Spam, gone for good", body: "Burn unwanted spam tokens and NFTs in a tap. Your wallet stays clean." },
+                    ]}
+                />
+            </BgZone>
+
+            <BgZone bg="var(--color-soft-pink)">
                 <InsetBlock
-                    eyebrow="Privacy"
                     title="Your privacy matters"
-                    body="We never track any personally identifiable information or asset balances. What's yours stays yours — on-chain and off."
+                    body="We never track any personally identifiable information or asset balances. What's yours stays yours, on-chain and off."
                     ctaLabel="Read our privacy policy"
                     ctaHref="/about"
                     visual={
@@ -74,23 +79,7 @@ export default function SafetyPage() {
                         />
                     }
                 />
-            </BgZone>
 
-            <BgZone bg="var(--color-soft-pink)">
-                <CenterFeature
-                    title="Spam, gone for good"
-                    sub="Burn unwanted spam tokens and NFTs in a tap, your wallet stays clean."
-                    visual={
-                        <StackedCard
-                            tone="bg-lantern/30"
-                            sheets={["bg-white", "bg-soft-blue"]}
-                            className="w-[260px] sm:w-[300px]"
-                            title="Burn unwanted spam NFTs for good."
-                        />
-                    }
-                />
-
-                <ExploreMore currentHref="/safety" />
                 <Faq items={FAQ} />
             </BgZone>
         </ColorScrollPage>

@@ -3,6 +3,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { MARKETING_FEATURES } from "./nav-data";
+import { Marquee } from "@/components/ui/marquee";
 import { Reveal, Parallax, WordReveal } from "./motion";
 
 // Marketing section kit — Cash App-shaped: big LEFT-aligned Geist headlines
@@ -579,6 +580,188 @@ export function BigStatement({
                     {children}
                 </WordReveal>
             </div>
+        </section>
+    );
+}
+
+// Editorial ledger — full-width index rows with a single hairline above each,
+// huge titles left and the body in a right-hand column (asymmetric, no cards).
+// A distinct layout family from the grids and splits: scale does the talking.
+export function FeatureLedger({
+    title,
+    sub,
+    rows,
+    className,
+}: {
+    title?: string;
+    sub?: string;
+    rows: { title: string; body: string; visual?: React.ReactNode }[];
+    className?: string;
+}) {
+    return (
+        <section className={cn(BEAT, "px-6 py-12", className)}>
+            <div className="mx-auto w-full max-w-7xl">
+                {(title || sub) && (
+                    <Reveal>
+                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>}
+                        {sub && <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">{sub}</p>}
+                    </Reveal>
+                )}
+                <div className={cn(title || sub ? "mt-16" : "")}>
+                    {rows.map((r, i) => (
+                        <Reveal key={r.title} delay={i * 0.05}>
+                            <div className="grid items-center gap-4 border-t border-black/10 py-10 sm:py-14 lg:grid-cols-12 lg:gap-8">
+                                <h3 className="font-extrabold text-3xl leading-[1.02] tracking-tight text-black sm:text-5xl lg:col-span-6 lg:text-6xl">
+                                    {r.title}
+                                </h3>
+                                <p className={cn("max-w-md text-lg font-semibold leading-snug text-black/60", r.visual ? "lg:col-span-4" : "lg:col-span-5 lg:col-start-8")}>
+                                    {r.body}
+                                </p>
+                                {r.visual && <div className="lg:col-span-2 lg:justify-self-end">{r.visual}</div>}
+                            </div>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+// Poster beat — an oversized statement pinned top-left of a giant floating
+// panel, body + CTA bottom-left, visual bottom-right. The asymmetric
+// counterpoint to the centered beats; the panel floats so dark stays seamless.
+export function PosterPanel({
+    title,
+    body,
+    ctaLabel,
+    ctaHref,
+    visual,
+    tone = "bg-black",
+    dark = true,
+}: {
+    title: string;
+    body: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    visual?: React.ReactNode;
+    tone?: string;
+    dark?: boolean;
+}) {
+    return (
+        <section className={cn(BEAT, "px-4 py-12 sm:px-6")}>
+            <Reveal className="mx-auto w-full max-w-8xl">
+                <div
+                    className={cn(
+                        "flex min-h-[78svh] flex-col justify-between gap-12 overflow-hidden rounded-[40px] p-8 sm:p-14 lg:p-20",
+                        tone,
+                        dark
+                            ? "ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                            : "ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+                    )}
+                >
+                    <h2
+                        className={cn(
+                            "max-w-[13ch] font-extrabold text-5xl leading-[0.98] tracking-tight sm:text-7xl lg:text-8xl",
+                            dark ? "text-white" : "text-black",
+                        )}
+                    >
+                        {title}
+                    </h2>
+                    <div className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
+                        <div className="max-w-sm">
+                            <p className={cn("text-lg font-semibold leading-snug", dark ? "text-white/65" : "text-black/65")}>{body}</p>
+                            {ctaLabel && ctaHref && (
+                                <Link
+                                    href={ctaHref}
+                                    className={cn(
+                                        "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
+                                        dark ? "bg-white text-black" : "bg-black text-white",
+                                    )}
+                                >
+                                    {ctaLabel}
+                                </Link>
+                            )}
+                        </div>
+                        {visual && <div className="shrink-0 lg:pr-4">{visual}</div>}
+                    </div>
+                </div>
+            </Reveal>
+        </section>
+    );
+}
+
+// Asymmetric 7/5 split — a tall color panel carries the visual, the copy column
+// sits beside it. A different family from the 50/50 splits and the contained
+// InsetBlock: the visual gets the bigger share of the row.
+export function SplitShowcase({
+    title,
+    body,
+    ctaLabel,
+    ctaHref,
+    visual,
+    tone = "bg-white",
+    reverse = false,
+}: {
+    title: string;
+    body: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+    visual: React.ReactNode;
+    tone?: string;
+    reverse?: boolean;
+}) {
+    return (
+        <section className={cn(BEAT, "px-6 py-12")}>
+            <div className="mx-auto grid w-full max-w-7xl items-stretch gap-8 lg:grid-cols-12">
+                <Reveal className={cn("lg:col-span-7", reverse && "lg:order-2")}>
+                    <div className={cn("grid h-full min-h-[56svh] place-items-center overflow-hidden rounded-[40px] p-8 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]", tone)}>
+                        {visual}
+                    </div>
+                </Reveal>
+                <Reveal delay={0.08} className={cn("flex flex-col justify-center py-6 lg:col-span-5 lg:px-8", reverse && "lg:order-1")}>
+                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-black sm:text-5xl">{title}</h2>
+                    <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-black/65">{body}</p>
+                    {ctaLabel && ctaHref && (
+                        <Link
+                            href={ctaHref}
+                            className="mt-8 inline-block self-start rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                        >
+                            {ctaLabel}
+                        </Link>
+                    )}
+                </Reveal>
+            </div>
+        </section>
+    );
+}
+
+// Kinetic type band — a thin divider of oversized pixel type drifting sideways
+// between two full-screen beats. Max ONE per page.
+export function MarqueeBand({
+    items,
+    className,
+    dark = false,
+}: {
+    items: string[];
+    className?: string;
+    dark?: boolean;
+}) {
+    return (
+        <section className={cn("overflow-hidden py-8 sm:py-12", className)}>
+            <Marquee className="[--duration:36s] [--gap:2.5rem] p-0">
+                {items.map((w) => (
+                    <span
+                        key={w}
+                        className={cn(
+                            "flex items-center gap-10 whitespace-nowrap font-pixel text-5xl tracking-tight sm:text-7xl",
+                            dark ? "text-white" : "text-black",
+                        )}
+                    >
+                        {w}
+                        <span aria-hidden className={cn("text-2xl sm:text-3xl", dark ? "text-white/40" : "text-black/30")}>✦</span>
+                    </span>
+                ))}
+            </Marquee>
         </section>
     );
 }

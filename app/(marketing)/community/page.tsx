@@ -3,13 +3,16 @@ import {
     UserGroupIcon, Mic01Icon, Chatting01Icon,
     AiMagicIcon, SecurityCheckIcon, Compass01Icon,
 } from "@hugeicons/core-free-icons";
-import { MarketingHero, BentoGrid, InsetBlock, ExploreMore, Faq } from "@/components/marketing/sections";
+import { MarketingHero, BentoGrid, SplitShowcase, ExploreMore, Faq } from "@/components/marketing/sections";
 import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
 import { CardCarousel } from "@/components/marketing/card-carousel";
 import { type Feature } from "@/components/marketing/feature-card";
 import { MiniServer, MiniSpace, MiniChat } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = { title: "Communities" };
+
+// The belonging page: hero, card spread, varied bento, and an asymmetric bots
+// showcase. Bento carries the breadth; the split carries the automation story.
 
 const FEATURES: Feature[] = [
     { icon: UserGroupIcon, title: "Servers", body: "Channels for everything your community is into.", accent: "text-twitter" },
@@ -20,12 +23,13 @@ const FEATURES: Feature[] = [
     { icon: Compass01Icon, title: "Discover", body: "Find communities built around what you love.", accent: "text-pastelred" },
 ];
 
+// Varied fills so the grid reads as color-as-identity, not white-on-white tiles.
 const BENTO_STYLE = [
-    { bg: "bg-white", accent: "text-twitter", span: "big" },
+    { bg: "bg-soft-blue", accent: "text-twitter", span: "big" },
     { bg: "bg-white", accent: "text-pastelred" },
-    { bg: "bg-white", accent: "text-jewel" },
+    { bg: "bg-soft-pink", accent: "text-jewel" },
     { bg: "bg-white", accent: "text-sunset", span: "wide" },
-    { bg: "bg-white", accent: "text-twitter", span: "wide" },
+    { bg: "bg-pastel-yellow", accent: "text-twitter", span: "wide" },
     { bg: "bg-white", accent: "text-pastelred", span: "wide" },
 ] as const;
 
@@ -68,9 +72,8 @@ export default function CommunityPage() {
             <BgZone bg="#0e0f13">
                 <CardCarousel
                     dark
-                    eyebrow="Under one roof"
                     title="Servers, spaces, and chats"
-                    sub="Everything Discord does — plus live audio and encrypted DMs — right where your audience already is."
+                    sub="Everything Discord does, plus live audio and encrypted DMs, right where your audience already is."
                     cards={[
                         { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Servers</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniServer /></div></>) },
                         { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Live spaces</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniSpace /></div></>) },
@@ -81,22 +84,21 @@ export default function CommunityPage() {
 
             <BgZone bg="var(--color-soft-pink)">
                 <BentoGrid
-                    eyebrow="What's inside"
                     title="Built for belonging"
                     items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
                 />
 
-                <InsetBlock
+                <SplitShowcase
                     reverse
-                    eyebrow="Automation"
                     title="Automate the boring parts"
-                    body="Add Discord-style bots for welcomes, moderation, and token-gated perks — so you can focus on the people, not the busywork."
+                    body="Add Discord-style bots for welcomes, moderation, and token-gated perks, so you can focus on the people, not the busywork."
                     ctaLabel="Build your server"
                     ctaHref="/login"
+                    tone="bg-white"
                     visual={
                         <div className="w-full max-w-sm space-y-3">
                             {BOTS.map(([t, b]) => (
-                                <div key={t} className="rounded-2xl bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                                <div key={t} className="rounded-2xl bg-soft-gray p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                                     <p className="text-sm font-extrabold tracking-tight text-black">{t}</p>
                                     <p className="mt-0.5 text-xs font-semibold text-black/55">{b}</p>
                                 </div>

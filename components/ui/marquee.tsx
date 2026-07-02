@@ -59,7 +59,7 @@ export function Marquee({
                 .map((_, i) => (
                     <div
                         key={i}
-                        className={cn("flex shrink-0 justify-start [gap:var(--gap)] min-w-full will-change-transform", {
+                        className={cn("flex shrink-0 justify-start [gap:var(--gap)] min-w-full will-change-transform motion-reduce:animate-none", {
                             "animate-marquee flex-row": !vertical,
                             "animate-marquee-vertical flex-col": vertical,
                             "group-hover:[animation-play-state:paused]": pauseOnHover,
