@@ -12,6 +12,13 @@ import { Reveal, Parallax } from "./motion";
 // placeholders sized for real app mockups dropped in later. See
 // docs/design-principles.md.
 
+// One beat per screen (measured from cash.app: every homepage section is
+// literally min-height 100vh, interior heroes ~94vh). Major sections fill
+// ~92svh with their content vertically centered; utility sections (FAQ,
+// explore-more) get a lighter ~75svh.
+const BEAT = "flex min-h-[92svh] flex-col justify-center";
+const BEAT_LIGHT = "flex min-h-[75svh] flex-col justify-center";
+
 // Rounded placeholder panel where a real product mockup (phone screen / render)
 // will go. Solid-fill, aggressive radius, with a phone-shaped inner frame.
 export function ShowcasePanel({
@@ -119,9 +126,10 @@ export function MarketingHero({
         </Reveal>
     );
 
+    // Hero fills the first screen minus the header clearance the page adds.
     if (centered) {
         return (
-            <section className="px-6 pt-10 pb-16 sm:pt-16 sm:pb-24">
+            <section className="flex min-h-[86svh] flex-col justify-center px-6 py-10">
                 <div className="mx-auto w-full max-w-6xl">
                     {copy}
                     <div className="mt-14">{art}</div>
@@ -131,7 +139,7 @@ export function MarketingHero({
     }
 
     return (
-        <section className="px-6 pt-6 pb-16 sm:pb-24">
+        <section className="flex min-h-[86svh] flex-col justify-center px-6 py-10">
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
                 {variant === "reverse" ? (
                     <>
@@ -172,7 +180,7 @@ export function ShowcaseRow({
     className?: string;
 }) {
     return (
-        <section className={cn("px-6 py-16 sm:py-24", className)}>
+        <section className={cn(BEAT, "px-6 py-12", className)}>
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
                 <div className={cn(reverse && "lg:order-2")}>
                     <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-black sm:text-5xl">
@@ -217,7 +225,7 @@ export function BoldBlock({
     reverse?: boolean;
 }) {
     return (
-        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+        <section className={cn(BEAT, "px-6 py-12", tone)}>
             <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
                 <Reveal className={cn(reverse && "lg:order-2")}>
                     <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl", dark ? "text-white" : "text-black")}>
@@ -269,7 +277,7 @@ export function InsetBlock({
     reverse?: boolean;
 }) {
     return (
-        <section className="px-6 py-12 sm:py-16">
+        <section className={cn(BEAT, "px-6 py-12")}>
             <Reveal>
                 <div
                     className={cn(
@@ -330,7 +338,7 @@ export function CenterFeature({
     dark?: boolean;
 }) {
     return (
-        <section className={cn("px-6 py-24 sm:py-32", tone)}>
+        <section className={cn(BEAT, "px-6 py-12", tone)}>
             <div className="mx-auto w-full max-w-3xl text-center">
                 <Reveal>
                     {eyebrow && (
@@ -380,7 +388,7 @@ export function StepFlow({
     tone?: string;
 }) {
     return (
-        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+        <section className={cn(BEAT, "px-6 py-12", tone)}>
             <div className="mx-auto w-full max-w-6xl">
                 <Reveal>
                     {eyebrow && (
@@ -423,7 +431,7 @@ export function BentoGrid({
     tone?: string;
 }) {
     return (
-        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+        <section className={cn(BEAT, "px-6 py-12", tone)}>
             <div className="mx-auto w-full max-w-6xl">
                 {(eyebrow || title || sub) && (
                     <Reveal>
@@ -481,7 +489,7 @@ export function CaptionCards({
     columns?: 2 | 3;
 }) {
     return (
-        <section className={cn("px-6 py-24 sm:py-32", tone)}>
+        <section className={cn(BEAT, "px-6 py-12", tone)}>
             <div className="mx-auto w-full max-w-6xl">
                 {(eyebrow || title || sub) && (
                     <Reveal className="max-w-3xl">
@@ -526,7 +534,7 @@ export function TwoUpBold({
     tone?: string;
 }) {
     return (
-        <section className={cn("px-6 py-16 sm:py-24", tone)}>
+        <section className={cn(BEAT, "px-6 py-12", tone)}>
             <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-2">
                 {items.map((it, i) => (
                     <Reveal key={it.title} delay={i * 0.08}>
@@ -556,7 +564,7 @@ export function BigStatement({
     className?: string;
 }) {
     return (
-        <section className={cn("px-6 py-20 sm:py-32", tone, className)}>
+        <section className={cn("flex min-h-[80svh] flex-col justify-center px-6 py-12", tone, className)}>
             <div className="mx-auto max-w-4xl">
                 <Reveal>
                     <p className="font-extrabold text-3xl leading-[1.15] tracking-tight text-black sm:text-5xl">{children}</p>
@@ -579,7 +587,7 @@ export function BandSection({
     sub?: string;
 }) {
     return (
-        <section className={cn("px-6 py-16 sm:py-24", className)}>
+        <section className={cn(BEAT, "px-6 py-12", className)}>
             <div className="mx-auto w-full max-w-6xl">
                 {(title || sub) && (
                     <Reveal>
@@ -601,7 +609,7 @@ export function BandSection({
 export function ExploreMore({ currentHref, className }: { currentHref: string; className?: string }) {
     const links = MARKETING_FEATURES.filter((f) => f.href !== currentHref).slice(0, 3);
     return (
-        <section className={cn("px-6 py-16 sm:py-24", className)}>
+        <section className={cn(BEAT_LIGHT, "px-6 py-12", className)}>
             <div className="mx-auto w-full max-w-6xl">
                 <Reveal>
                     <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">Explore more</h2>
@@ -633,7 +641,7 @@ export function ExploreMore({ currentHref, className }: { currentHref: string; c
 
 export function Faq({ items, className }: { items: { q: string; a: string }[]; className?: string }) {
     return (
-        <section className={cn("px-6 py-16 sm:py-24", className)}>
+        <section className={cn(BEAT_LIGHT, "px-6 py-12", className)}>
             <div className="mx-auto w-full max-w-3xl">
                 <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">
                     Questions, answered
@@ -673,7 +681,7 @@ export function ClosingCta({
     tiles?: { title: string; body: string }[];
 }) {
     return (
-        <section className="px-4 py-12 sm:px-6 sm:py-16">
+        <section className="flex min-h-[85svh] flex-col justify-center px-4 py-12 sm:px-6">
             <div className="mx-auto w-full max-w-8xl overflow-hidden rounded-[40px] bg-black px-6 py-16 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-12 sm:py-20">
                 <Reveal>
                     <h2 className="max-w-2xl font-extrabold text-4xl leading-[1.05] tracking-tight text-white sm:text-6xl">{title}</h2>

@@ -55,10 +55,12 @@ export function ColorScrollPage({
         };
     }, [initial]);
 
+    // 400ms easeOutQuint = Phantom's measured house transition (they run it on
+    // <html>: `background-color 0.4s cubic-bezier(0.22,1,0.36,1)`).
     return (
         <div
             ref={ref}
-            className={cn("transition-colors duration-700 ease-out", className)}
+            className={cn("transition-colors duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)]", className)}
             style={{ backgroundColor: bg }}
         >
             {children}

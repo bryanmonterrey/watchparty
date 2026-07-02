@@ -1,44 +1,37 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion, type MotionValue } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Reveal } from "./motion";
 
-// Phantom-style card carousel: three cards start STACKED in the center, then a
-// pinned scroll SPREADS them out into a 3-up row (scroll-scrubbed). Below lg (and
-// under reduced motion) it degrades to a plain stacked row — no pin, no overflow.
-
-// Distance a side card travels from the center stack to its row slot: card width
-// (300) + gap (32).
-const SPREAD = 332;
+// Phantom-style card deck (measured live from phantom.com): cards rest in a
+// normal in-flow row — no pinning, the section costs zero extra scroll. The
+// INITIAL state pulls every card onto the center as a fanned deck (pure
+// translateX, ~25px stagger, leftmost card on top), and a spring with a slight
+// overshoot fires ONCE when the row is mostly in view, spreading the deck into
+// the row. Phantom's cards: 3:4 portrait, 24px radius, ~32px gap, solid token
+// surfaces, all springing together (no stagger delay).
 
 type CarouselCard = { tone: string; node: React.ReactNode };
+
+// ~2% overshoot, settles in well under a second (matches the measured motion).
+const SPRING = { type: "spring", stiffness: 90, damping: 15, mass: 1 } as const;
+
+// One slot of travel in card-widths: 100% card + gap, minus the deck stagger,
+// ≈ 102% of the card's own width. Percentages keep it correct across the
+// responsive card sizes without measuring.
+const SLOT_PCT = 102;
 
 function CardFrame({ tone, children }: { tone: string; children: React.ReactNode }) {
     return (
         <div
             className={cn(
-                "flex aspect-[3/4] w-[300px] shrink-0 flex-col overflow-hidden rounded-[32px] p-7 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]",
+                "flex aspect-[3/4] w-[300px] shrink-0 flex-col overflow-hidden rounded-[24px] p-7 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] xl:w-[340px]",
                 tone,
             )}
         >
             {children}
         </div>
-    );
-}
-
-function AnimatedCard({ p, pos, card }: { p: MotionValue<number>; pos: -1 | 0 | 1; card: CarouselCard }) {
-    // At progress 0 the side cards sit ON the center (stacked, smaller, tilted,
-    // nudged down); at progress 1 they land in their row slots.
-    const x = useTransform(p, [0, 1], [-pos * SPREAD, 0]);
-    const y = useTransform(p, [0, 1], [pos === 0 ? 0 : 30, 0]);
-    const scale = useTransform(p, [0, 1], [pos === 0 ? 1 : 0.86, 1]);
-    const rotate = useTransform(p, [0, 1], [pos * 7, 0]);
-    return (
-        <motion.div style={{ x, y, scale, rotate, zIndex: pos === 0 ? 30 : 10 }} className="relative">
-            <CardFrame tone={card.tone}>{card.node}</CardFrame>
-        </motion.div>
     );
 }
 
@@ -67,16 +60,13 @@ export function CardCarousel({
     cards: CarouselCard[];
     dark?: boolean;
 }) {
-    const ref = useRef<HTMLDivElement>(null);
     const reduce = useReducedMotion();
-    const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-    // Finish the spread by ~60% of the pin, then hold.
-    const p = useTransform(scrollYProgress, [0, 0.6, 1], [0, 1, 1]);
+    const center = (cards.length - 1) / 2;
 
-    // Plain stacked row (mobile + reduced motion): no pin, cards just sit in a row
-    // (wrapping on small screens).
+    // Plain row (mobile + reduced motion): cards wrap, revealed with the shared
+    // fade-up, no deck.
     const staticRow = (
-        <section className={cn("px-6 py-20 sm:py-28", reduce ? "" : "lg:hidden")}>
+        <section className={cn("flex min-h-[92svh] flex-col justify-center px-6 py-16", reduce ? "" : "lg:hidden")}>
             <Header eyebrow={eyebrow} title={title} sub={sub} dark={dark} />
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-6">
                 {cards.map((c, i) => (
@@ -92,15 +82,23 @@ export function CardCarousel({
 
     return (
         <>
-            {/* Pinned spread — desktop only. */}
-            <section ref={ref} className="relative hidden lg:block lg:h-[240vh]">
-                <div className="sticky top-0 flex h-svh flex-col items-center justify-center overflow-hidden px-6">
-                    <Header eyebrow={eyebrow} title={title} sub={sub} dark={dark} />
-                    <div className="relative flex items-center justify-center gap-8">
-                        {cards.map((c, i) => (
-                            <AnimatedCard key={i} p={p} pos={(i - 1) as -1 | 0 | 1} card={c} />
-                        ))}
-                    </div>
+            {/* Deck → row spring, desktop only. */}
+            <section className="hidden min-h-[92svh] flex-col justify-center px-6 py-16 lg:flex">
+                <Header eyebrow={eyebrow} title={title} sub={sub} dark={dark} />
+                <div className="flex items-center justify-center gap-8">
+                    {cards.map((c, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ x: `${(center - i) * SLOT_PCT}%` }}
+                            whileInView={{ x: "0%" }}
+                            viewport={{ once: true, amount: 0.6 }}
+                            transition={SPRING}
+                            style={{ zIndex: cards.length - i }}
+                            className="relative"
+                        >
+                            <CardFrame tone={c.tone}>{c.node}</CardFrame>
+                        </motion.div>
+                    ))}
                 </div>
             </section>
             {staticRow}
