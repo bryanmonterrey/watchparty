@@ -87,7 +87,7 @@ function SectionHeader({ title, href }: { title: string; href: string }) {
     return (
         <div className="flex items-baseline justify-between pb-4">
             <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-            <Link href={href} className="text-sm font-extrabold text-pastel-yellow hover:text-white/80">
+            <Link href={href} className="text-sm font-extrabold text-ring hover:text-twitter2">
                 View all
             </Link>
         </div>
