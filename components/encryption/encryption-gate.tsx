@@ -1,16 +1,34 @@
 'use client';
 
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useEncryptionContext } from './encryption-provider';
 import { WalletSetupCta } from '@/components/wallet/wallet-drawer/views/setup/wallet-setup-cta';
+
+// Same lazy-mount pattern as WalletButton: the connect modal is heavy and only
+// needed on click, so it stays out of the messages bundle until then.
+const WalletConnectModal = dynamic(
+    () => import('@/components/wallet/wallet-connect-modal').then((m) => ({ default: m.WalletConnectModal })),
+    { ssr: false },
+);
 
 /**
  * Gates the messages UI on wallet setup. Messaging is end-to-end encrypted with
  * a key derived from the user's on-device wallet share, so without a wallet
  * there's no key to encrypt with — we prompt setup instead of falling back to a
- * server-readable key. Once the wallet exists, `retry()` re-runs key init.
+ * server-readable key.
+ *
+ * Extension-wallet users land here whenever the page's wallet adapter isn't
+ * connected (being signed in ≠ adapter connected): "Connect wallet" opens the
+ * standard connect modal, and the EncryptionProvider re-runs key init on its
+ * own once the adapter reports a publicKey (it's in the init effect's deps) —
+ * deriving the messaging key from a one-time signature. Embedded-wallet users
+ * use the Generate flow below, then `retry()`.
  */
 export function EncryptionGate({ children }: { children: React.ReactNode }) {
     const { needsWallet, retry } = useEncryptionContext();
+    const [modalReady, setModalReady] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
 
     if (!needsWallet) return <>{children}</>;
 
@@ -24,7 +42,17 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
                 </p>
             </div>
 
-            <div className="w-full max-w-[320px]">
+            <div className="flex w-full max-w-[320px] flex-col gap-4">
+                <button
+                    onClick={() => {
+                        setModalReady(true);
+                        setModalOpen(true);
+                    }}
+                    className="flex h-12 cursor-pointer items-center justify-center rounded-full bg-white text-[15px] font-semibold tracking-tight text-black transition-colors hover:bg-white/90"
+                >
+                    Connect wallet
+                </button>
+
                 <WalletSetupCta />
             </div>
 
@@ -34,6 +62,8 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
             >
                 I&apos;ve connected my wallet
             </button>
+
+            {modalReady && <WalletConnectModal open={modalOpen} onOpenChange={setModalOpen} />}
         </div>
     );
 }
