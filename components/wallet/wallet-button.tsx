@@ -74,12 +74,21 @@ function WalletButtonInner() {
     }, []);
 
     // Header siblings (the SOL balance chip) open the drawer via this event —
-    // the drawer state lives here, next to its lazy-mount gates.
+    // the drawer state lives here, next to its lazy-mount gates. Users with no
+    // linked wallet get the connect modal instead of an empty drawer.
     useEffect(() => {
-        const open = () => { setDrawerReady(true); setDrawerOpen(true); };
+        const open = () => {
+            if (walletAddress) {
+                setDrawerReady(true);
+                setDrawerOpen(true);
+            } else {
+                setModalReady(true);
+                setIsModalOpen(true);
+            }
+        };
         window.addEventListener(OPEN_WALLET_DRAWER_EVENT, open);
         return () => window.removeEventListener(OPEN_WALLET_DRAWER_EVENT, open);
-    }, []);
+    }, [walletAddress]);
 
     const handleSignIn = useCallback(async () => {
         if (!connected || !publicKey) {

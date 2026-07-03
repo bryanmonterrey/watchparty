@@ -45,7 +45,9 @@ export function SolBalanceChip() {
         },
     );
 
-    if (!walletAddress) return null;
+    // No wallet linked yet → the query stays disabled (isLoading false) and
+    // balance resolves to 0, so those users get the "Add money" state; the
+    // wallet button routes the click to the connect modal instead of the drawer.
     if (isLoading) return <SolBalanceChipSkeleton />;
 
     const balance = data?.tokens?.find((t) => t.mint === SOL_MINT)?.balance ?? 0;
