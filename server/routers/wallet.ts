@@ -9,6 +9,7 @@ import {
 import { headers } from "next/headers";
 import { TRPCError } from "@trpc/server";
 import { Keypair, Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
+import { createServerConnection } from "@/lib/solana/server-connection";
 import { withCache, invalidateCache, TTL } from "@/lib/cache";
 import { resolvePool } from "@/lib/tokens/udf-datafeed";
 
@@ -348,7 +349,7 @@ export const walletRouter = router({
                     const treasury = KP.fromSecretKey(Buffer.from(treasuryKey, "base64"));
                     const tx = Tx.from(txBytes);
                     tx.partialSign(treasury);
-                    const conn = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, "confirmed");
+                    const conn = createServerConnection();
                     sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 });
                 }
                 return { type: "tx" as const, signature: sig };
@@ -385,7 +386,7 @@ export const walletRouter = router({
             const txBytes = Buffer.from(input.transaction, "base64");
 
             try {
-                const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, "confirmed");
+                const connection = createServerConnection();
                 let signature: string;
 
                 const paymasterApiKey = process.env.SWIG_API_KEY;
@@ -666,7 +667,7 @@ export const walletRouter = router({
             }
 
             try {
-                const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, "confirmed");
+                const connection = createServerConnection();
                 const signature = await connection.sendRawTransaction(
                     Buffer.from(input.transaction, "base64"),
                     { skipPreflight: true, maxRetries: 0 }
@@ -730,7 +731,7 @@ export const walletRouter = router({
                 const txBuffer = Buffer.from(input.transaction, "base64");
                 let rawTransaction: Uint8Array;
 
-                const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, "confirmed");
+                const connection = createServerConnection();
 
                 // Tier 3 only handles v1 custodial wallets where the custodial keypair IS
                 // the fee payer / from-pubkey. For Swig wallets (v2) the first signer is

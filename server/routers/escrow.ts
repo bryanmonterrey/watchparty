@@ -5,6 +5,7 @@ import { escrows, tokens } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
 import { eq, and } from "drizzle-orm";
 import { Keypair, Connection, PublicKey } from "@solana/web3.js";
+import { createServerConnection } from "@/lib/solana/server-connection";
 import bs58 from "bs58";
 import { nanoid } from "nanoid";
 import { DynamicFeeSharingClient, deriveFeeVaultPdaAddress } from "@meteora-ag/dynamic-fee-sharing-sdk";
@@ -108,7 +109,7 @@ export const escrowRouter = router({
             const treasuryKeypair = Keypair.fromSecretKey(bs58.decode(treasuryKey));
             const proxyKeypair = Keypair.fromSecretKey(bs58.decode(escrowRecord.claimerPrivateKey));
 
-            const connection = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL!, "confirmed");
+            const connection = createServerConnection();
             const dfsClient = new DynamicFeeSharingClient(connection, "confirmed");
 
             const baseMint = new PublicKey(tokenRecord.tokenAddress);

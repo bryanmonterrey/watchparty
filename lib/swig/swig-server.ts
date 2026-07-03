@@ -19,6 +19,7 @@ import {
     SystemProgram,
     Transaction,
 } from '@solana/web3.js';
+import { createServerConnection } from '@/lib/solana/server-connection';
 
 // Lazily created so importing this module (e.g. during `next build` page-data
 // collection) never constructs a Connection when the RPC env var is absent.
@@ -27,7 +28,7 @@ function getRpc(): Connection {
     if (!_rpc) {
         const url = process.env.NEXT_PUBLIC_HELIUS_RPC_URL;
         if (!url) throw new Error("NEXT_PUBLIC_HELIUS_RPC_URL is not set");
-        _rpc = new Connection(url, 'confirmed');
+        _rpc = createServerConnection(url);
     }
     return _rpc;
 }
