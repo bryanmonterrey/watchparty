@@ -23,10 +23,9 @@ function CreateButtonSkeleton() {
     <Button
       disabled
       variant="outline"
-      className="rounded-full border-none font-semibold flex bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs text-white/90 gap-2 px-4 h-11 w-[110px]"
+      className="rounded-full border-none flex bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs text-white/90 size-11 p-0"
     >
       <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
-      <div className="h-3 w-full rounded-full shimmer-skeleton" />
     </Button>
   )
 }
@@ -175,12 +174,10 @@ export function AppHeader() {
                 ) : (
                   <Button
                     variant="outline"
-                    className="rounded-full border-none font-semibold flex text-[17px] h-11 px-3 text-flexwhite bg-zinc-500/35 hover:bg-zinc-500/60"
+                    aria-label="Create"
+                    className="rounded-full border-none flex size-11 p-0 text-flexwhite bg-zinc-500/35 hover:bg-zinc-500/60"
                   >
-                    <span className="flex items-center gap-1">
-                      <CreateIcon className="size-5" strokeWidth={2}/>
-                      Create
-                    </span>
+                    <CreateIcon className="size-6" strokeWidth={2}/>
                   </Button>
                 )}
               </WithAuth>

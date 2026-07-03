@@ -14,10 +14,9 @@ export function WalletButtonSkeleton() {
         <Button
             disabled
             variant="outline"
-            className="text-zinc-300 h-11 font-semibold text-[18px] tracking-wide bg-zinc-500/35 backdrop-blur-xs border-none px-4 pl-2 gap-2 w-[140px]"
+            className="text-zinc-300 size-11 rounded-full p-0 overflow-hidden bg-zinc-500/35 backdrop-blur-xs border-none"
         >
-            <div className="h-6 w-6 rounded-full shimmer-skeleton shrink-0" />
-            <div className="h-3 w-full rounded-full shimmer-skeleton" />
+            <div className="size-full rounded-full shimmer-skeleton shrink-0" />
         </Button>
     );
 }

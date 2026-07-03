@@ -200,20 +200,22 @@ function WalletButtonInner() {
     if (isSignedIn) {
         return (
             <>
+                {/* Avatar-only trigger — the avatar IS the button (no address
+                    text); hover shows a soft ring for affordance. */}
                 <Button
                     variant="outline"
-                    className="text-flexwhite border-none h-11 font-medium text-[18px] bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs px-4 pl-2 gap-2 min-w-[140px]"
+                    aria-label="Open wallet"
+                    className="border-none size-11 rounded-full p-0 overflow-hidden bg-zinc-500/35 hover:bg-zinc-500/60 backdrop-blur-xs hover:ring-2 hover:ring-white/25"
                     disabled={isProcessing}
                     onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
                     onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
                 >
-                    <span className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                            <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
-                            <AvatarFallback></AvatarFallback>
-                        </Avatar>
-                        {buttonText}
-                    </span>
+                    <Avatar className="size-full">
+                        <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
+                        <AvatarFallback className="bg-transparent text-white/90 font-semibold">
+                            {(session?.user?.username ?? "?")[0]?.toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
                 </Button>
 
                 {drawerReady && (
