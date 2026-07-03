@@ -80,7 +80,7 @@ export function GlobalSearch({
                     // input focus, cleared on submit / outside click) — the old
                     // extra focus-within ring doubled it in a second color.
                     "relative h-[52px] backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-zinc-500/35 rounded-full transition-colors",
-                    isFocused && "ring-2 ring-white"
+                    isFocused && "ring-2 ring-white/35"
                 )}
             >
                 <SearchIcon className="absolute left-4 size-6 text-zinc-400" />
