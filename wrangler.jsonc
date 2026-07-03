@@ -8,6 +8,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Persist worker logs (console/errors) to Cloudflare Workers Logs so
+  // production errors are queryable after the fact (dashboard → Workers →
+  // watchparty → Logs) instead of only visible in a live `wrangler tail`.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   // Supabase session pooler (DIRECT_URL) fronted by Hyperdrive — the DB client
   // in db/index.ts reads env.HYPERDRIVE.connectionString on Workers.
   "hyperdrive": [
