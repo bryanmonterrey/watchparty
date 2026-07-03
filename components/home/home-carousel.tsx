@@ -48,6 +48,7 @@ interface CarouselVideo {
     isLive?: boolean | null;
     /** Launched token (if any) — drives the market-cap chip. */
     ticker?: string | null;
+    tokenId?: string | null;
     tokenAddress?: string | null;
     marketCapUsd?: number | null;
     user: { username: string | null; avatar_url: string | null };
@@ -210,7 +211,7 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                                                 {/* Open state: LIVE + market cap, top-left. */}
                                                 <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
                                                     {v.isLive && <LiveBadge />}
-                                                    <MarketCapChip tokenAddress={v.tokenAddress} marketCap={v.marketCapUsd} ticker={v.ticker} />
+                                                    <MarketCapChip tokenSlug={v.tokenAddress ?? v.tokenId} marketCap={v.marketCapUsd} ticker={v.ticker} />
                                                 </div>
                                             </>
                                         )}
@@ -249,7 +250,7 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                                         <div className="absolute inset-0 bg-black/40" />
                                         {/* Closed state: market cap only, top-center (peek is 116px). */}
                                         <div className="absolute inset-x-0 top-3 z-30 flex justify-center">
-                                            <MarketCapChip compact tokenAddress={v.tokenAddress} marketCap={v.marketCapUsd} ticker={v.ticker} />
+                                            <MarketCapChip compact tokenSlug={v.tokenAddress ?? v.tokenId} marketCap={v.marketCapUsd} ticker={v.ticker} />
                                         </div>
                                         <div className="absolute inset-0 flex items-center justify-center">
                                             <div className="size-14 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/25">
@@ -428,7 +429,7 @@ function ActivePanel({ v, onPrev, onNext }: { v: CarouselVideo; onPrev: () => vo
             {/* LIVE badge + market cap, top-left. */}
             <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
                 {v.isLive && <LiveBadge />}
-                <MarketCapChip tokenAddress={v.tokenAddress} marketCap={v.marketCapUsd} ticker={v.ticker} />
+                <MarketCapChip tokenSlug={v.tokenAddress ?? v.tokenId} marketCap={v.marketCapUsd} ticker={v.ticker} />
             </div>
 
             {/* Player controls, top-right — grouped pills (prev/next · mute/cc),

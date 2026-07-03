@@ -13,8 +13,11 @@ export function formatMarketCap(mc: number): string {
 }
 
 interface MarketCapChipProps {
-    /** Token mint — the chip navigates to /{tokenAddress} (token page). */
-    tokenAddress: string | null | undefined;
+    /**
+     * Token page slug: the mint address once live, else the token row id —
+     * /[slug] resolves both (same rule as trade's token-row).
+     */
+    tokenSlug: string | null | undefined;
     marketCap: number | null | undefined;
     ticker?: string | null;
     /** Market cap only (no ticker) — for narrow surfaces like closed carousel peeks. */
@@ -25,23 +28,23 @@ interface MarketCapChipProps {
 /**
  * Market-cap pill for video surfaces (hero carousel, section cards, feed
  * cards). Frosted black like the rest of the over-thumbnail chrome (LIVE
- * badge, time nail); mcap in emerald to match the live $TICKER pill. Renders
- * nothing until the token is live on-chain AND the stream worker has cached a
- * market cap. Safe inside <Link>/onClick wrappers — it swallows its click and
- * routes to the token page itself.
+ * badge, time nail); mcap in emerald to match the live $TICKER pill, or a
+ * muted $-.--K placeholder until the stream worker has cached a market cap.
+ * Safe inside <Link>/onClick wrappers — it swallows its click and routes to
+ * the token page itself.
  */
-export function MarketCapChip({ tokenAddress, marketCap, ticker, compact, className }: MarketCapChipProps) {
+export function MarketCapChip({ tokenSlug, marketCap, ticker, compact, className }: MarketCapChipProps) {
     const router = useRouter();
-    if (!tokenAddress || marketCap == null) return null;
+    if (!tokenSlug) return null;
 
     return (
         <button
             type="button"
-            aria-label={`Token ${ticker ? `$${ticker} ` : ""}market cap ${formatMarketCap(marketCap)} — open token page`}
+            aria-label={`Token ${ticker ? `$${ticker} ` : ""}market cap ${marketCap == null ? "unavailable" : formatMarketCap(marketCap)} — open token page`}
             onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                router.push(`/${tokenAddress}`);
+                router.push(`/${tokenSlug}`);
             }}
             className={cn(
                 "flex cursor-pointer items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold leading-none tracking-tight text-white backdrop-blur-sm transition-colors hover:bg-black/70",
@@ -49,7 +52,11 @@ export function MarketCapChip({ tokenAddress, marketCap, ticker, compact, classN
             )}
         >
             {!compact && ticker && <span className="max-w-24 truncate uppercase">${ticker}</span>}
-            <span className="text-emerald-400 tabular-nums">{formatMarketCap(marketCap)}</span>
+            {marketCap == null ? (
+                <span className="text-zinc-400 tabular-nums">$-.--K</span>
+            ) : (
+                <span className="text-emerald-400 tabular-nums">{formatMarketCap(marketCap)}</span>
+            )}
         </button>
     );
 }

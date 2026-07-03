@@ -9,6 +9,7 @@ export interface Video {
     category: string | null;
     ticker?: string | null;
     tokenStatus?: string | null;
+    tokenId?: string | null;
     tokenAddress?: string | null;
     marketCapUsd?: number | null;
     user: {

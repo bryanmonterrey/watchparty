@@ -41,6 +41,7 @@ interface FeedVideo {
     watchedTime?: number | null;
     /** Launched token (if any) — drives the market-cap chip. */
     ticker?: string | null;
+    tokenId?: string | null;
     tokenAddress?: string | null;
     marketCapUsd?: number | null;
     user: { username: string | null; avatar_url: string | null };
@@ -333,7 +334,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
                     (sibling, like the controls) so it's not a nested interactive
                     element; it routes to the token page itself. */}
                 <MarketCapChip
-                    tokenAddress={v.tokenAddress}
+                    tokenSlug={v.tokenAddress ?? v.tokenId}
                     marketCap={v.marketCapUsd}
                     ticker={v.ticker}
                     className="absolute left-3 top-3 z-10"

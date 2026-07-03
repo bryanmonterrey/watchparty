@@ -73,7 +73,7 @@ export function VideoCard({ video, loading }: VideoCardProps) {
                     <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
                 )}
                 <MarketCapChip
-                    tokenAddress={video.tokenAddress}
+                    tokenSlug={video.tokenAddress ?? video.tokenId}
                     marketCap={video.marketCapUsd}
                     ticker={video.ticker}
                     className="absolute left-2 top-2 z-10"
