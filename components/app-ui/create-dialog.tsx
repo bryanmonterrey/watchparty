@@ -533,19 +533,12 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
                                         className={cn(
-                                            "relative px-1 py-1 text-base cursor-pointer font-medium capitalize transition-colors",
+                                            "relative text-xl font-bold px-1 py-1 text-base cursor-pointer capitalize transition-colors",
                                             activeTab === tab ? "text-white cursor-default" : "text-zinc-500 hover:text-zinc-300"
                                         )}
                                     >
                                         {tab}
-                                        {activeTab === tab && (
-                                            <motion.div
-                                                layoutId="active-tab-underline"
-                                                className="absolute bottom-[-5px] left-0 right-0 rounded-full h-[2px] bg-white"
-                                                initial={false}
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            />
-                                        )}
+                                        
                                     </button>
                                 ))}
                             </div>
