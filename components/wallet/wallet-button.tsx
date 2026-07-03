@@ -208,7 +208,7 @@ function WalletButtonInner() {
                     <Button
                         variant="outline"
                         aria-label="Open wallet"
-                        className="border-none size-11 p-0 overflow-hidden bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs"
+                        className="rounded-none border-none size-11 p-0 overflow-hidden bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs"
                         disabled={isProcessing}
                         onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
                         onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}

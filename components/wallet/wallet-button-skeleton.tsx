@@ -16,7 +16,7 @@ export function WalletButtonSkeleton() {
             <Button
                 disabled
                 variant="outline"
-                className="text-zinc-300 size-11 p-0 overflow-hidden bg-[#6A6A6A]/35 backdrop-blur-xs border-none"
+                className="text-zinc-300 rounded-none size-11 p-0 overflow-hidden bg-[#6A6A6A]/35 backdrop-blur-xs border-none"
             >
                 <div className="size-full shimmer-skeleton shrink-0" />
             </Button>

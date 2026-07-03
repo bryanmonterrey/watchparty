@@ -25,7 +25,7 @@ function CreateButtonSkeleton() {
       <Button
         disabled
         variant="outline"
-        className="border-none flex bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs text-white/90 size-11 p-0"
+        className="rounded-none border-none flex bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs text-white/90 size-11 p-0"
       >
         <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
       </Button>
@@ -179,7 +179,7 @@ export function AppHeader() {
                     <Button
                       variant="outline"
                       aria-label="Create"
-                      className="border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
+                      className="rounded-none border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
                     >
                       <CreateIcon className="size-6" strokeWidth={2}/>
                     </Button>
