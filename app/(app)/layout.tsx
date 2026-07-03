@@ -10,6 +10,7 @@ import { MobileChrome } from "@/components/app-ui/mobile/mobile-chrome";
 import { MiniPlayerShell } from "@/components/app-ui/mini-player-shell";
 import { UpgradeOverlay } from "@/components/premium/upgrade-overlay";
 import OnboardingDialog from "@/components/app-ui/app-onboarding";
+import { DesktopOnlyGate } from "@/components/app-ui/desktop-only-gate";
 
 // Authenticated app shell. Guards every (app) route (no session -> /login) and
 // hosts the app's provider stack + sidebar frame.
@@ -36,6 +37,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // pin) — deliberately NOT restored from the cookie anymore.
   return (
     <AppProviders>
+      {/* Below md every signed-in route shows the desktop-only notice.
+          Remove when the responsive pass lands. */}
+      <DesktopOnlyGate />
       <MiniPlayerShell>
         <SidebarProvider defaultOpen={false}>
           <AppSidebar />
