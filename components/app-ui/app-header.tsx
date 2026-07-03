@@ -12,6 +12,7 @@ import Image from 'next/image'
 import { CreateDialog } from './create-dialog'
 import { WithAuth } from '@/components/auth/with-auth'
 import { Squircle } from '@/components/ui/squircle'
+import { SolBalanceChip, SolBalanceChipSkeleton } from '@/components/wallet/sol-balance-chip'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
@@ -165,11 +166,13 @@ export function AppHeader() {
             Create pill showed first and the wallet popped in a beat later. */}
         {!mounted ? (
           <>
+            <SolBalanceChipSkeleton />
             <CreateButtonSkeleton />
             <WalletButtonSkeleton />
           </>
         ) : (
           <>
+            <SolBalanceChip />
             <CreateDialog>
               <WithAuth>
                 {isLoading ? (

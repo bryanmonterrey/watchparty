@@ -15,6 +15,7 @@ import { appToast } from "@/components/app-ui/app-toast";
 import { Loader2 } from "lucide-react";
 import { WalletButtonSkeleton } from "./wallet-button-skeleton";
 import { Squircle } from "@/components/ui/squircle";
+import { OPEN_WALLET_DRAWER_EVENT } from "./sol-balance-chip";
 import "@/lib/types";
 
 // WalletConnectModal + WalletDrawer are interaction-only and HEAVY (the drawer
@@ -70,6 +71,14 @@ function WalletButtonInner() {
     const handleConnect = useCallback(() => {
         setModalReady(true);
         setIsModalOpen(true);
+    }, []);
+
+    // Header siblings (the SOL balance chip) open the drawer via this event —
+    // the drawer state lives here, next to its lazy-mount gates.
+    useEffect(() => {
+        const open = () => { setDrawerReady(true); setDrawerOpen(true); };
+        window.addEventListener(OPEN_WALLET_DRAWER_EVENT, open);
+        return () => window.removeEventListener(OPEN_WALLET_DRAWER_EVENT, open);
     }, []);
 
     const handleSignIn = useCallback(async () => {
