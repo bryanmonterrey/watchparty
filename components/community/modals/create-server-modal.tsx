@@ -46,7 +46,7 @@ export function CreateServerModal() {
 
     return (
         <Dialog open={isModalOpen} onOpenChange={handleClose}>
-            <DialogContent className="bg-[#313338] border-none text-white p-0 overflow-hidden">
+            <DialogContent className="border-none text-white p-0 overflow-hidden">
                 <DialogHeader className="pt-8 px-6">
                     <DialogTitle className="text-2xl text-center font-bold">
                         Create your server

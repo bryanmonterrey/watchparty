@@ -79,7 +79,7 @@ export function StoryCreator({ open, onClose }: StoryCreatorProps) {
 
     return (
         <Dialog open={open} onOpenChange={v => !v && handleClose()}>
-            <DialogContent className="bg-black border-white/10 max-w-sm p-0 overflow-hidden">
+            <DialogContent className="border-white/10 max-w-sm p-0 overflow-hidden">
                 <DialogHeader className="px-5 pt-5 pb-3">
                     <DialogTitle className="text-zinc-100">New Story</DialogTitle>
                 </DialogHeader>

@@ -516,7 +516,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                     {children}
                 </DialogTrigger>
                 <DialogContent className={cn(
-                    "fixed left-[50%] z-50 grid w-full translate-x-[-50%] border border-zinc-800 bg-black p-0 shadow-lg duration-200 sm:rounded-4xl transition-all max-w-[900px] md:max-w-4xl",
+                    "fixed left-[50%] z-50 grid w-full translate-x-[-50%] border border-zinc-800 p-0 duration-200 sm:rounded-4xl transition-all max-w-[900px] md:max-w-4xl",
                     step === "upload" ? "top-[10vh] translate-y-0" : "top-[50%] translate-y-[-50%]"
                 )}>
                     <VisuallyHidden.Root>
@@ -1045,7 +1045,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
             <ScheduledPostsDrawer open={showScheduledPosts} onOpenChange={setShowScheduledPosts} />
 
             <AlertDialog open={showCloseAlert} onOpenChange={setShowCloseAlert}>
-                <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
+                <AlertDialogContent className="border-zinc-800 text-white">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Save as draft?</AlertDialogTitle>
                         <AlertDialogDescription className="text-zinc-400">

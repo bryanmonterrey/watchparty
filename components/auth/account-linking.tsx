@@ -240,7 +240,7 @@ export default function AccountLinking() {
 
             {/* Unlink Confirmation Dialog */}
             <Dialog open={!!showUnlinkDialog} onOpenChange={() => setShowUnlinkDialog(null)}>
-                <DialogContent className="bg-neutral-950 border-neutral-800">
+                <DialogContent className="border-neutral-800">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="w-5 h-5 text-yellow-500" />

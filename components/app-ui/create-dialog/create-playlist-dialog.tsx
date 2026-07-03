@@ -47,7 +47,7 @@ export function CreatePlaylistDialog({ open, onOpenChange, onCreate }: CreatePla
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#282828] border-zinc-800 text-white max-w-[600px] p-0 gap-0">
+            <DialogContent className="border-zinc-800 text-white max-w-[600px] p-0 gap-0">
                 <DialogHeader className="p-6 pb-4 border-b border-white/10">
                     <DialogTitle className="text-xl font-semibold">Create a new playlist</DialogTitle>
                 </DialogHeader>

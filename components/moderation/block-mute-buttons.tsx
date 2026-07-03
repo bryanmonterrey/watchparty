@@ -77,7 +77,7 @@ export function BlockButton({ userId, username, className, onDone }: BlockButton
             </button>
 
             <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-                <DialogContent className="sm:max-w-sm bg-zinc-950 border border-white/10">
+                <DialogContent className="sm:max-w-sm border border-white/10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-zinc-100">
                             <Ban className="w-4 h-4 text-red-400" /> Block @{username}?
@@ -173,7 +173,7 @@ export function MuteButton({ userId, username, className, onDone }: MuteButtonPr
             </button>
 
             <Dialog open={showOptions} onOpenChange={setShowOptions}>
-                <DialogContent className="sm:max-w-sm bg-zinc-950 border border-white/10">
+                <DialogContent className="sm:max-w-sm border border-white/10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-zinc-100">
                             <VolumeX className="w-4 h-4" /> Mute @{username}

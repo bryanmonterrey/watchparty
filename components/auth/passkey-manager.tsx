@@ -165,7 +165,7 @@ export default function PasskeyManager() {
 
             {/* Add Passkey Dialog */}
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                <DialogContent className="bg-neutral-950 border-neutral-800">
+                <DialogContent className="border-neutral-800">
                     <DialogHeader>
                         <DialogTitle>Add New Passkey</DialogTitle>
                         <DialogDescription>
@@ -199,7 +199,7 @@ export default function PasskeyManager() {
 
             {/* Rename Passkey Dialog */}
             <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-                <DialogContent className="bg-neutral-950 border-neutral-800">
+                <DialogContent className="border-neutral-800">
                     <DialogHeader>
                         <DialogTitle>Rename Passkey</DialogTitle>
                         <DialogDescription>
@@ -238,7 +238,7 @@ export default function PasskeyManager() {
 
             {/* Delete Passkey Dialog */}
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                <DialogContent className="bg-neutral-950 border-neutral-800">
+                <DialogContent className="border-neutral-800">
                     <DialogHeader>
                         <DialogTitle>Delete Passkey</DialogTitle>
                         <DialogDescription className="text-red-400">

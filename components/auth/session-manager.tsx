@@ -197,7 +197,7 @@ export default function SessionManager() {
 
             {/* Revoke All Dialog */}
             <Dialog open={showRevokeAllDialog} onOpenChange={setShowRevokeAllDialog}>
-                <DialogContent className="bg-neutral-900 border-neutral-800">
+                <DialogContent className="border-neutral-800">
                     <DialogHeader>
                         <DialogTitle className="text-white">Revoke All Other Sessions?</DialogTitle>
                         <DialogDescription className="text-neutral-400">

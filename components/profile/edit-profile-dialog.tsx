@@ -129,7 +129,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[600px] p-0 overflow-hidden bg-black border-zinc-800 rounded-3xl sm:rounded-[32px] gap-0">
+            <DialogContent className="max-w-[600px] p-0 overflow-hidden border-zinc-800 rounded-3xl sm:rounded-[32px] gap-0">
                 <VisuallyHidden.Root>
                     <DialogTitle>Edit Profile</DialogTitle>
                 </VisuallyHidden.Root>

@@ -83,7 +83,7 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => isOpen ? onOpenChange(true) : handleClose()}>
-            <DialogContent className="sm:max-w-[500px] bg-black border-zinc-800 p-0 gap-0 top-[50%] overflow-hidden flex flex-col max-h-[85vh] rounded-[32px]">
+            <DialogContent className="sm:max-w-[500px] border-zinc-800 p-0 gap-0 top-[50%] overflow-hidden flex flex-col max-h-[85vh] rounded-[32px]">
                 <VisuallyHidden.Root>
                     <DialogTitle>Edit Ticker</DialogTitle>
                 </VisuallyHidden.Root>

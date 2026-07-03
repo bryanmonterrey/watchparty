@@ -90,7 +90,7 @@ export default function RevealPhraseModal({ isOpen, onClose }: RevealPhraseModal
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="bg-neutral-950 border-neutral-800 max-w-2xl">
+            <DialogContent className="border-neutral-800 max-w-2xl">
                 {/* Warning Step */}
                 {step === "warning" && (
                     <>

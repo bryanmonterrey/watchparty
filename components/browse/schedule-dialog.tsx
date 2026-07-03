@@ -36,7 +36,7 @@ export function ScheduleDialog({ open, onClose, onConfirm }: ScheduleDialogProps
 
     return (
         <Dialog open={open} onOpenChange={v => !v && onClose()}>
-            <DialogContent className="bg-black border-white/10 max-w-sm">
+            <DialogContent className="border-white/10 max-w-sm">
                 <DialogHeader>
                     <DialogTitle className="text-zinc-100">Schedule post</DialogTitle>
                 </DialogHeader>

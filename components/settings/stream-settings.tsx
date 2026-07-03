@@ -76,7 +76,7 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
                     <RefreshCw className="w-4 h-4" /> Generate Connection
                 </button>
             </DialogTrigger>
-            <DialogContent className="bg-zinc-900 border-white/10 max-w-md">
+            <DialogContent className="border-white/10 max-w-md">
                 <DialogHeader>
                     <DialogTitle className="text-zinc-100">Generate Stream Connection</DialogTitle>
                 </DialogHeader>
