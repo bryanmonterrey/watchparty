@@ -61,7 +61,7 @@ export function SolBalanceChip() {
                 className={`flex h-11 cursor-pointer items-center gap-2 rounded-none border-none px-3.5 backdrop-blur-xs transition-colors ${
                     balance > 0
                         ? "bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
-                        : "bg-soft-blue/35 hover:bg-soft-blue/50"
+                        : "bg-jewel/30 hover:bg-jewel/50"
                 }`}
             >
                 {balance > 0 ? (
