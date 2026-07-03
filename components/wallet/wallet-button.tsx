@@ -14,6 +14,7 @@ import { signInWithSolana } from "@/lib/solana/sign-in";
 import { appToast } from "@/components/app-ui/app-toast";
 import { Loader2 } from "lucide-react";
 import { WalletButtonSkeleton } from "./wallet-button-skeleton";
+import { Squircle } from "@/components/ui/squircle";
 import "@/lib/types";
 
 // WalletConnectModal + WalletDrawer are interaction-only and HEAVY (the drawer
@@ -201,22 +202,25 @@ function WalletButtonInner() {
         return (
             <>
                 {/* Avatar-only trigger — the avatar IS the button (no address
-                    text); hover shows a soft ring for affordance. */}
-                <Button
-                    variant="outline"
-                    aria-label="Open wallet"
-                    className="border-none size-11 rounded-full p-0 overflow-hidden bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs hover:ring-2 hover:ring-white/25"
-                    disabled={isProcessing}
-                    onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
-                    onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
-                >
-                    <Avatar className="size-full">
-                        <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
-                        <AvatarFallback className="bg-transparent text-white/90 font-semibold">
-                            {(session?.user?.username ?? "?")[0]?.toUpperCase()}
-                        </AvatarFallback>
-                    </Avatar>
-                </Button>
+                    text). Squircle clip defines the shape, so the avatar's own
+                    rounding is disabled and it fills the tile edge-to-edge. */}
+                <Squircle asChild radius={16} autoEffects={false}>
+                    <Button
+                        variant="outline"
+                        aria-label="Open wallet"
+                        className="border-none size-11 p-0 overflow-hidden bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs"
+                        disabled={isProcessing}
+                        onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
+                        onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
+                    >
+                        <Avatar className="size-full rounded-none">
+                            <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
+                            <AvatarFallback className="bg-transparent text-white/90 font-semibold rounded-none">
+                                {(session?.user?.username ?? "?")[0]?.toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                    </Button>
+                </Squircle>
 
                 {drawerReady && (
                     <WalletDrawer

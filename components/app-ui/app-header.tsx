@@ -11,6 +11,7 @@ import { CreateIcon, MenuIcon, SearchIcon } from '../icons'
 import Image from 'next/image'
 import { CreateDialog } from './create-dialog'
 import { WithAuth } from '@/components/auth/with-auth'
+import { Squircle } from '@/components/ui/squircle'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
@@ -20,13 +21,15 @@ import Link from 'next/link'
  
 function CreateButtonSkeleton() {
   return (
-    <Button
-      disabled
-      variant="outline"
-      className="rounded-full border-none flex bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs text-white/90 size-11 p-0"
-    >
-      <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
-    </Button>
+    <Squircle asChild radius={16} autoEffects={false}>
+      <Button
+        disabled
+        variant="outline"
+        className="border-none flex bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs text-white/90 size-11 p-0"
+      >
+        <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
+      </Button>
+    </Squircle>
   )
 }
 
@@ -172,13 +175,15 @@ export function AppHeader() {
                 {isLoading ? (
                   <CreateButtonSkeleton />
                 ) : (
-                  <Button
-                    variant="outline"
-                    aria-label="Create"
-                    className="rounded-full border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
-                  >
-                    <CreateIcon className="size-6" strokeWidth={2}/>
-                  </Button>
+                  <Squircle asChild radius={16} autoEffects={false}>
+                    <Button
+                      variant="outline"
+                      aria-label="Create"
+                      className="border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
+                    >
+                      <CreateIcon className="size-6" strokeWidth={2}/>
+                    </Button>
+                  </Squircle>
                 )}
               </WithAuth>
             </CreateDialog>
