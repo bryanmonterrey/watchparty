@@ -13,6 +13,7 @@ import {
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { trpc } from '@/lib/trpc/client';
+import { TRPCClientError } from '@trpc/client';
 import { logger } from '@/lib/logger';
 import { storeFrostClientShare } from '@/lib/frost/frost-storage';
 
@@ -116,7 +117,16 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
                         wrapKey = await deriveMessagingWrapKey(userId);
                     }
                 } catch (restoreErr) {
-                    logger.error('Failed to restore embedded wallet share for messaging', restoreErr as Error, { userId });
+                    // wallet_address is set for BOTH wallet kinds, but only
+                    // embedded (MPC) wallets have an encrypted_wallets row.
+                    // For extension-wallet users frostSetup answers NOT_FOUND
+                    // (or PRECONDITION_FAILED pre-FROST) — that's the expected
+                    // "no embedded wallet" signal, not a failure; fall through
+                    // to the signature-derived wrap key below.
+                    const code = restoreErr instanceof TRPCClientError ? restoreErr.data?.code : undefined;
+                    if (code !== 'NOT_FOUND' && code !== 'PRECONDITION_FAILED') {
+                        logger.error('Failed to restore embedded wallet share for messaging', restoreErr as Error, { userId });
+                    }
                 }
             }
 
