@@ -19,6 +19,7 @@ import { ClockIcon, QueueIcon } from "@/components/icons";
 import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
 import { useAudioOwner } from "@/lib/audio-bus";
 import { HomeCarousel, HomeCarouselSkeleton } from "./home-carousel";
+import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 import { HOME_CATEGORIES } from "@/lib/data/home-categories";
 import { CategoryCard } from "@/components/categories/category-card";
 
@@ -38,6 +39,10 @@ interface FeedVideo {
     isLive?: boolean | null;
     /** Signed-in user's saved playback position (seconds); 0/undefined = none. */
     watchedTime?: number | null;
+    /** Launched token (if any) — drives the market-cap chip. */
+    ticker?: string | null;
+    tokenAddress?: string | null;
+    marketCapUsd?: number | null;
     user: { username: string | null; avatar_url: string | null };
 }
 
@@ -323,6 +328,16 @@ function VideoCard({ v }: { v: FeedVideo }) {
                         </video>
                     )}
                 </Link>
+
+                {/* Market cap over the thumbnail, top-left. Outside the <Link>
+                    (sibling, like the controls) so it's not a nested interactive
+                    element; it routes to the token page itself. */}
+                <MarketCapChip
+                    tokenAddress={v.tokenAddress}
+                    marketCap={v.marketCapUsd}
+                    ticker={v.ticker}
+                    className="absolute left-3 top-3 z-10"
+                />
 
                 {/* Controls, vertically stacked on the right. Outside the <Link>
                     so they aren't nested interactive elements; z-10 keeps them

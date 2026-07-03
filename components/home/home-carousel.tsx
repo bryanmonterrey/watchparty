@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAudioOwner } from "@/lib/audio-bus";
 import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
+import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 
@@ -45,6 +46,10 @@ interface CarouselVideo {
     thumbnailUrl: string | null;
     /** Live stream rather than a VOD — drives the LIVE badge. */
     isLive?: boolean | null;
+    /** Launched token (if any) — drives the market-cap chip. */
+    ticker?: string | null;
+    tokenAddress?: string | null;
+    marketCapUsd?: number | null;
     user: { username: string | null; avatar_url: string | null };
 }
 
@@ -202,9 +207,11 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                                                     // eslint-disable-next-line @next/next/no-img-element
                                                     <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
                                                 )}
-                                                {v.isLive && (
-                                                    <div className="absolute left-4 top-3 z-30"><LiveBadge /></div>
-                                                )}
+                                                {/* Open state: LIVE + market cap, top-left. */}
+                                                <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
+                                                    {v.isLive && <LiveBadge />}
+                                                    <MarketCapChip tokenAddress={v.tokenAddress} marketCap={v.marketCapUsd} ticker={v.ticker} />
+                                                </div>
                                             </>
                                         )}
                                         {/* Now-playing bar (reveals with the controls on hover):
@@ -240,6 +247,10 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                                             <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full object-cover blur-xl" />
                                         )}
                                         <div className="absolute inset-0 bg-black/40" />
+                                        {/* Closed state: market cap only, top-center (peek is 116px). */}
+                                        <div className="absolute inset-x-0 top-3 z-30 flex justify-center">
+                                            <MarketCapChip compact tokenAddress={v.tokenAddress} marketCap={v.marketCapUsd} ticker={v.ticker} />
+                                        </div>
                                         <div className="absolute inset-0 flex items-center justify-center">
                                             <div className="size-14 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/25">
                                                 {v.user.avatar_url ? (
@@ -414,10 +425,11 @@ function ActivePanel({ v, onPrev, onNext }: { v: CarouselVideo; onPrev: () => vo
                 ))}
             </video>
 
-            {/* LIVE badge, top-left. */}
-            {v.isLive && (
-                <div className="absolute left-4 top-3 z-30"><LiveBadge /></div>
-            )}
+            {/* LIVE badge + market cap, top-left. */}
+            <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
+                {v.isLive && <LiveBadge />}
+                <MarketCapChip tokenAddress={v.tokenAddress} marketCap={v.marketCapUsd} ticker={v.ticker} />
+            </div>
 
             {/* Player controls, top-right — grouped pills (prev/next · mute/cc),
                 revealed on hover of the panel. */}

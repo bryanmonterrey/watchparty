@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { db } from "@/db";
 import { posts, user, mutes, blocks, follows } from "@/db/schema";
+import { tokens } from "@/db/schema/content/token";
 import { eq, desc, and, lt, sql, inArray, or, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { recordSignal, accumulateDwell, ACTION } from "@/lib/feed-ranker/signals";
@@ -371,6 +372,10 @@ export const feedRouter = router({
             const fetchLimit = rankEligible ? FEED_POOL_SIZE : input.limit + 1;
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
+            // Cached market columns on tokens (written by the token-stream
+            // worker) — powers the market-cap chips with zero RPC on read.
+            const postTokens = alias(tokens, "post_tokens");
+            const origTokens = alias(tokens, "orig_tokens");
 
             const results = await db
                 .select({
@@ -395,6 +400,10 @@ export const feedRouter = router({
                     ticker: posts.ticker,
                     tokenStatus: posts.tokenStatus,
                     token_image: posts.token_image,
+                    tokenAddress: postTokens.tokenAddress,
+                    marketCapUsd: postTokens.marketCapUsd,
+                    origTokenAddress: origTokens.tokenAddress,
+                    origMarketCapUsd: origTokens.marketCapUsd,
                     repostOfId: posts.repostOfId,
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
                     user: {
@@ -426,6 +435,8 @@ export const feedRouter = router({
                 .innerJoin(user, eq(posts.userId, user.id))
                 .leftJoin(origPosts, eq(posts.repostOfId, origPosts.id))
                 .leftJoin(origUser, eq(origPosts.userId, origUser.id))
+                .leftJoin(postTokens, eq(posts.tokenId, postTokens.id))
+                .leftJoin(origTokens, eq(origPosts.tokenId, origTokens.id))
                 .where(and(
                     eq(posts.status, "published"),
                     or(isNotNull(posts.videoUrl), isNotNull(origPosts.videoUrl)),
@@ -462,6 +473,8 @@ export const feedRouter = router({
                         duration: s.origDuration ?? 0,
                         category: s.origCategory,
                         isLive: s.origIsLive ?? false,
+                        tokenAddress: s.origTokenAddress ?? s.tokenAddress,
+                        marketCapUsd: s.origMarketCapUsd ?? s.marketCapUsd,
                         user: s.origUser!,
                         repostedBy: { name: s.user.name, username: s.user.username },
                     };

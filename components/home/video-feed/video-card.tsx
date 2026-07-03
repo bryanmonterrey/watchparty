@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatRelativeTime } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
+import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 import { Video } from "./types";
 
 interface VideoCardProps {
@@ -71,6 +72,12 @@ export function VideoCard({ video, loading }: VideoCardProps) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
                 )}
+                <MarketCapChip
+                    tokenAddress={video.tokenAddress}
+                    marketCap={video.marketCapUsd}
+                    ticker={video.ticker}
+                    className="absolute left-2 top-2 z-10"
+                />
             </div>
 
             {/* Info */}
