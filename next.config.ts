@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root: a stray bun.lock one level up (~/Documents/projects,
+  // from an accidental `bun add` there) made Next infer THAT as the root, which
+  // widens Turbopack's file-watching scope to every sibling project.
+  turbopack: {
+    root: __dirname,
+  },
   experimental: {
     // View Transitions — global-search ("search-bar") and app-container
     // ("page-content") set `viewTransitionName`, which only morphs across
