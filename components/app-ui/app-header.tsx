@@ -20,15 +20,18 @@ import { searchParams } from '@/lib/searchParams'
 import { GlobalSearch } from './global-search'
 import Link from 'next/link'
  
+// rounded-2xl approximates the squircle server-side; Lisse stamps
+// data-state="ready" once its clip-path lands, which switches it off so the
+// clip is the only shape (see wallet-button-skeleton).
 function CreateButtonSkeleton() {
   return (
     <Squircle asChild radius={16} autoEffects={false}>
       <Button
         disabled
         variant="outline"
-        className="rounded-none border-none flex bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs text-white/90 size-11 p-0"
+        className="rounded-2xl data-[state=ready]:rounded-none border-none flex bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs text-white/90 size-11 p-0 overflow-hidden"
       >
-        <div className="size-5 rounded-full shimmer-skeleton shrink-0" />
+        <div className="size-full shimmer-skeleton shrink-0" />
       </Button>
     </Squircle>
   )

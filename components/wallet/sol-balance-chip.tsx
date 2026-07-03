@@ -18,11 +18,14 @@ function formatSol(balance: number) {
     return balance.toFixed(3);
 }
 
+// rounded-2xl approximates the squircle server-side; Lisse stamps
+// data-state="ready" once its clip-path lands, which switches it off so the
+// clip is the only shape (see wallet-button-skeleton).
 export function SolBalanceChipSkeleton() {
     return (
         <Squircle asChild radius={16} autoEffects={false}>
-            <div className="flex h-11 w-[92px] items-center justify-center rounded-none bg-[#6A6A6A]/35 backdrop-blur-xs">
-                <div className="h-3 w-14 rounded-full shimmer-skeleton" />
+            <div className="flex h-11 w-[92px] items-center justify-center overflow-hidden rounded-2xl bg-[#6A6A6A]/35 backdrop-blur-xs data-[state=ready]:rounded-none">
+                <div className="size-full shimmer-skeleton" />
             </div>
         </Squircle>
     );
@@ -32,7 +35,7 @@ export function SolBalanceChipSkeleton() {
 // "Add money" prompt in the Solana gradient. Reads the same getWalletAssets
 // query the wallet button prefetches, so it shares that cache entry.
 export function SolBalanceChip() {
-    const { data: session } = useAuthSession();
+    const { data: session, isLoading: sessionLoading } = useAuthSession();
     const walletAddress = session?.user?.wallet_address;
 
     const { data, isLoading } = trpc.wallet.getWalletAssets.useQuery(
@@ -45,10 +48,13 @@ export function SolBalanceChip() {
         },
     );
 
-    // No wallet linked yet → the query stays disabled (isLoading false) and
-    // balance resolves to 0, so those users get the "Add money" state; the
-    // wallet button routes the click to the connect modal instead of the drawer.
-    if (isLoading) return <SolBalanceChipSkeleton />;
+    // Hold the skeleton while the session itself is loading — otherwise the
+    // disabled query reports isLoading false and this flashes "Add money"
+    // while Create/Wallet are still skeletons. No wallet linked → the query
+    // stays disabled and balance resolves to 0, so those users get the
+    // "Add money" state; the wallet button routes the click to the connect
+    // modal instead of the drawer.
+    if (sessionLoading || isLoading) return <SolBalanceChipSkeleton />;
 
     const balance = data?.tokens?.find((t) => t.mint === SOL_MINT)?.balance ?? 0;
 
