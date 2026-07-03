@@ -12,6 +12,7 @@ import { resolvePostLoginRedirect } from "@/lib/auth/constants";
 import { ConfirmEmailStep } from "./confirm-email-step";
 import { WaitingStep, FingerprintIcon } from "./waiting-step";
 import { Squircle } from "@/components/ui/squircle";
+import { Spinner } from "@/components/ui/spinner";
 import {
   GoogleIcon,
   XIcon,
@@ -296,8 +297,4 @@ function MailIcon({ className }: { className?: string }) {
       <path d="M4 7.5L10.7 12a2.4 2.4 0 0 0 2.6 0L20 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
-}
-
-function Spinner() {
-  return <span className="inline-block size-4 animate-spin rounded-full border-2 border-white/70 border-t-transparent" aria-hidden="true" />;
 }

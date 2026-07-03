@@ -30,14 +30,26 @@ export function WaitingStep({
 }) {
   return (
     <div className="flex flex-col items-center">
-      {/* Icon tile with rotating accent arc */}
+      {/* Icon tile with a comet sweep. The gradient layer rotates INSIDE a
+          fixed rounded mask (and is oversized so its own corners never show),
+          so the shape stays still and only the light travels around it —
+          rotating the rounded square itself made the corners tumble. */}
       <div className="relative mt-16 size-[92px] sm:mt-20">
+        {/* Soft brand glow breathing behind the tile. */}
         <motion.div
-          className="absolute inset-0 rounded-[26px]"
-          style={{ background: "conic-gradient(from 0deg, #00ED89, rgba(0,237,137,0) 32%)" }}
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          aria-hidden
+          className="absolute -inset-2 rounded-[30px] bg-[#00ED89]/25 blur-xl"
+          animate={{ opacity: [0.35, 0.75, 0.35] }}
+          transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
         />
+        <div className="absolute inset-0 overflow-hidden rounded-[26px]">
+          <motion.div
+            className="absolute -inset-1/2"
+            style={{ background: "conic-gradient(from 0deg, rgba(0,237,137,0) 55%, #00ED89 100%)" }}
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
+          />
+        </div>
         <Squircle asChild radius={22} autoEffects={false}>
           <div className="absolute inset-[3px] grid place-items-center bg-[#141414]">
             {icon}

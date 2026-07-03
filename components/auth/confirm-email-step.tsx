@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { sendEmailOtp, verifyEmailOtp } from "@/lib/auth/client";
 import { OtpInput } from "./otp-input";
 import { HapticButton } from "@/components/ui/haptic-button";
+import { Spinner } from "@/components/ui/spinner";
 import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 
 const RESEND_COOLDOWN = 60;
@@ -101,7 +102,7 @@ export function ConfirmEmailStep({
         className="mt-7 flex h-[68px] items-center justify-center gap-2 rounded-full bg-[#00ED89] text-base font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-[82px] sm:text-[17px]"
       >
         {verifying ? (
-          <span className="inline-block size-4 animate-spin rounded-full border-2 border-black/40 border-t-transparent" />
+          <Spinner className="text-black/60" />
         ) : (
           <CheckGlyph />
         )}
