@@ -38,7 +38,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-white/5",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[#121212]/50",
         className
       )}
       {...props}
@@ -60,10 +60,9 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          // Frosted surface matching the header action tiles (Create button):
-          // #6A6A6A tint + backdrop blur. Blur is stronger than the tiles'
-          // blur-xs so page content behind a full dialog doesn't fight the text.
-          "bg-[#6A6A6A]/35 backdrop-blur-xl text-flexwhite data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
+          // Shared dialog surface: near-black solid (frosted #6A6A6A/35 washed
+          // out over busy content).
+          "bg-[#0C0C0C] backdrop-blur-xl text-flexwhite data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
           className
         )}
         {...props}
