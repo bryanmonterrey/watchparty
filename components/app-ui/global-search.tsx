@@ -37,6 +37,20 @@ export function GlobalSearch({
         setInputValue(initialValue);
     }, [initialValue]);
 
+    // Clear the active state on any click outside the search container.
+    // isFocused previously only reset on submit / dropdown close, so with
+    // showDropdown=false (the /search page) the focus ring stuck on forever.
+    useEffect(() => {
+        if (!isFocused) return;
+        const onPointerDown = (e: PointerEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setIsFocused(false);
+            }
+        };
+        document.addEventListener("pointerdown", onPointerDown);
+        return () => document.removeEventListener("pointerdown", onPointerDown);
+    }, [isFocused]);
+
     const handleSubmit = (e?: React.FormEvent) => {
         e?.preventDefault();
         const trimmed = inputValue.trim();
@@ -62,11 +76,14 @@ export function GlobalSearch({
             <form
                 onSubmit={handleSubmit}
                 className={cn(
-                    "relative h-[52px] focus-within:ring-2 focus-within:ring-twitter2 backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-zinc-500/35 rounded-full focus-within:border-zinc-700 transition-colors",
-                    isFocused && "ring-2 ring-paramount border-zinc-700"
+                    // Single source of truth for the ring: isFocused (set on
+                    // input focus, cleared on submit / outside click) — the old
+                    // extra focus-within ring doubled it in a second color.
+                    "relative h-[52px] backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-zinc-500/35 rounded-full transition-colors",
+                    isFocused && "ring-2 ring-white"
                 )}
             >
-                <SearchIcon className="absolute left-4 w-[20px] h-[20px] text-zinc-400" />
+                <SearchIcon className="absolute left-4 size-6 text-zinc-400" />
                 <input
                     type="text"
                     value={inputValue}
@@ -77,7 +94,7 @@ export function GlobalSearch({
                     onFocus={() => setIsFocused(true)}
                     placeholder={placeholder}
                     autoFocus={autoFocus}
-                    className="w-full bg-transparent pl-11 pr-20 py-2.5 text-[18px] font-medium text-white placeholder:text-flexwhite/85 focus:outline-none"
+                    className="w-full bg-transparent pl-12.5 pr-20 py-2.5 text-[16px] font-medium text-white placeholder:text-zinc-400 focus:outline-none"
                 />
                 <div className="absolute right-3 flex items-center gap-1">
                     <AnimatePresence>
@@ -100,11 +117,11 @@ export function GlobalSearch({
                         <AnimatePresence mode="wait">
                             {inputValue.length > 0 ? (
                                 <motion.span key="arrow" initial={{ opacity: 1, scale: 1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 1, scale: 1 }} transition={{ duration: 0.125 }}>
-                                    <ArrowRightIcon className="w-5 h-5" />
+                                    <ArrowRightIcon className="w-6 h-6" />
                                 </motion.span>
                             ) : (
                                 <motion.span key="live" initial={{ opacity: 1, scale: 1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 1, scale: 1 }} transition={{ duration: 0.125 }}>
-                                    <AudioWavesIcon className="w-5 h-5" />
+                                    <AudioWavesIcon className="w-6 h-6" />
                                 </motion.span>
                             )}
                         </AnimatePresence>
