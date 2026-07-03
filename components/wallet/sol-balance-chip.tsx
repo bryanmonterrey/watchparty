@@ -61,7 +61,7 @@ export function SolBalanceChip() {
                 className={`flex h-11 cursor-pointer items-center gap-2 rounded-none border-none px-3.5 backdrop-blur-xs transition-colors ${
                     balance > 0
                         ? "bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
-                        : "bg-soft-blue/35 text-jewel hover:bg-soft-blue/50"
+                        : "bg-soft-blue/35 hover:bg-soft-blue/50"
                 }`}
             >
                 {balance > 0 ? (
@@ -70,7 +70,7 @@ export function SolBalanceChip() {
                         <span className="text-[15px] font-semibold text-white">{formatSol(balance)}</span>
                     </>
                 ) : (
-                    <span className="text-[15px] font-bold text-black">Add money</span>
+                    <span className="text-[15px] font-bold text-jewel">Add money</span>
                 )}
             </button>
         </Squircle>
