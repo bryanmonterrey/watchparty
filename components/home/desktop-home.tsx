@@ -336,7 +336,6 @@ function VideoCard({ v }: { v: FeedVideo }) {
                 <MarketCapChip
                     tokenSlug={v.tokenAddress ?? v.tokenId}
                     marketCap={v.marketCapUsd}
-                    ticker={v.ticker}
                     className="absolute left-3 top-3 z-10"
                 />
 

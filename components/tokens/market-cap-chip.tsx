@@ -19,44 +19,37 @@ interface MarketCapChipProps {
      */
     tokenSlug: string | null | undefined;
     marketCap: number | null | undefined;
-    ticker?: string | null;
-    /** Market cap only (no ticker) — for narrow surfaces like closed carousel peeks. */
-    compact?: boolean;
     className?: string;
 }
 
 /**
  * Market-cap pill for video surfaces (hero carousel, section cards, feed
- * cards). Frosted black like the rest of the over-thumbnail chrome (LIVE
- * badge, time nail); mcap in emerald to match the live $TICKER pill, or a
- * muted $-.--K placeholder until the stream worker has cached a market cap.
- * Safe inside <Link>/onClick wrappers — it swallows its click and routes to
- * the token page itself.
+ * cards). Price only — no ticker/title. Frosted black like the rest of the
+ * over-thumbnail chrome (LIVE badge, time nail); the cap in emerald, or a
+ * muted $-.--K placeholder until the stream worker has cached one. Safe
+ * inside <Link>/onClick wrappers — it swallows its click and routes to the
+ * token page itself.
  */
-export function MarketCapChip({ tokenSlug, marketCap, ticker, compact, className }: MarketCapChipProps) {
+export function MarketCapChip({ tokenSlug, marketCap, className }: MarketCapChipProps) {
     const router = useRouter();
     if (!tokenSlug) return null;
 
     return (
         <button
             type="button"
-            aria-label={`Token ${ticker ? `$${ticker} ` : ""}market cap ${marketCap == null ? "unavailable" : formatMarketCap(marketCap)} — open token page`}
+            aria-label={`Token market cap ${marketCap == null ? "unavailable" : formatMarketCap(marketCap)} — open token page`}
             onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 router.push(`/${tokenSlug}`);
             }}
             className={cn(
-                "flex cursor-pointer items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold leading-none tracking-tight text-white backdrop-blur-sm transition-colors hover:bg-black/70",
+                "flex cursor-pointer items-center rounded-full bg-black/45 px-3 py-1.5 text-[13px] font-extrabold leading-none tracking-tight backdrop-blur-sm transition-colors hover:bg-black/70",
+                marketCap == null ? "text-zinc-400" : "text-emerald-400",
                 className,
             )}
         >
-            {!compact && ticker && <span className="max-w-24 truncate uppercase">${ticker}</span>}
-            {marketCap == null ? (
-                <span className="text-zinc-400 tabular-nums">$-.--K</span>
-            ) : (
-                <span className="text-emerald-400 tabular-nums">{formatMarketCap(marketCap)}</span>
-            )}
+            <span className="tabular-nums">{marketCap == null ? "$-.--K" : formatMarketCap(marketCap)}</span>
         </button>
     );
 }
