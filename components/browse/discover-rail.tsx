@@ -6,7 +6,7 @@ import { MoreHorizontal } from "lucide-react";
 import { BookmarkIcon } from "@/components/icons";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { PostComposerDialog } from "./post-composer-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 
 // Left rail of the discover 3-column layout. Geometry taken straight from the
 // Figma rects in desktopdesigns/discoverlanding.svg (1512 frame):
@@ -55,22 +55,27 @@ export function DiscoverRail() {
                     <p className="truncate text-[15px] font-bold">{user?.name ?? user?.username ?? ""}</p>
                     <p className="truncate text-sm text-muted-foreground">@{user?.username ?? ""}</p>
                 </div>
-                <DropdownMenu>
-                    <DropdownMenuTrigger
-                        aria-label="More"
-                        className="rounded-full p-1 text-muted-foreground outline-none transition-colors hover:bg-white/10 hover:text-white"
-                    >
-                        <MoreHorizontal className="size-6 shrink-0" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="top" align="end" className="w-48">
-                        <DropdownMenuItem asChild>
-                            <Link href="/discover/bookmarks" className="cursor-pointer">
-                                <BookmarkIcon className="size-5" />
-                                Bookmarks
-                            </Link>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <GooDropdown
+                    side="top"
+                    align="end"
+                    width={192}
+                    triggerAriaLabel="More"
+                    triggerClassName="rounded-full p-1 text-muted-foreground transition-colors hover:bg-white/10 hover:text-white"
+                    trigger={<MoreHorizontal className="size-6 shrink-0" />}
+                    items={[
+                        {
+                            key: "bookmarks",
+                            href: "/discover/bookmarks",
+                            className: "gap-2 cursor-pointer",
+                            label: (
+                                <>
+                                    <BookmarkIcon className="size-5" />
+                                    Bookmarks
+                                </>
+                            ),
+                        },
+                    ]}
+                />
             </div>
             </div>
 

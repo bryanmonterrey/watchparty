@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { Shield, ShieldCheck, Flag, CheckCircle2, XCircle, Clock, Users, FileText, AlertTriangle, Search, ChevronRight } from "lucide-react";
+import { Shield, ShieldCheck, Flag, CheckCircle2, XCircle, Clock, Users, FileText, AlertTriangle, Search, ChevronRight, ChevronDown } from "lucide-react";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -190,15 +191,34 @@ function UsersTab() {
                                 <p className="text-xs text-zinc-500">@{u.username} · <span className="text-zinc-400">{u.role}</span></p>
                             </div>
                             <div className="flex gap-1.5">
-                                <select
-                                    value={u.role}
-                                    onChange={e => setRole.mutate({ userId: u.id, role: e.target.value as "user" | "moderator" | "admin" })}
-                                    className="bg-zinc-800 text-xs text-zinc-300 rounded-lg px-2 py-1 border border-white/10 focus:outline-none"
-                                >
-                                    <option value="user">User</option>
-                                    <option value="moderator">Moderator</option>
-                                    <option value="admin">Admin</option>
-                                </select>
+                                <GooDropdown
+                                    align="end"
+                                    width={140}
+                                    gap={8}
+                                    fill="#27272a"
+                                    buttonRadius={8}
+                                    panelRadius={12}
+                                    itemHeight={32}
+                                    triggerClassName="flex items-center gap-1 bg-zinc-800 text-xs text-zinc-300 rounded-lg px-2 py-1 border border-white/10"
+                                    trigger={
+                                        <>
+                                            {u.role === "user" && "User"}
+                                            {u.role === "moderator" && "Moderator"}
+                                            {u.role === "admin" && "Admin"}
+                                            <ChevronDown className="h-3 w-3 opacity-50" />
+                                        </>
+                                    }
+                                    items={([
+                                        { value: "user", label: "User" },
+                                        { value: "moderator", label: "Moderator" },
+                                        { value: "admin", label: "Admin" },
+                                    ] as const).map((opt) => ({
+                                        key: opt.value,
+                                        onClick: () => setRole.mutate({ userId: u.id, role: opt.value }),
+                                        className: "text-xs text-zinc-300 hover:bg-white/10",
+                                        label: opt.label,
+                                    }))}
+                                />
                                 <button onClick={() => suspend.mutate({ userId: u.id })}
                                     className="px-2 py-1 rounded-lg bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors">
                                     Suspend

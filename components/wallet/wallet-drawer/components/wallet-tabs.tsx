@@ -15,12 +15,7 @@ import {
     ViewOffIcon, 
     RefreshIcon 
 } from "@/components/icons";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 
 const TABS: TabType[] = [
     { id: "tokens", name: "Tokens", icon: Coins },
@@ -99,45 +94,62 @@ export function WalletTabs({
                     ))}
                 </div>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button className="p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer outline-none">
-                            <RestingDotsIcon className="w-6 h-6" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 bg-neutral-950 border-flexborder/75 rounded-3xl p-1.5 shadow-3xl">
-                        {activeTab !== "activity" && (
-                            <DropdownMenuItem
-                                onClick={() => {
-                                    if (activeTab === "tokens") onManageTokens?.();
-                                    else if (activeTab === "nfts") onManageCollectibles?.();
-                                }}
-                                className="flex items-center justify-start gap-3 py-2.5 px-4 rounded-full cursor-pointer hover:bg-white/5 transition-colors group"
-                            >
-                                <ToggleIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
-                                <span className="text-lg font-medium text-white/90">
-                                    {activeTab === "tokens" ? "Manage Tokens" : "Manage Collectibles"}
-                                </span>
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                            onClick={onHideBalances}
-                            className="flex items-center justify-start gap-3 py-2.5 px-4 rounded-full cursor-pointer hover:bg-white/5 transition-colors group"
-                        >
-                            <ViewOffIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
-                            <span className="text-lg font-medium text-white/90">
-                                {hideBalances ? "Show Balances" : "Hide Balances"}
-                            </span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            onClick={onRefresh}
-                            className="flex items-center justify-start gap-3 py-2 px-4 rounded-full cursor-pointer hover:bg-white/5 transition-colors group"
-                        >
-                            <RefreshIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
-                            <span className="text-lg font-medium text-white/90">Refresh</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <GooDropdown
+                    align="end"
+                    width={224}
+                    fill="#0a0a0a"
+                    panelRadius={24}
+                    itemHeight={48}
+                    triggerAriaLabel="Wallet options"
+                    triggerClassName="p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                    trigger={<RestingDotsIcon className="w-6 h-6" />}
+                    items={[
+                        ...(activeTab !== "activity"
+                            ? [
+                                  {
+                                      key: "manage",
+                                      onClick: () => {
+                                          if (activeTab === "tokens") onManageTokens?.();
+                                          else if (activeTab === "nfts") onManageCollectibles?.();
+                                      },
+                                      className: "gap-3 px-4 rounded-full cursor-pointer hover:bg-white/5 group",
+                                      label: (
+                                          <>
+                                              <ToggleIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
+                                              <span className="text-lg font-medium text-white/90">
+                                                  {activeTab === "tokens" ? "Manage Tokens" : "Manage Collectibles"}
+                                              </span>
+                                          </>
+                                      ),
+                                  },
+                              ]
+                            : []),
+                        {
+                            key: "hide-balances",
+                            onClick: onHideBalances,
+                            className: "gap-3 px-4 rounded-full cursor-pointer hover:bg-white/5 group",
+                            label: (
+                                <>
+                                    <ViewOffIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
+                                    <span className="text-lg font-medium text-white/90">
+                                        {hideBalances ? "Show Balances" : "Hide Balances"}
+                                    </span>
+                                </>
+                            ),
+                        },
+                        {
+                            key: "refresh",
+                            onClick: onRefresh,
+                            className: "gap-3 px-4 rounded-full cursor-pointer hover:bg-white/5 group",
+                            label: (
+                                <>
+                                    <RefreshIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
+                                    <span className="text-lg font-medium text-white/90">Refresh</span>
+                                </>
+                            ),
+                        },
+                    ]}
+                />
             </div>
 
             <div className="flex-1 overflow-y-auto hidden-scrollbar">

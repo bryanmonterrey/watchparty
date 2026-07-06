@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Radio, Copy, Eye, EyeOff, RefreshCw, AlertTriangle, Check } from "lucide-react";
+import { Radio, Copy, Eye, EyeOff, RefreshCw, AlertTriangle, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -13,13 +13,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 
 function CopyField({ label, value, secret }: { label: string; value: string | null; secret?: boolean }) {
     const [show, setShow] = useState(!secret);
@@ -83,15 +77,36 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
                 <div className="space-y-4 pt-2">
                     <div className="space-y-1.5">
                         <label className="text-xs text-zinc-400">Connection type</label>
-                        <Select value={ingressType} onValueChange={v => setIngressType(v as "RTMP" | "WHIP")}>
-                            <SelectTrigger className="bg-zinc-800 border-white/10 text-zinc-100">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-zinc-800 border-white/10">
-                                <SelectItem value="RTMP">RTMP (OBS, Streamlabs)</SelectItem>
-                                <SelectItem value="WHIP">WHIP (Browser-based)</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <GooDropdown
+                            className="w-full"
+                            align="start"
+                            width={280}
+                            gap={8}
+                            fill="#27272a"
+                            buttonRadius={8}
+                            panelRadius={12}
+                            triggerClassName="flex h-9 w-full items-center justify-between rounded-md border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-zinc-100"
+                            trigger={
+                                <>
+                                    {ingressType === "RTMP" ? "RTMP (OBS, Streamlabs)" : "WHIP (Browser-based)"}
+                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                </>
+                            }
+                            items={([
+                                { value: "RTMP", label: "RTMP (OBS, Streamlabs)" },
+                                { value: "WHIP", label: "WHIP (Browser-based)" },
+                            ] as const).map((opt) => ({
+                                key: opt.value,
+                                onClick: () => setIngressType(opt.value),
+                                className: "justify-between text-zinc-100 hover:bg-white/10",
+                                label: (
+                                    <>
+                                        {opt.label}
+                                        {ingressType === opt.value && <Check className="h-4 w-4" />}
+                                    </>
+                                ),
+                            }))}
+                        />
                     </div>
 
                     <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">

@@ -5,12 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Users, Globe, Eye, Settings } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { cn } from "@/lib/utils";
 import type { TokenStatus, TradeToken } from "./types";
 
@@ -92,18 +87,21 @@ export function MobileTrade() {
         <div className="pt-16">
             {/* Title row: Trade + SOL chip + settings (header shows only the title) */}
             <div className="flex items-center justify-between px-4 pb-3 pt-2">
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-1 rounded-full bg-muted px-4 py-1.5 text-sm font-bold">
-                        {STATUS_LABEL[status]} <ChevronDown className="size-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                        {(Object.keys(STATUS_LABEL) as TokenStatus[]).map((s) => (
-                            <DropdownMenuItem key={s} onClick={() => setStatus(s)}>
-                                {STATUS_LABEL[s]} ({data[s].length})
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <GooDropdown
+                    align="start"
+                    width={200}
+                    triggerClassName="flex items-center gap-1 rounded-full bg-muted px-4 py-1.5 text-sm font-bold"
+                    trigger={
+                        <>
+                            {STATUS_LABEL[status]} <ChevronDown className="size-4" />
+                        </>
+                    }
+                    items={(Object.keys(STATUS_LABEL) as TokenStatus[]).map((s) => ({
+                        key: s,
+                        label: `${STATUS_LABEL[s]} (${data[s].length})`,
+                        onClick: () => setStatus(s),
+                    }))}
+                />
                 <div className="flex items-center gap-3">
                     <span className="text-sm font-bold">Market Cap</span>
                     <Settings className="size-5 text-muted-foreground" />

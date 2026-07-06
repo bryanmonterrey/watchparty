@@ -38,7 +38,7 @@ type Tab = "video" | "post" | "stream"
 type Step = "upload" | "details"
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu"
+import { GooDropdown } from "@/components/ui/goo-dropdown"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 export function CreateDialog({ children, ...props }: CreateDialogProps) {
@@ -605,87 +605,86 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                             <AvatarFallback></AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 space-y-4">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <button className="flex items-center gap-1.5 px-3 py-1 rounded-full cursor-pointer text-twitter2 text-sm font-medium hover:bg-white/15 bg-white/10 transition-colors w-fit outline-none">
+                                            <GooDropdown
+                                                align="start"
+                                                width={300}
+                                                gap={8}
+                                                fill="#18181b"
+                                                panelRadius={12}
+                                                itemHeight={64}
+                                                headerHeight={56}
+                                                header={
+                                                    <div className="flex h-full flex-col justify-center border-b border-zinc-800 px-4">
+                                                        <h3 className="font-bold text-white text-base">Choose audience</h3>
+                                                    </div>
+                                                }
+                                                triggerClassName="flex items-center gap-1.5 px-3 py-1 rounded-full cursor-pointer text-twitter2 text-sm font-medium hover:bg-white/15 bg-white/10 transition-colors w-fit"
+                                                trigger={
+                                                    <>
                                                         {audience === "everyone" && "Everyone"}
                                                         {audience === "followers" && "Followers"}
                                                         {audience === "verified" && "Verified"}
                                                         {audience === "token_holders" && "Token Holders"}
                                                         {audience === "community" && "Community"}
                                                         <ChevronDown className="w-4 h-4" />
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="start" className="w-[300px] bg-zinc-900 border-zinc-800 rounded-xl p-0 overflow-hidden shadow-2xl">
-                                                    <div className="p-4 border-b border-zinc-800">
-                                                        <h3 className="font-bold text-white text-base">Choose audience</h3>
-                                                    </div>
-                                                    <div className="p-1">
-                                                        <DropdownMenuItem onClick={() => setAudience("everyone")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                                                                    <Globe className="w-5 h-5" />
-                                                                </div>
-                                                                <span className="font-semibold text-white">Everyone</span>
-                                                            </div>
-                                                            {audience === "everyone" && <Check className="w-5 h-5 text-blue-500" />}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setAudience("followers")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
-                                                                    <Users className="w-5 h-5" />
-                                                                </div>
-                                                                <span className="font-semibold text-white">Followers</span>
-                                                            </div>
-                                                            {audience === "followers" && <Check className="w-5 h-5 text-blue-500" />}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setAudience("verified")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                                                                    <BadgeCheck className="w-5 h-5" />
-                                                                </div>
-                                                                <span className="font-semibold text-white">Verified</span>
-                                                            </div>
-                                                            {audience === "verified" && <Check className="w-5 h-5 text-blue-500" />}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setAudience("token_holders")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500">
-                                                                    <Medal className="w-5 h-5" />
-                                                                </div>
-                                                                <span className="font-semibold text-white">Token Holders</span>
-                                                            </div>
-                                                            {audience === "token_holders" && <Check className="w-5 h-5 text-blue-500" />}
-                                                        </DropdownMenuItem>
-                                                    </div>
-
-                                                    {userCommunities.length > 0 && (
-                                                        <>
-                                                            <DropdownMenuSeparator className="bg-zinc-800" />
-                                                            <div className="p-4 pb-2">
-                                                                <h4 className="text-sm font-bold text-white">My Communities</h4>
-                                                            </div>
-                                                            <div className="p-1">
-                                                                {userCommunities.map((community, i) => (
-                                                                    <DropdownMenuItem key={i} onClick={() => setAudience("community")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <Avatar className="w-10 h-10 rounded-lg">
-                                                                                <AvatarImage src={community.imageUrl} />
-                                                                                <AvatarFallback className="rounded-lg bg-zinc-800">{community.name.charAt(0)}</AvatarFallback>
-                                                                            </Avatar>
-                                                                            <div className="flex flex-col">
-                                                                                <span className="font-semibold text-white">{community.name}</span>
-                                                                                <span className="text-sm text-zinc-400">{community.membersCount} Members</span>
-                                                                            </div>
-                                                                        </div>
-                                                                        {audience === "community" && <Check className="w-5 h-5 text-blue-500" />}
-                                                                    </DropdownMenuItem>
-                                                                ))}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                    </>
+                                                }
+                                                items={[
+                                                    ...([
+                                                        { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" />, bubble: "bg-blue-500/20 text-blue-500" },
+                                                        { value: "followers", label: "Followers", icon: <Users className="w-5 h-5" />, bubble: "bg-green-500/20 text-green-500" },
+                                                        { value: "verified", label: "Verified", icon: <BadgeCheck className="w-5 h-5" />, bubble: "bg-blue-500/20 text-blue-500" },
+                                                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" />, bubble: "bg-yellow-500/20 text-yellow-500" },
+                                                    ] as const).map((opt) => ({
+                                                        key: opt.value,
+                                                        onClick: () => setAudience(opt.value),
+                                                        className: "justify-between px-3 rounded-lg cursor-pointer hover:bg-white/5",
+                                                        label: (
+                                                            <>
+                                                                <span className="flex items-center gap-3">
+                                                                    <span className={cn("flex h-10 w-10 items-center justify-center rounded-full", opt.bubble)}>
+                                                                        {opt.icon}
+                                                                    </span>
+                                                                    <span className="font-semibold text-white">{opt.label}</span>
+                                                                </span>
+                                                                {audience === opt.value && <Check className="w-5 h-5 text-blue-500" />}
+                                                            </>
+                                                        ),
+                                                    })),
+                                                    ...(userCommunities.length > 0
+                                                        ? [
+                                                              { key: "communities-sep", type: "separator" as const, className: "bg-zinc-800" },
+                                                              {
+                                                                  key: "communities-label",
+                                                                  type: "label" as const,
+                                                                  height: 36,
+                                                                  className: "text-sm font-bold text-white",
+                                                                  label: "My Communities",
+                                                              },
+                                                              ...userCommunities.map((community, i) => ({
+                                                                  key: `community-${i}`,
+                                                                  onClick: () => setAudience("community"),
+                                                                  className: "justify-between px-3 rounded-lg cursor-pointer hover:bg-white/5",
+                                                                  label: (
+                                                                      <>
+                                                                          <span className="flex items-center gap-3">
+                                                                              <Avatar className="w-10 h-10 rounded-lg">
+                                                                                  <AvatarImage src={community.imageUrl} />
+                                                                                  <AvatarFallback className="rounded-lg bg-zinc-800">{community.name.charAt(0)}</AvatarFallback>
+                                                                              </Avatar>
+                                                                              <span className="flex flex-col">
+                                                                                  <span className="font-semibold text-white">{community.name}</span>
+                                                                                  <span className="text-sm text-zinc-400">{community.membersCount} Members</span>
+                                                                              </span>
+                                                                          </span>
+                                                                          {audience === "community" && <Check className="w-5 h-5 text-blue-500" />}
+                                                                      </>
+                                                                  ),
+                                                              })),
+                                                          ]
+                                                        : []),
+                                                ]}
+                                            />
 
                                             <textarea
                                                 placeholder="What's happening?"
@@ -836,60 +835,52 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                             )}
 
                                             <div className="flex items-center pb-4 border-b border-zinc-800">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <button className="flex cursor-pointer items-center gap-2 text-twitter2 hover:text-twitter2 hover:bg-white/10 px-2 py-2 rounded-full transition-colors text-sm font-medium outline-none">
+                                                <GooDropdown
+                                                    side="top"
+                                                    align="start"
+                                                    width={300}
+                                                    gap={8}
+                                                    fill="#18181b"
+                                                    panelRadius={12}
+                                                    itemHeight={64}
+                                                    headerHeight={84}
+                                                    header={
+                                                        <div className="flex h-full flex-col justify-center gap-1 border-b border-zinc-800 px-4">
+                                                            <h3 className="font-bold text-white text-base">Who can reply?</h3>
+                                                            <p className="text-zinc-400 text-sm">Choose who can reply to this post.<br />Anyone mentioned can always reply.</p>
+                                                        </div>
+                                                    }
+                                                    triggerClassName="flex cursor-pointer items-center gap-2 text-twitter2 hover:text-twitter2 hover:bg-white/10 px-2 py-2 rounded-full transition-colors text-sm font-medium"
+                                                    trigger={
+                                                        <>
                                                             {replyPrivacy === "everyone" && <><Globe className="w-4 h-4" /> Everyone can reply</>}
                                                             {replyPrivacy === "followers" && <><Users className="w-4 h-4" /> Followers can reply</>}
                                                             {replyPrivacy === "verified" && <><BadgeCheck className="w-4 h-4" /> Verified can reply</>}
                                                             {replyPrivacy === "token_holders" && <><Medal className="w-4 h-4" /> Token Holders can reply</>}
-                                                        </button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="start" className="w-[300px] bg-zinc-900 border-zinc-800 rounded-xl p-0 overflow-hidden shadow-2xl">
-                                                        <div className="p-4 border-b border-zinc-800 flex flex-col gap-1">
-                                                            <h3 className="font-bold text-white text-base">Who can reply?</h3>
-                                                            <p className="text-zinc-400 text-sm">Choose who can reply to this post.<br />Anyone mentioned can always reply.</p>
-                                                        </div>
-                                                        <div className="p-1">
-                                                            <DropdownMenuItem onClick={() => setReplyPrivacy("everyone")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                                                                        <Globe className="w-5 h-5" />
-                                                                    </div>
-                                                                    <span className="font-semibold text-white">Everyone</span>
-                                                                </div>
-                                                                {replyPrivacy === "everyone" && <Check className="w-5 h-5 text-blue-500" />}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => setReplyPrivacy("followers")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                                                                        <Users className="w-5 h-5" />
-                                                                    </div>
-                                                                    <span className="font-semibold text-white">Accounts you follow</span>
-                                                                </div>
-                                                                {replyPrivacy === "followers" && <Check className="w-5 h-5 text-blue-500" />}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => setReplyPrivacy("verified")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                                                                        <BadgeCheck className="w-5 h-5" />
-                                                                    </div>
-                                                                    <span className="font-semibold text-white">Verified accounts</span>
-                                                                </div>
-                                                                {replyPrivacy === "verified" && <Check className="w-5 h-5 text-blue-500" />}
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => setReplyPrivacy("token_holders")} className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                                                                        <Medal className="w-5 h-5" />
-                                                                    </div>
-                                                                    <span className="font-semibold text-white">Token Holders</span>
-                                                                </div>
-                                                                {replyPrivacy === "token_holders" && <Check className="w-5 h-5 text-blue-500" />}
-                                                            </DropdownMenuItem>
-                                                        </div>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                        </>
+                                                    }
+                                                    items={([
+                                                        { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" /> },
+                                                        { value: "followers", label: "Accounts you follow", icon: <Users className="w-5 h-5" /> },
+                                                        { value: "verified", label: "Verified accounts", icon: <BadgeCheck className="w-5 h-5" /> },
+                                                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" /> },
+                                                    ] as const).map((opt) => ({
+                                                        key: opt.value,
+                                                        onClick: () => setReplyPrivacy(opt.value),
+                                                        className: "justify-between px-3 rounded-lg cursor-pointer hover:bg-white/5",
+                                                        label: (
+                                                            <>
+                                                                <span className="flex items-center gap-3">
+                                                                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white">
+                                                                        {opt.icon}
+                                                                    </span>
+                                                                    <span className="font-semibold text-white">{opt.label}</span>
+                                                                </span>
+                                                                {replyPrivacy === opt.value && <Check className="w-5 h-5 text-blue-500" />}
+                                                            </>
+                                                        ),
+                                                    }))}
+                                                />
                                             </div>
 
                                             <TickerEditDialog

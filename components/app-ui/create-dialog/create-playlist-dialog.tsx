@@ -13,14 +13,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import { GooDropdown } from "@/components/ui/goo-dropdown"
+import { Check, ChevronDown } from "lucide-react"
 
 interface CreatePlaylistDialogProps {
     open: boolean
@@ -82,40 +76,89 @@ export function CreatePlaylistDialog({ open, onOpenChange, onCreate }: CreatePla
                     <div className="flex gap-4">
                         <div className="flex-1 space-y-1">
                             <Label className="text-xs text-zinc-400 ml-1">Visibility</Label>
-                            <Select value={visibility} onValueChange={setVisibility}>
-                                <SelectTrigger className="h-12 bg-transparent border-zinc-600 focus:ring-0 focus:border-blue-400">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#282828] border-zinc-700 text-zinc-200">
-                                    <SelectItem value="public">Public</SelectItem>
-                                    <SelectItem value="private">Private</SelectItem>
-                                    <SelectItem value="unlisted">Unlisted</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <GooDropdown
+                                className="w-full"
+                                align="start"
+                                width={240}
+                                gap={8}
+                                fill="#282828"
+                                buttonRadius={8}
+                                panelRadius={12}
+                                triggerClassName="flex h-12 w-full items-center justify-between rounded-md border border-zinc-600 bg-transparent px-3 text-sm text-zinc-200"
+                                trigger={
+                                    <>
+                                        {visibility === "public" && "Public"}
+                                        {visibility === "private" && "Private"}
+                                        {visibility === "unlisted" && "Unlisted"}
+                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                    </>
+                                }
+                                items={([
+                                    { value: "public", label: "Public" },
+                                    { value: "private", label: "Private" },
+                                    { value: "unlisted", label: "Unlisted" },
+                                ] as const).map((opt) => ({
+                                    key: opt.value,
+                                    onClick: () => setVisibility(opt.value),
+                                    className: "justify-between text-zinc-200 hover:bg-white/10",
+                                    label: (
+                                        <>
+                                            {opt.label}
+                                            {visibility === opt.value && <Check className="h-4 w-4" />}
+                                        </>
+                                    ),
+                                }))}
+                            />
                         </div>
                         <div className="flex-1 space-y-1">
                             <Label className="text-xs text-zinc-400 ml-1">Default video order</Label>
-                            <Select value={sortOrder} onValueChange={setSortOrder}>
-                                <SelectTrigger className="h-12 bg-transparent border-zinc-600 focus:ring-0 focus:border-blue-400">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#282828] border-zinc-700 text-zinc-200">
-                                    <SelectItem value="newest">Date published (newest)</SelectItem>
-                                    <SelectItem value="oldest">Date published (oldest)</SelectItem>
-                                    <SelectItem value="popular">Most popular</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <GooDropdown
+                                className="w-full"
+                                align="start"
+                                width={260}
+                                gap={8}
+                                fill="#282828"
+                                buttonRadius={8}
+                                panelRadius={12}
+                                triggerClassName="flex h-12 w-full items-center justify-between rounded-md border border-zinc-600 bg-transparent px-3 text-sm text-zinc-200"
+                                trigger={
+                                    <>
+                                        {sortOrder === "newest" && "Date published (newest)"}
+                                        {sortOrder === "oldest" && "Date published (oldest)"}
+                                        {sortOrder === "popular" && "Most popular"}
+                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                    </>
+                                }
+                                items={([
+                                    { value: "newest", label: "Date published (newest)" },
+                                    { value: "oldest", label: "Date published (oldest)" },
+                                    { value: "popular", label: "Most popular" },
+                                ] as const).map((opt) => ({
+                                    key: opt.value,
+                                    onClick: () => setSortOrder(opt.value),
+                                    className: "justify-between text-zinc-200 hover:bg-white/10",
+                                    label: (
+                                        <>
+                                            {opt.label}
+                                            {sortOrder === opt.value && <Check className="h-4 w-4" />}
+                                        </>
+                                    ),
+                                }))}
+                            />
                         </div>
                     </div>
 
                     {/* Language */}
                     <div className="space-y-1">
                         <Label className="text-xs text-zinc-400 ml-1">Language</Label>
-                        <Select disabled>
-                            <SelectTrigger className="h-12 bg-transparent border-zinc-600 opacity-50 cursor-not-allowed">
-                                <span className="text-zinc-400">Title and description language</span>
-                            </SelectTrigger>
-                        </Select>
+                        <button
+                            type="button"
+                            disabled
+                            className="flex h-12 w-full items-center justify-between rounded-md border border-zinc-600 bg-transparent px-3 text-sm opacity-50 cursor-not-allowed"
+                        >
+                            <span className="text-zinc-400">Title and description language</span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                        </button>
                     </div>
                 </div>
 

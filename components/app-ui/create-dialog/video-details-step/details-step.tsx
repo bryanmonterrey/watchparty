@@ -5,7 +5,7 @@ import { Image as ImageIcon, Globe, Users, BadgeCheck, Medal, ChevronDown, Check
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { GooDropdown } from "@/components/ui/goo-dropdown"
 import { cn } from "@/lib/utils"
 import { PlaylistSelector } from "../playlist-selector"
 import { ShowMoreSection } from "./show-more-section"
@@ -171,42 +171,49 @@ export function DetailsStep({
             <div className="space-y-3">
                 <Label className="text-sm font-medium text-zinc-300">Who can see this video</Label>
                 <p className="text-xs text-zinc-500">Control who can view your video</p>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <button className="flex items-center gap-3 h-12 px-4 rounded-full border border-zinc-700 text-md font-medium text-white hover:bg-white/5 transition-colors outline-none w-fit">
+                <GooDropdown
+                    align="start"
+                    width={260}
+                    gap={8}
+                    fill="#18181b"
+                    panelRadius={12}
+                    itemHeight={52}
+                    headerHeight={44}
+                    header={
+                        <div className="flex h-full flex-col justify-center border-b border-zinc-800 px-3">
+                            <h3 className="font-bold text-white text-sm">Choose audience</h3>
+                        </div>
+                    }
+                    triggerClassName="flex items-center gap-3 h-12 px-4 rounded-full border border-zinc-700 text-md font-medium text-white hover:bg-white/5 transition-colors w-fit"
+                    trigger={
+                        <>
                             {videoAudience === "everyone" && <><Globe className="w-5 h-5 text-blue-400" />Everyone</>}
                             {videoAudience === "followers" && <><Users className="w-5 h-5 text-green-400" />Followers</>}
                             {videoAudience === "verified" && <><BadgeCheck className="w-5 h-5 text-blue-400" />Verified</>}
                             {videoAudience === "token_holders" && <><Medal className="w-5 h-5 text-yellow-400" />Token Holders</>}
                             <ChevronDown className="w-5 h-5 ml-1 opacity-50" />
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[260px] bg-zinc-900 border-zinc-800 rounded-xl p-0 overflow-hidden shadow-2xl">
-                        <div className="p-3 border-b border-zinc-800">
-                            <h3 className="font-bold text-white text-sm">Choose audience</h3>
-                        </div>
-                        <div className="p-1">
-                            {([
-                                { value: "everyone", label: "Everyone", icon: <Globe className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
-                                { value: "followers", label: "Followers", icon: <Users className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
-                                { value: "verified", label: "Verified", icon: <BadgeCheck className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
-                                { value: "token_holders", label: "Token Holders", icon: <Medal className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
-                            ] as const).map(opt => (
-                                <DropdownMenuItem
-                                    key={opt.value}
-                                    onClick={() => setVideoAudience(opt.value)}
-                                    className="flex items-center justify-between p-2.5 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5"
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", opt.bg, opt.color)}>{opt.icon}</div>
-                                        <span className="font-medium text-white text-sm">{opt.label}</span>
-                                    </div>
-                                    {videoAudience === opt.value && <Check className="w-4 h-4 text-blue-400" />}
-                                </DropdownMenuItem>
-                            ))}
-                        </div>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                        </>
+                    }
+                    items={([
+                        { value: "everyone", label: "Everyone", icon: <Globe className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
+                        { value: "followers", label: "Followers", icon: <Users className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
+                        { value: "verified", label: "Verified", icon: <BadgeCheck className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
+                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
+                    ] as const).map((opt) => ({
+                        key: opt.value,
+                        onClick: () => setVideoAudience(opt.value),
+                        className: "justify-between px-2.5 rounded-lg cursor-pointer hover:bg-white/5",
+                        label: (
+                            <>
+                                <span className="flex items-center gap-2.5">
+                                    <span className={cn("flex h-8 w-8 items-center justify-center rounded-full", opt.bg, opt.color)}>{opt.icon}</span>
+                                    <span className="font-medium text-white text-sm">{opt.label}</span>
+                                </span>
+                                {videoAudience === opt.value && <Check className="w-4 h-4 text-blue-400" />}
+                            </>
+                        ),
+                    }))}
+                />
             </div>
 
             {/* Show More Section */}

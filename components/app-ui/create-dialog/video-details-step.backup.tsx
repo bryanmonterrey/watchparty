@@ -6,10 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Image as ImageIcon, Copy, Coins, Maximize2, Settings, ChevronDown, ChevronUp, Sparkles, Globe, Users, BadgeCheck, Medal, X, Search, Check, CalendarIcon } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { GooDropdown } from "@/components/ui/goo-dropdown"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
@@ -30,6 +29,31 @@ import { useAuthSession } from "@/hooks/use-auth-session"
 import { TextShimmer } from "@/components/ui/text-shimmer"
 import { CardsEditor } from "@/components/video/cards"
 import type { DraftCard } from "@/components/video/cards"
+
+const CATEGORY_OPTIONS = [
+    { value: "Just Chatting", label: "Just Chatting" },
+    { value: "Music", label: "Music" },
+    { value: "Gaming", label: "Gaming" },
+    { value: "Games", label: "Games" },
+    { value: "Esports", label: "Esports" },
+    { value: "Tech", label: "Tech" },
+    { value: "Creative", label: "Creative" },
+    { value: "Sports", label: "Sports" },
+    { value: "IRL", label: "IRL" },
+    { value: "Live", label: "Live" },
+    { value: "News", label: "News" },
+    { value: "Memes", label: "Memes" },
+    { value: "Political", label: "Political" },
+    { value: "GTAV", label: "GTAV" },
+    { value: "Fortnite", label: "Fortnite" },
+    { value: "Pranks", label: "Pranks" },
+    { value: "Trending", label: "Trending" },
+    { value: "Travel", label: "Travel" },
+    { value: "Food", label: "Food & Cooking" },
+    { value: "Education", label: "Education" },
+    { value: "Fitness", label: "Fitness" },
+    { value: "People", label: "People & Blogs" },
+]
 
 // All languages supported by Deepgram Nova-3
 const CAPTION_LANGS = [
@@ -580,42 +604,49 @@ export function VideoDetailsStep({ file, uploadedUrl, isUploading, uploadProgres
                             <div className="space-y-3">
                                 <Label className="text-sm font-medium text-zinc-300">Who can see this video</Label>
                                 <p className="text-xs text-zinc-500">Control who can view your video</p>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button className="flex items-center gap-2 h-10 px-4 rounded-full border border-zinc-700 text-sm font-medium text-white hover:bg-white/5 transition-colors outline-none w-fit">
+                                <GooDropdown
+                                    align="start"
+                                    width={260}
+                                    gap={8}
+                                    fill="#18181b"
+                                    panelRadius={12}
+                                    itemHeight={52}
+                                    headerHeight={44}
+                                    header={
+                                        <div className="flex h-full flex-col justify-center border-b border-zinc-800 px-3">
+                                            <h3 className="font-bold text-white text-sm">Choose audience</h3>
+                                        </div>
+                                    }
+                                    triggerClassName="flex items-center gap-2 h-10 px-4 rounded-full border border-zinc-700 text-sm font-medium text-white hover:bg-white/5 transition-colors w-fit"
+                                    trigger={
+                                        <>
                                             {videoAudience === "everyone" && <><Globe className="w-4 h-4 text-blue-400" />Everyone</>}
                                             {videoAudience === "followers" && <><Users className="w-4 h-4 text-green-400" />Followers</>}
                                             {videoAudience === "verified" && <><BadgeCheck className="w-4 h-4 text-blue-400" />Verified</>}
                                             {videoAudience === "token_holders" && <><Medal className="w-4 h-4 text-yellow-400" />Token Holders</>}
                                             <ChevronDown className="w-4 h-4 ml-1 opacity-50" />
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start" className="w-[260px] bg-zinc-900 border-zinc-800 rounded-xl p-0 overflow-hidden shadow-2xl">
-                                        <div className="p-3 border-b border-zinc-800">
-                                            <h3 className="font-bold text-white text-sm">Choose audience</h3>
-                                        </div>
-                                        <div className="p-1">
-                                            {([
-                                                { value: "everyone", label: "Everyone", icon: <Globe className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
-                                                { value: "followers", label: "Followers", icon: <Users className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
-                                                { value: "verified", label: "Verified", icon: <BadgeCheck className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
-                                                { value: "token_holders", label: "Token Holders", icon: <Medal className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
-                                            ] as const).map(opt => (
-                                                <DropdownMenuItem
-                                                    key={opt.value}
-                                                    onClick={() => setVideoAudience(opt.value)}
-                                                    className="flex items-center justify-between p-2.5 cursor-pointer hover:bg-white/5 rounded-lg focus:bg-white/5"
-                                                >
-                                                    <div className="flex items-center gap-2.5">
-                                                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", opt.bg, opt.color)}>{opt.icon}</div>
-                                                        <span className="font-medium text-white text-sm">{opt.label}</span>
-                                                    </div>
-                                                    {videoAudience === opt.value && <Check className="w-4 h-4 text-blue-400" />}
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </div>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                        </>
+                                    }
+                                    items={([
+                                        { value: "everyone", label: "Everyone", icon: <Globe className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
+                                        { value: "followers", label: "Followers", icon: <Users className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
+                                        { value: "verified", label: "Verified", icon: <BadgeCheck className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
+                                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
+                                    ] as const).map((opt) => ({
+                                        key: opt.value,
+                                        onClick: () => setVideoAudience(opt.value),
+                                        className: "justify-between px-2.5 rounded-lg cursor-pointer hover:bg-white/5",
+                                        label: (
+                                            <>
+                                                <span className="flex items-center gap-2.5">
+                                                    <span className={cn("flex h-8 w-8 items-center justify-center rounded-full", opt.bg, opt.color)}>{opt.icon}</span>
+                                                    <span className="font-medium text-white text-sm">{opt.label}</span>
+                                                </span>
+                                                {videoAudience === opt.value && <Check className="w-4 h-4 text-blue-400" />}
+                                            </>
+                                        ),
+                                    }))}
+                                />
                             </div>
 
                             {/* Show More Section */}
@@ -833,15 +864,31 @@ export function VideoDetailsStep({ file, uploadedUrl, isUploading, uploadProgres
                                                     <p className="text-xs text-zinc-500">Learn about <a href="#" className="text-blue-500 hover:underline">license types</a>.</p>
 
                                                     <div className="space-y-4">
-                                                        <Select value={license} onValueChange={setLicense}>
-                                                            <SelectTrigger className="w-full h-10 bg-transparent border-zinc-700 text-zinc-300">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                                                                <SelectItem value="standard">Standard Watchparty License</SelectItem>
-                                                                <SelectItem value="cc">Creative Commons - Attribution</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
+                                                        <GooDropdown
+                                                            className="w-full"
+                                                            align="start"
+                                                            width={280}
+                                                            gap={8}
+                                                            fill="#18181b"
+                                                            buttonRadius={8}
+                                                            panelRadius={12}
+                                                            triggerClassName="flex w-full h-10 items-center justify-between rounded-md border border-zinc-700 bg-transparent px-3 text-sm text-zinc-300"
+                                                            trigger={
+                                                                <>
+                                                                    {license === "standard" ? "Standard Watchparty License" : "Creative Commons - Attribution"}
+                                                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                                                </>
+                                                            }
+                                                            items={([
+                                                                { value: "standard", label: "Standard Watchparty License" },
+                                                                { value: "cc", label: "Creative Commons - Attribution" },
+                                                            ] as const).map((opt) => ({
+                                                                key: opt.value,
+                                                                onClick: () => setLicense(opt.value),
+                                                                className: "text-zinc-300 hover:bg-white/10",
+                                                                label: opt.label,
+                                                            }))}
+                                                        />
 
                                                         <div className="flex items-start space-x-2">
                                                             <Checkbox
@@ -940,35 +987,31 @@ export function VideoDetailsStep({ file, uploadedUrl, isUploading, uploadProgres
                                                         <h3 className="text-sm font-medium text-zinc-300">Category</h3>
                                                         <p className="text-xs text-zinc-500">Add your video to a category so viewers can find it more easily</p>
                                                     </div>
-                                                    <Select value={category || ""} onValueChange={setCategory}>
-                                                        <SelectTrigger className="w-full h-10 bg-transparent border-zinc-700 text-zinc-300">
-                                                            <SelectValue placeholder="Select a category" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300 max-h-[240px]">
-                                                            <SelectItem value="Just Chatting">Just Chatting</SelectItem>
-                                                            <SelectItem value="Music">Music</SelectItem>
-                                                            <SelectItem value="Gaming">Gaming</SelectItem>
-                                                            <SelectItem value="Games">Games</SelectItem>
-                                                            <SelectItem value="Esports">Esports</SelectItem>
-                                                            <SelectItem value="Tech">Tech</SelectItem>
-                                                            <SelectItem value="Creative">Creative</SelectItem>
-                                                            <SelectItem value="Sports">Sports</SelectItem>
-                                                            <SelectItem value="IRL">IRL</SelectItem>
-                                                            <SelectItem value="Live">Live</SelectItem>
-                                                            <SelectItem value="News">News</SelectItem>
-                                                            <SelectItem value="Memes">Memes</SelectItem>
-                                                            <SelectItem value="Political">Political</SelectItem>
-                                                            <SelectItem value="GTAV">GTAV</SelectItem>
-                                                            <SelectItem value="Fortnite">Fortnite</SelectItem>
-                                                            <SelectItem value="Pranks">Pranks</SelectItem>
-                                                            <SelectItem value="Trending">Trending</SelectItem>
-                                                            <SelectItem value="Travel">Travel</SelectItem>
-                                                            <SelectItem value="Food">Food & Cooking</SelectItem>
-                                                            <SelectItem value="Education">Education</SelectItem>
-                                                            <SelectItem value="Fitness">Fitness</SelectItem>
-                                                            <SelectItem value="People">People & Blogs</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <GooDropdown
+                                                        className="w-full"
+                                                        align="start"
+                                                        width={280}
+                                                        gap={8}
+                                                        fill="#18181b"
+                                                        buttonRadius={8}
+                                                        panelRadius={12}
+                                                        maxPanelHeight={240}
+                                                        triggerClassName="flex w-full h-10 items-center justify-between rounded-md border border-zinc-700 bg-transparent px-3 text-sm text-zinc-300"
+                                                        trigger={
+                                                            <>
+                                                                <span className={category ? undefined : "text-zinc-500"}>
+                                                                    {category ? (CATEGORY_OPTIONS.find((o) => o.value === category)?.label ?? category) : "Select a category"}
+                                                                </span>
+                                                                <ChevronDown className="h-4 w-4 opacity-50" />
+                                                            </>
+                                                        }
+                                                        items={CATEGORY_OPTIONS.map((opt) => ({
+                                                            key: opt.value,
+                                                            onClick: () => setCategory(opt.value),
+                                                            className: "text-zinc-300 hover:bg-white/10",
+                                                            label: opt.label,
+                                                        }))}
+                                                    />
                                                 </div>
 
                                                 {/* Comments and Ratings */}
@@ -981,29 +1024,67 @@ export function VideoDetailsStep({ file, uploadedUrl, isUploading, uploadProgres
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div className="space-y-1">
                                                             <Label className="text-xs text-zinc-500">Comments</Label>
-                                                            <Select value={comments} onValueChange={setComments}>
-                                                                <SelectTrigger className="w-full h-10 bg-transparent border-zinc-700 text-zinc-300">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                                                                    <SelectItem value="on">On</SelectItem>
-                                                                    <SelectItem value="off">Off</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                            <GooDropdown
+                                                                className="w-full"
+                                                                align="start"
+                                                                width={160}
+                                                                gap={8}
+                                                                fill="#18181b"
+                                                                buttonRadius={8}
+                                                                panelRadius={12}
+                                                                itemHeight={36}
+                                                                triggerClassName="flex w-full h-10 items-center justify-between rounded-md border border-zinc-700 bg-transparent px-3 text-sm text-zinc-300"
+                                                                trigger={
+                                                                    <>
+                                                                        {comments === "on" ? "On" : "Off"}
+                                                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                                                    </>
+                                                                }
+                                                                items={([
+                                                                    { value: "on", label: "On" },
+                                                                    { value: "off", label: "Off" },
+                                                                ] as const).map((opt) => ({
+                                                                    key: opt.value,
+                                                                    onClick: () => setComments(opt.value),
+                                                                    className: "text-zinc-300 hover:bg-white/10",
+                                                                    label: opt.label,
+                                                                }))}
+                                                            />
                                                         </div>
                                                         <div className="space-y-1">
                                                             <Label className="text-xs text-zinc-500">Moderation</Label>
-                                                            <Select value={commentModeration} onValueChange={setCommentModeration} disabled={comments === "off"}>
-                                                                <SelectTrigger className="w-full h-10 bg-transparent border-zinc-700 text-zinc-300">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                                                                    <SelectItem value="basic">Basic</SelectItem>
-                                                                    <SelectItem value="strict">Strict</SelectItem>
-                                                                    <SelectItem value="hold">Hold all</SelectItem>
-                                                                    <SelectItem value="none">None</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                            <GooDropdown
+                                                                className="w-full"
+                                                                align="start"
+                                                                width={160}
+                                                                gap={8}
+                                                                fill="#18181b"
+                                                                buttonRadius={8}
+                                                                panelRadius={12}
+                                                                itemHeight={36}
+                                                                disabled={comments === "off"}
+                                                                triggerClassName="flex w-full h-10 items-center justify-between rounded-md border border-zinc-700 bg-transparent px-3 text-sm text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                trigger={
+                                                                    <>
+                                                                        {commentModeration === "basic" && "Basic"}
+                                                                        {commentModeration === "strict" && "Strict"}
+                                                                        {commentModeration === "hold" && "Hold all"}
+                                                                        {commentModeration === "none" && "None"}
+                                                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                                                    </>
+                                                                }
+                                                                items={([
+                                                                    { value: "basic", label: "Basic" },
+                                                                    { value: "strict", label: "Strict" },
+                                                                    { value: "hold", label: "Hold all" },
+                                                                    { value: "none", label: "None" },
+                                                                ] as const).map((opt) => ({
+                                                                    key: opt.value,
+                                                                    onClick: () => setCommentModeration(opt.value),
+                                                                    className: "text-zinc-300 hover:bg-white/10",
+                                                                    label: opt.label,
+                                                                }))}
+                                                            />
                                                         </div>
                                                     </div>
 
@@ -1097,15 +1178,33 @@ export function VideoDetailsStep({ file, uploadedUrl, isUploading, uploadProgres
                                                     <div className="pt-2 flex flex-col gap-4">
                                                         <div className="w-[calc(50%-8px)] space-y-1">
                                                             <Label className="text-xs text-zinc-500">Sort by</Label>
-                                                            <Select value={commentSort} onValueChange={setCommentSort} disabled={comments === "off"}>
-                                                                <SelectTrigger className="w-full h-10 bg-transparent border-zinc-700 text-zinc-300">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                                                                    <SelectItem value="top">Top</SelectItem>
-                                                                    <SelectItem value="newest">Newest</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                                            <GooDropdown
+                                                                className="w-full"
+                                                                align="start"
+                                                                width={160}
+                                                                gap={8}
+                                                                fill="#18181b"
+                                                                buttonRadius={8}
+                                                                panelRadius={12}
+                                                                itemHeight={36}
+                                                                disabled={comments === "off"}
+                                                                triggerClassName="flex w-full h-10 items-center justify-between rounded-md border border-zinc-700 bg-transparent px-3 text-sm text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                trigger={
+                                                                    <>
+                                                                        {commentSort === "top" ? "Top" : "Newest"}
+                                                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                                                    </>
+                                                                }
+                                                                items={([
+                                                                    { value: "top", label: "Top" },
+                                                                    { value: "newest", label: "Newest" },
+                                                                ] as const).map((opt) => ({
+                                                                    key: opt.value,
+                                                                    onClick: () => setCommentSort(opt.value),
+                                                                    className: "text-zinc-300 hover:bg-white/10",
+                                                                    label: opt.label,
+                                                                }))}
+                                                            />
                                                         </div>
 
                                                         <div className="flex items-start space-x-2">

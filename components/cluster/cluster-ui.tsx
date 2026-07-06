@@ -7,8 +7,8 @@ import * as React from 'react'
 import { ReactNode } from 'react'
 
 import { useCluster } from './cluster-data-access'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
+import { GooDropdown } from '@/components/ui/goo-dropdown'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { AppAlert } from '@/components/app-ui/app-alert'
 
 export function ExplorerLink({ path, label, className }: { path: string; label: string; className?: string }) {
@@ -55,17 +55,16 @@ export function ClusterChecker({ children }: { children: ReactNode }) {
 export function ClusterUiSelect() {
   const { clusters, setCluster, cluster } = useCluster()
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline">{cluster.name}</Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {clusters.map((item) => (
-          <DropdownMenuItem key={item.name} onClick={() => setCluster(item)}>
-            {item.name}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <GooDropdown
+      align="end"
+      width={200}
+      trigger={cluster.name}
+      triggerClassName={buttonVariants({ variant: 'outline' })}
+      items={clusters.map((item) => ({
+        key: item.name,
+        label: item.name,
+        onClick: () => setCluster(item),
+      }))}
+    />
   )
 }
