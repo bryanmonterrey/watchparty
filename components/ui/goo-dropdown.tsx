@@ -261,32 +261,37 @@ export function GooDropdown({
         </defs>
       </svg>
 
-      <div
-        aria-hidden
-        className="pointer-events-none absolute"
-        style={{
-          ...overlayPos,
-          filter: shouldReduceMotion ? 'none' : `url(#${filterId})`,
-          zIndex: elevated ? 50 : 0,
-        }}
-      >
+      {/* Goo + content layers mount only while open/animating: their boxes
+          extend layerH past the trigger and would otherwise add phantom
+          scrollable space (and a fill pill behind the trigger) when closed. */}
+      {elevated && (
         <div
-          className="absolute"
+          aria-hidden
+          className="pointer-events-none absolute"
           style={{
-            left: geo.btnX,
-            top: geo.btnY,
-            width: btn.w,
-            height: btn.h,
-            borderRadius: geo.closedRect.r,
-            background: fill,
+            ...overlayPos,
+            filter: shouldReduceMotion ? 'none' : `url(#${filterId})`,
+            zIndex: 50,
           }}
-        />
-        <div
-          ref={panelRef}
-          className="absolute inset-0 will-change-[clip-path]"
-          style={{ background: fill, clipPath: currentShape }}
-        />
-      </div>
+        >
+          <div
+            className="absolute"
+            style={{
+              left: geo.btnX,
+              top: geo.btnY,
+              width: btn.w,
+              height: btn.h,
+              borderRadius: geo.closedRect.r,
+              background: fill,
+            }}
+          />
+          <div
+            ref={panelRef}
+            className="absolute inset-0 will-change-[clip-path]"
+            style={{ background: fill, clipPath: currentShape }}
+          />
+        </div>
+      )}
 
       <button
         ref={triggerRef}
@@ -305,6 +310,7 @@ export function GooDropdown({
         {trigger}
       </button>
 
+      {elevated && (
       <div
         ref={contentRef}
         role="menu"
@@ -313,7 +319,7 @@ export function GooDropdown({
           ...overlayPos,
           clipPath: currentShape,
           pointerEvents: open ? 'auto' : 'none',
-          zIndex: elevated ? 52 : 0,
+          zIndex: 52,
         }}
       >
         <div
@@ -399,6 +405,7 @@ export function GooDropdown({
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }
