@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { SettingsIcon, PowerIcon, WalletIcon, CopyIcon, LogoutIcon } from "@/components/icons";
 import { shortenWalletAddress } from "@/lib/utils";
 import { appToast } from "@/components/app-ui/app-toast";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 
 interface WalletHeaderProps {
     username: string;
@@ -71,48 +71,54 @@ export function WalletHeader({
                     <SettingsIcon className="w-5 h-5 text-zinc-400" />
                 </Button>
 
-                <Popover open={isOpen} onOpenChange={setIsOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            className={`size-9 p-0 glass-ring rounded-full transition-colors ${isOpen ? "bg-zinc-700/70 text-white" : "bg-black hover:bg-black/50 text-zinc-400"}`}
-                        >
-                            <PowerIcon className="w-5 h-5" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                        align="end"
-                        sideOffset={8}
-                        className="w-52 bg-neutral-950 border-flexborder/75 rounded-3xl shadow-3xl p-1.5 overflow-hidden flex flex-col gap-1"
-                    >
-                        <button
-                            onClick={handleCopyAddress}
-                            className="w-full flex items-center px-4 py-2.5 text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white rounded-full cursor-pointer transition-colors text-left group gap-3"
-                        >
-                            <CopyIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
-                            Copy Address
-                        </button>
-                        <button
-                            onClick={() => {
-                                onChangeWallet?.();
-                                setIsOpen(false);
-                            }}
-                            className="w-full flex items-center px-4 py-2.5 text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white rounded-full cursor-pointer transition-colors text-left group gap-3"
-                        >
-                            <WalletIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
-                            Change Wallet
-                        </button>
-                        <button
-                            onClick={() => {
-                                onSignOut();
-                                setIsOpen(false);
-                            }}
-                            className="w-full flex items-center px-4 py-2.5 text-lg font-medium text-red-400/90 hover:bg-red-500/10 hover:text-red-400 rounded-full cursor-pointer transition-colors text-left gap-3"
-                        >
-                            <LogoutIcon className="w-5 h-5 shrink-0" />
-                            Disconnect
-                        </button>
-                    </PopoverContent>
-                </Popover>
+                <GooDropdown
+                    open={isOpen}
+                    onOpenChange={setIsOpen}
+                    align="end"
+                    width={208}
+                    gap={8}
+                    fill="#0a0a0a"
+                    panelRadius={24}
+                    itemHeight={48}
+                    triggerAriaLabel="Wallet session"
+                    triggerClassName={`flex size-9 items-center justify-center glass-ring rounded-full transition-colors ${isOpen ? "bg-zinc-700/70 text-white" : "bg-black hover:bg-black/50 text-zinc-400"}`}
+                    trigger={<PowerIcon className="w-5 h-5" />}
+                    items={[
+                        {
+                            key: "copy",
+                            onClick: handleCopyAddress,
+                            className: "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                            label: (
+                                <>
+                                    <CopyIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
+                                    Copy Address
+                                </>
+                            ),
+                        },
+                        {
+                            key: "change-wallet",
+                            onClick: () => onChangeWallet?.(),
+                            className: "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                            label: (
+                                <>
+                                    <WalletIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
+                                    Change Wallet
+                                </>
+                            ),
+                        },
+                        {
+                            key: "disconnect",
+                            onClick: onSignOut,
+                            className: "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-red-400/90 hover:bg-red-500/10 hover:text-red-400",
+                            label: (
+                                <>
+                                    <LogoutIcon className="w-5 h-5 shrink-0" />
+                                    Disconnect
+                                </>
+                            ),
+                        },
+                    ]}
+                />
             </div>
         </div>
     );

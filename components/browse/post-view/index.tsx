@@ -344,11 +344,8 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                         isPinned={post.isPinned}
                                         open={showReportDialog}
                                         onOpenChange={setShowReportDialog}
-                                        trigger={
-                                            <button className="text-zinc-500 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors">
-                                                <MoreHorizontal className="w-5 h-5" />
-                                            </button>
-                                        }
+                                        triggerClassName="text-zinc-500 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors"
+                                        trigger={<MoreHorizontal className="w-5 h-5" />}
                                     />
                                 </div>
                             </div>

@@ -12,6 +12,7 @@ import { EditProfileDialog } from "./edit-profile-dialog";
 import { FollowersFollowingDialog } from "./followers-following-dialog";
 import { TipModal } from "@/components/browse/tip-modal";
 import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -22,7 +23,14 @@ interface ProfileHeaderProps {
     onToggleSize?: () => void;
 }
 
-function MoreMenu({ userId, username, onClose, onGift }: { userId: string; username: string | null; onClose: () => void; onGift: () => void }) {
+function MoreMenu({ userId, username, open, onOpenChange, onClose, onGift }: {
+    userId: string;
+    username: string | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onClose: () => void;
+    onGift: () => void;
+}) {
     const utils = trpc.useUtils();
     const banUser = trpc.moderation.banUser.useMutation({
         onSuccess: () => { utils.moderation.isUserBannedByMe.invalidate({ userId }); onClose(); },
@@ -34,25 +42,54 @@ function MoreMenu({ userId, username, onClose, onGift }: { userId: string; usern
     const isBanned = banStatus?.banned ?? false;
 
     return (
-        <div className="absolute right-0 top-full mt-1 bg-zinc-900 border border-white/10 rounded-xl shadow-xl z-30 w-52 overflow-hidden py-1">
-            <button
-                onClick={() => { onGift(); onClose(); }}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 transition-colors text-left"
-            >
-                <Gift className="w-4 h-4 text-lantern" />
-                Gift subscription
-            </button>
-            <MuteButton userId={userId} username={username} className="px-4 py-2.5 hover:bg-white/5 w-full text-left" onDone={onClose} />
-            <BlockButton userId={userId} username={username} className="px-4 py-2.5 hover:bg-white/5 w-full text-left" onDone={onClose} />
-            <button
-                onClick={() => isBanned ? unbanUser.mutate({ userId }) : banUser.mutate({ userId })}
-                disabled={banUser.isPending || unbanUser.isPending}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors text-left disabled:opacity-50"
-            >
-                <ShieldBan className="w-4 h-4" />
-                {isBanned ? "Unban from channel" : "Ban from channel"}
-            </button>
-        </div>
+        <GooDropdown
+            open={open}
+            onOpenChange={onOpenChange}
+            align="end"
+            width={208}
+            gap={8}
+            fill="#18181b"
+            panelRadius={12}
+            itemHeight={40}
+            triggerAriaLabel="More options"
+            triggerClassName="flex size-11 items-center justify-center rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10 transition-colors"
+            trigger={<VerticalDotsIcon className="size-6" />}
+            items={[
+                {
+                    key: "gift",
+                    onClick: onGift,
+                    className: "gap-2 px-4 text-sm text-zinc-300 hover:bg-white/5 rounded-lg cursor-pointer",
+                    label: (
+                        <>
+                            <Gift className="w-4 h-4 text-lantern" />
+                            Gift subscription
+                        </>
+                    ),
+                },
+                {
+                    key: "mute",
+                    type: "custom",
+                    label: <MuteButton userId={userId} username={username} className="px-4 h-full hover:bg-white/5 rounded-lg w-full text-left" onDone={onClose} />,
+                },
+                {
+                    key: "block",
+                    type: "custom",
+                    label: <BlockButton userId={userId} username={username} className="px-4 h-full hover:bg-white/5 rounded-lg w-full text-left" onDone={onClose} />,
+                },
+                {
+                    key: "ban",
+                    onClick: () => isBanned ? unbanUser.mutate({ userId }) : banUser.mutate({ userId }),
+                    closeOnSelect: false,
+                    className: "gap-2 px-4 text-sm text-red-400 hover:bg-white/5 rounded-lg cursor-pointer",
+                    label: (
+                        <>
+                            <ShieldBan className="w-4 h-4" />
+                            {isBanned ? "Unban from channel" : "Ban from channel"}
+                        </>
+                    ),
+                },
+            ]}
+        />
     );
 }
 
@@ -75,17 +112,6 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
     const [showTip, setShowTip] = React.useState(false);
     const [showMoreMenu, setShowMoreMenu] = React.useState(false);
     const [showGiftDialog, setShowGiftDialog] = React.useState(false);
-    const moreMenuRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-                setShowMoreMenu(false);
-            }
-        };
-        if (showMoreMenu) document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [showMoreMenu]);
     const { data: session, isPending: sessionPending } = useAuthSession();
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => { setMounted(true); }, []);
@@ -175,22 +201,14 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                         Gift Subs
                                     </Button>
                                 )}
-                                <div className="relative" ref={moreMenuRef}>
-                                    <Button
-                                        onClick={() => setShowMoreMenu(v => !v)}
-                                        className="size-11 rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10"
-                                    >
-                                        <VerticalDotsIcon className="size-6" />
-                                    </Button>
-                                    {showMoreMenu && (
-                                        <MoreMenu
-                                            userId={user.id}
-                                            username={user.username}
-                                            onClose={() => setShowMoreMenu(false)}
-                                            onGift={() => setShowGiftDialog(true)}
-                                        />
-                                    )}
-                                </div>
+                                <MoreMenu
+                                    userId={user.id}
+                                    username={user.username}
+                                    open={showMoreMenu}
+                                    onOpenChange={setShowMoreMenu}
+                                    onClose={() => setShowMoreMenu(false)}
+                                    onGift={() => setShowGiftDialog(true)}
+                                />
                                 {onToggleSize && (
                                     <Button
                                         onClick={onToggleSize}

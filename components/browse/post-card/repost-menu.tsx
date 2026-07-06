@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { RetweetIcon, QuoteIcon } from "@/components/icons";
-import { ActionButton } from "./action-button";
 
 interface RepostMenuProps {
     open: boolean;
@@ -24,7 +24,6 @@ export function RepostMenu({
     onOpenChange,
     reposted,
     repostCount,
-    onRepostClick,
     onDoRepost,
     onDoQuote,
     className,
@@ -32,45 +31,72 @@ export function RepostMenu({
     iconSize = "w-[18px] h-[18px]",
     hideCountAtZero = true,
 }: RepostMenuProps) {
+    const active = reposted || open;
+    const rowClass = "gap-3 px-4 rounded-full cursor-pointer text-lg font-bold text-zinc-200 hover:bg-white/5 hover:text-white";
+
     return (
-        <Popover open={open} onOpenChange={onOpenChange}>
-            <PopoverTrigger asChild>
-                <div onClick={(e) => e.stopPropagation()} className={className}>
-                    <ActionButton
-                        icon={<RetweetIcon className={iconSize} />}
-                        count={repostCount}
-                        hideCountAtZero={hideCountAtZero}
-                        hoverColor="hover:text-emerald-500"
-                        hoverBg="hover:bg-emerald-500/10"
-                        onClick={onRepostClick}
-                        active={reposted || open}
-                        activeColor="text-emerald-500"
-                        className={buttonClassName}
-                    />
-                </div>
-            </PopoverTrigger>
-            <PopoverContent
-                side="top"
-                align="start"
-                sideOffset={8}
-                className="w-48 bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50 flex flex-col gap-1"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <button
-                    onClick={onDoRepost}
-                    className="flex cursor-pointer items-center gap-3 w-full px-4 py-2.5 text-lg font-bold text-zinc-200 hover:bg-white/5 hover:text-white rounded-full transition-colors text-left group"
-                >
-                    <RetweetIcon className="w-5 h-5 text-white group-hover:text-white transition-colors" />
-                    {reposted ? "Undo repost" : "Repost"}
-                </button>
-                <button
-                    onClick={onDoQuote}
-                    className="flex cursor-pointer items-center gap-3 w-full px-4 py-2.5 text-lg font-bold text-zinc-200 hover:bg-white/5 hover:text-white rounded-full transition-colors text-left group"
-                >
-                    <QuoteIcon className="w-5 h-5 text-white group-hover:text-white transition-colors" />
-                    Quote
-                </button>
-            </PopoverContent>
-        </Popover>
+        <GooDropdown
+            className={className}
+            open={open}
+            onOpenChange={onOpenChange}
+            side="top"
+            align="start"
+            width={192}
+            gap={8}
+            fill="#0a0a0a"
+            panelRadius={24}
+            itemHeight={48}
+            stopPropagation
+            triggerAriaLabel="Repost"
+            triggerClassName={cn(
+                "flex items-center gap-1 cursor-pointer group/btn transition-colors",
+                active ? "text-emerald-500" : "text-postgray",
+                "hover:text-emerald-500",
+                buttonClassName
+            )}
+            trigger={
+                <>
+                    <span className="p-2 rounded-full transition-colors flex items-center justify-center hover:bg-emerald-500/10">
+                        <RetweetIcon className={iconSize} />
+                    </span>
+                    <span
+                        className={cn(
+                            "text-[13px] -ml-1 min-w-[2ch] tracking-tight tabular-nums transition-opacity duration-200",
+                            repostCount === 0 && hideCountAtZero
+                                ? "opacity-0 select-none"
+                                : active
+                                    ? "text-emerald-500"
+                                    : "text-postgray"
+                        )}
+                    >
+                        {repostCount === 0 && hideCountAtZero ? "" : repostCount}
+                    </span>
+                </>
+            }
+            items={[
+                {
+                    key: "repost",
+                    onClick: onDoRepost,
+                    className: rowClass,
+                    label: (
+                        <>
+                            <RetweetIcon className="w-5 h-5 text-white transition-colors" />
+                            {reposted ? "Undo repost" : "Repost"}
+                        </>
+                    ),
+                },
+                {
+                    key: "quote",
+                    onClick: onDoQuote,
+                    className: rowClass,
+                    label: (
+                        <>
+                            <QuoteIcon className="w-5 h-5 text-white transition-colors" />
+                            Quote
+                        </>
+                    ),
+                },
+            ]}
+        />
     );
 }

@@ -100,17 +100,11 @@ export function PostCardHeaderRow({
                     isPinned={isPinned}
                     open={showReportDialog}
                     onOpenChange={setShowReportDialog}
-                    trigger={
-                        <button
-                            onClick={(e) => e.stopPropagation()}
-                            className={cn(
-                                "text-postgray cursor-pointer hover:bg-twitter2/[12%] hover:text-white p-1.5 rounded-full transition-colors",
-                                showReportDialog && "text-white"
-                            )}
-                        >
-                            <MoreHorizontal className="w-[18px] h-[18px]" />
-                        </button>
-                    }
+                    triggerClassName={cn(
+                        "text-postgray cursor-pointer hover:bg-twitter2/[12%] hover:text-white p-1.5 rounded-full transition-colors",
+                        showReportDialog && "text-white"
+                    )}
+                    trigger={<MoreHorizontal className="w-[18px] h-[18px]" />}
                 />
             </div>
         </div>

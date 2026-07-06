@@ -47,7 +47,7 @@ import { WithAuth } from "@/components/auth/with-auth"
 import { CreateDialog } from "./create-dialog"
 import { NotificationsPanel } from "@/components/notifications/notifications-panel"
 import { useAuthSession } from "@/hooks/use-auth-session"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { GooDropdown } from "@/components/ui/goo-dropdown"
 
 const items = [
     {
@@ -320,51 +320,55 @@ export function AppSidebar() {
                 <SidebarFooter className="!px-0">
                     <SidebarMenu>
                         <SidebarMenuItem className="w-full">
-                            <Popover open={moreOpen} onOpenChange={setMoreOpen}>
-                                <PopoverTrigger asChild>
-                                    <SidebarMenuButton 
-                                        size="lg" 
-                                        className={cn(
-                                            "text-md w-full !w-full !justify-start !p-0 transition-all duration-150 ease-in-out text-flexwhite/85 hover:text-white/85 font-medium h-12 relative isolate hover:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-800/50 gap-0",
-                                            moreOpen && "before:bg-zinc-800/50"
-                                        )}
-                                    >
-                                        <div className="flex w-full items-center cursor-pointer">
-                                            <div className="flex w-(--sidebar-width-icon) h-11 items-center justify-center shrink-0">
-                                                <MenuIcon className="size-7" />
-                                            </div>
-                                            <AnimatePresence mode="wait">
-                                                {(state !== "collapsed" || isMobile) && (
-                                                    <motion.span
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        exit={{ opacity: 0, x: -10 }}
-                                                        transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
-                                                        className="whitespace-nowrap -ml-2"
-                                                    >
-                                                        More
-                                                    </motion.span>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                    </SidebarMenuButton>
-                                </PopoverTrigger>
-                                <PopoverContent 
-                                    side="top" 
-                                    align="end" 
-                                    sideOffset={8}
-                                    className="w-80 ml-12 bg-black border-flexborder/75 rounded-3xl shadow-xl p-1.5 overflow-hidden flex flex-col gap-1 z-50"
-                                >
-                                    <Link
-                                        href="/settings"
-                                        onClick={() => setMoreOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-2.5 text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white rounded-full transition-colors group"
-                                    >
-                                        <SettingsIcon className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />
-                                        Settings
-                                    </Link>
-                                </PopoverContent>
-                            </Popover>
+                            <GooDropdown
+                                className="w-full"
+                                open={moreOpen}
+                                onOpenChange={setMoreOpen}
+                                side="top"
+                                align="start"
+                                width={320}
+                                gap={8}
+                                fill="#000000"
+                                panelRadius={24}
+                                itemHeight={48}
+                                triggerClassName={cn(
+                                    "text-md w-full flex items-center justify-start p-0 transition-all duration-150 ease-in-out text-flexwhite/85 hover:text-white/85 font-medium h-12 relative isolate hover:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-800/50 gap-0 cursor-pointer",
+                                    moreOpen && "before:bg-zinc-800/50"
+                                )}
+                                trigger={
+                                    <span className="flex w-full items-center">
+                                        <span className="flex w-(--sidebar-width-icon) h-11 items-center justify-center shrink-0">
+                                            <MenuIcon className="size-7" />
+                                        </span>
+                                        <AnimatePresence mode="wait">
+                                            {(state !== "collapsed" || isMobile) && (
+                                                <motion.span
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: -10 }}
+                                                    transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
+                                                    className="whitespace-nowrap -ml-2"
+                                                >
+                                                    More
+                                                </motion.span>
+                                            )}
+                                        </AnimatePresence>
+                                    </span>
+                                }
+                                items={[
+                                    {
+                                        key: "settings",
+                                        href: "/settings",
+                                        className: "gap-3 px-4 rounded-full text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                                        label: (
+                                            <>
+                                                <SettingsIcon className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />
+                                                Settings
+                                            </>
+                                        ),
+                                    },
+                                ]}
+                            />
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarFooter>

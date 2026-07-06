@@ -9,7 +9,7 @@ import {
     VolumeX, Ban, EyeOff,
     BarChart3, Code, Megaphone, Trash2, Sparkles, Info, MessageCircle, ListPlus, X
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -27,35 +27,35 @@ const REPORT_REASON_MAP: Record<string, ReportReason> = {
 };
 const REPORT_REASONS = Object.keys(REPORT_REASON_MAP);
 
-// ── MenuItem ───────────────────────────────────────────────────────────────────
+// ── Item builder ───────────────────────────────────────────────────────────────
 
-interface MenuItemProps {
-    icon: React.ElementType;
-    label: string;
-    onClick?: () => void;
-    variant?: "default" | "danger";
-    className?: string;
-}
-
-function MenuItem({ icon: Icon, label, onClick, variant = "default", className }: MenuItemProps) {
-    return (
-        <button
-            onClick={(e) => { e.stopPropagation(); onClick?.(); }}
-            className={cn(
-                "flex items-center gap-3 w-full px-4 py-2.5 text-base font-bold transition-colors rounded-full cursor-pointer text-left group",
-                variant === "danger"
-                    ? "text-red-500 hover:bg-red-500/10"
-                    : "text-zinc-200 hover:bg-white/5 hover:text-white",
-                className
-            )}
-        >
-            <Icon className={cn(
-                "w-[18px] h-[18px] shrink-0 transition-colors",
-                variant === "danger" ? "text-red-500" : "text-white group-hover:text-white"
-            )} />
-            <span className="truncate">{label}</span>
-        </button>
-    );
+function menuItem(
+    Icon: React.ElementType,
+    label: string,
+    onClick?: () => void,
+    variant: "default" | "danger" = "default",
+    closeOnSelect = true,
+): GooDropdownItem {
+    return {
+        key: label,
+        onClick,
+        closeOnSelect,
+        className: cn(
+            "gap-3 px-4 rounded-full cursor-pointer text-base font-bold group",
+            variant === "danger"
+                ? "text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                : "text-zinc-200 hover:bg-white/5 hover:text-white"
+        ),
+        label: (
+            <>
+                <Icon className={cn(
+                    "w-[18px] h-[18px] shrink-0 transition-colors",
+                    variant === "danger" ? "text-red-500" : "text-white group-hover:text-white"
+                )} />
+                <span className="truncate">{label}</span>
+            </>
+        ),
+    };
 }
 
 // ── PostOptionsMenu ────────────────────────────────────────────────────────────
@@ -70,12 +70,14 @@ export interface PostOptionsMenuProps {
     isPinned?: boolean;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    /** Content of the trigger button (GooDropdown renders the <button> itself). */
     trigger: React.ReactNode;
+    triggerClassName?: string;
 }
 
-export function PostOptionsMenu({ 
-    postId, userId, username, onClose, onHide, isOwnPost, isPinned, 
-    open, onOpenChange, trigger 
+export function PostOptionsMenu({
+    postId, userId, username, onClose, onHide, isOwnPost, isPinned,
+    open, onOpenChange, trigger, triggerClassName
 }: PostOptionsMenuProps) {
     const [view, setView] = useState<"main" | "report">("main");
     const [reportSubmitted, setReportSubmitted] = useState(false);
@@ -84,6 +86,14 @@ export function PostOptionsMenu({
     const pinPost = trpc.content.pinPost.useMutation({ onSuccess: onClose });
     const unpinPost = trpc.content.unpinPost.useMutation({ onSuccess: onClose });
     const notInterested = trpc.content.notInterested.useMutation();
+
+    const handleOpenChange = (next: boolean) => {
+        onOpenChange(next);
+        if (!next) {
+            setView("main");
+            setReportSubmitted(false);
+        }
+    };
 
     const handleNotInterested = () => {
         notInterested.mutate({ subjectId: postId, authorId: userId ?? undefined, surface: "home" });
@@ -102,81 +112,85 @@ export function PostOptionsMenu({
         }, 1500);
     };
 
-    if (reportSubmitted) {
-        return (
-            <div className="px-4 py-6 text-sm text-zinc-300 text-center animate-in fade-in duration-200">
-                Thanks for the report. We'll review it.
-            </div>
-        );
-    }
+    let header: React.ReactNode;
+    let headerHeight = 0;
+    let items: GooDropdownItem[];
 
-    if (view === "report") {
-        return (
-            <div className="flex flex-col gap-0.5 animate-in slide-in-from-right-2 duration-200">
-                <div className="flex items-center px-4 py-2 gap-3 border-b border-white/5 mb-1">
-                    <button onClick={() => setView("main")} className="p-1 -ml-1 text-zinc-400 hover:text-white transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
-                    <span className="text-sm font-bold text-white">Report post</span>
-                </div>
-                {REPORT_REASONS.map(reason => (
-                    <MenuItem
-                        key={reason}
-                        icon={Flag}
-                        label={reason}
-                        onClick={() => handleReport(reason)}
-                    />
-                ))}
+    if (reportSubmitted) {
+        items = [{
+            key: "thanks",
+            type: "label",
+            height: 72,
+            className: "justify-center px-4 text-sm font-medium text-zinc-300",
+            label: "Thanks for the report. We'll review it.",
+        }];
+    } else if (view === "report") {
+        headerHeight = 40;
+        header = (
+            <div className="flex h-full items-center px-4 gap-3 border-b border-white/5">
+                <button
+                    onClick={() => setView("main")}
+                    className="p-1 -ml-1 text-zinc-400 hover:text-white transition-colors"
+                    aria-label="Back"
+                >
+                    <X className="w-4 h-4" />
+                </button>
+                <span className="text-sm font-bold text-white">Report post</span>
             </div>
         );
+        items = REPORT_REASONS.map(reason =>
+            menuItem(Flag, reason, () => handleReport(reason), "default", false)
+        );
+    } else if (isOwnPost) {
+        items = [
+            menuItem(Trash2, "Delete", () => { }, "danger"),
+            menuItem(
+                isPinned ? PinOff : Pin,
+                isPinned ? "Unpin from profile" : "Pin to your profile",
+                () => isPinned ? unpinPost.mutate({ postId }) : pinPost.mutate({ postId })
+            ),
+            menuItem(Sparkles, "Add/remove from Highlights"),
+            menuItem(ListPlus, "Add/remove from Lists"),
+            menuItem(Info, "Add/remove content disclosure"),
+            menuItem(MessageCircle, "Change who can reply"),
+            menuItem(BarChart3, "View post activity"),
+            menuItem(Code, "Embed post"),
+            menuItem(BarChart3, "View post analytics"),
+            menuItem(Megaphone, "Request Community Note"),
+        ];
+    } else {
+        items = [
+            menuItem(EyeOff, "Not interested in this post", handleNotInterested),
+            menuItem(UserMinus, `Unfollow @${username || "user"}`),
+            menuItem(UserPlus, `Subscribe to @${username || "user"}`),
+            menuItem(ListPlus, "Add/remove from Lists"),
+            menuItem(VolumeX, "Mute"),
+            menuItem(Ban, `Block @${username || "user"}`),
+            menuItem(BarChart3, "View post activity"),
+            menuItem(Code, "Embed post"),
+            menuItem(Flag, "Report post", () => setView("report"), "default", false),
+            menuItem(Megaphone, "Request Community Note"),
+        ];
     }
 
     return (
-        <Popover open={open} onOpenChange={onOpenChange}>
-            <PopoverTrigger asChild>
-                {trigger}
-            </PopoverTrigger>
-            <PopoverContent
-                side="bottom"
-                align="end"
-                sideOffset={8}
-                className="w-72 bg-neutral-950 border-flexborder/75 rounded-3xl shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 p-1.5 overflow-hidden z-50 transition-all duration-200"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-150">
-                    {isOwnPost ? (
-                        <>
-                            <MenuItem icon={Trash2} label="Delete" variant="danger" onClick={() => { }} />
-                            <MenuItem
-                                icon={isPinned ? PinOff : Pin}
-                                label={isPinned ? "Unpin from profile" : "Pin to your profile"}
-                                onClick={() => isPinned ? unpinPost.mutate({ postId }) : pinPost.mutate({ postId })}
-                            />
-                            <MenuItem icon={Sparkles} label="Add/remove from Highlights" />
-                            <MenuItem icon={ListPlus} label="Add/remove from Lists" />
-                            <MenuItem icon={Info} label="Add/remove content disclosure" />
-                            <MenuItem icon={MessageCircle} label="Change who can reply" />
-                            <MenuItem icon={BarChart3} label="View post activity" />
-                            <MenuItem icon={Code} label="Embed post" />
-                            <MenuItem icon={BarChart3} label="View post analytics" />
-                            <MenuItem icon={Megaphone} label="Request Community Note" />
-                        </>
-                    ) : (
-                        <>
-                            <MenuItem icon={EyeOff} label="Not interested in this post" onClick={handleNotInterested} />
-                            <MenuItem icon={UserMinus} label={`Unfollow @${username || "user"}`} />
-                            <MenuItem icon={UserPlus} label={`Subscribe to @${username || "user"}`} />
-                            <MenuItem icon={ListPlus} label="Add/remove from Lists" />
-                            <MenuItem icon={VolumeX} label="Mute" />
-                            <MenuItem icon={Ban} label={`Block @${username || "user"}`} />
-                            <MenuItem icon={BarChart3} label="View post activity" />
-                            <MenuItem icon={Code} label="Embed post" />
-                            <MenuItem icon={Flag} label="Report post" onClick={() => setView("report")} />
-                            <MenuItem icon={Megaphone} label="Request Community Note" />
-                        </>
-                    )}
-                </div>
-            </PopoverContent>
-        </Popover>
+        <GooDropdown
+            open={open}
+            onOpenChange={handleOpenChange}
+            side="bottom"
+            align="end"
+            width={288}
+            gap={8}
+            fill="#0a0a0a"
+            panelRadius={24}
+            itemHeight={44}
+            stopPropagation
+            triggerAriaLabel="Post options"
+            triggerClassName={triggerClassName}
+            trigger={trigger}
+            header={header}
+            headerHeight={headerHeight}
+            items={items}
+        />
     );
 }

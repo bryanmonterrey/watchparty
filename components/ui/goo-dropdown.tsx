@@ -7,12 +7,15 @@ import { cn } from '@/lib/utils'
 
 export type GooDropdownItem = {
   key?: string | number
-  type?: 'item' | 'label' | 'separator'
+  /** 'custom' renders the label node bare (no button wrapper) — for rows that are interactive components themselves. */
+  type?: 'item' | 'label' | 'separator' | 'custom'
   label?: React.ReactNode
   onClick?: () => void
   href?: string
   className?: string
   height?: number
+  /** Set false to keep the menu open after clicking (view switches, async flows). */
+  closeOnSelect?: boolean
 }
 
 type SpringConfig = {
@@ -30,6 +33,11 @@ export type GooDropdownProps = {
   triggerClassName?: string
   triggerAriaLabel?: string
   items: GooDropdownItem[]
+  /** Controlled open state; omit for uncontrolled. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** Stop click events from bubbling out (for menus inside clickable cards). */
+  stopPropagation?: boolean
   /** Optional fixed-height header rendered above the items. */
   header?: React.ReactNode
   headerHeight?: number
@@ -74,6 +82,9 @@ export function GooDropdown({
   triggerClassName,
   triggerAriaLabel,
   items,
+  open: controlledOpen,
+  onOpenChange,
+  stopPropagation = false,
   header,
   headerHeight = 48,
   width = 240,
@@ -90,7 +101,13 @@ export function GooDropdown({
   spring = DEFAULT_SPRING,
   className,
 }: GooDropdownProps) {
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next)
+    onOpenChange?.(next)
+  }
   const [elevated, setElevated] = useState(false)
   const shouldReduceMotion = useReducedMotion()
   const filterId = useId().replace(/[:]/g, '')
@@ -209,7 +226,7 @@ export function GooDropdown({
 
   const select = (item: GooDropdownItem) => {
     item.onClick?.()
-    setOpen(false)
+    if (item.closeOnSelect !== false) setOpen(false)
   }
 
   // Read the current shape during render so re-renders while open don't snap
@@ -224,7 +241,11 @@ export function GooDropdown({
   }
 
   return (
-    <div ref={rootRef} className={cn('relative inline-flex select-none', className)}>
+    <div
+      ref={rootRef}
+      className={cn('relative inline-flex select-none', className)}
+      onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+    >
       <svg className="absolute h-0 w-0" aria-hidden>
         <defs>
           <filter id={filterId}>
@@ -271,7 +292,7 @@ export function GooDropdown({
         ref={triggerRef}
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={triggerAriaLabel}
@@ -318,6 +339,13 @@ export function GooDropdown({
               return (
                 <div key={k} className="flex shrink-0 items-center px-2" style={{ height: h }}>
                   <div className={cn('h-px w-full bg-border/60', item.className)} />
+                </div>
+              )
+            }
+            if (item.type === 'custom') {
+              return (
+                <div key={k} className={cn('shrink-0', item.className)} style={{ height: h }}>
+                  {item.label}
                 </div>
               )
             }
