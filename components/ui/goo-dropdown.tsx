@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { animate, useMotionValue, useMotionValueEvent, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
@@ -114,10 +115,14 @@ export function GooDropdown({
 
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const portalRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
   const [btn, setBtn] = useState({ w: 78, h: 34 })
+  // Trigger's viewport position — the portal layer is fixed-positioned off it,
+  // so the panel lives outside the page flow and can never add scroll space.
+  const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null)
 
   useLayoutEffect(() => {
     const el = triggerRef.current
@@ -206,12 +211,46 @@ export function GooDropdown({
     if (disabled) setOpen(false)
   }, [disabled])
 
+  // Anchor the portal to the trigger: measure before paint when the layer
+  // mounts, and follow the trigger through scroll/resize while visible.
+  useLayoutEffect(() => {
+    if (!elevated) return
+    const measure = () => {
+      const r = triggerRef.current?.getBoundingClientRect()
+      if (r) {
+        setAnchor((prev) =>
+          prev && prev.left === r.left && prev.top === r.top ? prev : { left: r.left, top: r.top },
+        )
+      }
+    }
+    measure()
+    window.addEventListener('scroll', measure, { capture: true, passive: true })
+    window.addEventListener('resize', measure)
+    return () => {
+      window.removeEventListener('scroll', measure, { capture: true })
+      window.removeEventListener('resize', measure)
+    }
+  }, [elevated])
+
+  // Keep pre-click events inside the portal from reaching document-level
+  // dismiss listeners (Radix dialogs close on "outside" pointerdown/focusin).
+  // NOT 'click': React's delegated listeners sit on document.body, and
+  // stopping click before body would swallow the items' own onClick.
+  useEffect(() => {
+    const el = portalRef.current
+    if (!el || !elevated) return
+    const stop = (e: Event) => e.stopPropagation()
+    const events = ['pointerdown', 'mousedown', 'touchstart', 'focusin'] as const
+    events.forEach((ev) => el.addEventListener(ev, stop))
+    return () => events.forEach((ev) => el.removeEventListener(ev, stop))
+  }, [elevated])
+
   useEffect(() => {
     if (!open) return
     const onPointerDown = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const t = e.target as Node
+      if (rootRef.current?.contains(t) || portalRef.current?.contains(t)) return
+      setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
@@ -233,18 +272,20 @@ export function GooDropdown({
   // the inline clip-path back to the closed state.
   const currentShape = shapeAt(progress.get())
 
-  const overlayPos: React.CSSProperties = {
-    left: -geo.btnX,
-    top: -geo.btnY,
-    width: geo.layerW,
-    height: geo.layerH,
-  }
-
-  return (
+  const layer = elevated && anchor && (
     <div
-      ref={rootRef}
-      className={cn('relative inline-flex select-none', className)}
+      ref={portalRef}
       onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+      className="select-none"
+      style={{
+        position: 'fixed',
+        left: anchor.left - geo.btnX,
+        top: anchor.top - geo.btnY,
+        width: 0,
+        height: 0,
+        zIndex: 60,
+        pointerEvents: 'none',
+      }}
     >
       <svg className="absolute h-0 w-0" aria-hidden>
         <defs>
@@ -261,65 +302,57 @@ export function GooDropdown({
         </defs>
       </svg>
 
-      {/* Goo + content layers mount only while open/animating: their boxes
-          extend layerH past the trigger and would otherwise add phantom
-          scrollable space (and a fill pill behind the trigger) when closed. */}
-      {elevated && (
+      <div
+        aria-hidden
+        className="pointer-events-none absolute"
+        style={{
+          left: 0,
+          top: 0,
+          width: geo.layerW,
+          height: geo.layerH,
+          filter: shouldReduceMotion ? 'none' : `url(#${filterId})`,
+        }}
+      >
         <div
-          aria-hidden
-          className="pointer-events-none absolute"
+          className="absolute"
           style={{
-            ...overlayPos,
-            filter: shouldReduceMotion ? 'none' : `url(#${filterId})`,
-            zIndex: 50,
+            left: geo.btnX,
+            top: geo.btnY,
+            width: btn.w,
+            height: btn.h,
+            borderRadius: geo.closedRect.r,
+            background: fill,
           }}
-        >
-          <div
-            className="absolute"
-            style={{
-              left: geo.btnX,
-              top: geo.btnY,
-              width: btn.w,
-              height: btn.h,
-              borderRadius: geo.closedRect.r,
-              background: fill,
-            }}
-          />
-          <div
-            ref={panelRef}
-            className="absolute inset-0 will-change-[clip-path]"
-            style={{ background: fill, clipPath: currentShape }}
-          />
-        </div>
-      )}
+        />
+        <div
+          ref={panelRef}
+          className="absolute inset-0 will-change-[clip-path]"
+          style={{ background: fill, clipPath: currentShape }}
+        />
+      </div>
 
-      <button
-        ref={triggerRef}
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen(!open)}
+      {/* Non-interactive replica of the trigger so its label rides above the
+          goo fill; the real (invisible) trigger below still takes the clicks. */}
+      <span
+        aria-hidden
         aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={triggerAriaLabel}
-        className={cn(
-          'relative outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
-          triggerClassName,
-        )}
-        style={{ zIndex: elevated ? 51 : 1 }}
+        className={cn('pointer-events-none absolute', triggerClassName)}
+        style={{ left: geo.btnX, top: geo.btnY, width: btn.w, height: btn.h }}
       >
         {trigger}
-      </button>
+      </span>
 
-      {elevated && (
       <div
         ref={contentRef}
         role="menu"
         className="absolute will-change-[clip-path]"
         style={{
-          ...overlayPos,
+          left: 0,
+          top: 0,
+          width: geo.layerW,
+          height: geo.layerH,
           clipPath: currentShape,
           pointerEvents: open ? 'auto' : 'none',
-          zIndex: 52,
         }}
       >
         <div
@@ -405,7 +438,35 @@ export function GooDropdown({
           </div>
         </div>
       </div>
-      )}
+    </div>
+  )
+
+  return (
+    <div
+      ref={rootRef}
+      className={cn('relative inline-flex select-none', className)}
+      onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={triggerAriaLabel}
+        className={cn(
+          'relative outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+          triggerClassName,
+        )}
+        // While the portal layer is up, its replica renders the trigger's
+        // visuals; the real button stays (invisible) purely for interaction.
+        style={{ opacity: elevated ? 0 : 1 }}
+      >
+        {trigger}
+      </button>
+
+      {layer && createPortal(layer, document.body)}
     </div>
   )
 }
