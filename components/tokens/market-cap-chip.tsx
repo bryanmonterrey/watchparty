@@ -26,7 +26,7 @@ interface MarketCapChipProps {
  * Market-cap pill for video surfaces (hero carousel, section cards, feed
  * cards). Price only — no ticker/title. Frosted black like the rest of the
  * over-thumbnail chrome (LIVE badge, time nail); the cap in emerald, or a
- * muted $–.–– placeholder (en dashes) until the stream worker has cached
+ * muted $—.—— placeholder (em dashes) until the stream worker has cached
  * one. Safe
  * inside <Link>/onClick wrappers — it swallows its click and routes to the
  * token page itself.
@@ -50,7 +50,7 @@ export function MarketCapChip({ tokenSlug, marketCap, className }: MarketCapChip
                 className,
             )}
         >
-            <span className="tabular-nums">{marketCap == null ? "$–.––" : formatMarketCap(marketCap)}</span>
+            <span className="tabular-nums">{marketCap == null ? "$—.——" : formatMarketCap(marketCap)}</span>
         </button>
     );
 }
