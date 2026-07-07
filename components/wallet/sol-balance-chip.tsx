@@ -2,7 +2,6 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { Squircle } from "@/components/ui/squircle";
 import { SolanaMarkIcon } from "@/components/icons";
 
 // Native SOL mint as reported by getWalletAssets (display/balances mint).
@@ -18,18 +17,15 @@ function formatSol(balance: number) {
     return balance.toFixed(3);
 }
 
-// rounded-2xl approximates the squircle server-side; Lisse stamps
-// data-state="ready" once its clip-path lands, which switches it off so the
-// clip is the only shape (see wallet-button-skeleton).
+// The chip is a pill (rounded-full, no Squircle — repo rule for pills), so
+// its skeleton is the same pill shape; only Create/Wallet are squircles.
+// opacity-50 matches those two, which are disabled <Button>s and inherit
+// disabled:opacity-50.
 export function SolBalanceChipSkeleton() {
     return (
-        <Squircle asChild radius={16} autoEffects={false}>
-            {/* opacity-50 matches the Create/Wallet skeletons, which are
-                disabled <Button>s and inherit disabled:opacity-50. */}
-            <div className="flex h-11 w-[92px] items-center justify-center overflow-hidden rounded-2xl bg-[#6A6A6A]/35 opacity-50 backdrop-blur-xs data-[state=ready]:rounded-none">
-                <div className="size-full shimmer-skeleton" />
-            </div>
-        </Squircle>
+        <div className="flex h-11 w-[92px] items-center justify-center overflow-hidden rounded-full bg-[#6A6A6A]/35 opacity-50 backdrop-blur-xs">
+            <div className="size-full shimmer-skeleton" />
+        </div>
     );
 }
 
@@ -61,22 +57,20 @@ export function SolBalanceChip() {
     const balance = data?.tokens?.find((t) => t.mint === SOL_MINT)?.balance ?? 0;
 
     return (
-        <Squircle asChild radius={16} autoEffects={false}>
-            <button
-                type="button"
-                aria-label={balance > 0 ? `Wallet balance ${formatSol(balance)} SOL` : "Add money"}
-                onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))}
-                className="flex h-11 cursor-pointer items-center gap-2 rounded-full border-none bg-[#6A6A6A]/35 px-3.5 backdrop-blur-xs transition-colors hover:bg-[#6A6A6A]/50"
-            >
-                {balance > 0 ? (
-                    <>
-                        <SolanaMarkIcon className="h-3.5 w-4 shrink-0" />
-                        <span className="text-[15px] font-semibold text-white">{formatSol(balance)}</span>
-                    </>
-                ) : (
-                    <span className="text-[15px] font-bold text-flexwhite">Add money</span>
-                )}
-            </button>
-        </Squircle>
+        <button
+            type="button"
+            aria-label={balance > 0 ? `Wallet balance ${formatSol(balance)} SOL` : "Add money"}
+            onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))}
+            className="flex h-11 cursor-pointer items-center gap-2 rounded-full border-none bg-[#6A6A6A]/35 px-3.5 backdrop-blur-xs transition-colors hover:bg-[#6A6A6A]/50"
+        >
+            {balance > 0 ? (
+                <>
+                    <SolanaMarkIcon className="h-3.5 w-4 shrink-0" />
+                    <span className="text-[15px] font-semibold text-white">{formatSol(balance)}</span>
+                </>
+            ) : (
+                <span className="text-[15px] font-bold text-flexwhite">Add money</span>
+            )}
+        </button>
     );
 }
