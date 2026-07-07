@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { SolanaMarkIcon } from "@/components/icons";
@@ -29,25 +30,73 @@ export function SolBalanceChipSkeleton() {
     );
 }
 
+type WalletAssetsData = { tokens: Array<Record<string, unknown> & { mint: string; balance: number }>; solPrice: number; hiddenTokenMints: string[] };
+
+// Last-known assets snapshot, persisted per address. Hydrated back in as
+// TanStack placeholderData so the header paints the previous balance
+// instantly on load (Phantom-style) while the real fetch lands silently.
+const snapshotKey = (address: string) => `wallet-assets-snapshot:${address}`;
+
+function readSnapshot(address: string | null | undefined): WalletAssetsData | undefined {
+    if (!address || typeof window === "undefined") return undefined;
+    try {
+        const raw = window.localStorage.getItem(snapshotKey(address));
+        return raw ? (JSON.parse(raw) as WalletAssetsData) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function writeSnapshot(address: string, data: WalletAssetsData) {
+    try {
+        // Slim to what the header needs on first paint — token balances, no
+        // icons/metadata bloat, capped — so the entry stays a few KB.
+        const slim: WalletAssetsData = {
+            tokens: (data.tokens ?? []).slice(0, 25).map((t) => ({
+                mint: t.mint,
+                symbol: t.symbol,
+                name: t.name,
+                balance: t.balance,
+                decimals: t.decimals,
+                price: t.price,
+                usdValue: t.usdValue,
+            })) as WalletAssetsData["tokens"],
+            solPrice: data.solPrice,
+            hiddenTokenMints: data.hiddenTokenMints ?? [],
+        };
+        window.localStorage.setItem(snapshotKey(address), JSON.stringify(slim));
+    } catch {
+        // storage full/blocked — instant paint is best-effort
+    }
+}
+
 // One shared loading gate for all three header tiles (balance chip, Create,
 // wallet avatar): session + the first getWalletAssets fetch. Everyone who
 // calls this subscribes to the SAME query cache entry, so all tiles leave
 // their skeletons in the same render pass instead of the avatar landing
-// seconds before the balance. isLoading only covers the initial fetch —
-// background refetches (60s interval) don't re-skeleton anything.
+// seconds before the balance. A persisted last-known snapshot serves as
+// placeholderData, so returning users skip the skeletons entirely and the
+// fresh balance swaps in when the fetch lands. isLoading only covers the
+// initial no-placeholder fetch — background refetches never re-skeleton.
 export function useHeaderWalletLoading() {
     const { data: session, isLoading: sessionLoading } = useAuthSession();
     const walletAddress = session?.user?.wallet_address;
 
-    const { data, isLoading } = trpc.wallet.getWalletAssets.useQuery(
+    const { data, isLoading, isPlaceholderData } = trpc.wallet.getWalletAssets.useQuery(
         { address: walletAddress ?? "" },
         {
             enabled: !!walletAddress,
             staleTime: 30_000,
             refetchInterval: 60_000,
             retry: 1,
+            placeholderData: () => readSnapshot(walletAddress),
         },
     );
+
+    // Persist the latest real result for next visit's instant paint.
+    useEffect(() => {
+        if (walletAddress && data && !isPlaceholderData) writeSnapshot(walletAddress, data as WalletAssetsData);
+    }, [walletAddress, data, isPlaceholderData]);
 
     // No wallet linked → query stays disabled (isLoading false), tiles render
     // their signed-out states as soon as the session resolves.

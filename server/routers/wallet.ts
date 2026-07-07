@@ -10,7 +10,7 @@ import { headers } from "next/headers";
 import { TRPCError } from "@trpc/server";
 import { Keypair, Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { createServerConnection } from "@/lib/solana/server-connection";
-import { withCache, invalidateCache, TTL } from "@/lib/cache";
+import { withCache, withSwrCache, invalidateCache, TTL } from "@/lib/cache";
 import { resolvePool } from "@/lib/tokens/udf-datafeed";
 
 const subtle = globalThis.crypto?.subtle;
@@ -352,6 +352,8 @@ export const walletRouter = router({
                     const conn = createServerConnection();
                     sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 });
                 }
+                // Balances changed — drop the SWR'd assets snapshot.
+                if (ctx.user.wallet_address) invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
                 return { type: "tx" as const, signature: sig };
             }
         }),
@@ -416,6 +418,8 @@ export const walletRouter = router({
                 }
 
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
+                // Balances changed — drop the SWR'd assets snapshot.
+                if (ctx.user.wallet_address) invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
                 return { success: true, signature };
             } catch (error) {
                 await logWalletAccess({
@@ -674,6 +678,8 @@ export const walletRouter = router({
                 );
 
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
+                // Balances changed — drop the SWR'd assets snapshot.
+                invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
                 return { success: true, signature };
             } catch (error) {
                 await logWalletAccess({
@@ -776,6 +782,9 @@ export const walletRouter = router({
                     success: true,
                 });
 
+                // The tx changes balances — drop the SWR'd assets snapshot so
+                // the next fetch reflects it instead of serving stale.
+                invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
                 return { success: true, signature };
             } catch (error) {
                 console.error("Failed to sign and send transaction:", error);
@@ -2253,7 +2262,10 @@ export const walletRouter = router({
                 .eq("user_id", ctx.user.id)
                 .single();
 
-            const tokenDataPromise = withCache(`helius:assets:${address}`, TTL.WALLET_ASSETS, async () => {
+            // SWR: cached assets (even a few minutes old) are served instantly and
+            // refreshed in the background — the header/drawer never block on the
+            // Helius + DexScreener round-trips except on a true cold miss.
+            const tokenDataPromise = withSwrCache(`helius:assets:${address}`, TTL.WALLET_ASSETS, TTL.WALLET_ASSETS_STALE, async () => {
             const heliusKey = process.env.HELIUS_API_KEY;
             const url = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
 
