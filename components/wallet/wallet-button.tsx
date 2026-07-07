@@ -15,7 +15,7 @@ import { appToast } from "@/components/app-ui/app-toast";
 import { Loader2 } from "lucide-react";
 import { WalletButtonSkeleton } from "./wallet-button-skeleton";
 import { Squircle } from "@/components/ui/squircle";
-import { OPEN_WALLET_DRAWER_EVENT } from "./sol-balance-chip";
+import { OPEN_WALLET_DRAWER_EVENT, useHeaderWalletLoading } from "./sol-balance-chip";
 import "@/lib/types";
 
 // WalletConnectModal + WalletDrawer are interaction-only and HEAVY (the drawer
@@ -50,6 +50,9 @@ function WalletButtonInner() {
 
     const { publicKey, connected, connecting, disconnecting, disconnect, signMessage } = useWallet();
     const { data: session, isLoading: loading } = useAuthSession();
+    // Shared with the balance chip + Create button so all three header tiles
+    // leave their skeletons in the same paint (see useHeaderWalletLoading).
+    const { loading: headerLoading } = useHeaderWalletLoading();
     const [isSigningIn, startSigningIn] = useTransition();
 
     const isSignedIn = !!session?.user;
@@ -208,7 +211,7 @@ function WalletButtonInner() {
         }
     };
 
-    if (loading && session === undefined) {
+    if ((loading && session === undefined) || headerLoading) {
         return <WalletButtonSkeleton />;
     }
 

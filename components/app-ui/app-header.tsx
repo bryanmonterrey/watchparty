@@ -4,7 +4,6 @@ import { ThemeSelect } from '@/components/theme/theme-select'
 import { ClusterUiSelect } from '../cluster/cluster-ui'
 import WalletButton from '@/components/wallet/wallet-button'
 import { WalletButtonSkeleton } from '@/components/wallet/wallet-button-skeleton'
-import { useAuthSession } from '@/hooks/use-auth-session'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { CreateIcon, MenuIcon, SearchIcon } from '../icons'
@@ -12,7 +11,7 @@ import Image from 'next/image'
 import { CreateDialog } from './create-dialog'
 import { WithAuth } from '@/components/auth/with-auth'
 import { Squircle } from '@/components/ui/squircle'
-import { SolBalanceChip, SolBalanceChipSkeleton } from '@/components/wallet/sol-balance-chip'
+import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
@@ -43,7 +42,9 @@ export function AppHeader() {
   // On /search the header bar drives results live: every keystroke updates ?q
   // (which the search page reads), instead of only navigating on Enter.
   const [searchQ, setSearchQ] = useQueryState('q', searchParams.q)
-  const { data: session, isLoading } = useAuthSession()
+  // Shared gate (session + first wallet-assets fetch) so the Create tile
+  // leaves its skeleton in the same paint as the balance chip and avatar.
+  const { loading: isLoading } = useHeaderWalletLoading()
   const { toggleSidebar } = useSidebar()
   const [mounted, setMounted] = useState(false)
   const [scrollY, setScrollY] = useState(0)

@@ -29,10 +29,13 @@ export function SolBalanceChipSkeleton() {
     );
 }
 
-// Header SOL balance: Solana mark + amount; at zero balance it becomes an
-// "Add money" prompt in the Solana gradient. Reads the same getWalletAssets
-// query the wallet button prefetches, so it shares that cache entry.
-export function SolBalanceChip() {
+// One shared loading gate for all three header tiles (balance chip, Create,
+// wallet avatar): session + the first getWalletAssets fetch. Everyone who
+// calls this subscribes to the SAME query cache entry, so all tiles leave
+// their skeletons in the same render pass instead of the avatar landing
+// seconds before the balance. isLoading only covers the initial fetch —
+// background refetches (60s interval) don't re-skeleton anything.
+export function useHeaderWalletLoading() {
     const { data: session, isLoading: sessionLoading } = useAuthSession();
     const walletAddress = session?.user?.wallet_address;
 
@@ -46,13 +49,18 @@ export function SolBalanceChip() {
         },
     );
 
-    // Hold the skeleton while the session itself is loading — otherwise the
-    // disabled query reports isLoading false and this flashes "Add money"
-    // while Create/Wallet are still skeletons. No wallet linked → the query
-    // stays disabled and balance resolves to 0, so those users get the
-    // "Add money" state; the wallet button routes the click to the connect
-    // modal instead of the drawer.
-    if (sessionLoading || isLoading) return <SolBalanceChipSkeleton />;
+    // No wallet linked → query stays disabled (isLoading false), tiles render
+    // their signed-out states as soon as the session resolves.
+    return { loading: sessionLoading || isLoading, data, session };
+}
+
+// Header SOL balance: Solana mark + amount; at zero balance it becomes an
+// "Add money" prompt in the Solana gradient. Reads the same getWalletAssets
+// query the wallet button prefetches, so it shares that cache entry.
+export function SolBalanceChip() {
+    const { loading, data } = useHeaderWalletLoading();
+
+    if (loading) return <SolBalanceChipSkeleton />;
 
     const balance = data?.tokens?.find((t) => t.mint === SOL_MINT)?.balance ?? 0;
 
