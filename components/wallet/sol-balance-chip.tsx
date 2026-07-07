@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { getRealtimeClient } from "@/lib/supabase/realtime-client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { SolanaMarkIcon } from "@/components/icons";
 
 // Native SOL mint as reported by getWalletAssets (display/balances mint).
@@ -70,6 +72,33 @@ function writeSnapshot(address: string, data: WalletAssetsData) {
     }
 }
 
+// Refcounted realtime subscription: useHeaderWalletLoading mounts in three
+// header components, but one Supabase client must not join the same topic
+// three times — so the first subscriber opens the channel, the rest share it,
+// and the last unmount tears it down.
+const assetsChannels = new Map<string, { channel: RealtimeChannel; listeners: Set<() => void> }>();
+
+function subscribeAssetsChanged(address: string, listener: () => void): () => void {
+    let entry = assetsChannels.get(address);
+    if (!entry) {
+        const listeners = new Set<() => void>();
+        const channel = getRealtimeClient()
+            .channel(`wallet-assets:${address}`)
+            .on("broadcast", { event: "changed" }, () => listeners.forEach((l) => l()))
+            .subscribe();
+        entry = { channel, listeners };
+        assetsChannels.set(address, entry);
+    }
+    entry.listeners.add(listener);
+    return () => {
+        entry.listeners.delete(listener);
+        if (entry.listeners.size === 0) {
+            getRealtimeClient().removeChannel(entry.channel);
+            assetsChannels.delete(address);
+        }
+    };
+}
+
 // One shared loading gate for all three header tiles (balance chip, Create,
 // wallet avatar): session + the first getWalletAssets fetch. Everyone who
 // calls this subscribes to the SAME query cache entry, so all tiles leave
@@ -97,6 +126,17 @@ export function useHeaderWalletLoading() {
     useEffect(() => {
         if (walletAddress && data && !isPlaceholderData) writeSnapshot(walletAddress, data as WalletAssetsData);
     }, [walletAddress, data, isPlaceholderData]);
+
+    // Push, don't poll: the Helius assets webhook busts the server cache and
+    // broadcasts on this wallet's topic when a tx touches it — refetch right
+    // away so deposits/sends appear in seconds, not at the next interval.
+    const utils = trpc.useUtils();
+    useEffect(() => {
+        if (!walletAddress) return;
+        return subscribeAssetsChanged(walletAddress, () => {
+            utils.wallet.getWalletAssets.invalidate({ address: walletAddress });
+        });
+    }, [walletAddress, utils]);
 
     // No wallet linked → query stays disabled (isLoading false), tiles render
     // their signed-out states as soon as the session resolves.
