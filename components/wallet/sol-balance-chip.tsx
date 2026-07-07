@@ -24,7 +24,9 @@ function formatSol(balance: number) {
 export function SolBalanceChipSkeleton() {
     return (
         <Squircle asChild radius={16} autoEffects={false}>
-            <div className="flex h-11 w-[92px] items-center justify-center overflow-hidden rounded-2xl bg-[#6A6A6A]/35 backdrop-blur-xs data-[state=ready]:rounded-none">
+            {/* opacity-50 matches the Create/Wallet skeletons, which are
+                disabled <Button>s and inherit disabled:opacity-50. */}
+            <div className="flex h-11 w-[92px] items-center justify-center overflow-hidden rounded-2xl bg-[#6A6A6A]/35 opacity-50 backdrop-blur-xs data-[state=ready]:rounded-none">
                 <div className="size-full shimmer-skeleton" />
             </div>
         </Squircle>
