@@ -1794,6 +1794,27 @@ export function FilterIcon(props: SVGMotionProps<SVGSVGElement>) {
     );
 }
 
+// public/menu2.svg — two-line menu mark.
+export function Menu2Icon(props: SVGMotionProps<SVGSVGElement>) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M4 8.5L20 8.5" />
+            <path d="M4 15.5L20 15.5" />
+        </motion.svg>
+    );
+}
+
 export function VerifiedIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
     return (
         <motion.svg

@@ -1,8 +1,7 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
 import type { TokenStatus } from "./types";
-import { FilterIcon, RestingDotsIcon } from "../icons";
+import { Menu2Icon } from "../icons";
 
 
 const COLUMN_LABELS: Record<TokenStatus, string> = {
@@ -27,12 +26,9 @@ export function TokenColumnHeader({ status, tokensCount }: TokenColumnHeaderProp
           {tokensCount}
         </span>
       </div>
-      <div className="flex items-center gap-2 rounded-full backdrop-blur-sm">
+      <div className="flex items-center rounded-full backdrop-blur-sm">
         <button className="cursor-pointer text-flexwhite/80 hover:text-flexwhite transition-colors p-2.5 rounded-full hover:bg-white/5">
-          <FilterIcon className="size-6" />
-        </button>
-        <button className="cursor-pointer text-flexwhite/80 hover:text-flexwhite transition-colors p-2.5 rounded-full hover:bg-white/5">
-          <RestingDotsIcon className="size-6" />
+          <Menu2Icon className="size-6" />
         </button>
       </div>
     </div>
