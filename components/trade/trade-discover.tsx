@@ -414,9 +414,9 @@ export function TradeDiscover() {
             {/* Token table */}
             <div className="flex-1 px-4 pb-8 lg:px-6">
                 <Squircle asChild radius={24} autoEffects={false}>
-                    <div className="bg-panel shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+                    <div className="bg-panel">
                         {/* Column headers */}
-                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-[13px] font-semibold text-zinc-500")}>
+                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-[14px] font-semibold text-zinc-500")}>
                             <span>Token</span>
                             <span>Market cap</span>
                             <span className="max-md:hidden">Volume</span>
