@@ -4,10 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-    ArrowDown01Icon,
     Copy01Icon,
     Globe02Icon,
-    Sorting01Icon,
     Tick02Icon,
     UserGroup02Icon,
 } from "@hugeicons/core-free-icons";
@@ -90,6 +88,25 @@ function ringColor(progress: number, status: TokenStatus): string {
     if (status === "migrated") return "#00ED89";
     if (progress >= 80) return "#FFCC00"; // sunset — close to migration
     return "#00ED89"; // lantern
+}
+
+// public/menu2.svg inlined so it rides currentColor.
+function Menu2Icon({ className }: { className?: string }) {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+            aria-hidden="true"
+        >
+            <path d="M4 8.5L20 8.5" />
+            <path d="M4 15.5L20 15.5" />
+        </svg>
+    );
 }
 
 function XIcon({ className }: { className?: string }) {
@@ -391,9 +408,8 @@ export function TradeDiscover() {
                         triggerClassName="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                         trigger={
                             <>
-                                <HugeiconsIcon icon={Sorting01Icon} className="size-3.5" strokeWidth={2} />
+                                <Menu2Icon className="size-4" />
                                 {SORTS.find((s) => s.key === sort)?.label}
-                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
                             </>
                         }
                         items={SORTS.map((s) => ({
