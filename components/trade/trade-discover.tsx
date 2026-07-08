@@ -165,10 +165,10 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                 <TokenAvatar token={token} />
                 <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                        <span className="truncate text-[15px] font-bold tracking-tight text-white">
+                        <span className="truncate text-[16px] font-bold tracking-tight text-white">
                             {token.symbol.startsWith("$") ? token.symbol : `$${token.symbol}`}
                         </span>
-                        <span className="hidden truncate text-[13px] font-medium text-zinc-500 sm:inline">{token.name}</span>
+                        <span className="hidden truncate text-[14px] font-medium text-zinc-500 sm:inline">{token.name}</span>
                         <button onClick={copy} aria-label="Copy token address" className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300">
                             {copied
                                 ? <HugeiconsIcon icon={Tick02Icon} className="size-3 text-lantern" strokeWidth={2.5} />
@@ -183,13 +183,13 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                                     router.push(`/${token.creatorUsername ?? slug}`);
                                 }}
                                 aria-label="Watch the creator's live stream"
-                                className="flex cursor-pointer items-center gap-1 rounded-full bg-pastelred/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-pastelred transition-colors hover:bg-pastelred/25"
+                                className="flex cursor-pointer items-center gap-1 rounded-full bg-pastelred/15 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-pastelred transition-colors hover:bg-pastelred/25"
                             >
                                 <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
                                 LIVE{token.liveViewerCount > 0 ? ` · ${formatCount(token.liveViewerCount)}` : ""}
                             </button>
                         )}
-                        <span className="text-[11px] font-medium text-zinc-500">{token.timeAgo}</span>
+                        <span className="text-[12px] font-medium text-zinc-500">{token.timeAgo}</span>
                         {token.hasSocials.twitter && (
                             <button onClick={(e) => openSocial(e, token.hasSocials.twitter)} aria-label="X profile" className="cursor-pointer text-zinc-600 transition-colors hover:text-white">
                                 <XIcon className="size-[11px]" />
@@ -200,7 +200,7 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                                 <HugeiconsIcon icon={Globe02Icon} className="size-3" strokeWidth={2} />
                             </button>
                         )}
-                        <span className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 md:hidden">
+                        <span className="flex items-center gap-1 text-[12px] font-medium text-zinc-500 md:hidden">
                             <HugeiconsIcon icon={UserGroup02Icon} className="size-[11px]" strokeWidth={2} />
                             {formatCount(token.holderCount)}
                         </span>
@@ -210,28 +210,28 @@ function DiscoverRow({ token }: { token: TradeToken }) {
 
             {/* Market cap + 24h change */}
             <div className="min-w-0">
-                <p className="text-[14px] font-bold tabular-nums tracking-tight text-white">{formatUsd(token.marketCap)}</p>
-                <p className={cn("mt-0.5 text-[12px] font-semibold tabular-nums", up ? "text-lantern" : "text-pastelred")}>
+                <p className="text-[15px] font-bold tabular-nums tracking-tight text-white">{formatUsd(token.marketCap)}</p>
+                <p className={cn("mt-0.5 text-[13px] font-semibold tabular-nums", up ? "text-lantern" : "text-pastelred")}>
                     {up ? "+" : ""}{token.changePercent.toFixed(1)}%
                 </p>
             </div>
 
             {/* Volume 24h */}
             <div className="min-w-0 max-md:hidden">
-                <p className="text-[14px] font-semibold tabular-nums text-zinc-200">{token.volume > 0 ? formatUsd(token.volume) : "—"}</p>
-                <p className="mt-0.5 text-[11px] font-medium text-zinc-600">24h vol</p>
+                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{token.volume > 0 ? formatUsd(token.volume) : "—"}</p>
+                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">24h vol</p>
             </div>
 
             {/* Price */}
             <div className="min-w-0 max-lg:hidden">
-                <p className="text-[14px] font-semibold tabular-nums text-zinc-200">{formatPrice(token.priceUsd)}</p>
-                <p className="mt-0.5 text-[11px] font-medium text-zinc-600">price</p>
+                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{formatPrice(token.priceUsd)}</p>
+                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">price</p>
             </div>
 
             {/* TX + holders */}
             <div className="min-w-0 max-lg:hidden">
-                <p className="text-[14px] font-semibold tabular-nums text-zinc-200">{formatCount(token.txCount)}</p>
-                <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-zinc-600">
+                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{formatCount(token.txCount)}</p>
+                <p className="mt-0.5 flex items-center gap-1 text-[12px] font-medium text-zinc-600">
                     <HugeiconsIcon icon={UserGroup02Icon} className="size-[11px]" strokeWidth={2} />
                     {formatCount(token.holderCount)}
                 </p>
@@ -244,7 +244,7 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                         e.stopPropagation();
                         router.push(`/${slug}`);
                     }}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-lantern/10 px-4 py-2 text-[13px] font-bold text-lantern transition-colors hover:bg-lantern/25 active:scale-95"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-lantern/10 px-4 py-2 text-[14px] font-bold text-lantern transition-colors hover:bg-lantern/25 active:scale-95"
                 >
                     <SolanaIcon className="size-3.5" />
                     Buy
@@ -358,7 +358,7 @@ export function TradeDiscover() {
                                 key={t.key}
                                 onClick={() => selectTab(t.key)}
                                 className={cn(
-                                    "flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold tracking-tight transition-colors",
+                                    "flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-bold tracking-tight transition-colors",
                                     tab === t.key
                                         ? "bg-white text-black"
                                         : "text-zinc-400 hover:bg-white/10 hover:text-white",
@@ -372,7 +372,7 @@ export function TradeDiscover() {
                                 )}
                                 {t.label}
                                 {t.key === "live" && liveCount > 0 && (
-                                    <span className={cn("text-xs font-bold tabular-nums", tab === t.key ? "text-black/50" : "text-zinc-600")}>
+                                    <span className={cn("text-[13px] font-bold tabular-nums", tab === t.key ? "text-black/50" : "text-zinc-600")}>
                                         {liveCount}
                                     </span>
                                 )}
@@ -416,7 +416,7 @@ export function TradeDiscover() {
                 <Squircle asChild radius={24} autoEffects={false}>
                     <div className="bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
                         {/* Column headers */}
-                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-[12px] font-semibold text-zinc-500")}>
+                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-[13px] font-semibold text-zinc-500")}>
                             <span>Token</span>
                             <span>Market cap</span>
                             <span className="max-md:hidden">Volume</span>
