@@ -20,23 +20,41 @@ import { SolanaIcon } from "@/components/icons";
 import type { TokenStatus, TradeToken } from "./types";
 
 // Discover: the /trade landing (per the Axiom reference, in watchparty's
-// language) — tab pills + sort over ONE full-width token table. Every number
-// shown is a real cached market column; nothing decorative. The bonding ring
-// around each token image carries migration progress, so there's no separate
-// progress column.
+// language) — tab pills + sort over ONE full-width token table. Tabs are
+// discovery *views* (Trending / Live / Top / New) — lifecycle stages
+// (new/migrating/migrated) live on /trade/memescope as columns. "Live" is
+// tokens whose creator is streaming on watchparty right now — the native
+// counterpart of Axiom's "Pump Live". Every number shown is a real cached
+// market column; nothing decorative. The bonding ring around each token image
+// carries migration progress, so there's no separate progress column.
 
 const EMPTY: Record<TokenStatus, TradeToken[]> = { new: [], migrating: [], migrated: [] };
 
-type Tab = "trending" | TokenStatus;
+type Tab = "trending" | "live" | "top" | "new";
 
 const TABS: { key: Tab; label: string }[] = [
     { key: "trending", label: "Trending" },
+    { key: "live", label: "Live" },
+    { key: "top", label: "Top" },
     { key: "new", label: "New" },
-    { key: "migrating", label: "Migrating" },
-    { key: "migrated", label: "Migrated" },
 ];
 
 type SortKey = "volume" | "marketCap" | "txCount" | "newest";
+
+// Each tab's natural ordering; the sort dropdown can override it afterwards.
+const TAB_SORT: Record<Tab, SortKey> = {
+    trending: "volume",
+    live: "volume",
+    top: "marketCap",
+    new: "newest",
+};
+
+const EMPTY_COPY: Record<Tab, { title: string; hint: string }> = {
+    trending: { title: "No tokens here yet", hint: "New launches show up the moment they go live." },
+    live: { title: "No creators live right now", hint: "Tokens appear here while their creator is streaming." },
+    top: { title: "No tokens here yet", hint: "New launches show up the moment they go live." },
+    new: { title: "No fresh launches yet", hint: "Brand-new tokens land here first." },
+};
 
 const SORTS: { key: SortKey; label: string }[] = [
     { key: "volume", label: "Volume" },
@@ -158,6 +176,19 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                         </button>
                     </div>
                     <div className="mt-1 flex items-center gap-2">
+                        {token.creatorIsLive && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/${token.creatorUsername ?? slug}`);
+                                }}
+                                aria-label="Watch the creator's live stream"
+                                className="flex cursor-pointer items-center gap-1 rounded-full bg-pastelred/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-pastelred transition-colors hover:bg-pastelred/25"
+                            >
+                                <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
+                                LIVE{token.liveViewerCount > 0 ? ` · ${formatCount(token.liveViewerCount)}` : ""}
+                            </button>
+                        )}
                         <span className="text-[11px] font-medium text-zinc-500">{token.timeAgo}</span>
                         {token.hasSocials.twitter && (
                             <button onClick={(e) => openSocial(e, token.hasSocials.twitter)} aria-label="X profile" className="cursor-pointer text-zinc-600 transition-colors hover:text-white">
@@ -253,7 +284,9 @@ export function TradeDiscover() {
     });
 
     // Same realtime push as the memescope board: token-stream worker writes →
-    // Postgres change → invalidate. Anon users ride the 15s refetch.
+    // Postgres change → invalidate. `streams` is watched too so the Live tab
+    // reacts the moment a creator goes live/offline. Anon users ride the 15s
+    // refetch.
     useEffect(() => {
         let channel: ReturnType<ReturnType<typeof getRealtimeClient>["channel"]> | null = null;
         let cancelled = false;
@@ -270,6 +303,9 @@ export function TradeDiscover() {
                 .on("postgres_changes", { event: "*", schema: "public", table: "tokens" }, () =>
                     utils.trade.getFeed.invalidate(),
                 )
+                .on("postgres_changes", { event: "*", schema: "public", table: "streams" }, () =>
+                    utils.trade.getFeed.invalidate(),
+                )
                 .subscribe();
         })();
         return () => {
@@ -278,15 +314,17 @@ export function TradeDiscover() {
         };
     }, [utils]);
 
-    const counts: Record<Tab, number> = {
-        trending: data.new.length + data.migrating.length + data.migrated.length,
-        new: data.new.length,
-        migrating: data.migrating.length,
-        migrated: data.migrated.length,
-    };
+    const all = useMemo(
+        () => [...data.new, ...data.migrating, ...data.migrated],
+        [data],
+    );
+    const liveCount = all.filter((t) => t.creatorIsLive).length;
 
     const tokens = useMemo(() => {
-        const list = tab === "trending" ? [...data.new, ...data.migrating, ...data.migrated] : [...data[tab]];
+        const base =
+            tab === "live" ? all.filter((t) => t.creatorIsLive)
+            : tab === "new" ? [...data.new]
+            : [...all];
         const by: Record<SortKey, (a: TradeToken, b: TradeToken) => number> = {
             volume: (a, b) => b.volume - a.volume,
             marketCap: (a, b) => b.marketCap - a.marketCap,
@@ -295,8 +333,16 @@ export function TradeDiscover() {
             // "newest" keeps the natural order.
             newest: () => 0,
         };
-        return list.sort(by[sort]);
-    }, [data, tab, sort]);
+        // Live tab: most-watched streams first, market sort as tiebreaker.
+        return base.sort((a, b) =>
+            tab === "live" ? b.liveViewerCount - a.liveViewerCount || by[sort](a, b) : by[sort](a, b),
+        );
+    }, [data, all, tab, sort]);
+
+    const selectTab = (t: Tab) => {
+        setTab(t);
+        setSort(TAB_SORT[t]);
+    };
 
     return (
         <div className="flex h-full flex-col">
@@ -310,7 +356,7 @@ export function TradeDiscover() {
                         {TABS.map((t) => (
                             <button
                                 key={t.key}
-                                onClick={() => setTab(t.key)}
+                                onClick={() => selectTab(t.key)}
                                 className={cn(
                                     "flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold tracking-tight transition-colors",
                                     tab === t.key
@@ -318,10 +364,18 @@ export function TradeDiscover() {
                                         : "text-zinc-400 hover:bg-white/10 hover:text-white",
                                 )}
                             >
+                                {t.key === "live" && liveCount > 0 && (
+                                    <span className="relative flex size-2">
+                                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-pastelred opacity-75" />
+                                        <span className="relative inline-flex size-2 rounded-full bg-pastelred" />
+                                    </span>
+                                )}
                                 {t.label}
-                                <span className={cn("text-xs font-bold tabular-nums", tab === t.key ? "text-black/50" : "text-zinc-600")}>
-                                    {counts[t.key]}
-                                </span>
+                                {t.key === "live" && liveCount > 0 && (
+                                    <span className={cn("text-xs font-bold tabular-nums", tab === t.key ? "text-black/50" : "text-zinc-600")}>
+                                        {liveCount}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -376,8 +430,8 @@ export function TradeDiscover() {
                                 Array.from({ length: 10 }).map((_, i) => <RowSkeleton key={i} />)
                             ) : tokens.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center gap-1 py-20">
-                                    <p className="text-sm font-bold text-zinc-400">No tokens here yet</p>
-                                    <p className="text-xs text-zinc-600">New launches show up the moment they go live.</p>
+                                    <p className="text-sm font-bold text-zinc-400">{EMPTY_COPY[tab].title}</p>
+                                    <p className="text-xs text-zinc-600">{EMPTY_COPY[tab].hint}</p>
                                 </div>
                             ) : (
                                 tokens.map((t) => <DiscoverRow key={t.id} token={t} />)

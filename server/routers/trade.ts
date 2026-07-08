@@ -1,7 +1,9 @@
 import { router, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
-import { eq, and, desc, sql, isNotNull } from "drizzle-orm";
+import { streams } from "@/db/schema/content/stream";
+import { user } from "@/db/schema/auth/user";
+import { eq, and, desc, sql, isNotNull, type SQL } from "drizzle-orm";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -21,9 +23,25 @@ function timeAgo(date: Date): string {
     return `${Math.floor(h / 24)}d`;
 }
 
-type Row = typeof tokens.$inferSelect;
+// Each feed row carries the token plus live-stream state for its creator, so
+// the Discover "Live" tab (creator streaming right now) needs no extra query.
+function feedQuery(where: SQL | undefined) {
+    return db
+        .select({
+            token: tokens,
+            creatorIsLive: streams.isLive,
+            liveViewerCount: streams.viewerCount,
+            creatorUsername: user.username,
+        })
+        .from(tokens)
+        .leftJoin(streams, eq(streams.userId, tokens.creatorId))
+        .leftJoin(user, eq(user.id, tokens.creatorId))
+        .where(where);
+}
 
-function toTradeToken(t: Row) {
+type FeedRow = Awaited<ReturnType<typeof feedQuery>>[number];
+
+function toTradeToken({ token: t, creatorIsLive, liveViewerCount, creatorUsername }: FeedRow) {
     return {
         id: t.id,
         name: t.name,
@@ -48,6 +66,9 @@ function toTradeToken(t: Row) {
         status: t.phase,
         tokenAddress: t.tokenAddress,
         poolAddress: t.poolAddress,
+        creatorIsLive: creatorIsLive ?? false,
+        liveViewerCount: creatorIsLive ? (liveViewerCount ?? 0) : 0,
+        creatorUsername,
     };
 }
 
@@ -57,22 +78,13 @@ export const tradeRouter = router({
         const live = and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress));
 
         const [newCol, migratingCol, migratedCol] = await Promise.all([
-            db
-                .select()
-                .from(tokens)
-                .where(and(live, eq(tokens.phase, "new")))
+            feedQuery(and(live, eq(tokens.phase, "new")))
                 .orderBy(desc(tokens.createdAt))
                 .limit(PER_COLUMN),
-            db
-                .select()
-                .from(tokens)
-                .where(and(live, eq(tokens.phase, "migrating")))
+            feedQuery(and(live, eq(tokens.phase, "migrating")))
                 .orderBy(desc(tokens.bondingProgress))
                 .limit(PER_COLUMN),
-            db
-                .select()
-                .from(tokens)
-                .where(and(live, eq(tokens.phase, "migrated")))
+            feedQuery(and(live, eq(tokens.phase, "migrated")))
                 .orderBy(sql`${tokens.volume24hUsd} desc nulls last`)
                 .limit(PER_COLUMN),
         ]);

@@ -25,4 +25,8 @@ export interface TradeToken {
   status: TokenStatus;
   tokenAddress?: string | null;
   poolAddress?: string | null;
+  /** Creator is streaming on watchparty right now (Discover "Live" tab). */
+  creatorIsLive: boolean;
+  liveViewerCount: number;
+  creatorUsername?: string | null;
 }
