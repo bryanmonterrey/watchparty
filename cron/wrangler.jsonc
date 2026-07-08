@@ -6,8 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   // Drives the premium/treasury/feed crons by calling the app's guarded endpoints.
   // Collect hourly; sweep every 30 min; feed-corpus hourly at :17 (own slot so it
-  // never coincides with the others). Dispatched by event.cron in code.
-  "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *"] },
+  // never coincides with the others); assets-webhook sync daily at 04:30 UTC.
+  // Dispatched by event.cron in code.
+  "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *"] },
   "vars": { "TARGET_BASE_URL": "https://watchparty.xyz" },
   "observability": { "enabled": true }
   // CRON_SECRET is a secret and MUST equal the app's CRON_SECRET. Set out-of-band:

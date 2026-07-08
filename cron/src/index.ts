@@ -7,7 +7,8 @@
 // worker has no scheduled() handler.
 //
 // Schedules (wrangler.jsonc): collect "0 * * * *" (hourly), sweep "*/30 * * * *",
-// feed-corpus "17 * * * *" (hourly, Phoenix ranker corpus refresh).
+// feed-corpus "17 * * * *" (hourly, Phoenix ranker corpus refresh),
+// sync-assets-webhook "30 4 * * *" (daily, re-sync Helius watched wallets).
 
 interface Env {
     CRON_SECRET: string;
@@ -32,6 +33,9 @@ export default {
             // Phoenix feed ranker: refresh the candidate corpus (embed recent
             // posts + live streams into post_embeddings).
             ctx.waitUntil(call(env, "/api/cron/feed-corpus"));
+        } else if (event.cron === "30 4 * * *") {
+            // Re-sync the Helius wallet-assets webhook with newly linked wallets.
+            ctx.waitUntil(call(env, "/api/cron/sync-assets-webhook"));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }
