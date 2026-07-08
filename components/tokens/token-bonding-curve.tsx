@@ -2,7 +2,7 @@ import React from "react"
 
 export function TokenBondingCurve() {
     return (
-        <div className="bg-card rounded-[25px] p-5 flex flex-col gap-3">
+        <div className="bg-panel rounded-[25px] p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between text-lg font-bold">
                 <span className="text-zinc-200">Bonding curve progress</span>
                 <span className="text-zinc-200">100.0%</span>

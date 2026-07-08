@@ -38,7 +38,7 @@ export function TokenHeader({ token }: TokenHeaderProps) {
     ].filter((s): s is { href: string; Icon: typeof XIcon; label: string } => s !== null)
 
     return (
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-5 p-6 bg-card rounded-[25px]">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-5 p-6 bg-panel rounded-[25px]">
             <div className="flex flex-col gap-4">
                 {/* Image + Info Row */}
                 <div className="flex gap-5 items-start">

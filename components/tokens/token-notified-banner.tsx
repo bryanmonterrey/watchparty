@@ -2,7 +2,7 @@ import React from "react"
 
 export function TokenNotifiedBanner() {
     return (
-        <div className="bg-card rounded-[25px] p-5 flex flex-col gap-1 relative overflow-hidden">
+        <div className="bg-panel rounded-[25px] p-5 flex flex-col gap-1 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
             <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-zinc-200 flex items-center gap-2">

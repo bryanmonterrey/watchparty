@@ -40,7 +40,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
     }
 
     return (
-        <div className="bg-card rounded-[25px] flex flex-col overflow-hidden w-full">
+        <div className="bg-panel rounded-[25px] flex flex-col overflow-hidden w-full">
             {/* Filter Bar */}
             <div className="p-5 border-b border-zinc-800/40 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">

@@ -8,7 +8,7 @@ export function TokenSwapCard() {
     const [side, setSide] = useState<"buy" | "sell">("buy")
 
     return (
-        <div className="bg-card rounded-[25px] p-5 flex flex-col">
+        <div className="bg-panel rounded-[25px] p-5 flex flex-col">
             <div className="relative flex bg-[#16181c] rounded-full p-1 mb-6 shadow-inner w-full">
                 {(["buy", "sell"] as const).map((s) => {
                     const active = side === s

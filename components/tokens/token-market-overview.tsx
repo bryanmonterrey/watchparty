@@ -18,7 +18,7 @@ export function TokenMarketOverview({ token }: TokenMarketOverviewProps) {
     }
 
     return (
-        <div className="bg-card rounded-[25px] p-6 flex flex-col gap-4">
+        <div className="bg-panel rounded-[25px] p-6 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <div className="text-zinc-500 font-bold text-xs uppercase tracking-wider mb-1">Market Cap</div>

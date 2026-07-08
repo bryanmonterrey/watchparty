@@ -16,7 +16,7 @@ interface TokenDescriptionProps {
 
 export function TokenDescription({ token }: TokenDescriptionProps) {
     return (
-        <div className="bg-card rounded-[25px] p-6 flex flex-col gap-3">
+        <div className="bg-panel rounded-[25px] p-6 flex flex-col gap-3">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Avatar className="size-6">

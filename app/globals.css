@@ -179,6 +179,8 @@
   --color-sunset: #FFCC00;
   --color-pastelred: #FF746C;
   --color-pastelgray: #7F878E;
+  /* Translucent card wash used by the /trade grid + token page cards. */
+  --color-panel: rgba(255, 255, 255, 0.03);
   --blur-xs: 4px;
   --blur-sm: 8px;
   --blur-md: 12px;

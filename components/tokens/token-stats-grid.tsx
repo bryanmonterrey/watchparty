@@ -48,7 +48,7 @@ export function TokenStatsGrid({ token }: TokenStatsGridProps) {
     ]
 
     return (
-        <div className="bg-card rounded-[25px] p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-panel rounded-[25px] p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
             {stats.map((stat, i) => (
                 <div key={i} className="flex flex-col items-center justify-center py-2">
                     <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1.5">{stat.label}</span>

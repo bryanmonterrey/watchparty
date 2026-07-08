@@ -9,7 +9,7 @@ export function TokenHoldersTable({ token }: TokenHoldersTableProps) {
     const holderCount = token?.holderCount ?? 0
 
     return (
-        <div className="bg-card rounded-[25px] flex flex-col overflow-hidden w-full">
+        <div className="bg-panel rounded-[25px] flex flex-col overflow-hidden w-full">
             {/* Table Header / Actions */}
             <div className="p-5 border-b border-zinc-800/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex items-center gap-2.5">
