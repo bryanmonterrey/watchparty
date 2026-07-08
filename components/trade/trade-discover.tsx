@@ -416,12 +416,12 @@ export function TradeDiscover() {
                 <Squircle asChild radius={24} autoEffects={false}>
                     <div className="bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
                         {/* Column headers */}
-                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-[11px] font-bold uppercase tracking-wider text-zinc-600")}>
+                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-[12px] font-semibold text-zinc-500")}>
                             <span>Token</span>
                             <span>Market cap</span>
                             <span className="max-md:hidden">Volume</span>
                             <span className="max-lg:hidden">Price</span>
-                            <span className="max-lg:hidden">TXNS</span>
+                            <span className="max-lg:hidden">Txns</span>
                             <span className="text-right">Action</span>
                         </div>
 
