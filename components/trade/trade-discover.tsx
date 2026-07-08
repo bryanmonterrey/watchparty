@@ -171,7 +171,7 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                         <span className="hidden truncate text-[14px] font-medium text-zinc-500 sm:inline">{token.name}</span>
                         <button onClick={copy} aria-label="Copy token address" className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300">
                             {copied
-                                ? <HugeiconsIcon icon={Tick02Icon} className="size-3 text-lantern" strokeWidth={2.5} />
+                                ? <HugeiconsIcon icon={Tick02Icon} className="size-3 text-white" strokeWidth={2.5} />
                                 : <HugeiconsIcon icon={Copy01Icon} className="size-3" strokeWidth={2} />}
                         </button>
                     </div>
@@ -244,7 +244,7 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                         e.stopPropagation();
                         router.push(`/${slug}`);
                     }}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-lantern/10 px-4 py-2 text-[14px] font-bold text-lantern transition-colors hover:bg-lantern/25 active:scale-95"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95"
                 >
                     <SolanaIcon className="size-3.5" />
                     Buy
@@ -403,7 +403,7 @@ export function TradeDiscover() {
                             label: (
                                 <>
                                     {s.label}
-                                    {sort === s.key && <HugeiconsIcon icon={Tick02Icon} className="size-4 text-lantern" strokeWidth={2} />}
+                                    {sort === s.key && <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />}
                                 </>
                             ),
                         }))}
@@ -425,7 +425,7 @@ export function TradeDiscover() {
                             <span className="text-right">Action</span>
                         </div>
 
-                        <div className="divide-y divide-white/5">
+                        <div>
                             {isLoading ? (
                                 Array.from({ length: 10 }).map((_, i) => <RowSkeleton key={i} />)
                             ) : tokens.length === 0 ? (
