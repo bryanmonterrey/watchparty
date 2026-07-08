@@ -31,7 +31,11 @@ function toTradeToken(t: Row) {
         imageUrl: t.imageUrl ?? "",
         platform: "meteora" as const,
         timeAgo: timeAgo(t.createdAt),
-        hasSocials: {},
+        hasSocials: {
+            twitter: t.twitterUrl ?? undefined,
+            website: t.websiteUrl ?? undefined,
+        },
+        priceUsd: t.priceUsd ?? 0,
         holderCount: t.holderCount ?? 0,
         txCount: t.txCount24h ?? 0,
         bondingProgress: Math.round(t.bondingProgress ?? 0),

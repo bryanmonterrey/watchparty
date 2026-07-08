@@ -17,6 +17,7 @@ import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
 import { searchParams } from '@/lib/searchParams'
 import { GlobalSearch } from './global-search'
+import { TradeNav } from '@/components/trade/trade-nav'
 import Link from 'next/link'
  
 // rounded-2xl approximates the squircle server-side; Lisse stamps
@@ -127,6 +128,9 @@ export function AppHeader() {
             className="sm:size-[25px] opacity-90"
           />
           </Link>
+          {/* Trade section switcher (Frame 546): the page title doubles as a
+              goo dropdown over Discover/Memescope/Perps/Predictions. */}
+          {firstSegment === 'trade' && <TradeNav />}
           {/* Discover search lives in the header (right of the logo), not in the
               feed tab bar. */}
           {firstSegment === 'discover' && (

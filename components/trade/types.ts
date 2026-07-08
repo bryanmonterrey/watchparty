@@ -16,6 +16,7 @@ export interface TradeToken {
   txCount: number;
   bondingProgress: number; // 0-100
   solAmount: number;
+  priceUsd: number;
   marketCap: number;
   volume: number;
   buyPercent: number;
