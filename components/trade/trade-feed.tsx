@@ -52,14 +52,14 @@ export function TradeFeed() {
       <div className="sticky w-full top-0 left-0 right-0 z-40 flex items-center justify-center flex-col pt-2 pb-0 space-y-3">
         <div className="absolute inset-0 backdrop-blur-sm bg-black/20 -z-10 pointer-events-none" />
         <div className="w-full h-[52px] pointer-events-none" />
-        <div className="flex-1 w-full grid grid-cols-3 gap-2 px-1">
+        <div className="flex-1 w-full grid grid-cols-3 gap-3 px-3 lg:px-4">
           <TokenColumnHeader status="new" tokensCount={data.new.length} />
           <TokenColumnHeader status="migrating" tokensCount={data.migrating.length} />
           <TokenColumnHeader status="migrated" tokensCount={data.migrated.length} />
         </div>
       </div>
 
-      <div className="absolute inset-0 grid grid-cols-3 gap-2 px-1 overflow-hidden">
+      <div className="absolute inset-0 grid grid-cols-3 gap-3 px-3 lg:px-4 overflow-hidden">
         {(["new", "migrating", "migrated"] as const).map((status) => (
           <TokenColumn
             key={status}

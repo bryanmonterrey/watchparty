@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Squircle } from "@/components/ui/squircle";
 import { TokenRow } from "./token-row";
 import type { TradeToken, TokenStatus } from "./types";
 
@@ -11,41 +12,53 @@ interface TokenColumnProps {
   className?: string;
 }
 
-export function TokenColumn({ tokens, loading, className }: TokenColumnProps) {
+const EMPTY_COPY: Record<TokenStatus, { title: string; hint: string }> = {
+  new: { title: "No fresh launches yet", hint: "Brand-new tokens land here first." },
+  migrating: { title: "Nothing bonding right now", hint: "Tokens close to migration show up here." },
+  migrated: { title: "No graduates yet", hint: "Tokens that complete their curve appear here." },
+};
+
+export function TokenColumn({ status, tokens, loading, className }: TokenColumnProps) {
   return (
     <div className={cn("h-full overflow-y-auto scroll-smooth hidden-scrollbar", className)}>
       {/* Pushes initial content below the fixed header; scrolls away as you go up */}
       <div className="h-[116px] shrink-0" />
-      <div className="bg-black/50 rounded-xl">
-        {loading ? (
-          <div className="flex flex-col gap-px">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <TokenRowSkeleton key={i} />
-            ))}
-          </div>
-        ) : tokens.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-zinc-700 text-xs font-medium">
-            No tokens in this category
-          </div>
-        ) : (
-          <div className="flex flex-col">
-            {tokens.map((token) => <TokenRow key={token.id} token={token} />)}
-          </div>
-        )}
-      </div>
+      <Squircle asChild radius={24} autoEffects={false}>
+        <div className="bg-panel">
+          {loading ? (
+            <div className="flex flex-col py-1">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <TokenRowSkeleton key={i} />
+              ))}
+            </div>
+          ) : tokens.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-1 px-6 py-20 text-center">
+              <p className="text-sm font-bold text-zinc-400">{EMPTY_COPY[status].title}</p>
+              <p className="text-xs text-zinc-600">{EMPTY_COPY[status].hint}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col py-1">
+              {tokens.map((token) => <TokenRow key={token.id} token={token} />)}
+            </div>
+          )}
+        </div>
+      </Squircle>
     </div>
   );
 }
 
+// Mirrors TokenRow's real geometry (48px ring avatar, three text lines, Buy
+// pill) so the swap from skeleton → data doesn't jump.
 function TokenRowSkeleton() {
   return (
-    <div className="flex items-center gap-2.5 px-2.5 py-2.5">
-      <div className="size-10 rounded-lg bg-white/5 animate-pulse shrink-0" />
-      <div className="flex-1 flex flex-col gap-2">
-        <div className="h-3 w-2/3 rounded bg-white/5 animate-pulse" />
-        <div className="h-2.5 w-1/2 rounded bg-white/5 animate-pulse" />
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3">
+      <div className="size-12 shrink-0 overflow-hidden rounded-[14px]"><div className="size-full shimmer-skeleton" /></div>
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="h-3.5 w-2/3 max-w-[140px] overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+        <div className="h-3 w-1/2 max-w-[110px] overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+        <div className="h-3 w-3/5 max-w-[120px] overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
       </div>
-      <div className="h-3 w-10 rounded bg-white/5 animate-pulse" />
+      <div className="h-9 w-[72px] overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
     </div>
   );
 }
