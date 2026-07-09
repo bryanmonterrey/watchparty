@@ -3,7 +3,7 @@
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { animate, useMotionValue, useMotionValueEvent, useReducedMotion } from 'motion/react'
+import { useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 export type GooDropdownItem = {
@@ -65,9 +65,14 @@ const SEPARATOR_ROW_H = 9
 
 const DEFAULT_SPRING: SpringConfig = {
   type: 'spring',
-  visualDuration: 0.3,
+  visualDuration: 0.22,
   bounce: 0.15,
 }
+
+// The morph runs on native CSS clip-path transitions (compositor-driven —
+// no per-frame JS). Open gets a springy overshoot; close is a quick ease.
+const OPEN_EASE = 'cubic-bezier(0.34, 1.3, 0.64, 1)'
+const CLOSE_EASE = 'cubic-bezier(0.4, 0, 0.68, 1)'
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
@@ -180,38 +185,55 @@ export function GooDropdown({
       )
   }, [geo])
 
-  const progress = useMotionValue(0)
+  // Rendered shape target: false = trigger pill, true = open panel. The
+  // browser interpolates between the two inset() clip-paths natively.
+  const [shown, setShown] = useState(false)
 
   // Fully open + at rest: the goo blur would keep bridging trigger → panel
   // with a visible neck, so drop the filter once the morph settles and
   // restore it the moment the shape animates again.
   const [settled, setSettled] = useState(false)
 
-  useMotionValueEvent(progress, 'change', (v) => {
-    const shape = shapeAt(v)
-    if (panelRef.current) panelRef.current.style.clipPath = shape
-    if (contentRef.current) contentRef.current.style.clipPath = shape
-    if (v === 0) setElevated(false)
-    setSettled(v === 1)
-  })
+  const openDur = spring.visualDuration ?? 0.22
+  const closeDur = openDur * 0.65
 
   useEffect(() => {
-    if (open) setElevated(true)
-    if (shouldReduceMotion) {
-      progress.set(open ? 1 : 0)
-      return
+    if (open) {
+      setElevated(true)
+      if (shouldReduceMotion) {
+        setShown(true)
+        setSettled(true)
+        return
+      }
+      // Let the layer mount and paint the closed shape first, then retarget —
+      // otherwise the transition has no start frame and the panel just pops.
+      let raf2 = 0
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setShown(true))
+      })
+      return () => {
+        cancelAnimationFrame(raf1)
+        cancelAnimationFrame(raf2)
+      }
     }
-    const config = {
-      ...spring,
-      visualDuration: open
-        ? (spring.visualDuration ?? 0.3)
-        : spring.visualDuration
-          ? spring.visualDuration * 0.7
-          : 0.2,
-    }
-    const animation = animate(progress, open ? 1 : 0, config)
-    return () => animation.stop()
-  }, [open, progress, spring, shouldReduceMotion])
+    setShown(false)
+    setSettled(false)
+    if (shouldReduceMotion) setElevated(false)
+  }, [open, shouldReduceMotion])
+
+  // transitionend unmounts the layer after close; this is the backstop for
+  // the cases where it never fires (ancestor hidden mid-close, etc.).
+  useEffect(() => {
+    if (open || shouldReduceMotion || !elevated) return
+    const t = setTimeout(() => setElevated(false), closeDur * 1000 + 150)
+    return () => clearTimeout(t)
+  }, [open, shouldReduceMotion, elevated, closeDur])
+
+  const handleShapeEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== 'clip-path' || e.target !== e.currentTarget) return
+    if (open) setSettled(true)
+    else setElevated(false)
+  }
 
   useEffect(() => {
     if (disabled) setOpen(false)
@@ -274,9 +296,12 @@ export function GooDropdown({
     if (item.closeOnSelect !== false) setOpen(false)
   }
 
-  // Read the current shape during render so re-renders while open don't snap
-  // the inline clip-path back to the closed state.
-  const currentShape = shapeAt(progress.get())
+  // The style only ever carries the *target* shape; the browser owns the
+  // interpolation, so re-renders while open can never snap it back.
+  const targetShape = shapeAt(shown ? 1 : 0)
+  const shapeTransition = shouldReduceMotion
+    ? undefined
+    : `clip-path ${shown ? openDur : closeDur}s ${shown ? OPEN_EASE : CLOSE_EASE}`
 
   const layer = elevated && anchor && (
     <div
@@ -332,8 +357,9 @@ export function GooDropdown({
         />
         <div
           ref={panelRef}
+          onTransitionEnd={handleShapeEnd}
           className="absolute inset-0 will-change-[clip-path]"
-          style={{ background: fill, clipPath: currentShape }}
+          style={{ background: fill, clipPath: targetShape, transition: shapeTransition }}
         />
       </div>
 
@@ -357,7 +383,8 @@ export function GooDropdown({
           top: 0,
           width: geo.layerW,
           height: geo.layerH,
-          clipPath: currentShape,
+          clipPath: targetShape,
+          transition: shapeTransition,
           pointerEvents: open ? 'auto' : 'none',
         }}
       >
