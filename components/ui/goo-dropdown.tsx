@@ -182,11 +182,17 @@ export function GooDropdown({
 
   const progress = useMotionValue(0)
 
+  // Fully open + at rest: the goo blur would keep bridging trigger → panel
+  // with a visible neck, so drop the filter once the morph settles and
+  // restore it the moment the shape animates again.
+  const [settled, setSettled] = useState(false)
+
   useMotionValueEvent(progress, 'change', (v) => {
     const shape = shapeAt(v)
     if (panelRef.current) panelRef.current.style.clipPath = shape
     if (contentRef.current) contentRef.current.style.clipPath = shape
     if (v === 0) setElevated(false)
+    setSettled(v === 1)
   })
 
   useEffect(() => {
@@ -310,7 +316,7 @@ export function GooDropdown({
           top: 0,
           width: geo.layerW,
           height: geo.layerH,
-          filter: shouldReduceMotion ? 'none' : `url(#${filterId})`,
+          filter: shouldReduceMotion || settled ? 'none' : `url(#${filterId})`,
         }}
       >
         <div
