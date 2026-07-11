@@ -47,7 +47,13 @@ export function useSettingsTab() {
 type SubItem = { id: SettingsTab; label: string };
 // Related panels share one nav item: `subs` render as a pill row above the
 // content, and the item's own `id` is its first sub (the tab a click opens).
-export type SettingsNavItem = { id: SettingsTab; label: string; icon: IconSvgElement; subs?: SubItem[] };
+export type SettingsNavItem = {
+    id: SettingsTab;
+    label: string;
+    description: string;
+    icon: IconSvgElement;
+    subs?: SubItem[];
+};
 
 // Ordered by how often a typical user needs each: personal basics first,
 // then account plumbing, money, creator tools, admin last (Instagram-style
@@ -59,16 +65,19 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "profile",
                 label: "Profile",
+                description: "Avatar, bio and verification",
                 icon: UserCircleIcon,
                 subs: [
                     { id: "profile", label: "Edit profile" },
                     { id: "verification", label: "Verification" },
                 ],
             },
-            { id: "notifications", label: "Notifications", icon: Notification02Icon },
+            { id: "notifications", label: "Notifications", description: "What we notify you about",
+                icon: Notification02Icon },
             {
                 id: "privacy",
                 label: "Privacy",
+                description: "Visibility, blocked and muted",
                 icon: Shield01Icon,
                 subs: [
                     { id: "privacy", label: "Privacy" },
@@ -85,6 +94,7 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "sessions",
                 label: "Security",
+                description: "Sessions, 2FA and passkeys",
                 icon: SecurityCheckIcon,
                 subs: [
                     { id: "sessions", label: "Sessions" },
@@ -96,6 +106,7 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "linked",
                 label: "Connections",
+                description: "Linked accounts and wallets",
                 icon: ConnectIcon,
                 subs: [
                     { id: "linked", label: "Linked accounts" },
@@ -107,10 +118,12 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
     {
         label: "Payments",
         items: [
-            { id: "premium", label: "Premium", icon: Crown02Icon },
+            { id: "premium", label: "Premium", description: "Your platform plan",
+                icon: Crown02Icon },
             {
                 id: "subscriptions",
                 label: "Subscriptions",
+                description: "Subs you pay for and gifts",
                 icon: FavouriteIcon,
                 subs: [
                     { id: "subscriptions", label: "My subscriptions" },
@@ -120,6 +133,7 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "payouts",
                 label: "Earnings",
+                description: "Payouts and referrals",
                 icon: Wallet01Icon,
                 subs: [
                     { id: "payouts", label: "Payouts" },
@@ -131,11 +145,14 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
     {
         label: "Creator",
         items: [
-            { id: "analytics", label: "Analytics", icon: Analytics01Icon },
-            { id: "stream", label: "Stream", icon: PodcastIcon },
+            { id: "analytics", label: "Analytics", description: "Followers, views, top posts",
+                icon: Analytics01Icon },
+            { id: "stream", label: "Stream", description: "Stream key and setup",
+                icon: PodcastIcon },
             {
                 id: "vips",
                 label: "Community",
+                description: "VIPs, mods and channel bans",
                 icon: UserGroup02Icon,
                 subs: [
                     { id: "vips", label: "VIP members" },
@@ -146,6 +163,7 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "welcome",
                 label: "Messages",
+                description: "Welcome and mass messages",
                 icon: MessageAdd01Icon,
                 subs: [
                     { id: "welcome", label: "Welcome message" },
@@ -155,6 +173,7 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "tiers",
                 label: "Monetization",
+                description: "Tiers, badges, promo codes",
                 icon: Layers01Icon,
                 subs: [
                     { id: "tiers", label: "Subscription tiers" },
@@ -165,6 +184,7 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "vault",
                 label: "Content",
+                description: "Media vault and emotes",
                 icon: Archive02Icon,
                 subs: [
                     { id: "vault", label: "Media vault" },
@@ -175,7 +195,8 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
     },
     {
         label: "Admin",
-        items: [{ id: "admin", label: "Admin", icon: Flag02Icon }],
+        items: [{ id: "admin", label: "Admin", description: "Platform administration",
+                icon: Flag02Icon }],
     },
 ];
 
@@ -199,12 +220,12 @@ export function SettingsNav() {
         <GooDropdown
             align="start"
             side="bottom"
-            width={260}
+            width={272}
             gap={10}
             fill="#101011"
             panelRadius={24}
-            itemHeight={40}
-            maxPanelHeight={520}
+            itemHeight={56}
+            maxPanelHeight={560}
             triggerAriaLabel="Settings sections"
             triggerClassName="flex h-10 cursor-pointer items-center gap-1.5 rounded-full px-3 text-lg font-bold tracking-tight text-white transition-colors hover:bg-white/10"
             trigger={
@@ -215,22 +236,32 @@ export function SettingsNav() {
             }
             items={navGroups.flatMap((group) => [
                 { key: `label-${group.label}`, type: "label" as const, label: group.label, height: 30 },
-                ...group.items.map((item) => ({
-                    key: item.id,
-                    onClick: () => setTab(item.id),
-                    className: cn(
-                        "gap-2.5 px-3 rounded-full cursor-pointer text-sm font-semibold",
-                        itemOwnsTab(item, tab)
-                            ? "bg-white/10 text-white"
-                            : "text-zinc-300 hover:bg-white/5 hover:text-white",
-                    ),
-                    label: (
-                        <>
-                            <HugeiconsIcon icon={item.icon} className="size-4 shrink-0" strokeWidth={2} />
-                            {item.label}
-                        </>
-                    ),
-                })),
+                ...group.items.map((item) => {
+                    const isActive = itemOwnsTab(item, tab);
+                    return {
+                        key: item.id,
+                        onClick: () => setTab(item.id),
+                        className: "gap-3 px-3 rounded-2xl cursor-pointer hover:bg-white/5 group",
+                        label: (
+                            <>
+                                <span
+                                    className={cn(
+                                        "flex size-9 shrink-0 items-center justify-center rounded-full",
+                                        isActive
+                                            ? "bg-white text-black"
+                                            : "bg-white/5 text-zinc-400 transition-colors group-hover:text-white",
+                                    )}
+                                >
+                                    <HugeiconsIcon icon={item.icon} className="size-4.5" strokeWidth={1.8} />
+                                </span>
+                                <span className="flex min-w-0 flex-col">
+                                    <span className="text-[15px] font-bold text-white">{item.label}</span>
+                                    <span className="truncate text-xs text-zinc-500">{item.description}</span>
+                                </span>
+                            </>
+                        ),
+                    };
+                }),
             ])}
         />
     );
