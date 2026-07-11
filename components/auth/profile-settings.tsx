@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { authClient } from "@/lib/auth/client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "boneyard-js/react";
-import { User } from "lucide-react";
 import AvatarUpload from "@/components/file-upload/avatar-upload";
 import type { FileWithPreview } from "@/hooks/use-file-upload";
 import { AnimatePresence, motion } from "framer-motion";
@@ -14,7 +12,6 @@ import { trpc } from "@/lib/trpc/client";
 import { appToast } from "@/components/app-ui/app-toast";
 export default function ProfileSettings() {
     const { data: session } = useAuthSession();
-    const [isLoading, setIsLoading] = useState(true);
     const [username, setUsername] = useState("");
     const [displayName, setDisplayName] = useState("");
     const [bio, setBio] = useState("");
@@ -37,20 +34,21 @@ export default function ProfileSettings() {
                 appToast.success("Fees claimed successfully!");
                 refetchEscrows();
             }
-        } catch (e: any) {
-            appToast.error(e.message || "Failed to claim fees");
+        } catch (e) {
+            appToast.error(e instanceof Error ? e.message : "Failed to claim fees");
         }
     };
 
-    useEffect(() => {
-        if (session?.user) {
-            setUsername(session.user.username || "");
-            setDisplayName(session.user.name || "");
-            setBio(session.user.bio || "");
-            // Bio would come from session if it exists in the user object
-            setIsLoading(false);
-        }
-    }, [session]);
+    // Seed the form when the session user arrives/changes — render-time
+    // adjustment instead of an effect (react-hooks/set-state-in-effect)
+    const [syncedUserId, setSyncedUserId] = useState<string | null>(null);
+    if (session?.user && syncedUserId !== session.user.id) {
+        setSyncedUserId(session.user.id);
+        setUsername(session.user.username || "");
+        setDisplayName(session.user.name || "");
+        setBio(session.user.bio || "");
+    }
+    const isLoading = !session?.user;
 
     const handleAvatarChange = (file: FileWithPreview | null) => {
         if (file?.file instanceof File) {
@@ -61,7 +59,7 @@ export default function ProfileSettings() {
     };
 
     const handleSubmit = () => {
-        const updates: any = {};
+        const updates: { username?: string; displayName?: string; bio?: string; avatar?: File } = {};
 
         if (username !== session?.user?.username) {
             updates.username = username;
@@ -80,7 +78,7 @@ export default function ProfileSettings() {
         }
 
         updateProfile.mutate(updates, {
-            onSuccess: (data) => {
+            onSuccess: () => {
                 setAvatarFile(null);
                 setResetCount(prev => prev + 1); // Reset avatar component
             },

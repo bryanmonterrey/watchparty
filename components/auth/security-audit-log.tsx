@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { Shield, Eye, Key, UserPlus, UserMinus, Edit } from "lucide-react";
 import { Skeleton } from "boneyard-js/react";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
@@ -23,16 +21,6 @@ const actionLabels: Record<ActionType, string> = {
     passkey_removed: "Passkey Removed",
     passkey_renamed: "Passkey Renamed",
 };
-
-interface AuditLog {
-    id: string;
-    action: ActionType;
-    ipAddress: string;
-    userAgent: string;
-    success: boolean;
-    createdAt: string;
-    metadata?: any;
-}
 
 export default function SecurityAuditLog() {
     const { data, isLoading } = useAuditLogs();

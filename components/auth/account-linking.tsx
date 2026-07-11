@@ -1,10 +1,8 @@
 "use client";
 
-"use client";
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Link as LinkIcon, Unlink, Shield, AlertTriangle, Check } from "lucide-react";
+import { Link as LinkIcon, Unlink, AlertTriangle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "boneyard-js/react";
 import {
@@ -17,14 +15,6 @@ import {
 import { useLinkedAccounts, useLinkAccount, useUnlinkAccount } from "@/hooks/use-linked-accounts";
 import { appToast } from "@/components/app-ui/app-toast";
 import { useAuthSession } from "@/hooks/use-auth-session";
-
-interface LinkedAccount {
-    id: string;
-    provider: string;
-    providerId: string;
-    email?: string;
-    createdAt: Date;
-}
 
 const providers = [
     {
@@ -95,10 +85,6 @@ export default function AccountLinking() {
 
     const linkedAccounts = data?.accounts || [];
     const [showUnlinkDialog, setShowUnlinkDialog] = useState<string | null>(null);
-
-    const handleLinkAccount = (provider: string) => {
-        linkAccount.mutate(provider);
-    };
 
     const handleUnlinkAccount = (accountId: string, provider: string) => {
         // Check if this is the last authentication method
@@ -263,7 +249,7 @@ export default function AccountLinking() {
                             onClick={() => {
                                 const account = linkedAccounts.find(a => a.id === showUnlinkDialog);
                                 if (account) {
-                                    unlinkAccount.mutate({ accountId: account.id, provider: account.provider });
+                                    handleUnlinkAccount(account.id, account.provider);
                                 }
                             }}
                             variant="destructive"

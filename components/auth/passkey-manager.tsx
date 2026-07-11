@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Key, Trash2, Edit, Plus, Shield, Smartphone } from "lucide-react";
+import { Trash2, Edit, Plus, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "boneyard-js/react";
 import {
@@ -247,7 +247,7 @@ export default function PasskeyManager() {
                     </DialogHeader>
                     <div className="space-y-4">
                         <p className="text-sm text-neutral-400">
-                            You won't be able to use this device for biometric authentication anymore.
+                            You won&apos;t be able to use this device for biometric authentication anymore.
                             {passkeys.length <= 1 && (
                                 <span className="block mt-2 text-red-400">
                                     ⚠️ This is your last passkey. Deleting it will disable passkey authentication.

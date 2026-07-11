@@ -9,11 +9,9 @@ import {
     Analytics01Icon,
     Archive02Icon,
     ArrowDown01Icon,
-    Award01Icon,
-    BanIcon,
     CheckmarkBadge01Icon,
+    ConnectIcon,
     Crown02Icon,
-    Crown03Icon,
     EyeIcon,
     FavouriteIcon,
     Flag02Icon,
@@ -24,16 +22,11 @@ import {
     Notification02Icon,
     PodcastIcon,
     SecurityCheckIcon,
-    SecurityLockIcon,
-    SentIcon,
     Shield01Icon,
-    Shield02Icon,
     SmileIcon,
-    Tag01Icon,
     UserBlock01Icon,
+    UserCircleIcon,
     UserGroup02Icon,
-    ViewOffSlashIcon,
-    VolumeMute02Icon,
     Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
@@ -89,26 +82,63 @@ const ReferralSettings = dynamic(() => import("@/components/settings/referral-se
 const SubscriptionTierManager = dynamic(() => import("@/components/creator/subscription-tier-manager").then(m => m.SubscriptionTierManager), { loading: PanelLoading, ssr: false });
 const GiftInbox = dynamic(() => import("@/components/settings/gift-inbox").then(m => m.GiftInbox), { loading: PanelLoading, ssr: false });
 const AdminDashboard = dynamic(() => import("@/components/admin/admin-dashboard").then(m => m.AdminDashboard), { loading: PanelLoading, ssr: false });
+const ProfileSettings = dynamic(() => import("@/components/auth/profile-settings"), { loading: PanelLoading, ssr: false });
+const AccountLinking = dynamic(() => import("@/components/auth/account-linking"), { loading: PanelLoading, ssr: false });
+const WalletManagement = dynamic(() => import("@/components/auth/wallet-management"), { loading: PanelLoading, ssr: false });
+const PasskeyManager = dynamic(() => import("@/components/auth/passkey-manager"), { loading: PanelLoading, ssr: false });
+const SecurityAuditLog = dynamic(() => import("@/components/auth/security-audit-log"), { loading: PanelLoading, ssr: false });
 
-type Tab = "premium" | "analytics" | "stream" | "vips" | "moderators" | "welcome" | "mass" | "vault" | "emotes" | "notifications" | "privacy" | "sessions" | "blocked" | "muted" | "hidden" | "verification" | "admin" | "promo" | "badges" | "2fa" | "bans" | "subscriptions" | "tiers" | "payouts" | "referrals" | "gifts";
+type Tab = "profile" | "linked" | "wallets" | "passkeys" | "audit" | "premium" | "analytics" | "stream" | "vips" | "moderators" | "welcome" | "mass" | "vault" | "emotes" | "notifications" | "privacy" | "sessions" | "blocked" | "muted" | "hidden" | "verification" | "admin" | "promo" | "badges" | "2fa" | "bans" | "subscriptions" | "tiers" | "payouts" | "referrals" | "gifts";
 
-type NavItem = { id: Tab; label: string; icon: IconSvgElement };
+type SubItem = { id: Tab; label: string };
+// Related panels share one nav item: `subs` render as a pill row above the
+// content, and the item's own `id` is its first sub (the tab a click opens).
+type NavItem = { id: Tab; label: string; icon: IconSvgElement; subs?: SubItem[] };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     {
         label: "General",
         items: [
+            { id: "profile", label: "Profile", icon: UserCircleIcon },
             { id: "analytics", label: "Analytics", icon: Analytics01Icon },
             { id: "premium", label: "Premium", icon: Crown02Icon },
             { id: "notifications", label: "Notifications", icon: Notification02Icon },
             { id: "privacy", label: "Privacy", icon: Shield01Icon },
+            {
+                id: "blocked",
+                label: "Moderation",
+                icon: UserBlock01Icon,
+                subs: [
+                    { id: "blocked", label: "Blocked" },
+                    { id: "muted", label: "Muted" },
+                    { id: "hidden", label: "Hidden posts" },
+                ],
+            },
         ],
     },
     {
-        label: "Security",
+        label: "Account",
         items: [
-            { id: "sessions", label: "Sessions", icon: SecurityCheckIcon },
-            { id: "2fa", label: "Two-factor auth", icon: SecurityLockIcon },
+            {
+                id: "linked",
+                label: "Connections",
+                icon: ConnectIcon,
+                subs: [
+                    { id: "linked", label: "Linked accounts" },
+                    { id: "wallets", label: "Wallets" },
+                ],
+            },
+            {
+                id: "sessions",
+                label: "Security",
+                icon: SecurityCheckIcon,
+                subs: [
+                    { id: "sessions", label: "Sessions" },
+                    { id: "2fa", label: "Two-factor auth" },
+                    { id: "passkeys", label: "Passkeys" },
+                    { id: "audit", label: "Audit log" },
+                ],
+            },
             { id: "verification", label: "Verification", icon: CheckmarkBadge01Icon },
         ],
     },
@@ -116,15 +146,37 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         label: "Creator",
         items: [
             { id: "stream", label: "Stream", icon: PodcastIcon },
-            { id: "vips", label: "VIP members", icon: Crown03Icon },
-            { id: "moderators", label: "Moderators", icon: Shield02Icon },
-            { id: "welcome", label: "Welcome message", icon: MessageAdd01Icon },
-            { id: "mass", label: "Mass message", icon: SentIcon },
+            {
+                id: "vips",
+                label: "Community",
+                icon: UserGroup02Icon,
+                subs: [
+                    { id: "vips", label: "VIP members" },
+                    { id: "moderators", label: "Moderators" },
+                    { id: "bans", label: "Channel bans" },
+                ],
+            },
+            {
+                id: "welcome",
+                label: "Messages",
+                icon: MessageAdd01Icon,
+                subs: [
+                    { id: "welcome", label: "Welcome message" },
+                    { id: "mass", label: "Mass message" },
+                ],
+            },
+            {
+                id: "tiers",
+                label: "Monetization",
+                icon: Layers01Icon,
+                subs: [
+                    { id: "tiers", label: "Subscription tiers" },
+                    { id: "badges", label: "Badges" },
+                    { id: "promo", label: "Promo codes" },
+                ],
+            },
             { id: "vault", label: "Media vault", icon: Archive02Icon },
             { id: "emotes", label: "Emotes", icon: SmileIcon },
-            { id: "promo", label: "Promo codes", icon: Tag01Icon },
-            { id: "badges", label: "Badges", icon: Award01Icon },
-            { id: "tiers", label: "Subscription tiers", icon: Layers01Icon },
         ],
     },
     {
@@ -137,21 +189,15 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         ],
     },
     {
-        label: "Moderation",
-        items: [
-            { id: "blocked", label: "Blocked", icon: UserBlock01Icon },
-            { id: "muted", label: "Muted", icon: VolumeMute02Icon },
-            { id: "hidden", label: "Hidden posts", icon: ViewOffSlashIcon },
-            { id: "bans", label: "Channel bans", icon: BanIcon },
-        ],
-    },
-    {
         label: "Admin",
         items: [{ id: "admin", label: "Admin", icon: Flag02Icon }],
     },
 ];
 
 const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+
+const itemOwnsTab = (item: NavItem, tab: Tab) =>
+    item.id === tab || !!item.subs?.some((s) => s.id === tab);
 
 function StatCard({ label, value, icon, sub }: { label: string; value: string | number; icon: IconSvgElement; sub?: string }) {
     return (
@@ -170,28 +216,31 @@ function StatCard({ label, value, icon, sub }: { label: string; value: string | 
 
 export default function SettingsPage() {
     const { data: session } = useAuthSession();
-    const [tab, setTab] = useState<Tab>("analytics");
+    const [tab, setTab] = useState<Tab>("profile");
 
     const { data: analytics, isLoading } = trpc.user.getAnalytics.useQuery(undefined, { enabled: !!session?.user });
 
-    const active = ALL_ITEMS.find((i) => i.id === tab);
+    const isAdmin = session?.user?.role === "admin";
+    const navGroups = isAdmin ? NAV_GROUPS : NAV_GROUPS.filter((g) => g.label !== "Admin");
+
+    const active = ALL_ITEMS.find((i) => itemOwnsTab(i, tab));
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl gap-8 px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)] lg:px-6">
+        <div className="flex w-full max-w-6xl gap-8 px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
             {/* Vertical section rail (desktop) */}
-            <nav className="sticky top-[calc(var(--header-height)+16px)] hidden max-h-[calc(100svh-var(--header-height)-32px)] w-56 shrink-0 self-start overflow-y-auto hidden-scrollbar md:block">
+            <nav className="sticky top-[calc(var(--header-height)+16px)] hidden max-h-[calc(100svh-var(--header-height)-32px)] w-60 shrink-0 self-start overflow-y-auto hidden-scrollbar md:block">
                 <div className="flex flex-col gap-5">
-                    {NAV_GROUPS.map((group) => (
+                    {navGroups.map((group) => (
                         <div key={group.label}>
-                            <p className="px-3.5 pb-1.5 text-[12px] font-semibold text-zinc-600">{group.label}</p>
+                            <p className="px-3.5 pb-1.5 text-[13px] font-semibold text-zinc-600">{group.label}</p>
                             <div className="flex flex-col gap-0.5">
                                 {group.items.map((item) => (
                                     <button
                                         key={item.id}
                                         onClick={() => setTab(item.id)}
                                         className={cn(
-                                            "flex cursor-pointer items-center gap-2.5 rounded-full px-3.5 py-2 text-left text-[14px] font-semibold transition-colors",
-                                            tab === item.id
+                                            "flex cursor-pointer items-center gap-2.5 rounded-full px-3.5 py-2 text-left text-[15px] font-semibold transition-colors",
+                                            itemOwnsTab(item, tab)
                                                 ? "bg-white text-black"
                                                 : "text-zinc-400 hover:bg-white/5 hover:text-white",
                                         )}
@@ -227,14 +276,14 @@ export default function SettingsPage() {
                                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-zinc-500" strokeWidth={2} />
                             </>
                         }
-                        items={NAV_GROUPS.flatMap((group) => [
+                        items={navGroups.flatMap((group) => [
                             { key: `label-${group.label}`, type: "label" as const, label: group.label, height: 30 },
                             ...group.items.map((item) => ({
                                 key: item.id,
                                 onClick: () => setTab(item.id),
                                 className: cn(
                                     "gap-2.5 px-3 rounded-full cursor-pointer text-sm font-semibold",
-                                    tab === item.id ? "bg-white/10 text-white" : "text-zinc-300 hover:bg-white/5 hover:text-white",
+                                    itemOwnsTab(item, tab) ? "bg-white/10 text-white" : "text-zinc-300 hover:bg-white/5 hover:text-white",
                                 ),
                                 label: (
                                     <>
@@ -246,6 +295,26 @@ export default function SettingsPage() {
                         ])}
                     />
                 </div>
+
+                {/* Sub-section pills for consolidated nav items */}
+                {active?.subs && (
+                    <div className="mb-5 flex flex-wrap gap-1.5">
+                        {active.subs.map((sub) => (
+                            <button
+                                key={sub.id}
+                                onClick={() => setTab(sub.id)}
+                                className={cn(
+                                    "h-9 cursor-pointer rounded-full px-4 text-[13px] font-semibold transition-colors",
+                                    tab === sub.id
+                                        ? "bg-white text-black"
+                                        : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                )}
+                            >
+                                {sub.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {tab === "analytics" && (
                     <div className="space-y-4">
@@ -290,6 +359,11 @@ export default function SettingsPage() {
                     </div>
                 )}
 
+                {tab === "profile" && <ProfileSettings />}
+                {tab === "linked" && <AccountLinking />}
+                {tab === "wallets" && <WalletManagement />}
+                {tab === "passkeys" && <PasskeyManager />}
+                {tab === "audit" && <SecurityAuditLog />}
                 {tab === "premium" && <PremiumSettings />}
                 {tab === "stream" && <StreamSettings />}
                 {tab === "privacy" && <PrivacySettings />}
@@ -314,7 +388,7 @@ export default function SettingsPage() {
                 {tab === "payouts" && <PayoutSettings />}
                 {tab === "referrals" && <ReferralSettings />}
                 {tab === "gifts" && <GiftInbox />}
-                {tab === "admin" && <AdminDashboard />}
+                {tab === "admin" && isAdmin && <AdminDashboard />}
             </div>
         </div>
     );

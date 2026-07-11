@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { useState, useEffect } from "react";
 import { ChevronRight, Eye, Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,7 +61,7 @@ export default function WalletManagement({ isLoading = false }: WalletManagement
                             </div>
                             <div>
                                 <h3 className="font-medium">Export Private Key</h3>
-                                <p className="text-sm text-neutral-400">Export your wallet's private key</p>
+                                <p className="text-sm text-neutral-400">Export your wallet&apos;s private key</p>
                             </div>
                         </div>
                         <Button
