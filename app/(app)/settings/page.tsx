@@ -9,22 +9,17 @@ import {
     Analytics01Icon,
     Archive02Icon,
     ArrowDown01Icon,
-    CheckmarkBadge01Icon,
     ConnectIcon,
     Crown02Icon,
     EyeIcon,
     FavouriteIcon,
     Flag02Icon,
-    GiftIcon,
     Layers01Icon,
-    Link01Icon,
     MessageAdd01Icon,
     Notification02Icon,
     PodcastIcon,
     SecurityCheckIcon,
     Shield01Icon,
-    SmileIcon,
-    UserBlock01Icon,
     UserCircleIcon,
     UserGroup02Icon,
     Wallet01Icon,
@@ -95,20 +90,29 @@ type SubItem = { id: Tab; label: string };
 // content, and the item's own `id` is its first sub (the tab a click opens).
 type NavItem = { id: Tab; label: string; icon: IconSvgElement; subs?: SubItem[] };
 
+// Ordered by how often a typical user needs each: personal basics first,
+// then account plumbing, money, creator tools, admin last (Instagram-style
+// "edit profile up top"). Related panels ride as subs of one item.
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     {
         label: "General",
         items: [
-            { id: "profile", label: "Profile", icon: UserCircleIcon },
-            { id: "analytics", label: "Analytics", icon: Analytics01Icon },
-            { id: "premium", label: "Premium", icon: Crown02Icon },
-            { id: "notifications", label: "Notifications", icon: Notification02Icon },
-            { id: "privacy", label: "Privacy", icon: Shield01Icon },
             {
-                id: "blocked",
-                label: "Moderation",
-                icon: UserBlock01Icon,
+                id: "profile",
+                label: "Profile",
+                icon: UserCircleIcon,
                 subs: [
+                    { id: "profile", label: "Edit profile" },
+                    { id: "verification", label: "Verification" },
+                ],
+            },
+            { id: "notifications", label: "Notifications", icon: Notification02Icon },
+            {
+                id: "privacy",
+                label: "Privacy",
+                icon: Shield01Icon,
+                subs: [
+                    { id: "privacy", label: "Privacy" },
                     { id: "blocked", label: "Blocked" },
                     { id: "muted", label: "Muted" },
                     { id: "hidden", label: "Hidden posts" },
@@ -120,15 +124,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         label: "Account",
         items: [
             {
-                id: "linked",
-                label: "Connections",
-                icon: ConnectIcon,
-                subs: [
-                    { id: "linked", label: "Linked accounts" },
-                    { id: "wallets", label: "Wallets" },
-                ],
-            },
-            {
                 id: "sessions",
                 label: "Security",
                 icon: SecurityCheckIcon,
@@ -139,12 +134,45 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
                     { id: "audit", label: "Audit log" },
                 ],
             },
-            { id: "verification", label: "Verification", icon: CheckmarkBadge01Icon },
+            {
+                id: "linked",
+                label: "Connections",
+                icon: ConnectIcon,
+                subs: [
+                    { id: "linked", label: "Linked accounts" },
+                    { id: "wallets", label: "Wallets" },
+                ],
+            },
+        ],
+    },
+    {
+        label: "Payments",
+        items: [
+            { id: "premium", label: "Premium", icon: Crown02Icon },
+            {
+                id: "subscriptions",
+                label: "Subscriptions",
+                icon: FavouriteIcon,
+                subs: [
+                    { id: "subscriptions", label: "My subscriptions" },
+                    { id: "gifts", label: "Gift inbox" },
+                ],
+            },
+            {
+                id: "payouts",
+                label: "Earnings",
+                icon: Wallet01Icon,
+                subs: [
+                    { id: "payouts", label: "Payouts" },
+                    { id: "referrals", label: "Referrals" },
+                ],
+            },
         ],
     },
     {
         label: "Creator",
         items: [
+            { id: "analytics", label: "Analytics", icon: Analytics01Icon },
             { id: "stream", label: "Stream", icon: PodcastIcon },
             {
                 id: "vips",
@@ -175,17 +203,15 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
                     { id: "promo", label: "Promo codes" },
                 ],
             },
-            { id: "vault", label: "Media vault", icon: Archive02Icon },
-            { id: "emotes", label: "Emotes", icon: SmileIcon },
-        ],
-    },
-    {
-        label: "Payments",
-        items: [
-            { id: "payouts", label: "Payouts", icon: Wallet01Icon },
-            { id: "referrals", label: "Referrals", icon: Link01Icon },
-            { id: "subscriptions", label: "My subscriptions", icon: FavouriteIcon },
-            { id: "gifts", label: "Gift inbox", icon: GiftIcon },
+            {
+                id: "vault",
+                label: "Content",
+                icon: Archive02Icon,
+                subs: [
+                    { id: "vault", label: "Media vault" },
+                    { id: "emotes", label: "Emotes" },
+                ],
+            },
         ],
     },
     {
