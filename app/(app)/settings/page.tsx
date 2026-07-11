@@ -1,32 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import dynamic from "next/dynamic";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
     Analytics01Icon,
-    Archive02Icon,
-    ArrowDown01Icon,
-    ConnectIcon,
-    Crown02Icon,
     EyeIcon,
     FavouriteIcon,
-    Flag02Icon,
-    Layers01Icon,
-    MessageAdd01Icon,
-    Notification02Icon,
-    PodcastIcon,
-    SecurityCheckIcon,
-    Shield01Icon,
-    UserCircleIcon,
     UserGroup02Icon,
-    Wallet01Icon,
 } from "@hugeicons/core-free-icons";
-import type { IconSvgElement } from "@hugeicons/react";
 import { Squircle } from "@/components/ui/squircle";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { ALL_SETTINGS_ITEMS, itemOwnsTab, useSettingsTab } from "@/components/settings/settings-nav";
 import { cn } from "@/lib/utils";
 
 // Port of sidebar's (browse)/settings/page.tsx, with two changes:
@@ -35,9 +20,9 @@ import { cn } from "@/lib/utils";
 //   pull a chart lib). Sidebar imported everything eagerly.
 // - The client-side `redirect("/")` guard is gone; the (app) layout guards.
 //
-// Shell design mirrors /trade: the page title lives in the app header (next
-// to the logo), sections are a vertical grouped rail on desktop and a
-// GooDropdown picker on mobile, and content sits in bg-panel squircles.
+// Shell design mirrors /trade: the page title in the app header IS the nav
+// (SettingsNav goo dropdown, ?tab= via nuqs), sub-sections render as a pill
+// row above the content, and content sits in bg-panel squircles.
 
 function PanelLoading() {
     return (
@@ -83,148 +68,6 @@ const WalletManagement = dynamic(() => import("@/components/auth/wallet-manageme
 const PasskeyManager = dynamic(() => import("@/components/auth/passkey-manager"), { loading: PanelLoading, ssr: false });
 const SecurityAuditLog = dynamic(() => import("@/components/auth/security-audit-log"), { loading: PanelLoading, ssr: false });
 
-type Tab = "profile" | "linked" | "wallets" | "passkeys" | "audit" | "premium" | "analytics" | "stream" | "vips" | "moderators" | "welcome" | "mass" | "vault" | "emotes" | "notifications" | "privacy" | "sessions" | "blocked" | "muted" | "hidden" | "verification" | "admin" | "promo" | "badges" | "2fa" | "bans" | "subscriptions" | "tiers" | "payouts" | "referrals" | "gifts";
-
-type SubItem = { id: Tab; label: string };
-// Related panels share one nav item: `subs` render as a pill row above the
-// content, and the item's own `id` is its first sub (the tab a click opens).
-type NavItem = { id: Tab; label: string; icon: IconSvgElement; subs?: SubItem[] };
-
-// Ordered by how often a typical user needs each: personal basics first,
-// then account plumbing, money, creator tools, admin last (Instagram-style
-// "edit profile up top"). Related panels ride as subs of one item.
-const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
-    {
-        label: "General",
-        items: [
-            {
-                id: "profile",
-                label: "Profile",
-                icon: UserCircleIcon,
-                subs: [
-                    { id: "profile", label: "Edit profile" },
-                    { id: "verification", label: "Verification" },
-                ],
-            },
-            { id: "notifications", label: "Notifications", icon: Notification02Icon },
-            {
-                id: "privacy",
-                label: "Privacy",
-                icon: Shield01Icon,
-                subs: [
-                    { id: "privacy", label: "Privacy" },
-                    { id: "blocked", label: "Blocked" },
-                    { id: "muted", label: "Muted" },
-                    { id: "hidden", label: "Hidden posts" },
-                ],
-            },
-        ],
-    },
-    {
-        label: "Account",
-        items: [
-            {
-                id: "sessions",
-                label: "Security",
-                icon: SecurityCheckIcon,
-                subs: [
-                    { id: "sessions", label: "Sessions" },
-                    { id: "2fa", label: "Two-factor auth" },
-                    { id: "passkeys", label: "Passkeys" },
-                    { id: "audit", label: "Audit log" },
-                ],
-            },
-            {
-                id: "linked",
-                label: "Connections",
-                icon: ConnectIcon,
-                subs: [
-                    { id: "linked", label: "Linked accounts" },
-                    { id: "wallets", label: "Wallets" },
-                ],
-            },
-        ],
-    },
-    {
-        label: "Payments",
-        items: [
-            { id: "premium", label: "Premium", icon: Crown02Icon },
-            {
-                id: "subscriptions",
-                label: "Subscriptions",
-                icon: FavouriteIcon,
-                subs: [
-                    { id: "subscriptions", label: "My subscriptions" },
-                    { id: "gifts", label: "Gift inbox" },
-                ],
-            },
-            {
-                id: "payouts",
-                label: "Earnings",
-                icon: Wallet01Icon,
-                subs: [
-                    { id: "payouts", label: "Payouts" },
-                    { id: "referrals", label: "Referrals" },
-                ],
-            },
-        ],
-    },
-    {
-        label: "Creator",
-        items: [
-            { id: "analytics", label: "Analytics", icon: Analytics01Icon },
-            { id: "stream", label: "Stream", icon: PodcastIcon },
-            {
-                id: "vips",
-                label: "Community",
-                icon: UserGroup02Icon,
-                subs: [
-                    { id: "vips", label: "VIP members" },
-                    { id: "moderators", label: "Moderators" },
-                    { id: "bans", label: "Channel bans" },
-                ],
-            },
-            {
-                id: "welcome",
-                label: "Messages",
-                icon: MessageAdd01Icon,
-                subs: [
-                    { id: "welcome", label: "Welcome message" },
-                    { id: "mass", label: "Mass message" },
-                ],
-            },
-            {
-                id: "tiers",
-                label: "Monetization",
-                icon: Layers01Icon,
-                subs: [
-                    { id: "tiers", label: "Subscription tiers" },
-                    { id: "badges", label: "Badges" },
-                    { id: "promo", label: "Promo codes" },
-                ],
-            },
-            {
-                id: "vault",
-                label: "Content",
-                icon: Archive02Icon,
-                subs: [
-                    { id: "vault", label: "Media vault" },
-                    { id: "emotes", label: "Emotes" },
-                ],
-            },
-        ],
-    },
-    {
-        label: "Admin",
-        items: [{ id: "admin", label: "Admin", icon: Flag02Icon }],
-    },
-];
-
-const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
-
-const itemOwnsTab = (item: NavItem, tab: Tab) =>
-    item.id === tab || !!item.subs?.some((s) => s.id === tab);
-
 function StatCard({ label, value, icon, sub }: { label: string; value: string | number; icon: IconSvgElement; sub?: string }) {
     return (
         <Squircle asChild radius={20} autoEffects={false}>
@@ -242,86 +85,18 @@ function StatCard({ label, value, icon, sub }: { label: string; value: string | 
 
 export default function SettingsPage() {
     const { data: session } = useAuthSession();
-    const [tab, setTab] = useState<Tab>("profile");
+    const [tab, setTab] = useSettingsTab();
 
     const { data: analytics, isLoading } = trpc.user.getAnalytics.useQuery(undefined, { enabled: !!session?.user });
 
     const isAdmin = session?.user?.role === "admin";
-    const navGroups = isAdmin ? NAV_GROUPS : NAV_GROUPS.filter((g) => g.label !== "Admin");
 
-    const active = ALL_ITEMS.find((i) => itemOwnsTab(i, tab));
+    const active = ALL_SETTINGS_ITEMS.find((i) => itemOwnsTab(i, tab));
 
     return (
-        <div className="flex w-full max-w-6xl gap-8 px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
-            {/* Vertical section rail (desktop) */}
-            <nav className="sticky top-[calc(var(--header-height)+16px)] hidden max-h-[calc(100svh-var(--header-height)-32px)] w-60 shrink-0 self-start overflow-y-auto hidden-scrollbar md:block">
-                <div className="flex flex-col gap-5">
-                    {navGroups.map((group) => (
-                        <div key={group.label}>
-                            <p className="px-3.5 pb-1.5 text-[13px] font-semibold text-zinc-600">{group.label}</p>
-                            <div className="flex flex-col gap-0.5">
-                                {group.items.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => setTab(item.id)}
-                                        className={cn(
-                                            "flex cursor-pointer items-center gap-2.5 rounded-full px-3.5 py-2 text-left text-[15px] font-semibold transition-colors",
-                                            itemOwnsTab(item, tab)
-                                                ? "bg-white text-black"
-                                                : "text-zinc-400 hover:bg-white/5 hover:text-white",
-                                        )}
-                                    >
-                                        <HugeiconsIcon icon={item.icon} className="size-4 shrink-0" strokeWidth={2} />
-                                        {item.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </nav>
-
-            {/* Content */}
-            <div className="min-w-0 flex-1">
-                {/* Mobile section picker */}
-                <div className="mb-5 md:hidden">
-                    <GooDropdown
-                        align="start"
-                        width={248}
-                        gap={8}
-                        fill="#101011"
-                        panelRadius={20}
-                        itemHeight={40}
-                        maxPanelHeight={440}
-                        triggerAriaLabel="Settings section"
-                        triggerClassName="flex h-11 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-[15px] font-bold text-white transition-colors hover:bg-white/10"
-                        trigger={
-                            <>
-                                {active && <HugeiconsIcon icon={active.icon} className="size-4" strokeWidth={2} />}
-                                {active?.label}
-                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-zinc-500" strokeWidth={2} />
-                            </>
-                        }
-                        items={navGroups.flatMap((group) => [
-                            { key: `label-${group.label}`, type: "label" as const, label: group.label, height: 30 },
-                            ...group.items.map((item) => ({
-                                key: item.id,
-                                onClick: () => setTab(item.id),
-                                className: cn(
-                                    "gap-2.5 px-3 rounded-full cursor-pointer text-sm font-semibold",
-                                    itemOwnsTab(item, tab) ? "bg-white/10 text-white" : "text-zinc-300 hover:bg-white/5 hover:text-white",
-                                ),
-                                label: (
-                                    <>
-                                        <HugeiconsIcon icon={item.icon} className="size-4 shrink-0" strokeWidth={2} />
-                                        {item.label}
-                                    </>
-                                ),
-                            })),
-                        ])}
-                    />
-                </div>
-
+        <div className="w-full max-w-4xl px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+            {/* Section switching lives in the app header (SettingsNav) */}
+            <div className="min-w-0">
                 {/* Sub-section pills for consolidated nav items */}
                 {active?.subs && (
                     <div className="mb-5 flex flex-wrap gap-1.5">

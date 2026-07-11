@@ -115,7 +115,7 @@ export default function ProfileSettings() {
                 <AvatarUpload
                     key={resetCount} // Only re-render when explicitly reset
                     onFileChange={handleAvatarChange}
-                    defaultAvatar={session.user.avatar_url || session.user.image || undefined}
+                    defaultAvatar={session?.user?.avatar_url || session?.user?.image || undefined}
                 />
             </div>
 

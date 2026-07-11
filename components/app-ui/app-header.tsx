@@ -18,6 +18,7 @@ import { useQueryState } from 'nuqs'
 import { searchParams } from '@/lib/searchParams'
 import { GlobalSearch } from './global-search'
 import { TradeNav } from '@/components/trade/trade-nav'
+import { SettingsNav } from '@/components/settings/settings-nav'
 import Link from 'next/link'
  
 // rounded-2xl approximates the squircle server-side; Lisse stamps
@@ -131,11 +132,9 @@ export function AppHeader() {
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
           {firstSegment === 'trade' && <TradeNav />}
-          {/* Settings: static page title next to the logo, same spot/type as
-              the Trade switcher. */}
-          {firstSegment === 'settings' && (
-            <h1 className="px-3 text-lg font-bold tracking-tight text-white">Settings</h1>
-          )}
+          {/* Settings: the page title doubles as the section switcher (goo
+              dropdown over ?tab=), same pattern as the Trade switcher. */}
+          {firstSegment === 'settings' && <SettingsNav />}
           {/* Discover search lives in the header (right of the logo), not in the
               feed tab bar. */}
           {firstSegment === 'discover' && (
