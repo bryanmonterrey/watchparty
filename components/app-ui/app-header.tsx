@@ -131,6 +131,11 @@ export function AppHeader() {
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
           {firstSegment === 'trade' && <TradeNav />}
+          {/* Settings: static page title next to the logo, same spot/type as
+              the Trade switcher. */}
+          {firstSegment === 'settings' && (
+            <h1 className="px-3 text-lg font-bold tracking-tight text-white">Settings</h1>
+          )}
           {/* Discover search lives in the header (right of the logo), not in the
               feed tab bar. */}
           {firstSegment === 'discover' && (

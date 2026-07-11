@@ -68,7 +68,7 @@ function ReportsTab() {
                                 {filter === "pending" && (
                                     <div className="flex gap-1.5 shrink-0">
                                         <button onClick={() => resolve.mutate({ reportId: r.id, status: "resolved" })}
-                                            className="p-1.5 rounded-lg bg-lantern/10 text-lantern hover:bg-lantern/20 transition-colors">
+                                            className="p-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors">
                                             <CheckCircle2 className="w-4 h-4" />
                                         </button>
                                         <button onClick={() => resolve.mutate({ reportId: r.id, status: "dismissed" })}
@@ -123,7 +123,7 @@ function VerificationTab() {
                                 }
                                 <div>
                                     <p className="text-sm font-semibold text-zinc-200">{v.userName}</p>
-                                    <p className="text-xs text-zinc-500">@{v.userUsername} · requesting <span className="text-lantern font-semibold">{v.requestedTier}</span></p>
+                                    <p className="text-xs text-zinc-500">@{v.userUsername} · requesting <span className="text-white font-semibold">{v.requestedTier}</span></p>
                                 </div>
                             </div>
                             <div className="space-y-1 text-xs text-zinc-400">
@@ -138,11 +138,11 @@ function VerificationTab() {
                                         placeholder="Rejection reason (optional)"
                                         value={rejectReason[v.id] ?? ""}
                                         onChange={e => setRejectReason(prev => ({ ...prev, [v.id]: e.target.value }))}
-                                        className="w-full px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                                        className="w-full px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                                     />
                                     <div className="flex gap-2">
                                         <button onClick={() => review.mutate({ requestId: v.id, action: "approve" })}
-                                            className="flex-1 py-1.5 rounded-lg bg-lantern text-zinc-950 text-xs font-bold hover:bg-lantern/90 transition-colors">
+                                            className="flex-1 py-1.5 rounded-lg bg-white text-zinc-950 text-xs font-bold hover:bg-white/90 transition-colors">
                                             Approve
                                         </button>
                                         <button onClick={() => review.mutate({ requestId: v.id, action: "reject", rejectionReason: rejectReason[v.id] })}
@@ -175,7 +175,7 @@ function UsersTab() {
                     value={query}
                     onChange={e => { setQuery(e.target.value); setTimeout(() => setDebouncedQ(e.target.value), 400); }}
                     placeholder="Search users by name or @username…"
-                    className="w-full pl-9 pr-3 py-2 bg-zinc-800 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                    className="w-full pl-9 pr-3 py-2 bg-zinc-800 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                 />
             </div>
             {data && (

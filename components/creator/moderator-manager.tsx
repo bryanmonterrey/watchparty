@@ -49,7 +49,7 @@ export function ModeratorManager() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users…"
-                            className="w-full pl-9 pr-4 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-lantern/50" />
+                            className="w-full pl-9 pr-4 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/30" />
                     </div>
                     {searchResults?.users.filter(u => !modIds.has(u.id) && u.id !== userId).map(u => (
                         <div key={u.id} className="flex items-center gap-2 p-2 hover:bg-white/5 rounded-lg">

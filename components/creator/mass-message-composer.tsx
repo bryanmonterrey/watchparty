@@ -31,7 +31,7 @@ export function MassMessageComposer() {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-lantern" />
+                <Send className="w-5 h-5 text-white" />
                 <h2 className="text-base font-bold text-zinc-100">Mass Message</h2>
             </div>
 
@@ -44,7 +44,7 @@ export function MassMessageComposer() {
                             <button
                                 key={a}
                                 onClick={() => setAudience(a)}
-                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${audience === a ? "bg-lantern text-zinc-950" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${audience === a ? "bg-white text-zinc-950" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
                             >
                                 {a === "all_followers" ? "All Followers" : `VIPs (${vips?.length ?? 0})`}
                             </button>
@@ -61,7 +61,7 @@ export function MassMessageComposer() {
                         placeholder="Write a message to your followers…"
                         rows={4}
                         maxLength={1000}
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-white/30"
                     />
                     <p className="text-right text-xs text-zinc-600">{content.length}/1000</p>
                 </div>
@@ -69,7 +69,7 @@ export function MassMessageComposer() {
                 <button
                     onClick={() => send.mutate({ audience, content })}
                     disabled={send.isPending || content.trim().length === 0}
-                    className="w-full py-2 rounded-lg bg-lantern text-zinc-950 font-bold text-sm hover:bg-lantern/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-2 rounded-lg bg-white text-zinc-950 font-bold text-sm hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     <Send className="w-4 h-4" />
                     {send.isPending ? "Sending…" : "Send Message"}

@@ -50,7 +50,7 @@ export function PrivacySettings() {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-lantern" />
+                <Shield className="w-5 h-5 text-white" />
                 <h2 className="text-base font-bold text-zinc-100">Privacy</h2>
             </div>
 
@@ -63,9 +63,9 @@ export function PrivacySettings() {
                         </div>
                         <button
                             onClick={() => set(v => !v)}
-                            className={`relative w-11 h-6 rounded-full transition-colors ${value ? "bg-lantern" : "bg-zinc-700"}`}
+                            className={`relative w-11 h-6 rounded-full transition-colors ${value ? "bg-white" : "bg-zinc-700"}`}
                         >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-5" : "translate-x-0"}`} />
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${value ? "translate-x-5 bg-black" : "translate-x-0 bg-white"}`} />
                         </button>
                     </div>
                 ))}
@@ -85,7 +85,7 @@ export function PrivacySettings() {
                         value={dmPriceSol}
                         onChange={e => setDmPriceSol(e.target.value)}
                         placeholder="0.00 (free)"
-                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40"
+                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
                     />
                     <span className="text-sm text-zinc-500 shrink-0">SOL</span>
                 </div>
@@ -98,7 +98,7 @@ export function PrivacySettings() {
                     dmPrice: dmPriceSol ? Math.round(parseFloat(dmPriceSol) * SOL) : 0,
                 })}
                 disabled={update.isPending}
-                className="w-full py-2 rounded-lg bg-lantern text-zinc-950 font-bold text-sm hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                className="w-full py-2 rounded-lg bg-white text-zinc-950 font-bold text-sm hover:bg-white/90 transition-colors disabled:opacity-50"
             >
                 {update.isPending ? "Saving…" : "Save"}
             </button>

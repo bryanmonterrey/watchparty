@@ -86,7 +86,7 @@ export function SessionManager() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-lantern" />
+                    <ShieldCheck className="w-5 h-5 text-white" />
                     <h2 className="text-base font-bold text-zinc-100">Active Sessions</h2>
                 </div>
                 {sessions.length > 1 && (
@@ -119,7 +119,7 @@ export function SessionManager() {
                                         {deviceLabel(s.userAgent)}
                                     </p>
                                     {s.current && (
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lantern/20 text-lantern shrink-0">
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/15 text-white shrink-0">
                                             This device
                                         </span>
                                     )}

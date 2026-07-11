@@ -32,12 +32,12 @@ export function GiftInbox() {
         <div className="space-y-3">
             <p className="text-xs text-zinc-500">Redeem your gifted subscriptions before they expire.</p>
             {data.map(gift => (
-                <div key={gift.id} className="rounded-xl bg-zinc-900/60 border border-lantern/20 p-4 space-y-3">
+                <div key={gift.id} className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
                     <div className="flex items-start gap-3">
-                        <Gift className="w-5 h-5 text-lantern shrink-0 mt-0.5" />
+                        <Gift className="w-5 h-5 text-white shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-zinc-100">
-                                {gift.durationMonths}mo <span className="text-lantern">{gift.tier.name}</span> subscription
+                                {gift.durationMonths}mo <span className="text-white">{gift.tier.name}</span> subscription
                             </p>
                             <p className="text-xs text-zinc-500 mt-0.5">
                                 From{" "}
@@ -51,13 +51,13 @@ export function GiftInbox() {
                             )}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                            <Crown className="w-3.5 h-3.5 text-lantern" />
+                            <Crown className="w-3.5 h-3.5 text-white" />
                         </div>
                     </div>
                     <button
                         onClick={() => redeem.mutate({ giftId: gift.id })}
                         disabled={redeem.isPending}
-                        className="w-full py-2 rounded-xl bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                        className="w-full py-2 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
                     >
                         {redeem.isPending ? "Activating…" : "Redeem Gift"}
                     </button>

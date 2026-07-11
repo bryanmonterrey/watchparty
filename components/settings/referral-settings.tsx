@@ -37,7 +37,7 @@ export function ReferralSettings() {
             {/* My code */}
             <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
                 <div className="flex items-center gap-2">
-                    <Gift className="w-5 h-5 text-lantern" />
+                    <Gift className="w-5 h-5 text-white" />
                     <p className="text-sm font-semibold text-zinc-300">Your referral link</p>
                 </div>
                 {code ? (
@@ -46,7 +46,7 @@ export function ReferralSettings() {
                             {referralLink}
                         </code>
                         <button onClick={copyLink} className="shrink-0 p-2 text-zinc-500 hover:text-zinc-200 transition-colors">
-                            {copied ? <Check className="w-4 h-4 text-lantern" /> : <Copy className="w-4 h-4" />}
+                            {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
                         </button>
                     </div>
                 ) : (
@@ -80,7 +80,7 @@ export function ReferralSettings() {
                                 <p className="text-sm text-zinc-200 truncate">{r.referredUser.name}</p>
                                 <p className="text-xs text-zinc-500">Joined {formatDistanceToNow(new Date(r.createdAt))} ago</p>
                             </div>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.status === "completed" ? "bg-lantern/10 text-lantern" : "bg-zinc-800 text-zinc-500"}`}>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.status === "completed" ? "bg-white/10 text-white" : "bg-zinc-800 text-zinc-500"}`}>
                                 {r.status}
                             </span>
                         </div>
@@ -98,7 +98,7 @@ export function ReferralSettings() {
                         onChange={e => setApplyInput(e.target.value.toUpperCase())}
                         placeholder="XXXXXX"
                         maxLength={12}
-                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40  tracking-widest"
+                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30  tracking-widest"
                     />
                     <button
                         onClick={() => applyCode.mutate({ code: applyInput })}

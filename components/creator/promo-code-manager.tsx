@@ -38,11 +38,11 @@ export function PromoCodeManager() {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Tag className="w-5 h-5 text-lantern" />
+                    <Tag className="w-5 h-5 text-white" />
                     <h2 className="text-base font-bold text-zinc-100">Promo Codes</h2>
                 </div>
                 <button onClick={() => setShowForm(v => !v)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-lantern text-zinc-950 text-xs font-bold hover:bg-lantern/90 transition-colors">
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-zinc-950 text-xs font-bold hover:bg-white/90 transition-colors">
                     <Plus className="w-3.5 h-3.5" /> New Code
                 </button>
             </div>
@@ -58,7 +58,7 @@ export function PromoCodeManager() {
                                 onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ""))}
                                 placeholder="SUMMER25"
                                 maxLength={20}
-                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100  placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100  placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                             />
                         </div>
                         <div>
@@ -67,7 +67,7 @@ export function PromoCodeManager() {
                                 type="number" min={1} max={100}
                                 value={discount}
                                 onChange={e => setDiscount(Number(e.target.value))}
-                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-white/30"
                             />
                         </div>
                         <div>
@@ -77,7 +77,7 @@ export function PromoCodeManager() {
                                 value={maxUses}
                                 onChange={e => setMaxUses(e.target.value)}
                                 placeholder="Unlimited"
-                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                                className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                             />
                         </div>
                     </div>
@@ -86,7 +86,7 @@ export function PromoCodeManager() {
                         <button
                             onClick={() => createCode.mutate({ code, discountPercent: discount, maxUses: maxUses ? Number(maxUses) : undefined })}
                             disabled={createCode.isPending || code.length < 3}
-                            className="px-4 py-1.5 rounded-lg bg-lantern text-zinc-950 text-xs font-bold hover:bg-lantern/90 disabled:opacity-50 transition-colors"
+                            className="px-4 py-1.5 rounded-lg bg-white text-zinc-950 text-xs font-bold hover:bg-white/90 disabled:opacity-50 transition-colors"
                         >
                             {createCode.isPending ? "Creating…" : "Create"}
                         </button>
@@ -108,7 +108,7 @@ export function PromoCodeManager() {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                     <span className=" text-sm font-bold text-zinc-100">{c.code}</span>
-                                    <span className="text-xs bg-lantern/10 text-lantern px-1.5 py-0.5 rounded font-semibold">{c.discountPercent}% off</span>
+                                    <span className="text-xs bg-white/10 text-white px-1.5 py-0.5 rounded font-semibold">{c.discountPercent}% off</span>
                                     {!c.isActive && <span className="text-xs text-zinc-600">inactive</span>}
                                 </div>
                                 <p className="text-xs text-zinc-500">
@@ -117,10 +117,10 @@ export function PromoCodeManager() {
                             </div>
                             <div className="flex items-center gap-1">
                                 <button onClick={() => copy(c.code)} className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors">
-                                    {copied === c.code ? <Check className="w-3.5 h-3.5 text-lantern" /> : <Copy className="w-3.5 h-3.5" />}
+                                    {copied === c.code ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
                                 </button>
                                 <button onClick={() => toggleCode.mutate({ codeId: c.id, isActive: !c.isActive })} className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors">
-                                    {c.isActive ? <ToggleRight className="w-4 h-4 text-lantern" /> : <ToggleLeft className="w-4 h-4" />}
+                                    {c.isActive ? <ToggleRight className="w-4 h-4 text-white" /> : <ToggleLeft className="w-4 h-4" />}
                                 </button>
                                 <button onClick={() => deleteCode.mutate({ codeId: c.id })} className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors">
                                     <Trash2 className="w-3.5 h-3.5" />

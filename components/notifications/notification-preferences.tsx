@@ -88,7 +88,7 @@ export function NotificationPreferences() {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-lantern" />
+                <Bell className="w-5 h-5 text-white" />
                 <h2 className="text-base font-bold text-zinc-100">Notification Preferences</h2>
             </div>
 
@@ -101,9 +101,9 @@ export function NotificationPreferences() {
                         </div>
                         <button
                             onClick={() => toggle(key)}
-                            className={`relative w-11 h-6 rounded-full transition-colors ${prefs[key] ? "bg-lantern" : "bg-zinc-700"}`}
+                            className={`relative w-11 h-6 rounded-full transition-colors ${prefs[key] ? "bg-white" : "bg-zinc-700"}`}
                         >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${prefs[key] ? "translate-x-5" : "translate-x-0"}`} />
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${prefs[key] ? "translate-x-5 bg-black" : "translate-x-0 bg-white"}`} />
                         </button>
                     </div>
                 ))}
@@ -113,7 +113,7 @@ export function NotificationPreferences() {
             {pushSupported && (
                 <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        {pushGranted ? <Bell className="w-5 h-5 text-lantern" /> : <BellOff className="w-5 h-5 text-zinc-500" />}
+                        {pushGranted ? <Bell className="w-5 h-5 text-white" /> : <BellOff className="w-5 h-5 text-zinc-500" />}
                         <div>
                             <p className="text-sm font-medium text-zinc-200">Push Notifications</p>
                             <p className="text-xs text-zinc-500">{pushGranted ? "Enabled on this device" : "Get notified even when the app is closed"}</p>
@@ -122,7 +122,7 @@ export function NotificationPreferences() {
                     <button
                         onClick={handlePushToggle}
                         disabled={subscribePush.isPending || unsubscribePush.isPending}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pushGranted ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600" : "bg-lantern text-zinc-950 hover:bg-lantern/90"}`}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pushGranted ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600" : "bg-white text-zinc-950 hover:bg-white/90"}`}
                     >
                         {pushGranted ? "Disable" : "Enable"}
                     </button>
@@ -132,7 +132,7 @@ export function NotificationPreferences() {
             <button
                 onClick={() => update.mutate(prefs as Record<PrefKey, boolean> & { pushEnabled: boolean })}
                 disabled={update.isPending}
-                className="w-full py-2 rounded-lg bg-lantern text-zinc-950 font-bold text-sm hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                className="w-full py-2 rounded-lg bg-white text-zinc-950 font-bold text-sm hover:bg-white/90 transition-colors disabled:opacity-50"
             >
                 {update.isPending ? "Saving…" : "Save Preferences"}
             </button>

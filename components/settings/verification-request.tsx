@@ -54,8 +54,8 @@ export function VerificationRequest() {
 
     if (existing?.status === "approved") {
         return (
-            <div className="rounded-xl bg-lantern/10 border border-lantern/20 p-6 space-y-2 text-center">
-                <CheckCircle2 className="w-10 h-10 mx-auto text-lantern" />
+            <div className="rounded-xl bg-white/10 border border-white/10 p-6 space-y-2 text-center">
+                <CheckCircle2 className="w-10 h-10 mx-auto text-white" />
                 <p className="font-semibold text-zinc-100">Verification Approved</p>
                 <p className="text-sm text-zinc-400">Your account has been verified.</p>
             </div>
@@ -93,7 +93,7 @@ export function VerificationRequest() {
                     <button
                         key={t.id}
                         onClick={() => setTier(t.id)}
-                        className={`p-3 rounded-xl border text-left space-y-1 transition-colors ${tier === t.id ? "border-lantern/50 bg-lantern/10" : "border-white/10 bg-zinc-900/60 hover:bg-white/5"}`}
+                        className={`p-3 rounded-xl border text-left space-y-1 transition-colors ${tier === t.id ? "border-white/20/50 bg-white/10" : "border-white/10 bg-zinc-900/60 hover:bg-white/5"}`}
                     >
                         {t.icon}
                         <p className="text-xs font-bold text-zinc-200">{t.label}</p>
@@ -106,23 +106,23 @@ export function VerificationRequest() {
                 <div>
                     <label className="text-xs text-zinc-500 mb-1 block">Full legal name *</label>
                     <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50" />
+                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30" />
                 </div>
                 <div>
                     <label className="text-xs text-zinc-500 mb-1 block">Website or official link</label>
                     <input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://yoursite.com"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50" />
+                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30" />
                 </div>
                 <div>
                     <label className="text-xs text-zinc-500 mb-1 block">Twitter / X handle</label>
                     <input value={twitterHandle} onChange={e => setTwitterHandle(e.target.value)} placeholder="@handle"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50" />
+                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30" />
                 </div>
                 <div>
                     <label className="text-xs text-zinc-500 mb-1 block">Why do you deserve verification? *</label>
                     <textarea value={reason} onChange={e => setReason(e.target.value)} rows={4}
                         placeholder="Describe your public presence, notable work, audience size, etc. (min 20 chars)"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50 resize-none" />
+                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30 resize-none" />
                     <p className="text-xs text-zinc-600 mt-0.5">{reason.length}/1000</p>
                 </div>
             </div>
@@ -130,7 +130,7 @@ export function VerificationRequest() {
             <button
                 onClick={() => submit.mutate({ requestedTier: tier, fullName, bio: bio || undefined, website: website || undefined, twitterHandle: twitterHandle || undefined, reason })}
                 disabled={submit.isPending || !fullName.trim() || reason.length < 20}
-                className="w-full py-2.5 rounded-xl bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors disabled:opacity-40"
+                className="w-full py-2.5 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-40"
             >
                 {submit.isPending ? "Submitting…" : "Submit Request"}
             </button>

@@ -18,7 +18,7 @@ function solToLamports(s: string) {
 const STATUS_CONFIG = {
     pending:    { icon: <Clock className="w-3.5 h-3.5" />,       color: "text-yellow-400",  label: "Pending" },
     processing: { icon: <Clock className="w-3.5 h-3.5" />,       color: "text-blue-400",    label: "Processing" },
-    completed:  { icon: <CheckCircle2 className="w-3.5 h-3.5" />, color: "text-lantern",    label: "Completed" },
+    completed:  { icon: <CheckCircle2 className="w-3.5 h-3.5" />, color: "text-white",    label: "Completed" },
     failed:     { icon: <AlertCircle className="w-3.5 h-3.5" />, color: "text-red-400",     label: "Failed" },
 };
 
@@ -56,7 +56,7 @@ export function PayoutSettings() {
     return (
         <div className="space-y-6">
             {/* USDC subscription earnings — claim model */}
-            <div className="rounded-xl bg-gradient-to-br from-lantern/15 to-zinc-900/60 border border-lantern/20 p-4">
+            <div className="rounded-xl bg-gradient-to-br from-white/10 to-zinc-900/60 border border-white/10 p-4">
                 <p className="text-xs text-zinc-400 mb-1">Claimable subscription earnings (USDC)</p>
                 <div className="flex items-end justify-between gap-3">
                     <div>
@@ -69,7 +69,7 @@ export function PayoutSettings() {
                     <button
                         onClick={() => claim.mutate()}
                         disabled={claim.isPending || claimableNet <= 0}
-                        className="rounded-full bg-lantern text-zinc-950 font-bold text-sm px-5 h-10 hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                        className="rounded-full bg-white text-zinc-950 font-bold text-sm px-5 h-10 hover:bg-white/90 transition-colors disabled:opacity-50"
                     >
                         {claim.isPending ? "Claiming…" : "Claim to wallet"}
                     </button>
@@ -88,7 +88,7 @@ export function PayoutSettings() {
                         </div>
                         <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-3">
                             <p className="text-xs text-zinc-500 mb-1">Last 30 Days</p>
-                            <p className="text-lg font-bold text-lantern">{lamportsToSol(last30)} SOL</p>
+                            <p className="text-lg font-bold text-white">{lamportsToSol(last30)} SOL</p>
                         </div>
                         <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-3">
                             <p className="text-xs text-zinc-500 mb-1">Available</p>
@@ -110,12 +110,12 @@ export function PayoutSettings() {
                         value={amount}
                         onChange={e => setAmount(e.target.value)}
                         placeholder="Amount in SOL"
-                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-lantern/40"
+                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
                     />
                     <button
                         onClick={() => requestPayout.mutate({ amountLamports: solToLamports(amount) })}
                         disabled={!amount || parseFloat(amount) <= 0 || requestPayout.isPending}
-                        className="px-4 py-2 rounded-lg bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                        className="px-4 py-2 rounded-lg bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
                     >
                         {requestPayout.isPending ? "Requesting…" : "Request"}
                     </button>
@@ -132,7 +132,7 @@ export function PayoutSettings() {
                                 <p className="text-xs text-zinc-400 capitalize">{e.type.replace("_", " ")}</p>
                                 <p className="text-xs text-zinc-600">{formatDistanceToNow(new Date(e.createdAt))} ago</p>
                             </div>
-                            <span className="text-sm font-semibold text-lantern">+{lamportsToSol(e.amountLamports)} SOL</span>
+                            <span className="text-sm font-semibold text-white">+{lamportsToSol(e.amountLamports)} SOL</span>
                         </div>
                     ))}
                 </div>

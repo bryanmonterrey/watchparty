@@ -42,8 +42,8 @@ function CopyField({ label, value, secret }: { label: string; value: string | nu
                         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                 )}
-                <button onClick={copy} disabled={!value} className="p-2 text-zinc-500 hover:text-lantern transition-colors disabled:opacity-30">
-                    {copied ? <Check className="w-4 h-4 text-lantern" /> : <Copy className="w-4 h-4" />}
+                <button onClick={copy} disabled={!value} className="p-2 text-zinc-500 hover:text-white transition-colors disabled:opacity-30">
+                    {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
                 </button>
             </div>
         </div>
@@ -66,7 +66,7 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors">
+                <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors">
                     <RefreshCw className="w-4 h-4" /> Generate Connection
                 </button>
             </DialogTrigger>
@@ -121,7 +121,7 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
                         <button
                             onClick={() => generate.mutate({ ingressType })}
                             disabled={generate.isPending}
-                            className="px-4 py-2 rounded-lg bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                            className="px-4 py-2 rounded-lg bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
                         >
                             {generate.isPending ? "Generating…" : "Generate"}
                         </button>
@@ -185,7 +185,7 @@ export function StreamSettings() {
                         value={title}
                         onChange={e => setTitle(e.target.value)}
                         placeholder="What are you streaming today?"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                     />
                 </div>
                 <div className="space-y-1.5">
@@ -194,7 +194,7 @@ export function StreamSettings() {
                         value={category}
                         onChange={e => setCategory(e.target.value)}
                         placeholder="e.g. Gaming, Music, Crypto…"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                     />
                 </div>
                 <button

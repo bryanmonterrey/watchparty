@@ -35,7 +35,7 @@ export function SubscriberBadgesManager() {
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-lantern" />
+                <Award className="w-5 h-5 text-white" />
                 <h2 className="text-base font-bold text-zinc-100">Subscriber Badges</h2>
             </div>
 

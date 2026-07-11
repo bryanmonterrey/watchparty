@@ -100,7 +100,7 @@ export function AnalyticsCharts() {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-lantern" />
+                <TrendingUp className="w-4 h-4 text-white" />
                 <p className="text-sm font-semibold text-zinc-300">Last 30 Days</p>
             </div>
             <div className="grid grid-cols-2 gap-3">

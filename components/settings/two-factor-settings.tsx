@@ -35,7 +35,7 @@ function DigitInput({ value, onChange, length = 6 }: { value: string; onChange: 
                             prev?.focus();
                         }
                     }}
-                    className="w-10 h-12 text-center text-lg font-bold bg-zinc-800 border border-white/15 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-lantern/60"
+                    className="w-10 h-12 text-center text-lg font-bold bg-zinc-800 border border-white/15 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-white/30"
                 />
             ))}
         </div>
@@ -132,8 +132,8 @@ export function TwoFactorSettings() {
     if (is2FAEnabled && step === "idle") {
         return (
             <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-lantern/10 border border-lantern/20">
-                    <ShieldCheck className="w-6 h-6 text-lantern shrink-0" />
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/10 border border-white/10">
+                    <ShieldCheck className="w-6 h-6 text-white shrink-0" />
                     <div>
                         <p className="text-sm font-bold text-zinc-100">Two-factor authentication is active</p>
                         <p className="text-xs text-zinc-400">Your account is protected with an authenticator app.</p>
@@ -178,15 +178,15 @@ export function TwoFactorSettings() {
     if (step === "backup") {
         return (
             <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-lantern/10 border border-lantern/20">
-                    <ShieldCheck className="w-5 h-5 text-lantern" />
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/10 border border-white/10">
+                    <ShieldCheck className="w-5 h-5 text-white" />
                     <p className="text-sm font-bold text-zinc-100">2FA enabled successfully!</p>
                 </div>
                 <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
                     <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold text-zinc-300">Backup Codes</p>
                         <button onClick={copyCodes} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
-                            {copiedCodes ? <Check className="w-3 h-3 text-lantern" /> : <Copy className="w-3 h-3" />}
+                            {copiedCodes ? <Check className="w-3 h-3 text-white" /> : <Copy className="w-3 h-3" />}
                             {copiedCodes ? "Copied" : "Copy all"}
                         </button>
                     </div>
@@ -213,7 +213,7 @@ export function TwoFactorSettings() {
                 <div className="flex gap-2">
                     <button onClick={() => { setStep("setup"); setCode(""); }} className="flex-1 py-2 rounded-xl bg-zinc-800 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors">Back</button>
                     <button onClick={verifyAndEnable} disabled={loading || code.length < 6}
-                        className="flex-1 py-2 rounded-xl bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors disabled:opacity-50">
+                        className="flex-1 py-2 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50">
                         {loading ? "Verifying…" : "Verify & Enable"}
                     </button>
                 </div>
@@ -235,13 +235,13 @@ export function TwoFactorSettings() {
                     <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-800/60 border border-white/10">
                         <code className="flex-1 text-xs  text-zinc-300 tracking-widest break-all">{secret}</code>
                         <button onClick={copySecret} className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors">
-                            {copiedSecret ? <Check className="w-4 h-4 text-lantern" /> : <Copy className="w-4 h-4" />}
+                            {copiedSecret ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
                         </button>
                     </div>
                 )}
                 <p className="text-xs text-zinc-600 text-center">Or enter the code above manually in your app.</p>
                 <button onClick={() => setStep("verify")}
-                    className="w-full py-2.5 rounded-xl bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors">
+                    className="w-full py-2.5 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors">
                     I've scanned it →
                 </button>
             </div>
@@ -270,7 +270,7 @@ export function TwoFactorSettings() {
             <button
                 onClick={startSetup}
                 disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors disabled:opacity-50"
+                className="w-full py-2.5 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
             >
                 {loading ? "Setting up…" : "Enable Two-Factor Auth"}
             </button>

@@ -112,7 +112,7 @@ export function MediaVault() {
                             value={newFolderName}
                             onChange={e => setNewFolderName(e.target.value)}
                             placeholder="Folder name"
-                            className="flex-1 px-2 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-100 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                            className="flex-1 px-2 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-100 focus:outline-none focus:ring-1 focus:ring-white/30"
                             onBlur={() => { if (!newFolderName.trim()) setShowNewFolder(false); }}
                         />
                     </form>
@@ -130,7 +130,7 @@ export function MediaVault() {
                     <button
                         onClick={() => fileRef.current?.click()}
                         disabled={uploading}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lantern/20 text-lantern hover:bg-lantern/30 text-sm font-medium transition-colors disabled:opacity-40"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 text-white hover:bg-white/20 text-sm font-medium transition-colors disabled:opacity-40"
                     >
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         Upload

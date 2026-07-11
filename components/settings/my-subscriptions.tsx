@@ -41,7 +41,7 @@ export function MySubscriptions() {
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                             <p className="text-sm font-semibold text-zinc-200 truncate">{sub.creator.name}</p>
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-lantern/10 text-lantern font-semibold border border-lantern/20">{sub.tier.name}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/10 text-white font-semibold border border-white/10">{sub.tier.name}</span>
                         </div>
                         <p className="text-xs text-zinc-500">
                             {lamportsToSol(sub.tier.priceMonthly)} SOL/{sub.billingCycle === "annual" ? "yr" : "mo"}

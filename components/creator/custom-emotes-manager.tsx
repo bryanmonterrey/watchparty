@@ -61,12 +61,12 @@ export function CustomEmotesManager() {
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder=":emote_name:"
-                    className="flex-1 px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-lantern/50"
+                    className="flex-1 px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                 />
                 <button
                     onClick={() => fileRef.current?.click()}
                     disabled={uploading || !name.trim()}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-lantern/20 text-lantern hover:bg-lantern/30 text-sm font-medium transition-colors disabled:opacity-40"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/15 text-white hover:bg-white/20 text-sm font-medium transition-colors disabled:opacity-40"
                 >
                     {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                     Upload
