@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 import { EditProfileDialog } from "./edit-profile-dialog";
+import { LevelBadge } from "./level-badge";
 import { FollowersFollowingDialog } from "./followers-following-dialog";
 import { TipModal } from "@/components/browse/tip-modal";
 import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
@@ -169,6 +170,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                     {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-6" />}
                     {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-6" />}
                     {user.verifiedTier === "government" && <GovBadgeIcon className="size-6" />}
+                    <LevelBadge xp={user.xp} />
                     
                     {isMinimized && (
                         <span className="text-zinc-400 tracking-wide font-semibold text-sm ml-1">

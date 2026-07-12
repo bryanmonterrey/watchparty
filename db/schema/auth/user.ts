@@ -28,6 +28,8 @@ export const user = pgTable("user", {
   dmRequireFollow: boolean("dmRequireFollow").default(false).notNull(),
   twoFactorEnabled: boolean("twoFactorEnabled").default(false),
   dmPrice: integer("dmPrice"),                         // lamports to unlock DMs (null = free)
+  xp: integer("xp").default(0).notNull(),              // lifetime XP; rollup of xp_events (server/lib/xp.ts)
+  level: integer("level").default(1).notNull(),        // derived from xp via lib/xp.ts curve
   referralCode: text("referralCode"),                  // auto-generated code for referrals
   referredBy: text("referredBy"),                      // userId who referred this user
   banned: boolean("banned"),

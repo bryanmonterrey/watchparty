@@ -7,6 +7,7 @@ import { posts } from '@/db/schema/content/post';
 import { like, or, eq, count, and, desc, lt, gt, sql, inArray } from 'drizzle-orm';
 import { withCache, invalidateCache, TTL } from '@/lib/cache';
 import { createNotification } from '@/server/lib/notify';
+import { awardXP } from '@/server/lib/xp';
 import { upsertUser } from '@/lib/typesense/sync';
 
 export const userRouter = router({
@@ -122,6 +123,7 @@ export const userRouter = router({
             if (ctx.user.id === input.followingId) throw new Error("Cannot follow yourself");
             await db.insert(follows).values({ followerId: ctx.user.id, followingId: input.followingId }).onConflictDoNothing();
             await createNotification({ userId: input.followingId, actorId: ctx.user.id, type: "follow" });
+            await awardXP(input.followingId, "follow_received", ctx.user.id);
             return { success: true };
         }),
 

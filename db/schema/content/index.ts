@@ -20,3 +20,4 @@ export * from "./video_progress";
 export * from "./video_heatmap";
 export * from "./video_captions";
 export * from "./video_cards";
+export * from "./xp";
