@@ -53,7 +53,7 @@ export function CreatePlaylistDialog({ open, onOpenChange, onCreate }: CreatePla
                         <Input
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="h-14 pt-4 bg-transparent border-zinc-600 focus:border-blue-400 rounded transition-colors placeholder:text-zinc-500"
+                            className="h-14 pt-4"
                             placeholder="Add title"
                         />
                         <div className="text-right text-xs text-zinc-400 mt-1">{title.length}/150</div>

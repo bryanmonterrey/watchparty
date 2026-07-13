@@ -105,7 +105,7 @@ export function DetailsStep({
                     <Input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="bg-transparent text-md h-12 border-zinc-700 focus:border-twitter2/50 transition-colors pr-10"
+                        className="h-12 pr-10"
                         maxLength={100}
                     />
                 </div>

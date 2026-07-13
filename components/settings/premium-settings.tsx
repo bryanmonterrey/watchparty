@@ -3,9 +3,10 @@
 import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 import { TIERS, type TierKey } from "@/lib/premium/tiers";
-import { Crown, Loader2, Megaphone, ArrowUpRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon, CrownIcon, Loading03Icon, Megaphone02Icon } from "@hugeicons/core-free-icons";
 import { appToast } from "@/components/app-ui/app-toast";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Panel, PillButton } from "@/components/settings/ui";
 
 export function PremiumSettings() {
     const utils = trpc.useUtils();
@@ -19,72 +20,65 @@ export function PremiumSettings() {
         onError: (e) => appToast.error(e.message),
     });
 
-    if (isLoading) return <Skeleton className="h-40 rounded-xl" />;
+    if (isLoading) return (
+        <div className="h-40 overflow-hidden rounded-[24px]"><div className="size-full shimmer-skeleton" /></div>
+    );
 
     const sub = data?.subscription;
     const active = data?.entitled && sub;
 
     if (!active) {
         return (
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-6 text-center">
-                <Crown className="mx-auto size-8 text-twitter" />
-                <p className="mt-3 font-semibold text-zinc-100">You&apos;re not on Premium</p>
-                <p className="mt-1 text-sm text-zinc-400">
+            <Panel className="p-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+                <HugeiconsIcon icon={CrownIcon} className="mx-auto size-8 text-twitter" strokeWidth={2} />
+                <p className="mt-3 text-[15px] font-bold tracking-tight text-white">You&apos;re not on Premium</p>
+                <p className="mt-1 text-[13px] font-medium text-zinc-400">
                     Unlock verified badges, higher limits, analytics and more.
                 </p>
-                <button
-                    onClick={() => openOverlay()}
-                    className="mt-4 rounded-full bg-white text-zinc-950 font-bold px-6 h-11 hover:bg-zinc-200 transition-colors"
-                >
+                <PillButton variant="primary" className="mt-4 h-11 px-6" onClick={() => openOverlay()}>
                     Upgrade to Premium
-                </button>
-            </div>
+                </PillButton>
+            </Panel>
         );
     }
 
     const tier = TIERS[sub.tierKey as TierKey];
     return (
         <div className="space-y-4">
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-5">
+            <Panel className="p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
                 <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                        <Crown className="size-5 text-twitter" />
+                    <div className="flex items-center gap-2.5">
+                        <HugeiconsIcon icon={CrownIcon} className="size-5 text-twitter" strokeWidth={2} />
                         <div>
-                            <p className="font-bold text-zinc-100">{tier?.name ?? sub.tierKey}</p>
-                            <p className="text-xs text-zinc-400 capitalize">
+                            <p className="text-[15px] font-bold tracking-tight text-white">{tier?.name ?? sub.tierKey}</p>
+                            <p className="text-[12px] font-medium capitalize text-zinc-500">
                                 {sub.billingCycle} · {sub.status.replace("_", " ")}
                             </p>
                         </div>
                     </div>
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-[12px] font-medium text-zinc-500">
                         {sub.cancelAtPeriodEnd ? "Ends" : "Renews"}{" "}
                         {new Date(sub.currentPeriodEnd).toLocaleDateString()}
                     </span>
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                    <button
-                        onClick={() => openOverlay()}
-                        className="rounded-full bg-white/10 hover:bg-white/20 text-zinc-100 font-semibold px-4 h-11 text-sm transition-colors"
-                    >
+                    <PillButton className="h-11" onClick={() => openOverlay()}>
                         Change plan
-                    </button>
+                    </PillButton>
                     {!sub.cancelAtPeriodEnd && (
                         <button
                             onClick={() => cancel.mutate(undefined)}
                             disabled={cancel.isPending}
-                            className="flex items-center gap-2 rounded-full bg-transparent hover:bg-red-500/10 text-red-400 font-semibold px-4 h-11 text-sm transition-colors disabled:opacity-50"
+                            className="flex h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-[13px] font-semibold text-pastelred transition-colors hover:bg-pastelred/10 disabled:opacity-50"
                         >
-                            {cancel.isPending && <Loader2 className="size-4 animate-spin" />}
+                            {cancel.isPending && <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" strokeWidth={2} />}
                             Cancel auto-renew
                         </button>
                     )}
                 </div>
-            </div>
+            </Panel>
 
-            {/* Premium features you can manage. Ads opens the ad dashboard, where
-                you create campaigns funded by ad credits — your plan includes a
-                monthly allowance, and you can buy more there. */}
             {/* Ads — a manageable premium feature. Double-bezel: outer shell (tray)
                 holds an inner core (plate). Opens the ad dashboard, where campaigns
                 are funded by ad credits (plan includes a monthly allowance). */}
@@ -99,7 +93,7 @@ export function PremiumSettings() {
                     <div className="pointer-events-none absolute -right-12 -top-16 size-40 rounded-full bg-twitter/20 blur-3xl transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] opacity-60 group-hover:opacity-100" />
                     <div className="relative flex items-center gap-4">
                         <div className="grid size-11 place-items-center rounded-2xl bg-white/[0.04] text-twitter ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
-                            <Megaphone className="size-5" strokeWidth={1.5} />
+                            <HugeiconsIcon icon={Megaphone02Icon} className="size-5" strokeWidth={1.5} />
                         </div>
                         <div>
                             <p className="text-[15px] font-semibold tracking-tight text-white">Ads</p>
@@ -112,7 +106,7 @@ export function PremiumSettings() {
                     </div>
                     {/* button-in-button trailing arrow */}
                     <div className="relative grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06] text-zinc-300 ring-1 ring-white/10 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:bg-white group-hover:text-black group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-                        <ArrowUpRight className="size-4" strokeWidth={1.75} />
+                        <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4" strokeWidth={1.75} />
                     </div>
                 </div>
             </a>

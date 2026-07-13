@@ -94,7 +94,7 @@ export default function SettingsPage() {
     const active = ALL_SETTINGS_ITEMS.find((i) => itemOwnsTab(i, tab));
 
     return (
-        <div className="w-full max-w-4xl px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+        <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
             {/* Section switching lives in the app header (SettingsNav) */}
             <div className="min-w-0">
                 {/* Sub-section pills for consolidated nav items */}

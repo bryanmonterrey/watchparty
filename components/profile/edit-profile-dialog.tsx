@@ -232,7 +232,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                             <Input 
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="h-14 bg-zinc-900/50 border-white/5 rounded-2xl px-4 text-white focus:ring-1 focus:ring-white/20 transition-all"
+                                className="h-14"
                                 placeholder="Display name"
                                 maxLength={50}
                             />
@@ -266,7 +266,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                             <Input 
                                 value={location}
                                 onChange={(e) => setLocation(e.target.value)}
-                                className="h-14 bg-zinc-900/50 border-white/5 rounded-2xl px-4 text-white focus:ring-1 focus:ring-white/20 transition-all"
+                                className="h-14"
                                 placeholder="E.g. Miami, FL"
                                 maxLength={100}
                             />
@@ -279,7 +279,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                             <Input 
                                 value={website}
                                 onChange={(e) => setWebsite(e.target.value)}
-                                className="h-14 bg-zinc-900/50 border-white/5 rounded-2xl px-4 text-white focus:ring-1 focus:ring-white/20 transition-all"
+                                className="h-14"
                                 placeholder="https://yourwebsite.com"
                                 maxLength={100}
                             />

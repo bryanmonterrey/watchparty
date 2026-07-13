@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { Shield } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Panel, PanelHeader, PillButton } from "@/components/settings/ui";
 
 const SOL = 1_000_000_000;
 
@@ -49,59 +51,52 @@ export function PrivacySettings() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-white" />
-                <h2 className="text-base font-bold text-zinc-100">Privacy</h2>
-            </div>
+            <PanelHeader title="Privacy" />
 
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 divide-y divide-white/5">
+            <Panel className="p-1.5">
                 {SETTINGS.map(({ label, description, value, set }) => (
-                    <div key={label} className="flex items-center justify-between px-4 py-3">
+                    <div key={label} className="flex items-center justify-between gap-4 rounded-[18px] px-3.5 py-3 transition-colors hover:bg-white/[0.04]">
                         <div>
-                            <p className="text-sm font-medium text-zinc-200">{label}</p>
-                            <p className="text-xs text-zinc-500">{description}</p>
+                            <p className="text-[14px] font-semibold text-zinc-200">{label}</p>
+                            <p className="text-[12px] font-medium text-zinc-500">{description}</p>
                         </div>
-                        <button
-                            onClick={() => set(v => !v)}
-                            className={`relative w-11 h-6 rounded-full transition-colors ${value ? "bg-white" : "bg-zinc-700"}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${value ? "translate-x-5 bg-black" : "translate-x-0 bg-white"}`} />
-                        </button>
+                        <Switch checked={value} onCheckedChange={() => set(v => !v)} />
                     </div>
                 ))}
-            </div>
+            </Panel>
 
-            {/* DM Paywall */}
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-2">
+            {/* DM paywall */}
+            <Panel className="space-y-3 p-5">
                 <div>
-                    <p className="text-sm font-medium text-zinc-200">DM paywall</p>
-                    <p className="text-xs text-zinc-500">Charge a fee (in SOL) for non-followers to message you. Leave blank for free.</p>
+                    <p className="text-[14px] font-semibold text-zinc-200">DM paywall</p>
+                    <p className="text-[12px] font-medium text-zinc-500">Charge a fee (in SOL) for non-followers to message you. Leave blank for free.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <input
+                    <Input
                         type="number"
                         step="0.001"
                         min="0"
                         value={dmPriceSol}
                         onChange={e => setDmPriceSol(e.target.value)}
                         placeholder="0.00 (free)"
-                        className="flex-1 bg-zinc-800 text-sm text-zinc-100 placeholder:text-zinc-500 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
+                        className="h-11 flex-1 text-[13px] [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                    <span className="text-sm text-zinc-500 shrink-0">SOL</span>
+                    <span className="shrink-0 text-[13px] font-semibold text-zinc-500">SOL</span>
                 </div>
-            </div>
+            </Panel>
 
-            <button
+            <PillButton
+                variant="primary"
+                className="h-11 w-full"
                 onClick={() => update.mutate({
                     showOnlineStatus,
                     dmRequireFollow,
                     dmPrice: dmPriceSol ? Math.round(parseFloat(dmPriceSol) * SOL) : 0,
                 })}
                 disabled={update.isPending}
-                className="w-full py-2 rounded-lg bg-white text-zinc-950 font-bold text-sm hover:bg-white/90 transition-colors disabled:opacity-50"
             >
                 {update.isPending ? "Saving…" : "Save"}
-            </button>
+            </PillButton>
         </div>
     );
 }

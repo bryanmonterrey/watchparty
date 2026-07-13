@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { authClient } from "@/lib/auth/client";
-import { Monitor, Smartphone, Globe, Trash2, Loader2, ShieldCheck } from "lucide-react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { ComputerIcon, Delete02Icon, Globe02Icon, Loading03Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import { EmptyState, Panel, PanelHeader, PanelSkeleton } from "@/components/settings/ui";
 
 interface SessionInfo {
     id: string;
@@ -17,11 +18,11 @@ interface SessionInfo {
     current?: boolean;
 }
 
-function deviceIcon(userAgent?: string | null) {
-    if (!userAgent) return <Globe className="w-4 h-4" />;
+function deviceIcon(userAgent?: string | null): IconSvgElement {
+    if (!userAgent) return Globe02Icon;
     const ua = userAgent.toLowerCase();
-    if (ua.includes("mobile") || ua.includes("android") || ua.includes("iphone")) return <Smartphone className="w-4 h-4" />;
-    return <Monitor className="w-4 h-4" />;
+    if (ua.includes("mobile") || ua.includes("android") || ua.includes("iphone")) return SmartPhone01Icon;
+    return ComputerIcon;
 }
 
 function deviceLabel(userAgent?: string | null) {
@@ -84,47 +85,42 @@ export function SessionManager() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-white" />
-                    <h2 className="text-base font-bold text-zinc-100">Active Sessions</h2>
-                </div>
-                {sessions.length > 1 && (
+            <PanelHeader
+                title="Active sessions"
+                action={sessions.length > 1 && (
                     <button
                         onClick={revokeAll}
                         disabled={revoking === "all"}
-                        className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                        className="cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-semibold text-pastelred transition-colors hover:bg-pastelred/10 disabled:opacity-40"
                     >
                         {revoking === "all" ? "Revoking…" : "Sign out all others"}
                     </button>
                 )}
-            </div>
+            />
 
             {loading ? (
-                <div className="space-y-2">
-                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
-                </div>
+                <PanelSkeleton rows={3} rowClassName="h-16" />
             ) : sessions.length === 0 ? (
-                <p className="text-sm text-zinc-500 text-center py-8">No active sessions found</p>
+                <EmptyState title="No active sessions" hint="Sessions appear here when you sign in on a device" />
             ) : (
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 divide-y divide-white/5">
+                <Panel className="p-1.5">
                     {sessions.map(s => (
-                        <div key={s.id} className="flex items-center gap-3 px-4 py-3">
-                            <div className="p-2 rounded-lg bg-white/5 text-zinc-400 shrink-0">
-                                {deviceIcon(s.userAgent)}
+                        <div key={s.id} className="flex items-center gap-3 rounded-[18px] px-3.5 py-3 transition-colors hover:bg-white/[0.04]">
+                            <div className="shrink-0 rounded-full bg-white/5 p-2 text-zinc-400">
+                                <HugeiconsIcon icon={deviceIcon(s.userAgent)} className="size-4" strokeWidth={2} />
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium text-zinc-200 truncate">
+                                    <p className="truncate text-[14px] font-semibold text-zinc-200">
                                         {deviceLabel(s.userAgent)}
                                     </p>
                                     {s.current && (
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/15 text-white shrink-0">
+                                        <span className="shrink-0 rounded-full bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white">
                                             This device
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-xs text-zinc-500">
+                                <p className="text-[12px] font-medium text-zinc-500">
                                     {s.ipAddress && `${s.ipAddress} · `}
                                     Active {formatDistanceToNow(new Date(s.updatedAt), { addSuffix: true })}
                                 </p>
@@ -133,15 +129,15 @@ export function SessionManager() {
                                 <button
                                     onClick={() => revoke(s.token)}
                                     disabled={revoking === s.token}
-                                    className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-40 shrink-0"
+                                    className="shrink-0 cursor-pointer rounded-full p-2 text-zinc-600 transition-colors hover:bg-pastelred/10 hover:text-pastelred disabled:opacity-40"
                                     title="Revoke session"
                                 >
-                                    {revoking === s.token ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                    <HugeiconsIcon icon={revoking === s.token ? Loading03Icon : Delete02Icon} className={revoking === s.token ? "size-4 animate-spin" : "size-4"} strokeWidth={2} />
                                 </button>
                             )}
                         </div>
                     ))}
-                </div>
+                </Panel>
             )}
         </div>
     );

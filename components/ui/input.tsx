@@ -1,21 +1,37 @@
 import * as React from "react"
 
+import { Squircle } from "@/components/ui/squircle"
 import { cn } from "@/lib/utils"
 
-function Input({ className, type, ref, ...props }: React.ComponentProps<"input">) {
+// Squircle-clipped input (Lisse). The shape comes entirely from the clip-path,
+// so the element stays `rounded-none` and must not carry a border or focus
+// ring — both are painted on the rectangular box and get cut at the clipped
+// corners. State reads through background tints instead.
+function Input({
+  className,
+  type,
+  radius = 14,
+  ref,
+  ...props
+}: React.ComponentProps<"input"> & { radius?: number }) {
   return (
-    <input
-      ref={ref}
-      type={type}
-      data-slot="input"
-      className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-full border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        className
-      )}
-      {...props}
-    />
+    <Squircle asChild radius={radius}>
+      <input
+        ref={ref}
+        type={type}
+        data-slot="input"
+        className={cn(
+          "h-11 w-full min-w-0 rounded-none bg-white/[0.06] px-4 text-[14px] font-medium text-white outline-none transition-colors",
+          "placeholder:text-zinc-600 selection:bg-white/20 selection:text-white",
+          "focus:bg-white/[0.1]",
+          "file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-white",
+          "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+          "aria-invalid:bg-pastelred/10 aria-invalid:placeholder:text-pastelred/60",
+          className
+        )}
+        {...props}
+      />
+    </Squircle>
   )
 }
 

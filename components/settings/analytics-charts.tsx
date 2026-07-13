@@ -1,18 +1,27 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
-import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, Users, Eye, Heart, Crown } from "lucide-react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { ChartUpIcon, CrownIcon, EyeIcon, FavouriteIcon, UserGroup02Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
+import { Panel } from "@/components/settings/ui";
 
-function SparkBar({ values, color, label }: { values: number[]; color: string; label: string }) {
+// Brand series colors (lantern / twitter2 / pastelred / white / sunset)
+const SERIES = {
+    followers: "#00ED89",
+    views: "#358efc",
+    likes: "#FF746C",
+    posts: "#e4e4e7",
+    subs: "#FFCC00",
+};
+
+function SparkBar({ values, color }: { values: number[]; color: string }) {
     const max = Math.max(...values, 1);
     const w = 100 / values.length;
 
     return (
         <div className="space-y-2">
-            <p className="text-xs font-semibold text-zinc-400">{label}</p>
-            <svg viewBox={`0 0 100 40`} className="w-full h-14" preserveAspectRatio="none">
+            <svg viewBox={`0 0 100 40`} className="h-14 w-full" preserveAspectRatio="none">
                 {values.map((v, i) => {
                     const h = (v / max) * 36;
                     return (
@@ -29,7 +38,7 @@ function SparkBar({ values, color, label }: { values: number[]; color: string; l
                     );
                 })}
             </svg>
-            <div className="flex justify-between text-[10px] text-zinc-600">
+            <div className="flex justify-between text-[11px] font-medium text-zinc-600">
                 <span>30d ago</span>
                 <span>Today</span>
             </div>
@@ -48,7 +57,7 @@ function SparkLine({ values, color }: { values: number[]; color: string }) {
     const area = `0,40 ${points} 100,40`;
 
     return (
-        <svg viewBox="0 0 100 42" className="w-full h-14" preserveAspectRatio="none">
+        <svg viewBox="0 0 100 42" className="h-14 w-full" preserveAspectRatio="none">
             <defs>
                 <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={color} stopOpacity="0.3" />
@@ -77,6 +86,18 @@ function buildDayArray(data: { day: string; count?: number; views?: number; like
     return arr;
 }
 
+function ChartTile({ icon, label, value, children, wide }: { icon: IconSvgElement; label: string; value: string; children: React.ReactNode; wide?: boolean }) {
+    return (
+        <Panel className={wide ? "col-span-2 space-y-1 p-4" : "space-y-1 p-4"}>
+            <div className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500">
+                <HugeiconsIcon icon={icon} className="size-3.5" strokeWidth={2} /> {label}
+            </div>
+            <p className="text-xl font-bold tabular-nums tracking-tight text-white">{value}</p>
+            {children}
+        </Panel>
+    );
+}
+
 export function AnalyticsCharts() {
     const { data, isLoading } = trpc.user.getEngagementHistory.useQuery();
 
@@ -93,52 +114,31 @@ export function AnalyticsCharts() {
 
     if (isLoading) return (
         <div className="grid grid-cols-2 gap-3">
-            {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
+            {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="h-28 overflow-hidden rounded-[20px]"><div className="size-full shimmer-skeleton" /></div>
+            ))}
         </div>
     );
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-white" />
-                <p className="text-sm font-semibold text-zinc-300">Last 30 Days</p>
-            </div>
+            <p className="text-[14px] font-semibold text-zinc-500">Last 30 days</p>
             <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-1">
-                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
-                        <Users className="w-3.5 h-3.5" /> New Followers
-                    </div>
-                    <p className="text-xl font-bold text-zinc-100">+{totalNewFollowers.toLocaleString()}</p>
-                    <SparkLine values={followerData} color="#00ED89" />
-                </div>
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-1">
-                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
-                        <Eye className="w-3.5 h-3.5" /> Post Views
-                    </div>
-                    <p className="text-xl font-bold text-zinc-100">{totalViews.toLocaleString()}</p>
-                    <SparkLine values={viewsData} color="#60a5fa" />
-                </div>
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-1">
-                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
-                        <Heart className="w-3.5 h-3.5" /> Likes Received
-                    </div>
-                    <p className="text-xl font-bold text-zinc-100">{totalLikes.toLocaleString()}</p>
-                    <SparkLine values={likesData} color="#f472b6" />
-                </div>
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-1">
-                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
-                        <TrendingUp className="w-3.5 h-3.5" /> Posts Published
-                    </div>
-                    <p className="text-xl font-bold text-zinc-100">{postsData.reduce((a,b)=>a+b,0)}</p>
-                    <SparkBar values={postsData} color="#a78bfa" label="" />
-                </div>
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-1 col-span-2">
-                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
-                        <Crown className="w-3.5 h-3.5" /> New Subscribers
-                    </div>
-                    <p className="text-xl font-bold text-zinc-100">+{totalNewSubs.toLocaleString()}</p>
-                    <SparkLine values={subscriberData} color="#f59e0b" />
-                </div>
+                <ChartTile icon={UserGroup02Icon} label="New followers" value={`+${totalNewFollowers.toLocaleString()}`}>
+                    <SparkLine values={followerData} color={SERIES.followers} />
+                </ChartTile>
+                <ChartTile icon={EyeIcon} label="Post views" value={totalViews.toLocaleString()}>
+                    <SparkLine values={viewsData} color={SERIES.views} />
+                </ChartTile>
+                <ChartTile icon={FavouriteIcon} label="Likes received" value={totalLikes.toLocaleString()}>
+                    <SparkLine values={likesData} color={SERIES.likes} />
+                </ChartTile>
+                <ChartTile icon={ChartUpIcon} label="Posts published" value={postsData.reduce((a, b) => a + b, 0).toLocaleString()}>
+                    <SparkBar values={postsData} color={SERIES.posts} />
+                </ChartTile>
+                <ChartTile icon={CrownIcon} label="New subscribers" value={`+${totalNewSubs.toLocaleString()}`} wide>
+                    <SparkLine values={subscriberData} color={SERIES.subs} />
+                </ChartTile>
             </div>
         </div>
     );

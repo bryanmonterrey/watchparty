@@ -181,7 +181,7 @@ export function ShowMoreSection({
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-zinc-300">Tags</h3>
                                 <p className="text-xs text-zinc-500">Tags can be useful if content in your video is commonly misspelled.</p>
-                                <Input placeholder="Add tag" className="h-12 text-md bg-transparent border-zinc-700 focus:border-lantern/50 px-4" />
+                                <Input placeholder="Add tag" className="h-12" />
                                 <p className="text-xs text-zinc-600 text-right">0/500</p>
                             </div>
 

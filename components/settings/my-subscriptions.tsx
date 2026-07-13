@@ -1,11 +1,12 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Crown, X } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { EmptyState, Panel, PanelSkeleton } from "@/components/settings/ui";
 
 const SOL = 1_000_000_000;
 function lamportsToSol(l: number) {
@@ -19,31 +20,28 @@ export function MySubscriptions() {
         onSuccess: () => { utils.subscription.getMySubscriptions.invalidate(); toast.success("Subscription cancelled"); },
     });
 
-    if (isLoading) return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>;
+    if (isLoading) return <PanelSkeleton rows={3} rowClassName="h-16" />;
 
     if (!data?.length) return (
-        <div className="text-center py-12 space-y-2">
-            <Crown className="w-10 h-10 mx-auto text-zinc-700" />
-            <p className="text-sm text-zinc-500">No active subscriptions</p>
-        </div>
+        <EmptyState title="No active subscriptions" hint="Creators you subscribe to show up here" />
     );
 
     return (
-        <div className="space-y-2">
+        <Panel className="p-1.5">
             {data.map(sub => (
-                <div key={sub.id} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900/60 border border-white/10">
+                <div key={sub.id} className="flex items-center gap-3 rounded-[18px] px-3.5 py-3 transition-colors hover:bg-white/[0.04]">
                     <Link href={`/${sub.creator.username}`}>
                         {sub.creator.avatar_url
-                            ? <img src={sub.creator.avatar_url} className="w-10 h-10 rounded-full object-cover" alt={sub.creator.name} />
-                            : <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold">{sub.creator.name?.[0]}</div>
+                            ? <img src={sub.creator.avatar_url} className="size-10 rounded-full object-cover" alt={sub.creator.name} />
+                            : <div className="flex size-10 items-center justify-center rounded-full bg-white/10 font-bold text-zinc-400">{sub.creator.name?.[0]}</div>
                         }
                     </Link>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-zinc-200 truncate">{sub.creator.name}</p>
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-white/10 text-white font-semibold border border-white/10">{sub.tier.name}</span>
+                            <p className="truncate text-[14px] font-semibold text-zinc-200">{sub.creator.name}</p>
+                            <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[11px] font-semibold text-white">{sub.tier.name}</span>
                         </div>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-[12px] font-medium text-zinc-500">
                             {lamportsToSol(sub.tier.priceMonthly)} SOL/{sub.billingCycle === "annual" ? "yr" : "mo"}
                             {sub.cancelAtPeriodEnd
                                 ? ` · Cancels ${formatDistanceToNow(new Date(sub.currentPeriodEnd))} from now`
@@ -55,14 +53,14 @@ export function MySubscriptions() {
                         <button
                             onClick={() => cancel.mutate({ creatorId: sub.creator.id })}
                             disabled={cancel.isPending}
-                            className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors"
+                            className="cursor-pointer rounded-full p-1.5 text-zinc-600 transition-colors hover:bg-pastelred/10 hover:text-pastelred"
                             title="Cancel subscription"
                         >
-                            <X className="w-4 h-4" />
+                            <HugeiconsIcon icon={Cancel01Icon} className="size-4" strokeWidth={2} />
                         </button>
                     )}
                 </div>
             ))}
-        </div>
+        </Panel>
     );
 }

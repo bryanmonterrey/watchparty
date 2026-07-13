@@ -53,7 +53,7 @@ export function InviteModal() {
                         <Input
                             readOnly
                             value={inviteUrl}
-                            className="bg-zinc-900/50 border-none text-zinc-300 focus-visible:ring-0"
+                            className="text-zinc-300"
                         />
                         <Button
                             onClick={onCopy}

@@ -1,11 +1,12 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Gift, Crown } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GiftIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { EmptyState, Panel, PanelSkeleton, PillButton } from "@/components/settings/ui";
 
 export function GiftInbox() {
     const utils = trpc.useUtils();
@@ -19,27 +20,24 @@ export function GiftInbox() {
         onError: e => toast.error(e.message),
     });
 
-    if (isLoading) return <div className="space-y-3">{[1, 2].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>;
+    if (isLoading) return <PanelSkeleton rows={2} rowClassName="h-20" />;
 
     if (!data?.length) return (
-        <div className="text-center py-12 space-y-2">
-            <Gift className="w-10 h-10 mx-auto text-zinc-700" />
-            <p className="text-sm text-zinc-500">No pending gift subscriptions</p>
-        </div>
+        <EmptyState title="No pending gifts" hint="Gifted subscriptions land here until you redeem them" />
     );
 
     return (
         <div className="space-y-3">
-            <p className="text-xs text-zinc-500">Redeem your gifted subscriptions before they expire.</p>
+            <p className="text-[12px] font-medium text-zinc-500">Redeem your gifted subscriptions before they expire.</p>
             {data.map(gift => (
-                <div key={gift.id} className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
+                <Panel key={gift.id} className="space-y-3 p-5">
                     <div className="flex items-start gap-3">
-                        <Gift className="w-5 h-5 text-white shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-zinc-100">
-                                {gift.durationMonths}mo <span className="text-white">{gift.tier.name}</span> subscription
+                        <HugeiconsIcon icon={GiftIcon} className="mt-0.5 size-5 shrink-0 text-white" strokeWidth={2} />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[14px] font-bold text-white">
+                                {gift.durationMonths}mo {gift.tier.name} subscription
                             </p>
-                            <p className="text-xs text-zinc-500 mt-0.5">
+                            <p className="mt-0.5 text-[12px] font-medium text-zinc-500">
                                 From{" "}
                                 <Link href={`/${gift.sender.username}`} className="text-zinc-300 hover:underline">
                                     {gift.sender.name}
@@ -47,21 +45,19 @@ export function GiftInbox() {
                                 {" · "}Expires {formatDistanceToNow(new Date(gift.expiresAt))} from now
                             </p>
                             {gift.message && (
-                                <p className="text-xs text-zinc-400 italic mt-1.5">"{gift.message}"</p>
+                                <p className="mt-1.5 text-[12px] italic text-zinc-400">"{gift.message}"</p>
                             )}
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <Crown className="w-3.5 h-3.5 text-white" />
-                        </div>
                     </div>
-                    <button
+                    <PillButton
+                        variant="primary"
+                        className="w-full"
                         onClick={() => redeem.mutate({ giftId: gift.id })}
                         disabled={redeem.isPending}
-                        className="w-full py-2 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
                     >
-                        {redeem.isPending ? "Activating…" : "Redeem Gift"}
-                    </button>
-                </div>
+                        {redeem.isPending ? "Activating…" : "Redeem gift"}
+                    </PillButton>
+                </Panel>
             ))}
         </div>
     );

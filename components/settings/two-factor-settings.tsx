@@ -1,42 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { authClient } from "@/lib/auth/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { ShieldCheck, ShieldOff, Copy, Check, KeyRound, AlertTriangle } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert02Icon, Copy01Icon, SecurityLockIcon, Shield01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import QRCode from "qrcode";
+import { Squircle } from "@/components/ui/squircle";
+import { Panel, PillButton } from "@/components/settings/ui";
 
 function DigitInput({ value, onChange, length = 6 }: { value: string; onChange: (v: string) => void; length?: number }) {
     return (
-        <div className="flex gap-2 justify-center">
+        <div className="flex justify-center gap-2">
             {Array.from({ length }).map((_, i) => (
-                <input
-                    key={i}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={value[i] ?? ""}
-                    onChange={e => {
-                        const digits = value.split("");
-                        digits[i] = e.target.value.replace(/\D/g, "");
-                        const next = digits.join("").slice(0, length);
-                        onChange(next);
-                        // Auto-focus next
-                        if (e.target.value && i < length - 1) {
-                            const next = e.target.parentElement?.children[i + 1] as HTMLInputElement;
-                            next?.focus();
-                        }
-                    }}
-                    onKeyDown={e => {
-                        if (e.key === "Backspace" && !value[i] && i > 0) {
-                            const prev = e.currentTarget.parentElement?.children[i - 1] as HTMLInputElement;
-                            prev?.focus();
-                        }
-                    }}
-                    className="w-10 h-12 text-center text-lg font-bold bg-zinc-800 border border-white/15 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-white/30"
-                />
+                <Squircle asChild radius={12} key={i}>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={value[i] ?? ""}
+                        onChange={e => {
+                            const digits = value.split("");
+                            digits[i] = e.target.value.replace(/\D/g, "");
+                            const next = digits.join("").slice(0, length);
+                            onChange(next);
+                            // Auto-focus next
+                            if (e.target.value && i < length - 1) {
+                                const nextEl = e.target.parentElement?.children[i + 1] as HTMLInputElement;
+                                nextEl?.focus();
+                            }
+                        }}
+                        onKeyDown={e => {
+                            if (e.key === "Backspace" && !value[i] && i > 0) {
+                                const prev = e.currentTarget.parentElement?.children[i - 1] as HTMLInputElement;
+                                prev?.focus();
+                            }
+                        }}
+                        className="h-12 w-10 rounded-none bg-white/[0.06] text-center text-lg font-bold text-white outline-none transition-colors focus:bg-white/[0.12]"
+                    />
+                </Squircle>
             ))}
         </div>
     );
@@ -132,16 +135,16 @@ export function TwoFactorSettings() {
     if (is2FAEnabled && step === "idle") {
         return (
             <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/10 border border-white/10">
-                    <ShieldCheck className="w-6 h-6 text-white shrink-0" />
+                <Panel className="flex items-center gap-3 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+                    <HugeiconsIcon icon={Shield01Icon} className="size-6 shrink-0 text-white" strokeWidth={2} />
                     <div>
-                        <p className="text-sm font-bold text-zinc-100">Two-factor authentication is active</p>
-                        <p className="text-xs text-zinc-400">Your account is protected with an authenticator app.</p>
+                        <p className="text-[14px] font-bold text-white">Two-factor authentication is active</p>
+                        <p className="text-[12px] font-medium text-zinc-500">Your account is protected with an authenticator app.</p>
                     </div>
-                </div>
+                </Panel>
                 <button
                     onClick={() => setStep("disable")}
-                    className="w-full py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition-colors"
+                    className="h-11 w-full cursor-pointer rounded-full bg-pastelred/10 text-[13px] font-bold text-pastelred transition-colors hover:bg-pastelred/20"
                 >
                     Disable 2FA
                 </button>
@@ -153,20 +156,20 @@ export function TwoFactorSettings() {
     if (step === "disable") {
         return (
             <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                    <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
-                    <p className="text-sm text-red-300">Disabling 2FA reduces your account security.</p>
-                </div>
-                <div className="space-y-3">
-                    <div>
-                        <label className="text-xs text-zinc-500 mb-1 block">Enter your 6-digit authenticator code</label>
-                        <DigitInput value={code} onChange={setCode} />
+                <Squircle asChild radius={16} autoEffects={false}>
+                    <div className="flex items-center gap-3 bg-pastelred/10 p-4">
+                        <HugeiconsIcon icon={Alert02Icon} className="size-5 shrink-0 text-pastelred" strokeWidth={2} />
+                        <p className="text-[13px] font-medium text-pastelred">Disabling 2FA reduces your account security.</p>
                     </div>
+                </Squircle>
+                <div className="space-y-1.5">
+                    <label className="block text-[12px] font-medium text-zinc-500">Enter your 6-digit authenticator code</label>
+                    <DigitInput value={code} onChange={setCode} />
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => { setStep("idle"); setCode(""); }} className="flex-1 py-2 rounded-xl bg-zinc-800 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors">Cancel</button>
+                    <PillButton className="h-11 flex-1" onClick={() => { setStep("idle"); setCode(""); }}>Cancel</PillButton>
                     <button onClick={disable2FA} disabled={loading || code.length < 6}
-                        className="flex-1 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-500 transition-colors disabled:opacity-50">
+                        className="h-11 flex-1 cursor-pointer rounded-full bg-pastelred text-[13px] font-bold text-white transition-colors hover:bg-pastelred/90 disabled:pointer-events-none disabled:opacity-50">
                         {loading ? "Disabling…" : "Disable 2FA"}
                     </button>
                 </div>
@@ -178,28 +181,30 @@ export function TwoFactorSettings() {
     if (step === "backup") {
         return (
             <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/10 border border-white/10">
-                    <ShieldCheck className="w-5 h-5 text-white" />
-                    <p className="text-sm font-bold text-zinc-100">2FA enabled successfully!</p>
-                </div>
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
+                <Panel className="flex items-center gap-3 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+                    <HugeiconsIcon icon={Shield01Icon} className="size-5 text-white" strokeWidth={2} />
+                    <p className="text-[14px] font-bold text-white">2FA enabled successfully!</p>
+                </Panel>
+                <Panel className="space-y-3 p-5">
                     <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-zinc-300">Backup Codes</p>
-                        <button onClick={copyCodes} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
-                            {copiedCodes ? <Check className="w-3 h-3 text-white" /> : <Copy className="w-3 h-3" />}
+                        <p className="text-[13px] font-semibold text-zinc-300">Backup codes</p>
+                        <button onClick={copyCodes} className="flex cursor-pointer items-center gap-1 text-[12px] font-medium text-zinc-400 transition-colors hover:text-white">
+                            <HugeiconsIcon icon={copiedCodes ? Tick02Icon : Copy01Icon} className={copiedCodes ? "size-3 text-white" : "size-3"} strokeWidth={2} />
                             {copiedCodes ? "Copied" : "Copy all"}
                         </button>
                     </div>
-                    <p className="text-xs text-zinc-500">Save these backup codes somewhere safe. Each can be used once if you lose your authenticator.</p>
+                    <p className="text-[12px] font-medium text-zinc-500">Save these backup codes somewhere safe. Each can be used once if you lose your authenticator.</p>
                     <div className="grid grid-cols-2 gap-1.5">
-                        {backupCodes.map((code, i) => (
-                            <code key={i} className="text-xs  bg-zinc-800 text-zinc-300 px-2.5 py-1.5 rounded-lg text-center">{code}</code>
+                        {backupCodes.map((c, i) => (
+                            <Squircle asChild radius={10} key={i}>
+                                <code className="bg-white/[0.06] px-2.5 py-1.5 text-center text-[12px] text-zinc-300">{c}</code>
+                            </Squircle>
                         ))}
                     </div>
-                </div>
-                <button onClick={() => setStep("idle")} className="w-full py-2.5 rounded-xl bg-white/10 text-sm font-semibold text-zinc-200 hover:bg-white/15 transition-colors">
+                </Panel>
+                <PillButton className="h-11 w-full" onClick={() => setStep("idle")}>
                     Done
-                </button>
+                </PillButton>
             </div>
         );
     }
@@ -208,14 +213,13 @@ export function TwoFactorSettings() {
     if (step === "verify") {
         return (
             <div className="space-y-4">
-                <p className="text-sm text-zinc-400">Enter the 6-digit code from your authenticator app to confirm setup.</p>
+                <p className="text-[13px] font-medium text-zinc-400">Enter the 6-digit code from your authenticator app to confirm setup.</p>
                 <DigitInput value={code} onChange={v => { setCode(v); if (v.length === 6) setTimeout(() => verifyAndEnable(), 100); }} />
                 <div className="flex gap-2">
-                    <button onClick={() => { setStep("setup"); setCode(""); }} className="flex-1 py-2 rounded-xl bg-zinc-800 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors">Back</button>
-                    <button onClick={verifyAndEnable} disabled={loading || code.length < 6}
-                        className="flex-1 py-2 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50">
-                        {loading ? "Verifying…" : "Verify & Enable"}
-                    </button>
+                    <PillButton className="h-11 flex-1" onClick={() => { setStep("setup"); setCode(""); }}>Back</PillButton>
+                    <PillButton variant="primary" className="h-11 flex-1" onClick={verifyAndEnable} disabled={loading || code.length < 6}>
+                        {loading ? "Verifying…" : "Verify & enable"}
+                    </PillButton>
                 </div>
             </div>
         );
@@ -225,25 +229,26 @@ export function TwoFactorSettings() {
     if (step === "setup") {
         return (
             <div className="space-y-4">
-                <p className="text-sm text-zinc-400">Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+                <p className="text-[13px] font-medium text-zinc-400">Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
                 {qrDataUrl && (
                     <div className="flex justify-center">
-                        <img src={qrDataUrl} alt="TOTP QR Code" className="w-48 h-48 rounded-xl" />
+                        <Squircle asChild radius={20}>
+                            <img src={qrDataUrl} alt="TOTP QR Code" className="size-48" />
+                        </Squircle>
                     </div>
                 )}
                 {secret && (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-800/60 border border-white/10">
-                        <code className="flex-1 text-xs  text-zinc-300 tracking-widest break-all">{secret}</code>
-                        <button onClick={copySecret} className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors">
-                            {copiedSecret ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+                    <Panel className="flex items-center gap-2 p-3">
+                        <code className="flex-1 break-all text-[12px] tracking-widest text-zinc-300">{secret}</code>
+                        <button onClick={copySecret} className="shrink-0 cursor-pointer rounded-full p-1.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white">
+                            <HugeiconsIcon icon={copiedSecret ? Tick02Icon : Copy01Icon} className={copiedSecret ? "size-4 text-white" : "size-4"} strokeWidth={2} />
                         </button>
-                    </div>
+                    </Panel>
                 )}
-                <p className="text-xs text-zinc-600 text-center">Or enter the code above manually in your app.</p>
-                <button onClick={() => setStep("verify")}
-                    className="w-full py-2.5 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors">
+                <p className="text-center text-[12px] font-medium text-zinc-600">Or enter the code above manually in your app.</p>
+                <PillButton variant="primary" className="h-11 w-full" onClick={() => setStep("verify")}>
                     I've scanned it →
-                </button>
+                </PillButton>
             </div>
         );
     }
@@ -251,29 +256,25 @@ export function TwoFactorSettings() {
     // ── Idle (not enabled) ────────────────────────────────────────────────────
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-900/60 border border-white/10">
-                <ShieldOff className="w-6 h-6 text-zinc-500 shrink-0" />
+            <Panel className="flex items-center gap-3 p-5">
+                <HugeiconsIcon icon={SecurityLockIcon} className="size-6 shrink-0 text-zinc-500" strokeWidth={2} />
                 <div>
-                    <p className="text-sm font-bold text-zinc-200">Two-factor authentication is off</p>
-                    <p className="text-xs text-zinc-500">Add an extra layer of security to your account.</p>
+                    <p className="text-[14px] font-bold text-zinc-200">Two-factor authentication is off</p>
+                    <p className="text-[12px] font-medium text-zinc-500">Add an extra layer of security to your account.</p>
                 </div>
-            </div>
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3 text-sm text-zinc-400">
-                <p className="font-semibold text-zinc-300 text-xs uppercase tracking-wide">How it works</p>
-                <ol className="space-y-1.5 list-decimal list-inside text-xs">
+            </Panel>
+            <Panel className="space-y-3 p-5">
+                <p className="text-[12px] font-medium text-zinc-500">How it works</p>
+                <ol className="list-inside list-decimal space-y-1.5 text-[13px] text-zinc-400">
                     <li>Install an authenticator app (Google Authenticator, Authy, 1Password)</li>
                     <li>Scan the QR code shown on the next screen</li>
                     <li>Enter the 6-digit code to verify and enable</li>
                     <li>Save your backup codes in a safe place</li>
                 </ol>
-            </div>
-            <button
-                onClick={startSetup}
-                disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
-            >
-                {loading ? "Setting up…" : "Enable Two-Factor Auth"}
-            </button>
+            </Panel>
+            <PillButton variant="primary" className="h-11 w-full" onClick={startSetup} disabled={loading}>
+                {loading ? "Setting up…" : "Enable two-factor auth"}
+            </PillButton>
         </div>
     );
 }

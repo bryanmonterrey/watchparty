@@ -2,10 +2,20 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { Radio, Copy, Eye, EyeOff, RefreshCw, AlertTriangle, Check, ChevronDown } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+    Alert02Icon,
+    ArrowDown01Icon,
+    Copy01Icon,
+    RefreshIcon,
+    Tick02Icon,
+    ViewIcon,
+    ViewOffSlashIcon,
+} from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Squircle } from "@/components/ui/squircle";
 import {
     Dialog,
     DialogContent,
@@ -14,6 +24,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { EmptyState, FieldLabel, Panel, PanelHeader, PanelSkeleton, PillButton } from "@/components/settings/ui";
 
 function CopyField({ label, value, secret }: { label: string; value: string | null; secret?: boolean }) {
     const [show, setShow] = useState(!secret);
@@ -27,26 +38,27 @@ function CopyField({ label, value, secret }: { label: string; value: string | nu
     };
 
     return (
-        <div className="rounded-xl bg-zinc-800/60 p-4 space-y-2">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">{label}</p>
-            <div className="flex items-center gap-2">
-                <input
+        <Panel className="space-y-2 p-4">
+            <p className="text-[12px] font-medium text-zinc-500">{label}</p>
+            <div className="flex items-center gap-1.5">
+                <Input
+                    radius={12}
                     type={secret && !show ? "password" : "text"}
                     value={value ?? ""}
                     readOnly
                     placeholder={value ? "" : "Not generated yet"}
-                    className="flex-1 bg-zinc-900 text-sm text-zinc-200 px-3 py-2 rounded-lg border border-white/10 focus:outline-none "
+                    className="h-10 bg-white/[0.04] text-[13px] text-zinc-200"
                 />
                 {secret && (
-                    <button onClick={() => setShow(v => !v)} className="p-2 text-zinc-500 hover:text-zinc-300 transition-colors">
-                        {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <button onClick={() => setShow(v => !v)} className="cursor-pointer rounded-full p-2 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white">
+                        <HugeiconsIcon icon={show ? ViewOffSlashIcon : ViewIcon} className="size-4" strokeWidth={2} />
                     </button>
                 )}
-                <button onClick={copy} disabled={!value} className="p-2 text-zinc-500 hover:text-white transition-colors disabled:opacity-30">
-                    {copied ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+                <button onClick={copy} disabled={!value} className="cursor-pointer rounded-full p-2 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-30">
+                    <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} className={cn("size-4", copied && "text-white")} strokeWidth={2} />
                 </button>
             </div>
-        </div>
+        </Panel>
     );
 }
 
@@ -66,30 +78,30 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors">
-                    <RefreshCw className="w-4 h-4" /> Generate Connection
-                </button>
+                <PillButton variant="primary">
+                    <HugeiconsIcon icon={RefreshIcon} className="size-4" strokeWidth={2} /> Generate connection
+                </PillButton>
             </DialogTrigger>
-            <DialogContent className="border-white/10 max-w-md">
+            <DialogContent className="max-w-md border-white/5">
                 <DialogHeader>
-                    <DialogTitle className="text-zinc-100">Generate Stream Connection</DialogTitle>
+                    <DialogTitle className="text-white">Generate stream connection</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                     <div className="space-y-1.5">
-                        <label className="text-xs text-zinc-400">Connection type</label>
+                        <FieldLabel>Connection type</FieldLabel>
                         <GooDropdown
                             className="w-full"
                             align="start"
                             width={280}
                             gap={8}
                             fill="#27272a"
-                            buttonRadius={8}
-                            panelRadius={12}
-                            triggerClassName="flex h-9 w-full items-center justify-between rounded-md border border-white/10 bg-zinc-800 px-3 py-2 text-sm text-zinc-100"
+                            buttonRadius={20}
+                            panelRadius={16}
+                            triggerClassName="flex h-10 w-full items-center justify-between rounded-full bg-white/5 px-4 text-[13px] font-semibold text-white"
                             trigger={
                                 <>
                                     {ingressType === "RTMP" ? "RTMP (OBS, Streamlabs)" : "WHIP (Browser-based)"}
-                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-zinc-500" strokeWidth={2} />
                                 </>
                             }
                             items={([
@@ -98,33 +110,31 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
                             ] as const).map((opt) => ({
                                 key: opt.value,
                                 onClick: () => setIngressType(opt.value),
-                                className: "justify-between text-zinc-100 hover:bg-white/10",
+                                className: "justify-between text-[13px] font-medium text-zinc-100 hover:bg-white/10",
                                 label: (
                                     <>
                                         {opt.label}
-                                        {ingressType === opt.value && <Check className="h-4 w-4" />}
+                                        {ingressType === opt.value && <HugeiconsIcon icon={Tick02Icon} className="size-4" strokeWidth={2} />}
                                     </>
                                 ),
                             }))}
                         />
                     </div>
 
-                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-300">This will reset your existing stream key and server URL. Any active stream will be interrupted.</p>
-                    </div>
+                    <Squircle asChild radius={14} autoEffects={false}>
+                        <div className="flex items-start gap-2 bg-sunset/10 p-3">
+                            <HugeiconsIcon icon={Alert02Icon} className="mt-0.5 size-4 shrink-0 text-sunset" strokeWidth={2} />
+                            <p className="text-[12px] font-medium text-sunset">This will reset your existing stream key and server URL. Any active stream will be interrupted.</p>
+                        </div>
+                    </Squircle>
 
-                    <div className="flex gap-2 justify-end">
-                        <button onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:bg-white/5 transition-colors">
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setOpen(false)} className="cursor-pointer rounded-full px-4 py-2 text-[13px] font-semibold text-zinc-400 transition-colors hover:bg-white/5 hover:text-white">
                             Cancel
                         </button>
-                        <button
-                            onClick={() => generate.mutate({ ingressType })}
-                            disabled={generate.isPending}
-                            className="px-4 py-2 rounded-lg bg-white text-zinc-950 text-sm font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
-                        >
+                        <PillButton variant="primary" onClick={() => generate.mutate({ ingressType })} disabled={generate.isPending}>
                             {generate.isPending ? "Generating…" : "Generate"}
-                        </button>
+                        </PillButton>
                     </div>
                 </div>
             </DialogContent>
@@ -145,78 +155,71 @@ export function StreamSettings() {
     const [category, setCategory] = useState(stream?.category ?? "");
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Radio className="w-5 h-5 text-red-500" />
-                    <h2 className="text-base font-bold text-zinc-100">Stream Settings</h2>
-                    {stream?.isLive && (
-                        <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded bg-red-600 text-white uppercase tracking-wide">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                            Live
-                        </span>
-                    )}
-                </div>
-                <GenerateModal onGenerated={() => utils.stream.getMine.invalidate()} />
-            </div>
+        <div className="space-y-4">
+            <PanelHeader
+                title="Stream"
+                badge={stream?.isLive && (
+                    <span className="flex items-center gap-1 rounded-full bg-pastelred/15 px-2 py-0.5 text-[11px] font-bold tracking-wide text-pastelred">
+                        <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
+                        LIVE
+                    </span>
+                )}
+                action={<GenerateModal onGenerated={() => utils.stream.getMine.invalidate()} />}
+            />
 
             {isLoading ? (
-                <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+                <PanelSkeleton rows={3} rowClassName="h-20" />
             ) : !stream ? (
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-8 text-center space-y-2">
-                    <Radio className="w-10 h-10 mx-auto text-zinc-700" />
-                    <p className="text-sm text-zinc-400">No stream connection yet.</p>
-                    <p className="text-xs text-zinc-600">Click "Generate Connection" to create your RTMP/WHIP stream key.</p>
-                </div>
+                <EmptyState title="No stream connection yet" hint="Generate a connection to get your server URL and stream key" />
             ) : (
                 <div className="space-y-3">
                     <CopyField label="Server URL" value={stream.serverUrl} />
-                    <CopyField label="Stream Key" value={stream.streamKey} secret />
+                    <CopyField label="Stream key" value={stream.streamKey} secret />
                     <CopyField label="Playback URL" value={stream.playbackUrl} />
                 </div>
             )}
 
             {/* Stream info */}
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
-                <p className="text-sm font-semibold text-zinc-300">Stream Info</p>
+            <Panel className="space-y-4 p-5">
+                <p className="text-[14px] font-semibold text-zinc-300">Stream info</p>
                 <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500">Title</label>
-                    <input
+                    <FieldLabel>Title</FieldLabel>
+                    <Input
                         value={title}
                         onChange={e => setTitle(e.target.value)}
                         placeholder="What are you streaming today?"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
+                        className="h-11 text-[13px]"
                     />
                 </div>
                 <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500">Category</label>
-                    <input
+                    <FieldLabel>Category</FieldLabel>
+                    <Input
                         value={category}
                         onChange={e => setCategory(e.target.value)}
                         placeholder="e.g. Gaming, Music, Crypto…"
-                        className="w-full px-3 py-2 bg-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
+                        className="h-11 text-[13px]"
                     />
                 </div>
-                <button
+                <PillButton
+                    className="w-full"
                     onClick={() => updateInfo.mutate({ title: title || undefined, category: category || undefined })}
                     disabled={updateInfo.isPending}
-                    className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/15 text-sm text-zinc-200 font-medium transition-colors disabled:opacity-50"
                 >
-                    {updateInfo.isPending ? "Saving…" : "Save Info"}
-                </button>
-            </div>
+                    {updateInfo.isPending ? "Saving…" : "Save info"}
+                </PillButton>
+            </Panel>
 
             {/* Setup instructions */}
-            <div className="rounded-xl bg-zinc-900/40 border border-white/5 p-4 space-y-2">
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">OBS Setup</p>
-                <ol className="text-xs text-zinc-500 space-y-1 list-decimal list-inside">
+            <Panel className="space-y-2 p-5">
+                <p className="text-[12px] font-medium text-zinc-500">OBS setup</p>
+                <ol className="list-inside list-decimal space-y-1 text-[13px] text-zinc-500">
                     <li>Open OBS → Settings → Stream</li>
                     <li>Set Service to "Custom…"</li>
                     <li>Paste your Server URL into "Server"</li>
                     <li>Paste your Stream Key into "Stream Key"</li>
                     <li>Click OK and start streaming</li>
                 </ol>
-            </div>
+            </Panel>
         </div>
     );
 }
