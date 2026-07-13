@@ -103,12 +103,14 @@ nav into a rounded capsule.
   section gap ≈64px+). One theme per page — bands are tints within it, not a
   light/dark flip mid-scroll.
 
-### Gradient atmosphere (Rainbow takeaway)
-- Section backdrops can be **full-bleed soft gradients** (radial anchored
-  bottom-center, or a gentle linear sweep) that **dissolve into the pastel
-  canvas at one edge** — never a hard color block, never cropped in a small box.
-  Build from our pastels/accents (e.g. `soft-blue → soft-pink → background`),
-  not Rainbow's literal hues. Keep them quiet; the type and cards lead.
+### Gradient atmosphere (Rainbow takeaway) — RETIRED
+- **No gradients, ever** (user rule, 2026-07-13 — supersedes the Rainbow
+  takeaway below). Surfaces are flat fills; depth comes from inset highlights,
+  ambient blurred accent blobs, and inner hairlines — never `bg-gradient-*`.
+- ~~Section backdrops can be full-bleed soft gradients that dissolve into the
+  pastel canvas at one edge — build from our pastels/accents, keep them
+  quiet.~~ Use solid pastel bands instead (the Cash App / Phantom pattern in
+  §1.5 — both references actually use SOLID blocks, no gradients).
 
 ### Motion: scroll animation is a first-class pattern
 - **Entrance reveals on scroll**: `motion/react` `whileInView` (once, `amount:

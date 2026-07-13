@@ -213,7 +213,7 @@ function PlanBanner({ onManage }: { onManage: () => void }) {
             onClick={entitled ? onManage : () => openOverlay()}
             className="group block w-full cursor-pointer rounded-[1.75rem] bg-white/[0.03] p-1.5 text-left ring-1 ring-white/10 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.99]"
         >
-            <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-gradient-to-b from-zinc-900 to-zinc-950 p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
+            <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-zinc-900 p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
                 <div className="pointer-events-none absolute -right-12 -top-16 size-40 rounded-full bg-twitter/20 blur-3xl transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] opacity-60 group-hover:opacity-100" />
                 <div className="relative flex min-w-0 items-center gap-4">
                     <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.04] text-twitter ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
