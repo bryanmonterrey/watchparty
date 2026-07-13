@@ -18,7 +18,6 @@ import { useQueryState } from 'nuqs'
 import { searchParams } from '@/lib/searchParams'
 import { GlobalSearch } from './global-search'
 import { TradeNav } from '@/components/trade/trade-nav'
-import { SettingsNav } from '@/components/settings/settings-nav'
 import Link from 'next/link'
  
 // rounded-2xl approximates the squircle server-side; Lisse stamps
@@ -69,7 +68,8 @@ export function AppHeader() {
   // scroll. NOT on /discover: the app shell stacks the fixed header above all
   // page content, so a backdrop there would sit over the feed — the feed must
   // stay unobstructed.
-  const showScrollBackdrop = isMediaPage || pathname === '/home' || pathname === '/search' || pathname === '/settings';
+  const isHubPage = pathname === '/settings' || pathname === '/premium';
+  const showScrollBackdrop = isMediaPage || pathname === '/home' || pathname === '/search' || isHubPage;
 
   useEffect(() => {
     if (!showScrollBackdrop) return
@@ -101,7 +101,7 @@ export function AppHeader() {
           style={{
             backgroundColor: isMediaPage
               ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
-              : `color-mix(in oklab, var(--background) ${Math.min(scrollY / 32, 1) * (pathname === '/settings' ? 85 : 20)}%, transparent)`,
+              : `color-mix(in oklab, var(--background) ${Math.min(scrollY / 32, 1) * (isHubPage ? 85 : 20)}%, transparent)`,
             backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
           }}
         />
@@ -134,9 +134,8 @@ export function AppHeader() {
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
           {firstSegment === 'trade' && <TradeNav />}
-          {/* Settings: the page title doubles as the section switcher (goo
-              dropdown over ?tab=), same pattern as the Trade switcher. */}
-          {firstSegment === 'settings' && <SettingsNav />}
+          {/* Settings carries its own left rail (SettingsRail) — no header
+              switcher; /premium likewise titles itself in-page. */}
           {/* Discover search lives in the header (right of the logo), not in the
               feed tab bar. */}
           {firstSegment === 'discover' && (
