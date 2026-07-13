@@ -14,7 +14,6 @@ import {
     Archive02Icon,
     ArrowUpRight01Icon,
     CheckmarkBadge01Icon,
-    Crown02Icon,
     EyeIcon,
     FavouriteIcon,
     GiftIcon,
@@ -32,6 +31,7 @@ import {
     Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { VerifiedBadgeIcon } from "@/components/icons";
 import { Panel } from "@/components/settings/ui";
 
 // Premium hub — two-column: persistent left rail (double-bezel plan banner +
@@ -214,8 +214,8 @@ function PlanBanner({ onManage }: { onManage: () => void }) {
             <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-zinc-900 p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
                 <div className="pointer-events-none absolute -right-12 -top-16 size-40 rounded-full bg-twitter/20 blur-3xl transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] opacity-60 group-hover:opacity-100" />
                 <div className="relative flex min-w-0 items-center gap-4">
-                    <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.04] text-twitter ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
-                        <HugeiconsIcon icon={Crown02Icon} className="size-5" strokeWidth={1.75} />
+                    <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.04] ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                        <VerifiedBadgeIcon className="size-5" />
                     </div>
                     <div className="min-w-0">
                         <p className="text-[15px] font-bold tracking-tight text-white">
@@ -303,7 +303,7 @@ function AnalyticsSection() {
     return (
         <div className="space-y-4">
             <AnalyticsCharts />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 <StatCard label="Followers" value={analytics.followers} icon={UserGroup02Icon} />
                 <StatCard label="Following" value={analytics.following} icon={UserGroup02Icon} />
                 <StatCard label="Total posts" value={analytics.totalPosts} icon={Analytics01Icon} />
@@ -357,10 +357,10 @@ export default function PremiumPage() {
     const signals = useHubSignals(!!session?.user);
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-16 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+        <div className="flex w-full gap-12 px-(--header-px) pb-16 pt-6 md:pt-[calc(var(--header-height)+16px)]">
             {/* Left rail — plan banner + grouped sections, always visible */}
             <aside className="w-80 shrink-0 max-lg:w-72 max-md:hidden">
-                <div className="sticky top-[calc(var(--header-height)+16px)] max-h-[calc(100vh-var(--header-height)-32px)] overflow-y-auto pb-4 hidden-scrollbar">
+                <div className="sticky top-[calc(var(--header-height)+16px)] -m-2 max-h-[calc(100vh-var(--header-height)-24px)] overflow-y-auto p-2 pb-4 hidden-scrollbar">
                     <PlanBanner onManage={() => setSection("plan")} />
                     {HUB_GROUPS.map((group, gi) => (
                         <motion.section
@@ -385,7 +385,7 @@ export default function PremiumPage() {
                 initial={reduceMotion ? false : { opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.35, ease: EASE }}
-                className="min-w-0 max-w-3xl flex-1"
+                className="min-w-0 max-w-4xl flex-1"
             >
                 <h1 className="mb-5 text-[20px] font-bold tracking-tight text-white">{SECTION_TITLES[section]}</h1>
                 {section === "plan" && <PremiumSettings />}

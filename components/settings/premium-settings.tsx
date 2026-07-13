@@ -4,7 +4,8 @@ import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 import { TIERS, type TierKey } from "@/lib/premium/tiers";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpRight01Icon, CrownIcon, Loading03Icon, Megaphone02Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon, Loading03Icon, Megaphone02Icon } from "@hugeicons/core-free-icons";
+import { VerifiedBadgeIcon } from "@/components/icons";
 import { appToast } from "@/components/app-ui/app-toast";
 import { Panel, PillButton } from "@/components/settings/ui";
 
@@ -30,7 +31,7 @@ export function PremiumSettings() {
     if (!active) {
         return (
             <Panel className="p-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
-                <HugeiconsIcon icon={CrownIcon} className="mx-auto size-8 text-twitter" strokeWidth={2} />
+                <VerifiedBadgeIcon className="mx-auto size-8" />
                 <p className="mt-3 text-[15px] font-bold tracking-tight text-white">You&apos;re not on Premium</p>
                 <p className="mt-1 text-[13px] font-medium text-zinc-400">
                     Unlock verified badges, higher limits, analytics and more.
@@ -48,7 +49,7 @@ export function PremiumSettings() {
             <Panel className="p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                        <HugeiconsIcon icon={CrownIcon} className="size-5 text-twitter" strokeWidth={2} />
+                        <VerifiedBadgeIcon className="size-5" />
                         <div>
                             <p className="text-[15px] font-bold tracking-tight text-white">{tier?.name ?? sub.tierKey}</p>
                             <p className="text-[12px] font-medium capitalize text-zinc-500">

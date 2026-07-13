@@ -62,7 +62,7 @@ export default function SettingsPage() {
     if (movedTo) return null;
 
     return (
-        <div className="mx-auto flex w-full max-w-5xl gap-10 px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+        <div className="flex w-full gap-12 px-(--header-px) pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
             {/* Left rail — grouped section list */}
             <aside className="w-72 shrink-0 max-lg:w-60 max-md:hidden">
                 <div className="sticky top-[calc(var(--header-height)+16px)]">
@@ -71,7 +71,7 @@ export default function SettingsPage() {
             </aside>
 
             {/* Active panel */}
-            <div className="min-w-0 max-w-3xl flex-1">
+            <div className="min-w-0 max-w-4xl flex-1">
                 {/* Sub-section pills for consolidated nav items */}
                 {active?.subs && (
                     <div className="mb-5 flex flex-wrap gap-1.5">
