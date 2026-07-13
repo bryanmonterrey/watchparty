@@ -15,10 +15,11 @@ import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { cn } from "@/lib/utils";
 
-// Section switcher for /settings, rendered in the app header: the page
-// title IS the nav — "Profile ⌄" opens a goo dropdown of settings sections,
-// same pattern as TradeNav. The active tab lives in ?tab= (nuqs) so the
-// header dropdown and the page body stay in sync and tabs are linkable.
+// Settings navigation. The live nav is SettingsRail (left column of the
+// two-column /settings layout); the header shows a static "Settings" title.
+// SettingsNav (the goo-dropdown header switcher) is RETIRED but kept at the
+// bottom of this file in case it returns. Active tab lives in ?tab= (nuqs)
+// so panels stay deep-linkable.
 //
 // Settings holds ONLY account configuration — the creator/money surfaces
 // (analytics, earnings, monetization, stream, vault, community tools,
@@ -140,6 +141,58 @@ export const ALL_SETTINGS_ITEMS = SETTINGS_NAV_GROUPS.flatMap((g) => g.items);
 export const itemOwnsTab = (item: SettingsNavItem, tab: SettingsTab) =>
     item.id === tab || !!item.subs?.some((s) => s.id === tab);
 
+// The always-visible left rail (desktop). Grouped items, icon + label +
+// description; the active item gets the filled treatment. The page title
+// lives in the app header, not here.
+export function SettingsRail() {
+    const [tab, setTab] = useSettingsTab();
+    const { data: session } = useAuthSession();
+
+    const isAdmin = session?.user?.role === "admin";
+    const navGroups = isAdmin
+        ? SETTINGS_NAV_GROUPS
+        : SETTINGS_NAV_GROUPS.filter((g) => g.label !== "Admin");
+
+    return (
+        <nav aria-label="Settings sections" className="flex w-full flex-col">
+            {navGroups.map((group) => (
+                <div key={group.label} className="pb-5">
+                    <p className="px-3 pb-1 text-[13px] font-semibold text-zinc-500">{group.label}</p>
+                    {group.items.map((item) => {
+                        const isActive = itemOwnsTab(item, tab);
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => setTab(item.id)}
+                                className={cn(
+                                    "group flex w-full cursor-pointer items-center gap-3 rounded-[18px] px-3 py-2.5 text-left transition-colors",
+                                    isActive ? "bg-white/[0.06]" : "hover:bg-white/[0.04]",
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
+                                        isActive
+                                            ? "bg-white text-black"
+                                            : "bg-white/5 text-zinc-400 group-hover:text-white",
+                                    )}
+                                >
+                                    <HugeiconsIcon icon={item.icon} className="size-4.5" strokeWidth={1.8} />
+                                </span>
+                                <span className="flex min-w-0 flex-col">
+                                    <span className={cn("text-[14px] font-bold", isActive ? "text-white" : "text-zinc-200")}>{item.label}</span>
+                                    <span className="truncate text-[12px] font-medium text-zinc-500">{item.description}</span>
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            ))}
+        </nav>
+    );
+}
+
+// RETIRED (kept just in case): the header goo-dropdown section switcher.
 export function SettingsNav() {
     const [tab, setTab] = useSettingsTab();
     const { data: session } = useAuthSession();

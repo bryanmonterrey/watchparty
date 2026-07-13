@@ -12,7 +12,6 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
     Analytics01Icon,
     Archive02Icon,
-    ArrowLeft01Icon,
     ArrowRight01Icon,
     ArrowUpRight01Icon,
     CheckmarkBadge01Icon,
@@ -33,15 +32,15 @@ import {
     UserGroup02Icon,
     Wallet01Icon,
 } from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
 import { Panel } from "@/components/settings/ui";
 
-// Premium hub. Structure borrows X-Premium's drill-down (plan status up top,
-// grouped rows below, each row swaps the column for its section with a back
-// arrow) but the expression is watchparty's: pixel-font title, double-bezel
-// hero banner (the upgrade-overlay aesthetic), per-group accent tints, LIVE
-// data in the rows (claimable balance, live state, gift count), staggered
-// entrance. Checkout stays in the global UpgradeOverlay — non-subscribers who
-// land here get the overlay popped over the hub.
+// Premium hub — two-column: persistent left rail (double-bezel plan banner +
+// grouped rows with LIVE data signals) and the active section on the right
+// (?s=, nuqs, lazy panels). The page title is a static "Premium" in the app
+// header. Checkout stays in the global UpgradeOverlay — non-subscribers who
+// land here get the overlay popped over the hub. "hub" is a legacy alias for
+// the default section (plan).
 
 const SECTIONS = [
     "hub", "plan",
@@ -246,25 +245,30 @@ function PlanBanner({ onManage }: { onManage: () => void }) {
     );
 }
 
-function HubRowItem({ row, onOpen, signals }: {
+function HubRowItem({ row, active, onOpen, signals }: {
     row: HubRow;
+    active: boolean;
     onOpen: (s: Section) => void;
     signals: ReturnType<typeof useHubSignals>;
 }) {
     return (
         <button
             onClick={() => onOpen(row.s)}
-            className="group flex w-full cursor-pointer items-center gap-3.5 rounded-[20px] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+            className={cn(
+                "group flex w-full cursor-pointer items-center gap-3 rounded-[18px] px-3 py-2.5 text-left transition-colors",
+                active ? "bg-white/[0.06]" : "hover:bg-white/[0.04] active:bg-white/[0.06]",
+            )}
         >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-zinc-300 transition-colors group-hover:text-white group-active:scale-95">
-                <HugeiconsIcon icon={row.icon} className="size-[18px]" strokeWidth={2} />
+            <span className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors group-active:scale-95",
+                active ? "bg-white text-black" : "bg-white/[0.06] text-zinc-300 group-hover:text-white",
+            )}>
+                <HugeiconsIcon icon={row.icon} className="size-4.5" strokeWidth={2} />
             </span>
             <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-bold tracking-tight text-white">{row.label}</p>
-                <p className="text-[12px] font-medium text-zinc-500">{row.desc}</p>
+                <p className={cn("truncate text-[14px] font-bold tracking-tight", active ? "text-white" : "text-zinc-200")}>{row.label}</p>
             </div>
             <RowSignal s={row.s} signals={signals} />
-            <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
         </button>
     );
 }
@@ -333,7 +337,9 @@ function AnalyticsSection() {
 const EASE = [0.32, 0.72, 0, 1] as const;
 
 export default function PremiumPage() {
-    const [section, setSection] = useQueryState("s", sectionParser);
+    const [rawSection, setSection] = useQueryState("s", sectionParser);
+    // "hub" predates the two-column layout — treat it as the default section.
+    const section: Exclude<Section, "hub"> = rawSection === "hub" ? "plan" : rawSection;
     const { data: session } = useAuthSession();
     const reduceMotion = useReducedMotion();
 
@@ -343,56 +349,46 @@ export default function PremiumPage() {
     const openOverlay = usePremiumOverlay((s) => s.openOverlay);
     const notEntitled = !!status && !status.entitled;
     useEffect(() => {
-        if (notEntitled && section === "hub") openOverlay();
-        // Pop once when status resolves un-entitled on the hub; closing it
-        // leaves the hub (with its upsell banner) usable behind.
+        if (notEntitled) openOverlay();
+        // Pop once when status resolves un-entitled; closing it leaves the
+        // hub (with its upsell banner) usable behind.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [notEntitled]);
 
     const signals = useHubSignals(!!session?.user);
 
-    if (section === "hub") {
-        return (
-            <div className="mx-auto w-full max-w-2xl px-4 pb-16 pt-6 md:pt-[calc(var(--header-height)+16px)]">
-                <h1 className="mb-6 font-pixel text-[22px] tracking-tight text-white">Premium</h1>
-                <PlanBanner onManage={() => setSection("plan")} />
-                {HUB_GROUPS.map((group, gi) => (
-                    <motion.section
-                        key={group.label}
-                        initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 + gi * 0.07, duration: 0.45, ease: EASE }}
-                        className="mt-8"
-                    >
-                        <h2 className="mb-1.5 px-3 text-[16px] font-bold tracking-tight text-white">{group.label}</h2>
-                        {group.rows.map((row) => (
-                            <HubRowItem key={row.s} row={row} onOpen={setSection} signals={signals} />
-                        ))}
-                    </motion.section>
-                ))}
-            </div>
-        );
-    }
-
     return (
-        <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-6 md:pt-[calc(var(--header-height)+16px)]">
-            <div className="mb-5 flex items-center gap-2">
-                <button
-                    onClick={() => setSection("hub")}
-                    aria-label="Back to Premium"
-                    className="grid size-10 cursor-pointer place-items-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white active:scale-95"
-                >
-                    <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" strokeWidth={2} />
-                </button>
-                <h1 className="text-[20px] font-bold tracking-tight text-white">{SECTION_TITLES[section]}</h1>
-            </div>
+        <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 pb-16 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+            {/* Left rail — plan banner + grouped sections, always visible */}
+            <aside className="w-80 shrink-0 max-lg:w-72 max-md:hidden">
+                <div className="sticky top-[calc(var(--header-height)+16px)] max-h-[calc(100vh-var(--header-height)-32px)] overflow-y-auto pb-4 hidden-scrollbar">
+                    <PlanBanner onManage={() => setSection("plan")} />
+                    {HUB_GROUPS.map((group, gi) => (
+                        <motion.section
+                            key={group.label}
+                            initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.05 + gi * 0.07, duration: 0.45, ease: EASE }}
+                            className="mt-6"
+                        >
+                            <h2 className="mb-1 px-3 text-[13px] font-semibold text-zinc-500">{group.label}</h2>
+                            {group.rows.map((row) => (
+                                <HubRowItem key={row.s} row={row} active={section === row.s} onOpen={setSection} signals={signals} />
+                            ))}
+                        </motion.section>
+                    ))}
+                </div>
+            </aside>
 
+            {/* Active section */}
             <motion.div
                 key={section}
                 initial={reduceMotion ? false : { opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.35, ease: EASE }}
+                className="min-w-0 max-w-3xl flex-1"
             >
+                <h1 className="mb-5 text-[20px] font-bold tracking-tight text-white">{SECTION_TITLES[section]}</h1>
                 {section === "plan" && <PremiumSettings />}
                 {section === "analytics" && <AnalyticsSection />}
                 {section === "payouts" && <PayoutSettings />}
