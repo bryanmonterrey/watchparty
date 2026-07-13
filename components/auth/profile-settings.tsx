@@ -10,6 +10,9 @@ import { useUpdateProfile } from "@/hooks/use-update-profile";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { appToast } from "@/components/app-ui/app-toast";
+import { Input } from "@/components/ui/input";
+import { Squircle } from "@/components/ui/squircle";
+import { Panel } from "@/components/settings/ui";
 export default function ProfileSettings() {
     const { data: session } = useAuthSession();
     const [username, setUsername] = useState("");
@@ -106,73 +109,77 @@ export default function ProfileSettings() {
         <div className="space-y-4 w-full hidden-scrollbar pb-8">
             {/* Header */}
             <div>
-                <h2 className="text-xl font-semibold">Profile Settings</h2>
+                <h2 className="text-[16px] font-bold tracking-tight text-white">Profile</h2>
             </div>
 
             {/* Avatar Section */}
-            <div className="bg-greyy/25 rounded-3xl p-6">
-                <h3 className="font-medium text-white mb-4">Avatar</h3>
+            <Panel className="p-6">
+                <h3 className="mb-4 text-[14px] font-semibold text-zinc-300">Avatar</h3>
                 <AvatarUpload
                     key={resetCount} // Only re-render when explicitly reset
                     onFileChange={handleAvatarChange}
                     defaultAvatar={session?.user?.avatar_url || session?.user?.image || undefined}
                 />
-            </div>
+            </Panel>
 
             {/* Profile Information */}
-            <div className="bg-greyy/25 rounded-3xl p-6 space-y-4">
-                <h3 className="font-medium text-white mb-2">Profile Information</h3>
+            <Panel className="space-y-4 p-6">
+                <h3 className="text-[14px] font-semibold text-zinc-300">Profile information</h3>
 
                 {/* Username */}
                 <div>
-                    <label className="text-sm text-neutral-400 mb-2 block">Username</label>
-                    <input
+                    <label className="mb-2 block text-[12px] font-medium text-zinc-500">Username</label>
+                    <Input
+                        radius={16}
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Enter username"
-                        className="w-full px-4 py-3 bg-neutral-900/50 border border-neutral-800 rounded-full text-white placeholder:text-neutral-500 focus:outline-none"
+                        className="h-12 text-[14px]"
                     />
                 </div>
 
                 {/* Display Name */}
                 <div>
-                    <label className="text-sm text-neutral-400 mb-2 block">Display Name</label>
-                    <input
+                    <label className="mb-2 block text-[12px] font-medium text-zinc-500">Display Name</label>
+                    <Input
+                        radius={16}
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="Enter display name"
-                        className="w-full px-4 py-3 bg-neutral-900/50 border border-neutral-800 rounded-full text-white placeholder:text-neutral-500 focus:outline-none"
+                        className="h-12 text-[14px]"
                     />
                 </div>
 
                 {/* Bio */}
                 <div>
-                    <label className="text-sm text-neutral-400 mb-2 block">Bio</label>
-                    <textarea
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        placeholder="Tell us about yourself"
-                        rows={4}
-                        className="w-full px-4 py-3 bg-neutral-900/50 border border-neutral-800 rounded-3xl text-white placeholder:text-neutral-500 focus:outline-none resize-none"
-                    />
+                    <label className="mb-2 block text-[12px] font-medium text-zinc-500">Bio</label>
+                    <Squircle asChild radius={16}>
+                        <textarea
+                            value={bio}
+                            onChange={(e) => setBio(e.target.value)}
+                            placeholder="Tell us about yourself"
+                            rows={4}
+                            className="w-full resize-none rounded-none bg-white/[0.06] px-4 py-3 text-[14px] font-medium text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.1]"
+                        />
+                    </Squircle>
                 </div>
-            </div>
+            </Panel>
 
             {/* Unclaimed Fees (Escrow) */}
             {escrows && escrows.length > 0 && (
-                <div className="bg-greyy/25 rounded-3xl p-6 space-y-4 border border-zinc-800/50">
-                    <h3 className="font-medium text-white mb-2">Unclaimed Creator Fees</h3>
-                    <p className="text-sm text-neutral-400 mb-4">
+                <Panel className="space-y-4 p-6">
+                    <h3 className="text-[14px] font-semibold text-zinc-300">Unclaimed creator fees</h3>
+                    <p className="text-[12px] font-medium text-zinc-500">
                         You have pending fee shares from token launches that were routed to your social handle before you connected a wallet. Claim them now to your linked Solana wallet.
                     </p>
                     <div className="space-y-3">
                         {escrows.map(escrow => (
-                            <div key={escrow.id} className="flex items-center justify-between p-4 rounded-xl bg-neutral-900/50 border border-neutral-800">
+                            <div key={escrow.id} className="flex items-center justify-between rounded-[16px] bg-white/[0.04] p-4">
                                 <div className="space-y-1">
-                                    <div className="text-sm font-medium text-white">Fee Split Share</div>
-                                    <div className="text-xs text-neutral-400">
+                                    <div className="text-[14px] font-semibold text-white">Fee split share</div>
+                                    <div className="text-[12px] font-medium text-zinc-500">
                                         {escrow.sharePercentage}% on {escrow.platform}
                                     </div>
                                 </div>
@@ -182,12 +189,12 @@ export default function ProfileSettings() {
                                     variant="secondary"
                                     className="rounded-full text-sm font-medium disabled:opacity-50 flex items-center gap-2"
                                 >
-                                            {claimMutation.isPending ? "Claiming..." : "Claim Fees"}
+                                            {claimMutation.isPending ? "Claiming…" : "Claim fees"}
                                 </Button>
                             </div>
                         ))}
                     </div>
-                </div>
+                </Panel>
             )}
 
             {/* Unsaved Changes Toast */}
@@ -198,9 +205,9 @@ export default function ProfileSettings() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl bg-black/80 border border-white/10 p-4 rounded-3xl flex items-center justify-between gap-4 backdrop-blur-xl shadow-2xl z-50"
+                        className="fixed bottom-6 left-1/2 z-50 flex w-[90%] max-w-2xl -translate-x-1/2 items-center justify-between gap-4 rounded-full bg-black/80 p-3 pl-5 ring-1 ring-white/10 backdrop-blur-xl"
                     >
-                        <p className="text-white font-medium pl-2">Careful — you have unsaved changes!</p>
+                        <p className="text-[14px] font-semibold text-white">Careful — you have unsaved changes!</p>
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="ghost"
@@ -212,9 +219,9 @@ export default function ProfileSettings() {
                             <Button
                                 onClick={handleSubmit}
                                 disabled={updateProfile.isPending}
-                                className="bg-emerald-500 hover:bg-emerald-400 text-black font-medium px-6 rounded-full transition-all"
+                                className="rounded-full bg-white px-6 font-bold text-black transition-colors hover:bg-white/90"
                             >
-                                {updateProfile.isPending ? "Saving..." : "Save Changes"}
+                                {updateProfile.isPending ? "Saving…" : "Save changes"}
                             </Button>
                         </div>
                     </motion.div>

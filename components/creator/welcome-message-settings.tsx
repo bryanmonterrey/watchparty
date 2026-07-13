@@ -34,7 +34,7 @@ export function WelcomeMessageSettings() {
                 <h2 className="text-base font-bold text-zinc-100">Welcome Message</h2>
             </div>
 
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-4">
+            <div className="rounded-[20px] bg-panel p-4 space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-sm font-medium text-zinc-200">Auto-send on new follow</p>

@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { Bell, BellOff } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Notification01Icon, NotificationOff01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Panel, PanelHeader, PillButton } from "@/components/settings/ui";
 
 const TOGGLES = [
     { key: "likes", label: "Likes", description: "When someone likes your content" },
@@ -87,55 +90,49 @@ export function NotificationPreferences() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-white" />
-                <h2 className="text-base font-bold text-zinc-100">Notification Preferences</h2>
-            </div>
+            <PanelHeader title="Notifications" />
 
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 divide-y divide-white/5">
+            <Panel className="p-1.5">
                 {TOGGLES.map(({ key, label, description }) => (
-                    <div key={key} className="flex items-center justify-between px-4 py-3">
+                    <div key={key} className="flex items-center justify-between gap-4 rounded-[18px] px-3.5 py-3 transition-colors hover:bg-white/[0.04]">
                         <div>
-                            <p className="text-sm font-medium text-zinc-200">{label}</p>
-                            <p className="text-xs text-zinc-500">{description}</p>
+                            <p className="text-[14px] font-semibold text-zinc-200">{label}</p>
+                            <p className="text-[12px] font-medium text-zinc-500">{description}</p>
                         </div>
-                        <button
-                            onClick={() => toggle(key)}
-                            className={`relative w-11 h-6 rounded-full transition-colors ${prefs[key] ? "bg-white" : "bg-zinc-700"}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${prefs[key] ? "translate-x-5 bg-black" : "translate-x-0 bg-white"}`} />
-                        </button>
+                        <Switch checked={!!prefs[key]} onCheckedChange={() => toggle(key)} />
                     </div>
                 ))}
-            </div>
+            </Panel>
 
             {/* Push notifications */}
             {pushSupported && (
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 flex items-center justify-between">
+                <Panel className="flex items-center justify-between gap-4 p-5">
                     <div className="flex items-center gap-3">
-                        {pushGranted ? <Bell className="w-5 h-5 text-white" /> : <BellOff className="w-5 h-5 text-zinc-500" />}
+                        <HugeiconsIcon icon={pushGranted ? Notification01Icon : NotificationOff01Icon} className={pushGranted ? "size-5 text-white" : "size-5 text-zinc-500"} strokeWidth={2} />
                         <div>
-                            <p className="text-sm font-medium text-zinc-200">Push Notifications</p>
-                            <p className="text-xs text-zinc-500">{pushGranted ? "Enabled on this device" : "Get notified even when the app is closed"}</p>
+                            <p className="text-[14px] font-semibold text-zinc-200">Push notifications</p>
+                            <p className="text-[12px] font-medium text-zinc-500">{pushGranted ? "Enabled on this device" : "Get notified even when the app is closed"}</p>
                         </div>
                     </div>
-                    <button
+                    <PillButton
+                        variant={pushGranted ? "secondary" : "primary"}
+                        className="h-9"
                         onClick={handlePushToggle}
                         disabled={subscribePush.isPending || unsubscribePush.isPending}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pushGranted ? "bg-zinc-700 text-zinc-300 hover:bg-zinc-600" : "bg-white text-zinc-950 hover:bg-white/90"}`}
                     >
                         {pushGranted ? "Disable" : "Enable"}
-                    </button>
-                </div>
+                    </PillButton>
+                </Panel>
             )}
 
-            <button
+            <PillButton
+                variant="primary"
+                className="h-11 w-full"
                 onClick={() => update.mutate(prefs as Record<PrefKey, boolean> & { pushEnabled: boolean })}
                 disabled={update.isPending}
-                className="w-full py-2 rounded-lg bg-white text-zinc-950 font-bold text-sm hover:bg-white/90 transition-colors disabled:opacity-50"
             >
-                {update.isPending ? "Saving…" : "Save Preferences"}
-            </button>
+                {update.isPending ? "Saving…" : "Save preferences"}
+            </PillButton>
         </div>
     );
 }

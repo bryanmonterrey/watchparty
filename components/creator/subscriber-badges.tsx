@@ -66,7 +66,7 @@ export function SubscriberBadgesManager() {
                 <div className="space-y-2">
                     <p className="text-xs text-zinc-500 font-semibold">{data.length} badge holder{data.length !== 1 ? "s" : ""}</p>
                     {data.map(b => (
-                        <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900/60 border border-white/10">
+                        <div key={b.id} className="flex items-center gap-3 p-3 rounded-[20px] bg-panel">
                             <Link href={`/${b.username}`}>
                                 {b.avatar_url
                                     ? <img src={b.avatar_url} className="w-9 h-9 rounded-full object-cover" />

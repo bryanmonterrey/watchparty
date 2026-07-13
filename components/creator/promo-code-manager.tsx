@@ -48,7 +48,7 @@ export function PromoCodeManager() {
             </div>
 
             {showForm && (
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
+                <div className="rounded-[20px] bg-panel p-4 space-y-3">
                     <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Create Promo Code</p>
                     <div className="grid grid-cols-2 gap-3">
                         <div>

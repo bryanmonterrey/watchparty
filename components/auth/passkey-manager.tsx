@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Edit, Plus, Smartphone } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon, Edit02Icon, PlusSignIcon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
+import { Panel } from "@/components/settings/ui";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "boneyard-js/react";
 import {
@@ -88,76 +90,73 @@ export default function PasskeyManager() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold">Passkey Management</h2>
+                    <h2 className="text-[16px] font-bold tracking-tight text-white">Passkeys</h2>
                 </div>
             </div>
 
             {/* Passkeys List */}
             {passkeys.length === 0 ? (
-                <div className="bg-greyy/25 rounded-4xl p-8 text-center">
-                    <Smartphone className="w-12 h-12 text-neutral-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No Passkeys Yet</h3>
-                    <p className="text-neutral-400 text-sm mb-4">
-                        Add a passkey to enable biometric authentication
+                <Panel className="px-6 py-12 text-center">
+                    <HugeiconsIcon icon={SmartPhone01Icon} className="mx-auto mb-4 size-10 text-zinc-600" strokeWidth={2} />
+                    <h3 className="text-[14px] font-bold text-zinc-400">No passkeys yet</h3>
+                    <p className="mt-1 text-[12px] font-medium text-zinc-600">
+                        Add a passkey to sign in with Face ID, Touch ID, or Windows Hello
                     </p>
                     <Button
                         onClick={() => setShowAddDialog(true)}
-                        variant="outline"
-                        className="bg-neutral-800 border-neutral-800"
+                        variant="ghost"
+                        className="mt-4 rounded-full bg-white/10 font-bold hover:bg-white/20"
                     >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Your First Passkey
+                        <HugeiconsIcon icon={PlusSignIcon} className="mr-2 size-4" strokeWidth={2} />
+                        Add your first passkey
                     </Button>
-                </div>
+                </Panel>
             ) : (
                 <div className="space-y-2">
                     {passkeys.map((passkey) => (
-                        <div
+                        <Panel
                             key={passkey.id}
-                            className="bg-greyy/25 rounded-3xl p-4 flex items-center justify-between transition-colors"
+                            className="flex items-center justify-between p-4"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-neutral-800/20 rounded-lg flex items-center justify-center">
-                                    <Smartphone className="w-5 h-5 text-neutral-600" />
+                                <div className="flex size-10 items-center justify-center rounded-full bg-white/5">
+                                    <HugeiconsIcon icon={SmartPhone01Icon} className="size-5 text-zinc-500" strokeWidth={2} />
                                 </div>
                                 <div>
-                                    <h3 className="font-medium">
+                                    <h3 className="text-[14px] font-semibold text-white">
                                         {passkey.name || `Passkey ${passkey.id.slice(0, 8)} `}
                                     </h3>
-                                    <p className="text-sm text-neutral-400">
+                                    <p className="text-[12px] font-medium text-zinc-500">
                                         {passkey.deviceType} • Added{" "}
                                         {passkey.createdAt ? new Date(passkey.createdAt).toLocaleDateString() : "Unknown"}
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <Button
+                            <div className="flex gap-1.5">
+                                <button
                                     onClick={() => openRenameDialog(passkey)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-neutral-800 border-neutral-800"
+                                    className="cursor-pointer rounded-full p-2 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white"
                                 >
-                                    <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
+                                    <HugeiconsIcon icon={Edit02Icon} className="size-4" strokeWidth={2} />
+                                </button>
+                                <button
                                     onClick={() => openDeleteDialog(passkey)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-neutral-800 border-neutral-800 text-red-400 hover:text-red-300"
+                                    className="cursor-pointer rounded-full p-2 text-zinc-500 transition-colors hover:bg-pastelred/10 hover:text-pastelred disabled:pointer-events-none disabled:opacity-40"
                                     disabled={passkeys.length <= 1}
                                 >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                                    <HugeiconsIcon icon={Delete02Icon} className="size-4" strokeWidth={2} />
+                                </button>
                             </div>
-                        </div>
+                        </Panel>
                     ))}
                     <div className="flex justify-end items-end w-full">
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => setShowAddDialog(true)}
-                            className=" text-neutral-200"
+                            className="rounded-full bg-white/10 font-bold hover:bg-white/20"
                         >
-                            Add Passkey
+                            <HugeiconsIcon icon={PlusSignIcon} className="mr-2 size-4" strokeWidth={2} />
+                            Add passkey
                         </Button>
                     </div>
                 </div>
@@ -167,7 +166,7 @@ export default function PasskeyManager() {
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogContent className="border-neutral-800">
                     <DialogHeader>
-                        <DialogTitle>Add New Passkey</DialogTitle>
+                        <DialogTitle>Add new passkey</DialogTitle>
                         <DialogDescription>
                             Follow the prompts to register a new biometric authentication method
                         </DialogDescription>
@@ -180,17 +179,17 @@ export default function PasskeyManager() {
                         <div className="flex gap-2">
                             <Button
                                 onClick={() => setShowAddDialog(false)}
-                                variant="outline"
-                                className="flex-1 bg-neutral-900 border-neutral-800"
+                                variant="ghost"
+                                className="flex-1 rounded-full bg-white/5 hover:bg-white/10"
                             >
                                 Cancel
                             </Button>
                             <Button
                                 onClick={handleAddPasskey}
                                 disabled={addPasskey.isPending}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                className="flex-1 rounded-full bg-white font-bold text-black hover:bg-white/90"
                             >
-                                {addPasskey.isPending ? "Adding..." : "Add Passkey"}
+                                {addPasskey.isPending ? "Adding…" : "Add passkey"}
                             </Button>
                         </div>
                     </div>
@@ -201,7 +200,7 @@ export default function PasskeyManager() {
             <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
                 <DialogContent className="border-neutral-800">
                     <DialogHeader>
-                        <DialogTitle>Rename Passkey</DialogTitle>
+                        <DialogTitle>Rename passkey</DialogTitle>
                         <DialogDescription>
                             Give this passkey a memorable name
                         </DialogDescription>
@@ -211,7 +210,6 @@ export default function PasskeyManager() {
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             placeholder="e.g., iPhone 15 Pro, MacBook Air"
-                            className="bg-neutral-900 border-neutral-800"
                         />
                         <div className="flex gap-2">
                             <Button
@@ -219,15 +217,15 @@ export default function PasskeyManager() {
                                     setShowRenameDialog(false);
                                     setNewName("");
                                 }}
-                                variant="outline"
-                                className="flex-1 bg-neutral-900 border-neutral-800"
+                                variant="ghost"
+                                className="flex-1 rounded-full bg-white/5 hover:bg-white/10"
                             >
                                 Cancel
                             </Button>
                             <Button
                                 onClick={handleRenamePasskey}
                                 disabled={!newName.trim()}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                className="flex-1 rounded-full bg-white font-bold text-black hover:bg-white/90"
                             >
                                 Save
                             </Button>
@@ -240,8 +238,8 @@ export default function PasskeyManager() {
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <DialogContent className="border-neutral-800">
                     <DialogHeader>
-                        <DialogTitle>Delete Passkey</DialogTitle>
-                        <DialogDescription className="text-red-400">
+                        <DialogTitle>Delete passkey</DialogTitle>
+                        <DialogDescription className="text-pastelred">
                             Are you sure you want to delete this passkey?
                         </DialogDescription>
                     </DialogHeader>
@@ -249,7 +247,7 @@ export default function PasskeyManager() {
                         <p className="text-sm text-neutral-400">
                             You won&apos;t be able to use this device for biometric authentication anymore.
                             {passkeys.length <= 1 && (
-                                <span className="block mt-2 text-red-400">
+                                <span className="block mt-2 text-pastelred">
                                     ⚠️ This is your last passkey. Deleting it will disable passkey authentication.
                                 </span>
                             )}
@@ -257,14 +255,14 @@ export default function PasskeyManager() {
                         <div className="flex gap-2">
                             <Button
                                 onClick={() => setShowDeleteDialog(false)}
-                                variant="outline"
-                                className="flex-1 bg-neutral-900 border-neutral-800"
+                                variant="ghost"
+                                className="flex-1 rounded-full bg-white/5 hover:bg-white/10"
                             >
                                 Cancel
                             </Button>
                             <Button
                                 onClick={handleDeletePasskey}
-                                className="flex-1 bg-red-600 hover:bg-red-700"
+                                className="flex-1 rounded-full bg-pastelred font-bold text-white hover:bg-pastelred/90"
                                 disabled={passkeys.length <= 1}
                             >
                                 Delete

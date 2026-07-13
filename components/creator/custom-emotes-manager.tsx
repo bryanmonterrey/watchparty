@@ -56,7 +56,7 @@ export function CustomEmotesManager() {
             </div>
 
             {/* Add form */}
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-3 flex gap-2">
+            <div className="rounded-[20px] bg-panel p-3 flex gap-2">
                 <input
                     value={name}
                     onChange={e => setName(e.target.value)}

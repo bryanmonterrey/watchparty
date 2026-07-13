@@ -35,7 +35,7 @@ export function MassMessageComposer() {
                 <h2 className="text-base font-bold text-zinc-100">Mass Message</h2>
             </div>
 
-            <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
+            <div className="rounded-[20px] bg-panel p-4 space-y-3">
                 {/* Audience selector */}
                 <div className="space-y-1.5">
                     <label className="text-xs text-zinc-400">Send to</label>

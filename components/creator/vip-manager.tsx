@@ -45,7 +45,7 @@ export function VIPManager() {
             </div>
 
             {showAdd && (
-                <div className="rounded-xl bg-zinc-900/60 border border-white/10 p-3 space-y-2">
+                <div className="rounded-[20px] bg-panel p-3 space-y-2">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users…"
