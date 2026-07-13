@@ -105,7 +105,7 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
             <div className="relative">
                 <button
                     onClick={() => setShowPicker(p => !p)}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-lantern/10 border border-lantern/30 text-lantern text-sm font-semibold hover:bg-lantern/20 transition-colors"
+                    className="flex h-11 items-center gap-1.5 px-4 rounded-full bg-lantern/10 border border-lantern/30 text-lantern text-sm font-semibold hover:bg-lantern/20 transition-colors"
                 >
                     <Crown className="w-4 h-4" />
                     {subStatus.tier?.name ?? "Subscribed"}
@@ -130,7 +130,7 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
         <div className="relative">
             <button
                 onClick={() => setShowPicker(p => !p)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors"
+                className="flex h-11 items-center gap-1.5 px-4 rounded-full bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors"
             >
                 <Crown className="w-4 h-4" />
                 Subscribe

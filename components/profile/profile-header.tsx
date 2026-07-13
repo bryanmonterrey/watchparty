@@ -185,7 +185,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                     
                                     onClick={handleFollowToggle}
                                     className={cn(
-                                        "rounded-full font-bold backdrop-blur-lg text-base py-5 px-5",
+                                        "h-11 rounded-full font-bold backdrop-blur-lg text-base px-5",
                                         isFollowing
                                             ? "bg-black/25 border border-flexborder/50 text-white hover:bg-white2/10"
                                             : "bg-twitter2/90 text-white2 hover:bg-twitter2"
@@ -197,7 +197,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                 {user.wallet_address && (
                                     <Button
                                         onClick={() => setShowTip(true)}
-                                        className="p-5 rounded-full text-base bg-black/25 font-bold border border-flexborder/50 text-white2 hover:bg-white2/10"
+                                        className="h-11 px-5 rounded-full text-base bg-black/25 font-bold border border-flexborder/50 text-white2 hover:bg-white2/10"
                                         title="Send tip"
                                     >
                                         Gift Subs
@@ -226,7 +226,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                 <Button
                                     variant="outline"
                                     onClick={() => setIsEditing(true)}
-                                    className="font-bold rounded-full bg-zinc-900/50 hover:bg-zinc-800 border border-flexborder/50 h-9 px-4"
+                                    className="font-bold rounded-full bg-zinc-900/50 hover:bg-zinc-800 border border-flexborder/50 h-11 px-4"
                                 >
                                     Edit profile
                                 </Button>
@@ -234,7 +234,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                     <Button
                                         variant="outline"
                                         onClick={onToggleSize}
-                                        className="size-9 bg-zinc-900/50 hover:bg-zinc-800 rounded-full border border-flexborder/50 flex items-center justify-center p-0"
+                                        className="size-11 bg-zinc-900/50 hover:bg-zinc-800 rounded-full border border-flexborder/50 flex items-center justify-center p-0"
                                         title={isMinimized ? "Maximum size" : "Minimum size"}
                                     >
                                         {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
