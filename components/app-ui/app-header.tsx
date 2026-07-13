@@ -19,6 +19,7 @@ import { searchParams } from '@/lib/searchParams'
 import { GlobalSearch } from './global-search'
 import { TradeNav } from '@/components/trade/trade-nav'
 import Link from 'next/link'
+import { SettingsNav } from '@/components/settings/settings-nav'
  
 // rounded-2xl approximates the squircle server-side; Lisse stamps
 // data-state="ready" once its clip-path lands, which switches it off so the
@@ -134,8 +135,9 @@ export function AppHeader() {
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
           {firstSegment === 'trade' && <TradeNav />}
-          {/* Settings carries its own left rail (SettingsRail) — no header
-              switcher; /premium likewise titles itself in-page. */}
+          {/* Settings: the page title doubles as the section switcher (goo
+              dropdown over ?tab=), same pattern as the Trade switcher. */}
+          {firstSegment === 'settings' && <SettingsNav />}
           {/* Discover search lives in the header (right of the logo), not in the
               feed tab bar. */}
           {firstSegment === 'discover' && (

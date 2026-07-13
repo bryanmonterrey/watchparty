@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { motion, useReducedMotion } from "motion/react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
@@ -12,6 +14,7 @@ import {
     Archive02Icon,
     ArrowLeft01Icon,
     ArrowRight01Icon,
+    ArrowUpRight01Icon,
     CheckmarkBadge01Icon,
     Crown02Icon,
     EyeIcon,
@@ -30,14 +33,16 @@ import {
     UserGroup02Icon,
     Wallet01Icon,
 } from "@hugeicons/core-free-icons";
-import { Squircle } from "@/components/ui/squircle";
+import { cn } from "@/lib/utils";
 import { Panel, PillButton } from "@/components/settings/ui";
 
-// Premium hub — X-Premium-style drill-down. The hub is a vertical menu of
-// grouped rows (plan banner up top, chevron rows below); each row swaps the
-// column for that section (?s=, nuqs) with a back arrow, like X's
-// Premium → Creator Studio → Analytics flow. Checkout stays in the global
-// UpgradeOverlay so there's one transactional path.
+// Premium hub. Structure borrows X-Premium's drill-down (plan status up top,
+// grouped rows below, each row swaps the column for its section with a back
+// arrow) but the expression is watchparty's: pixel-font title, double-bezel
+// hero banner (the upgrade-overlay aesthetic), per-group accent tints, LIVE
+// data in the rows (claimable balance, live state, gift count), staggered
+// entrance. Checkout stays in the global UpgradeOverlay — non-subscribers who
+// land here get the overlay popped over the hub.
 
 const SECTIONS = [
     "hub", "plan",
@@ -83,10 +88,14 @@ const GiftInbox = dynamic(() => import("@/components/settings/gift-inbox").then(
 // ── Hub menu config ─────────────────────────────────────────────────────────
 
 type HubRow = { s: Section; icon: IconSvgElement; label: string; desc: string };
+type HubGroup = { label: string; chip: string; rows: HubRow[] };
 
-const HUB_GROUPS: { label: string; rows: HubRow[] }[] = [
+// One accent per group (color-as-identity): blue = tools, lantern = money,
+// sunset = community, neutral = spending.
+const HUB_GROUPS: HubGroup[] = [
     {
         label: "Quick access",
+        chip: "bg-twitter/10 text-twitter",
         rows: [
             { s: "analytics", icon: Analytics01Icon, label: "Analytics", desc: "Followers, views and engagement" },
             { s: "payouts", icon: Wallet01Icon, label: "Earnings", desc: "Claim and track your payouts" },
@@ -96,6 +105,7 @@ const HUB_GROUPS: { label: string; rows: HubRow[] }[] = [
     },
     {
         label: "Monetization",
+        chip: "bg-lantern/10 text-lantern",
         rows: [
             { s: "tiers", icon: Layers01Icon, label: "Subscription tiers", desc: "Price and perks for your subs" },
             { s: "badges", icon: CheckmarkBadge01Icon, label: "Subscriber badges", desc: "Loyalty badges by tenure" },
@@ -105,6 +115,7 @@ const HUB_GROUPS: { label: string; rows: HubRow[] }[] = [
     },
     {
         label: "Community",
+        chip: "bg-sunset/10 text-sunset",
         rows: [
             { s: "vips", icon: FavouriteIcon, label: "VIP members", desc: "Your channel's inner circle" },
             { s: "moderators", icon: Shield01Icon, label: "Moderators", desc: "Who keeps your chat safe" },
@@ -116,6 +127,7 @@ const HUB_GROUPS: { label: string; rows: HubRow[] }[] = [
     },
     {
         label: "Your subscriptions",
+        chip: "bg-white/10 text-white",
         rows: [
             { s: "subscriptions", icon: RepeatIcon, label: "My subscriptions", desc: "Creators you support" },
             { s: "gifts", icon: GiftIcon, label: "Gift inbox", desc: "Redeem gifted subscriptions" },
@@ -143,65 +155,121 @@ const SECTION_TITLES: Record<Exclude<Section, "hub">, string> = {
     gifts: "Gift inbox",
 };
 
+// ── Live signals — the hub reads as a living surface, not a link list ───────
+
+function formatCount(n: number) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+    return n.toLocaleString();
+}
+
+function useHubSignals(enabled: boolean) {
+    const { data: claimable } = trpc.subscription.getClaimable.useQuery(undefined, { enabled });
+    const { data: stream } = trpc.stream.getMine.useQuery(undefined, { enabled });
+    const { data: gifts } = trpc.subscription.getMyGifts.useQuery(undefined, { enabled });
+    const { data: subs } = trpc.subscription.getMySubscriptions.useQuery(undefined, { enabled });
+    const { data: analytics } = trpc.user.getAnalytics.useQuery(undefined, { enabled });
+    return { claimable, stream, gifts, subs, analytics };
+}
+
+function RowSignal({ s, signals }: { s: Section; signals: ReturnType<typeof useHubSignals> }) {
+    if (s === "payouts" && (signals.claimable?.netUsdc ?? 0) > 0) {
+        return <span className="text-[13px] font-bold tabular-nums text-lantern">${(signals.claimable!.netUsdc / 1_000_000).toFixed(2)}</span>;
+    }
+    if (s === "stream" && signals.stream?.isLive) {
+        return (
+            <span className="flex items-center gap-1 rounded-full bg-pastelred/15 px-2 py-0.5 text-[11px] font-bold tracking-wide text-pastelred">
+                <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
+                LIVE
+            </span>
+        );
+    }
+    if (s === "gifts" && (signals.gifts?.length ?? 0) > 0) {
+        return <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold tabular-nums text-white">{signals.gifts!.length}</span>;
+    }
+    if (s === "subscriptions" && (signals.subs?.length ?? 0) > 0) {
+        return <span className="text-[12px] font-semibold tabular-nums text-zinc-500">{signals.subs!.length} active</span>;
+    }
+    if (s === "analytics" && signals.analytics) {
+        return <span className="text-[12px] font-semibold tabular-nums text-zinc-500">{formatCount(signals.analytics.followers)} followers</span>;
+    }
+    return null;
+}
+
 // ── Hub pieces ──────────────────────────────────────────────────────────────
 
+// Double-bezel hero (the upgrade-overlay aesthetic): outer tray, inner
+// gradient plate, ambient brand glow. Subscribers click through to plan
+// management; everyone else opens the overlay.
 function PlanBanner({ onManage }: { onManage: () => void }) {
     const { data, isLoading } = trpc.premium.getStatus.useQuery();
     const openOverlay = usePremiumOverlay((s) => s.openOverlay);
 
     if (isLoading) {
-        return <div className="h-24 overflow-hidden rounded-[24px]"><div className="size-full shimmer-skeleton" /></div>;
+        return <div className="h-[104px] overflow-hidden rounded-[1.75rem]"><div className="size-full shimmer-skeleton" /></div>;
     }
 
     const sub = data?.subscription;
-    if (data?.entitled && sub) {
-        const tier = TIERS[sub.tierKey as TierKey];
-        return (
-            <Squircle asChild radius={24} autoEffects={false}>
-                <button
-                    onClick={onManage}
-                    className="group flex w-full cursor-pointer items-center gap-4 bg-panel p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition-colors hover:bg-white/[0.06]"
-                >
-                    <div className="grid size-11 shrink-0 place-items-center rounded-full bg-twitter/10 text-twitter">
-                        <HugeiconsIcon icon={Crown02Icon} className="size-5" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <p className="text-[15px] font-bold tracking-tight text-white">{tier?.name ?? sub.tierKey}</p>
-                        <p className="text-[12px] font-medium capitalize text-zinc-500">
-                            {sub.billingCycle} · {sub.cancelAtPeriodEnd ? "ends" : "renews"} {new Date(sub.currentPeriodEnd).toLocaleDateString()}
-                        </p>
-                    </div>
-                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
-                </button>
-            </Squircle>
-        );
-    }
+    const entitled = !!(data?.entitled && sub);
+    const tier = entitled ? TIERS[sub!.tierKey as TierKey] : undefined;
 
     return (
-        <Panel className="flex items-center gap-4 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
-            <div className="grid size-11 shrink-0 place-items-center rounded-full bg-twitter/10 text-twitter">
-                <HugeiconsIcon icon={Crown02Icon} className="size-5" strokeWidth={2} />
+        <button
+            onClick={entitled ? onManage : () => openOverlay()}
+            className="group block w-full cursor-pointer rounded-[1.75rem] bg-white/[0.03] p-1.5 text-left ring-1 ring-white/10 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.99]"
+        >
+            <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-gradient-to-b from-zinc-900 to-zinc-950 p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
+                <div className="pointer-events-none absolute -right-12 -top-16 size-40 rounded-full bg-twitter/20 blur-3xl transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] opacity-60 group-hover:opacity-100" />
+                <div className="relative flex min-w-0 items-center gap-4">
+                    <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.04] text-twitter ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                        <HugeiconsIcon icon={Crown02Icon} className="size-5" strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[15px] font-bold tracking-tight text-white">
+                            {entitled ? (tier?.name ?? sub!.tierKey) : "You're not on Premium"}
+                        </p>
+                        <p className="mt-0.5 text-[12px] font-medium text-zinc-500">
+                            {entitled ? (
+                                <span className="capitalize">{sub!.billingCycle} · {sub!.cancelAtPeriodEnd ? "ends" : "renews"} {new Date(sub!.currentPeriodEnd).toLocaleDateString()}</span>
+                            ) : (
+                                "Verified badge, ad-free viewing, ad credits and more"
+                            )}
+                        </p>
+                    </div>
+                </div>
+                {entitled ? (
+                    <div className="relative grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06] text-zinc-300 ring-1 ring-white/10 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:bg-white group-hover:text-black group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                        <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4" strokeWidth={1.75} />
+                    </div>
+                ) : (
+                    <span className="relative inline-flex h-10 shrink-0 items-center rounded-full bg-white px-4 text-[13px] font-bold text-black transition-colors group-hover:bg-white/90">
+                        See plans
+                    </span>
+                )}
             </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-bold tracking-tight text-white">You&apos;re not on Premium</p>
-                <p className="text-[12px] font-medium text-zinc-500">Verified badge, ad-free viewing, ad credits and more.</p>
-            </div>
-            <PillButton variant="primary" onClick={() => openOverlay()}>See plans</PillButton>
-        </Panel>
+        </button>
     );
 }
 
-function HubRowItem({ row, onOpen }: { row: HubRow; onOpen: (s: Section) => void }) {
+function HubRowItem({ row, chip, onOpen, signals }: {
+    row: HubRow;
+    chip: string;
+    onOpen: (s: Section) => void;
+    signals: ReturnType<typeof useHubSignals>;
+}) {
     return (
         <button
             onClick={() => onOpen(row.s)}
-            className="group flex w-full cursor-pointer items-center gap-4 rounded-[18px] px-3 py-3 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+            className="group flex w-full cursor-pointer items-center gap-3.5 rounded-[20px] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
         >
-            <HugeiconsIcon icon={row.icon} className="size-5 shrink-0 text-zinc-300" strokeWidth={2} />
+            <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full transition-transform group-active:scale-95", chip)}>
+                <HugeiconsIcon icon={row.icon} className="size-[18px]" strokeWidth={2} />
+            </span>
             <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-semibold tracking-tight text-white">{row.label}</p>
+                <p className="text-[15px] font-bold tracking-tight text-white">{row.label}</p>
                 <p className="text-[12px] font-medium text-zinc-500">{row.desc}</p>
             </div>
+            <RowSignal s={row.s} signals={signals} />
             <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
         </button>
     );
@@ -268,22 +336,45 @@ function AnalyticsSection() {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 
+const EASE = [0.32, 0.72, 0, 1] as const;
+
 export default function PremiumPage() {
     const [section, setSection] = useQueryState("s", sectionParser);
     const { data: session } = useAuthSession();
+    const reduceMotion = useReducedMotion();
+
+    // Non-subscribers get the overlay popped over the hub (sidebar clicks are
+    // intercepted too — this covers deep links and the loading race).
+    const { data: status } = trpc.premium.getStatus.useQuery(undefined, { enabled: !!session?.user });
+    const openOverlay = usePremiumOverlay((s) => s.openOverlay);
+    const notEntitled = !!status && !status.entitled;
+    useEffect(() => {
+        if (notEntitled && section === "hub") openOverlay();
+        // Pop once when status resolves un-entitled on the hub; closing it
+        // leaves the hub (with its upsell banner) usable behind.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [notEntitled]);
+
+    const signals = useHubSignals(!!session?.user);
 
     if (section === "hub") {
         return (
             <div className="mx-auto w-full max-w-2xl px-4 pb-16 pt-6 md:pt-[calc(var(--header-height)+16px)]">
-                <h1 className="mb-5 text-[20px] font-bold tracking-tight text-white">Premium</h1>
+                <h1 className="mb-6 font-pixel text-[22px] tracking-tight text-white">Premium</h1>
                 <PlanBanner onManage={() => setSection("plan")} />
-                {HUB_GROUPS.map((group) => (
-                    <section key={group.label} className="mt-7">
-                        <h2 className="mb-1 px-3 text-[16px] font-bold tracking-tight text-white">{group.label}</h2>
+                {HUB_GROUPS.map((group, gi) => (
+                    <motion.section
+                        key={group.label}
+                        initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 + gi * 0.07, duration: 0.45, ease: EASE }}
+                        className="mt-8"
+                    >
+                        <h2 className="mb-1.5 px-3 text-[16px] font-bold tracking-tight text-white">{group.label}</h2>
                         {group.rows.map((row) => (
-                            <HubRowItem key={row.s} row={row} onOpen={setSection} />
+                            <HubRowItem key={row.s} row={row} chip={group.chip} onOpen={setSection} signals={signals} />
                         ))}
-                    </section>
+                    </motion.section>
                 ))}
             </div>
         );
@@ -295,30 +386,37 @@ export default function PremiumPage() {
                 <button
                     onClick={() => setSection("hub")}
                     aria-label="Back to Premium"
-                    className="grid size-10 cursor-pointer place-items-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                    className="grid size-10 cursor-pointer place-items-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white active:scale-95"
                 >
                     <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" strokeWidth={2} />
                 </button>
                 <h1 className="text-[20px] font-bold tracking-tight text-white">{SECTION_TITLES[section]}</h1>
             </div>
 
-            {section === "plan" && <PremiumSettings />}
-            {section === "analytics" && <AnalyticsSection />}
-            {section === "payouts" && <PayoutSettings />}
-            {section === "referrals" && <ReferralSettings />}
-            {section === "stream" && <StreamSettings />}
-            {section === "vault" && <MediaVault />}
-            {section === "tiers" && session?.user && <SubscriptionTierManager creatorId={session.user.id} />}
-            {section === "badges" && <SubscriberBadgesManager />}
-            {section === "promo" && <PromoCodeManager />}
-            {section === "vips" && <VIPManager />}
-            {section === "moderators" && <ModeratorManager />}
-            {section === "bans" && <CreatorBansList />}
-            {section === "emotes" && <CustomEmotesManager />}
-            {section === "welcome" && <WelcomeMessageSettings />}
-            {section === "mass" && <MassMessageComposer />}
-            {section === "subscriptions" && <MySubscriptions />}
-            {section === "gifts" && <GiftInbox />}
+            <motion.div
+                key={section}
+                initial={reduceMotion ? false : { opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.35, ease: EASE }}
+            >
+                {section === "plan" && <PremiumSettings />}
+                {section === "analytics" && <AnalyticsSection />}
+                {section === "payouts" && <PayoutSettings />}
+                {section === "referrals" && <ReferralSettings />}
+                {section === "stream" && <StreamSettings />}
+                {section === "vault" && <MediaVault />}
+                {section === "tiers" && session?.user && <SubscriptionTierManager creatorId={session.user.id} />}
+                {section === "badges" && <SubscriberBadgesManager />}
+                {section === "promo" && <PromoCodeManager />}
+                {section === "vips" && <VIPManager />}
+                {section === "moderators" && <ModeratorManager />}
+                {section === "bans" && <CreatorBansList />}
+                {section === "emotes" && <CustomEmotesManager />}
+                {section === "welcome" && <WelcomeMessageSettings />}
+                {section === "mass" && <MassMessageComposer />}
+                {section === "subscriptions" && <MySubscriptions />}
+                {section === "gifts" && <GiftInbox />}
+            </motion.div>
         </div>
     );
 }

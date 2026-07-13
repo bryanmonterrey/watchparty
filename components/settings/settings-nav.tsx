@@ -3,6 +3,7 @@
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
+    ArrowDown01Icon,
     ConnectIcon,
     Flag02Icon,
     Notification02Icon,
@@ -10,17 +11,19 @@ import {
     Shield01Icon,
     UserCircleIcon,
 } from "@hugeicons/core-free-icons";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { cn } from "@/lib/utils";
 
-// Settings navigation. Settings holds ONLY account configuration — the
-// creator/money surfaces (analytics, earnings, monetization, stream, vault,
-// community tools, subscriptions) live in the /premium hub (X-Premium-style
-// drill-down); old /settings?tab= links to those redirect (MOVED_TO_PREMIUM).
+// Section switcher for /settings, rendered in the app header: the page
+// title IS the nav — "Profile ⌄" opens a goo dropdown of settings sections,
+// same pattern as TradeNav. The active tab lives in ?tab= (nuqs) so the
+// header dropdown and the page body stay in sync and tabs are linkable.
 //
-// Desktop layout is an X-settings-style two-column: SettingsRail (always
-// visible, grouped) on the left, the active panel on the right. The active
-// tab lives in ?tab= (nuqs) so panels stay deep-linkable.
+// Settings holds ONLY account configuration — the creator/money surfaces
+// (analytics, earnings, monetization, stream, vault, community tools,
+// subscriptions) live in the /premium hub; old /settings?tab= links to those
+// redirect there (MOVED_TO_PREMIUM).
 
 // Full historical id list — moved ids stay in the parser so old links still
 // parse, then the page redirects them to /premium.
@@ -137,9 +140,7 @@ export const ALL_SETTINGS_ITEMS = SETTINGS_NAV_GROUPS.flatMap((g) => g.items);
 export const itemOwnsTab = (item: SettingsNavItem, tab: SettingsTab) =>
     item.id === tab || !!item.subs?.some((s) => s.id === tab);
 
-// The always-visible left rail (desktop). Grouped items, icon + label +
-// description; the active item gets the filled treatment.
-export function SettingsRail() {
+export function SettingsNav() {
     const [tab, setTab] = useSettingsTab();
     const { data: session } = useAuthSession();
 
@@ -148,42 +149,55 @@ export function SettingsRail() {
         ? SETTINGS_NAV_GROUPS
         : SETTINGS_NAV_GROUPS.filter((g) => g.label !== "Admin");
 
+    const active = ALL_SETTINGS_ITEMS.find((i) => itemOwnsTab(i, tab));
+
     return (
-        <nav aria-label="Settings sections" className="flex w-full flex-col">
-            <h1 className="px-3 pb-4 text-[20px] font-bold tracking-tight text-white">Settings</h1>
-            {navGroups.map((group) => (
-                <div key={group.label} className="pb-5">
-                    <p className="px-3 pb-1 text-[13px] font-semibold text-zinc-500">{group.label}</p>
-                    {group.items.map((item) => {
-                        const isActive = itemOwnsTab(item, tab);
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => setTab(item.id)}
-                                className={cn(
-                                    "group flex w-full cursor-pointer items-center gap-3 rounded-[18px] px-3 py-2.5 text-left transition-colors",
-                                    isActive ? "bg-white/[0.06]" : "hover:bg-white/[0.04]",
-                                )}
-                            >
+        <GooDropdown
+            align="start"
+            side="bottom"
+            width={272}
+            gap={10}
+            fill="#101011"
+            panelRadius={24}
+            itemHeight={56}
+            maxPanelHeight={560}
+            triggerAriaLabel="Settings sections"
+            triggerClassName="flex h-10 cursor-pointer items-center gap-1.5 rounded-full px-3 text-lg font-bold tracking-tight text-white transition-colors hover:bg-white/10"
+            trigger={
+                <>
+                    {active?.label ?? "Settings"}
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-4.5 text-white/60" strokeWidth={2} />
+                </>
+            }
+            items={navGroups.flatMap((group) => [
+                { key: `label-${group.label}`, type: "label" as const, label: group.label, height: 30 },
+                ...group.items.map((item) => {
+                    const isActive = itemOwnsTab(item, tab);
+                    return {
+                        key: item.id,
+                        onClick: () => setTab(item.id),
+                        className: "gap-3 px-3 rounded-2xl cursor-pointer hover:bg-white/5 group",
+                        label: (
+                            <>
                                 <span
                                     className={cn(
-                                        "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
+                                        "flex size-9 shrink-0 items-center justify-center rounded-full",
                                         isActive
                                             ? "bg-white text-black"
-                                            : "bg-white/5 text-zinc-400 group-hover:text-white",
+                                            : "bg-white/5 text-zinc-400 transition-colors group-hover:text-white",
                                     )}
                                 >
                                     <HugeiconsIcon icon={item.icon} className="size-4.5" strokeWidth={1.8} />
                                 </span>
                                 <span className="flex min-w-0 flex-col">
-                                    <span className={cn("text-[14px] font-bold", isActive ? "text-white" : "text-zinc-200")}>{item.label}</span>
-                                    <span className="truncate text-[12px] font-medium text-zinc-500">{item.description}</span>
+                                    <span className="text-[15px] font-bold text-white">{item.label}</span>
+                                    <span className="truncate text-xs text-zinc-500">{item.description}</span>
                                 </span>
-                            </button>
-                        );
-                    })}
-                </div>
-            ))}
-        </nav>
+                            </>
+                        ),
+                    };
+                }),
+            ])}
+        />
     );
 }

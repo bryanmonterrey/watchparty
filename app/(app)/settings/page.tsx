@@ -7,17 +7,16 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import {
     ALL_SETTINGS_ITEMS,
     MOVED_TO_PREMIUM,
-    SettingsRail,
     itemOwnsTab,
     useSettingsTab,
 } from "@/components/settings/settings-nav";
 import { cn } from "@/lib/utils";
 
-// Settings — account configuration only, X-settings-style two-column:
-// SettingsRail (grouped, always visible) on the left, the active panel on the
-// right; consolidated items keep a sub-pill row above the panel. Tabs stay in
-// ?tab= (nuqs). Creator/money surfaces moved to the /premium hub — old tab
-// ids redirect there (MOVED_TO_PREMIUM) so deep links keep working.
+// Settings — account configuration only. Section switching lives in the app
+// header (SettingsNav goo dropdown, ?tab= via nuqs); consolidated items render
+// a sub-pill row above the panel. Creator/money surfaces live in the /premium
+// hub — old tab ids redirect there (MOVED_TO_PREMIUM) so deep links keep
+// working.
 
 function PanelLoading() {
     return (
@@ -62,16 +61,9 @@ export default function SettingsPage() {
     if (movedTo) return null;
 
     return (
-        <div className="mx-auto flex w-full max-w-5xl gap-10 px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
-            {/* Left rail (desktop) — grouped section list */}
-            <aside className="w-72 shrink-0 max-lg:w-60 max-md:hidden">
-                <div className="sticky top-[calc(var(--header-height)+16px)]">
-                    <SettingsRail />
-                </div>
-            </aside>
-
-            {/* Active panel */}
-            <div className="min-w-0 max-w-3xl flex-1">
+        <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+            {/* Section switching lives in the app header (SettingsNav) */}
+            <div className="min-w-0">
                 {/* Sub-section pills for consolidated nav items */}
                 {active?.subs && (
                     <div className="mb-5 flex flex-wrap gap-1.5">

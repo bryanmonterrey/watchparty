@@ -44,6 +44,7 @@ import {
     QuestsIcon,
 } from "@/components/icons"
 import { trpc } from "@/lib/trpc/client"
+import { usePremiumOverlay } from "@/lib/premium/overlay-store"
 import { WithAuth } from "@/components/auth/with-auth"
 import { CreateDialog } from "./create-dialog"
 import { NotificationsPanel } from "@/components/notifications/notifications-panel"
@@ -124,6 +125,11 @@ const items = [
 export function AppSidebar() {
     const { state, isMobile, setOpen, setOpenMobile, setHovered } = useSidebar()
     const { data: session } = useAuthSession()
+    // Premium nav gate: non-subscribers get the upgrade overlay instead of the
+    // hub. While status is loading the item navigates; the hub pops the
+    // overlay itself for un-entitled visitors, so the race is covered.
+    const { data: premiumStatus } = trpc.premium.getStatus.useQuery(undefined, { enabled: !!session?.user })
+    const openPremiumOverlay = usePremiumOverlay((s) => s.openOverlay)
     const [mounted, setMounted] = React.useState(false)
     React.useEffect(() => { setMounted(true) }, [])
     const pathname = usePathname()
@@ -190,9 +196,11 @@ export function AppSidebar() {
                                 <SidebarMenuItem key={item.title} className="w-fit">
                                     {(() => {
                                         const isProfile = item.title === "Profile";
+                                        const isPremiumGated = item.title === "Premium"
+                                            && !!premiumStatus && !premiumStatus.entitled;
                                         const itemUrl = mounted && isProfile && session?.user?.username
                                             ? `/${session.user.username}`
-                                            : item.url;
+                                            : isPremiumGated ? "#" : item.url;
                                         const isProtected = !!item.protected;
                                         const isUnauthenticated = !session?.user;
                                         const isSearch = item.title === "Search";
@@ -279,8 +287,14 @@ export function AppSidebar() {
                                                     }
 
                                                     if (item.title === "Premium") {
-                                                        // Navigates to the /premium hub; the page's
-                                                        // CTAs open the upgrade overlay.
+                                                        // Subscribers navigate to the /premium hub;
+                                                        // everyone else gets the upgrade overlay.
+                                                        if (isPremiumGated) {
+                                                            if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
+                                                            e.stopPropagation();
+                                                            e.preventDefault();
+                                                            openPremiumOverlay();
+                                                        }
                                                         setOpen(false);
                                                         setOpenMobile(false);
                                                     }
