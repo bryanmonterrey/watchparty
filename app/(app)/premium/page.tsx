@@ -33,7 +33,6 @@ import {
     UserGroup02Icon,
     Wallet01Icon,
 } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
 import { Panel } from "@/components/settings/ui";
 
 // Premium hub. Structure borrows X-Premium's drill-down (plan status up top,
@@ -88,14 +87,13 @@ const GiftInbox = dynamic(() => import("@/components/settings/gift-inbox").then(
 // ── Hub menu config ─────────────────────────────────────────────────────────
 
 type HubRow = { s: Section; icon: IconSvgElement; label: string; desc: string };
-type HubGroup = { label: string; chip: string; rows: HubRow[] };
+type HubGroup = { label: string; rows: HubRow[] };
 
-// One accent per group (color-as-identity): blue = tools, lantern = money,
-// sunset = community, neutral = spending.
+// Icon chips stay neutral (white on faint gray) — accent color is reserved
+// for live semantics in the row signals (lantern money, pastelred LIVE).
 const HUB_GROUPS: HubGroup[] = [
     {
         label: "Quick access",
-        chip: "bg-twitter/10 text-twitter",
         rows: [
             { s: "analytics", icon: Analytics01Icon, label: "Analytics", desc: "Followers, views and engagement" },
             { s: "payouts", icon: Wallet01Icon, label: "Earnings", desc: "Claim and track your payouts" },
@@ -105,7 +103,6 @@ const HUB_GROUPS: HubGroup[] = [
     },
     {
         label: "Monetization",
-        chip: "bg-lantern/10 text-lantern",
         rows: [
             { s: "tiers", icon: Layers01Icon, label: "Subscription tiers", desc: "Price and perks for your subs" },
             { s: "badges", icon: CheckmarkBadge01Icon, label: "Subscriber badges", desc: "Loyalty badges by tenure" },
@@ -115,7 +112,6 @@ const HUB_GROUPS: HubGroup[] = [
     },
     {
         label: "Community",
-        chip: "bg-sunset/10 text-sunset",
         rows: [
             { s: "vips", icon: FavouriteIcon, label: "VIP members", desc: "Your channel's inner circle" },
             { s: "moderators", icon: Shield01Icon, label: "Moderators", desc: "Who keeps your chat safe" },
@@ -127,7 +123,6 @@ const HUB_GROUPS: HubGroup[] = [
     },
     {
         label: "Your subscriptions",
-        chip: "bg-white/10 text-white",
         rows: [
             { s: "subscriptions", icon: RepeatIcon, label: "My subscriptions", desc: "Creators you support" },
             { s: "gifts", icon: GiftIcon, label: "Gift inbox", desc: "Redeem gifted subscriptions" },
@@ -251,9 +246,8 @@ function PlanBanner({ onManage }: { onManage: () => void }) {
     );
 }
 
-function HubRowItem({ row, chip, onOpen, signals }: {
+function HubRowItem({ row, onOpen, signals }: {
     row: HubRow;
-    chip: string;
     onOpen: (s: Section) => void;
     signals: ReturnType<typeof useHubSignals>;
 }) {
@@ -262,7 +256,7 @@ function HubRowItem({ row, chip, onOpen, signals }: {
             onClick={() => onOpen(row.s)}
             className="group flex w-full cursor-pointer items-center gap-3.5 rounded-[20px] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
         >
-            <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full transition-transform group-active:scale-95", chip)}>
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-zinc-300 transition-colors group-hover:text-white group-active:scale-95">
                 <HugeiconsIcon icon={row.icon} className="size-[18px]" strokeWidth={2} />
             </span>
             <div className="min-w-0 flex-1">
@@ -372,7 +366,7 @@ export default function PremiumPage() {
                     >
                         <h2 className="mb-1.5 px-3 text-[16px] font-bold tracking-tight text-white">{group.label}</h2>
                         {group.rows.map((row) => (
-                            <HubRowItem key={row.s} row={row} chip={group.chip} onOpen={setSection} signals={signals} />
+                            <HubRowItem key={row.s} row={row} onOpen={setSection} signals={signals} />
                         ))}
                     </motion.section>
                 ))}
