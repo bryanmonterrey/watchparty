@@ -5,6 +5,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
     ArrowDown01Icon,
     Compass01Icon,
+    Megaphone01Icon,
     Target02Icon,
     Telescope01Icon,
     TradeUpIcon,
@@ -34,6 +35,12 @@ const SECTIONS: {
         label: "Memescope",
         description: "Live bonding-curve board",
         icon: Telescope01Icon,
+    },
+    {
+        href: "/trade/callouts",
+        label: "Callouts",
+        description: "Community calls + top callers",
+        icon: Megaphone01Icon,
     },
     {
         href: "/trade/perpetuals",

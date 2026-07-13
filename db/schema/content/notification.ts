@@ -7,7 +7,7 @@ export const notifications = pgTable("notifications", {
     userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }), // recipient
     actorId: text("actorId").references(() => user.id, { onDelete: "cascade" }), // who triggered (null = system)
     type: text("type", {
-        enum: ["follow", "like", "comment", "repost", "mention", "quote", "system"]
+        enum: ["follow", "like", "comment", "repost", "mention", "quote", "callout", "system"]
     }).notNull(),
     postId: text("postId"),
     commentId: text("commentId"),

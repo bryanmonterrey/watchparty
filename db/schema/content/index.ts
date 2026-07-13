@@ -21,3 +21,4 @@ export * from "./video_heatmap";
 export * from "./video_captions";
 export * from "./video_cards";
 export * from "./xp";
+export * from "./callout";

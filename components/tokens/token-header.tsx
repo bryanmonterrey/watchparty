@@ -4,6 +4,7 @@ import { Share, Star, Copy } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Token } from "@/db/schema/content"
 import { SolanaIcon, XIcon, TelegramIcon, GlobeIcon } from "../icons"
+import { CalloutButton } from "./callout-button"
 
 interface TokenHeaderProps {
     token: Token & {
@@ -107,7 +108,10 @@ export function TokenHeader({ token }: TokenHeaderProps) {
             </div>
 
             <div className="flex items-start justify-start gap-2 md:gap-3 flex-wrap">
-                <button 
+                {token.status === "live" && token.poolAddress && (
+                    <CalloutButton tokenId={token.id} ticker={token.ticker} />
+                )}
+                <button
                     className="cursor-pointer flex items-center gap-2 py-2.5 bg-white text-black hover:bg-zinc-100 font-bold rounded-full px-5 text-sm transition-all shadow-md active:scale-95"
                 >
                     <Share className="size-4" />

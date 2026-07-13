@@ -42,7 +42,7 @@ DOTENV_PRODUCTION < .env.production` — that file lacks ALERT_WEBHOOK_URL.)
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.
 
 ## 🔭 Bigger workstreams (own focus / own chat)
-- **XP / quests / callouts (gamification)** — full design in `docs/exp-callouts.md`. XP ledger + levels, pump.fun-style token Callouts (6h cooldown, follower notify, 7d caller leaderboard scored off cached token market columns), quests with periodKey-based daily/weekly resets. fomo.family PnL/copy-trade layer deferred until per-user trades are tracked. Build order: XP core → callouts → quests.
+- **XP / quests / callouts (gamification)** — full design in `docs/exp-callouts.md`. Phase 1 XP core + Phase 2 callouts SHIPPED 2026-07-12 (ledger, levels, profile badge, callout button on token pages, `/trade/callouts` feed + 7d leaderboard, performance cron with XP bonuses). NEXT: Phase 3 quests (periodKey-based daily/weekly). fomo.family PnL/copy-trade layer deferred until per-user trades are tracked (design in doc §4).
 - **Realtime/PartyKit migration** — `realtime/` worker + `deploy-realtime` job exist; remaining surfaces: DMs, presence/typing, feeds, live stream chat, Spaces coordination; then delete `lib/supabase/realtime-client.ts`. (See `realtime-video-architecture-direction` memory.)
 - **IVS + Cloudflare video hybrid** with admin toggle — StreamProvider abstraction (ivs + cloudflare-stream), per-stream + global toggle, mirroring `lib/chains/` ChainAdapter pattern.
 

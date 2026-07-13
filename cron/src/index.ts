@@ -36,6 +36,9 @@ export default {
         } else if (event.cron === "30 4 * * *") {
             // Re-sync the Helius wallet-assets webhook with newly linked wallets.
             ctx.waitUntil(call(env, "/api/cron/sync-assets-webhook"));
+        } else if (event.cron === "*/10 * * * *") {
+            // Callout leaderboard: advance peak gains + pay multiplier XP bonuses.
+            ctx.waitUntil(call(env, "/api/cron/callout-performance"));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }

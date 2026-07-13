@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Repeat2, UserPlus, AtSign, Quote, Bell } from "lucide-react"
+import { Heart, MessageCircle, Repeat2, UserPlus, AtSign, Quote, Bell, Megaphone } from "lucide-react"
 
 export type Tab = "All" | "Comments"
 
@@ -9,5 +9,6 @@ export const TYPE_CONFIG = {
     quote:   { icon: Quote,         color: "text-purple-400",  bg: "bg-purple-400/10", label: "quoted your post" },
     follow:  { icon: UserPlus,      color: "text-white",     bg: "bg-white/10",    label: "started following you" },
     mention: { icon: AtSign,        color: "text-amber-400",   bg: "bg-amber-400/10",  label: "mentioned you" },
+    callout: { icon: Megaphone,     color: "text-lantern",     bg: "bg-lantern/10",    label: "made a callout" },
     system:  { icon: Bell,          color: "text-zinc-400",    bg: "bg-zinc-400/10",   label: "" },
 } as const

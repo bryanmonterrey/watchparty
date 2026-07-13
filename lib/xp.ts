@@ -15,6 +15,11 @@ export const XP_AWARDS = {
     follow_received: { amount: 15, maxPerDay: 20 },
     token_launched: { amount: 100, maxPerDay: 2 },
     referral_converted: { amount: 200, maxPerDay: 10 },
+    // Callout success bonuses — awarded by the callout-performance cron when a
+    // called token crosses the multiplier; refId = calloutId so each pays once.
+    callout_2x: { amount: 100, maxPerDay: 10 },
+    callout_5x: { amount: 300, maxPerDay: 10 },
+    callout_10x: { amount: 1000, maxPerDay: 10 },
 } as const satisfies Record<string, { amount: number; maxPerDay: number }>
 
 export type XpKind = keyof typeof XP_AWARDS

@@ -105,6 +105,11 @@ are then a single indexed query, same shape as the callout leaderboard.
 
 ## Build order
 
-1. Phase 1 XP core (schema + helper + 3–4 hook sites + profile UI) — small, ships alone.
-2. Phase 2 callouts — the headline feature, depends on 1 for bonuses.
-3. Phase 3 quests — pure retention layer on top of 1.
+1. ✅ Phase 1 XP core — SHIPPED 2026-07-12 (`xp_events` + user.xp/level live in DB, hooks
+   in content/comment/user/friends routers, LevelBadge in the profile header).
+2. ✅ Phase 2 callouts — SHIPPED 2026-07-12 (`callouts` table live; `callout` router:
+   create/cooldown/feed/leaderboard; CalloutButton on tradeable token pages;
+   `/trade/callouts` feed + 7d leaderboard in the Trade nav; "callout" notification
+   type; `/api/cron/callout-performance` every 10 min advancing peak gains + paying
+   2×/5×/10× XP bonuses).
+3. Phase 3 quests — pure retention layer on top of 1. NEXT UP.
