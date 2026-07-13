@@ -50,7 +50,6 @@ const CustomEmotesManager = dynamic(() => import("@/components/creator/custom-em
 const BlockedList = dynamic(() => import("@/components/settings/blocked-list").then(m => m.BlockedList), { loading: PanelLoading, ssr: false });
 const MutedList = dynamic(() => import("@/components/settings/muted-list").then(m => m.MutedList), { loading: PanelLoading, ssr: false });
 const HiddenPostsList = dynamic(() => import("@/components/settings/hidden-posts-list").then(m => m.HiddenPostsList), { loading: PanelLoading, ssr: false });
-const VerificationRequest = dynamic(() => import("@/components/settings/verification-request").then(m => m.VerificationRequest), { loading: PanelLoading, ssr: false });
 const PromoCodeManager = dynamic(() => import("@/components/creator/promo-code-manager").then(m => m.PromoCodeManager), { loading: PanelLoading, ssr: false });
 const SubscriberBadgesManager = dynamic(() => import("@/components/creator/subscriber-badges").then(m => m.SubscriberBadgesManager), { loading: PanelLoading, ssr: false });
 const TwoFactorSettings = dynamic(() => import("@/components/settings/two-factor-settings").then(m => m.TwoFactorSettings), { loading: PanelLoading, ssr: false });
@@ -179,7 +178,6 @@ export default function SettingsPage() {
                 {tab === "blocked" && <BlockedList />}
                 {tab === "muted" && <MutedList />}
                 {tab === "hidden" && <HiddenPostsList />}
-                {tab === "verification" && <VerificationRequest />}
                 {tab === "promo" && <PromoCodeManager />}
                 {tab === "badges" && <SubscriberBadgesManager />}
                 {tab === "2fa" && <TwoFactorSettings />}

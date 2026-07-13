@@ -91,16 +91,17 @@ export function AppHeader() {
     <header
       className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-between px-[var(--header-px)] py-3 pointer-events-none"
     >
-      {/* Scroll backdrop, media pages + /home only: media pages keep the
-          black scrim over video; /home gets the theme canvas so it works in
-          light and dark. Other pages have no scroll backdrop at all. */}
+      {/* Scroll backdrop: media pages keep the black scrim over video; /home
+          and /search get a whisper of theme canvas; /settings goes near-solid
+          (85%) so the header reads as a real bar over the scrolled panels.
+          Other pages have no scroll backdrop at all. */}
       {showScrollBackdrop && (
         <div
           className="absolute inset-0 transition-colors"
           style={{
             backgroundColor: isMediaPage
               ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
-              : `color-mix(in oklab, var(--background) ${Math.min(scrollY / 32, 1) * 20}%, transparent)`,
+              : `color-mix(in oklab, var(--background) ${Math.min(scrollY / 32, 1) * (pathname === '/settings' ? 85 : 20)}%, transparent)`,
             backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
           }}
         />

@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 // header dropdown and the page body stay in sync and tabs are linkable.
 
 export const SETTINGS_TABS = [
-    "profile", "verification", "notifications", "privacy", "blocked", "muted", "hidden",
+    "profile", "notifications", "privacy", "blocked", "muted", "hidden",
     "sessions", "2fa", "passkeys", "audit", "linked", "wallets",
     "premium", "subscriptions", "gifts", "payouts", "referrals",
     "analytics", "stream", "vips", "moderators", "bans", "welcome", "mass",
@@ -65,12 +65,8 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
             {
                 id: "profile",
                 label: "Profile",
-                description: "Avatar, bio and verification",
+                description: "Avatar and bio",
                 icon: UserCircleIcon,
-                subs: [
-                    { id: "profile", label: "Edit profile" },
-                    { id: "verification", label: "Verification" },
-                ],
             },
             { id: "notifications", label: "Notifications", description: "What we notify you about",
                 icon: Notification02Icon },
