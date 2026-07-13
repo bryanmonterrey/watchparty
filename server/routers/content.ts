@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { withCache, invalidateCache, TTL } from "@/lib/cache";
 import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
+import { recordQuestEvent } from "@/server/lib/quests";
 import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, upsertToken, deletePost, upsertUser } from "@/lib/typesense/sync";
@@ -127,7 +128,11 @@ export const contentRouter = router({
             });
             if (input.description) upsertPost({ id: videoId, content: input.description, userId: ctx.session.user.id, imageUrl: input.thumbnailUrl, createdAt: new Date() });
             await awardXP(ctx.session.user.id, "post_created", videoId);
-            if (tokenId && input.tokenStatus === "live") await awardXP(ctx.session.user.id, "token_launched", tokenId);
+            await recordQuestEvent(ctx.session.user.id, "post_created");
+            if (tokenId && input.tokenStatus === "live") {
+                await awardXP(ctx.session.user.id, "token_launched", tokenId);
+                await recordQuestEvent(ctx.session.user.id, "token_launched");
+            }
 
             if (input.playlistIds && input.playlistIds.length > 0) {
                 const playlistInserts = input.playlistIds.map(playlistId => ({
@@ -299,7 +304,11 @@ export const contentRouter = router({
             if (input.status === "published" && input.content) upsertPost({ id: postId, content: input.content, userId: ctx.session.user.id, imageUrl: input.imageUrl, createdAt: new Date() });
             if (input.status === "published") {
                 await awardXP(ctx.session.user.id, "post_created", postId);
-                if (tokenId && input.tokenStatus === "live") await awardXP(ctx.session.user.id, "token_launched", tokenId);
+                await recordQuestEvent(ctx.session.user.id, "post_created");
+                if (tokenId && input.tokenStatus === "live") {
+                    await awardXP(ctx.session.user.id, "token_launched", tokenId);
+                    await recordQuestEvent(ctx.session.user.id, "token_launched");
+                }
             }
 
             if (input.poll) {
@@ -713,6 +722,7 @@ export const contentRouter = router({
                     // refId includes the liker so each distinct liker pays once, ever (like→unlike→like can't re-award)
                     if (post.userId !== ctx.user.id) {
                         await awardXP(post.userId, "like_received", `${input.postId}:${ctx.user.id}`);
+                        await recordQuestEvent(post.userId, "like_received");
                     }
                 }
                 return { liked: true };

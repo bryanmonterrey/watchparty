@@ -8,6 +8,7 @@ import { like, or, eq, count, and, desc, lt, gt, sql, inArray } from 'drizzle-or
 import { withCache, invalidateCache, TTL } from '@/lib/cache';
 import { createNotification } from '@/server/lib/notify';
 import { awardXP } from '@/server/lib/xp';
+import { recordQuestEvent } from '@/server/lib/quests';
 import { upsertUser } from '@/lib/typesense/sync';
 
 export const userRouter = router({
@@ -124,6 +125,7 @@ export const userRouter = router({
             await db.insert(follows).values({ followerId: ctx.user.id, followingId: input.followingId }).onConflictDoNothing();
             await createNotification({ userId: input.followingId, actorId: ctx.user.id, type: "follow" });
             await awardXP(input.followingId, "follow_received", ctx.user.id);
+            await recordQuestEvent(input.followingId, "follow_received");
             return { success: true };
         }),
 

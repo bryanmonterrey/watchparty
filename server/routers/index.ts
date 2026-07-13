@@ -29,6 +29,7 @@ import { friendsRouter } from "./friends";
 import { spacesRouter } from "./spaces";
 import { tradeRouter } from "./trade";
 import { calloutRouter } from "./callout";
+import { questRouter } from "./quest";
 
 /**
  * Root application router
@@ -63,6 +64,7 @@ export const appRouter = router({
     spaces: spacesRouter,
     trade: tradeRouter,
     callout: calloutRouter,
+    quest: questRouter,
 });
 
 /**

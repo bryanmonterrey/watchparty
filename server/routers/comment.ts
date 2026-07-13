@@ -7,6 +7,7 @@ import { eq, desc, and, asc, sql, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
+import { recordQuestEvent } from "@/server/lib/quests";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { follows } from "@/db/schema/content/follow";
 import { upsertPost, deletePost } from "@/lib/typesense/sync";
@@ -176,6 +177,7 @@ export const commentRouter = router({
             // No XP for replying to yourself (own-thread farming)
             if (parent && parent.userId !== ctx.user.id) {
                 await awardXP(ctx.user.id, "comment_created", replyId);
+                await recordQuestEvent(ctx.user.id, "comment_created");
             }
 
             return { id: replyId };

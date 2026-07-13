@@ -112,4 +112,10 @@ are then a single indexed query, same shape as the callout leaderboard.
    `/trade/callouts` feed + 7d leaderboard in the Trade nav; "callout" notification
    type; `/api/cron/callout-performance` every 10 min advancing peak gains + paying
    2×/5×/10× XP bonuses).
-3. Phase 3 quests — pure retention layer on top of 1. NEXT UP.
+3. ✅ Phase 3 quests — SHIPPED 2026-07-13 (`quest_progress` table live; code-defined
+   catalog in `lib/quests.ts` (3 daily / 4 weekly); recordQuestEvent rides every XP hook
+   site + callout creation; auto-claims XP on completion; `/quests` page in the sidebar
+   with daily/weekly tabs, tick-bar progress, reset countdown).
+
+NEXT UP: Phase 4 (fomo.family social-trading layer) — start with 4a-1, server-witnessed
+trade recording in wallet.getSwapTransaction.

@@ -20,9 +20,15 @@ interface AwardResult {
  *   UTC day.
  * - Rolls up user.xp / user.level in the same call.
  */
-export async function awardXP(userId: string, kind: XpKind, refId: string): Promise<AwardResult> {
+export async function awardXP(
+    userId: string,
+    kind: XpKind,
+    refId: string,
+    opts?: { amount?: number }, // per-award override (quest rewards vary by quest)
+): Promise<AwardResult> {
     try {
-        const { amount, maxPerDay } = XP_AWARDS[kind];
+        const { maxPerDay } = XP_AWARDS[kind];
+        const amount = opts?.amount ?? XP_AWARDS[kind].amount;
 
         const dayStart = new Date();
         dayStart.setUTCHours(0, 0, 0, 0);

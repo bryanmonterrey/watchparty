@@ -6,6 +6,7 @@ import { user } from "@/db/schema";
 import { eq, and, or, like, inArray, ne } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { awardXP } from "@/server/lib/xp";
+import { recordQuestEvent } from "@/server/lib/quests";
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
@@ -100,6 +101,7 @@ export const friendsRouter = router({
                 .values({ followerId: ctx.user.id, followingId: input.userId })
                 .onConflictDoNothing();
             await awardXP(input.userId, "follow_received", ctx.user.id);
+            await recordQuestEvent(input.userId, "follow_received");
             const { followers } = await edges(ctx.user.id);
             return { success: true, nowFriends: followers.has(input.userId) };
         }),
@@ -121,6 +123,7 @@ export const friendsRouter = router({
                 .values({ followerId: ctx.user.id, followingId: found[0].id })
                 .onConflictDoNothing();
             await awardXP(found[0].id, "follow_received", ctx.user.id);
+            await recordQuestEvent(found[0].id, "follow_received");
             const { followers } = await edges(ctx.user.id);
             return { success: true, userId: found[0].id, nowFriends: followers.has(found[0].id) };
         }),

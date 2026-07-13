@@ -41,6 +41,7 @@ import {
     Logo4,
     FlagLogo,
     Star2Icon,
+    QuestsIcon,
 } from "@/components/icons"
 import { trpc } from "@/lib/trpc/client"
 import { WithAuth } from "@/components/auth/with-auth"
@@ -74,6 +75,12 @@ const items = [
         title: "Trade",
         url: "/trade",
         icon: TradeIcon,
+    },
+    {
+        title: "Quests",
+        url: "/quests",
+        icon: QuestsIcon,
+        protected: true,
     },
     {
         title: "Communities",

@@ -6,6 +6,7 @@ import { callouts, tokens, follows, notifications } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
 import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { recordQuestEvent } from "@/server/lib/quests";
 
 /**
  * pump.fun-style callouts (docs/exp-callouts.md, Phase 2).
@@ -62,6 +63,8 @@ export const calloutRouter = router({
                 priceAtCall: token.priceUsd,
                 marketCapAtCall: token.marketCapUsd,
             });
+
+            await recordQuestEvent(ctx.user.id, "callout_created");
 
             // Fan out to followers. Chunked inserts; non-critical, never fails the call.
             let notified = 0;
