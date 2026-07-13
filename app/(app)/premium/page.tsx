@@ -34,7 +34,7 @@ import {
     Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
-import { Panel, PillButton } from "@/components/settings/ui";
+import { Panel } from "@/components/settings/ui";
 
 // Premium hub. Structure borrows X-Premium's drill-down (plan status up top,
 // grouped rows below, each row swaps the column for its section with a back
