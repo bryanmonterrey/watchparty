@@ -78,12 +78,6 @@ const items = [
         icon: TradeIcon,
     },
     {
-        title: "Quests",
-        url: "/quests",
-        icon: QuestsIcon,
-        protected: true,
-    },
-    {
         title: "Communities",
         url: "/communities",
         icon: CommunitiesIcon,
@@ -358,7 +352,10 @@ export function AppSidebar() {
                                 )}
                                 trigger={
                                     <span className="flex w-full items-center">
-                                        <span className="flex w-(--sidebar-width-icon) h-11 items-center justify-center shrink-0">
+                                        {/* Fallback matches SIDEBAR_WIDTH_ICON: the goo replica portals to
+                                            <body>, outside the sidebar's --sidebar-width-icon scope, and the
+                                            column collapsing there shifted the "More" label on open. */}
+                                        <span className="flex w-[var(--sidebar-width-icon,4.25rem)] h-11 items-center justify-center shrink-0">
                                             <MenuIcon className="size-7" />
                                         </span>
                                         <AnimatePresence mode="wait">
@@ -377,6 +374,17 @@ export function AppSidebar() {
                                     </span>
                                 }
                                 items={[
+                                    {
+                                        key: "quests",
+                                        href: "/quests",
+                                        className: "gap-3 px-4 rounded-full text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                                        label: (
+                                            <>
+                                                <QuestsIcon className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />
+                                                Quests
+                                            </>
+                                        ),
+                                    },
                                     {
                                         key: "settings",
                                         href: "/settings",
