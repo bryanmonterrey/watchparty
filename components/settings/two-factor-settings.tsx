@@ -144,7 +144,7 @@ export function TwoFactorSettings() {
                 </Panel>
                 <button
                     onClick={() => setStep("disable")}
-                    className="h-11 w-full cursor-pointer rounded-full bg-pastelred/10 text-[13px] font-bold text-pastelred transition-colors hover:bg-pastelred/20"
+                    className="h-12 w-full cursor-pointer rounded-full bg-pastelred/10 text-[13px] font-bold text-pastelred transition-colors hover:bg-pastelred/20"
                 >
                     Disable 2FA
                 </button>
@@ -167,9 +167,9 @@ export function TwoFactorSettings() {
                     <DigitInput value={code} onChange={setCode} />
                 </div>
                 <div className="flex gap-2">
-                    <PillButton className="h-11 flex-1" onClick={() => { setStep("idle"); setCode(""); }}>Cancel</PillButton>
+                    <PillButton className="h-12 flex-1" onClick={() => { setStep("idle"); setCode(""); }}>Cancel</PillButton>
                     <button onClick={disable2FA} disabled={loading || code.length < 6}
-                        className="h-11 flex-1 cursor-pointer rounded-full bg-pastelred text-[13px] font-bold text-white transition-colors hover:bg-pastelred/90 disabled:pointer-events-none disabled:opacity-50">
+                        className="h-12 flex-1 cursor-pointer rounded-full bg-pastelred text-[13px] font-bold text-white transition-colors hover:bg-pastelred/90 disabled:pointer-events-none disabled:opacity-50">
                         {loading ? "Disabling…" : "Disable 2FA"}
                     </button>
                 </div>
@@ -202,7 +202,7 @@ export function TwoFactorSettings() {
                         ))}
                     </div>
                 </Panel>
-                <PillButton className="h-11 w-full" onClick={() => setStep("idle")}>
+                <PillButton className="h-12 w-full" onClick={() => setStep("idle")}>
                     Done
                 </PillButton>
             </div>
@@ -216,8 +216,8 @@ export function TwoFactorSettings() {
                 <p className="text-[13px] font-medium text-zinc-400">Enter the 6-digit code from your authenticator app to confirm setup.</p>
                 <DigitInput value={code} onChange={v => { setCode(v); if (v.length === 6) setTimeout(() => verifyAndEnable(), 100); }} />
                 <div className="flex gap-2">
-                    <PillButton className="h-11 flex-1" onClick={() => { setStep("setup"); setCode(""); }}>Back</PillButton>
-                    <PillButton variant="primary" className="h-11 flex-1" onClick={verifyAndEnable} disabled={loading || code.length < 6}>
+                    <PillButton className="h-12 flex-1" onClick={() => { setStep("setup"); setCode(""); }}>Back</PillButton>
+                    <PillButton variant="primary" className="h-12 flex-1" onClick={verifyAndEnable} disabled={loading || code.length < 6}>
                         {loading ? "Verifying…" : "Verify & enable"}
                     </PillButton>
                 </div>
@@ -246,7 +246,7 @@ export function TwoFactorSettings() {
                     </Panel>
                 )}
                 <p className="text-center text-[12px] font-medium text-zinc-600">Or enter the code above manually in your app.</p>
-                <PillButton variant="primary" className="h-11 w-full" onClick={() => setStep("verify")}>
+                <PillButton variant="primary" className="h-12 w-full" onClick={() => setStep("verify")}>
                     I've scanned it →
                 </PillButton>
             </div>
@@ -272,7 +272,7 @@ export function TwoFactorSettings() {
                     <li>Save your backup codes in a safe place</li>
                 </ol>
             </Panel>
-            <PillButton variant="primary" className="h-11 w-full" onClick={startSetup} disabled={loading}>
+            <PillButton variant="primary" className="h-12 w-full" onClick={startSetup} disabled={loading}>
                 {loading ? "Setting up…" : "Enable two-factor auth"}
             </PillButton>
         </div>

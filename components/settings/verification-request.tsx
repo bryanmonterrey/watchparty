@@ -140,7 +140,7 @@ export function VerificationRequest() {
 
             <PillButton
                 variant="primary"
-                className="h-11 w-full"
+                className="h-12 w-full"
                 onClick={() => submit.mutate({ requestedTier: tier, fullName, bio: bio || undefined, website: website || undefined, twitterHandle: twitterHandle || undefined, reason })}
                 disabled={submit.isPending || !fullName.trim() || reason.length < 20}
             >

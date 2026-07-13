@@ -35,7 +35,7 @@ export function PremiumSettings() {
                 <p className="mt-1 text-[13px] font-medium text-zinc-400">
                     Unlock verified badges, higher limits, analytics and more.
                 </p>
-                <PillButton variant="primary" className="mt-4 h-11 px-6" onClick={() => openOverlay()}>
+                <PillButton variant="primary" className="mt-4 px-6" onClick={() => openOverlay()}>
                     Upgrade to Premium
                 </PillButton>
             </Panel>
@@ -63,7 +63,7 @@ export function PremiumSettings() {
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                    <PillButton className="h-11" onClick={() => openOverlay()}>
+                    <PillButton className="" onClick={() => openOverlay()}>
                         Change plan
                     </PillButton>
                     {!sub.cancelAtPeriodEnd && (

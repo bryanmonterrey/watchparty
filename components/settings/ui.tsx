@@ -53,6 +53,7 @@ export function PanelSkeleton({ rows = 3, rowClassName = "h-16" }: { rows?: numb
 }
 
 // Primary = white pill (one per surface); secondary = quiet neutral pill.
+// Height standard: h-11 default; wide (w-full / flex-1) CTAs pass h-12.
 export function PillButton({
     variant = "secondary",
     className,
@@ -61,7 +62,7 @@ export function PillButton({
     return (
         <button
             className={cn(
-                "inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-[13px] font-bold transition-colors active:scale-95 disabled:pointer-events-none disabled:opacity-50",
+                "inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-[13px] font-bold transition-colors active:scale-95 disabled:pointer-events-none disabled:opacity-50",
                 variant === "primary"
                     ? "bg-white text-black hover:bg-white/90"
                     : "bg-white/10 text-white hover:bg-white/20",

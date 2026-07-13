@@ -127,7 +127,7 @@ export function NotificationPreferences() {
 
             <PillButton
                 variant="primary"
-                className="h-11 w-full"
+                className="h-12 w-full"
                 onClick={() => update.mutate(prefs as Record<PrefKey, boolean> & { pushEnabled: boolean })}
                 disabled={update.isPending}
             >

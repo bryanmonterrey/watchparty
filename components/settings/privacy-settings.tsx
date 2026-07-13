@@ -87,7 +87,7 @@ export function PrivacySettings() {
 
             <PillButton
                 variant="primary"
-                className="h-11 w-full"
+                className="h-12 w-full"
                 onClick={() => update.mutate({
                     showOnlineStatus,
                     dmRequireFollow,
