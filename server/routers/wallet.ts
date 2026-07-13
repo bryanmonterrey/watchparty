@@ -11,6 +11,10 @@ import { TRPCError } from "@trpc/server";
 import { Keypair, Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { createServerConnection } from "@/lib/solana/server-connection";
 import { withCache, withSwrCache, invalidateCache, TTL } from "@/lib/cache";
+import { db } from "@/db";
+import { trades } from "@/db/schema/content";
+import { nanoid } from "nanoid";
+import { and, eq, isNull } from "drizzle-orm";
 import { resolvePool } from "@/lib/tokens/udf-datafeed";
 
 const subtle = globalThis.crypto?.subtle;
@@ -1177,7 +1181,7 @@ export const walletRouter = router({
             userPublicKey: z.string(),
             wrapAndUnwrapSol: z.boolean().default(true)
         }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ ctx, input }) => {
             const referralAccount = process.env.JUPITER_REFERRAL_ACCOUNT;
             let feeAccount: string | undefined;
 
@@ -1219,7 +1223,30 @@ export const walletRouter = router({
                         const text = await response.text();
                         throw new Error(`Jupiter swap HTTP ${response.status}: ${text}`);
                     }
-                    return await response.json();
+                    const json = await response.json();
+
+                    // Server-witnessed trade record (docs/exp-callouts.md §4a): the
+                    // server knows the user, mints, and quoted amounts here — insert a
+                    // pending row now; the client reports the signature after send and
+                    // the trade-verify cron confirms on-chain. Never blocks the swap.
+                    let tradeId: string | undefined;
+                    try {
+                        const q = input.quoteResponse ?? {};
+                        tradeId = nanoid();
+                        await db.insert(trades).values({
+                            id: tradeId,
+                            userId: ctx.user.id,
+                            walletAddress: input.userPublicKey,
+                            inputMint: String(q.inputMint ?? ""),
+                            outputMint: String(q.outputMint ?? ""),
+                            inAmountRaw: String(q.inAmount ?? "0"),
+                            outAmountRaw: String(q.outAmount ?? "0"),
+                            usdValue: Number(q.swapUsdValue) || null,
+                        });
+                    } catch {
+                        tradeId = undefined;
+                    }
+                    return { ...json, tradeId };
                 } catch (err) {
                     console.warn(`Jupiter swap attempt failed for ${url}:`, err);
                     lastError = err;
@@ -1228,6 +1255,28 @@ export const walletRouter = router({
 
             console.error("All Jupiter swap endpoints failed:", lastError);
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch swap transaction — Jupiter API unreachable" });
+        }),
+
+    /**
+     * Client best-effort callback after sending a swap: attach the signature
+     * to the pending trade so the trade-verify cron can confirm it on-chain.
+     * Amounts stay server-witnessed — this only ever sets the signature.
+     */
+    reportSwapSignature: protectedProcedure
+        .input(z.object({ tradeId: z.string(), signature: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            try {
+                await db
+                    .update(trades)
+                    .set({ txSignature: input.signature })
+                    .where(and(
+                        eq(trades.id, input.tradeId),
+                        eq(trades.userId, ctx.user.id),
+                        eq(trades.status, "pending"),
+                        isNull(trades.txSignature),
+                    ));
+            } catch { /* duplicate signature or race — the cron reconciles */ }
+            return { ok: true };
         }),
 
     getTokenInfo: protectedProcedure

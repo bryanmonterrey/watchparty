@@ -23,3 +23,4 @@ export * from "./video_cards";
 export * from "./xp";
 export * from "./callout";
 export * from "./quest";
+export * from "./trade";

@@ -42,7 +42,7 @@ DOTENV_PRODUCTION < .env.production` — that file lacks ALERT_WEBHOOK_URL.)
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.
 
 ## 🔭 Bigger workstreams (own focus / own chat)
-- **XP / quests / callouts (gamification)** — full design in `docs/exp-callouts.md`. Phases 1–3 SHIPPED (XP ledger/levels/profile badge 07-12; callouts + `/trade/callouts` + performance cron 07-12; quests + `/quests` sidebar page 07-13). NEXT: Phase 4 fomo social-trading layer, starting with server-witnessed trade recording (doc §4a). fomo.family PnL/copy-trade layer deferred until per-user trades are tracked (design in doc §4).
+- **XP / quests / callouts (gamification)** — full design in `docs/exp-callouts.md`. Phases 1–3 SHIPPED (XP ledger/levels/profile badge 07-12; callouts + `/trade/callouts` + performance cron 07-12; quests + `/quests` sidebar page 07-13). Phase 4a-1 trade recording SHIPPED 07-13 (`trades` table, pending insert in getSwapTransaction, signature report, trade-verify cron). NEXT: Phase 4b PnL (doc §4b). fomo.family PnL/copy-trade layer deferred until per-user trades are tracked (design in doc §4).
 - **Realtime/PartyKit migration** — `realtime/` worker + `deploy-realtime` job exist; remaining surfaces: DMs, presence/typing, feeds, live stream chat, Spaces coordination; then delete `lib/supabase/realtime-client.ts`. (See `realtime-video-architecture-direction` memory.)
 - **IVS + Cloudflare video hybrid** with admin toggle — StreamProvider abstraction (ivs + cloudflare-stream), per-stream + global toggle, mirroring `lib/chains/` ChainAdapter pattern.
 

@@ -44,6 +44,7 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
 
     const getQuoteMutation = trpc.wallet.getQuote.useMutation();
     const getSwapTxMutation = trpc.wallet.getSwapTransaction.useMutation();
+    const reportSwapSignature = trpc.wallet.reportSwapSignature.useMutation();
 
     const activePublicKeyStr = adapterPublicKey?.toBase58() || walletAddress;
     const publicKey = toPublicKey(activePublicKeyStr);
@@ -173,7 +174,7 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
         });
 
         try {
-            const { swapTransaction } = await getSwapTxMutation.mutateAsync({
+            const { swapTransaction, tradeId } = await getSwapTxMutation.mutateAsync({
                 quoteResponse: quote,
                 userPublicKey: publicKey.toString(),
                 wrapAndUnwrapSol: true,
@@ -192,6 +193,11 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
             } else {
                 throw new Error("No wallet connected");
             }
+
+            // Attach the signature to the server-side trade record before waiting
+            // on confirmation — the trade-verify cron settles it on-chain even if
+            // this tab dies mid-confirm. Fire-and-forget.
+            if (tradeId) reportSwapSignature.mutate({ tradeId, signature });
 
             swapToast.setStep("confirming");
             await connection.confirmTransaction(signature, "confirmed");

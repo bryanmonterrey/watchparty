@@ -117,5 +117,13 @@ are then a single indexed query, same shape as the callout leaderboard.
    site + callout creation; auto-claims XP on completion; `/quests` page in the sidebar
    with daily/weekly tabs, tick-bar progress, reset countdown).
 
-NEXT UP: Phase 4 (fomo.family social-trading layer) — start with 4a-1, server-witnessed
-trade recording in wallet.getSwapTransaction.
+4. Phase 4a-1 (server-witnessed trade recording) — ✅ SHIPPED 2026-07-13: `trades` table
+   live; pending row inserted in `wallet.getSwapTransaction`; client attaches the
+   signature via `wallet.reportSwapSignature` right after send; `/api/cron/trade-verify`
+   (on the */10 slot) settles pending → confirmed/failed from `getSignatureStatuses`,
+   expires unreported rows after 1h. Reads are owner-only (RLS) until the opt-in public
+   trader profile ships.
+
+NEXT UP: Phase 4b PnL computation (cost basis + `pnl_snapshots` cron) → 4c social
+surfaces (trade feed/notifications, profile PnL card, leaderboard) → 4a-2 Helius
+webhook wallet tracking → 4d copy-trade.
