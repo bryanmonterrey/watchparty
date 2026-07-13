@@ -343,7 +343,7 @@ export function AppSidebar() {
                                 align="start"
                                 width={320}
                                 gap={8}
-                                fill="#000000"
+                                fill="#101011"
                                 panelRadius={24}
                                 itemHeight={48}
                                 triggerClassName={cn(
@@ -358,7 +358,10 @@ export function AppSidebar() {
                                         <span className="flex w-[var(--sidebar-width-icon,4.25rem)] h-11 items-center justify-center shrink-0">
                                             <MenuIcon className="size-7" />
                                         </span>
-                                        <AnimatePresence mode="wait">
+                                        {/* initial={false}: the goo dropdown re-mounts this trigger
+                                            inside its portal replica on open — without it the label
+                                            replays its x:-10 entrance and visibly shifts. */}
+                                        <AnimatePresence mode="wait" initial={false}>
                                             {(state !== "collapsed" || isMobile) && (
                                                 <motion.span
                                                     initial={{ opacity: 0, x: -10 }}
