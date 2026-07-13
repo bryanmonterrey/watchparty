@@ -12,7 +12,6 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
     Analytics01Icon,
     Archive02Icon,
-    ArrowRight01Icon,
     ArrowUpRight01Icon,
     CheckmarkBadge01Icon,
     Crown02Icon,
