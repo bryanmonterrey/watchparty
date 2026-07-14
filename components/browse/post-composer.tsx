@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { X, Globe, Users, BadgeCheck, Medal, Crown, Check, ChevronDown, BarChart2, Plus, Trash2 } from "lucide-react";
+import { X, Globe, Users, BadgeCheck, Medal, Crown, Check, ChevronDown, BarChart2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ import { LinkPreviewCard } from "@/components/browse/link-preview-card";
 import { VoiceRecorder, VoiceRecorderTrigger } from "@/components/browse/voice-recorder";
 import { ScheduledPostsDrawer } from "@/components/browse/scheduled-posts-drawer";
 import { nanoid } from "nanoid";
+import { PollComposer } from "@/components/browse/poll-composer";
 
 export function PostComposer() {
     const [content, setContent] = useState("");
@@ -561,52 +562,16 @@ export function PostComposer() {
 
                 {/* Poll creator */}
                 {showPoll && (
-                    <div className="mt-3 p-3 rounded-xl bg-zinc-900/50 border border-white/10 flex flex-col gap-2">
-                        <input
-                            placeholder="Ask a question…"
-                            value={pollQuestion}
-                            onChange={e => setPollQuestion(e.target.value)}
-                            className="bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 outline-none border-b border-white/10 focus:border-white/30 pb-1"
-                        />
-                        {pollOptions.map((opt, i) => (
-                            <div key={opt.id} className="flex items-center gap-2">
-                                <input
-                                    placeholder={`Choice ${i + 1}`}
-                                    value={opt.text}
-                                    onChange={e => setPollOptions(prev => prev.map((o, idx) => idx === i ? { ...o, text: e.target.value } : o))}
-                                    className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-500 outline-none border-b border-white/10 focus:border-white/30 pb-1"
-                                />
-                                {pollOptions.length > 2 && (
-                                    <button onClick={() => setPollOptions(prev => prev.filter((_, idx) => idx !== i))} className="text-zinc-500 hover:text-red-500">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        {pollOptions.length < 4 && (
-                            <button
-                                onClick={() => setPollOptions(prev => [...prev, { id: nanoid(), text: "" }])}
-                                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                            >
-                                <Plus className="w-3.5 h-3.5" /> Add option
-                            </button>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-zinc-500">Duration:</span>
-                            {(["1d", "3d", "7d"] as const).map(d => (
-                                <button
-                                    key={d}
-                                    onClick={() => setPollEndsAt(d)}
-                                    className={cn("text-xs px-2 py-0.5 rounded-full transition-colors",
-                                        pollEndsAt === d ? "bg-white/20 text-white" : "text-zinc-500 hover:text-zinc-300"
-                                    )}
-                                >{d}</button>
-                            ))}
-                            <button onClick={() => setShowPoll(false)} className="ml-auto text-zinc-500 hover:text-zinc-300">
-                                <X className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
+                    <PollComposer
+                        className="mt-3"
+                        question={pollQuestion}
+                        onQuestionChange={setPollQuestion}
+                        options={pollOptions}
+                        onOptionsChange={setPollOptions}
+                        duration={pollEndsAt}
+                        onDurationChange={setPollEndsAt}
+                        onRemove={() => setShowPoll(false)}
+                    />
                 )}
 
                 {/* Voice recorder */}

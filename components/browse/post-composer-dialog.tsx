@@ -30,7 +30,8 @@ import { useLinkPreview } from "@/hooks/use-link-preview";
 import { TokenLaunchTrigger, TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/components/browse/token-launch";
 import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 import { useTokenLaunch } from "@/hooks/use-token-launch";
-import { nanoid } from "nanoid";
+import { nanoid } from "nanoid"
+import { PollComposer } from "@/components/browse/poll-composer";
 
 interface PostRef {
     id: string;
@@ -552,6 +553,21 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                     }))}
                                 />
                             </div>
+
+                            {/* Poll (state existed but the dialog never rendered the
+                                composer — shared PollComposer fills the gap) */}
+                            {showPoll && (
+                                <PollComposer
+                                    className="mb-3"
+                                    question={pollQuestion}
+                                    onQuestionChange={setPollQuestion}
+                                    options={pollOptions}
+                                    onOptionsChange={setPollOptions}
+                                    duration={pollEndsAt}
+                                    onDurationChange={setPollEndsAt}
+                                    onRemove={() => setShowPoll(false)}
+                                />
+                            )}
 
                             {/* Toolbar */}
                             <div className="flex items-center justify-between">
