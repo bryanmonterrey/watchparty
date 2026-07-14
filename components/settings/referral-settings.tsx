@@ -38,7 +38,7 @@ export function ReferralSettings() {
     return (
         <div className="space-y-4">
             {/* My code */}
-            <Panel className="space-y-3 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+            <Panel className="space-y-3 p-5">
                 <p className="text-[14px] font-semibold text-zinc-300">Your referral link</p>
                 {code ? (
                     <div className="flex items-center gap-1.5">

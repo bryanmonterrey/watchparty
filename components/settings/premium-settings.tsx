@@ -30,7 +30,7 @@ export function PremiumSettings() {
 
     if (!active) {
         return (
-            <Panel className="p-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+            <Panel className="p-8 text-center">
                 <VerifiedBadgeIcon className="mx-auto size-8" />
                 <p className="mt-3 text-[15px] font-bold tracking-tight text-white">You&apos;re not on Premium</p>
                 <p className="mt-1 text-[13px] font-medium text-zinc-400">
@@ -46,7 +46,7 @@ export function PremiumSettings() {
     const tier = TIERS[sub.tierKey as TierKey];
     return (
         <div className="space-y-4">
-            <Panel className="p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+            <Panel className="p-5">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                         <VerifiedBadgeIcon className="size-5" />
@@ -89,11 +89,9 @@ export function PremiumSettings() {
                 rel="noopener noreferrer"
                 className="group block rounded-[1.75rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.99]"
             >
-                <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-zinc-900 p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-                    {/* ambient glow */}
-                    <div className="pointer-events-none absolute -right-12 -top-16 size-40 rounded-full bg-twitter/20 blur-3xl transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] opacity-60 group-hover:opacity-100" />
-                    <div className="relative flex items-center gap-4">
-                        <div className="grid size-11 place-items-center rounded-2xl bg-white/[0.04] text-twitter ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-zinc-900 p-5">
+                        <div className="relative flex items-center gap-4">
+                        <div className="grid size-11 place-items-center rounded-2xl bg-white/[0.04] text-twitter ring-1 ring-white/10">
                             <HugeiconsIcon icon={Megaphone02Icon} className="size-5" strokeWidth={1.5} />
                         </div>
                         <div>

@@ -135,7 +135,7 @@ export function TwoFactorSettings() {
     if (is2FAEnabled && step === "idle") {
         return (
             <div className="space-y-4">
-                <Panel className="flex items-center gap-3 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+                <Panel className="flex items-center gap-3 p-5">
                     <HugeiconsIcon icon={Shield01Icon} className="size-6 shrink-0 text-white" strokeWidth={2} />
                     <div>
                         <p className="text-[14px] font-bold text-white">Two-factor authentication is active</p>
@@ -181,7 +181,7 @@ export function TwoFactorSettings() {
     if (step === "backup") {
         return (
             <div className="space-y-4">
-                <Panel className="flex items-center gap-3 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+                <Panel className="flex items-center gap-3 p-5">
                     <HugeiconsIcon icon={Shield01Icon} className="size-5 text-white" strokeWidth={2} />
                     <p className="text-[14px] font-bold text-white">2FA enabled successfully!</p>
                 </Panel>

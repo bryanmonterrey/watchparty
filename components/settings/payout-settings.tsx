@@ -67,7 +67,7 @@ export function PayoutSettings() {
     return (
         <div className="space-y-4">
             {/* USDC subscription earnings — the panel's one focal moment */}
-            <Panel className="p-5 shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+            <Panel className="p-5">
                 <p className="mb-1 text-[12px] font-medium text-zinc-500">Claimable subscription earnings (USDC)</p>
                 <div className="flex items-end justify-between gap-3">
                     <div>

@@ -85,13 +85,12 @@ nav into a rounded capsule.
 - Content lives in **cards/panels**, not dense rows, when elevation communicates
   hierarchy. Squircle corners, generous interior padding (≈`p-6`/`p-8`,
   reference card padding is 32px), one clear focal element per card.
-- **Depth without gray/black drop shadows** (both references agree). Three ways,
-  in order of preference: (1) **inset highlight** for a soft, inflated/glassy
-  feel (`shadow-[inset_0_1px_0_rgba(255,255,255,.5)]` on light, `.06` on dark) —
-  Rainbow's signature; (2) **brand-tinted ambient glow** — a blurred accent blob
-  behind the card or a tinted `shadow-[…]` (Phantom's tinted elevation; already
-  used in `components/premium/upgrade-overlay` + `premium-settings`); (3) inner
-  hairline in dark mode (`ring-1 ring-white/10`). Never a neutral drop shadow.
+- **Depth without gray/black drop shadows** (both references agree) — and, per
+  user rule (2026-07-13), **without inset top highlights or blurred glow blobs
+  in-app either**: on dark app surfaces the 1px inset highlight reads as a stray
+  border-t and a blurred accent blob reads as a gradient. In-app depth = flat
+  fill + **uniform inner hairline** (`ring-1 ring-white/10`) only. Never a
+  neutral drop shadow. (Marketing pages may still use tinted elevation.)
 - **Color-as-identity feature cards**: a feature card's *fill* can be the signal
   (a pastel or accent surface with the content floating on top), rather than a
   white card with a colored icon. Vary fills across a set; keep one radius.
@@ -105,8 +104,9 @@ nav into a rounded capsule.
 
 ### Gradient atmosphere (Rainbow takeaway) — RETIRED
 - **No gradients, ever** (user rule, 2026-07-13 — supersedes the Rainbow
-  takeaway below). Surfaces are flat fills; depth comes from inset highlights,
-  ambient blurred accent blobs, and inner hairlines — never `bg-gradient-*`.
+  takeaway below). Surfaces are flat fills; in-app depth is a uniform inner
+  hairline only (see §2 Card-forward) — never `bg-gradient-*`, and blurred
+  accent blobs count as gradients too.
 - ~~Section backdrops can be full-bleed soft gradients that dissolve into the
   pastel canvas at one edge — build from our pastels/accents, keep them
   quiet.~~ Use solid pastel bands instead (the Cash App / Phantom pattern in

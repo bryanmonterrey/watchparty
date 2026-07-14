@@ -59,7 +59,7 @@ export function VerificationRequest() {
 
     if (existing?.status === "approved") {
         return (
-            <Panel className="space-y-2 p-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,.06)]">
+            <Panel className="space-y-2 p-8 text-center">
                 <HugeiconsIcon icon={CheckmarkCircle02Icon} className="mx-auto size-10 text-white" strokeWidth={2} />
                 <p className="text-[14px] font-bold text-white">Verification approved</p>
                 <p className="text-[13px] font-medium text-zinc-400">Your account has been verified.</p>

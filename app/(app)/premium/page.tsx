@@ -191,8 +191,8 @@ function RowSignal({ s, signals }: { s: Section; signals: ReturnType<typeof useH
 
 // ── Hub pieces ──────────────────────────────────────────────────────────────
 
-// Double-bezel hero (the upgrade-overlay aesthetic): outer tray, inner
-// gradient plate, ambient brand glow. Subscribers click through to plan
+// Double-bezel hero: outer tray + flat inner plate (no gradients, no glow,
+// no inset highlights — user rule). Subscribers click through to plan
 // management; everyone else opens the overlay.
 function PlanBanner({ onManage }: { onManage: () => void }) {
     const { data, isLoading } = trpc.premium.getStatus.useQuery();
@@ -211,10 +211,9 @@ function PlanBanner({ onManage }: { onManage: () => void }) {
             onClick={entitled ? onManage : () => openOverlay()}
             className="group block w-full cursor-pointer rounded-[1.75rem] bg-white/[0.03] p-1.5 text-left ring-1 ring-white/10 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.99]"
         >
-            <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-zinc-900 p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]">
-                <div className="pointer-events-none absolute -right-12 -top-16 size-40 rounded-full bg-twitter/20 blur-3xl transition-opacity duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] opacity-60 group-hover:opacity-100" />
+            <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-zinc-900 p-5">
                 <div className="relative flex min-w-0 items-center gap-4">
-                    <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.04] ring-1 ring-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                    <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.04] ring-1 ring-white/10">
                         <VerifiedBadgeIcon className="size-5" />
                     </div>
                     <div className="min-w-0">
