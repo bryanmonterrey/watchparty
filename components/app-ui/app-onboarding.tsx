@@ -323,7 +323,7 @@ export default function OnboardingDialog() {
                                     <Button
                                         type="submit"
                                         size="wide"
-                                        className="bg-white font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
+                                        className="h-20 rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
                                         disabled={loading || !available}
                                     >
                                         {loading ? "Claiming…" : available ? `Claim @${username}` : "Claim your handle"}
@@ -349,7 +349,7 @@ export default function OnboardingDialog() {
                                     <Button
                                         onClick={handleAvatarUpload}
                                         size="wide"
-                                        className="bg-white font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
+                                        className="h-20 rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
                                         disabled={loading || !avatarFile}
                                     >
                                         {loading ? "Uploading…" : "Complete profile"}
