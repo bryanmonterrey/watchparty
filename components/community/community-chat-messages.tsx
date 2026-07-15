@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, Fragment } from "react";
-import { Loader2, ServerCrash } from "lucide-react";
+import { ServerCrash } from "lucide-react";
 import { format } from "date-fns";
 import { trpc } from "@/lib/trpc/client";
 import { useCommunityScroll } from "@/hooks/use-community-scroll";
@@ -81,9 +81,16 @@ export function CommunityChatMessages({
 
     if (status === "pending") {
         return (
-            <div className="flex flex-col flex-1 justify-center items-center">
-                <Loader2 className="h-7 w-7 text-zinc-500 animate-spin my-4" />
-                <p className="text-xs text-zinc-400">Loading messages...</p>
+            <div className="flex flex-col flex-1 justify-end gap-5 p-4 overflow-hidden">
+                {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className="flex gap-x-3">
+                        <div className="size-9 shrink-0 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+                        <div className="flex w-full flex-col gap-2">
+                            <div className="h-3.5 w-24 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+                            <div className={`h-3.5 overflow-hidden rounded-full ${i % 3 === 0 ? "w-2/3" : i % 3 === 1 ? "w-1/2" : "w-3/4"}`}><div className="size-full shimmer-skeleton" /></div>
+                        </div>
+                    </div>
+                ))}
             </div>
         );
     }
@@ -106,7 +113,7 @@ export function CommunityChatMessages({
             {hasNextPage && (
                 <div className="flex justify-center">
                     {isFetchingNextPage ? (
-                        <Loader2 className="h-6 w-6 text-zinc-500 animate-spin my-4" />
+                        <div className="my-4 h-3.5 w-40 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
                     ) : (
                         <button
                             onClick={() => fetchNextPage()}

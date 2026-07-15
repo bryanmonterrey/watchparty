@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { ArrowLeft, Mic, MicOff, Hand, Radio, Loader2, PhoneOff } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, Hand, Radio, PhoneOff } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useRealtimeRoom } from "@/hooks/use-realtime-room";
@@ -54,8 +54,16 @@ export function SpaceRoom({ spaceId, onLeave }: Props) {
 
     if (isLoading || !data) {
         return (
-            <div className="flex flex-1 items-center justify-center bg-background">
-                <Loader2 className="h-7 w-7 text-flexwhite/40 animate-spin" />
+            <div className="flex flex-1 flex-col gap-6 bg-background p-6">
+                <div className="h-8 w-48 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+                <div className="grid grid-cols-4 gap-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="flex flex-col items-center gap-2">
+                            <div className="size-16 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+                            <div className="h-3 w-14 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

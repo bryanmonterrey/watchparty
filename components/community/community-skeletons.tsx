@@ -2,9 +2,13 @@
 
 import { cn } from "@/lib/utils";
 
-/** Pure-black surface skeleton block (overrides the zinc default for this app's bg). */
+/** Shimmer bone — the house skeleton (shimmer fill inside a sized container). */
 function Bone({ className }: { className?: string }) {
-    return <div className={cn("animate-pulse rounded-md bg-white/5", className)} />;
+    return (
+        <div className={cn("overflow-hidden rounded-md", className)}>
+            <div className="size-full shimmer-skeleton" />
+        </div>
+    );
 }
 
 /* ─── Channel chat ─────────────────────────────────────────── */
@@ -12,8 +16,8 @@ export function ChannelChatSkeleton() {
     return (
         <div className="flex flex-col h-full min-w-0">
             {/* header */}
-            <div className="h-14 shrink-0 px-4 flex items-center gap-x-2 bg-background border-b border-flexwhite/15">
-                <Bone className="h-5 w-5 rounded" />
+            <div className="h-17 shrink-0 px-4 flex items-center gap-x-2">
+                <Bone className="h-6 w-6 rounded-lg" />
                 <Bone className="h-4 w-32" />
                 <Bone className="ml-auto h-4 w-4 rounded-full" />
             </div>
@@ -46,8 +50,8 @@ export function ChannelChatSkeleton() {
 /* ─── Server sidebar (channel list) ────────────────────────── */
 export function ServerSidebarSkeleton() {
     return (
-        <div className="flex flex-col h-full w-64 bg-background border-r border-flexwhite/15 shrink-0">
-            <div className="h-12 border-b border-flexwhite/10 flex items-center px-4">
+        <div className="flex flex-col h-full w-76 bg-zinc-900/60 md:pt-[var(--header-height)] shrink-0">
+            <div className="h-12 flex items-center px-4">
                 <Bone className="h-4 w-32" />
             </div>
             <div className="flex-1 px-3 pt-5 space-y-5">
@@ -74,11 +78,11 @@ export function ExploreSkeleton() {
             {Array.from({ length: 6 }).map((_, i) => (
                 <div
                     key={i}
-                    className="rounded-3xl border border-flexwhite/10 overflow-hidden bg-white/[0.02]"
+                    className="rounded-3xl overflow-hidden bg-white/[0.03]"
                 >
                     <Bone className="h-24 w-full rounded-none" />
                     <div className="p-4 -mt-8">
-                        <Bone className="h-14 w-14 rounded-2xl border-4 border-black" />
+                        <Bone className="h-14 w-14 rounded-2xl" />
                         <Bone className="h-4 w-32 mt-3" />
                         <Bone className="h-3 w-full mt-3" />
                         <Bone className="h-3 w-2/3 mt-2" />
@@ -95,7 +99,7 @@ export function SpacesSkeleton() {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="rounded-3xl border border-flexwhite/10 bg-white/[0.02] p-5">
+                <div key={i} className="rounded-3xl bg-white/[0.03] p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Bone className="h-5 w-16 rounded-full" />
                         <Bone className="h-4 w-24 ml-auto" />
@@ -104,7 +108,7 @@ export function SpacesSkeleton() {
                     <Bone className="h-3 w-1/2 mt-2" />
                     <div className="flex -space-x-2 mt-5">
                         {Array.from({ length: 4 }).map((_, j) => (
-                            <Bone key={j} className="h-9 w-9 rounded-full border-2 border-black" />
+                            <Bone key={j} className="h-9 w-9 rounded-full" />
                         ))}
                     </div>
                 </div>
