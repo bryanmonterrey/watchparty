@@ -32,7 +32,7 @@ export default function MessagesPage() {
                 </div>
 
                 <div
-                    className={`h-full min-h-0 md:col-span-6 md:block md:pt-[var(--header-height)] ${selectedConversationId ? "block" : "hidden"}`}
+                    className={`h-full min-h-0 md:col-span-6 md:block ${selectedConversationId ? "block" : "hidden"}`}
                 >
                     {selectedConversationId ? (
                         <MessagesProvider conversationId={selectedConversationId}>

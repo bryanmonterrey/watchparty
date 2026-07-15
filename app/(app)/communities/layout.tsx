@@ -6,10 +6,11 @@ import { CommunityHomeSidebar } from "@/components/community/community-home-side
 import { CommunityModalProvider } from "@/components/community/community-modal-provider";
 import { useParams, usePathname } from "next/navigation";
 
-// Communities, redesigned per desktopdesigns/"community landing.svg": the
-// server-tile rail sits on the page canvas, and the sidebar + content pair
-// lives inside one large rounded card under the header. Columns and all
-// community logic are unchanged — only the frame moved.
+// Communities, full-bleed (same treatment as /messages): rail, sidebar and
+// content run edge to edge and top to bottom — no rounded card, no outer
+// border. Full-height hairlines divide the columns; the rail and sidebar
+// pad down past the floating header while the chat column owns its own
+// space from the very top. Columns and all community logic are unchanged.
 export default function CommunitiesLayout({
     children,
 }: {
@@ -22,22 +23,26 @@ export default function CommunitiesLayout({
     const isHome = pathname === "/communities" || !serverId;
 
     return (
-        <div className="flex h-svh flex-col overflow-hidden md:pt-[var(--header-height)]">
+        <div className="flex h-svh w-screen flex-col overflow-hidden">
             <CommunityModalProvider />
 
-            <div className="flex min-h-0 w-full flex-1 overflow-hidden pr-4 pb-4">
-                {/* Column 1: server tile rail on the canvas */}
-                <CommunityServerList />
+            <div className="flex min-h-0 w-full flex-1 overflow-hidden">
+                {/* Column 1: server tile rail */}
+                <div className="flex md:pt-[var(--header-height)]">
+                    <CommunityServerList />
+                </div>
 
-                {/* Columns 2+3 inside the big rounded preview card */}
-                <div className="flex min-w-0 flex-1 overflow-hidden rounded-4xl border border-zinc-500/20 max-md:m-0 max-md:rounded-none max-md:border-0">
-                    {isHome ? (
-                        <CommunityHomeSidebar />
-                    ) : (
-                        <CommunityServerSidebar serverId={serverId} />
-                    )}
+                {/* Columns 2+3 — one full-height hairline against the rail */}
+                <div className="flex min-w-0 flex-1 overflow-hidden md:border-l md:border-flexwhite/10">
+                    <div className="flex md:pt-[var(--header-height)]">
+                        {isHome ? (
+                            <CommunityHomeSidebar />
+                        ) : (
+                            <CommunityServerSidebar serverId={serverId} />
+                        )}
+                    </div>
 
-                    <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+                    <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden md:border-l md:border-flexwhite/10">
                         {children}
                     </main>
                 </div>

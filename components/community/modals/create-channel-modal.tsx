@@ -1,18 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Mic01Icon, Video01Icon } from "@hugeicons/core-free-icons";
 import {
     Dialog,
     DialogContent,
-    DialogFooter,
-    DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Squircle } from "@/components/ui/squircle";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { trpc } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
+
+const CHANNEL_TYPES = [
+    { id: "TEXT" as const, label: "Text", desc: "Messages, images and links" },
+    { id: "AUDIO" as const, label: "Voice", desc: "Hang out over voice" },
+    { id: "VIDEO" as const, label: "Video", desc: "Face-to-face rooms" },
+];
+
+// Channel names read like slugs (#stream-chat) — mirror discord's input
+// normalization so what you type is what you get.
+const slugify = (s: string) => s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-_]/g, "");
 
 export function CreateChannelModal() {
     const { isOpen, onClose, type, data } = useCommunityModal();
@@ -21,6 +31,7 @@ export function CreateChannelModal() {
     const utils = trpc.useUtils();
 
     const isModalOpen = isOpen && type === "createChannel";
+    const effectiveType = data.channelType ?? channelType;
 
     const createChannel = trpc.community.createChannel.useMutation({
         onSuccess: () => {
@@ -44,67 +55,77 @@ export function CreateChannelModal() {
         if (!name.trim() || !data.server?.id) return;
         createChannel.mutate({
             serverId: data.server.id,
-            name,
-            type: data.channelType ?? channelType,
+            name: slugify(name),
+            type: effectiveType,
         });
     };
 
     return (
         <Dialog open={isModalOpen} onOpenChange={handleClose}>
-            <DialogContent className="border-none text-white p-0 overflow-hidden">
-                <DialogHeader className="pt-8 px-6">
-                    <DialogTitle className="text-2xl text-center font-bold">
-                        Create Channel
-                    </DialogTitle>
-                </DialogHeader>
+            <DialogContent className="gap-5 rounded-4xl border-none p-6 sm:max-w-[440px]" showCloseButton={false}>
+                <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Create a channel</DialogTitle>
 
-                <form onSubmit={onSubmit} className="space-y-8">
-                    <div className="space-y-4 px-6">
-                        <div>
-                            <Label className="uppercase text-xs font-bold text-zinc-400">
-                                Channel Type
-                            </Label>
-                            <div className="flex gap-2 mt-2">
-                                {(["TEXT", "AUDIO", "VIDEO"] as const).map((t) => (
+                <form onSubmit={onSubmit} className="space-y-5">
+                    {/* Type */}
+                    <div className="flex flex-col gap-2">
+                        {CHANNEL_TYPES.map((t) => {
+                            const active = effectiveType === t.id;
+                            return (
+                                <Squircle asChild radius={16} key={t.id}>
                                     <button
-                                        key={t}
                                         type="button"
-                                        onClick={() => setChannelType(t)}
-                                        className={`px-3 py-1.5 rounded text-sm transition ${
-                                            (data.channelType ?? channelType) === t
-                                                ? "bg-indigo-500 text-white"
-                                                : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                                        }`}
+                                        onClick={() => setChannelType(t.id)}
+                                        disabled={!!data.channelType}
+                                        className={cn(
+                                            "flex cursor-pointer items-center gap-3 p-3.5 text-left transition-colors disabled:cursor-default",
+                                            active ? "bg-white/[0.08]" : "bg-white/[0.03] hover:bg-white/[0.06]",
+                                            !!data.channelType && !active && "opacity-40",
+                                        )}
                                     >
-                                        {t === "TEXT" ? "# Text" : t === "AUDIO" ? "🔊 Voice" : "📹 Video"}
+                                        <span className={cn(
+                                            "grid size-9 shrink-0 place-items-center rounded-full text-[15px] font-bold",
+                                            active ? "bg-white text-black" : "bg-white/5 text-zinc-400",
+                                        )}>
+                                            {t.id === "TEXT" ? "#" : (
+                                                <HugeiconsIcon icon={t.id === "AUDIO" ? Mic01Icon : Video01Icon} className="size-4" strokeWidth={2} />
+                                            )}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className={cn("block text-[14px] font-bold", active ? "text-white" : "text-zinc-200")}>{t.label}</span>
+                                            <span className="block text-[12px] font-medium text-zinc-500">{t.desc}</span>
+                                        </span>
                                     </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <Label className="uppercase text-xs font-bold text-zinc-400">
-                                Channel name
-                            </Label>
-                            <Input
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                disabled={createChannel.isPending}
-                                className="mt-1.5 bg-zinc-900/50 border-none text-white placeholder:text-zinc-500 focus-visible:ring-1 focus-visible:ring-indigo-500"
-                                placeholder="new-channel"
-                                autoFocus
-                            />
-                        </div>
+                                </Squircle>
+                            );
+                        })}
                     </div>
 
-                    <DialogFooter className="bg-zinc-900/30 px-6 py-4">
-                        <Button
-                            disabled={createChannel.isPending || !name.trim()}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white"
-                        >
-                            {createChannel.isPending ? "Creating..." : "Create Channel"}
-                        </Button>
-                    </DialogFooter>
+                    {/* Name */}
+                    <div className="space-y-1.5">
+                        <Input
+                            radius={14}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            disabled={createChannel.isPending}
+                            placeholder="new-channel"
+                            maxLength={40}
+                            autoFocus
+                            className="h-12 text-[14px]"
+                        />
+                        {name && (
+                            <p className="px-1 text-[12px] font-medium text-zinc-600">
+                                Will be created as <span className="text-zinc-400">{effectiveType === "TEXT" ? "#" : ""}{slugify(name) || "…"}</span>
+                            </p>
+                        )}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={createChannel.isPending || !slugify(name)}
+                        className="h-12 w-full cursor-pointer rounded-full bg-white text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
+                    >
+                        {createChannel.isPending ? "Creating…" : "Create channel"}
+                    </button>
                 </form>
             </DialogContent>
         </Dialog>
