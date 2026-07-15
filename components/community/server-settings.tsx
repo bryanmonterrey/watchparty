@@ -2,15 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
 import type { Area } from "react-easy-crop";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+    ArrowDown01Icon,
     Cancel01Icon,
     Copy01Icon,
-    ArrowDown01Icon,
     ImageUploadIcon,
     RefreshIcon,
     Rocket01Icon,
@@ -19,6 +18,7 @@ import {
 import { Hash, Mic, Video } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -29,30 +29,21 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
 import type { CommunityChannel, CommunityServer } from "@/db/schema/community";
-
-const SECTIONS = ["profile", "boosts", "members", "invites", "channels"] as const;
-type Section = (typeof SECTIONS)[number];
 
 const ROLES = ["ADMIN", "MODERATOR", "GUEST"] as const;
 const ROLE_LABEL: Record<string, string> = { ADMIN: "Admin", MODERATOR: "Mod", GUEST: "Member" };
 const channelTypeIcon = { TEXT: Hash, AUDIO: Mic, VIDEO: Video } as const;
 
-// Full-screen server settings (the Discord anatomy, watchparty skin):
-// grouped rail on the left, one section at a time on the right, ESC to
-// leave. Admins get everything; mods skip Profile; guests are bounced.
+// Server settings content column — lives where the chat area lives (the
+// settings sidebar replaces the server sidebar via the communities layout).
+// Chat-style header bar on top, one section at a time below, ESC leaves.
 export function ServerSettings({ serverId }: { serverId: string }) {
     const router = useRouter();
     const { data: session } = useAuthSession();
-    const { onOpen } = useCommunityModal();
     const { data, isLoading } = trpc.community.getServer.useQuery({ serverId });
-
-    const [section, setSection] = useQueryState(
-        "s",
-        parseAsStringLiteral(SECTIONS).withDefault("profile"),
-    );
-
-    const close = () => router.push(`/communities/${serverId}`);
+    const [section] = useSettingsSection();
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -65,26 +56,24 @@ export function ServerSettings({ serverId }: { serverId: string }) {
     const role = data?.currentMember.role;
     const isAdmin = role === "ADMIN";
     const isMod = isAdmin || role === "MODERATOR";
-    const isOwner = !!data && data.server.ownerId === session?.user?.id;
 
     // Guests have nothing to manage here.
     useEffect(() => {
         if (data && !isMod) router.replace(`/communities/${serverId}`);
     }, [data, isMod, router, serverId]);
 
+    const active: SettingsSection =
+        !isAdmin && (section === "profile" || section === "automod") ? "engagement" : section;
+
     if (isLoading || !data || !isMod) {
         return (
-            <div className="fixed inset-0 z-40 bg-background">
-                <div className="mx-auto flex h-full w-full max-w-6xl gap-8 px-6 pt-20">
-                    <div className="hidden w-60 shrink-0 flex-col gap-2 md:flex">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="h-10 overflow-hidden rounded-[14px]"><div className="size-full shimmer-skeleton" /></div>
-                        ))}
-                    </div>
-                    <div className="flex-1 space-y-3 pt-1">
-                        <div className="h-7 w-44 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
-                        <div className="h-32 overflow-hidden rounded-3xl"><div className="size-full shimmer-skeleton" /></div>
-                    </div>
+            <div className="flex flex-col h-full min-w-0">
+                <div className="h-17 shrink-0 flex items-center bg-black/50 backdrop-blur-xl px-4">
+                    <div className="h-5 w-40 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+                </div>
+                <div className="flex-1 space-y-3 p-6">
+                    <div className="h-28 max-w-2xl overflow-hidden rounded-3xl"><div className="size-full shimmer-skeleton" /></div>
+                    <div className="h-12 max-w-2xl overflow-hidden rounded-2xl"><div className="size-full shimmer-skeleton" /></div>
                 </div>
             </div>
         );
@@ -92,113 +81,57 @@ export function ServerSettings({ serverId }: { serverId: string }) {
 
     const { server, channels, members, currentMember, boostCount, boostedByMe } = data;
 
-    const nav: { group: string; rows: { key: Section; label: string }[] }[] = [
-        {
-            group: server.name,
-            rows: [
-                ...(isAdmin ? [{ key: "profile" as const, label: "Server profile" }] : []),
-                { key: "boosts", label: "Boosts" },
-            ],
-        },
-        {
-            group: "People",
-            rows: [
-                { key: "members", label: "Members" },
-                { key: "invites", label: "Invites" },
-            ],
-        },
-        {
-            group: "Channels",
-            rows: [{ key: "channels", label: "Channels" }],
-        },
-    ];
-
-    const active: Section = !isAdmin && section === "profile" ? "boosts" : section;
-
     return (
-        <div className="fixed inset-0 z-40 bg-background">
-            {/* Close (ESC) */}
-            <div className="absolute right-5 top-5 z-10 flex flex-col items-center gap-1 md:right-8 md:top-8">
-                <button
-                    onClick={close}
-                    aria-label="Close settings"
-                    className="grid size-11 cursor-pointer place-items-center rounded-full bg-white/[0.06] text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                    <HugeiconsIcon icon={Cancel01Icon} className="size-4" strokeWidth={2.5} />
-                </button>
-                <span className="text-[11px] font-bold text-zinc-600">ESC</span>
+        <div className="flex flex-col h-full min-w-0">
+            {/* Header — same bar anatomy as the chat header */}
+            <div className="h-17 shrink-0 flex items-center bg-black/50 backdrop-blur-xl w-full px-4">
+                <span className="font-semibold text-lg text-flexwhite truncate leading-tight">
+                    {sectionLabel(active)}
+                </span>
+                <div className="ml-auto flex items-center gap-2">
+                    <span className="hidden text-[11px] font-bold text-zinc-600 sm:block">ESC</span>
+                    <button
+                        onClick={() => router.push(`/communities/${serverId}`)}
+                        aria-label="Close settings"
+                        className="grid size-10 cursor-pointer place-items-center rounded-full text-flexwhite/40 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                        <HugeiconsIcon icon={Cancel01Icon} className="size-4" strokeWidth={2.5} />
+                    </button>
+                </div>
             </div>
 
-            <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-4 px-5 pt-16 md:flex-row md:gap-10 md:px-8 md:pt-20">
-                {/* Rail */}
-                <nav className="flex w-full shrink-0 gap-1 overflow-x-auto pb-1 hidden-scrollbar md:w-60 md:flex-col md:overflow-y-auto md:overflow-x-visible md:pb-10">
-                    {nav.map((g) => (
-                        <div key={g.group} className="flex shrink-0 gap-1 md:mb-5 md:flex-col">
-                            <p className="hidden truncate px-3 pb-1.5 text-[12px] font-bold text-zinc-500 md:block">{g.group}</p>
-                            {g.rows.map((row) => (
-                                <button
-                                    key={row.key}
-                                    onClick={() => setSection(row.key)}
-                                    className={cn(
-                                        "flex h-10 shrink-0 cursor-pointer items-center rounded-[14px] px-3 text-[14px] font-semibold transition-colors",
-                                        active === row.key
-                                            ? "bg-white/[0.07] text-white"
-                                            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200",
-                                    )}
-                                >
-                                    {row.label}
-                                </button>
-                            ))}
-                        </div>
-                    ))}
-
-                    {isOwner && (
-                        <div className="shrink-0 md:mt-1 md:border-t md:border-white/5 md:pt-4">
-                            <button
-                                onClick={() => onOpen("deleteServer", { server })}
-                                className="flex h-10 w-full shrink-0 cursor-pointer items-center rounded-[14px] px-3 text-[14px] font-semibold text-pastelred transition-colors hover:bg-pastelred/10"
-                            >
-                                Delete server
-                            </button>
-                        </div>
-                    )}
-                </nav>
-
-                {/* Section */}
-                <div className="min-w-0 flex-1 overflow-y-auto pb-16 hidden-scrollbar md:max-w-2xl">
+            <ScrollArea className="flex-1">
+                <div className="max-w-2xl p-6">
                     {active === "profile" && isAdmin && <ProfileSection server={server} memberCount={members.length} />}
+                    {active === "engagement" && <EngagementSection serverId={server.id} />}
                     {active === "boosts" && <BoostsSection serverId={server.id} boostCount={boostCount} boostedByMe={boostedByMe} />}
                     {active === "members" && (
                         <MembersSection serverId={server.id} members={members} isAdmin={isAdmin} currentUserId={session?.user?.id} />
                     )}
+                    {active === "roles" && (
+                        <RolesSection serverId={server.id} members={members} isAdmin={isAdmin} currentUserId={session?.user?.id} />
+                    )}
                     {active === "invites" && <InvitesSection serverId={server.id} inviteCode={server.inviteCode} />}
+                    {active === "bans" && <BansSection serverId={server.id} isAdmin={isAdmin} />}
                     {active === "channels" && <ChannelsSection server={server} channels={channels} role={currentMember.role} />}
+                    {active === "automod" && isAdmin && <AutomodSection server={server} />}
+                    {active === "audit" && <AuditSection serverId={server.id} />}
                 </div>
-            </div>
+            </ScrollArea>
         </div>
     );
 }
 
-function SectionHeader({ title, hint }: { title: string; hint: string }) {
-    return (
-        <div className="mb-6">
-            <h1 className="text-[24px] font-bold tracking-tight text-white">{title}</h1>
-            <p className="mt-0.5 text-[13px] font-medium text-zinc-500">{hint}</p>
-        </div>
-    );
+function SectionHint({ children }: { children: React.ReactNode }) {
+    return <p className="mb-6 text-[13px] font-medium text-zinc-500">{children}</p>;
 }
 
 // ─── Profile ─────────────────────────────────────────────
 
-function ProfileSection({
-    server,
-    memberCount,
-}: {
-    server: CommunityServer;
-    memberCount: number;
-}) {
+function ProfileSection({ server, memberCount }: { server: CommunityServer; memberCount: number }) {
     const utils = trpc.useUtils();
     const [name, setName] = useState(server.name);
+    const [tag, setTag] = useState(server.tag ?? "");
     const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -209,7 +142,8 @@ function ProfileSection({
     const updateServer = trpc.community.updateServer.useMutation();
 
     const previewSrc = iconDataUrl ?? server.imageUrl ?? null;
-    const dirty = name.trim() !== server.name || !!iconDataUrl;
+    const cleanTag = tag.trim().toUpperCase().slice(0, 8);
+    const dirty = name.trim() !== server.name || !!iconDataUrl || cleanTag !== (server.tag ?? "");
 
     const applyCrop = async () => {
         const state = cropStateRef.current;
@@ -240,6 +174,7 @@ function ProfileSection({
             await updateServer.mutateAsync({
                 serverId: server.id,
                 name: name.trim(),
+                tag: cleanTag || null,
                 ...(imageUrl ? { imageUrl } : {}),
             });
             utils.community.listServers.invalidate();
@@ -255,7 +190,7 @@ function ProfileSection({
 
     return (
         <div>
-            <SectionHeader title="Server profile" hint="How your server shows up in invites and the rail." />
+            <SectionHint>How your server shows up in invites, the rail, and the name menu.</SectionHint>
 
             {/* Preview card */}
             <div className="mb-8 flex items-center gap-4 rounded-3xl bg-white/[0.03] p-5">
@@ -267,7 +202,14 @@ function ProfileSection({
                     )}
                 </div>
                 <div className="min-w-0">
-                    <p className="truncate text-[16px] font-bold tracking-tight text-white">{name.trim() || server.name}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="truncate text-[16px] font-bold tracking-tight text-white">{name.trim() || server.name}</p>
+                        {cleanTag && (
+                            <span className="shrink-0 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-zinc-200">
+                                {cleanTag}
+                            </span>
+                        )}
+                    </div>
                     <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                         {memberCount} member{memberCount === 1 ? "" : "s"} · Est. {format(new Date(server.createdAt), "MMM yyyy")}
                     </p>
@@ -275,7 +217,7 @@ function ProfileSection({
             </div>
 
             {/* Name */}
-            <div className="mb-7">
+            <div className="mb-6">
                 <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Name</p>
                 <Input
                     radius={14}
@@ -284,6 +226,20 @@ function ProfileSection({
                     maxLength={100}
                     className="h-12 text-[14px] font-semibold"
                 />
+            </div>
+
+            {/* Tag */}
+            <div className="mb-6">
+                <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Server tag</p>
+                <Input
+                    radius={14}
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())}
+                    placeholder="STPA"
+                    maxLength={8}
+                    className="h-12 w-40 text-[14px] font-bold tracking-wide"
+                />
+                <p className="mt-1.5 px-1 text-[12px] font-medium text-zinc-600">A short badge for your server, up to 8 characters. Leave empty for none.</p>
             </div>
 
             {/* Icon */}
@@ -366,6 +322,80 @@ function ProfileSection({
     );
 }
 
+// ─── Engagement ──────────────────────────────────────────
+
+function EngagementSection({ serverId }: { serverId: string }) {
+    const { data, isLoading } = trpc.community.getEngagement.useQuery({ serverId });
+
+    const stats = data
+        ? [
+              { label: "Messages · 7d", value: data.messages7d },
+              { label: "Active members · 7d", value: data.activeMembers7d },
+              { label: "New members · 7d", value: data.newMembers7d },
+              { label: "Total members", value: data.totalMembers },
+          ]
+        : [];
+    const maxMessages = Math.max(1, ...(data?.topChannels.map((c) => c.messages) ?? [1]));
+
+    return (
+        <div>
+            <SectionHint>How your server has been doing over the last week.</SectionHint>
+
+            {isLoading && (
+                <div className="grid grid-cols-2 gap-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="h-24 overflow-hidden rounded-3xl"><div className="size-full shimmer-skeleton" /></div>
+                    ))}
+                </div>
+            )}
+
+            {data && (
+                <>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        {stats.map((s) => (
+                            <div key={s.label} className="rounded-3xl bg-white/[0.03] p-4">
+                                <p className="text-[24px] font-bold leading-tight tabular-nums tracking-tight text-white">
+                                    {s.value.toLocaleString()}
+                                </p>
+                                <p className="mt-1 text-[12px] font-medium text-zinc-500">{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <h2 className="mb-3 mt-8 text-[14px] font-semibold text-zinc-500">Top channels · 7d</h2>
+                    {data.topChannels.length === 0 ? (
+                        <div className="py-8 text-center">
+                            <p className="text-[14px] font-bold text-zinc-400">Quiet week</p>
+                            <p className="mt-0.5 text-[12px] font-medium text-zinc-600">No messages in the last 7 days</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            {data.topChannels.map((c) => {
+                                const Icon = channelTypeIcon[c.type];
+                                return (
+                                    <div key={c.channelId} className="flex items-center gap-3 rounded-[16px] px-3 py-2.5">
+                                        <Icon className="size-4 shrink-0 text-zinc-500" />
+                                        <p className="w-40 min-w-0 truncate text-[14px] font-semibold text-zinc-200">{c.name}</p>
+                                        <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
+                                            <div
+                                                className="h-full rounded-full bg-white/25"
+                                                style={{ width: `${Math.max(4, (c.messages / maxMessages) * 100)}%` }}
+                                            />
+                                        </div>
+                                        <p className="w-12 shrink-0 text-right text-[13px] font-bold tabular-nums text-zinc-400">
+                                            {c.messages.toLocaleString()}
+                                        </p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
 // ─── Boosts ──────────────────────────────────────────────
 
 function BoostsSection({
@@ -389,7 +419,7 @@ function BoostsSection({
 
     return (
         <div>
-            <SectionHeader title="Boosts" hint="Boosts are a signal of support from members." />
+            <SectionHint>Boosts are a signal of support from members.</SectionHint>
 
             <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-3xl bg-white/[0.03] p-5">
                 <div className="flex items-center gap-3.5">
@@ -433,7 +463,7 @@ function BoostsSection({
     );
 }
 
-// ─── Members ─────────────────────────────────────────────
+// ─── Members / Roles (shared row) ────────────────────────
 
 type Member = {
     id: string;
@@ -443,6 +473,98 @@ type Member = {
     userImage: string | null;
     userUsername: string | null;
 };
+
+function MemberRow({
+    serverId,
+    m,
+    isAdmin,
+    isSelf,
+}: {
+    serverId: string;
+    m: Member;
+    isAdmin: boolean;
+    isSelf: boolean;
+}) {
+    const utils = trpc.useUtils();
+    const invalidate = () => utils.community.getServer.invalidate({ serverId });
+    const updateRole = trpc.community.updateMemberRole.useMutation({ onSuccess: invalidate });
+    const kickMember = trpc.community.kickMember.useMutation({ onSuccess: invalidate });
+    const banMember = trpc.community.banMember.useMutation({
+        onSuccess: () => {
+            invalidate();
+            utils.community.listBans.invalidate({ serverId });
+            toast.success(`${m.userName ?? "Member"} banned`);
+        },
+    });
+    const busy = updateRole.isPending || kickMember.isPending || banMember.isPending;
+
+    return (
+        <div className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
+            <Avatar className="size-10 shrink-0">
+                <AvatarImage src={m.userImage || undefined} alt={m.userName || ""} />
+                <AvatarFallback className="bg-white/10 text-[13px] font-bold text-zinc-300">
+                    {(m.userName || "?")[0]?.toUpperCase()}
+                </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-bold text-white">
+                    {m.userName}{isSelf && <span className="ml-1.5 text-[11px] font-semibold text-zinc-500">you</span>}
+                </p>
+                <p className="truncate text-[12px] font-medium text-zinc-500">@{m.userUsername || "user"}</p>
+            </div>
+
+            {isAdmin && !isSelf ? (
+                <GooDropdown
+                    side="bottom"
+                    align="end"
+                    width={190}
+                    gap={6}
+                    fill="#101011"
+                    buttonRadius={16}
+                    panelRadius={16}
+                    triggerAriaLabel={`Manage ${m.userName}`}
+                    triggerClassName={cn(
+                        "flex h-8 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
+                        busy && "opacity-50 pointer-events-none",
+                    )}
+                    trigger={
+                        <>
+                            {ROLE_LABEL[m.role] ?? m.role}
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                        </>
+                    }
+                    items={[
+                        ...ROLES.filter((r) => r !== m.role).map((r) => ({
+                            key: r,
+                            onClick: () => updateRole.mutate({ serverId, memberId: m.id, role: r }),
+                            className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                            label: <>Make {ROLE_LABEL[r]}</>,
+                        })),
+                        {
+                            key: "kick",
+                            onClick: () => kickMember.mutate({ serverId, memberId: m.id }),
+                            className: "text-[13px] font-semibold text-pastelred hover:bg-pastelred/10",
+                            label: <>Kick from server</>,
+                        },
+                        {
+                            key: "ban",
+                            onClick: () => banMember.mutate({ serverId, memberId: m.id }),
+                            className: "text-[13px] font-semibold text-pastelred hover:bg-pastelred/10",
+                            label: <>Ban from server</>,
+                        },
+                    ]}
+                />
+            ) : (
+                <span className={cn(
+                    "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
+                    m.role === "ADMIN" ? "bg-white/15 text-white" : m.role === "MODERATOR" ? "bg-white/10 text-zinc-200" : "bg-white/5 text-zinc-500",
+                )}>
+                    {ROLE_LABEL[m.role] ?? m.role}
+                </span>
+            )}
+        </div>
+    );
+}
 
 function MembersSection({
     serverId,
@@ -455,84 +577,61 @@ function MembersSection({
     isAdmin: boolean;
     currentUserId?: string;
 }) {
-    const utils = trpc.useUtils();
-    const invalidate = () => utils.community.getServer.invalidate({ serverId });
-    const updateRole = trpc.community.updateMemberRole.useMutation({ onSuccess: invalidate });
-    const kickMember = trpc.community.kickMember.useMutation({ onSuccess: invalidate });
+    return (
+        <div>
+            <SectionHint>{members.length} {members.length === 1 ? "person" : "people"} in this server. Bans stop rejoining; kicks don&apos;t.</SectionHint>
+            <div className="space-y-0.5">
+                {members.map((m) => (
+                    <MemberRow key={m.userId} serverId={serverId} m={m} isAdmin={isAdmin} isSelf={m.userId === currentUserId} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function RolesSection({
+    serverId,
+    members,
+    isAdmin,
+    currentUserId,
+}: {
+    serverId: string;
+    members: Member[];
+    isAdmin: boolean;
+    currentUserId?: string;
+}) {
+    const ROLE_HINT: Record<string, string> = {
+        ADMIN: "Full control — settings, roles, bans, channels",
+        MODERATOR: "Manage channels, pins, and invites",
+        GUEST: "Chat and join voice",
+    };
 
     return (
         <div>
-            <SectionHeader
-                title="Members"
-                hint={`${members.length} ${members.length === 1 ? "person" : "people"} in this server.`}
-            />
-
-            <div className="space-y-0.5">
-                {members.map((m) => {
-                    const isSelf = m.userId === currentUserId;
-                    const busy = updateRole.isPending || kickMember.isPending;
-                    return (
-                        <div key={m.userId} className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
-                            <Avatar className="size-10 shrink-0">
-                                <AvatarImage src={m.userImage || undefined} alt={m.userName || ""} />
-                                <AvatarFallback className="bg-white/10 text-[13px] font-bold text-zinc-300">
-                                    {(m.userName || "?")[0]?.toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate text-[14px] font-bold text-white">
-                                    {m.userName}{isSelf && <span className="ml-1.5 text-[11px] font-semibold text-zinc-500">you</span>}
-                                </p>
-                                <p className="truncate text-[12px] font-medium text-zinc-500">@{m.userUsername || "user"}</p>
-                            </div>
-
-                            {isAdmin && !isSelf ? (
-                                <GooDropdown
-                                    side="bottom"
-                                    align="end"
-                                    width={180}
-                                    gap={6}
-                                    fill="#101011"
-                                    buttonRadius={16}
-                                    panelRadius={16}
-                                    triggerAriaLabel={`Manage ${m.userName}`}
-                                    triggerClassName={cn(
-                                        "flex h-8 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
-                                        busy && "opacity-50 pointer-events-none",
-                                    )}
-                                    trigger={
-                                        <>
-                                            {ROLE_LABEL[m.role] ?? m.role}
-                                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
-                                        </>
-                                    }
-                                    items={[
-                                        ...ROLES.filter((r) => r !== m.role).map((r) => ({
-                                            key: r,
-                                            onClick: () => updateRole.mutate({ serverId, memberId: m.id, role: r }),
-                                            className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
-                                            label: <>Make {ROLE_LABEL[r]}</>,
-                                        })),
-                                        {
-                                            key: "kick",
-                                            onClick: () => kickMember.mutate({ serverId, memberId: m.id }),
-                                            className: "text-[13px] font-semibold text-pastelred hover:bg-pastelred/10",
-                                            label: <>Kick from server</>,
-                                        },
-                                    ]}
-                                />
-                            ) : (
-                                <span className={cn(
-                                    "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
-                                    m.role === "ADMIN" ? "bg-white/15 text-white" : m.role === "MODERATOR" ? "bg-white/10 text-zinc-200" : "bg-white/5 text-zinc-500",
-                                )}>
-                                    {ROLE_LABEL[m.role] ?? m.role}
-                                </span>
-                            )}
+            <SectionHint>Three roles, clear powers. Change a member&apos;s role from their row.</SectionHint>
+            {ROLES.map((role) => {
+                const group = members.filter((m) => m.role === role);
+                return (
+                    <div key={role} className="mb-7">
+                        <div className="mb-1 flex items-baseline gap-2 px-1">
+                            <h2 className="text-[14px] font-semibold text-zinc-300">
+                                {ROLE_LABEL[role]}{group.length !== 1 ? "s" : ""}
+                            </h2>
+                            <span className="text-[12px] font-bold tabular-nums text-zinc-600">{group.length}</span>
                         </div>
-                    );
-                })}
-            </div>
+                        <p className="mb-2 px-1 text-[12px] font-medium text-zinc-600">{ROLE_HINT[role]}</p>
+                        {group.length === 0 ? (
+                            <p className="rounded-[16px] bg-white/[0.02] px-3 py-3 text-[13px] font-medium text-zinc-600">Nobody yet</p>
+                        ) : (
+                            <div className="space-y-0.5">
+                                {group.map((m) => (
+                                    <MemberRow key={m.userId} serverId={serverId} m={m} isAdmin={isAdmin} isSelf={m.userId === currentUserId} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     );
 }
@@ -558,7 +657,7 @@ function InvitesSection({ serverId, inviteCode }: { serverId: string; inviteCode
 
     return (
         <div>
-            <SectionHeader title="Invites" hint="Anyone with this link can join your server." />
+            <SectionHint>Anyone with this link can join your server — unless they&apos;re banned.</SectionHint>
 
             <div className="flex items-center gap-2">
                 <Input
@@ -592,6 +691,66 @@ function InvitesSection({ serverId, inviteCode }: { serverId: string; inviteCode
     );
 }
 
+// ─── Bans ────────────────────────────────────────────────
+
+function BansSection({ serverId, isAdmin }: { serverId: string; isAdmin: boolean }) {
+    const utils = trpc.useUtils();
+    const { data: bans = [], isLoading } = trpc.community.listBans.useQuery({ serverId });
+    const unban = trpc.community.unbanMember.useMutation({
+        onSuccess: () => utils.community.listBans.invalidate({ serverId }),
+    });
+
+    return (
+        <div>
+            <SectionHint>Banned users can&apos;t rejoin, even with a fresh invite link.</SectionHint>
+
+            {isLoading && (
+                <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-14 overflow-hidden rounded-[18px]"><div className="size-full shimmer-skeleton" /></div>
+                    ))}
+                </div>
+            )}
+
+            {!isLoading && bans.length === 0 && (
+                <div className="py-10 text-center">
+                    <p className="text-[14px] font-bold text-zinc-400">No bans</p>
+                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Ban members from their row in Members</p>
+                </div>
+            )}
+
+            <div className="space-y-0.5">
+                {bans.map((b) => (
+                    <div key={b.id} className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
+                        <Avatar className="size-10 shrink-0">
+                            <AvatarImage src={b.userImage || undefined} alt={b.userName || ""} />
+                            <AvatarFallback className="bg-white/10 text-[13px] font-bold text-zinc-300">
+                                {(b.userName || "?")[0]?.toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14px] font-bold text-white">{b.userName}</p>
+                            <p className="truncate text-[12px] font-medium text-zinc-500">
+                                Banned {formatDistanceToNow(new Date(b.createdAt), { addSuffix: true })}
+                                {b.reason ? ` · ${b.reason}` : ""}
+                            </p>
+                        </div>
+                        {isAdmin && (
+                            <button
+                                onClick={() => unban.mutate({ serverId, userId: b.userId })}
+                                disabled={unban.isPending}
+                                className="flex h-8 shrink-0 cursor-pointer items-center rounded-full bg-white/5 px-3 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                            >
+                                Revoke ban
+                            </button>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── Channels ────────────────────────────────────────────
 
 function ChannelsSection({
@@ -607,10 +766,7 @@ function ChannelsSection({
 
     return (
         <div>
-            <SectionHeader
-                title="Channels"
-                hint="Rename channels, make them read-only, or remove them. Drag to reorder from the sidebar."
-            />
+            <SectionHint>Rename channels, make them read-only, or remove them. Drag to reorder from the sidebar.</SectionHint>
 
             <div className="space-y-0.5">
                 {channels.map((c) => {
@@ -648,6 +804,96 @@ function ChannelsSection({
                         </div>
                     );
                 })}
+            </div>
+        </div>
+    );
+}
+
+// ─── AutoMod ─────────────────────────────────────────────
+
+function AutomodSection({ server }: { server: CommunityServer }) {
+    const utils = trpc.useUtils();
+    const [keywords, setKeywords] = useState(server.automodKeywords ?? "");
+    const updateServer = trpc.community.updateServer.useMutation({
+        onSuccess: () => {
+            utils.community.getServer.invalidate({ serverId: server.id });
+            toast.success("AutoMod updated");
+        },
+        onError: () => toast.error("Update failed"),
+    });
+
+    const dirty = keywords !== (server.automodKeywords ?? "");
+    const wordCount = keywords.split(",").map((w) => w.trim()).filter(Boolean).length;
+
+    return (
+        <div>
+            <SectionHint>Messages from members containing a blocked word are rejected before they post. Mods and admins are exempt.</SectionHint>
+
+            <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Blocked words</p>
+            <textarea
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                placeholder="spam, scam link, another phrase"
+                rows={5}
+                maxLength={2000}
+                className="w-full resize-none rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[14px] font-medium text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.06]"
+            />
+            <p className="mt-1.5 px-1 text-[12px] font-medium text-zinc-600">
+                Separate words or phrases with commas. {wordCount > 0 ? `${wordCount} blocked.` : "Nothing blocked yet."}
+            </p>
+
+            <button
+                onClick={() => updateServer.mutate({ serverId: server.id, automodKeywords: keywords.trim() || null })}
+                disabled={!dirty || updateServer.isPending}
+                className="mt-5 flex h-11 cursor-pointer items-center rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
+            >
+                {updateServer.isPending ? "Saving…" : "Save AutoMod"}
+            </button>
+        </div>
+    );
+}
+
+// ─── Audit log ───────────────────────────────────────────
+
+function AuditSection({ serverId }: { serverId: string }) {
+    const { data: entries = [], isLoading } = trpc.community.getAuditLog.useQuery({ serverId });
+
+    return (
+        <div>
+            <SectionHint>Every management action on this server, newest first.</SectionHint>
+
+            {isLoading && (
+                <div className="space-y-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="h-12 overflow-hidden rounded-[16px]"><div className="size-full shimmer-skeleton" /></div>
+                    ))}
+                </div>
+            )}
+
+            {!isLoading && entries.length === 0 && (
+                <div className="py-10 text-center">
+                    <p className="text-[14px] font-bold text-zinc-400">Nothing logged yet</p>
+                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Channel, member, and server changes show up here</p>
+                </div>
+            )}
+
+            <div className="space-y-0.5">
+                {entries.map((e) => (
+                    <div key={e.id} className="flex items-center gap-3 rounded-[16px] px-2.5 py-2 transition-colors hover:bg-white/[0.03]">
+                        <Avatar className="size-8 shrink-0">
+                            <AvatarImage src={e.actorImage || undefined} alt={e.actorName || ""} />
+                            <AvatarFallback className="bg-white/10 text-[11px] font-bold text-zinc-300">
+                                {(e.actorName || "?")[0]?.toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                        <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-300">
+                            <span className="font-bold text-white">{e.actorName}</span> {e.detail ?? e.action}
+                        </p>
+                        <p className="shrink-0 text-[11px] font-medium text-zinc-600">
+                            {formatDistanceToNow(new Date(e.createdAt), { addSuffix: true })}
+                        </p>
+                    </div>
+                ))}
             </div>
         </div>
     );

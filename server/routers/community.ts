@@ -10,6 +10,8 @@ import {
     communityMessageReactions,
     communityServerBoosts,
     communityBoostGrants,
+    communityBans,
+    communityAuditLog,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
 import { premiumSubscriptions } from "@/db/schema/content";
@@ -49,6 +51,19 @@ function isPublicHttpUrl(u: URL): boolean {
     if (host.includes(":") || host.startsWith("[")) return false; // IPv6 literal
     if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return false; // IPv4 literal
     return true;
+}
+
+/** Fire-and-forget audit trail entry — management actions only, never chat. */
+function logAudit(serverId: string, actorUserId: string, action: string, detail?: string) {
+    return db.insert(communityAuditLog).values({ serverId, actorUserId, action, detail }).catch(() => {});
+}
+
+/** Comma-separated automod keywords → normalized list. */
+function parseKeywords(raw: string | null | undefined): string[] {
+    return (raw ?? "")
+        .split(",")
+        .map((w) => w.trim().toLowerCase())
+        .filter(Boolean);
 }
 
 /**
@@ -105,6 +120,7 @@ export const communityRouter = router({
                 inviteCode: communityServers.inviteCode,
                 ownerId: communityServers.ownerId,
                 createdAt: communityServers.createdAt,
+                muted: communityMembers.muted,
             })
             .from(communityServers)
             .innerJoin(communityMembers, eq(communityServers.id, communityMembers.serverId))
@@ -158,9 +174,10 @@ export const communityRouter = router({
             mentionMap = new Map(mentionRows.map((r) => [r.serverId, Number(r.cnt)]));
         }
 
+        // Muted servers stay quiet on the rail: no unread pill; mentions still show.
         return servers.map((s) => ({
             ...s,
-            hasUnread: unreadSet.has(s.id),
+            hasUnread: !s.muted && unreadSet.has(s.id),
             mentionCount: mentionMap.get(s.id) ?? 0,
         }));
     }),
@@ -279,9 +296,10 @@ export const communityRouter = router({
                     userId: communityMembers.userId,
                     serverId: communityMembers.serverId,
                     createdAt: communityMembers.createdAt,
-                    userName: user.name,
+                    userName: sql<string>`COALESCE(${communityMembers.nickname}, ${user.name})`,
                     userImage: user.avatar_url,
                     userUsername: user.username,
+                    nickname: communityMembers.nickname,
                 })
                 .from(communityMembers)
                 .innerJoin(user, eq(communityMembers.userId, user.id))
@@ -349,6 +367,8 @@ export const communityRouter = router({
                 serverId: z.string().uuid(),
                 name: z.string().min(1).max(100).optional(),
                 imageUrl: z.string().optional(),
+                tag: z.string().max(8).nullable().optional(),
+                automodKeywords: z.string().max(2000).nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -359,11 +379,14 @@ export const communityRouter = router({
                 .set({
                     ...(input.name && { name: input.name }),
                     ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
+                    ...(input.tag !== undefined && { tag: input.tag ? input.tag.trim().toUpperCase() : null }),
+                    ...(input.automodKeywords !== undefined && { automodKeywords: input.automodKeywords }),
                     updatedAt: new Date(),
                 })
                 .where(eq(communityServers.id, input.serverId))
                 .returning();
 
+            await logAudit(input.serverId, ctx.user.id, "server.update", "updated server settings");
             return updated;
         }),
 
@@ -390,6 +413,7 @@ export const communityRouter = router({
                 .where(eq(communityServers.id, input.serverId))
                 .returning();
 
+            await logAudit(input.serverId, ctx.user.id, "invite.regenerate", "regenerated the invite link");
             return { inviteCode: updated.inviteCode };
         }),
 
@@ -421,6 +445,15 @@ export const communityRouter = router({
 
             if (existing.length) {
                 return { serverId: server[0].id, alreadyMember: true };
+            }
+
+            const banned = await db
+                .select({ id: communityBans.id })
+                .from(communityBans)
+                .where(and(eq(communityBans.serverId, server[0].id), eq(communityBans.userId, ctx.user.id)))
+                .limit(1);
+            if (banned.length) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "You are banned from this server" });
             }
 
             await db.insert(communityMembers).values({
@@ -476,6 +509,10 @@ export const communityRouter = router({
                 .where(eq(communityMembers.id, input.memberId))
                 .returning();
 
+            if (updated) {
+                const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, updated.userId)).limit(1);
+                await logAudit(input.serverId, ctx.user.id, "member.role", `made ${u?.name ?? "a member"} ${input.role.toLowerCase()}`);
+            }
             return updated;
         }),
 
@@ -502,7 +539,195 @@ export const communityRouter = router({
             }
 
             await db.delete(communityMembers).where(eq(communityMembers.id, input.memberId));
+            if (target.length) {
+                const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, target[0].userId)).limit(1);
+                await logAudit(input.serverId, ctx.user.id, "member.kick", `kicked ${u?.name ?? "a member"}`);
+            }
             return { success: true };
+        }),
+
+    /** Ban a member (admin): removes them AND blocks rejoining via invite */
+    banMember: protectedProcedure
+        .input(
+            z.object({
+                serverId: z.string().uuid(),
+                memberId: z.string().uuid(),
+                reason: z.string().max(300).optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            const [target] = await db
+                .select()
+                .from(communityMembers)
+                .where(eq(communityMembers.id, input.memberId))
+                .limit(1);
+            if (!target || target.serverId !== input.serverId) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
+            }
+            if (target.userId === ctx.user.id) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot ban yourself" });
+            }
+
+            await db
+                .insert(communityBans)
+                .values({ serverId: input.serverId, userId: target.userId, reason: input.reason ?? null, bannedBy: ctx.user.id })
+                .onConflictDoNothing();
+            await db.delete(communityMembers).where(eq(communityMembers.id, input.memberId));
+
+            const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, target.userId)).limit(1);
+            await logAudit(input.serverId, ctx.user.id, "member.ban", `banned ${u?.name ?? "a member"}${input.reason ? ` — ${input.reason}` : ""}`);
+            return { success: true };
+        }),
+
+    /** Revoke a ban (admin) */
+    unbanMember: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), userId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            await db
+                .delete(communityBans)
+                .where(and(eq(communityBans.serverId, input.serverId), eq(communityBans.userId, input.userId)));
+
+            const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, input.userId)).limit(1);
+            await logAudit(input.serverId, ctx.user.id, "member.unban", `revoked the ban on ${u?.name ?? "a user"}`);
+            return { success: true };
+        }),
+
+    /** Bans list (admin/mod) */
+    listBans: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            return db
+                .select({
+                    id: communityBans.id,
+                    userId: communityBans.userId,
+                    reason: communityBans.reason,
+                    createdAt: communityBans.createdAt,
+                    userName: user.name,
+                    userImage: user.avatar_url,
+                    userUsername: user.username,
+                })
+                .from(communityBans)
+                .innerJoin(user, eq(communityBans.userId, user.id))
+                .where(eq(communityBans.serverId, input.serverId))
+                .orderBy(desc(communityBans.createdAt));
+        }),
+
+    /** Audit log (admin/mod): the last 100 management actions */
+    getAuditLog: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            return db
+                .select({
+                    id: communityAuditLog.id,
+                    action: communityAuditLog.action,
+                    detail: communityAuditLog.detail,
+                    createdAt: communityAuditLog.createdAt,
+                    actorName: user.name,
+                    actorImage: user.avatar_url,
+                })
+                .from(communityAuditLog)
+                .innerJoin(user, eq(communityAuditLog.actorUserId, user.id))
+                .where(eq(communityAuditLog.serverId, input.serverId))
+                .orderBy(desc(communityAuditLog.createdAt))
+                .limit(100);
+        }),
+
+    /** Engagement stats (admin/mod): activity over the last 7 days */
+    getEngagement: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+            const [totalMembers] = await db
+                .select({ n: count() })
+                .from(communityMembers)
+                .where(eq(communityMembers.serverId, input.serverId));
+
+            const [newMembers] = await db
+                .select({ n: count() })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, input.serverId), sql`${communityMembers.createdAt} > ${weekAgo}`));
+
+            const [messages7d] = await db
+                .select({ n: count() })
+                .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+                .where(and(
+                    eq(communityChannels.serverId, input.serverId),
+                    eq(communityMessages.deleted, false),
+                    sql`${communityMessages.createdAt} > ${weekAgo}`,
+                ));
+
+            const [activeMembers] = await db
+                .select({ n: sql<number>`COUNT(DISTINCT ${communityMessages.memberId})` })
+                .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+                .where(and(
+                    eq(communityChannels.serverId, input.serverId),
+                    eq(communityMessages.deleted, false),
+                    sql`${communityMessages.createdAt} > ${weekAgo}`,
+                ));
+
+            const topChannels = await db
+                .select({
+                    channelId: communityChannels.id,
+                    name: communityChannels.name,
+                    type: communityChannels.type,
+                    messages: count(),
+                })
+                .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+                .where(and(
+                    eq(communityChannels.serverId, input.serverId),
+                    eq(communityMessages.deleted, false),
+                    sql`${communityMessages.createdAt} > ${weekAgo}`,
+                ))
+                .groupBy(communityChannels.id, communityChannels.name, communityChannels.type)
+                .orderBy(desc(count()))
+                .limit(5);
+
+            return {
+                totalMembers: Number(totalMembers?.n ?? 0),
+                newMembers7d: Number(newMembers?.n ?? 0),
+                messages7d: Number(messages7d?.n ?? 0),
+                activeMembers7d: Number(activeMembers?.n ?? 0),
+                topChannels: topChannels.map((c) => ({ ...c, messages: Number(c.messages) })),
+            };
+        }),
+
+    /** Per-server nickname ("per-server profile"); null clears it */
+    setNickname: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), nickname: z.string().max(50).nullable() }))
+        .mutation(async ({ ctx, input }) => {
+            const [updated] = await db
+                .update(communityMembers)
+                .set({ nickname: input.nickname?.trim() || null, updatedAt: new Date() })
+                .where(and(eq(communityMembers.serverId, input.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .returning();
+            if (!updated) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+            return { nickname: updated.nickname };
+        }),
+
+    /** Mute/unmute a server for the caller (suppresses unread badges) */
+    setServerMuted: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), muted: z.boolean() }))
+        .mutation(async ({ ctx, input }) => {
+            const [updated] = await db
+                .update(communityMembers)
+                .set({ muted: input.muted, updatedAt: new Date() })
+                .where(and(eq(communityMembers.serverId, input.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .returning();
+            if (!updated) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+            return { muted: !!updated.muted };
         }),
 
     // ─── Channel CRUD ────────────────────────────────────
@@ -529,6 +754,7 @@ export const communityRouter = router({
                 })
                 .returning();
 
+            await logAudit(input.serverId, ctx.user.id, "channel.create", `created #${channel.name}`);
             return channel;
         }),
 
@@ -557,6 +783,7 @@ export const communityRouter = router({
                 .where(eq(communityChannels.id, input.channelId))
                 .returning();
 
+            if (updated) await logAudit(input.serverId, ctx.user.id, "channel.update", `updated #${updated.name}`);
             return updated;
         }),
 
@@ -583,6 +810,9 @@ export const communityRouter = router({
             }
 
             await db.delete(communityChannels).where(eq(communityChannels.id, input.channelId));
+            if (channel.length) {
+                await logAudit(input.serverId, ctx.user.id, "channel.delete", `deleted #${channel[0].name}`);
+            }
             return { success: true };
         }),
 
@@ -968,12 +1198,12 @@ export const communityRouter = router({
                     channelId: communityMessages.channelId,
                     memberRole: communityMembers.role,
                     userId: communityMembers.userId,
-                    userName: user.name,
+                    userName: sql<string>`COALESCE(${communityMembers.nickname}, ${user.name})`,
                     userImage: user.avatar_url,
                     userUsername: user.username,
                     replyContent: replyMsg.content,
                     replyDeleted: replyMsg.deleted,
-                    replyUserName: replyUser.name,
+                    replyUserName: sql<string | null>`COALESCE(${replyMember.nickname}, ${replyUser.name})`,
                 })
                 .from(communityMessages)
                 .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
@@ -1057,6 +1287,20 @@ export const communityRouter = router({
 
             if (channel[0].readOnly && member[0].role === "GUEST") {
                 throw new TRPCError({ code: "FORBIDDEN", message: "This channel is read-only" });
+            }
+
+            // Automod: guests can't post messages containing blocked keywords.
+            if (member[0].role === "GUEST") {
+                const [srv] = await db
+                    .select({ automodKeywords: communityServers.automodKeywords })
+                    .from(communityServers)
+                    .where(eq(communityServers.id, channel[0].serverId))
+                    .limit(1);
+                const blocked = parseKeywords(srv?.automodKeywords);
+                const lower = input.content.toLowerCase();
+                if (blocked.some((w) => lower.includes(w))) {
+                    throw new TRPCError({ code: "BAD_REQUEST", message: "Message blocked by this server's AutoMod" });
+                }
             }
 
             const [message] = await db

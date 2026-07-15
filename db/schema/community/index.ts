@@ -11,6 +11,10 @@ export const communityServers = pgTable('community_servers', {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     imageUrl: text('image_url'),
+    // Short server tag (profile card + name menu)
+    tag: text('tag'),
+    // Comma-separated blocked words; guests' messages containing one are rejected
+    automodKeywords: text('automod_keywords'),
     inviteCode: text('invite_code').notNull().unique(),
     ownerId: text('owner_id')
         .references(() => user.id, { onDelete: 'cascade' })
@@ -37,6 +41,10 @@ export const communityMembers = pgTable('community_members', {
         .notNull(),
     // Rail sort order for this member's server list (null = joined order)
     railPosition: integer('rail_position'),
+    // Per-server display name ("per-server profile")
+    nickname: text('nickname'),
+    // Per-member server mute (suppresses unread badges)
+    muted: boolean('muted'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -225,3 +233,40 @@ export const communityBoostGrants = pgTable('community_boost_grants', {
 ]).enableRLS();
 
 export type CommunityBoostGrant = typeof communityBoostGrants.$inferSelect;
+
+// ─── Bans (kicked users can rejoin; banned users cannot) ──
+export const communityBans = pgTable('community_bans', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    userId: text('user_id')
+        .references(() => user.id, { onDelete: 'cascade' })
+        .notNull(),
+    reason: text('reason'),
+    bannedBy: text('banned_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('uq_bans_server_user').on(table.serverId, table.userId),
+    index('idx_community_bans_server').on(table.serverId),
+    pgPolicy('community_bans_select_member', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = server_id AND cm.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityBan = typeof communityBans.$inferSelect;
+
+// ─── Audit log (mod-visible trail of management actions) ──
+export const communityAuditLog = pgTable('community_audit_log', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    actorUserId: text('actor_user_id').notNull(),
+    action: text('action').notNull(),
+    detail: text('detail'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_community_audit_server_created').on(table.serverId, table.createdAt),
+    pgPolicy('community_audit_select_member', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = server_id AND cm.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityAuditEntry = typeof communityAuditLog.$inferSelect;

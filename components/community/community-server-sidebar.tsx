@@ -36,7 +36,13 @@ export function CommunityServerSidebar({ serverId }: Props) {
 
     return (
         <div className="flex flex-col h-full w-76 shrink-0 bg-zinc-900/60 overflow-hidden">
-            <CommunityServerHeader server={server} role={role} boostCount={boostCount} boostedByMe={boostedByMe} />
+            <CommunityServerHeader
+                server={server}
+                role={role}
+                boostCount={boostCount}
+                boostedByMe={boostedByMe}
+                muted={!!currentMember.muted}
+            />
 
             <ScrollArea className="flex-1">
 

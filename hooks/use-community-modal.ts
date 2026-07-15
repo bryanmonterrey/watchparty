@@ -13,7 +13,8 @@ export type CommunityModalType =
     | "createChannel"
     | "editChannel"
     | "deleteChannel"
-    | "deleteMessage";
+    | "deleteMessage"
+    | "nickname";
 
 type CommunityModalData = {
     server?: CommunityServer;

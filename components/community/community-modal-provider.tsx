@@ -12,6 +12,7 @@ const EditServerModal = dynamic(() => import("./modals/edit-server-modal").then(
 const EditChannelModal = dynamic(() => import("./modals/edit-channel-modal").then(m => m.EditChannelModal), { ssr: false });
 const MembersModal = dynamic(() => import("./modals/members-modal").then(m => m.MembersModal), { ssr: false });
 const ConfirmModal = dynamic(() => import("./modals/confirm-modal").then(m => m.ConfirmModal), { ssr: false });
+const NicknameModal = dynamic(() => import("./modals/nickname-modal").then(m => m.NicknameModal), { ssr: false });
 
 export function CommunityModalProvider() {
     return (
@@ -23,6 +24,7 @@ export function CommunityModalProvider() {
             <EditChannelModal />
             <MembersModal />
             <ConfirmModal />
+            <NicknameModal />
         </>
     );
 }
