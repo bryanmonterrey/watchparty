@@ -27,20 +27,17 @@ export default function CommunitiesLayout({
             <CommunityModalProvider />
 
             <div className="flex min-h-0 w-full flex-1 overflow-hidden">
-                {/* Column 1: server tile rail */}
-                <div className="flex md:pt-[var(--header-height)]">
-                    <CommunityServerList />
-                </div>
+                {/* Column 1: server tile rail (full height; content pads below
+                    the floating header internally) */}
+                <CommunityServerList />
 
-                {/* Columns 2+3 — one full-height hairline against the rail */}
+                {/* Columns 2+3 */}
                 <div className="flex min-w-0 flex-1 overflow-hidden md:pl-2">
-                    <div className="flex md:pt-[var(--header-height)]">
-                        {isHome ? (
-                            <CommunityHomeSidebar />
-                        ) : (
-                            <CommunityServerSidebar serverId={serverId} />
-                        )}
-                    </div>
+                    {isHome ? (
+                        <CommunityHomeSidebar />
+                    ) : (
+                        <CommunityServerSidebar serverId={serverId} />
+                    )}
 
                     <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
                         {children}

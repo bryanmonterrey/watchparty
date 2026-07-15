@@ -20,7 +20,7 @@ export function CommunityServerList() {
     const onHome = !/^\/communities\/[0-9a-fA-F-]{20,}/.test(pathname);
 
     return (
-        <div className="flex flex-col items-center gap-3.5 py-3 h-full w-[104px] shrink-0">
+        <div className="flex flex-col items-center gap-3.5 py-3 md:pt-[calc(var(--header-height)+0.25rem)] h-full w-[104px] shrink-0">
             {/* Home */}
             <TooltipProvider delayDuration={50}>
                 <Tooltip>
