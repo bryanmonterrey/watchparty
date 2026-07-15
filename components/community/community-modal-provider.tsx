@@ -8,6 +8,10 @@ import dynamic from "next/dynamic";
 const CreateServerModal = dynamic(() => import("./modals/create-server-modal").then(m => m.CreateServerModal), { ssr: false });
 const CreateChannelModal = dynamic(() => import("./modals/create-channel-modal").then(m => m.CreateChannelModal), { ssr: false });
 const InviteModal = dynamic(() => import("./modals/invite-modal").then(m => m.InviteModal), { ssr: false });
+const EditServerModal = dynamic(() => import("./modals/edit-server-modal").then(m => m.EditServerModal), { ssr: false });
+const EditChannelModal = dynamic(() => import("./modals/edit-channel-modal").then(m => m.EditChannelModal), { ssr: false });
+const MembersModal = dynamic(() => import("./modals/members-modal").then(m => m.MembersModal), { ssr: false });
+const ConfirmModal = dynamic(() => import("./modals/confirm-modal").then(m => m.ConfirmModal), { ssr: false });
 
 export function CommunityModalProvider() {
     return (
@@ -15,6 +19,10 @@ export function CommunityModalProvider() {
             <CreateServerModal />
             <CreateChannelModal />
             <InviteModal />
+            <EditServerModal />
+            <EditChannelModal />
+            <MembersModal />
+            <ConfirmModal />
         </>
     );
 }
