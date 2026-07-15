@@ -50,7 +50,7 @@ export function ChannelChatSkeleton() {
 /* ─── Server sidebar (channel list) ────────────────────────── */
 export function ServerSidebarSkeleton() {
     return (
-        <div className="flex flex-col h-full w-76 bg-zinc-900/60 md:pt-[var(--header-height)] shrink-0">
+        <div className="flex flex-col h-full w-76 bg-zinc-900/60 shrink-0">
             <div className="h-12 flex items-center px-4">
                 <Bone className="h-4 w-32" />
             </div>

@@ -32,7 +32,7 @@ export function CommunityServerSidebar({ serverId }: Props) {
     const allOrdered = [...textChannels, ...audioChannels, ...videoChannels];
 
     return (
-        <div className="flex flex-col h-full w-76 shrink-0 bg-zinc-900/60 md:pt-[var(--header-height)] overflow-hidden">
+        <div className="flex flex-col h-full w-76 shrink-0 bg-zinc-900/60 overflow-hidden">
             <CommunityServerHeader server={server} role={role} />
 
             <ScrollArea className="flex-1">
