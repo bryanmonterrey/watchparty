@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/auth/client';
 import { storeFrostClientShare } from '@/lib/frost/frost-storage';
 import SeedPhraseDisplay from '@/components/wallet/seed-phrase-display';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { SquareLock02Icon, Wallet01Icon } from '@hugeicons/core-free-icons';
 import {
     Dialog,
     DialogContent,
@@ -63,35 +65,40 @@ export function WalletSetupCta() {
     return (
         <>
             {/* CTA always rendered in the drawer */}
-            <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 pb-8">
-                <div className="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18-3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6m18 0V5.25A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25V6" />
-                    </svg>
-                </div>
+            <div className="flex flex-1 flex-col px-5 pb-6">
+                <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+                    <div className="grid size-16 place-items-center rounded-full bg-white/5">
+                        <HugeiconsIcon icon={Wallet01Icon} className="size-7 text-zinc-400" strokeWidth={1.8} />
+                    </div>
 
-                <div className="text-center space-y-1.5">
-                    <p className="text-[17px] font-semibold text-white">No wallet yet</p>
-                    <p className="text-[13px] text-zinc-500 leading-relaxed max-w-[240px]">
-                        Generate a Solana wallet to send, receive, and swap tokens.
-                    </p>
-                </div>
+                    <div className="space-y-1.5">
+                        <p className="text-[20px] font-bold tracking-tight text-white">No wallet yet</p>
+                        <p className="max-w-[250px] text-[13px] font-medium leading-relaxed text-zinc-500">
+                            Create a Solana wallet to send, receive, and swap tokens right from the app.
+                        </p>
+                    </div>
 
-                {error && (
-                    <p className="text-[13px] text-red-400 text-center">{error}</p>
-                )}
+                    <div className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-600">
+                        <HugeiconsIcon icon={SquareLock02Icon} className="size-3.5" strokeWidth={2} />
+                        Keys split with MPC — only you can spend
+                    </div>
+
+                    {error && (
+                        <p className="text-center text-[13px] font-medium text-pastelred">{error}</p>
+                    )}
+                </div>
 
                 <button
                     onClick={handleCreate}
                     disabled={step === 'generating'}
-                    className="cursor-pointer w-full py-4 rounded-full bg-white text-black font-semibold text-[15px] hover:bg-zinc-100 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex h-20 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {step === 'generating' ? (
                         <>
-                            <span className="w-4 h-4 rounded-full border-2 border-zinc-400 border-t-black animate-spin" />
-                            Creating...
+                            <span className="size-4 animate-spin rounded-full border-2 border-black/25 border-t-black" />
+                            Creating your wallet…
                         </>
-                    ) : 'Generate Wallet'}
+                    ) : 'Create wallet'}
                 </button>
             </div>
 
@@ -103,11 +110,11 @@ export function WalletSetupCta() {
                     onPointerDownOutside={e => e.preventDefault()}
                 >
                     <DialogHeader>
-                        <DialogTitle className="text-center text-white text-xl">
-                            Save Your Recovery Phrase
+                        <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">
+                            Save your recovery phrase
                         </DialogTitle>
-                        <DialogDescription className="text-center text-zinc-400">
-                            Write down these 12 words in order. This is the only way to recover your wallet.
+                        <DialogDescription className="text-center text-[13px] font-medium text-zinc-500">
+                            12 words, in order — the only way to recover this wallet.
                         </DialogDescription>
                     </DialogHeader>
                     {mnemonic && (

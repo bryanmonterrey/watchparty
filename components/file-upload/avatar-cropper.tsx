@@ -5,12 +5,10 @@ import Cropper, { type Area } from "react-easy-crop";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MinusSignIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 
-// Pan/zoom avatar cropper (X/Telegram model): the circular window is fixed,
-// the IMAGE moves — drag to pan, wheel/pinch or the slider to zoom. No crop
-// rectangle, no corner handles. Replaces the react-image-crop drag-handle
-// cropper the user rejected.
-
-const OUTPUT_SIZE = 512;
+// Pan/zoom image cropper (X/Telegram model): the crop window is fixed, the
+// IMAGE moves — drag to pan, wheel/pinch or the slider to zoom. No crop
+// rectangle, no corner handles. Round 1:1 by default (avatars); pass
+// aspect/shape/output for banners etc.
 
 async function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -22,24 +20,32 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 // croppedAreaPixels is in the source image's natural pixel space.
-export async function getCroppedDataUrl(imageSrc: string, area: Area): Promise<string> {
+export async function getCroppedDataUrl(
+    imageSrc: string,
+    area: Area,
+    output: { width: number; height: number } = { width: 512, height: 512 },
+): Promise<string> {
     const img = await loadImage(imageSrc);
     const canvas = document.createElement("canvas");
-    canvas.width = OUTPUT_SIZE;
-    canvas.height = OUTPUT_SIZE;
+    canvas.width = output.width;
+    canvas.height = output.height;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas context unavailable");
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, output.width, output.height);
     return canvas.toDataURL("image/png");
 }
 
 export function AvatarCropper({
     file,
     onAreaChange,
+    aspect = 1,
+    shape = "round",
 }: {
     file: File;
     onAreaChange: (imageSrc: string, area: Area) => void;
+    aspect?: number;
+    shape?: "round" | "rect";
 }) {
     const [imgSrc, setImgSrc] = useState("");
     const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -69,8 +75,8 @@ export function AvatarCropper({
                         zoom={zoom}
                         minZoom={1}
                         maxZoom={4}
-                        aspect={1}
-                        cropShape="round"
+                        aspect={aspect}
+                        cropShape={shape}
                         showGrid={false}
                         onCropChange={setCrop}
                         onZoomChange={setZoom}

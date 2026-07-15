@@ -1,27 +1,29 @@
 "use client";
 
-import { useState } from "react";
 import { ConversationList } from "@/components/messages/conversation-list";
 import { ChatArea } from "@/components/messages/chat-area";
 import { EmptyState } from "@/components/messages/empty-state";
 import { ChatProvider } from "@/components/messages/chat-context";
 import { MessagesProvider } from "@/components/messages/messages-provider";
 import { CryptoTrays } from "@/components/messages/trays/crypto-trays";
+import { useActiveConversation } from "@/components/messages/messages-nav";
 
 // Port of sidebar's (browse)/messages/page.tsx. The client-side session
 // redirect was dropped — the (app) layout already guards server-side.
+// Full-bleed: no card border/rounding — the split IS the page, list and
+// chat divided by one full-height hairline. The active chat lives in ?c=
+// (nuqs) so the header's MessagesNav can title itself with the username.
 
 export default function MessagesPage() {
-    const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+    const [selectedConversationId, setSelectedConversationId] = useActiveConversation();
 
     return (
         <ChatProvider>
-            {/* Mobile (per "Messages page mobile landing.svg"): list fills the
-                screen; opening a conversation swaps to a full-screen chat. The
-                desktop split keeps sidebar's 3/6 grid. */}
-            <div className="grid h-[calc(100svh-var(--header-height))] md:h-[calc(100svh-var(--header-height)-1rem)] md:mt-header md:rounded-3xl md:border md:border-flexwhite/10 w-full md:w-[calc(100vw-32px)] mx-auto grid-cols-1 overflow-hidden md:grid-cols-9 bg-zinc-950/10 backdrop-blur-md pb-4">
+            {/* Mobile: list fills the screen; opening a conversation swaps to a
+                full-screen chat. Desktop keeps the 3/6 split, edge to edge. */}
+            <div className="grid h-[calc(100svh-var(--header-height))] w-screen grid-cols-1 overflow-hidden md:mt-header md:grid-cols-9">
                 <div
-                    className={`h-full shadow-sm md:col-span-3 md:block md:border-r md:border-flexwhite/10 ${selectedConversationId ? "hidden" : "block"}`}
+                    className={`h-full md:col-span-3 md:block md:border-r md:border-flexwhite/10 ${selectedConversationId ? "hidden" : "block"}`}
                 >
                     <ConversationList
                         selectedConversationId={selectedConversationId}

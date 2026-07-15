@@ -15,6 +15,8 @@ import { appToast } from "@/components/app-ui/app-toast";
 import { cn } from "@/lib/utils";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { useRouter } from "next/navigation";
+import type { Area } from "react-easy-crop";
+import { AvatarCropper, getCroppedDataUrl } from "@/components/file-upload/avatar-cropper";
 
 interface EditProfileDialogProps {
     user: UserType;
@@ -55,16 +57,42 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
         }
     }, [open, user]);
 
+    // Picks route through the pan/zoom cropper (round 1:1 for avatars,
+    // 3:1 rect for banners) instead of landing raw.
+    const [cropTarget, setCropTarget] = React.useState<{ file: File; type: "avatar" | "banner" } | null>(null);
+    const [cropSaving, setCropSaving] = React.useState(false);
+    const cropStateRef = React.useRef<{ src: string; area: Area } | null>(null);
+
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, type: "avatar" | "banner") => {
         const file = e.target.files?.[0];
-        if (file) {
-            if (type === "avatar") {
-                setAvatarFile(file);
-                setAvatarPreview(URL.createObjectURL(file));
-            } else {
+        if (file) setCropTarget({ file, type });
+        e.target.value = "";
+    };
+
+    const handleCropSave = async () => {
+        const state = cropStateRef.current;
+        if (!state || !cropTarget) return;
+        setCropSaving(true);
+        try {
+            const isBanner = cropTarget.type === "banner";
+            const dataUrl = await getCroppedDataUrl(
+                state.src,
+                state.area,
+                isBanner ? { width: 1500, height: 500 } : { width: 512, height: 512 },
+            );
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], cropTarget.file.name.replace(/\.[^.]+$/, "") + ".png", { type: "image/png" });
+            if (isBanner) {
                 setBannerFile(file);
-                setBannerPreview(URL.createObjectURL(file));
+                setBannerPreview(dataUrl);
+            } else {
+                setAvatarFile(file);
+                setAvatarPreview(dataUrl);
             }
+            setCropTarget(null);
+            cropStateRef.current = null;
+        } finally {
+            setCropSaving(false);
         }
     };
 
@@ -287,6 +315,39 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                     </div>
                 </div>
             </DialogContent>
+
+            {/* Crop dialog (nested; dismissing = cancel) */}
+            {cropTarget && (
+                <Dialog open onOpenChange={(o) => { if (!o) { setCropTarget(null); cropStateRef.current = null; } }}>
+                    <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+                        <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">
+                            {cropTarget.type === "banner" ? "Adjust your banner" : "Adjust your photo"}
+                        </DialogTitle>
+                        <AvatarCropper
+                            file={cropTarget.file}
+                            aspect={cropTarget.type === "banner" ? 3 : 1}
+                            shape={cropTarget.type === "banner" ? "rect" : "round"}
+                            onAreaChange={(src, area) => { cropStateRef.current = { src, area }; }}
+                        />
+                        <p className="text-center text-[12px] font-medium text-zinc-500">Drag to reposition · scroll or slide to zoom</p>
+                        <div className="mt-1 flex gap-2">
+                            <button
+                                onClick={() => { setCropTarget(null); cropStateRef.current = null; }}
+                                className="h-12 flex-1 cursor-pointer rounded-full bg-white/5 text-[14px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCropSave}
+                                disabled={cropSaving}
+                                className="h-12 flex-1 cursor-pointer rounded-full bg-white text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-60"
+                            >
+                                {cropSaving ? "Saving…" : "Save"}
+                            </button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </Dialog>
     );
 }

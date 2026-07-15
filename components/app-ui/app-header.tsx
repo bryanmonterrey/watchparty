@@ -18,6 +18,7 @@ import { useQueryState } from 'nuqs'
 import { searchParams } from '@/lib/searchParams'
 import { GlobalSearch } from './global-search'
 import { TradeNav } from '@/components/trade/trade-nav'
+import { MessagesNav } from '@/components/messages/messages-nav'
 import Link from 'next/link'
  
 // rounded-2xl approximates the squircle server-side; Lisse stamps
@@ -143,6 +144,8 @@ export function AppHeader() {
           {firstSegment === 'premium' && (
             <span className="px-3 text-lg font-bold tracking-tight text-white">Premium</span>
           )}
+          {/* Messages: the title doubles as the conversation switcher (?c=). */}
+          {firstSegment === 'messages' && <MessagesNav />}
           {/* Discover search lives in the header (right of the logo), not in the
               feed tab bar. */}
           {firstSegment === 'discover' && (
