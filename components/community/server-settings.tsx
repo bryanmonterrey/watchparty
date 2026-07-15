@@ -31,6 +31,7 @@ import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ADMIN_ONLY_SECTIONS, sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
 import { Switch } from "@/components/ui/switch";
+import { Squircle } from "@/components/ui/squircle";
 import type { CommunityChannel, CommunityServer } from "@/db/schema/community";
 
 const ROLES = ["ADMIN", "MODERATOR", "GUEST"] as const;
@@ -95,7 +96,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     onClick={() => router.push(`/communities/${serverId}`)}
                     aria-label="Close settings"
                     title="Close settings"
-                    className="shrink-0 cursor-pointer rounded-[8px] bg-white/[0.06] px-2 py-1 text-[11px] font-bold tracking-wide text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
+                    className="shrink-0 cursor-pointer rounded-[8px] bg-white/[0.06] px-2 py-1 text-[12px] font-bold tracking-wide text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
                 >
                     esc
                 </button>
@@ -132,7 +133,32 @@ export function ServerSettings({ serverId }: { serverId: string }) {
 }
 
 function SectionHint({ children }: { children: React.ReactNode }) {
-    return <p className="mb-6 text-[13px] font-medium text-zinc-500">{children}</p>;
+    return <p className="mb-6 text-[14px] font-medium text-zinc-500">{children}</p>;
+}
+
+// Squircle action button for the settings surface (h-12, 15px bold).
+function ActionButton({
+    variant = "primary",
+    className,
+    children,
+    ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "soft" }) {
+    return (
+        <Squircle asChild radius={16}>
+            <button
+                {...props}
+                className={cn(
+                    "inline-flex h-12 cursor-pointer items-center justify-center gap-2 px-6 text-[15px] font-bold transition-colors disabled:pointer-events-none disabled:opacity-40",
+                    variant === "primary"
+                        ? "bg-white text-black hover:bg-white/90"
+                        : "bg-white/10 text-white hover:bg-white/20",
+                    className,
+                )}
+            >
+                {children}
+            </button>
+        </Squircle>
+    );
 }
 
 // ─── Profile ─────────────────────────────────────────────
@@ -209,9 +235,9 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                 </div>
                 <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                        <p className="truncate text-[16px] font-bold tracking-tight text-white">{name.trim() || server.name}</p>
+                        <p className="truncate text-[17px] font-bold tracking-tight text-white">{name.trim() || server.name}</p>
                         {server.tag && (
-                            <span className="shrink-0 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-zinc-200">
+                            <span className="shrink-0 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[12px] font-bold tracking-wide text-zinc-200">
                                 {server.tag}
                             </span>
                         )}
@@ -224,19 +250,19 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
 
             {/* Name */}
             <div className="mb-6">
-                <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Name</p>
+                <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Name</p>
                 <Input
                     radius={14}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     maxLength={100}
-                    className="h-12 text-[14px] font-semibold"
+                    className="h-13 text-[15px] font-semibold"
                 />
             </div>
 
             {/* Icon */}
             <div className="mb-8">
-                <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Icon</p>
+                <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Icon</p>
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => fileInputRef.current?.click()}
@@ -256,12 +282,9 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                             <HugeiconsIcon icon={ImageUploadIcon} className="size-6 text-zinc-600 transition-colors group-hover:text-zinc-300" strokeWidth={2} />
                         )}
                     </button>
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex h-11 cursor-pointer items-center rounded-full bg-white/10 px-5 text-[13px] font-bold text-white transition-colors hover:bg-white/20"
-                    >
+                    <ActionButton variant="soft" onClick={() => fileInputRef.current?.click()}>
                         Change icon
-                    </button>
+                    </ActionButton>
                 </div>
                 <input
                     ref={fileInputRef}
@@ -276,13 +299,9 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                 />
             </div>
 
-            <button
-                onClick={save}
-                disabled={!dirty || !name.trim() || saving}
-                className="flex h-11 cursor-pointer items-center rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
-            >
+            <ActionButton onClick={save} disabled={!dirty || !name.trim() || saving}>
                 {saving ? "Saving…" : "Save changes"}
-            </button>
+            </ActionButton>
 
             {cropFile && (
                 <Dialog open onOpenChange={(o) => { if (!o) { setCropFile(null); cropStateRef.current = null; } }}>
@@ -292,20 +311,18 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                             file={cropFile}
                             onAreaChange={(src, area) => { cropStateRef.current = { src, area }; }}
                         />
-                        <p className="text-center text-[12px] font-medium text-zinc-500">Drag to reposition · scroll or slide to zoom</p>
+                        <p className="text-center text-[13px] font-medium text-zinc-500">Drag to reposition · scroll or slide to zoom</p>
                         <div className="mt-1 flex gap-2">
-                            <button
+                            <ActionButton
+                                variant="soft"
+                                className="flex-1"
                                 onClick={() => { setCropFile(null); cropStateRef.current = null; }}
-                                className="h-12 flex-1 cursor-pointer rounded-full bg-white/5 text-[14px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                             >
                                 Cancel
-                            </button>
-                            <button
-                                onClick={applyCrop}
-                                className="h-12 flex-1 cursor-pointer rounded-full bg-white text-[14px] font-bold text-black transition-colors hover:bg-white/90"
-                            >
+                            </ActionButton>
+                            <ActionButton className="flex-1" onClick={applyCrop}>
                                 Save
-                            </button>
+                            </ActionButton>
                         </div>
                     </DialogContent>
                 </Dialog>
@@ -346,10 +363,10 @@ function EngagementSection({ serverId }: { serverId: string }) {
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         {stats.map((s) => (
                             <div key={s.label} className="rounded-3xl bg-white/[0.03] p-4">
-                                <p className="text-[24px] font-bold leading-tight tabular-nums tracking-tight text-white">
+                                <p className="text-[26px] font-bold leading-tight tabular-nums tracking-tight text-white">
                                     {s.value.toLocaleString()}
                                 </p>
-                                <p className="mt-1 text-[12px] font-medium text-zinc-500">{s.label}</p>
+                                <p className="mt-1 text-[13px] font-medium text-zinc-500">{s.label}</p>
                             </div>
                         ))}
                     </div>
@@ -357,8 +374,8 @@ function EngagementSection({ serverId }: { serverId: string }) {
                     <h2 className="mb-3 mt-8 text-[14px] font-semibold text-zinc-500">Top channels · 7d</h2>
                     {data.topChannels.length === 0 ? (
                         <div className="py-8 text-center">
-                            <p className="text-[14px] font-bold text-zinc-400">Quiet week</p>
-                            <p className="mt-0.5 text-[12px] font-medium text-zinc-600">No messages in the last 7 days</p>
+                            <p className="text-[15px] font-bold text-zinc-400">Quiet week</p>
+                            <p className="mt-0.5 text-[13px] font-medium text-zinc-600">No messages in the last 7 days</p>
                         </div>
                     ) : (
                         <div className="space-y-1">
@@ -367,14 +384,14 @@ function EngagementSection({ serverId }: { serverId: string }) {
                                 return (
                                     <div key={c.channelId} className="flex items-center gap-3 rounded-[16px] px-3 py-2.5">
                                         <Icon className="size-4 shrink-0 text-zinc-500" />
-                                        <p className="w-40 min-w-0 truncate text-[14px] font-semibold text-zinc-200">{c.name}</p>
+                                        <p className="w-40 min-w-0 truncate text-[15px] font-semibold text-zinc-200">{c.name}</p>
                                         <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
                                             <div
                                                 className="h-full rounded-full bg-white/25"
                                                 style={{ width: `${Math.max(4, (c.messages / maxMessages) * 100)}%` }}
                                             />
                                         </div>
-                                        <p className="w-12 shrink-0 text-right text-[13px] font-bold tabular-nums text-zinc-400">
+                                        <p className="w-12 shrink-0 text-right text-[14px] font-bold tabular-nums text-zinc-400">
                                             {c.messages.toLocaleString()}
                                         </p>
                                     </div>
@@ -419,12 +436,12 @@ function BoostsSection({
                         <HugeiconsIcon icon={Rocket01Icon} className="size-5 text-white" strokeWidth={2} />
                     </div>
                     <div>
-                        <p className="text-[24px] font-bold leading-tight tabular-nums tracking-tight text-white">{boostCount}</p>
-                        <p className="text-[12px] font-medium text-zinc-500">boost{boostCount === 1 ? "" : "s"} on this server</p>
+                        <p className="text-[26px] font-bold leading-tight tabular-nums tracking-tight text-white">{boostCount}</p>
+                        <p className="text-[13px] font-medium text-zinc-500">boost{boostCount === 1 ? "" : "s"} on this server</p>
                     </div>
                 </div>
                 {boostedByMe && (
-                    <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white">
+                    <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-bold text-white">
                         <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.5} />
                         You boost this server
                     </span>
@@ -432,21 +449,16 @@ function BoostsSection({
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-                <button
+                <ActionButton
+                    variant={boostedByMe ? "soft" : "primary"}
                     onClick={() => toggleBoost.mutate({ serverId })}
                     disabled={toggleBoost.isPending}
-                    className={cn(
-                        "flex h-11 cursor-pointer items-center gap-2 rounded-full px-6 text-[14px] font-bold transition-colors disabled:pointer-events-none disabled:opacity-40",
-                        boostedByMe
-                            ? "bg-white/10 text-white hover:bg-white/20"
-                            : "bg-white text-black hover:bg-white/90",
-                    )}
                 >
                     {boostedByMe ? "Remove your boost" : "Boost this server"}
-                </button>
+                </ActionButton>
                 <Link
                     href="/communities/shop"
-                    className="flex h-11 items-center rounded-full px-4 text-[13px] font-bold text-zinc-400 transition-colors hover:text-white"
+                    className="flex h-12 items-center rounded-full px-4 text-[15px] font-bold text-zinc-400 transition-colors hover:text-white"
                 >
                     {balance.data ? `${balance.data.available} boost${balance.data.available === 1 ? "" : "s"} available · Shop` : "Shop"}
                 </Link>
@@ -492,17 +504,17 @@ function MemberRow({
 
     return (
         <div className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
-            <Avatar className="size-10 shrink-0">
+            <Avatar className="size-11 shrink-0">
                 <AvatarImage src={m.userImage || undefined} alt={m.userName || ""} />
                 <AvatarFallback className="bg-white/10 text-[13px] font-bold text-zinc-300">
                     {(m.userName || "?")[0]?.toUpperCase()}
                 </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-bold text-white">
-                    {m.userName}{isSelf && <span className="ml-1.5 text-[11px] font-semibold text-zinc-500">you</span>}
+                <p className="truncate text-[15px] font-bold text-white">
+                    {m.userName}{isSelf && <span className="ml-1.5 text-[12px] font-semibold text-zinc-500">you</span>}
                 </p>
-                <p className="truncate text-[12px] font-medium text-zinc-500">@{m.userUsername || "user"}</p>
+                <p className="truncate text-[13px] font-medium text-zinc-500">@{m.userUsername || "user"}</p>
             </div>
 
             {isAdmin && !isSelf ? (
@@ -516,7 +528,7 @@ function MemberRow({
                     panelRadius={16}
                     triggerAriaLabel={`Manage ${m.userName}`}
                     triggerClassName={cn(
-                        "flex h-8 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
+                        "flex h-9 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3.5 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
                         busy && "opacity-50 pointer-events-none",
                     )}
                     trigger={
@@ -548,7 +560,7 @@ function MemberRow({
                 />
             ) : (
                 <span className={cn(
-                    "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
+                    "shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold",
                     m.role === "ADMIN" ? "bg-white/15 text-white" : m.role === "MODERATOR" ? "bg-white/10 text-zinc-200" : "bg-white/5 text-zinc-500",
                 )}>
                     {ROLE_LABEL[m.role] ?? m.role}
@@ -606,14 +618,14 @@ function RolesSection({
                 return (
                     <div key={role} className="mb-7">
                         <div className="mb-1 flex items-baseline gap-2 px-1">
-                            <h2 className="text-[14px] font-semibold text-zinc-300">
+                            <h2 className="text-[15px] font-semibold text-zinc-300">
                                 {ROLE_LABEL[role]}{group.length !== 1 ? "s" : ""}
                             </h2>
                             <span className="text-[12px] font-bold tabular-nums text-zinc-600">{group.length}</span>
                         </div>
-                        <p className="mb-2 px-1 text-[12px] font-medium text-zinc-600">{ROLE_HINT[role]}</p>
+                        <p className="mb-2 px-1 text-[13px] font-medium text-zinc-600">{ROLE_HINT[role]}</p>
                         {group.length === 0 ? (
-                            <p className="rounded-[16px] bg-white/[0.02] px-3 py-3 text-[13px] font-medium text-zinc-600">Nobody yet</p>
+                            <p className="rounded-[16px] bg-white/[0.02] px-3 py-3 text-[14px] font-medium text-zinc-600">Nobody yet</p>
                         ) : (
                             <div className="space-y-0.5">
                                 {group.map((m) => (
@@ -657,18 +669,16 @@ function InvitesSection({ serverId, inviteCode }: { serverId: string; inviteCode
                     readOnly
                     value={inviteUrl}
                     onFocus={(e) => e.target.select()}
-                    className="h-12 flex-1 text-[13px] text-zinc-300"
+                    className="h-13 flex-1 text-[14px] text-zinc-300"
                 />
-                <button
+                <ActionButton
+                    variant={copied ? "soft" : "primary"}
+                    className="h-13 shrink-0 px-5"
                     onClick={onCopy}
-                    className={cn(
-                        "flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-full px-5 text-[14px] font-bold transition-colors",
-                        copied ? "bg-white/10 text-white" : "bg-white text-black hover:bg-white/90",
-                    )}
                 >
                     <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} className="size-4" strokeWidth={2} />
                     {copied ? "Copied" : "Copy"}
-                </button>
+                </ActionButton>
             </div>
 
             <button
@@ -706,23 +716,23 @@ function BansSection({ serverId, isAdmin }: { serverId: string; isAdmin: boolean
 
             {!isLoading && bans.length === 0 && (
                 <div className="py-10 text-center">
-                    <p className="text-[14px] font-bold text-zinc-400">No bans</p>
-                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Ban members from their row in Members</p>
+                    <p className="text-[15px] font-bold text-zinc-400">No bans</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">Ban members from their row in Members</p>
                 </div>
             )}
 
             <div className="space-y-0.5">
                 {bans.map((b) => (
                     <div key={b.id} className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
-                        <Avatar className="size-10 shrink-0">
+                        <Avatar className="size-11 shrink-0">
                             <AvatarImage src={b.userImage || undefined} alt={b.userName || ""} />
                             <AvatarFallback className="bg-white/10 text-[13px] font-bold text-zinc-300">
                                 {(b.userName || "?")[0]?.toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-bold text-white">{b.userName}</p>
-                            <p className="truncate text-[12px] font-medium text-zinc-500">
+                            <p className="truncate text-[15px] font-bold text-white">{b.userName}</p>
+                            <p className="truncate text-[13px] font-medium text-zinc-500">
                                 Banned {formatDistanceToNow(new Date(b.createdAt), { addSuffix: true })}
                                 {b.reason ? ` · ${b.reason}` : ""}
                             </p>
@@ -731,7 +741,7 @@ function BansSection({ serverId, isAdmin }: { serverId: string; isAdmin: boolean
                             <button
                                 onClick={() => unban.mutate({ serverId, userId: b.userId })}
                                 disabled={unban.isPending}
-                                className="flex h-8 shrink-0 cursor-pointer items-center rounded-full bg-white/5 px-3 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                                className="flex h-9 shrink-0 cursor-pointer items-center rounded-full bg-white/5 px-3.5 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
                             >
                                 Revoke ban
                             </button>
@@ -766,10 +776,10 @@ function ChannelsSection({
                     const isGeneral = c.name === "general";
                     return (
                         <div key={c.id} className="group flex items-center gap-3 rounded-[18px] px-3 py-2.5 transition-colors hover:bg-white/[0.04]">
-                            <Icon className="size-4.5 shrink-0 text-zinc-500" />
-                            <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-zinc-200">{c.name}</p>
+                            <Icon className="size-5 shrink-0 text-zinc-500" />
+                            <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-zinc-200">{c.name}</p>
                             {c.readOnly && (
-                                <span className="flex items-center gap-1 rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-bold text-zinc-400">
+                                <span className="flex items-center gap-1 rounded-full bg-white/5 px-2.5 py-1 text-[12px] font-bold text-zinc-400">
                                     <LockIcon className="size-3.5" />
                                     Read-only
                                 </span>
@@ -778,20 +788,20 @@ function ChannelsSection({
                                 <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                     <button
                                         onClick={() => onOpen("editChannel", { channel: c, server })}
-                                        className="flex h-8 cursor-pointer items-center rounded-full bg-white/5 px-3 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                                        className="flex h-9 cursor-pointer items-center rounded-full bg-white/5 px-3.5 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                                     >
                                         Edit
                                     </button>
                                     <button
                                         onClick={() => onOpen("deleteChannel", { channel: c, server })}
-                                        className="flex h-8 cursor-pointer items-center rounded-full px-3 text-[12px] font-bold text-pastelred transition-colors hover:bg-pastelred/10"
+                                        className="flex h-9 cursor-pointer items-center rounded-full px-3.5 text-[13px] font-bold text-pastelred transition-colors hover:bg-pastelred/10"
                                     >
                                         Delete
                                     </button>
                                 </div>
                             )}
                             {isGeneral && role && (
-                                <LockIcon className="size-4.5 shrink-0 text-zinc-600" />
+                                <LockIcon className="size-5 shrink-0 text-zinc-600" />
                             )}
                         </div>
                     );
@@ -821,26 +831,26 @@ function AutomodSection({ server }: { server: CommunityServer }) {
         <div>
             <SectionHint>Messages from members containing a blocked word are rejected before they post. Mods and admins are exempt.</SectionHint>
 
-            <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Blocked words</p>
+            <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Blocked words</p>
             <textarea
                 value={keywords}
                 onChange={(e) => setKeywords(e.target.value)}
                 placeholder="spam, scam link, another phrase"
                 rows={5}
                 maxLength={2000}
-                className="w-full resize-none rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[14px] font-medium text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.06]"
+                className="w-full resize-none rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[15px] font-medium text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.06]"
             />
-            <p className="mt-1.5 px-1 text-[12px] font-medium text-zinc-600">
+            <p className="mt-1.5 px-1 text-[13px] font-medium text-zinc-600">
                 Separate words or phrases with commas. {wordCount > 0 ? `${wordCount} blocked.` : "Nothing blocked yet."}
             </p>
 
-            <button
+            <ActionButton
+                className="mt-5"
                 onClick={() => updateServer.mutate({ serverId: server.id, automodKeywords: keywords.trim() || null })}
                 disabled={!dirty || updateServer.isPending}
-                className="mt-5 flex h-11 cursor-pointer items-center rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
             >
                 {updateServer.isPending ? "Saving…" : "Save AutoMod"}
-            </button>
+            </ActionButton>
         </div>
     );
 }
@@ -867,34 +877,34 @@ function TagSection({ server }: { server: CommunityServer }) {
 
             {/* Preview */}
             <div className="mb-7 flex items-center gap-3 rounded-3xl bg-white/[0.03] p-5">
-                <p className="truncate text-[16px] font-bold tracking-tight text-white">{server.name}</p>
+                <p className="truncate text-[17px] font-bold tracking-tight text-white">{server.name}</p>
                 {cleanTag ? (
                     <span className="shrink-0 rounded-[8px] bg-white/10 px-2 py-1 text-[12px] font-bold tracking-wide text-zinc-200">
                         {cleanTag}
                     </span>
                 ) : (
-                    <span className="shrink-0 text-[12px] font-medium text-zinc-600">no tag</span>
+                    <span className="shrink-0 text-[13px] font-medium text-zinc-600">no tag</span>
                 )}
             </div>
 
-            <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Tag</p>
+            <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Tag</p>
             <Input
                 radius={14}
                 value={tag}
                 onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())}
                 placeholder="STPA"
                 maxLength={8}
-                className="h-12 w-40 text-[14px] font-bold tracking-wide"
+                className="h-13 w-44 text-[15px] font-bold tracking-wide"
             />
-            <p className="mt-1.5 px-1 text-[12px] font-medium text-zinc-600">Up to 8 letters or numbers. Clear it to remove the badge.</p>
+            <p className="mt-1.5 px-1 text-[13px] font-medium text-zinc-600">Up to 8 letters or numbers. Clear it to remove the badge.</p>
 
-            <button
+            <ActionButton
+                className="mt-5"
                 onClick={() => updateServer.mutate({ serverId: server.id, tag: cleanTag || null })}
                 disabled={!dirty || updateServer.isPending}
-                className="mt-5 flex h-11 cursor-pointer items-center rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
             >
                 {updateServer.isPending ? "Saving…" : "Save tag"}
-            </button>
+            </ActionButton>
         </div>
     );
 }
@@ -967,13 +977,10 @@ function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji
 
             {/* Upload */}
             {!pendingFile ? (
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="mb-7 flex h-11 cursor-pointer items-center gap-2 rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90"
-                >
+                <ActionButton className="mb-7" onClick={() => fileInputRef.current?.click()}>
                     <HugeiconsIcon icon={ImageUploadIcon} className="size-4" strokeWidth={2} />
                     Upload {isEmoji ? "emoji" : "sticker"}
-                </button>
+                </ActionButton>
             ) : (
                 <div className="mb-7 flex flex-wrap items-center gap-3 rounded-3xl bg-white/[0.03] p-4">
                     <div className={cn("grid shrink-0 place-items-center overflow-hidden rounded-[14px] bg-black4", isEmoji ? "size-12" : "size-20")}>
@@ -988,24 +995,21 @@ function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji
                             placeholder="name"
                             maxLength={32}
                             autoFocus
-                            className="h-10 min-w-24 flex-1 text-[13px] font-bold"
+                            className="h-11 min-w-24 flex-1 text-[14px] font-bold"
                         />
                         <span className="text-[14px] font-bold text-zinc-500">:</span>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
-                        <button
-                            onClick={clearPending}
-                            className="flex h-10 cursor-pointer items-center rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
-                        >
+                        <ActionButton variant="soft" className="h-11 px-4 text-[14px]" onClick={clearPending}>
                             Cancel
-                        </button>
-                        <button
+                        </ActionButton>
+                        <ActionButton
+                            className="h-11 px-4 text-[14px]"
                             onClick={upload}
                             disabled={uploading || !/^[a-z0-9_]{2,32}$/.test(name)}
-                            className="flex h-10 cursor-pointer items-center rounded-full bg-white px-4 text-[13px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
                         >
                             {uploading ? "Uploading…" : "Add"}
-                        </button>
+                        </ActionButton>
                     </div>
                 </div>
             )}
@@ -1031,8 +1035,8 @@ function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji
 
             {!isLoading && items.length === 0 && (
                 <div className="py-10 text-center">
-                    <p className="text-[14px] font-bold text-zinc-400">No {isEmoji ? "emoji" : "stickers"} yet</p>
-                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Upload the first one — every member gets to use it</p>
+                    <p className="text-[15px] font-bold text-zinc-400">No {isEmoji ? "emoji" : "stickers"} yet</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">Upload the first one — every member gets to use it</p>
                 </div>
             )}
 
@@ -1040,7 +1044,7 @@ function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji
                 {items.map((e) => (
                     <div key={e.id} className="group relative flex flex-col items-center gap-1.5 rounded-2xl bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
                         <img src={e.imageUrl} alt={e.name} className={cn("object-contain", isEmoji ? "size-10" : "size-20")} />
-                        <p className="w-full truncate text-center text-[11px] font-bold text-zinc-500">:{e.name}:</p>
+                        <p className="w-full truncate text-center text-[12px] font-bold text-zinc-500">:{e.name}:</p>
                         <button
                             onClick={() => deleteExpression.mutate({ serverId, expressionId: e.id })}
                             disabled={deleteExpression.isPending}
@@ -1063,8 +1067,8 @@ function SoundboardSection() {
         <div>
             <SectionHint>Short sounds members can play in voice channels.</SectionHint>
             <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
-                <p className="text-[15px] font-bold text-zinc-300">Arrives with voice rooms</p>
-                <p className="mx-auto mt-1 max-w-xs text-[13px] font-medium leading-relaxed text-zinc-500">
+                <p className="text-[16px] font-bold text-zinc-300">Arrives with voice rooms</p>
+                <p className="mx-auto mt-1 max-w-xs text-[14px] font-medium leading-relaxed text-zinc-500">
                     The soundboard needs live voice under it. It unlocks when realtime voice ships.
                 </p>
             </div>
@@ -1098,8 +1102,8 @@ function AccessSection({
 
             <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
                 <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-bold text-white">Pause invites</p>
-                    <p className="mt-0.5 text-[12px] font-medium text-zinc-500">
+                    <p className="text-[15px] font-bold text-white">Pause invites</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                         Nobody can join while paused — even with a valid link. Current members are unaffected.
                     </p>
                 </div>
@@ -1111,8 +1115,8 @@ function AccessSection({
             </label>
 
             <div className="rounded-3xl bg-white/[0.03] px-5 py-4">
-                <p className="text-[14px] font-bold text-white">Read-only channels</p>
-                <p className="mt-0.5 text-[12px] font-medium text-zinc-500">
+                <p className="text-[15px] font-bold text-white">Read-only channels</p>
+                <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                     {readOnlyCount === 0
                         ? "None — every channel is open to members. Make one read-only from Channels."
                         : `${readOnlyCount} channel${readOnlyCount === 1 ? "" : "s"} where only mods can post: ${channels.filter((c) => c.readOnly).map((c) => `#${c.name}`).join(", ")}`}
@@ -1129,8 +1133,8 @@ function IntegrationsSection() {
         <div>
             <SectionHint>Services connected to this server.</SectionHint>
             <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
-                <p className="text-[15px] font-bold text-zinc-300">No integrations yet</p>
-                <p className="mx-auto mt-1 max-w-xs text-[13px] font-medium leading-relaxed text-zinc-500">
+                <p className="text-[16px] font-bold text-zinc-300">No integrations yet</p>
+                <p className="mx-auto mt-1 max-w-xs text-[14px] font-medium leading-relaxed text-zinc-500">
                     Webhooks and connected services land here as the platform opens up.
                 </p>
             </div>
@@ -1143,8 +1147,8 @@ function AppsSection() {
         <div>
             <SectionHint>Apps and bots you can add to this server.</SectionHint>
             <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
-                <p className="text-[15px] font-bold text-zinc-300">The app directory is coming</p>
-                <p className="mx-auto mt-1 max-w-xs text-[13px] font-medium leading-relaxed text-zinc-500">
+                <p className="text-[16px] font-bold text-zinc-300">The app directory is coming</p>
+                <p className="mx-auto mt-1 max-w-xs text-[14px] font-medium leading-relaxed text-zinc-500">
                     A home for server apps and bots once the developer platform opens.
                 </p>
             </div>
@@ -1197,10 +1201,10 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
                         className="flex w-full cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 text-left transition-colors hover:bg-white/[0.06]"
                     >
                         <div className="min-w-0 flex-1">
-                            <p className="text-[14px] font-bold text-white">{r.label}</p>
-                            <p className="mt-0.5 truncate text-[12px] font-medium text-zinc-500">{r.status}</p>
+                            <p className="text-[15px] font-bold text-white">{r.label}</p>
+                            <p className="mt-0.5 truncate text-[13px] font-medium text-zinc-500">{r.status}</p>
                         </div>
-                        <span className="shrink-0 text-[12px] font-bold text-zinc-500">Open</span>
+                        <span className="shrink-0 text-[13px] font-bold text-zinc-500">Open</span>
                     </button>
                 ))}
             </div>
@@ -1227,24 +1231,24 @@ function AuditSection({ serverId }: { serverId: string }) {
 
             {!isLoading && entries.length === 0 && (
                 <div className="py-10 text-center">
-                    <p className="text-[14px] font-bold text-zinc-400">Nothing logged yet</p>
-                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Channel, member, and server changes show up here</p>
+                    <p className="text-[15px] font-bold text-zinc-400">Nothing logged yet</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">Channel, member, and server changes show up here</p>
                 </div>
             )}
 
             <div className="space-y-0.5">
                 {entries.map((e) => (
                     <div key={e.id} className="flex items-center gap-3 rounded-[16px] px-2.5 py-2 transition-colors hover:bg-white/[0.03]">
-                        <Avatar className="size-8 shrink-0">
+                        <Avatar className="size-9 shrink-0">
                             <AvatarImage src={e.actorImage || undefined} alt={e.actorName || ""} />
-                            <AvatarFallback className="bg-white/10 text-[11px] font-bold text-zinc-300">
+                            <AvatarFallback className="bg-white/10 text-[12px] font-bold text-zinc-300">
                                 {(e.actorName || "?")[0]?.toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
-                        <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-300">
+                        <p className="min-w-0 flex-1 truncate text-[14px] font-medium text-zinc-300">
                             <span className="font-bold text-white">{e.actorName}</span> {e.detail ?? e.action}
                         </p>
-                        <p className="shrink-0 text-[11px] font-medium text-zinc-600">
+                        <p className="shrink-0 text-[12px] font-medium text-zinc-600">
                             {formatDistanceToNow(new Date(e.createdAt), { addSuffix: true })}
                         </p>
                     </div>

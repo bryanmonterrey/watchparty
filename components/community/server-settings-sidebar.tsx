@@ -73,14 +73,14 @@ export function ServerSettingsSidebar({ serverId }: { serverId: string }) {
                     {data ? (
                         groups.map((g) => (
                             <div key={g.label} className="mb-4">
-                                <p className="truncate px-3 pb-1 pt-2 text-[12px] font-bold text-zinc-500">{g.label}</p>
+                                <p className="truncate px-3 pb-1 pt-2 text-[13px] font-bold text-zinc-500">{g.label}</p>
                                 <div className="space-y-[2px]">
                                     {g.rows.map((key) => (
                                         <button
                                             key={key}
                                             onClick={() => setSection(key)}
                                             className={cn(
-                                                "flex h-10 w-full cursor-pointer items-center rounded-lg px-3 text-sm font-medium transition",
+                                                "flex h-11 w-full cursor-pointer items-center rounded-lg px-3 text-[15px] font-medium transition",
                                                 active === key
                                                     ? "bg-white/[0.07] text-flexwhite"
                                                     : "text-flexwhite/50 hover:bg-white/5 hover:text-flexwhite/80",
@@ -95,7 +95,7 @@ export function ServerSettingsSidebar({ serverId }: { serverId: string }) {
                     ) : (
                         <div className="flex flex-col gap-2 px-1 pt-2">
                             {Array.from({ length: 10 }).map((_, i) => (
-                                <div key={i} className="h-10 overflow-hidden rounded-lg"><div className="size-full shimmer-skeleton" /></div>
+                                <div key={i} className="h-11 overflow-hidden rounded-lg"><div className="size-full shimmer-skeleton" /></div>
                             ))}
                         </div>
                     )}
@@ -104,7 +104,7 @@ export function ServerSettingsSidebar({ serverId }: { serverId: string }) {
                         <div className="mt-2 border-t border-white/5 pt-3">
                             <button
                                 onClick={() => data && onOpen("deleteServer", { server: data.server })}
-                                className="flex h-10 w-full cursor-pointer items-center rounded-lg px-3 text-sm font-medium text-pastelred transition hover:bg-pastelred/10"
+                                className="flex h-11 w-full cursor-pointer items-center rounded-lg px-3 text-[15px] font-medium text-pastelred transition hover:bg-pastelred/10"
                             >
                                 Delete server
                             </button>
