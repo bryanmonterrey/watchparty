@@ -12,6 +12,19 @@ import { recordQuestEvent } from '@/server/lib/quests';
 import { upsertUser } from '@/lib/typesense/sync';
 
 export const userRouter = router({
+    // Live availability check for onboarding — same uniqueness source of
+    // truth as /api/update-profile (which still re-validates on save).
+    checkUsername: protectedProcedure
+        .input(z.object({ username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_-]+$/) }))
+        .query(async ({ ctx, input }) => {
+            const [existing] = await db
+                .select({ id: user.id })
+                .from(user)
+                .where(eq(user.username, input.username))
+                .limit(1);
+            return { available: !existing || existing.id === ctx.user.id };
+        }),
+
     /**
      * Search for users by name, username, or email
      */

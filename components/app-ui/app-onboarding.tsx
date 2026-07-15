@@ -4,57 +4,76 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { authClient } from "@/lib/auth/client";
+import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
-    DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckmarkCircle02Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { CheckmarkCircle02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import AvatarUpload from "@/components/file-upload/avatar-upload";
 
-// Two-step onboarding (username → photo) with a completion beat. Logic is
-// untouched; the shell follows the current design language — step dots,
-// icon chip, squircle input, wide white pill CTAs.
-function StepDots({ step }: { step: "username_setup" | "avatar_setup" | "complete" }) {
-    const idx = step === "username_setup" ? 0 : 1;
-    if (step === "complete") return null;
-    return (
-        <div className="mb-1 flex justify-center gap-1.5">
-            {[0, 1].map((i) => (
-                <span
-                    key={i}
-                    className={cn(
-                        "h-1.5 rounded-full transition-all duration-300",
-                        i === idx ? "w-6 bg-white" : "w-1.5 bg-white/15",
-                    )}
-                />
-            ))}
-        </div>
-    );
-}
+// Onboarding: claim a handle → add a photo → done. First-run surface, so it
+// gets the delight budget: a fixed-size stage (steps never resize the
+// dialog), slide+blur step transitions (blur masks the crossfade), a live
+// pixel-font handle preview with debounced availability, and a springy
+// completion beat. Avatar is skippable — the username is the only thing the
+// product actually needs.
 
 type OnboardingStep =
     | "username_setup"
     | "avatar_setup"
     | "complete";
 
+const USERNAME_RE = /^[a-zA-Z0-9_-]+$/;
+const EASE = [0.23, 1, 0.32, 1] as const;
+
+function StepShell({ children, reduceMotion }: { children: React.ReactNode; reduceMotion: boolean }) {
+    return (
+        <motion.div
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 32, filter: "blur(4px)" }}
+            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -32, filter: "blur(4px)" }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="flex min-h-0 flex-1 flex-col"
+        >
+            {children}
+        </motion.div>
+    );
+}
+
 export default function OnboardingDialog() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const queryClient = useQueryClient();
+    const reduceMotion = !!useReducedMotion();
     const [isOpen, setIsOpen] = useState(false);
     const [step, setStep] = useState<OnboardingStep>("username_setup");
     const [username, setUsername] = useState("");
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // Debounced live availability — only queried once the format is valid.
+    const [debounced, setDebounced] = useState("");
+    useEffect(() => {
+        const id = setTimeout(() => setDebounced(username), 350);
+        return () => clearTimeout(id);
+    }, [username]);
+    const formatValid = debounced.length >= 3 && debounced.length <= 20 && USERNAME_RE.test(debounced);
+    const availability = trpc.user.checkUsername.useQuery(
+        { username: debounced },
+        { enabled: isOpen && step === "username_setup" && formatValid, staleTime: 30_000 },
+    );
+    const isSettled = debounced === username;
+    const available = formatValid && isSettled && availability.data?.available === true;
+    const taken = formatValid && isSettled && availability.data?.available === false;
 
     // Handle avatar file change - deferred to avoid setState during render
     const handleFileChange = useCallback((file: any) => {
@@ -76,9 +95,7 @@ export default function OnboardingDialog() {
 
                 if (debugMode) {
                     setIsOpen(true);
-                    // You can change this to test different steps:
-                    // "wallet_setup", "username_setup", or "avatar_setup"
-                    setStep("avatar_setup");
+                    setStep("username_setup");
                     return;
                 }
 
@@ -114,7 +131,7 @@ export default function OnboardingDialog() {
             return;
         }
 
-        if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        if (!USERNAME_RE.test(username)) {
             setError("Username can only contain letters, numbers, underscores, and hyphens");
             return;
         }
@@ -199,13 +216,23 @@ export default function OnboardingDialog() {
                 setIsOpen(false);
                 router.replace("/");
                 router.refresh();
-            }, 2000);
+            }, 1600);
         } catch (error) {
             console.error("❌ Avatar upload failed:", error);
             setError(error instanceof Error ? error.message : "Failed to upload avatar");
         } finally {
             setLoading(false);
         }
+    };
+
+    // Username is the only hard requirement — the photo can wait.
+    const handleSkipAvatar = () => {
+        setStep("complete");
+        setTimeout(() => {
+            setIsOpen(false);
+            router.replace("/");
+            router.refresh();
+        }, 1600);
     };
 
     const handleClose = () => {
@@ -215,103 +242,149 @@ export default function OnboardingDialog() {
         }
     };
 
+    // Availability line under the live preview: height is reserved so the
+    // layout never shifts between states.
+    const statusLine = (() => {
+        if (!username) return null;
+        if (username.length < 3) return { text: "Keep going — at least 3 characters", tone: "muted" as const };
+        if (!USERNAME_RE.test(username)) return { text: "Letters, numbers, underscores and hyphens only", tone: "bad" as const };
+        if (username.length > 20) return { text: "Maximum 20 characters", tone: "bad" as const };
+        if (!isSettled || availability.isFetching) return { text: "Checking availability…", tone: "muted" as const };
+        if (taken) return { text: `@${username} is taken`, tone: "bad" as const };
+        if (available) return { text: `@${username} is yours`, tone: "good" as const };
+        return null;
+    })();
+
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent
-                className="gap-6 rounded-4xl border-none p-8 sm:max-w-md"
-                showCloseButton={step === "complete"}
+                className="overflow-hidden rounded-4xl border-none p-0 sm:max-w-[580px]"
+                showCloseButton={false}
             >
-                <StepDots step={step} />
+                {/* Fixed-size stage: steps swap inside, the dialog never resizes. */}
+                <div className="flex h-[620px] max-h-[85svh] flex-col px-8 pb-8 pt-10 sm:px-12">
+                    <AnimatePresence mode="wait" initial={false}>
+                        {step === "username_setup" && (
+                            <StepShell key="username" reduceMotion={reduceMotion}>
+                                <div className="text-center">
+                                    <p className="font-pixel text-[13px] tracking-[0.2em] text-zinc-500">WELCOME TO WATCHPARTY</p>
+                                    <DialogTitle className="mt-3 text-[26px] font-bold tracking-tight text-white">Claim your handle</DialogTitle>
+                                    <p className="mt-1.5 text-[14px] font-medium text-zinc-500">One name, everywhere on watchparty. You can change it later.</p>
+                                </div>
 
-                {step === "username_setup" && (
-                    <>
-                        <DialogHeader>
-                            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-white/5">
-                                <HugeiconsIcon icon={UserCircleIcon} className="size-7 text-zinc-400" strokeWidth={1.8} />
-                            </div>
-                            <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">Choose your username</DialogTitle>
-                            <DialogDescription className="text-center text-[13px] font-medium text-zinc-500">
-                                Your unique @handle on watchparty
-                            </DialogDescription>
-                        </DialogHeader>
-                        <form
-                            className="space-y-4"
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                handleUsernameSubmit();
-                            }}
-                        >
-                            <div>
-                                <Input
-                                    radius={16}
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => {
-                                        setUsername(e.target.value);
-                                        setError("");
-                                    }}
-                                    placeholder="username"
-                                    autoFocus
-                                    className="h-12 text-center text-[15px] font-semibold tracking-tight"
-                                />
-                                {error ? (
-                                    <p className="mt-2 text-center text-[12px] font-medium text-pastelred">{error}</p>
-                                ) : (
-                                    <p className="mt-2 text-center text-[12px] font-medium text-zinc-600">
-                                        3–20 characters · letters, numbers, underscores and hyphens
+                                {/* Live preview — the handle is the hero */}
+                                <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-4">
+                                    <p
+                                        className={cn(
+                                            "max-w-full truncate px-2 font-pixel text-[clamp(28px,7vw,44px)] leading-none tracking-tight transition-colors duration-200",
+                                            username ? "text-white" : "text-zinc-800",
+                                        )}
+                                    >
+                                        @{username || "yourname"}
                                     </p>
-                                )}
-                            </div>
-                            <Button
-                                type="submit"
-                                size="wide"
-                                className="bg-white font-bold text-black hover:bg-white/90"
-                                disabled={loading || !username.trim()}
-                            >
-                                {loading ? "Saving…" : "Continue"}
-                            </Button>
-                        </form>
-                    </>
-                )}
+                                    <div className="flex h-5 items-center">
+                                        {statusLine && (
+                                            <p
+                                                className={cn(
+                                                    "flex items-center gap-1.5 text-[13px] font-medium transition-colors duration-200",
+                                                    statusLine.tone === "good" && "text-white",
+                                                    statusLine.tone === "bad" && "text-pastelred",
+                                                    statusLine.tone === "muted" && "text-zinc-500",
+                                                )}
+                                            >
+                                                {statusLine.tone === "good" && <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.5} />}
+                                                {statusLine.text}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
 
-                {step === "avatar_setup" && (
-                    <>
-                        <DialogHeader>
-                            <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">Add a profile photo</DialogTitle>
-                            <DialogDescription className="text-center text-[13px] font-medium text-zinc-500">
-                                Help people recognize you, @{username || "you"}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <AvatarUpload
-                                onFileChange={handleFileChange}
-                            />
-                            {error && <p className="text-center text-[12px] font-medium text-pastelred">{error}</p>}
-                            <Button
-                                onClick={handleAvatarUpload}
-                                size="wide"
-                                className="bg-white font-bold text-black hover:bg-white/90"
-                                disabled={loading || !avatarFile}
-                            >
-                                {loading ? "Uploading…" : "Complete profile"}
-                            </Button>
-                        </div>
-                    </>
-                )}
+                                <form
+                                    className="space-y-3"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handleUsernameSubmit();
+                                    }}
+                                >
+                                    <Input
+                                        radius={18}
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => {
+                                            setUsername(e.target.value.trim());
+                                            setError("");
+                                        }}
+                                        placeholder="username"
+                                        autoFocus
+                                        maxLength={20}
+                                        className="h-14 text-center text-[16px] font-semibold tracking-tight"
+                                    />
+                                    {error && <p className="text-center text-[12px] font-medium text-pastelred">{error}</p>}
+                                    <Button
+                                        type="submit"
+                                        size="wide"
+                                        className="bg-white font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
+                                        disabled={loading || !available}
+                                    >
+                                        {loading ? "Claiming…" : available ? `Claim @${username}` : "Claim your handle"}
+                                    </Button>
+                                </form>
+                            </StepShell>
+                        )}
 
-                {step === "complete" && (
-                    <DialogHeader>
-                        <div className="flex flex-col items-center py-2">
-                            <div className="mx-auto mb-4 grid size-14 place-items-center rounded-full bg-white/10">
-                                <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-7 text-white" strokeWidth={2} />
-                            </div>
-                            <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">You&apos;re all set</DialogTitle>
-                            <DialogDescription className="mt-1 text-center text-[13px] font-medium text-zinc-500">
-                                Welcome to watchparty, @{username || "friend"}
-                            </DialogDescription>
-                        </div>
-                    </DialogHeader>
-                )}
+                        {step === "avatar_setup" && (
+                            <StepShell key="avatar" reduceMotion={reduceMotion}>
+                                <div className="text-center">
+                                    <p className="font-pixel text-[13px] tracking-[0.2em] text-zinc-500">@{username.toUpperCase()}</p>
+                                    <DialogTitle className="mt-3 text-[26px] font-bold tracking-tight text-white">Put a face to the name</DialogTitle>
+                                    <p className="mt-1.5 text-[14px] font-medium text-zinc-500">Profiles with a photo get noticed first.</p>
+                                </div>
+
+                                <div className="flex min-h-0 flex-1 items-center justify-center py-4">
+                                    <AvatarUpload onFileChange={handleFileChange} />
+                                </div>
+
+                                <div className="space-y-3">
+                                    {error && <p className="text-center text-[12px] font-medium text-pastelred">{error}</p>}
+                                    <Button
+                                        onClick={handleAvatarUpload}
+                                        size="wide"
+                                        className="bg-white font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
+                                        disabled={loading || !avatarFile}
+                                    >
+                                        {loading ? "Uploading…" : "Complete profile"}
+                                    </Button>
+                                    <button
+                                        onClick={handleSkipAvatar}
+                                        disabled={loading}
+                                        className="h-10 w-full cursor-pointer rounded-full text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white"
+                                    >
+                                        Skip for now
+                                    </button>
+                                </div>
+                            </StepShell>
+                        )}
+
+                        {step === "complete" && (
+                            <StepShell key="complete" reduceMotion={reduceMotion}>
+                                <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                                    <motion.div
+                                        initial={reduceMotion ? false : { scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ type: "spring", duration: 0.5, bounce: 0.25 }}
+                                        className="grid size-16 place-items-center rounded-full bg-white/10"
+                                    >
+                                        <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-8 text-white" strokeWidth={2} />
+                                    </motion.div>
+                                    <div className="text-center">
+                                        <DialogTitle className="text-[26px] font-bold tracking-tight text-white">You&apos;re in</DialogTitle>
+                                        <p className="mt-1.5 font-pixel text-[15px] text-zinc-500">@{username || "friend"}</p>
+                                    </div>
+                                </div>
+                            </StepShell>
+                        )}
+                    </AnimatePresence>
+                </div>
             </DialogContent>
         </Dialog>
     );
