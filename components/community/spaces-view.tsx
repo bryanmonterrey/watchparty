@@ -48,16 +48,16 @@ export function SpacesView() {
     return (
         <ScrollArea className="flex-1 bg-background">
             <div className="flex flex-col p-6 pt-5 max-w-5xl mx-auto">
-                {/* Header — title only (matches Communities), with the action beside it */}
-                <div className="flex items-end gap-4 mb-8">
+                {/* Header */}
+                <div className="mb-7 flex items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-black tracking-tighter text-white">Spaces</h1>
-                        <p className="text-flexwhite/40 mt-1.5 text-lg font-medium">Drop in. Talk live.</p>
+                        <h1 className="text-[24px] font-bold tracking-tight text-white">Spaces</h1>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">Drop in. Talk live.</p>
                     </div>
 
                     <button
                         onClick={() => setCreating((v) => !v)}
-                        className="mb-1 flex items-center gap-2 px-5 py-2.5 rounded-full bg-twitter text-black font-semibold text-sm hover:bg-twitter2 active:scale-95 transition-all"
+                        className="flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-white px-5 text-[13px] font-bold text-black transition-transform hover:bg-white/90 active:scale-95"
                     >
                         {creating ? <X className="size-4" /> : <Plus className="size-4" />}
                         {creating ? "Cancel" : "Start a Space"}
@@ -77,9 +77,9 @@ export function SpacesView() {
                             }}
                             className="overflow-hidden mb-8"
                         >
-                            <div className="rounded-3xl border border-flexwhite/10 bg-white/[0.02] p-5">
-                                <p className="text-sm font-semibold text-flexwhite mb-3">What do you want to talk about?</p>
-                                <div className="flex items-center gap-2 bg-zinc-800/50 rounded-full border border-flexwhite/10 focus-within:ring-1 focus-within:ring-white/20 transition-all pl-4 pr-1.5 py-1.5">
+                            <div className="rounded-3xl bg-white/[0.03] p-5">
+                                <p className="mb-3 text-[14px] font-semibold text-zinc-300">What do you want to talk about?</p>
+                                <div className="flex items-center gap-2 rounded-full bg-white/[0.06] transition-colors focus-within:bg-white/[0.1] pl-4 pr-1.5 py-1.5">
                                     <input
                                         autoFocus
                                         value={title}
@@ -102,24 +102,25 @@ export function SpacesView() {
                 </AnimatePresence>
 
                 {/* Live now */}
-                <h2 className="text-sm font-bold uppercase tracking-wider text-flexwhite/40 mb-4 flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-darkfantasy animate-pulse" />
+                <h2 className="mb-4 flex items-center gap-2 text-[14px] font-semibold text-zinc-500">
+                    <span className="size-2 animate-pulse rounded-full bg-pastelred" />
                     Live now
                 </h2>
 
                 {live.isLoading ? (
                     <SpacesSkeleton />
                 ) : spaces.length === 0 ? (
-                    <div className="relative rounded-[28px] border border-flexwhite/10 overflow-hidden">
-                        <div className="absolute inset-0 bg-zinc-900/60" />
-                        <div className="relative flex flex-col items-center justify-center py-20 px-6 text-center">
-                            <div className="size-20 rounded-full bg-white/5 border border-flexwhite/10 flex items-center justify-center mb-6">
-                                <Radio className="size-9 text-flexwhite/30" />
+                    <div className="rounded-[28px] bg-white/[0.03] px-6 py-16">
+                        <div className="flex flex-col items-center gap-5 text-center">
+                            <div className="grid size-16 place-items-center rounded-full bg-white/5">
+                                <Radio className="size-7 text-zinc-500" />
                             </div>
-                            <h3 className="text-xl font-bold text-flexwhite mb-1.5">No live Spaces right now</h3>
-                            <p className="text-flexwhite/40 text-sm max-w-sm">
-                                Be the first — start a Space and your communities can drop in.
-                            </p>
+                            <div className="space-y-1.5">
+                                <h3 className="text-[20px] font-bold tracking-tight text-white">No live Spaces right now</h3>
+                                <p className="max-w-sm text-[13px] font-medium leading-relaxed text-zinc-500">
+                                    Be the first — start a Space and your communities can drop in.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -132,11 +133,11 @@ export function SpacesView() {
                                 transition={{ delay: i * 0.04, type: "spring", damping: 22, stiffness: 120 }}
                                 onClick={() => join.mutate({ spaceId: s.id })}
                                 disabled={join.isPending}
-                                className="group text-left rounded-3xl border border-flexwhite/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-darkfantasy/30 p-5 transition-all"
+                                className="group cursor-pointer text-left rounded-3xl bg-white/[0.03] hover:bg-white/[0.06] p-5 transition-colors disabled:opacity-60"
                             >
                                 <div className="flex items-center gap-2 mb-4">
-                                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-darkfantasy">
-                                        <span className="h-2 w-2 rounded-full bg-darkfantasy animate-pulse" />
+                                    <span className="flex items-center gap-1.5 rounded-full bg-pastelred/15 px-2 py-0.5 text-[11px] font-bold tracking-wide text-pastelred">
+                                        <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
                                         LIVE
                                     </span>
                                     <span className="ml-auto flex items-center gap-1 text-xs text-flexwhite/40">

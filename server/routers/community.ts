@@ -65,7 +65,37 @@ export const communityRouter = router({
             ));
         const unreadSet = new Set(unreadServers.map((r) => r.serverId));
 
-        return servers.map((s) => ({ ...s, hasUnread: unreadSet.has(s.id) }));
+        // Mention counts: unread messages containing @myusername, per server.
+        const [me] = await db.select({ username: user.username }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+        let mentionMap = new Map<string, number>();
+        if (me?.username) {
+            const mentionRows = await db
+                .select({ serverId: communityChannels.serverId, cnt: count() })
+                .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+                .innerJoin(communityMembers, and(
+                    eq(communityMembers.serverId, communityChannels.serverId),
+                    eq(communityMembers.userId, ctx.user.id),
+                ))
+                .leftJoin(communityChannelReads, and(
+                    eq(communityChannelReads.channelId, communityChannels.id),
+                    eq(communityChannelReads.memberId, communityMembers.id),
+                ))
+                .where(and(
+                    ne(communityMessages.memberId, communityMembers.id),
+                    eq(communityMessages.deleted, false),
+                    sql`${communityMessages.createdAt} > COALESCE(${communityChannelReads.lastReadAt}, 'epoch'::timestamptz)`,
+                    sql`${communityMessages.content} ILIKE ${'%@' + me.username + '%'}`,
+                ))
+                .groupBy(communityChannels.serverId);
+            mentionMap = new Map(mentionRows.map((r) => [r.serverId, Number(r.cnt)]));
+        }
+
+        return servers.map((s) => ({
+            ...s,
+            hasUnread: unreadSet.has(s.id),
+            mentionCount: mentionMap.get(s.id) ?? 0,
+        }));
     }),
 
     /** Quick switcher: every channel across the user's servers + unread counts */

@@ -59,6 +59,7 @@ export function CommunityServerList() {
                             name={server.name}
                             imageUrl={server.imageUrl}
                             hasUnread={server.hasUnread}
+                            mentionCount={server.mentionCount}
                         />
                     ))}
 

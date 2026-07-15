@@ -10,9 +10,10 @@ type CommunityServerIconProps = {
     imageUrl: string | null;
     name: string;
     hasUnread?: boolean;
+    mentionCount?: number;
 };
 
-export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false }: CommunityServerIconProps) {
+export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false, mentionCount = 0 }: CommunityServerIconProps) {
     const params = useParams();
     const router = useRouter();
     const isActive = params?.serverId === id;
@@ -58,11 +59,25 @@ export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false }: C
                                 </Squircle>
                             </div>
                         </Squircle>
-                        {hasUnread && !isActive && (
+                        {/* Left-edge state pill (the Discord anatomy): tall =
+                            active server, short = unread, grows on hover. */}
+                        <span
+                            aria-hidden
+                            className={cn(
+                                "absolute left-0 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-white transition-all duration-200",
+                                isActive ? "h-9 opacity-100"
+                                    : hasUnread ? "h-2.5 opacity-100 group-hover:h-5"
+                                    : "h-2.5 opacity-0 group-hover:h-5 group-hover:opacity-100",
+                            )}
+                        />
+                        {/* Mention badge, bottom-right */}
+                        {mentionCount > 0 && (
                             <span
-                                aria-label="Unread activity"
-                                className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-white ring-2 ring-black"
-                            />
+                                aria-label={`${mentionCount} mentions`}
+                                className="absolute -bottom-0.5 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-pastelred px-1 text-[10px] font-bold leading-none text-white ring-[3px] ring-black"
+                            >
+                                {mentionCount > 99 ? "99+" : mentionCount}
+                            </span>
                         )}
                     </button>
                 </TooltipTrigger>

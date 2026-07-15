@@ -50,10 +50,10 @@ export function FriendsView() {
 
     return (
         <div className="flex flex-col h-full bg-background">
-            {/* Tab bar */}
-            <div className="h-14 shrink-0 px-4 flex items-center gap-1 border-b border-flexwhite/15">
-                <div className="flex items-center gap-2 mr-2 text-flexwhite font-bold">
-                    <Users className="size-5 text-flexwhite/50" />
+            {/* Header — same anatomy/height as the server chat header */}
+            <div className="h-17 shrink-0 px-4 flex items-center gap-1">
+                <div className="flex items-center gap-2 mr-2 text-lg font-semibold text-flexwhite">
+                    <Users className="size-6 text-flexwhite/40" />
                     Friends
                 </div>
                 <span className="h-5 w-px bg-flexwhite/10 mx-2" />
@@ -83,7 +83,7 @@ export function FriendsView() {
             </div>
 
             <ScrollArea className="flex-1">
-                <div className="p-6 max-w-3xl mx-auto">
+                <div className="max-w-2xl p-5">
                     {tab === "Add Friend" ? (
                         <AddFriendPanel onAdded={invalidate} />
                     ) : tab === "Pending" ? (
@@ -179,7 +179,7 @@ export function FriendsView() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-flexwhite/40 mb-2 px-1">
+            <h3 className="mb-2 px-1 text-[13px] font-semibold text-zinc-500">
                 {title}
             </h3>
             <div className="space-y-0.5">{children}</div>
@@ -209,7 +209,7 @@ function FriendRow({
                     <span
                         className={cn(
                             "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-black",
-                            user.isOnline ? "bg-twitter shadow-[0_0_6px_var(--color-twitter)]" : "bg-zinc-600"
+                            user.isOnline ? "bg-lantern" : "bg-zinc-600"
                         )}
                     />
                 )}
@@ -277,11 +277,11 @@ function AddFriendPanel({ onAdded }: { onAdded: () => void }) {
 
     return (
         <div>
-            <h2 className="text-lg font-bold text-flexwhite mb-1">Add Friend</h2>
-            <p className="text-sm text-flexwhite/40 mb-5">You can add friends with their username.</p>
+            <h2 className="mb-1 text-[20px] font-bold tracking-tight text-white">Add a friend</h2>
+            <p className="mb-5 text-[13px] font-medium text-zinc-500">You can add friends with their username.</p>
             <form
                 onSubmit={onSubmit}
-                className="flex items-center gap-2 bg-zinc-800/50 rounded-full border border-flexwhite/10 focus-within:ring-1 focus-within:ring-white/20 transition-all pl-4 pr-1.5 py-1.5"
+                className="flex items-center gap-2 bg-white/[0.06] rounded-full focus-within:bg-white/[0.1] transition-colors pl-4 pr-1.5 py-1.5"
             >
                 <span className="text-flexwhite/30 text-sm">@</span>
                 <input
@@ -318,12 +318,14 @@ function EmptyFriends({ tab }: { tab: Tab }) {
     };
     const { title, sub } = copy[tab];
     return (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="size-20 rounded-full bg-white/5 border border-flexwhite/10 flex items-center justify-center mb-6">
-                <Search className="size-9 text-flexwhite/25" />
+        <div className="flex flex-col items-start gap-5 px-1 py-16">
+            <div className="grid size-16 place-items-center rounded-full bg-white/5">
+                <Search className="size-7 text-zinc-500" />
             </div>
-            <h3 className="text-lg font-bold text-flexwhite mb-1.5">{title}</h3>
-            <p className="text-flexwhite/40 text-sm max-w-xs">{sub}</p>
+            <div className="space-y-1.5">
+                <h3 className="text-[20px] font-bold tracking-tight text-white">{title}</h3>
+                <p className="max-w-xs text-[13px] font-medium leading-relaxed text-zinc-500">{sub}</p>
+            </div>
         </div>
     );
 }
