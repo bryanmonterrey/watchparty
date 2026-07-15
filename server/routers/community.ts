@@ -370,6 +370,10 @@ export const communityRouter = router({
                 imageUrl: z.string().optional(),
                 tag: z.string().max(8).nullable().optional(),
                 automodKeywords: z.string().max(2000).nullable().optional(),
+                bannerColor: z.string().max(64).nullable().optional(),
+                description: z.string().max(500).nullable().optional(),
+                traits: z.string().max(300).nullable().optional(),
+                privateProfile: z.boolean().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -382,6 +386,10 @@ export const communityRouter = router({
                     ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
                     ...(input.tag !== undefined && { tag: input.tag ? input.tag.trim().toUpperCase() : null }),
                     ...(input.automodKeywords !== undefined && { automodKeywords: input.automodKeywords }),
+                    ...(input.bannerColor !== undefined && { bannerColor: input.bannerColor }),
+                    ...(input.description !== undefined && { description: input.description?.trim() || null }),
+                    ...(input.traits !== undefined && { traits: input.traits }),
+                    ...(input.privateProfile !== undefined && { privateProfile: input.privateProfile }),
                     updatedAt: new Date(),
                 })
                 .where(eq(communityServers.id, input.serverId))
@@ -416,6 +424,45 @@ export const communityRouter = router({
 
             await logAudit(input.serverId, ctx.user.id, "invite.regenerate", "regenerated the invite link");
             return { inviteCode: updated.inviteCode };
+        }),
+
+    /** Invite-link landing data. Private profiles reveal only name + icon. */
+    getInvitePreview: protectedProcedure
+        .input(z.object({ inviteCode: z.string().min(1) }))
+        .query(async ({ ctx, input }) => {
+            const [server] = await db
+                .select()
+                .from(communityServers)
+                .where(eq(communityServers.inviteCode, input.inviteCode))
+                .limit(1);
+            if (!server) throw new TRPCError({ code: "NOT_FOUND", message: "This invite is invalid or expired" });
+
+            const [member] = await db
+                .select({ id: communityMembers.id })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, server.id), eq(communityMembers.userId, ctx.user.id)))
+                .limit(1);
+
+            const [{ n: memberCount }] = await db
+                .select({ n: count() })
+                .from(communityMembers)
+                .where(eq(communityMembers.serverId, server.id));
+
+            const isPrivate = !!server.privateProfile && !member;
+            return {
+                serverId: member ? server.id : null,
+                alreadyMember: !!member,
+                invitesPaused: !!server.invitesPaused,
+                name: server.name,
+                imageUrl: server.imageUrl,
+                tag: isPrivate ? null : server.tag,
+                bannerColor: isPrivate ? null : server.bannerColor,
+                description: isPrivate ? null : server.description,
+                traits: isPrivate ? null : server.traits,
+                memberCount: isPrivate ? null : Number(memberCount),
+                createdAt: isPrivate ? null : server.createdAt,
+                privateProfile: isPrivate,
+            };
         }),
 
     /** Join a server via invite code */

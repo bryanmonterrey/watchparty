@@ -17,6 +17,14 @@ export const communityServers = pgTable('community_servers', {
     automodKeywords: text('automod_keywords'),
     // Access: while true, joins via invite link are rejected
     invitesPaused: boolean('invites_paused'),
+    // Profile card: flat CSS banner color (no gradients)
+    bannerColor: text('banner_color'),
+    // "Why should people join" — shown on the invite page
+    description: text('description'),
+    // Comma-separated personality chips (max 5, app-enforced)
+    traits: text('traits'),
+    // When true, invite links show only name + icon
+    privateProfile: boolean('private_profile'),
     inviteCode: text('invite_code').notNull().unique(),
     ownerId: text('owner_id')
         .references(() => user.id, { onDelete: 'cascade' })

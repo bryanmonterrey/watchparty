@@ -30,6 +30,7 @@ import { trpc } from "@/lib/trpc/client";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { ADMIN_ONLY_SECTIONS, sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
+import { ServerProfileCard, BANNER_COLORS, DEFAULT_BANNER, parseTraits } from "./server-profile-card";
 import { Switch } from "@/components/ui/switch";
 import { Squircle } from "@/components/ui/squircle";
 import type { CommunityChannel, CommunityServer } from "@/db/schema/community";
@@ -103,7 +104,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
             </div>
 
             <ScrollArea className="flex-1">
-                <div className="max-w-2xl p-6">
+                <div className={cn("p-6", active === "profile" ? "max-w-5xl" : "max-w-2xl")}>
                     {active === "profile" && isAdmin && <ProfileSection server={server} memberCount={members.length} />}
                     {active === "tag" && isAdmin && <TagSection server={server} />}
                     {active === "engagement" && <EngagementSection serverId={server.id} />}
@@ -166,6 +167,11 @@ function ActionButton({
 function ProfileSection({ server, memberCount }: { server: CommunityServer; memberCount: number }) {
     const utils = trpc.useUtils();
     const [name, setName] = useState(server.name);
+    const [description, setDescription] = useState(server.description ?? "");
+    const [bannerColor, setBannerColor] = useState(server.bannerColor ?? DEFAULT_BANNER);
+    const [traits, setTraits] = useState<string[]>(parseTraits(server.traits));
+    const [traitInput, setTraitInput] = useState("");
+    const [privateProfile, setPrivateProfile] = useState(!!server.privateProfile);
     const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -176,7 +182,21 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
     const updateServer = trpc.community.updateServer.useMutation();
 
     const previewSrc = iconDataUrl ?? server.imageUrl ?? null;
-    const dirty = name.trim() !== server.name || !!iconDataUrl;
+    const traitsStr = traits.join(",");
+    const dirty =
+        name.trim() !== server.name ||
+        !!iconDataUrl ||
+        description.trim() !== (server.description ?? "") ||
+        bannerColor !== (server.bannerColor ?? DEFAULT_BANNER) ||
+        traitsStr !== (server.traits ?? "") ||
+        privateProfile !== !!server.privateProfile;
+
+    const addTrait = () => {
+        const t = traitInput.replace(/,/g, "").trim().slice(0, 24);
+        if (!t || traits.length >= 5 || traits.some((x) => x.toLowerCase() === t.toLowerCase())) return;
+        setTraits((prev) => [...prev, t]);
+        setTraitInput("");
+    };
 
     const applyCrop = async () => {
         const state = cropStateRef.current;
@@ -207,6 +227,10 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
             await updateServer.mutateAsync({
                 serverId: server.id,
                 name: name.trim(),
+                description: description.trim() || null,
+                bannerColor: bannerColor === DEFAULT_BANNER ? null : bannerColor,
+                traits: traitsStr || null,
+                privateProfile,
                 ...(imageUrl ? { imageUrl } : {}),
             });
             utils.community.listServers.invalidate();
@@ -222,86 +246,176 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
 
     return (
         <div>
-            <SectionHint>How your server shows up in invites, the rail, and the name menu.</SectionHint>
+            <SectionHint>How your server shows up on invite links and around the app.</SectionHint>
 
-            {/* Preview card */}
-            <div className="mb-8 flex items-center gap-4 rounded-3xl bg-white/[0.03] p-5">
-                <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-[20px] bg-black4">
-                    {previewSrc ? (
-                        <img src={previewSrc} alt="" className="size-full object-cover" />
-                    ) : (
-                        <span className="text-[20px] font-bold text-white/90">{name.charAt(0).toUpperCase() || "?"}</span>
-                    )}
-                </div>
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <p className="truncate text-[17px] font-bold tracking-tight text-white">{name.trim() || server.name}</p>
-                        {server.tag && (
-                            <span className="shrink-0 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[12px] font-bold tracking-wide text-zinc-200">
-                                {server.tag}
-                            </span>
-                        )}
+            <div className="flex flex-col gap-8 xl:flex-row xl:items-start">
+                {/* Form */}
+                <div className="min-w-0 flex-1">
+                    {/* Name */}
+                    <div className="mb-6">
+                        <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Name</p>
+                        <Input
+                            radius={14}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            maxLength={100}
+                            className="h-13 text-[15px] font-semibold"
+                        />
                     </div>
-                    <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
-                        {memberCount} member{memberCount === 1 ? "" : "s"} · Est. {format(new Date(server.createdAt), "MMM yyyy")}
-                    </p>
-                </div>
-            </div>
 
-            {/* Name */}
-            <div className="mb-6">
-                <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Name</p>
-                <Input
-                    radius={14}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    maxLength={100}
-                    className="h-13 text-[15px] font-semibold"
-                />
-            </div>
+                    {/* Icon */}
+                    <div className="mb-7">
+                        <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Icon</p>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className={cn(
+                                    "group relative grid size-20 cursor-pointer place-items-center overflow-hidden rounded-[24px] transition-colors",
+                                    previewSrc ? "" : "border border-dashed border-white/15 hover:border-white/30",
+                                )}
+                            >
+                                {previewSrc ? (
+                                    <>
+                                        <img src={previewSrc} alt="" className="size-full object-cover" />
+                                        <span className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                            <HugeiconsIcon icon={ImageUploadIcon} className="size-5 text-white" strokeWidth={2} />
+                                        </span>
+                                    </>
+                                ) : (
+                                    <HugeiconsIcon icon={ImageUploadIcon} className="size-6 text-zinc-600 transition-colors group-hover:text-zinc-300" strokeWidth={2} />
+                                )}
+                            </button>
+                            <ActionButton variant="soft" onClick={() => fileInputRef.current?.click()}>
+                                Change icon
+                            </ActionButton>
+                        </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) setCropFile(f);
+                                e.target.value = "";
+                            }}
+                        />
+                    </div>
 
-            {/* Icon */}
-            <div className="mb-8">
-                <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Icon</p>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className={cn(
-                            "group relative grid size-20 cursor-pointer place-items-center overflow-hidden rounded-[24px] transition-colors",
-                            previewSrc ? "" : "border border-dashed border-white/15 hover:border-white/30",
+                    {/* Banner color */}
+                    <div className="mb-7">
+                        <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Banner</p>
+                        <div className="grid grid-cols-4 gap-2">
+                            {BANNER_COLORS.map((c) => (
+                                <button
+                                    key={c.name}
+                                    aria-label={`${c.name} banner`}
+                                    title={c.name}
+                                    onClick={() => setBannerColor(c.value)}
+                                    className={cn(
+                                        "h-14 cursor-pointer rounded-2xl transition-all",
+                                        bannerColor === c.value && "ring-2 ring-white ring-offset-2 ring-offset-background",
+                                    )}
+                                    style={{ backgroundColor: c.value }}
+                                />
+                            ))}
+                        </div>
+                        <p className="mt-1.5 px-1 text-[13px] font-medium text-zinc-600">Flat color behind your icon on the profile card.</p>
+                    </div>
+
+                    {/* Traits */}
+                    <div className="mb-7">
+                        <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Traits</p>
+                        {traits.length > 0 && (
+                            <div className="mb-2 flex flex-wrap gap-1.5">
+                                {traits.map((t) => (
+                                    <span
+                                        key={t}
+                                        className="flex items-center gap-1.5 rounded-full bg-white/[0.06] py-1.5 pl-3 pr-1.5 text-[14px] font-semibold text-zinc-200"
+                                    >
+                                        {t}
+                                        <button
+                                            onClick={() => setTraits((prev) => prev.filter((x) => x !== t))}
+                                            aria-label={`Remove ${t}`}
+                                            className="grid size-5 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
+                                        >
+                                            <HugeiconsIcon icon={Cancel01Icon} className="size-2.5" strokeWidth={2.5} />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
                         )}
-                    >
-                        {previewSrc ? (
-                            <>
-                                <img src={previewSrc} alt="" className="size-full object-cover" />
-                                <span className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                                    <HugeiconsIcon icon={ImageUploadIcon} className="size-5 text-white" strokeWidth={2} />
-                                </span>
-                            </>
-                        ) : (
-                            <HugeiconsIcon icon={ImageUploadIcon} className="size-6 text-zinc-600 transition-colors group-hover:text-zinc-300" strokeWidth={2} />
+                        {traits.length < 5 && (
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    radius={14}
+                                    value={traitInput}
+                                    onChange={(e) => setTraitInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            addTrait();
+                                        }
+                                    }}
+                                    placeholder="crypto, memes, movie nights…"
+                                    maxLength={24}
+                                    className="h-12 flex-1 text-[14px] font-semibold"
+                                />
+                                <ActionButton variant="soft" className="h-12 px-5" onClick={addTrait} disabled={!traitInput.trim()}>
+                                    Add
+                                </ActionButton>
+                            </div>
                         )}
-                    </button>
-                    <ActionButton variant="soft" onClick={() => fileInputRef.current?.click()}>
-                        Change icon
+                        <p className="mt-1.5 px-1 text-[13px] font-medium text-zinc-600">
+                            Up to 5 chips that show off your server&apos;s personality. {5 - traits.length} left.
+                        </p>
+                    </div>
+
+                    {/* Description */}
+                    <div className="mb-7">
+                        <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Description</p>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Why should people join?"
+                            rows={4}
+                            maxLength={500}
+                            className="w-full resize-none rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[15px] font-medium text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.06]"
+                        />
+                    </div>
+
+                    {/* Private profile */}
+                    <label className="mb-8 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[15px] font-bold text-white">Private profile</p>
+                            <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                                Invite links show only your name and icon — no banner, description, traits, or member count.
+                            </p>
+                        </div>
+                        <Switch checked={privateProfile} onCheckedChange={setPrivateProfile} disabled={saving} />
+                    </label>
+
+                    <ActionButton onClick={save} disabled={!dirty || !name.trim() || saving}>
+                        {saving ? "Saving…" : "Save changes"}
                     </ActionButton>
                 </div>
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) setCropFile(f);
-                        e.target.value = "";
-                    }}
-                />
-            </div>
 
-            <ActionButton onClick={save} disabled={!dirty || !name.trim() || saving}>
-                {saving ? "Saving…" : "Save changes"}
-            </ActionButton>
+                {/* Live preview — exactly what an invite link shows */}
+                <div className="w-full shrink-0 self-start xl:sticky xl:top-6 xl:w-80">
+                    <p className="mb-2 px-1 text-[14px] font-semibold text-zinc-500">Invite preview</p>
+                    <ServerProfileCard
+                        name={name.trim() || server.name}
+                        imageUrl={previewSrc}
+                        tag={server.tag}
+                        bannerColor={bannerColor}
+                        description={description}
+                        traits={traitsStr}
+                        memberCount={memberCount}
+                        createdAt={server.createdAt}
+                        isPrivate={privateProfile}
+                    />
+                </div>
+            </div>
 
             {cropFile && (
                 <Dialog open onOpenChange={(o) => { if (!o) { setCropFile(null); cropStateRef.current = null; } }}>
