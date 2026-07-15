@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Squircle } from "@/components/ui/squircle";
@@ -45,11 +44,10 @@ export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false }: C
                                         )}
                                     >
                                         {imageUrl ? (
-                                            <Image
+                                            <img
                                                 src={imageUrl}
                                                 alt={name}
-                                                fill
-                                                className="object-cover"
+                                                className="absolute inset-0 size-full object-cover"
                                             />
                                         ) : (
                                             <span className="text-black font-semibold text-lg">

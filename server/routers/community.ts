@@ -68,6 +68,58 @@ export const communityRouter = router({
         return servers.map((s) => ({ ...s, hasUnread: unreadSet.has(s.id) }));
     }),
 
+    /** Quick switcher: every channel across the user's servers + unread counts */
+    quickSwitch: protectedProcedure.query(async ({ ctx }) => {
+        const rows = await db
+            .select({
+                channelId: communityChannels.id,
+                channelName: communityChannels.name,
+                channelType: communityChannels.type,
+                serverId: communityServers.id,
+                serverName: communityServers.name,
+                serverImage: communityServers.imageUrl,
+                position: communityChannels.position,
+                createdAt: communityChannels.createdAt,
+            })
+            .from(communityChannels)
+            .innerJoin(communityServers, eq(communityChannels.serverId, communityServers.id))
+            .innerJoin(communityMembers, and(
+                eq(communityMembers.serverId, communityServers.id),
+                eq(communityMembers.userId, ctx.user.id),
+            ))
+            .orderBy(asc(communityServers.createdAt), sql`${communityChannels.position} ASC NULLS LAST`, asc(communityChannels.createdAt));
+
+        const unread = await db
+            .select({ channelId: communityMessages.channelId, cnt: count() })
+            .from(communityMessages)
+            .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+            .innerJoin(communityMembers, and(
+                eq(communityMembers.serverId, communityChannels.serverId),
+                eq(communityMembers.userId, ctx.user.id),
+            ))
+            .leftJoin(communityChannelReads, and(
+                eq(communityChannelReads.channelId, communityChannels.id),
+                eq(communityChannelReads.memberId, communityMembers.id),
+            ))
+            .where(and(
+                ne(communityMessages.memberId, communityMembers.id),
+                eq(communityMessages.deleted, false),
+                sql`${communityMessages.createdAt} > COALESCE(${communityChannelReads.lastReadAt}, 'epoch'::timestamptz)`,
+            ))
+            .groupBy(communityMessages.channelId);
+        const unreadMap = new Map(unread.map((r) => [r.channelId, Number(r.cnt)]));
+
+        return rows.map((r) => ({
+            channelId: r.channelId,
+            channelName: r.channelName,
+            channelType: r.channelType,
+            serverId: r.serverId,
+            serverName: r.serverName,
+            serverImage: r.serverImage,
+            unreadCount: unreadMap.get(r.channelId) ?? 0,
+        }));
+    }),
+
     /** Get a server by ID with channels + members */
     getServer: protectedProcedure
         .input(z.object({ serverId: z.string().uuid() }))

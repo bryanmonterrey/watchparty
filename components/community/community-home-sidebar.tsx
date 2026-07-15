@@ -4,13 +4,14 @@ import { Home, MessageSquare, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useCommunityModal } from "@/hooks/use-community-modal";
+import { useState } from "react";
+import { CommunityQuickSwitcher } from "./community-quick-switcher";
 import { CommunitiesIcon, WaveIcon, TeamIcon, SearchIcon, MicIcon } from "../icons";
 
 export function CommunityHomeSidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { onOpen } = useCommunityModal();
+    const [searchOpen, setSearchOpen] = useState(false);
 
     const routes = [
         {
@@ -37,8 +38,8 @@ export function CommunityHomeSidebar() {
         <div className="flex flex-col h-full md:h-auto py-4 w-76 shrink-0 md:my-3 md:rounded-3xl md:bg-white/[0.03] overflow-hidden">
             <div className="p-3 -mt-1 px-2 h-12 flex items-center text-lg justify-center">
                 <button
-                    onClick={() => onOpen("createServer")}
-                    className="relative cursor-pointer placeholder:text-lg text-lg gap-2.5 flex items-center justify-start text-zinc-500 bg-zinc-600/10 hover:bg-zinc-600/20 border border-zinc-500/5 rounded-full transition-colors w-full px-4 py-3"
+                    onClick={() => setSearchOpen(true)}
+                    className="relative cursor-pointer text-lg gap-2.5 flex items-center justify-start text-zinc-500 bg-zinc-600/10 hover:bg-zinc-600/20 rounded-full transition-colors w-full px-4 py-3"
                 >
                     <SearchIcon className="w-7 h-7 text-zinc-500" />
                     Search
@@ -67,6 +68,8 @@ export function CommunityHomeSidebar() {
                     ))}
                 </div>
             </ScrollArea>
+
+            <CommunityQuickSwitcher open={searchOpen} onOpenChange={setSearchOpen} />
         </div>
     );
 }
