@@ -21,7 +21,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       // Height standard: the longer a button runs, the taller it gets.
-      // h-11 default → h-12 wide (w-full in a form/panel) → h-20 hero
+      // h-11 default → h-12 wide (w-full in a form/panel) → h-18 hero
       // (full-width CTA in a big ceremonial dialog: onboarding, upgrade,
       // crop). Don't restate heights in className; pick the size variant.
       size: {
@@ -29,7 +29,7 @@ const buttonVariants = cva(
         sm: "h-8 rounded-full gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-12 rounded-full px-6 has-[>svg]:px-4",
         wide: "h-12 w-full rounded-full px-6 has-[>svg]:px-4",
-        hero: "h-20 w-full rounded-full px-8 text-[16px] font-bold has-[>svg]:px-6",
+        hero: "h-18 w-full rounded-full px-8 text-[16px] font-bold has-[>svg]:px-6",
         icon: "size-11",
         "icon-sm": "size-8",
         "icon-lg": "size-12",

@@ -21,9 +21,9 @@ export default function MessagesPage() {
         <ChatProvider>
             {/* Mobile: list fills the screen; opening a conversation swaps to a
                 full-screen chat. Desktop keeps the 3/6 split, edge to edge. */}
-            <div className="grid h-[calc(100svh-var(--header-height))] w-screen grid-cols-1 overflow-hidden md:mt-header md:grid-cols-9">
+            <div className="grid h-[calc(100svh-var(--header-height))] w-screen grid-cols-1 overflow-hidden md:h-svh md:grid-cols-9">
                 <div
-                    className={`h-full md:col-span-3 md:block md:border-r md:border-flexwhite/10 ${selectedConversationId ? "hidden" : "block"}`}
+                    className={`h-full md:col-span-3 md:block md:border-r md:border-flexwhite/10 md:pt-[var(--header-height)] ${selectedConversationId ? "hidden" : "block"}`}
                 >
                     <ConversationList
                         selectedConversationId={selectedConversationId}
@@ -32,7 +32,7 @@ export default function MessagesPage() {
                 </div>
 
                 <div
-                    className={`h-full min-h-0 md:col-span-6 md:block ${selectedConversationId ? "block" : "hidden"}`}
+                    className={`h-full min-h-0 md:col-span-6 md:block md:pt-[var(--header-height)] ${selectedConversationId ? "block" : "hidden"}`}
                 >
                     {selectedConversationId ? (
                         <MessagesProvider conversationId={selectedConversationId}>

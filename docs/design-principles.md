@@ -43,10 +43,10 @@ References (in `docs/references/`, named by what they exemplify):
   squircled element. Pick one radius scale per surface and hold it.
 - **Button heights (the standard — don't restate per button)**: the longer a
   button runs, the taller it gets. **h-11** default → **h-12** wide (w-full /
-  flex-1 CTAs in forms and panels) → **h-20 hero** (the full-width CTA in a
+  flex-1 CTAs in forms and panels) → **h-18 hero** (the full-width CTA in a
   big ceremonial dialog: onboarding, upgrade, crop). The primitives encode
   this — `components/ui/button.tsx` (`size="default"` = h-11, `size="lg"`/
-  `size="wide"` = h-12, `size="hero"` = h-20 w-full 16px bold) and the
+  `size="wide"` = h-12, `size="hero"` = h-18 w-full 16px bold) and the
   settings kit's `PillButton` (h-11 default; pass `h-12` with `w-full`/
   `flex-1`). Never hand-set other heights on buttons; compact list-row
   *chips* (py-1.5 text-12 actions inside rows) are chips, not buttons, and

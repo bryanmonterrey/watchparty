@@ -142,7 +142,7 @@ export default function SeedPhraseDisplay({
                     <button
                         onClick={handleConfirmClick}
                         disabled={!confirmed}
-                        className="h-20 w-full cursor-pointer rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
+                        className="h-18 w-full cursor-pointer rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
                     >
                         I saved my phrase
                     </button>

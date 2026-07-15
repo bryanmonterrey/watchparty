@@ -7,7 +7,7 @@ import { authClient } from '@/lib/auth/client';
 import { storeFrostClientShare } from '@/lib/frost/frost-storage';
 import SeedPhraseDisplay from '@/components/wallet/seed-phrase-display';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { SquareLock02Icon, Wallet01Icon } from '@hugeicons/core-free-icons';
+import { Wallet01Icon } from '@hugeicons/core-free-icons';
 import {
     Dialog,
     DialogContent,
@@ -18,7 +18,10 @@ import {
 
 type Step = 'cta' | 'generating' | 'seed_phrase';
 
-export function WalletSetupCta() {
+// `variant="drawer"` (default) is the wallet drawer's full empty state;
+// `variant="inline"` renders ONLY the create button (+ error + seed dialog)
+// so other surfaces (messages encryption gate) can compose their own copy.
+export function WalletSetupCta({ variant = 'drawer' }: { variant?: 'drawer' | 'inline' } = {}) {
     const [step, setStep] = useState<Step>('cta');
     const [mnemonic, setMnemonic] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -62,6 +65,55 @@ export function WalletSetupCta() {
         router.refresh();
     }, [queryClient, router]);
 
+    const seedDialog = (
+        <Dialog open={step === 'seed_phrase' && !!mnemonic} onOpenChange={() => {}}>
+            <DialogContent
+                className="sm:max-w-md rounded-4xl"
+                showCloseButton={false}
+                onPointerDownOutside={e => e.preventDefault()}
+            >
+                <DialogHeader>
+                    <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">
+                        Save your recovery phrase
+                    </DialogTitle>
+                    <DialogDescription className="text-center text-[13px] font-medium text-zinc-500">
+                        12 words, in order — the only way to recover this wallet.
+                    </DialogDescription>
+                </DialogHeader>
+                {mnemonic && (
+                    <SeedPhraseDisplay
+                        mnemonic={mnemonic}
+                        onConfirm={handlePhraseConfirmed}
+                        showConfirmation={true}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+
+    if (variant === 'inline') {
+        return (
+            <>
+                <button
+                    onClick={handleCreate}
+                    disabled={step === 'generating'}
+                    className="flex h-18 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white/5 text-[15px] font-bold text-zinc-200 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {step === 'generating' ? (
+                        <>
+                            <span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                            Creating your wallet…
+                        </>
+                    ) : 'Create a new wallet'}
+                </button>
+                {error && (
+                    <p className="text-center text-[13px] font-medium text-pastelred">{error}</p>
+                )}
+                {seedDialog}
+            </>
+        );
+    }
+
     return (
         <>
             {/* CTA always rendered in the drawer */}
@@ -78,11 +130,6 @@ export function WalletSetupCta() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-600">
-                        <HugeiconsIcon icon={SquareLock02Icon} className="size-3.5" strokeWidth={2} />
-                        Keys split with MPC — only you can spend
-                    </div>
-
                     {error && (
                         <p className="text-center text-[13px] font-medium text-pastelred">{error}</p>
                     )}
@@ -91,8 +138,8 @@ export function WalletSetupCta() {
                 <button
                     onClick={handleCreate}
                     disabled={step === 'generating'}
-                    className="flex h-20 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                    className="mb-4 mt-8 flex h-18 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+>
                     {step === 'generating' ? (
                         <>
                             <span className="size-4 animate-spin rounded-full border-2 border-black/25 border-t-black" />
@@ -103,29 +150,7 @@ export function WalletSetupCta() {
             </div>
 
             {/* Seed phrase shown in a full dialog on top */}
-            <Dialog open={step === 'seed_phrase' && !!mnemonic} onOpenChange={() => {}}>
-                <DialogContent
-                    className="sm:max-w-md rounded-4xl"
-                    showCloseButton={false}
-                    onPointerDownOutside={e => e.preventDefault()}
-                >
-                    <DialogHeader>
-                        <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">
-                            Save your recovery phrase
-                        </DialogTitle>
-                        <DialogDescription className="text-center text-[13px] font-medium text-zinc-500">
-                            12 words, in order — the only way to recover this wallet.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {mnemonic && (
-                        <SeedPhraseDisplay
-                            mnemonic={mnemonic}
-                            onConfirm={handlePhraseConfirmed}
-                            showConfirmation={true}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
+            {seedDialog}
         </>
     );
 }
