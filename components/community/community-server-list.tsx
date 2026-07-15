@@ -20,7 +20,7 @@ export function CommunityServerList() {
     const onHome = !/^\/communities\/[0-9a-fA-F-]{20,}/.test(pathname);
 
     return (
-        <div className="flex flex-col items-center gap-3.5 py-3 h-full w-[104px] shrink-0">
+        <div className="flex flex-col items-center gap-3.5 py-3 h-full w-[112px] shrink-0">
             {/* Home */}
             <TooltipProvider delayDuration={50}>
                 <Tooltip>
@@ -50,7 +50,7 @@ export function CommunityServerList() {
             </TooltipProvider>
 
             {/* Server icons + create */}
-            <ScrollArea className="flex-1 w-full">
+            <ScrollArea className="flex-1 w-full [&_[data-slot=scroll-area-viewport]]:[scrollbar-width:none] [&_[data-slot=scroll-area-viewport]::-webkit-scrollbar]:hidden">
                 <div className="flex flex-col items-center gap-3">
                     {servers.map((server) => (
                         <CommunityServerIcon
