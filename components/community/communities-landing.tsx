@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Users2, Hash, ArrowRight, Loader2 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc/client";
@@ -149,11 +148,10 @@ export function CommunitiesLanding() {
                                 className="group cursor-pointer relative aspect-square rounded-[36px] border border-zinc-500/25 overflow-hidden transition-all"
                             >
                                 {server.imageUrl ? (
-                                    <Image
+                                    <img
                                         src={server.imageUrl}
                                         alt={server.name}
-                                        fill
-                                        className="object-cover transition-transform duration-500 ease-out"
+                                        className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out"
                                     />
                                 ) : (
                                     <div className="h-full flex items-center justify-center">
