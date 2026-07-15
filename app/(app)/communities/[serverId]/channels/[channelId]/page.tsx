@@ -25,6 +25,10 @@ export default function ChannelPage() {
         { serverId },
         { enabled: !!serverId }
     );
+    const { data: expressions = [] } = trpc.community.listExpressions.useQuery(
+        { serverId },
+        { enabled: !!serverId }
+    );
 
     const { onlineUserIds, typingUsers, sendTyping, sendStopTyping } = useCommunityChannel({
         channelId,
@@ -46,6 +50,12 @@ export default function ChannelPage() {
     }
 
     const canInvite = serverData.currentMember.role !== "GUEST";
+    const emojiMap = Object.fromEntries(
+        expressions.filter((e) => e.kind === "emoji").map((e) => [e.name, e.imageUrl]),
+    );
+    const stickers = expressions
+        .filter((e) => e.kind === "sticker")
+        .map((e) => ({ id: e.id, name: e.name, imageUrl: e.imageUrl }));
 
     return (
         <div className="flex flex-col h-full min-w-0">
@@ -65,6 +75,7 @@ export default function ChannelPage() {
                 currentUserId={session.user.id}
                 currentMemberRole={serverData.currentMember.role}
                 typingUsers={typingUsers}
+                emojiMap={emojiMap}
             />
 
             <CommunityChatInput
@@ -76,6 +87,7 @@ export default function ChannelPage() {
                 mentionables={serverData.members
                     .filter((m) => m.userUsername)
                     .map((m) => ({ username: m.userUsername!, name: m.userName }))}
+                stickers={stickers}
             />
 
             <CommunityChannelInfo

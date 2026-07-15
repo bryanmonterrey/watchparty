@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowTurnBackwardIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { ArrowTurnBackwardIcon, Cancel01Icon, StickerIcon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
 import { ArrowUpIcon, CreateIcon, LockIcon } from "../icons";
 
 type Mentionable = { username: string; name: string | null };
+type Sticker = { id: string; name: string; imageUrl: string };
 
 type Props = {
     channelId: string;
@@ -16,12 +17,15 @@ type Props = {
     onStopTyping?: () => void;
     /** server members for @autocomplete */
     mentionables?: Mentionable[];
+    /** server stickers for the picker */
+    stickers?: Sticker[];
     /** read-only channel + guest role → show the locked bar instead of the input */
     locked?: boolean;
 };
 
-export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyping, mentionables = [], locked = false }: Props) {
+export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyping, mentionables = [], stickers = [], locked = false }: Props) {
     const [content, setContent] = useState("");
+    const [stickersOpen, setStickersOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     // @autocomplete: the token being typed after the last "@" (null = closed)
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -135,6 +139,49 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                 >
                     <CreateIcon className="h-5.5 w-5.5" />
                 </button>
+
+                {stickers.length > 0 && (
+                    <>
+                        {stickersOpen && (
+                            <button
+                                type="button"
+                                aria-label="Close stickers"
+                                className="fixed inset-0 z-10 cursor-default"
+                                onClick={() => setStickersOpen(false)}
+                            />
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setStickersOpen((v) => !v)}
+                            title="Send a sticker"
+                            className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full text-flexwhite/40 hover:text-flexwhite hover:bg-white/5 transition-colors"
+                        >
+                            <HugeiconsIcon icon={StickerIcon} className="size-5" strokeWidth={2} />
+                        </button>
+                        {stickersOpen && (
+                            <div className="absolute bottom-full left-0 z-20 mb-2 w-80 rounded-2xl bg-[#101011] p-2 ring-1 ring-white/10">
+                                <p className="px-2 pb-1.5 pt-1 text-[12px] font-semibold text-zinc-500">Stickers</p>
+                                <div className="grid max-h-64 grid-cols-4 gap-1.5 overflow-y-auto hidden-scrollbar">
+                                    {stickers.map((s) => (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setStickersOpen(false);
+                                                sendMessage.mutate({ channelId, content: `:${s.name}:`, fileUrl: s.imageUrl });
+                                            }}
+                                            title={`:${s.name}:`}
+                                            className="grid aspect-square cursor-pointer place-items-center rounded-xl p-1.5 transition-colors hover:bg-white/[0.06]"
+                                        >
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={s.imageUrl} alt={s.name} className="size-full object-contain" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
 
                 <input
                     ref={inputRef}

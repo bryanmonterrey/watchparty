@@ -9,9 +9,20 @@ import { CommunityMessageReactions, type MessageReaction } from "./community-mes
 import { EmojiPicker } from "@/components/messages/emoji-picker";
 import { SmileIcon } from "@hugeicons/core-free-icons";
 
-// Render @mentions as highlighted chips and URLs as links; plain text otherwise.
-function MessageContent({ content, deleted, isUpdated }: { content: string; deleted: boolean; isUpdated: boolean }) {
-    const parts = content.split(/(@[a-zA-Z0-9_-]+|@everyone|https?:\/\/[^\s]+)/g);
+// Render @mentions as chips, URLs as links, and :name: custom emoji inline;
+// plain text otherwise.
+function MessageContent({
+    content,
+    deleted,
+    isUpdated,
+    emojiMap,
+}: {
+    content: string;
+    deleted: boolean;
+    isUpdated: boolean;
+    emojiMap?: Record<string, string>;
+}) {
+    const parts = content.split(/(@[a-zA-Z0-9_-]+|@everyone|https?:\/\/[^\s]+|:[a-z0-9_]{2,32}:)/g);
     return (
         <p className={cn(
             "text-sm text-flexwhite/90 mt-0.5 leading-relaxed break-words",
@@ -28,6 +39,13 @@ function MessageContent({ content, deleted, isUpdated }: { content: string; dele
                             {part}
                         </a>
                     );
+                }
+                if (/^:[a-z0-9_]{2,32}:$/.test(part)) {
+                    const url = emojiMap?.[part.slice(1, -1)];
+                    if (url) {
+                        // eslint-disable-next-line @next/next/no-img-element
+                        return <img key={i} src={url} alt={part} title={part} className="inline-block size-5 object-contain align-text-bottom" />;
+                    }
                 }
                 return <span key={i}>{part}</span>;
             })}
@@ -62,6 +80,7 @@ type Props = {
     replyTo?: { userName: string | null; content: string; deleted: boolean } | null;
     reactions?: MessageReaction[];
     currentUsername?: string | null;
+    emojiMap?: Record<string, string>;
 };
 
 const roleIconMap: Record<string, React.ReactNode> = {
@@ -94,6 +113,7 @@ export function CommunityChatItem({
     replyTo = null,
     reactions = [],
     currentUsername = null,
+    emojiMap,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(content);
@@ -200,7 +220,7 @@ export function CommunityChatItem({
 
                     {!fileUrl && !isEditing && (
                         <>
-                            <MessageContent content={content} deleted={deleted} isUpdated={isUpdated} />
+                            <MessageContent content={content} deleted={deleted} isUpdated={isUpdated} emojiMap={emojiMap} />
                             {!deleted && embedUrl && <CommunityLinkEmbed url={embedUrl} />}
                         </>
                     )}

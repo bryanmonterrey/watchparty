@@ -15,6 +15,8 @@ export const communityServers = pgTable('community_servers', {
     tag: text('tag'),
     // Comma-separated blocked words; guests' messages containing one are rejected
     automodKeywords: text('automod_keywords'),
+    // Access: while true, joins via invite link are rejected
+    invitesPaused: boolean('invites_paused'),
     inviteCode: text('invite_code').notNull().unique(),
     ownerId: text('owner_id')
         .references(() => user.id, { onDelete: 'cascade' })
@@ -270,3 +272,23 @@ export const communityAuditLog = pgTable('community_audit_log', {
 ]).enableRLS();
 
 export type CommunityAuditEntry = typeof communityAuditLog.$inferSelect;
+
+// ─── Expressions (custom emoji + stickers) ────────────────
+export const communityExpressions = pgTable('community_expressions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    // 'emoji' renders inline via :name:; 'sticker' sends as an image message
+    kind: text('kind').notNull(),
+    name: text('name').notNull(),
+    imageUrl: text('image_url').notNull(),
+    createdBy: text('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('uq_expressions_server_kind_name').on(table.serverId, table.kind, table.name),
+    index('idx_community_expressions_server').on(table.serverId),
+    pgPolicy('community_expressions_select_member', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = server_id AND cm.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityExpression = typeof communityExpressions.$inferSelect;

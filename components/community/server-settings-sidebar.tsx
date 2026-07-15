@@ -9,6 +9,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
+    ADMIN_ONLY_SECTIONS,
     SETTINGS_SECTIONS,
     sectionLabel,
     useSettingsSection,
@@ -34,22 +35,27 @@ export function ServerSettingsSidebar({ serverId }: { serverId: string }) {
               {
                   label: data.server.name,
                   rows: [
-                      ...(isAdmin ? (["profile"] as const) : []),
+                      ...(isAdmin ? (["profile", "tag"] as const) : []),
                       "engagement",
                       "boosts",
                   ],
               },
-              { label: "People", rows: ["members", "roles", "invites", "bans"] },
-              { label: "Channels", rows: ["channels"] },
+              { label: "Expression", rows: ["emoji", "stickers", "soundboard"] },
+              {
+                  label: "People",
+                  rows: ["members", "roles", "invites", ...(isAdmin ? (["access"] as const) : [])],
+              },
+              { label: "Apps", rows: ["integrations", "apps"] },
               {
                   label: "Moderation",
-                  rows: [...(isAdmin ? (["automod"] as const) : []), "audit"],
+                  rows: ["safety", "audit", "bans", ...(isAdmin ? (["automod"] as const) : [])],
               },
+              { label: "Channels", rows: ["channels"] },
           ]
         : [];
 
     const active: SettingsSection =
-        !isAdmin && (section === "profile" || section === "automod") ? "engagement" : section;
+        !isAdmin && ADMIN_ONLY_SECTIONS.includes(section) ? "engagement" : section;
 
     return (
         <div className="flex flex-col h-full w-76 shrink-0 bg-zinc-900/60 overflow-hidden">
@@ -88,7 +94,7 @@ export function ServerSettingsSidebar({ serverId }: { serverId: string }) {
                         ))
                     ) : (
                         <div className="flex flex-col gap-2 px-1 pt-2">
-                            {Array.from({ length: SETTINGS_SECTIONS.length }).map((_, i) => (
+                            {Array.from({ length: 10 }).map((_, i) => (
                                 <div key={i} className="h-10 overflow-hidden rounded-lg"><div className="size-full shimmer-skeleton" /></div>
                             ))}
                         </div>

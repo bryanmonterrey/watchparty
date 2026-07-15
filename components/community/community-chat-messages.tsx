@@ -21,6 +21,8 @@ type Props = {
     currentUserId: string;
     currentMemberRole: string;
     typingUsers?: TypingUser[];
+    /** server custom emoji: name → image url (renders :name: inline) */
+    emojiMap?: Record<string, string>;
 };
 
 function typingLabel(users: TypingUser[]) {
@@ -38,6 +40,7 @@ export function CommunityChatMessages({
     currentUserId,
     currentMemberRole,
     typingUsers = [],
+    emojiMap,
 }: Props) {
     const { data: session } = useAuthSession();
     const currentUsername = session?.user?.username ?? null;
@@ -158,6 +161,7 @@ export function CommunityChatMessages({
                                 } : null}
                                 reactions={message.reactions}
                                 currentUsername={currentUsername}
+                                emojiMap={emojiMap}
                             />
                             {/* AFTER the item in DOM = visually ABOVE it under
                                 flex-col-reverse — the divider heads the day. */}

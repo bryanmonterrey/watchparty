@@ -12,6 +12,7 @@ import {
     communityBoostGrants,
     communityBans,
     communityAuditLog,
+    communityExpressions,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
 import { premiumSubscriptions } from "@/db/schema/content";
@@ -456,6 +457,10 @@ export const communityRouter = router({
                 throw new TRPCError({ code: "FORBIDDEN", message: "You are banned from this server" });
             }
 
+            if (server[0].invitesPaused) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Invites are paused on this server" });
+            }
+
             await db.insert(communityMembers).values({
                 userId: ctx.user.id,
                 serverId: server[0].id,
@@ -702,6 +707,85 @@ export const communityRouter = router({
                 activeMembers7d: Number(activeMembers?.n ?? 0),
                 topChannels: topChannels.map((c) => ({ ...c, messages: Number(c.messages) })),
             };
+        }),
+
+    /** Pause/resume invites (admin) — joins via link are rejected while paused */
+    setInvitesPaused: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), paused: z.boolean() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            await db
+                .update(communityServers)
+                .set({ invitesPaused: input.paused, updatedAt: new Date() })
+                .where(eq(communityServers.id, input.serverId));
+            await logAudit(input.serverId, ctx.user.id, "access.invites", input.paused ? "paused invites" : "resumed invites");
+            return { paused: input.paused };
+        }),
+
+    // ─── Expressions (custom emoji + stickers) ───────────
+
+    /** All expressions on a server (member) */
+    listExpressions: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const [member] = await db
+                .select({ id: communityMembers.id })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, input.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .limit(1);
+            if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+
+            return db
+                .select()
+                .from(communityExpressions)
+                .where(eq(communityExpressions.serverId, input.serverId))
+                .orderBy(asc(communityExpressions.name));
+        }),
+
+    /** Add an emoji or sticker (admin/mod) */
+    addExpression: protectedProcedure
+        .input(
+            z.object({
+                serverId: z.string().uuid(),
+                kind: z.enum(["emoji", "sticker"]),
+                name: z.string().min(2).max(32).regex(/^[a-z0-9_]+$/, "Lowercase letters, numbers, and underscores only"),
+                imageUrl: z.string().url(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [created] = await db
+                .insert(communityExpressions)
+                .values({
+                    serverId: input.serverId,
+                    kind: input.kind,
+                    name: input.name,
+                    imageUrl: input.imageUrl,
+                    createdBy: ctx.user.id,
+                })
+                .onConflictDoNothing()
+                .returning();
+            if (!created) throw new TRPCError({ code: "CONFLICT", message: `A ${input.kind} named :${input.name}: already exists` });
+
+            await logAudit(input.serverId, ctx.user.id, "expression.add", `added ${input.kind} :${input.name}:`);
+            return created;
+        }),
+
+    /** Remove an emoji or sticker (admin/mod) */
+    deleteExpression: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), expressionId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [removed] = await db
+                .delete(communityExpressions)
+                .where(and(eq(communityExpressions.id, input.expressionId), eq(communityExpressions.serverId, input.serverId)))
+                .returning();
+            if (removed) {
+                await logAudit(input.serverId, ctx.user.id, "expression.delete", `removed ${removed.kind} :${removed.name}:`);
+            }
+            return { success: true };
         }),
 
     /** Per-server nickname ("per-server profile"); null clears it */

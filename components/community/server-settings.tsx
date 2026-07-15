@@ -29,7 +29,8 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
+import { ADMIN_ONLY_SECTIONS, sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
+import { Switch } from "@/components/ui/switch";
 import type { CommunityChannel, CommunityServer } from "@/db/schema/community";
 
 const ROLES = ["ADMIN", "MODERATOR", "GUEST"] as const;
@@ -63,7 +64,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
     }, [data, isMod, router, serverId]);
 
     const active: SettingsSection =
-        !isAdmin && (section === "profile" || section === "automod") ? "engagement" : section;
+        !isAdmin && ADMIN_ONLY_SECTIONS.includes(section) ? "engagement" : section;
 
     if (isLoading || !data || !isMod) {
         return (
@@ -103,8 +104,12 @@ export function ServerSettings({ serverId }: { serverId: string }) {
             <ScrollArea className="flex-1">
                 <div className="max-w-2xl p-6">
                     {active === "profile" && isAdmin && <ProfileSection server={server} memberCount={members.length} />}
+                    {active === "tag" && isAdmin && <TagSection server={server} />}
                     {active === "engagement" && <EngagementSection serverId={server.id} />}
                     {active === "boosts" && <BoostsSection serverId={server.id} boostCount={boostCount} boostedByMe={boostedByMe} />}
+                    {active === "emoji" && <ExpressionsSection serverId={server.id} kind="emoji" />}
+                    {active === "stickers" && <ExpressionsSection serverId={server.id} kind="sticker" />}
+                    {active === "soundboard" && <SoundboardSection />}
                     {active === "members" && (
                         <MembersSection serverId={server.id} members={members} isAdmin={isAdmin} currentUserId={session?.user?.id} />
                     )}
@@ -112,6 +117,10 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                         <RolesSection serverId={server.id} members={members} isAdmin={isAdmin} currentUserId={session?.user?.id} />
                     )}
                     {active === "invites" && <InvitesSection serverId={server.id} inviteCode={server.inviteCode} />}
+                    {active === "access" && isAdmin && <AccessSection server={server} channels={channels} />}
+                    {active === "integrations" && <IntegrationsSection />}
+                    {active === "apps" && <AppsSection />}
+                    {active === "safety" && <SafetySection server={server} isAdmin={isAdmin} />}
                     {active === "bans" && <BansSection serverId={server.id} isAdmin={isAdmin} />}
                     {active === "channels" && <ChannelsSection server={server} channels={channels} role={currentMember.role} />}
                     {active === "automod" && isAdmin && <AutomodSection server={server} />}
@@ -131,7 +140,6 @@ function SectionHint({ children }: { children: React.ReactNode }) {
 function ProfileSection({ server, memberCount }: { server: CommunityServer; memberCount: number }) {
     const utils = trpc.useUtils();
     const [name, setName] = useState(server.name);
-    const [tag, setTag] = useState(server.tag ?? "");
     const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,8 +150,7 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
     const updateServer = trpc.community.updateServer.useMutation();
 
     const previewSrc = iconDataUrl ?? server.imageUrl ?? null;
-    const cleanTag = tag.trim().toUpperCase().slice(0, 8);
-    const dirty = name.trim() !== server.name || !!iconDataUrl || cleanTag !== (server.tag ?? "");
+    const dirty = name.trim() !== server.name || !!iconDataUrl;
 
     const applyCrop = async () => {
         const state = cropStateRef.current;
@@ -174,7 +181,6 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
             await updateServer.mutateAsync({
                 serverId: server.id,
                 name: name.trim(),
-                tag: cleanTag || null,
                 ...(imageUrl ? { imageUrl } : {}),
             });
             utils.community.listServers.invalidate();
@@ -204,9 +210,9 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                 <div className="min-w-0">
                     <div className="flex items-center gap-2">
                         <p className="truncate text-[16px] font-bold tracking-tight text-white">{name.trim() || server.name}</p>
-                        {cleanTag && (
+                        {server.tag && (
                             <span className="shrink-0 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-zinc-200">
-                                {cleanTag}
+                                {server.tag}
                             </span>
                         )}
                     </div>
@@ -226,20 +232,6 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                     maxLength={100}
                     className="h-12 text-[14px] font-semibold"
                 />
-            </div>
-
-            {/* Tag */}
-            <div className="mb-6">
-                <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Server tag</p>
-                <Input
-                    radius={14}
-                    value={tag}
-                    onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())}
-                    placeholder="STPA"
-                    maxLength={8}
-                    className="h-12 w-40 text-[14px] font-bold tracking-wide"
-                />
-                <p className="mt-1.5 px-1 text-[12px] font-medium text-zinc-600">A short badge for your server, up to 8 characters. Leave empty for none.</p>
             </div>
 
             {/* Icon */}
@@ -849,6 +841,369 @@ function AutomodSection({ server }: { server: CommunityServer }) {
             >
                 {updateServer.isPending ? "Saving…" : "Save AutoMod"}
             </button>
+        </div>
+    );
+}
+
+// ─── Server tag ──────────────────────────────────────────
+
+function TagSection({ server }: { server: CommunityServer }) {
+    const utils = trpc.useUtils();
+    const [tag, setTag] = useState(server.tag ?? "");
+    const updateServer = trpc.community.updateServer.useMutation({
+        onSuccess: () => {
+            utils.community.getServer.invalidate({ serverId: server.id });
+            toast.success("Server tag updated");
+        },
+        onError: () => toast.error("Update failed"),
+    });
+
+    const cleanTag = tag.trim().toUpperCase().slice(0, 8);
+    const dirty = cleanTag !== (server.tag ?? "");
+
+    return (
+        <div>
+            <SectionHint>A short badge shown next to your server name. Members can copy it from the name menu.</SectionHint>
+
+            {/* Preview */}
+            <div className="mb-7 flex items-center gap-3 rounded-3xl bg-white/[0.03] p-5">
+                <p className="truncate text-[16px] font-bold tracking-tight text-white">{server.name}</p>
+                {cleanTag ? (
+                    <span className="shrink-0 rounded-[8px] bg-white/10 px-2 py-1 text-[12px] font-bold tracking-wide text-zinc-200">
+                        {cleanTag}
+                    </span>
+                ) : (
+                    <span className="shrink-0 text-[12px] font-medium text-zinc-600">no tag</span>
+                )}
+            </div>
+
+            <p className="mb-1.5 px-1 text-[13px] font-semibold text-zinc-500">Tag</p>
+            <Input
+                radius={14}
+                value={tag}
+                onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())}
+                placeholder="STPA"
+                maxLength={8}
+                className="h-12 w-40 text-[14px] font-bold tracking-wide"
+            />
+            <p className="mt-1.5 px-1 text-[12px] font-medium text-zinc-600">Up to 8 letters or numbers. Clear it to remove the badge.</p>
+
+            <button
+                onClick={() => updateServer.mutate({ serverId: server.id, tag: cleanTag || null })}
+                disabled={!dirty || updateServer.isPending}
+                className="mt-5 flex h-11 cursor-pointer items-center rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
+            >
+                {updateServer.isPending ? "Saving…" : "Save tag"}
+            </button>
+        </div>
+    );
+}
+
+// ─── Expressions (emoji + stickers) ──────────────────────
+
+function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji" | "sticker" }) {
+    const utils = trpc.useUtils();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+    const [name, setName] = useState("");
+    const [uploading, setUploading] = useState(false);
+
+    const { data: expressions = [], isLoading } = trpc.community.listExpressions.useQuery({ serverId });
+    const items = expressions.filter((e) => e.kind === kind);
+
+    const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation();
+    const addExpression = trpc.community.addExpression.useMutation();
+    const deleteExpression = trpc.community.deleteExpression.useMutation({
+        onSuccess: () => utils.community.listExpressions.invalidate({ serverId }),
+    });
+
+    const pickFile = (f: File) => {
+        setPendingFile(f);
+        setPendingPreview(URL.createObjectURL(f));
+        setName(f.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 32));
+    };
+
+    const clearPending = () => {
+        if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+        setPendingFile(null);
+        setPendingPreview(null);
+        setName("");
+    };
+
+    const upload = async () => {
+        if (!pendingFile || !/^[a-z0-9_]{2,32}$/.test(name) || uploading) return;
+        setUploading(true);
+        try {
+            const ext = pendingFile.name.split(".").pop() || "png";
+            const { token, path } = await getPresignedUrl.mutateAsync({
+                bucket: "emotes",
+                filename: `${kind}-${name}.${ext}`,
+                contentType: pendingFile.type || "image/png",
+            });
+            const { data: up, error } = await supabase.storage.from("emotes").uploadToSignedUrl(path, token, pendingFile);
+            if (error || !up) throw new Error("Upload failed");
+            const imageUrl = supabase.storage.from("emotes").getPublicUrl(up.path).data.publicUrl;
+            await addExpression.mutateAsync({ serverId, kind, name, imageUrl });
+            utils.community.listExpressions.invalidate({ serverId });
+            clearPending();
+            toast.success(`:${name}: added`);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Upload failed");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const isEmoji = kind === "emoji";
+
+    return (
+        <div>
+            <SectionHint>
+                {isEmoji
+                    ? "Custom emoji render inline when anyone types :name: in chat."
+                    : "Stickers send as images from the sticker picker in the chat bar."}
+            </SectionHint>
+
+            {/* Upload */}
+            {!pendingFile ? (
+                <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mb-7 flex h-11 cursor-pointer items-center gap-2 rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90"
+                >
+                    <HugeiconsIcon icon={ImageUploadIcon} className="size-4" strokeWidth={2} />
+                    Upload {isEmoji ? "emoji" : "sticker"}
+                </button>
+            ) : (
+                <div className="mb-7 flex flex-wrap items-center gap-3 rounded-3xl bg-white/[0.03] p-4">
+                    <div className={cn("grid shrink-0 place-items-center overflow-hidden rounded-[14px] bg-black4", isEmoji ? "size-12" : "size-20")}>
+                        {pendingPreview && <img src={pendingPreview} alt="" className="size-full object-contain" />}
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span className="text-[14px] font-bold text-zinc-500">:</span>
+                        <Input
+                            radius={12}
+                            value={name}
+                            onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                            placeholder="name"
+                            maxLength={32}
+                            autoFocus
+                            className="h-10 min-w-24 flex-1 text-[13px] font-bold"
+                        />
+                        <span className="text-[14px] font-bold text-zinc-500">:</span>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5">
+                        <button
+                            onClick={clearPending}
+                            className="flex h-10 cursor-pointer items-center rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={upload}
+                            disabled={uploading || !/^[a-z0-9_]{2,32}$/.test(name)}
+                            className="flex h-10 cursor-pointer items-center rounded-full bg-white px-4 text-[13px] font-bold text-black transition-colors hover:bg-white/90 disabled:pointer-events-none disabled:opacity-40"
+                        >
+                            {uploading ? "Uploading…" : "Add"}
+                        </button>
+                    </div>
+                </div>
+            )}
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) pickFile(f);
+                    e.target.value = "";
+                }}
+            />
+
+            {isLoading && (
+                <div className={cn("grid gap-2", isEmoji ? "grid-cols-4 sm:grid-cols-6" : "grid-cols-2 sm:grid-cols-4")}>
+                    {Array.from({ length: isEmoji ? 12 : 4 }).map((_, i) => (
+                        <div key={i} className="aspect-square overflow-hidden rounded-2xl"><div className="size-full shimmer-skeleton" /></div>
+                    ))}
+                </div>
+            )}
+
+            {!isLoading && items.length === 0 && (
+                <div className="py-10 text-center">
+                    <p className="text-[14px] font-bold text-zinc-400">No {isEmoji ? "emoji" : "stickers"} yet</p>
+                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Upload the first one — every member gets to use it</p>
+                </div>
+            )}
+
+            <div className={cn("grid gap-2", isEmoji ? "grid-cols-4 sm:grid-cols-6" : "grid-cols-2 sm:grid-cols-4")}>
+                {items.map((e) => (
+                    <div key={e.id} className="group relative flex flex-col items-center gap-1.5 rounded-2xl bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
+                        <img src={e.imageUrl} alt={e.name} className={cn("object-contain", isEmoji ? "size-10" : "size-20")} />
+                        <p className="w-full truncate text-center text-[11px] font-bold text-zinc-500">:{e.name}:</p>
+                        <button
+                            onClick={() => deleteExpression.mutate({ serverId, expressionId: e.id })}
+                            disabled={deleteExpression.isPending}
+                            aria-label={`Delete ${e.name}`}
+                            className="absolute -right-1.5 -top-1.5 grid size-6 cursor-pointer place-items-center rounded-full bg-black4 text-zinc-400 opacity-0 ring-1 ring-white/10 transition-all hover:text-pastelred group-hover:opacity-100"
+                        >
+                            <HugeiconsIcon icon={Cancel01Icon} className="size-3" strokeWidth={2.5} />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─── Soundboard ──────────────────────────────────────────
+
+function SoundboardSection() {
+    return (
+        <div>
+            <SectionHint>Short sounds members can play in voice channels.</SectionHint>
+            <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
+                <p className="text-[15px] font-bold text-zinc-300">Arrives with voice rooms</p>
+                <p className="mx-auto mt-1 max-w-xs text-[13px] font-medium leading-relaxed text-zinc-500">
+                    The soundboard needs live voice under it. It unlocks when realtime voice ships.
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Access ──────────────────────────────────────────────
+
+function AccessSection({
+    server,
+    channels,
+}: {
+    server: CommunityServer;
+    channels: (CommunityChannel & { unreadCount?: number })[];
+}) {
+    const utils = trpc.useUtils();
+    const setPaused = trpc.community.setInvitesPaused.useMutation({
+        onSuccess: (res) => {
+            utils.community.getServer.invalidate({ serverId: server.id });
+            toast.success(res.paused ? "Invites paused" : "Invites resumed");
+        },
+        onError: () => toast.error("Update failed"),
+    });
+
+    const readOnlyCount = channels.filter((c) => c.readOnly).length;
+
+    return (
+        <div>
+            <SectionHint>Who can get in, and what they can touch once they&apos;re here.</SectionHint>
+
+            <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-bold text-white">Pause invites</p>
+                    <p className="mt-0.5 text-[12px] font-medium text-zinc-500">
+                        Nobody can join while paused — even with a valid link. Current members are unaffected.
+                    </p>
+                </div>
+                <Switch
+                    checked={!!server.invitesPaused}
+                    onCheckedChange={(v) => setPaused.mutate({ serverId: server.id, paused: v })}
+                    disabled={setPaused.isPending}
+                />
+            </label>
+
+            <div className="rounded-3xl bg-white/[0.03] px-5 py-4">
+                <p className="text-[14px] font-bold text-white">Read-only channels</p>
+                <p className="mt-0.5 text-[12px] font-medium text-zinc-500">
+                    {readOnlyCount === 0
+                        ? "None — every channel is open to members. Make one read-only from Channels."
+                        : `${readOnlyCount} channel${readOnlyCount === 1 ? "" : "s"} where only mods can post: ${channels.filter((c) => c.readOnly).map((c) => `#${c.name}`).join(", ")}`}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Apps ────────────────────────────────────────────────
+
+function IntegrationsSection() {
+    return (
+        <div>
+            <SectionHint>Services connected to this server.</SectionHint>
+            <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
+                <p className="text-[15px] font-bold text-zinc-300">No integrations yet</p>
+                <p className="mx-auto mt-1 max-w-xs text-[13px] font-medium leading-relaxed text-zinc-500">
+                    Webhooks and connected services land here as the platform opens up.
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function AppsSection() {
+    return (
+        <div>
+            <SectionHint>Apps and bots you can add to this server.</SectionHint>
+            <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
+                <p className="text-[15px] font-bold text-zinc-300">The app directory is coming</p>
+                <p className="mx-auto mt-1 max-w-xs text-[13px] font-medium leading-relaxed text-zinc-500">
+                    A home for server apps and bots once the developer platform opens.
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Safety setup ────────────────────────────────────────
+
+function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: boolean }) {
+    const [, setSection] = useSettingsSection();
+    const { data: bans = [] } = trpc.community.listBans.useQuery({ serverId: server.id });
+    const automodCount = (server.automodKeywords ?? "").split(",").map((w) => w.trim()).filter(Boolean).length;
+
+    const rows: { label: string; status: string; target: SettingsSection; show: boolean }[] = [
+        {
+            label: "Invites",
+            status: server.invitesPaused ? "Paused — nobody can join" : "Open — anyone with the link can join",
+            target: "access",
+            show: isAdmin,
+        },
+        {
+            label: "AutoMod",
+            status: automodCount > 0 ? `${automodCount} blocked word${automodCount === 1 ? "" : "s"}` : "No blocked words",
+            target: "automod",
+            show: isAdmin,
+        },
+        {
+            label: "Bans",
+            status: bans.length > 0 ? `${bans.length} user${bans.length === 1 ? "" : "s"} banned` : "Nobody banned",
+            target: "bans",
+            show: true,
+        },
+        {
+            label: "Audit log",
+            status: "Every management action, tracked",
+            target: "audit",
+            show: true,
+        },
+    ];
+
+    return (
+        <div>
+            <SectionHint>Your safety tools at a glance.</SectionHint>
+            <div className="space-y-2">
+                {rows.filter((r) => r.show).map((r) => (
+                    <button
+                        key={r.label}
+                        onClick={() => setSection(r.target)}
+                        className="flex w-full cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 text-left transition-colors hover:bg-white/[0.06]"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[14px] font-bold text-white">{r.label}</p>
+                            <p className="mt-0.5 truncate text-[12px] font-medium text-zinc-500">{r.status}</p>
+                        </div>
+                        <span className="shrink-0 text-[12px] font-bold text-zinc-500">Open</span>
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }
