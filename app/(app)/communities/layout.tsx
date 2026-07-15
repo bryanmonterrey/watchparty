@@ -33,7 +33,7 @@ export default function CommunitiesLayout({
                 </div>
 
                 {/* Columns 2+3 — one full-height hairline against the rail */}
-                <div className="flex min-w-0 flex-1 overflow-hidden md:border-l md:border-flexwhite/10">
+                <div className="flex min-w-0 flex-1 overflow-hidden md:pl-2">
                     <div className="flex md:pt-[var(--header-height)]">
                         {isHome ? (
                             <CommunityHomeSidebar />
@@ -42,7 +42,7 @@ export default function CommunitiesLayout({
                         )}
                     </div>
 
-                    <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden md:border-l md:border-flexwhite/10">
+                    <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
                         {children}
                     </main>
                 </div>
