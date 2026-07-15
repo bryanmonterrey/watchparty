@@ -49,7 +49,7 @@ export function SpacesView() {
         <ScrollArea className="flex-1 bg-background">
             <div className="flex flex-col p-6 pt-5 max-w-5xl mx-auto">
                 {/* Header */}
-                <div className="mb-7 flex items-center justify-between gap-4">
+                <div className="mb-7 flex items-center gap-5">
                     <div>
                         <h1 className="text-[24px] font-bold tracking-tight text-white">Spaces</h1>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">Drop in. Talk live.</p>

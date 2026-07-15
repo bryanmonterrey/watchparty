@@ -8,6 +8,7 @@ import { CommunityChannelItem } from "./community-channel-item";
 import { CommunityChannelReorder } from "./community-channel-reorder";
 import { CommunityMemberItem } from "./community-member-item";
 import { ServerSidebarSkeleton } from "./community-skeletons";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 
 type Props = {
@@ -16,6 +17,8 @@ type Props = {
 
 export function CommunityServerSidebar({ serverId }: Props) {
     const { data, isLoading } = trpc.community.getServer.useQuery({ serverId });
+    const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+    const toggle = (key: string) => setCollapsed((c) => ({ ...c, [key]: !c[key] }));
 
     if (isLoading || !data) {
         return <ServerSidebarSkeleton />;
@@ -45,13 +48,17 @@ export function CommunityServerSidebar({ serverId }: Props) {
                             role={role}
                             label="Text Channels"
                             server={server}
+                            collapsed={!!collapsed.text}
+                            onToggleCollapsed={() => toggle("text")}
                         />
-                        <CommunityChannelReorder
-                            channels={textChannels}
-                            allChannels={allOrdered}
-                            server={server}
-                            role={role}
-                        />
+                        {!collapsed.text && (
+                            <CommunityChannelReorder
+                                channels={textChannels}
+                                allChannels={allOrdered}
+                                server={server}
+                                role={role}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -63,13 +70,17 @@ export function CommunityServerSidebar({ serverId }: Props) {
                             role={role}
                             label="Voice Channels"
                             server={server}
+                            collapsed={!!collapsed.audio}
+                            onToggleCollapsed={() => toggle("audio")}
                         />
-                        <CommunityChannelReorder
-                            channels={audioChannels}
-                            allChannels={allOrdered}
-                            server={server}
-                            role={role}
-                        />
+                        {!collapsed.audio && (
+                            <CommunityChannelReorder
+                                channels={audioChannels}
+                                allChannels={allOrdered}
+                                server={server}
+                                role={role}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -81,13 +92,17 @@ export function CommunityServerSidebar({ serverId }: Props) {
                             role={role}
                             label="Video Channels"
                             server={server}
+                            collapsed={!!collapsed.video}
+                            onToggleCollapsed={() => toggle("video")}
                         />
-                        <CommunityChannelReorder
-                            channels={videoChannels}
-                            allChannels={allOrdered}
-                            server={server}
-                            role={role}
-                        />
+                        {!collapsed.video && (
+                            <CommunityChannelReorder
+                                channels={videoChannels}
+                                allChannels={allOrdered}
+                                server={server}
+                                role={role}
+                            />
+                        )}
                     </div>
                 )}
             </ScrollArea>

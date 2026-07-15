@@ -72,6 +72,9 @@ export default function ChannelPage() {
                 channelName={channel.name}
                 onTyping={sendTyping}
                 onStopTyping={sendStopTyping}
+                mentionables={serverData.members
+                    .filter((m) => m.userUsername)
+                    .map((m) => ({ username: m.userUsername!, name: m.userName }))}
             />
 
             <CommunityChannelInfo

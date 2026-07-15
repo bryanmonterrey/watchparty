@@ -7,9 +7,10 @@ import {
     communityChannels,
     communityMessages,
     communityChannelReads,
+    communityMessageReactions,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
-import { eq, and, desc, asc, sql, lt, ne, count } from "drizzle-orm";
+import { eq, and, desc, asc, sql, lt, ne, count, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
@@ -42,7 +43,7 @@ export const communityRouter = router({
             .from(communityServers)
             .innerJoin(communityMembers, eq(communityServers.id, communityMembers.serverId))
             .where(eq(communityMembers.userId, ctx.user.id))
-            .orderBy(asc(communityServers.createdAt));
+            .orderBy(sql`${communityMembers.railPosition} ASC NULLS LAST`, asc(communityServers.createdAt));
 
         // Unread flag per server: any channel message newer than the member's
         // read marker (missing marker = everything unread), not their own.
@@ -513,6 +514,58 @@ export const communityRouter = router({
     // ─── Messages ────────────────────────────────────────
 
     /** Get paginated messages for a channel */
+    /** Toggle an emoji reaction on a message */
+    toggleReaction: protectedProcedure
+        .input(z.object({ messageId: z.string().uuid(), emoji: z.string().min(1).max(32) }))
+        .mutation(async ({ ctx, input }) => {
+            const [msg] = await db
+                .select({ id: communityMessages.id, channelId: communityMessages.channelId, serverId: communityChannels.serverId })
+                .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+                .where(eq(communityMessages.id, input.messageId))
+                .limit(1);
+            if (!msg) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+            const [member] = await db
+                .select()
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, msg.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .limit(1);
+            if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+
+            const existing = await db
+                .select({ id: communityMessageReactions.id })
+                .from(communityMessageReactions)
+                .where(and(
+                    eq(communityMessageReactions.messageId, input.messageId),
+                    eq(communityMessageReactions.memberId, member.id),
+                    eq(communityMessageReactions.emoji, input.emoji),
+                ))
+                .limit(1);
+            if (existing.length) {
+                await db.delete(communityMessageReactions).where(eq(communityMessageReactions.id, existing[0].id));
+            } else {
+                await db.insert(communityMessageReactions).values({
+                    messageId: input.messageId,
+                    memberId: member.id,
+                    emoji: input.emoji,
+                });
+            }
+            await notifyChannelChange(msg.channelId);
+            return { reacted: !existing.length };
+        }),
+
+    /** Reorder the caller's server rail — serverIds in desired order */
+    reorderRail: protectedProcedure
+        .input(z.object({ serverIds: z.array(z.string().uuid()).min(1) }))
+        .mutation(async ({ ctx, input }) => {
+            await Promise.all(input.serverIds.map((serverId, i) =>
+                db.update(communityMembers)
+                    .set({ railPosition: i })
+                    .where(and(eq(communityMembers.serverId, serverId), eq(communityMembers.userId, ctx.user.id)))
+            ));
+            return { success: true };
+        }),
+
     /** Reorder channels (admin/mod) — channelIds in desired order */
     reorderChannels: protectedProcedure
         .input(z.object({ serverId: z.string().uuid(), channelIds: z.array(z.string().uuid()).min(1) }))
@@ -700,7 +753,32 @@ export const communityRouter = router({
                 nextCursor = nextItem.createdAt.toISOString();
             }
 
-            return { items: msgs, nextCursor };
+            // Reactions for this page, aggregated per message+emoji with
+            // whether the current member reacted.
+            const ids = msgs.map((m) => m.id);
+            let reactionsByMessage = new Map<string, { emoji: string; count: number; reactedByMe: boolean }[]>();
+            if (ids.length) {
+                const rows = await db
+                    .select({
+                        messageId: communityMessageReactions.messageId,
+                        emoji: communityMessageReactions.emoji,
+                        cnt: count(),
+                        mine: sql<number>`SUM(CASE WHEN ${communityMessageReactions.memberId} = ${member[0].id} THEN 1 ELSE 0 END)`,
+                    })
+                    .from(communityMessageReactions)
+                    .where(inArray(communityMessageReactions.messageId, ids))
+                    .groupBy(communityMessageReactions.messageId, communityMessageReactions.emoji);
+                for (const r of rows) {
+                    const list = reactionsByMessage.get(r.messageId) ?? [];
+                    list.push({ emoji: r.emoji, count: Number(r.cnt), reactedByMe: Number(r.mine) > 0 });
+                    reactionsByMessage.set(r.messageId, list);
+                }
+            }
+
+            return {
+                items: msgs.map((m) => ({ ...m, reactions: reactionsByMessage.get(m.id) ?? [] })),
+                nextCursor,
+            };
         }),
 
     /** Send a message */

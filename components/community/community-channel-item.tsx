@@ -57,7 +57,12 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
                 {channel.name}
             </p>
             {hasUnread && (
-                <span className="ml-auto mr-1 size-2 shrink-0 rounded-full bg-white group-hover:hidden" aria-label="Unread messages" />
+                <span
+                    aria-label={`${channel.unreadCount} unread messages`}
+                    className="ml-auto mr-1 flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full bg-pastelred px-1 text-[10px] font-bold leading-none text-white group-hover:hidden"
+                >
+                    {(channel.unreadCount ?? 0) > 99 ? "99+" : channel.unreadCount}
+                </span>
             )}
 
             {channel.name !== "general" && role !== "GUEST" && (

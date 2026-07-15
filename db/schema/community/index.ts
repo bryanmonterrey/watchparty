@@ -35,6 +35,8 @@ export const communityMembers = pgTable('community_members', {
     serverId: uuid('server_id')
         .references(() => communityServers.id, { onDelete: 'cascade' })
         .notNull(),
+    // Rail sort order for this member's server list (null = joined order)
+    railPosition: integer('rail_position'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -165,3 +167,22 @@ export const communityChannelReads = pgTable('community_channel_reads', {
 ]).enableRLS();
 
 export type CommunityChannelRead = typeof communityChannelReads.$inferSelect;
+
+// ─── Message reactions ───────────────────────────────────
+export const communityMessageReactions = pgTable('community_message_reactions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    messageId: uuid('message_id')
+        .references(() => communityMessages.id, { onDelete: 'cascade' })
+        .notNull(),
+    memberId: uuid('member_id')
+        .references(() => communityMembers.id, { onDelete: 'cascade' })
+        .notNull(),
+    emoji: text('emoji').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('uq_reaction_message_member_emoji').on(table.messageId, table.memberId, table.emoji),
+    index('idx_message_reactions_message').on(table.messageId),
+    pgPolicy('community_message_reactions_own', { for: 'all', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members WHERE community_members.id = member_id AND community_members.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityMessageReaction = typeof communityMessageReactions.$inferSelect;

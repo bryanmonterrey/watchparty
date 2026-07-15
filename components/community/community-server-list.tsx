@@ -6,6 +6,8 @@ import { useCommunityModal } from "@/hooks/use-community-modal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CommunityServerIcon } from "./community-server-icon";
 import { trpc } from "@/lib/trpc/client";
+import { useState } from "react";
+import { Reorder } from "motion/react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { HomeIcon, CreateIcon } from "@/components/icons";
@@ -15,6 +17,20 @@ export function CommunityServerList() {
     const router = useRouter();
     const pathname = usePathname();
     const { data: servers = [] } = trpc.community.listServers.useQuery();
+    const utils = trpc.useUtils();
+    const reorderRail = trpc.community.reorderRail.useMutation({
+        onSuccess: () => utils.community.listServers.invalidate(),
+    });
+    // Local order during a drag; server order wins after invalidation.
+    const [order, setOrder] = useState<string[] | null>(null);
+    const ordered = order
+        ? order.map((id) => servers.find((s) => s.id === id)!).filter(Boolean)
+        : servers;
+    const commitOrder = () => {
+        if (!order) return;
+        reorderRail.mutate({ serverIds: order });
+        setOrder(null);
+    };
 
     // "Home" = any community page that isn't a specific server.
     const onHome = !/^\/communities\/[0-9a-fA-F-]{20,}/.test(pathname);
@@ -52,16 +68,29 @@ export function CommunityServerList() {
             {/* Server icons + create */}
             <ScrollArea className="flex-1 w-full [&_[data-slot=scroll-area-viewport]]:[scrollbar-width:none] [&_[data-slot=scroll-area-viewport]::-webkit-scrollbar]:hidden">
                 <div className="flex flex-col items-center gap-3">
-                    {servers.map((server) => (
-                        <CommunityServerIcon
-                            key={server.id}
-                            id={server.id}
-                            name={server.name}
-                            imageUrl={server.imageUrl}
-                            hasUnread={server.hasUnread}
-                            mentionCount={server.mentionCount}
-                        />
-                    ))}
+                    <Reorder.Group
+                        axis="y"
+                        values={ordered.map((s) => s.id)}
+                        onReorder={(ids: string[]) => setOrder(ids)}
+                        className="flex w-full flex-col items-center gap-3"
+                    >
+                        {ordered.map((server) => (
+                            <Reorder.Item
+                                key={server.id}
+                                value={server.id}
+                                onDragEnd={commitOrder}
+                                className="w-full cursor-grab active:cursor-grabbing"
+                            >
+                                <CommunityServerIcon
+                                    id={server.id}
+                                    name={server.name}
+                                    imageUrl={server.imageUrl}
+                                    hasUnread={server.hasUnread}
+                                    mentionCount={server.mentionCount}
+                                />
+                            </Reorder.Item>
+                        ))}
+                    </Reorder.Group>
 
                     <TooltipProvider delayDuration={50}>
                         <Tooltip>

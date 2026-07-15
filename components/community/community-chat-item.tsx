@@ -4,6 +4,31 @@ import { ShieldAlert, ShieldCheck, Edit, Trash } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
+import { CommunityMessageReactions, type MessageReaction } from "./community-message-reactions";
+import { EmojiPicker } from "@/components/messages/emoji-picker";
+import { SmileIcon } from "@hugeicons/core-free-icons";
+
+// Render @mentions as highlighted chips (Discord-style); plain text otherwise.
+function MessageContent({ content, deleted, isUpdated }: { content: string; deleted: boolean; isUpdated: boolean }) {
+    const parts = content.split(/(@[a-zA-Z0-9_-]+|@everyone)/g);
+    return (
+        <p className={cn(
+            "text-sm text-flexwhite/90 mt-0.5 leading-relaxed",
+            deleted && "italic text-zinc-500 text-sm"
+        )}>
+            {parts.map((part, i) =>
+                /^@([a-zA-Z0-9_-]+|everyone)$/.test(part) && !deleted ? (
+                    <span key={i} className="rounded-[4px] bg-twitter/20 px-1 py-0.5 font-semibold text-twitter2">{part}</span>
+                ) : (
+                    <span key={i}>{part}</span>
+                )
+            )}
+            {isUpdated && !deleted && (
+                <span className="text-[10px] mx-2 text-zinc-500">(edited)</span>
+            )}
+        </p>
+    );
+}
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,6 +52,8 @@ type Props = {
     serverId: string;
     pinned?: boolean;
     replyTo?: { userName: string | null; content: string; deleted: boolean } | null;
+    reactions?: MessageReaction[];
+    currentUsername?: string | null;
 };
 
 const roleIconMap: Record<string, React.ReactNode> = {
@@ -57,6 +84,8 @@ export function CommunityChatItem({
     serverId,
     pinned = false,
     replyTo = null,
+    reactions = [],
+    currentUsername = null,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(content);
@@ -72,6 +101,9 @@ export function CommunityChatItem({
         onSuccess: () => utils.community.getMessages.invalidate(),
     });
     const setPinned = trpc.community.setMessagePinned.useMutation({
+        onSuccess: () => utils.community.getMessages.invalidate(),
+    });
+    const toggleReaction = trpc.community.toggleReaction.useMutation({
         onSuccess: () => utils.community.getMessages.invalidate(),
     });
     const setReplyTo = useCommunityReply((s) => s.setReplyTo);
@@ -98,7 +130,12 @@ export function CommunityChatItem({
     };
 
     return (
-        <div className="relative group flex items-center hover:bg-white/[0.03] px-4 py-2 transition w-full">
+        <div className={cn(
+            "relative group flex items-center px-4 py-2 transition w-full",
+            !deleted && currentUsername && (content.includes(`@${currentUsername}`) || content.includes("@everyone"))
+                ? "bg-sunset/[0.07] shadow-[inset_2px_0_0_var(--color-sunset)] hover:bg-sunset/10"
+                : "hover:bg-white/[0.03]",
+        )}>
             <div className="group flex gap-x-2 items-start w-full">
                 <Avatar className="h-9 w-9 mt-0.5">
                     <AvatarImage src={userImage ?? undefined} alt={userName ?? ""} />
@@ -153,15 +190,7 @@ export function CommunityChatItem({
                     )}
 
                     {!fileUrl && !isEditing && (
-                        <p className={cn(
-                            "text-sm text-flexwhite/90 mt-0.5 leading-relaxed",
-                            deleted && "italic text-zinc-500 text-sm"
-                        )}>
-                            {content}
-                            {isUpdated && !deleted && (
-                                <span className="text-[10px] mx-2 text-zinc-500">(edited)</span>
-                            )}
-                        </p>
+                        <MessageContent content={content} deleted={deleted} isUpdated={isUpdated} />
                     )}
 
                     {!fileUrl && isEditing && (
@@ -188,11 +217,21 @@ export function CommunityChatItem({
                             Press escape to cancel, enter to save
                         </span>
                     )}
+
+                    {!deleted && (
+                        <CommunityMessageReactions messageId={id} reactions={reactions} />
+                    )}
                 </div>
             </div>
 
             {!deleted && (
                 <div className="hidden group-hover:flex items-center gap-x-1 absolute p-1 -top-3 right-5 bg-black3 border border-flexwhite/15 rounded-lg shadow-lg">
+                    <EmojiPicker onEmojiSelect={(e) => toggleReaction.mutate({ messageId: id, emoji: e.native })}>
+                        <button className="cursor-pointer" title="React">
+                            <HugeiconsIcon icon={SmileIcon} className="w-4 h-4 text-zinc-400 hover:text-zinc-300 transition" strokeWidth={2} />
+                        </button>
+                    </EmojiPicker>
+
                     <TooltipProvider delayDuration={50}>
                         <Tooltip>
                             <TooltipTrigger asChild>

@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { trpc } from "@/lib/trpc/client";
 import { useCommunityScroll } from "@/hooks/use-community-scroll";
 import { useEffect } from "react";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { CommunityChatItem } from "./community-chat-item";
 import { CommunityChatWelcome } from "./community-chat-welcome";
 
@@ -38,6 +39,8 @@ export function CommunityChatMessages({
     currentMemberRole,
     typingUsers = [],
 }: Props) {
+    const { data: session } = useAuthSession();
+    const currentUsername = session?.user?.username ?? null;
     const chatRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -128,9 +131,12 @@ export function CommunityChatMessages({
             <div className="flex flex-col-reverse mt-auto">
                 {data?.pages?.map((group, i) => (
                     <Fragment key={i}>
-                        {group.items.map((message) => (
+                        {group.items.map((message, idx) => {
+                            const older = group.items[idx + 1] ?? data.pages[i + 1]?.items?.[0];
+                            const isNewDay = !older || new Date(older.createdAt).toDateString() !== new Date(message.createdAt).toDateString();
+                            return (
+                        <Fragment key={message.id}>
                             <CommunityChatItem
-                                key={message.id}
                                 id={message.id}
                                 content={message.content}
                                 memberRole={message.memberRole}
@@ -150,8 +156,23 @@ export function CommunityChatMessages({
                                     content: message.replyContent ?? "message deleted",
                                     deleted: message.replyDeleted ?? true,
                                 } : null}
+                                reactions={message.reactions}
+                                currentUsername={currentUsername}
                             />
-                        ))}
+                            {/* AFTER the item in DOM = visually ABOVE it under
+                                flex-col-reverse — the divider heads the day. */}
+                            {isNewDay && (
+                                <div className="my-3 flex items-center gap-3 px-4" aria-hidden>
+                                    <span className="h-px flex-1 bg-white/[0.06]" />
+                                    <span className="text-[11px] font-semibold text-zinc-600">
+                                        {new Date(message.createdAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+                                    </span>
+                                    <span className="h-px flex-1 bg-white/[0.06]" />
+                                </div>
+                            )}
+                        </Fragment>
+                            );
+                        })}
                     </Fragment>
                 ))}
             </div>
