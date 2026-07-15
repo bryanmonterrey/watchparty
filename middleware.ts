@@ -31,10 +31,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Everything else that isn't explicitly public requires a session.
+  // Everything else that isn't explicitly public requires a session. Carry the
+  // destination through login (invite links, deep links) — the login card
+  // funnels every auth method through resolvePostLoginRedirect(callbackUrl),
+  // which only honors same-site targets.
   const isPublic = publicRoutes.includes(pathname);
   if (!session && !isPublic) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const login = new URL("/login", request.url);
+    login.searchParams.set("callbackUrl", pathname + request.nextUrl.search);
+    return NextResponse.redirect(login);
   }
 
   return NextResponse.next();

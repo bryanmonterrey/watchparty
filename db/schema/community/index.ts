@@ -25,6 +25,14 @@ export const communityServers = pgTable('community_servers', {
     traits: text('traits'),
     // When true, invite links show only name + icon
     privateProfile: boolean('private_profile'),
+    // System messages: target channel (null = #general) + per-event toggles
+    // (null/true = on, false = off)
+    systemChannelId: uuid('system_channel_id'),
+    welcomeMessages: boolean('welcome_messages'),
+    boostMessages: boolean('boost_messages'),
+    // AutoMod rules for members (mods/admins exempt)
+    automodBlockLinks: boolean('automod_block_links'),
+    automodBlockMentions: boolean('automod_block_mentions'),
     inviteCode: text('invite_code').notNull().unique(),
     ownerId: text('owner_id')
         .references(() => user.id, { onDelete: 'cascade' })
@@ -104,6 +112,8 @@ export const communityMessages = pgTable('community_messages', {
     // Reply threading (SET NULL keeps the child when the parent is removed)
     replyToId: uuid('reply_to_id'),
     pinned: boolean('pinned').default(false).notNull(),
+    // System rows (joins, boosts) render compact in chat
+    system: boolean('system'),
     deleted: boolean('deleted').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

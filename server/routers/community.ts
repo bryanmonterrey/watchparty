@@ -99,6 +99,46 @@ async function boostAllowance(userId: string) {
     return { tierSlots, purchased, used, available: tierSlots + purchased - used };
 }
 
+/**
+ * Post a system row (join/boost announcements) into the server's system
+ * channel (falls back to #general, then the first channel). Fire-and-forget:
+ * a failed announcement never fails the action that triggered it.
+ */
+async function sendSystemMessage(serverId: string, memberId: string, content: string) {
+    try {
+        const [srv] = await db
+            .select({ systemChannelId: communityServers.systemChannelId })
+            .from(communityServers)
+            .where(eq(communityServers.id, serverId))
+            .limit(1);
+        const channels = await db
+            .select({ id: communityChannels.id, name: communityChannels.name, type: communityChannels.type })
+            .from(communityChannels)
+            .where(eq(communityChannels.serverId, serverId));
+        const target =
+            channels.find((c) => c.id === srv?.systemChannelId) ??
+            channels.find((c) => c.name === "general" && c.type === "TEXT") ??
+            channels.find((c) => c.type === "TEXT");
+        if (!target) return;
+        await db.insert(communityMessages).values({
+            content,
+            memberId,
+            channelId: target.id,
+            system: true,
+        });
+        await notifyChannelChange(target.id);
+    } catch {
+        // announcements are best-effort
+    }
+}
+
+const WELCOME_TEMPLATES = [
+    "{name} just landed",
+    "Say hi to {name}",
+    "{name} is here",
+    "{name} joined the server",
+];
+
 /** Notify connected clients that a channel's messages changed → they refetch. */
 function notifyChannelChange(channelId: string) {
     return publishToRoom(rooms.communityChannel(channelId), {
@@ -374,6 +414,11 @@ export const communityRouter = router({
                 description: z.string().max(500).nullable().optional(),
                 traits: z.string().max(300).nullable().optional(),
                 privateProfile: z.boolean().optional(),
+                systemChannelId: z.string().uuid().nullable().optional(),
+                welcomeMessages: z.boolean().optional(),
+                boostMessages: z.boolean().optional(),
+                automodBlockLinks: z.boolean().optional(),
+                automodBlockMentions: z.boolean().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -390,6 +435,11 @@ export const communityRouter = router({
                     ...(input.description !== undefined && { description: input.description?.trim() || null }),
                     ...(input.traits !== undefined && { traits: input.traits }),
                     ...(input.privateProfile !== undefined && { privateProfile: input.privateProfile }),
+                    ...(input.systemChannelId !== undefined && { systemChannelId: input.systemChannelId }),
+                    ...(input.welcomeMessages !== undefined && { welcomeMessages: input.welcomeMessages }),
+                    ...(input.boostMessages !== undefined && { boostMessages: input.boostMessages }),
+                    ...(input.automodBlockLinks !== undefined && { automodBlockLinks: input.automodBlockLinks }),
+                    ...(input.automodBlockMentions !== undefined && { automodBlockMentions: input.automodBlockMentions }),
                     updatedAt: new Date(),
                 })
                 .where(eq(communityServers.id, input.serverId))
@@ -508,11 +558,21 @@ export const communityRouter = router({
                 throw new TRPCError({ code: "FORBIDDEN", message: "Invites are paused on this server" });
             }
 
-            await db.insert(communityMembers).values({
-                userId: ctx.user.id,
-                serverId: server[0].id,
-                role: "GUEST",
-            });
+            const [newMember] = await db
+                .insert(communityMembers)
+                .values({
+                    userId: ctx.user.id,
+                    serverId: server[0].id,
+                    role: "GUEST",
+                })
+                .returning();
+
+            // Welcome announcement (on unless explicitly disabled)
+            if (server[0].welcomeMessages !== false && newMember) {
+                const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+                const template = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
+                await sendSystemMessage(server[0].id, newMember.id, template.replace("{name}", u?.name ?? "Someone"));
+            }
 
             return { serverId: server[0].id, alreadyMember: false };
         }),
@@ -1015,6 +1075,17 @@ export const communityRouter = router({
                     throw new TRPCError({ code: "FORBIDDEN", message: "No boost slots available — get more in the shop or upgrade premium" });
                 }
                 await db.insert(communityServerBoosts).values({ serverId: input.serverId, memberId: member.id });
+
+                // Boost announcement (on unless explicitly disabled)
+                const [srv] = await db
+                    .select({ boostMessages: communityServers.boostMessages })
+                    .from(communityServers)
+                    .where(eq(communityServers.id, input.serverId))
+                    .limit(1);
+                if (srv?.boostMessages !== false) {
+                    const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+                    await sendSystemMessage(input.serverId, member.id, `${u?.name ?? "Someone"} just boosted the server`);
+                }
             }
             return { boosted: !existing.length };
         }),
@@ -1322,6 +1393,7 @@ export const communityRouter = router({
                     fileUrl: communityMessages.fileUrl,
                     deleted: communityMessages.deleted,
                     pinned: communityMessages.pinned,
+                    system: communityMessages.system,
                     replyToId: communityMessages.replyToId,
                     createdAt: communityMessages.createdAt,
                     updatedAt: communityMessages.updatedAt,
@@ -1420,10 +1492,14 @@ export const communityRouter = router({
                 throw new TRPCError({ code: "FORBIDDEN", message: "This channel is read-only" });
             }
 
-            // Automod: guests can't post messages containing blocked keywords.
+            // AutoMod: rules apply to members (mods/admins exempt).
             if (member[0].role === "GUEST") {
                 const [srv] = await db
-                    .select({ automodKeywords: communityServers.automodKeywords })
+                    .select({
+                        automodKeywords: communityServers.automodKeywords,
+                        automodBlockLinks: communityServers.automodBlockLinks,
+                        automodBlockMentions: communityServers.automodBlockMentions,
+                    })
                     .from(communityServers)
                     .where(eq(communityServers.id, channel[0].serverId))
                     .limit(1);
@@ -1431,6 +1507,12 @@ export const communityRouter = router({
                 const lower = input.content.toLowerCase();
                 if (blocked.some((w) => lower.includes(w))) {
                     throw new TRPCError({ code: "BAD_REQUEST", message: "Message blocked by this server's AutoMod" });
+                }
+                if (srv?.automodBlockLinks && /https?:\/\//i.test(input.content)) {
+                    throw new TRPCError({ code: "BAD_REQUEST", message: "Links are blocked by this server's AutoMod" });
+                }
+                if (srv?.automodBlockMentions && (input.content.match(/@[a-zA-Z0-9_-]+/g)?.length ?? 0) > 5) {
+                    throw new TRPCError({ code: "BAD_REQUEST", message: "Too many mentions — blocked by this server's AutoMod" });
                 }
             }
 

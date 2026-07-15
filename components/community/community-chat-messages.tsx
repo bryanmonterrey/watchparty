@@ -162,6 +162,7 @@ export function CommunityChatMessages({
                                 reactions={message.reactions}
                                 currentUsername={currentUsername}
                                 emojiMap={emojiMap}
+                                system={message.system ?? false}
                             />
                             {/* AFTER the item in DOM = visually ABOVE it under
                                 flex-col-reverse — the divider heads the day. */}

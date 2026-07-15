@@ -107,7 +107,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                 <div className={cn("p-6", active === "profile" ? "max-w-5xl" : "max-w-2xl")}>
                     {active === "profile" && isAdmin && <ProfileSection server={server} memberCount={members.length} />}
                     {active === "tag" && isAdmin && <TagSection server={server} />}
-                    {active === "engagement" && <EngagementSection serverId={server.id} />}
+                    {active === "engagement" && <EngagementSection server={server} channels={channels} isAdmin={isAdmin} />}
                     {active === "boosts" && <BoostsSection serverId={server.id} boostCount={boostCount} boostedByMe={boostedByMe} />}
                     {active === "emoji" && <ExpressionsSection serverId={server.id} kind="emoji" />}
                     {active === "stickers" && <ExpressionsSection serverId={server.id} kind="sticker" />}
@@ -118,7 +118,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     {active === "roles" && (
                         <RolesSection serverId={server.id} members={members} isAdmin={isAdmin} currentUserId={session?.user?.id} />
                     )}
-                    {active === "invites" && <InvitesSection serverId={server.id} inviteCode={server.inviteCode} />}
+                    {active === "invites" && <InvitesSection server={server} isAdmin={isAdmin} />}
                     {active === "access" && isAdmin && <AccessSection server={server} channels={channels} />}
                     {active === "integrations" && <IntegrationsSection />}
                     {active === "apps" && <AppsSection />}
@@ -447,8 +447,28 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
 
 // ─── Engagement ──────────────────────────────────────────
 
-function EngagementSection({ serverId }: { serverId: string }) {
+function EngagementSection({
+    server,
+    channels,
+    isAdmin,
+}: {
+    server: CommunityServer;
+    channels: (CommunityChannel & { unreadCount?: number })[];
+    isAdmin: boolean;
+}) {
+    const serverId = server.id;
+    const utils = trpc.useUtils();
     const { data, isLoading } = trpc.community.getEngagement.useQuery({ serverId });
+    const updateServer = trpc.community.updateServer.useMutation({
+        onSuccess: () => utils.community.getServer.invalidate({ serverId }),
+        onError: () => toast.error("Update failed"),
+    });
+
+    const textChannels = channels.filter((c) => c.type === "TEXT");
+    const systemChannel =
+        textChannels.find((c) => c.id === server.systemChannelId) ??
+        textChannels.find((c) => c.name === "general") ??
+        textChannels[0];
 
     const stats = data
         ? [
@@ -513,6 +533,71 @@ function EngagementSection({ serverId }: { serverId: string }) {
                             })}
                         </div>
                     )}
+                </>
+            )}
+
+            {/* System messages — announcements that keep the server feeling alive */}
+            {isAdmin && (
+                <>
+                    <h2 className="mb-3 mt-9 text-[14px] font-semibold text-zinc-500">System messages</h2>
+                    <div className="space-y-2">
+                        <label className="flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[15px] font-bold text-white">Welcome messages</p>
+                                <p className="mt-0.5 text-[13px] font-medium text-zinc-500">Announce when someone joins the server.</p>
+                            </div>
+                            <Switch
+                                checked={server.welcomeMessages !== false}
+                                onCheckedChange={(v) => updateServer.mutate({ serverId, welcomeMessages: v })}
+                                disabled={updateServer.isPending}
+                            />
+                        </label>
+
+                        <label className="flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[15px] font-bold text-white">Boost messages</p>
+                                <p className="mt-0.5 text-[13px] font-medium text-zinc-500">Announce when someone boosts the server.</p>
+                            </div>
+                            <Switch
+                                checked={server.boostMessages !== false}
+                                onCheckedChange={(v) => updateServer.mutate({ serverId, boostMessages: v })}
+                                disabled={updateServer.isPending}
+                            />
+                        </label>
+
+                        <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[15px] font-bold text-white">Announcements channel</p>
+                                <p className="mt-0.5 text-[13px] font-medium text-zinc-500">Where join and boost messages post.</p>
+                            </div>
+                            <GooDropdown
+                                side="bottom"
+                                align="end"
+                                width={220}
+                                gap={6}
+                                fill="#101011"
+                                buttonRadius={16}
+                                panelRadius={16}
+                                triggerAriaLabel="Announcements channel"
+                                triggerClassName={cn(
+                                    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[14px] font-bold text-zinc-200 transition-colors hover:bg-white/10 hover:text-white",
+                                    updateServer.isPending && "pointer-events-none opacity-50",
+                                )}
+                                trigger={
+                                    <>
+                                        #{systemChannel?.name ?? "general"}
+                                        <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                                    </>
+                                }
+                                items={textChannels.map((c) => ({
+                                    key: c.id,
+                                    onClick: () => updateServer.mutate({ serverId, systemChannelId: c.id }),
+                                    className: "text-[14px] font-medium text-zinc-100 hover:bg-white/10",
+                                    label: <>#{c.name}</>,
+                                }))}
+                            />
+                        </div>
+                    </div>
                 </>
             )}
         </div>
@@ -590,6 +675,7 @@ type Member = {
     userName: string | null;
     userImage: string | null;
     userUsername: string | null;
+    createdAt: string | Date;
 };
 
 function MemberRow({
@@ -628,7 +714,9 @@ function MemberRow({
                 <p className="truncate text-[15px] font-bold text-white">
                     {m.userName}{isSelf && <span className="ml-1.5 text-[12px] font-semibold text-zinc-500">you</span>}
                 </p>
-                <p className="truncate text-[13px] font-medium text-zinc-500">@{m.userUsername || "user"}</p>
+                <p className="truncate text-[13px] font-medium text-zinc-500">
+                    @{m.userUsername || "user"} · joined {formatDistanceToNow(new Date(m.createdAt), { addSuffix: true })}
+                </p>
             </div>
 
             {isAdmin && !isSelf ? (
@@ -684,6 +772,9 @@ function MemberRow({
     );
 }
 
+const MEMBER_SORTS = ["Newest", "Oldest", "A–Z"] as const;
+type MemberSort = (typeof MEMBER_SORTS)[number];
+
 function MembersSection({
     serverId,
     members,
@@ -695,11 +786,64 @@ function MembersSection({
     isAdmin: boolean;
     currentUserId?: string;
 }) {
+    const [query, setQuery] = useState("");
+    const [sort, setSort] = useState<MemberSort>("Newest");
+
+    const q = query.trim().toLowerCase();
+    const filtered = members
+        .filter((m) => !q || (m.userName ?? "").toLowerCase().includes(q) || (m.userUsername ?? "").toLowerCase().includes(q))
+        .sort((a, b) => {
+            if (sort === "A–Z") return (a.userName ?? "").localeCompare(b.userName ?? "");
+            const d = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            return sort === "Oldest" ? d : -d;
+        });
+
     return (
         <div>
             <SectionHint>{members.length} {members.length === 1 ? "person" : "people"} in this server. Bans stop rejoining; kicks don&apos;t.</SectionHint>
+
+            <div className="mb-4 flex items-center gap-2">
+                <Input
+                    radius={14}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search by name or username"
+                    className="h-12 flex-1 text-[14px] font-semibold"
+                />
+                <GooDropdown
+                    side="bottom"
+                    align="end"
+                    width={150}
+                    gap={6}
+                    fill="#101011"
+                    buttonRadius={16}
+                    panelRadius={16}
+                    triggerAriaLabel="Sort members"
+                    triggerClassName="flex h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[14px] font-bold text-zinc-200 transition-colors hover:bg-white/10 hover:text-white"
+                    trigger={
+                        <>
+                            {sort}
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                        </>
+                    }
+                    items={MEMBER_SORTS.map((s) => ({
+                        key: s,
+                        onClick: () => setSort(s),
+                        className: "text-[14px] font-medium text-zinc-100 hover:bg-white/10",
+                        label: <>{s}</>,
+                    }))}
+                />
+            </div>
+
+            {filtered.length === 0 && (
+                <div className="py-10 text-center">
+                    <p className="text-[15px] font-bold text-zinc-400">Nobody matches</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">Try a different name or username</p>
+                </div>
+            )}
+
             <div className="space-y-0.5">
-                {members.map((m) => (
+                {filtered.map((m) => (
                     <MemberRow key={m.userId} serverId={serverId} m={m} isAdmin={isAdmin} isSelf={m.userId === currentUserId} />
                 ))}
             </div>
@@ -756,15 +900,23 @@ function RolesSection({
 
 // ─── Invites ─────────────────────────────────────────────
 
-function InvitesSection({ serverId, inviteCode }: { serverId: string; inviteCode: string }) {
+function InvitesSection({ server, isAdmin }: { server: CommunityServer; isAdmin: boolean }) {
+    const serverId = server.id;
     const [copied, setCopied] = useState(false);
     const utils = trpc.useUtils();
     const generateInvite = trpc.community.generateInviteCode.useMutation({
         onSuccess: () => utils.community.getServer.invalidate({ serverId }),
     });
+    const setPaused = trpc.community.setInvitesPaused.useMutation({
+        onSuccess: (res) => {
+            utils.community.getServer.invalidate({ serverId });
+            toast.success(res.paused ? "Invites paused" : "Invites resumed");
+        },
+        onError: () => toast.error("Update failed"),
+    });
 
     const inviteUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/communities/invite/${inviteCode}`
+        ? `${window.location.origin}/communities/invite/${server.inviteCode}`
         : "";
 
     const onCopy = () => {
@@ -798,11 +950,27 @@ function InvitesSection({ serverId, inviteCode }: { serverId: string; inviteCode
             <button
                 onClick={() => generateInvite.mutate({ serverId })}
                 disabled={generateInvite.isPending}
-                className="mt-4 flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 text-[12px] font-semibold text-zinc-500 transition-colors hover:text-white disabled:opacity-50"
+                className="mt-4 flex cursor-pointer items-center gap-1.5 rounded-full py-1.5 text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white disabled:opacity-50"
             >
                 <HugeiconsIcon icon={RefreshIcon} className={cn("size-3.5", generateInvite.isPending && "animate-spin")} strokeWidth={2} />
                 Generate a new link — the old one stops working
             </button>
+
+            {isAdmin && (
+                <label className="mt-6 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Pause invites</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Nobody can join while paused — even with a valid link.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.invitesPaused}
+                        onCheckedChange={(v) => setPaused.mutate({ serverId, paused: v })}
+                        disabled={setPaused.isPending}
+                    />
+                </label>
+            )}
         </div>
     );
 }
@@ -811,14 +979,30 @@ function InvitesSection({ serverId, inviteCode }: { serverId: string; inviteCode
 
 function BansSection({ serverId, isAdmin }: { serverId: string; isAdmin: boolean }) {
     const utils = trpc.useUtils();
-    const { data: bans = [], isLoading } = trpc.community.listBans.useQuery({ serverId });
+    const [query, setQuery] = useState("");
+    const { data: allBans = [], isLoading } = trpc.community.listBans.useQuery({ serverId });
     const unban = trpc.community.unbanMember.useMutation({
         onSuccess: () => utils.community.listBans.invalidate({ serverId }),
     });
 
+    const q = query.trim().toLowerCase();
+    const bans = allBans.filter(
+        (b) => !q || (b.userName ?? "").toLowerCase().includes(q) || (b.userUsername ?? "").toLowerCase().includes(q),
+    );
+
     return (
         <div>
             <SectionHint>Banned users can&apos;t rejoin, even with a fresh invite link.</SectionHint>
+
+            {allBans.length > 0 && (
+                <Input
+                    radius={14}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search bans by name or username"
+                    className="mb-4 h-12 text-[14px] font-semibold"
+                />
+            )}
 
             {isLoading && (
                 <div className="space-y-2">
@@ -830,8 +1014,10 @@ function BansSection({ serverId, isAdmin }: { serverId: string; isAdmin: boolean
 
             {!isLoading && bans.length === 0 && (
                 <div className="py-10 text-center">
-                    <p className="text-[15px] font-bold text-zinc-400">No bans</p>
-                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">Ban members from their row in Members</p>
+                    <p className="text-[15px] font-bold text-zinc-400">{allBans.length ? "Nobody matches" : "No bans"}</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">
+                        {allBans.length ? "Try a different name" : "Ban members from their row in Members"}
+                    </p>
                 </div>
             )}
 
@@ -943,28 +1129,67 @@ function AutomodSection({ server }: { server: CommunityServer }) {
 
     return (
         <div>
-            <SectionHint>Messages from members containing a blocked word are rejected before they post. Mods and admins are exempt.</SectionHint>
+            <SectionHint>Rules run on members&apos; messages before they post. Mods and admins are exempt.</SectionHint>
 
-            <p className="mb-1.5 px-1 text-[14px] font-semibold text-zinc-500">Blocked words</p>
-            <textarea
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-                placeholder="spam, scam link, another phrase"
-                rows={5}
-                maxLength={2000}
-                className="w-full resize-none rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[15px] font-medium text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.06]"
-            />
-            <p className="mt-1.5 px-1 text-[13px] font-medium text-zinc-600">
-                Separate words or phrases with commas. {wordCount > 0 ? `${wordCount} blocked.` : "Nothing blocked yet."}
-            </p>
+            <div className="space-y-2">
+                {/* Rule: block links */}
+                <label className="flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Block links</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Members can&apos;t post URLs — kills drive-by scam links.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.automodBlockLinks}
+                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, automodBlockLinks: v })}
+                        disabled={updateServer.isPending}
+                    />
+                </label>
 
-            <ActionButton
-                className="mt-5"
-                onClick={() => updateServer.mutate({ serverId: server.id, automodKeywords: keywords.trim() || null })}
-                disabled={!dirty || updateServer.isPending}
-            >
-                {updateServer.isPending ? "Saving…" : "Save AutoMod"}
-            </ActionButton>
+                {/* Rule: mention spam */}
+                <label className="flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Block mention spam</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Messages with more than 5 @mentions are rejected.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.automodBlockMentions}
+                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, automodBlockMentions: v })}
+                        disabled={updateServer.isPending}
+                    />
+                </label>
+
+                {/* Rule: custom words */}
+                <div className="rounded-3xl bg-white/[0.03] px-5 py-4">
+                    <p className="text-[15px] font-bold text-white">Block custom words</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                        Messages containing any of these are rejected. Separate with commas.
+                    </p>
+                    <textarea
+                        value={keywords}
+                        onChange={(e) => setKeywords(e.target.value)}
+                        placeholder="spam, scam link, another phrase"
+                        rows={4}
+                        maxLength={2000}
+                        className="mt-3 w-full resize-none rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[15px] font-medium text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.06]"
+                    />
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="text-[13px] font-medium text-zinc-600">
+                            {wordCount > 0 ? `${wordCount} blocked.` : "Nothing blocked yet."}
+                        </p>
+                        <ActionButton
+                            className="h-11 px-5 text-[14px]"
+                            onClick={() => updateServer.mutate({ serverId: server.id, automodKeywords: keywords.trim() || null })}
+                            disabled={!dirty || updateServer.isPending}
+                        >
+                            {updateServer.isPending ? "Saving…" : "Save words"}
+                        </ActionButton>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
@@ -1328,12 +1553,43 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
 
 // ─── Audit log ───────────────────────────────────────────
 
+const AUDIT_FILTERS: { label: string; prefixes: string[] | null }[] = [
+    { label: "All", prefixes: null },
+    { label: "Server", prefixes: ["server.", "access.", "invite."] },
+    { label: "Channels", prefixes: ["channel."] },
+    { label: "Members", prefixes: ["member."] },
+    { label: "Expressions", prefixes: ["expression."] },
+];
+
 function AuditSection({ serverId }: { serverId: string }) {
-    const { data: entries = [], isLoading } = trpc.community.getAuditLog.useQuery({ serverId });
+    const [filter, setFilter] = useState("All");
+    const { data: allEntries = [], isLoading } = trpc.community.getAuditLog.useQuery({ serverId });
+
+    const prefixes = AUDIT_FILTERS.find((f) => f.label === filter)?.prefixes ?? null;
+    const entries = prefixes
+        ? allEntries.filter((e) => prefixes.some((p) => e.action.startsWith(p)))
+        : allEntries;
 
     return (
         <div>
             <SectionHint>Every management action on this server, newest first.</SectionHint>
+
+            <div className="mb-4 flex flex-wrap gap-1.5">
+                {AUDIT_FILTERS.map((f) => (
+                    <button
+                        key={f.label}
+                        onClick={() => setFilter(f.label)}
+                        className={cn(
+                            "h-9 cursor-pointer rounded-full px-4 text-[13px] font-bold transition-colors",
+                            filter === f.label
+                                ? "bg-white text-black"
+                                : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                        )}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+            </div>
 
             {isLoading && (
                 <div className="space-y-2">
@@ -1345,8 +1601,10 @@ function AuditSection({ serverId }: { serverId: string }) {
 
             {!isLoading && entries.length === 0 && (
                 <div className="py-10 text-center">
-                    <p className="text-[15px] font-bold text-zinc-400">Nothing logged yet</p>
-                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">Channel, member, and server changes show up here</p>
+                    <p className="text-[15px] font-bold text-zinc-400">{allEntries.length ? "Nothing in this category" : "Nothing logged yet"}</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">
+                        {allEntries.length ? "Try another filter" : "Channel, member, and server changes show up here"}
+                    </p>
                 </div>
             )}
 

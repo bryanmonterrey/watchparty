@@ -81,6 +81,8 @@ type Props = {
     reactions?: MessageReaction[];
     currentUsername?: string | null;
     emojiMap?: Record<string, string>;
+    /** join/boost announcements render as a compact system row */
+    system?: boolean;
 };
 
 const roleIconMap: Record<string, React.ReactNode> = {
@@ -114,6 +116,7 @@ export function CommunityChatItem({
     reactions = [],
     currentUsername = null,
     emojiMap,
+    system = false,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(content);
@@ -157,6 +160,19 @@ export function CommunityChatItem({
         if (!editContent.trim()) return;
         updateMessage.mutate({ messageId: id, content: editContent });
     };
+
+    // System rows (joins, boosts): one quiet line, no avatar, no toolbar.
+    if (system) {
+        return (
+            <div className="flex items-center gap-2.5 px-4 py-1.5">
+                <span aria-hidden className="ml-1 inline-block size-2 shrink-0 rounded-full bg-lantern/70" />
+                <p className="min-w-0 truncate text-[13px] font-medium text-zinc-500">
+                    {content}
+                    <span className="ml-2 text-[11px] text-zinc-600">{timestamp}</span>
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className={cn(
