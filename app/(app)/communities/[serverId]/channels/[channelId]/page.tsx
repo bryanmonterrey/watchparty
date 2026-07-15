@@ -53,6 +53,7 @@ export default function ChannelPage() {
                 channelName={channel.name}
                 serverId={serverId}
                 type="channel"
+                channelId={channelId}
                 onlineCount={onlineUserIds.length}
                 onOpenInfo={() => setInfoOpen(true)}
             />

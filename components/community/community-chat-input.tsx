@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { SendHorizontal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { ArrowUpIcon, CreateIcon, SendIcon } from "../icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowTurnBackwardIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { useCommunityReply } from "@/hooks/use-community-reply";
+import { ArrowUpIcon, CreateIcon } from "../icons";
 
 type Props = {
     channelId: string;
@@ -16,10 +18,17 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
     const [content, setContent] = useState("");
     const utils = trpc.useUtils();
     const lastTypingRef = useRef(0);
+    const { replyTo, setReplyTo } = useCommunityReply();
+
+    // Switching channels drops a stale reply target.
+    useEffect(() => {
+        setReplyTo(null);
+    }, [channelId, setReplyTo]);
 
     const sendMessage = trpc.community.sendMessage.useMutation({
         onSuccess: () => {
             setContent("");
+            setReplyTo(null);
             onStopTyping?.();
             lastTypingRef.current = 0;
             utils.community.getMessages.invalidate({ channelId });
@@ -44,11 +53,28 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!content.trim()) return;
-        sendMessage.mutate({ channelId, content });
+        sendMessage.mutate({ channelId, content, replyToId: replyTo?.id });
     };
 
     return (
         <form onSubmit={onSubmit} className="px-4 pb-5 pt-1">
+            {replyTo && (
+                <div className="mx-1 mb-1.5 flex items-center gap-2 rounded-2xl bg-white/[0.04] px-3.5 py-2">
+                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3.5 shrink-0 scale-y-[-1] text-zinc-500" strokeWidth={2} />
+                    <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-zinc-400">
+                        Replying to <span className="font-bold text-zinc-200">{replyTo.userName}</span>
+                        <span className="text-zinc-600"> · {replyTo.content}</span>
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => setReplyTo(null)}
+                        aria-label="Cancel reply"
+                        className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                        <HugeiconsIcon icon={Cancel01Icon} className="size-3" strokeWidth={2.5} />
+                    </button>
+                </div>
+            )}
             <div className="relative flex items-center bg-zinc-800/50 rounded-2xl border border-flexwhite/10 focus-within:ring-1 focus-within:ring-white/20 transition-all">
                 <button
                     type="button"

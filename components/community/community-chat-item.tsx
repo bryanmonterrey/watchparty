@@ -1,6 +1,9 @@
 "use client";
 
 import { ShieldAlert, ShieldCheck, Edit, Trash } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowTurnBackwardIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
+import { useCommunityReply } from "@/hooks/use-community-reply";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +25,8 @@ type Props = {
     deleted: boolean;
     isUpdated: boolean;
     serverId: string;
+    pinned?: boolean;
+    replyTo?: { userName: string | null; content: string; deleted: boolean } | null;
 };
 
 const roleIconMap: Record<string, React.ReactNode> = {
@@ -50,6 +55,8 @@ export function CommunityChatItem({
     deleted,
     isUpdated,
     serverId,
+    pinned = false,
+    replyTo = null,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(content);
@@ -64,12 +71,17 @@ export function CommunityChatItem({
     const deleteMessage = trpc.community.deleteMessage.useMutation({
         onSuccess: () => utils.community.getMessages.invalidate(),
     });
+    const setPinned = trpc.community.setMessagePinned.useMutation({
+        onSuccess: () => utils.community.getMessages.invalidate(),
+    });
+    const setReplyTo = useCommunityReply((s) => s.setReplyTo);
 
     const isOwner = userId === currentUserId;
     const isAdmin = currentMemberRole === "ADMIN";
     const isMod = currentMemberRole === "MODERATOR";
     const canDelete = !deleted && (isAdmin || isMod || isOwner);
     const canEdit = !deleted && isOwner && !fileUrl;
+    const canPin = !deleted && (isAdmin || isMod);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -96,6 +108,18 @@ export function CommunityChatItem({
                 </Avatar>
 
                 <div className="flex flex-col w-full">
+                    {replyTo && (
+                        <div className="mb-0.5 flex items-center gap-1.5 text-[12px] font-medium text-zinc-500">
+                            <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3 shrink-0 scale-y-[-1]" strokeWidth={2} />
+                            <span className="shrink-0 font-semibold text-zinc-400">{replyTo.userName ?? "Unknown"}</span>
+                            <span className="truncate">{replyTo.deleted ? "message deleted" : replyTo.content}</span>
+                        </div>
+                    )}
+                    {pinned && !deleted && (
+                        <div className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold text-zinc-500">
+                            <HugeiconsIcon icon={PinIcon} className="size-3" strokeWidth={2} /> Pinned
+                        </div>
+                    )}
                     <div className="flex items-center gap-x-2">
                         <div className="flex items-center">
                             <span className={cn("font-semibold text-sm", roleColorMap[memberRole] ?? "text-zinc-300")}>
@@ -167,8 +191,36 @@ export function CommunityChatItem({
                 </div>
             </div>
 
-            {canDelete && (
+            {!deleted && (
                 <div className="hidden group-hover:flex items-center gap-x-1 absolute p-1 -top-3 right-5 bg-black3 border border-flexwhite/15 rounded-lg shadow-lg">
+                    <TooltipProvider delayDuration={50}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button onClick={() => setReplyTo({ id, userName: userName ?? "Unknown", content })} className="cursor-pointer">
+                                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="w-4 h-4 text-zinc-400 hover:text-zinc-300 transition scale-y-[-1]" strokeWidth={2} />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top"><p className="text-xs">Reply</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    {canPin && (
+                        <TooltipProvider delayDuration={50}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => setPinned.mutate({ serverId, messageId: id, pinned: !pinned })}
+                                        disabled={setPinned.isPending}
+                                        className="cursor-pointer disabled:opacity-50"
+                                    >
+                                        <HugeiconsIcon icon={pinned ? PinOffIcon : PinIcon} className="w-4 h-4 text-zinc-400 hover:text-zinc-300 transition" strokeWidth={2} />
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p className="text-xs">{pinned ? "Unpin" : "Pin"}</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+
                     {canEdit && (
                         <TooltipProvider delayDuration={50}>
                             <Tooltip>
@@ -183,17 +235,19 @@ export function CommunityChatItem({
                         </TooltipProvider>
                     )}
 
-                    <TooltipProvider delayDuration={50}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Trash
-                                    onClick={() => deleteMessage.mutate({ messageId: id, serverId })}
-                                    className="cursor-pointer w-4 h-4 text-zinc-400 hover:text-zinc-300 transition"
-                                />
-                            </TooltipTrigger>
-                            <TooltipContent side="top"><p className="text-xs">Delete</p></TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    {canDelete && (
+                        <TooltipProvider delayDuration={50}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Trash
+                                        onClick={() => deleteMessage.mutate({ messageId: id, serverId })}
+                                        className="cursor-pointer w-4 h-4 text-zinc-400 hover:text-zinc-300 transition"
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p className="text-xs">Delete</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                 </div>
             )}
         </div>

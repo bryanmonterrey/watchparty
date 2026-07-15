@@ -9,7 +9,7 @@ import type { CommunityChannel, CommunityServer } from "@/db/schema/community";
 import { LockIcon, TrashIcon } from "../icons";
 
 type Props = {
-    channel: CommunityChannel;
+    channel: CommunityChannel & { unreadCount?: number };
     server: CommunityServer;
     role?: string;
 };
@@ -27,6 +27,7 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
 
     const Icon = iconMap[channel.type];
     const isActive = params?.channelId === channel.id;
+    const hasUnread = !isActive && (channel.unreadCount ?? 0) > 0;
 
     const onClick = () => {
         router.push(`/communities/${params?.serverId}/channels/${channel.id}`);
@@ -49,11 +50,15 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
             <p
                 className={cn(
                     "line-clamp-1 font-medium text-sm text-flexwhite/50 group-hover:text-flexwhite/80 transition text-left",
-                    isActive && "text-flexwhite group-hover:text-flexwhite"
+                    isActive && "text-flexwhite group-hover:text-flexwhite",
+                    hasUnread && "font-bold text-flexwhite group-hover:text-flexwhite"
                 )}
             >
                 {channel.name}
             </p>
+            {hasUnread && (
+                <span className="ml-auto mr-1 size-2 shrink-0 rounded-full bg-white group-hover:hidden" aria-label="Unread messages" />
+            )}
 
             {channel.name !== "general" && role !== "GUEST" && (
                 <div className="ml-auto flex items-center gap-x-2">

@@ -5,6 +5,7 @@ import { Loader2, ServerCrash } from "lucide-react";
 import { format } from "date-fns";
 import { trpc } from "@/lib/trpc/client";
 import { useCommunityScroll } from "@/hooks/use-community-scroll";
+import { useEffect } from "react";
 import { CommunityChatItem } from "./community-chat-item";
 import { CommunityChatWelcome } from "./community-chat-welcome";
 
@@ -62,6 +63,21 @@ export function CommunityChatMessages({
         shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
         count: allMessages.length,
     });
+
+    // Read marker: viewing a channel marks it read — on open and whenever a
+    // new message lands while you're looking at it.
+    const utils = trpc.useUtils();
+    const markRead = trpc.community.markChannelRead.useMutation({
+        onSuccess: () => {
+            utils.community.getServer.invalidate({ serverId });
+            utils.community.listServers.invalidate();
+        },
+    });
+    const markReadMutate = markRead.mutate;
+    const newestId = data?.pages?.[0]?.items?.[0]?.id;
+    useEffect(() => {
+        if (channelId) markReadMutate({ channelId });
+    }, [channelId, newestId, markReadMutate]);
 
     if (status === "pending") {
         return (
@@ -121,6 +137,12 @@ export function CommunityChatMessages({
                                 deleted={message.deleted}
                                 isUpdated={message.updatedAt.getTime() !== message.createdAt.getTime()}
                                 serverId={serverId}
+                                pinned={message.pinned}
+                                replyTo={message.replyToId ? {
+                                    userName: message.replyUserName,
+                                    content: message.replyContent ?? "message deleted",
+                                    deleted: message.replyDeleted ?? true,
+                                } : null}
                             />
                         ))}
                     </Fragment>

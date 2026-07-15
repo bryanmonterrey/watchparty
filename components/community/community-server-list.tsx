@@ -58,6 +58,7 @@ export function CommunityServerList() {
                             id={server.id}
                             name={server.name}
                             imageUrl={server.imageUrl}
+                            hasUnread={server.hasUnread}
                         />
                     ))}
 

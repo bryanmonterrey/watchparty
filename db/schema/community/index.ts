@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, pgPolicy, uuid, text, timestamp, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, pgPolicy, uuid, text, timestamp, boolean, index, integer, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { user } from '../auth/user';
 
@@ -57,6 +57,8 @@ export const communityChannels = pgTable('community_channels', {
     createdById: text('created_by_id')
         .references(() => user.id, { onDelete: 'cascade' })
         .notNull(),
+    // Sort order within the server (null = fall back to createdAt)
+    position: integer('position'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -77,6 +79,9 @@ export const communityMessages = pgTable('community_messages', {
     channelId: uuid('channel_id')
         .references(() => communityChannels.id, { onDelete: 'cascade' })
         .notNull(),
+    // Reply threading (SET NULL keeps the child when the parent is removed)
+    replyToId: uuid('reply_to_id'),
+    pinned: boolean('pinned').default(false).notNull(),
     deleted: boolean('deleted').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -142,3 +147,21 @@ export type CommunityMessage = typeof communityMessages.$inferSelect;
 
 // Live audio rooms (Spaces)
 export * from "./spaces";
+
+// ─── Channel read state (unread indicators) ─────────────
+export const communityChannelReads = pgTable('community_channel_reads', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    memberId: uuid('member_id')
+        .references(() => communityMembers.id, { onDelete: 'cascade' })
+        .notNull(),
+    channelId: uuid('channel_id')
+        .references(() => communityChannels.id, { onDelete: 'cascade' })
+        .notNull(),
+    lastReadAt: timestamp('last_read_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('uq_channel_reads_member_channel').on(table.memberId, table.channelId),
+    index('idx_channel_reads_channel').on(table.channelId),
+    pgPolicy('community_channel_reads_own', { for: 'all', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members WHERE community_members.id = member_id AND community_members.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityChannelRead = typeof communityChannelReads.$inferSelect;

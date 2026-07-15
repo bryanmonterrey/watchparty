@@ -6,9 +6,11 @@ import {
     communityMembers,
     communityChannels,
     communityMessages,
+    communityChannelReads,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
-import { eq, and, desc, asc, sql, lt, count } from "drizzle-orm";
+import { eq, and, desc, asc, sql, lt, ne, count } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { publishToRoom } from "@/lib/realtime/publish";
@@ -42,7 +44,28 @@ export const communityRouter = router({
             .where(eq(communityMembers.userId, ctx.user.id))
             .orderBy(asc(communityServers.createdAt));
 
-        return servers;
+        // Unread flag per server: any channel message newer than the member's
+        // read marker (missing marker = everything unread), not their own.
+        const unreadServers = await db
+            .selectDistinct({ serverId: communityChannels.serverId })
+            .from(communityMessages)
+            .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+            .innerJoin(communityMembers, and(
+                eq(communityMembers.serverId, communityChannels.serverId),
+                eq(communityMembers.userId, ctx.user.id),
+            ))
+            .leftJoin(communityChannelReads, and(
+                eq(communityChannelReads.channelId, communityChannels.id),
+                eq(communityChannelReads.memberId, communityMembers.id),
+            ))
+            .where(and(
+                ne(communityMessages.memberId, communityMembers.id),
+                eq(communityMessages.deleted, false),
+                sql`${communityMessages.createdAt} > COALESCE(${communityChannelReads.lastReadAt}, 'epoch'::timestamptz)`,
+            ));
+        const unreadSet = new Set(unreadServers.map((r) => r.serverId));
+
+        return servers.map((s) => ({ ...s, hasUnread: unreadSet.has(s.id) }));
     }),
 
     /** Get a server by ID with channels + members */
@@ -79,7 +102,26 @@ export const communityRouter = router({
                 .select()
                 .from(communityChannels)
                 .where(eq(communityChannels.serverId, input.serverId))
-                .orderBy(asc(communityChannels.createdAt));
+                .orderBy(sql`${communityChannels.position} ASC NULLS LAST`, asc(communityChannels.createdAt));
+
+            // Unread count per channel for the current member.
+            const unreadRows = await db
+                .select({ channelId: communityMessages.channelId, cnt: count() })
+                .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+                .leftJoin(communityChannelReads, and(
+                    eq(communityChannelReads.channelId, communityMessages.channelId),
+                    eq(communityChannelReads.memberId, membership[0].id),
+                ))
+                .where(and(
+                    eq(communityChannels.serverId, input.serverId),
+                    ne(communityMessages.memberId, membership[0].id),
+                    eq(communityMessages.deleted, false),
+                    sql`${communityMessages.createdAt} > COALESCE(${communityChannelReads.lastReadAt}, 'epoch'::timestamptz)`,
+                ))
+                .groupBy(communityMessages.channelId);
+            const unreadByChannel = new Map(unreadRows.map((r) => [r.channelId, Number(r.cnt)]));
+            const channelsWithUnread = channels.map((c) => ({ ...c, unreadCount: unreadByChannel.get(c.id) ?? 0 }));
 
             const members = await db
                 .select({
@@ -99,7 +141,7 @@ export const communityRouter = router({
 
             return {
                 server: server[0],
-                channels,
+                channels: channelsWithUnread,
                 members,
                 currentMember: membership[0],
             };
@@ -389,6 +431,111 @@ export const communityRouter = router({
     // ─── Messages ────────────────────────────────────────
 
     /** Get paginated messages for a channel */
+    /** Reorder channels (admin/mod) — channelIds in desired order */
+    reorderChannels: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), channelIds: z.array(z.string().uuid()).min(1) }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+            await Promise.all(input.channelIds.map((id, i) =>
+                db.update(communityChannels)
+                    .set({ position: i, updatedAt: new Date() })
+                    .where(and(eq(communityChannels.id, id), eq(communityChannels.serverId, input.serverId)))
+            ));
+            return { success: true };
+        }),
+
+    /** Pin or unpin a message (admin/mod) */
+    setMessagePinned: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), messageId: z.string().uuid(), pinned: z.boolean() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+            const [msg] = await db
+                .select({ id: communityMessages.id, channelId: communityMessages.channelId, serverId: communityChannels.serverId })
+                .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
+                .where(eq(communityMessages.id, input.messageId))
+                .limit(1);
+            if (!msg || msg.serverId !== input.serverId) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+            }
+            await db.update(communityMessages)
+                .set({ pinned: input.pinned, updatedAt: new Date() })
+                .where(eq(communityMessages.id, input.messageId));
+            await notifyChannelChange(msg.channelId);
+            return { success: true };
+        }),
+
+    /** Pinned messages for a channel */
+    getPinnedMessages: protectedProcedure
+        .input(z.object({ channelId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const channel = await db
+                .select()
+                .from(communityChannels)
+                .where(eq(communityChannels.id, input.channelId))
+                .limit(1);
+            if (!channel.length) throw new TRPCError({ code: "NOT_FOUND", message: "Channel not found" });
+            const member = await db
+                .select()
+                .from(communityMembers)
+                .where(and(
+                    eq(communityMembers.serverId, channel[0].serverId),
+                    eq(communityMembers.userId, ctx.user.id),
+                ))
+                .limit(1);
+            if (!member.length) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+
+            return db
+                .select({
+                    id: communityMessages.id,
+                    content: communityMessages.content,
+                    fileUrl: communityMessages.fileUrl,
+                    createdAt: communityMessages.createdAt,
+                    userName: user.name,
+                    userImage: user.avatar_url,
+                })
+                .from(communityMessages)
+                .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
+                .innerJoin(user, eq(communityMembers.userId, user.id))
+                .where(and(
+                    eq(communityMessages.channelId, input.channelId),
+                    eq(communityMessages.pinned, true),
+                    eq(communityMessages.deleted, false),
+                ))
+                .orderBy(desc(communityMessages.createdAt))
+                .limit(50);
+        }),
+
+    /** Mark a channel read (upsert the member's read marker) */
+    markChannelRead: protectedProcedure
+        .input(z.object({ channelId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            const channel = await db
+                .select()
+                .from(communityChannels)
+                .where(eq(communityChannels.id, input.channelId))
+                .limit(1);
+            if (!channel.length) throw new TRPCError({ code: "NOT_FOUND", message: "Channel not found" });
+            const member = await db
+                .select()
+                .from(communityMembers)
+                .where(and(
+                    eq(communityMembers.serverId, channel[0].serverId),
+                    eq(communityMembers.userId, ctx.user.id),
+                ))
+                .limit(1);
+            if (!member.length) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+
+            await db
+                .insert(communityChannelReads)
+                .values({ memberId: member[0].id, channelId: input.channelId, lastReadAt: new Date() })
+                .onConflictDoUpdate({
+                    target: [communityChannelReads.memberId, communityChannelReads.channelId],
+                    set: { lastReadAt: new Date() },
+                });
+            return { success: true };
+        }),
+
     getMessages: protectedProcedure
         .input(
             z.object({
@@ -430,12 +577,18 @@ export const communityRouter = router({
                 conditions.push(lt(communityMessages.createdAt, new Date(input.cursor)));
             }
 
+            const replyMsg = alias(communityMessages, "reply_msg");
+            const replyMember = alias(communityMembers, "reply_member");
+            const replyUser = alias(user, "reply_user");
+
             const msgs = await db
                 .select({
                     id: communityMessages.id,
                     content: communityMessages.content,
                     fileUrl: communityMessages.fileUrl,
                     deleted: communityMessages.deleted,
+                    pinned: communityMessages.pinned,
+                    replyToId: communityMessages.replyToId,
                     createdAt: communityMessages.createdAt,
                     updatedAt: communityMessages.updatedAt,
                     memberId: communityMessages.memberId,
@@ -445,10 +598,16 @@ export const communityRouter = router({
                     userName: user.name,
                     userImage: user.avatar_url,
                     userUsername: user.username,
+                    replyContent: replyMsg.content,
+                    replyDeleted: replyMsg.deleted,
+                    replyUserName: replyUser.name,
                 })
                 .from(communityMessages)
                 .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
                 .innerJoin(user, eq(communityMembers.userId, user.id))
+                .leftJoin(replyMsg, eq(communityMessages.replyToId, replyMsg.id))
+                .leftJoin(replyMember, eq(replyMsg.memberId, replyMember.id))
+                .leftJoin(replyUser, eq(replyMember.userId, replyUser.id))
                 .where(and(...conditions))
                 .orderBy(desc(communityMessages.createdAt))
                 .limit(input.limit + 1);
@@ -469,6 +628,7 @@ export const communityRouter = router({
                 channelId: z.string().uuid(),
                 content: z.string().min(1),
                 fileUrl: z.string().optional(),
+                replyToId: z.string().uuid().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -504,6 +664,7 @@ export const communityRouter = router({
                     fileUrl: input.fileUrl ?? null,
                     memberId: member[0].id,
                     channelId: input.channelId,
+                    replyToId: input.replyToId ?? null,
                 })
                 .returning();
 

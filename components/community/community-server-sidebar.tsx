@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { CommunityServerHeader } from "./community-server-header";
 import { CommunityChannelSection } from "./community-channel-section";
 import { CommunityChannelItem } from "./community-channel-item";
+import { CommunityChannelReorder } from "./community-channel-reorder";
 import { CommunityMemberItem } from "./community-member-item";
 import { ServerSidebarSkeleton } from "./community-skeletons";
 import { trpc } from "@/lib/trpc/client";
@@ -26,6 +27,9 @@ export function CommunityServerSidebar({ serverId }: Props) {
     const textChannels = channels.filter((c) => c.type === "TEXT");
     const audioChannels = channels.filter((c) => c.type === "AUDIO");
     const videoChannels = channels.filter((c) => c.type === "VIDEO");
+    // Server-wide display order (sections concatenated) — the reorder commit
+    // needs the complete list so positions stay globally consistent.
+    const allOrdered = [...textChannels, ...audioChannels, ...videoChannels];
 
     return (
         <div className="flex flex-col h-full w-76 bg-zinc-900/60 shrink-0">
@@ -42,16 +46,12 @@ export function CommunityServerSidebar({ serverId }: Props) {
                             label="Text Channels"
                             server={server}
                         />
-                        <div className="space-y-[2px]">
-                            {textChannels.map((channel) => (
-                                <CommunityChannelItem
-                                    key={channel.id}
-                                    channel={channel}
-                                    role={role}
-                                    server={server}
-                                />
-                            ))}
-                        </div>
+                        <CommunityChannelReorder
+                            channels={textChannels}
+                            allChannels={allOrdered}
+                            server={server}
+                            role={role}
+                        />
                     </div>
                 )}
 
@@ -64,16 +64,12 @@ export function CommunityServerSidebar({ serverId }: Props) {
                             label="Voice Channels"
                             server={server}
                         />
-                        <div className="space-y-[2px]">
-                            {audioChannels.map((channel) => (
-                                <CommunityChannelItem
-                                    key={channel.id}
-                                    channel={channel}
-                                    role={role}
-                                    server={server}
-                                />
-                            ))}
-                        </div>
+                        <CommunityChannelReorder
+                            channels={audioChannels}
+                            allChannels={allOrdered}
+                            server={server}
+                            role={role}
+                        />
                     </div>
                 )}
 
@@ -86,16 +82,12 @@ export function CommunityServerSidebar({ serverId }: Props) {
                             label="Video Channels"
                             server={server}
                         />
-                        <div className="space-y-[2px]">
-                            {videoChannels.map((channel) => (
-                                <CommunityChannelItem
-                                    key={channel.id}
-                                    channel={channel}
-                                    role={role}
-                                    server={server}
-                                />
-                            ))}
-                        </div>
+                        <CommunityChannelReorder
+                            channels={videoChannels}
+                            allChannels={allOrdered}
+                            server={server}
+                            role={role}
+                        />
                     </div>
                 )}
             </ScrollArea>

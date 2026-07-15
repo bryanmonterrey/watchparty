@@ -10,9 +10,10 @@ type CommunityServerIconProps = {
     id: string;
     imageUrl: string | null;
     name: string;
+    hasUnread?: boolean;
 };
 
-export function CommunityServerIcon({ id, imageUrl, name }: CommunityServerIconProps) {
+export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false }: CommunityServerIconProps) {
     const params = useParams();
     const router = useRouter();
     const isActive = params?.serverId === id;
@@ -59,6 +60,12 @@ export function CommunityServerIcon({ id, imageUrl, name }: CommunityServerIconP
                                 </Squircle>
                             </div>
                         </Squircle>
+                        {hasUnread && !isActive && (
+                            <span
+                                aria-label="Unread activity"
+                                className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-white ring-2 ring-black"
+                            />
+                        )}
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" align="center">
