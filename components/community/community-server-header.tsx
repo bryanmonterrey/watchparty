@@ -1,18 +1,20 @@
 "use client";
 
-import {
-    ChevronDown,
-    LogOut,
-    PlusCircle,
-    Rocket,
-    Settings,
-    Trash,
-    UserPlus,
-    Users,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+    ArrowDown01Icon,
+    Copy01Icon,
+    Logout01Icon,
+    PlusSignIcon,
+    Rocket01Icon,
+    Settings01Icon,
+    UserAdd01Icon,
+} from "@hugeicons/core-free-icons";
 import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 import { useCommunityModal } from "@/hooks/use-community-modal";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import type { CommunityServer } from "@/db/schema/community";
 
@@ -23,8 +25,13 @@ type Props = {
     boostedByMe?: boolean;
 };
 
+// Server name menu (the Discord anatomy): boost on top, member actions in
+// the middle, the one red action last. Owners manage/delete through Server
+// Settings; everyone else gets Leave.
 export function CommunityServerHeader({ server, role, boostCount = 0, boostedByMe = false }: Props) {
     const { onOpen } = useCommunityModal();
+    const { data: session } = useAuthSession();
+    const router = useRouter();
     const utils = trpc.useUtils();
     const toggleBoost = trpc.community.toggleBoost.useMutation({
         onSuccess: () => {
@@ -36,8 +43,15 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
 
     const isAdmin = role === "ADMIN";
     const isModerator = isAdmin || role === "MODERATOR";
+    const isOwner = server.ownerId === session?.user?.id;
 
     const rowClass = "px-3 text-sm cursor-pointer text-neutral-400 font-medium hover:bg-zinc-800 hover:text-neutral-200";
+    const iconClass = "h-4 w-4 ml-auto";
+
+    const copyInvite = () => {
+        navigator.clipboard.writeText(`${window.location.origin}/communities/invite/${server.inviteCode}`);
+        toast.success("Invite link copied");
+    };
 
     const items: GooDropdownItem[] = [
         {
@@ -52,54 +66,35 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
                             {boostCount}
                         </span>
                     )}
-                    <Rocket className="h-4 w-4 ml-auto" />
+                    <HugeiconsIcon icon={Rocket01Icon} className={iconClass} strokeWidth={2} />
                 </>
             ),
         },
-        { key: "boost-sep", type: "separator" as const },
+        { key: "sep-boost", type: "separator" as const },
+        {
+            key: "invite",
+            onClick: () => onOpen("invite", { server }),
+            className: rowClass,
+            label: (
+                <>
+                    Invite People
+                    <HugeiconsIcon icon={UserAdd01Icon} className={iconClass} strokeWidth={2} />
+                </>
+            ),
+        },
         ...(isModerator
             ? [
                   {
-                      key: "invite",
-                      onClick: () => onOpen("invite", { server }),
-                      className: `${rowClass} text-indigo-400 hover:text-indigo-300`,
-                      label: (
-                          <>
-                              Invite People
-                              <UserPlus className="h-4 w-4 ml-auto" />
-                          </>
-                      ),
-                  },
-              ]
-            : []),
-        ...(isAdmin
-            ? [
-                  {
                       key: "settings",
-                      onClick: () => onOpen("editServer", { server }),
+                      onClick: () => router.push(`/communities/${server.id}/settings`),
                       className: rowClass,
                       label: (
                           <>
                               Server Settings
-                              <Settings className="h-4 w-4 ml-auto" />
+                              <HugeiconsIcon icon={Settings01Icon} className={iconClass} strokeWidth={2} />
                           </>
                       ),
                   },
-                  {
-                      key: "members",
-                      onClick: () => onOpen("members", { server }),
-                      className: rowClass,
-                      label: (
-                          <>
-                              Manage Members
-                              <Users className="h-4 w-4 ml-auto" />
-                          </>
-                      ),
-                  },
-              ]
-            : []),
-        ...(isModerator
-            ? [
                   {
                       key: "create-channel",
                       onClick: () => onOpen("createChannel", { server }),
@@ -107,40 +102,40 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
                       label: (
                           <>
                               Create Channel
-                              <PlusCircle className="h-4 w-4 ml-auto" />
+                              <HugeiconsIcon icon={PlusSignIcon} className={iconClass} strokeWidth={2} />
                           </>
                       ),
                   },
-                  { key: "sep", type: "separator" as const },
               ]
             : []),
-        ...(isAdmin
+        { key: "sep-actions", type: "separator" as const },
+        {
+            key: "copy-invite",
+            onClick: copyInvite,
+            className: rowClass,
+            label: (
+                <>
+                    Copy Invite Link
+                    <HugeiconsIcon icon={Copy01Icon} className={iconClass} strokeWidth={2} />
+                </>
+            ),
+        },
+        ...(!isOwner
             ? [
-                  {
-                      key: "delete",
-                      onClick: () => onOpen("deleteServer", { server }),
-                      className: `${rowClass} text-rose-500 hover:text-rose-400`,
-                      label: (
-                          <>
-                              Delete Server
-                              <Trash className="h-4 w-4 ml-auto" />
-                          </>
-                      ),
-                  },
-              ]
-            : [
+                  { key: "sep-leave", type: "separator" as const },
                   {
                       key: "leave",
                       onClick: () => onOpen("leaveServer", { server }),
-                      className: `${rowClass} text-rose-500 hover:text-rose-400`,
+                      className: `${rowClass} text-pastelred hover:text-pastelred`,
                       label: (
                           <>
                               Leave Server
-                              <LogOut className="h-4 w-4 ml-auto" />
+                              <HugeiconsIcon icon={Logout01Icon} className={iconClass} strokeWidth={2} />
                           </>
                       ),
                   },
-              ]),
+              ]
+            : []),
     ];
 
     return (
@@ -155,7 +150,7 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
             trigger={
                 <>
                     {server.name}
-                    <ChevronDown className="h-5 w-5 ml-auto" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="h-5 w-5 ml-auto" strokeWidth={2} />
                 </>
             }
             items={items}

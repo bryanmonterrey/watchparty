@@ -33,16 +33,13 @@ export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false, men
                             <div
                                 className={cn(
                                     "relative flex h-[62px] w-[62px] transition-colors items-center justify-center",
-                                    "bg-transparent group-hover:bg-soft-pink/40",
-                                    isActive && "bg-soft-pink group-hover:bg-soft-pink"
+                                    "bg-transparent group-hover:bg-[#6A6A6A]/50",
+                                    isActive && "bg-[#6A6A6A]/70 group-hover:bg-[#6A6A6A]/70"
                                 )}
                             >
                                 <Squircle asChild radius={16} autoEffects={false}>
                                     <div
-                                        className={cn(
-                                            "relative flex h-[62px] w-[62px] overflow-hidden items-center justify-center bg-black4",
-                                            isActive && "bg-soft-pink"
-                                        )}
+                                        className="relative flex h-[62px] w-[62px] overflow-hidden items-center justify-center bg-black4"
                                     >
                                         {imageUrl ? (
                                             <img
@@ -51,7 +48,7 @@ export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false, men
                                                 className="absolute inset-0 size-full object-cover"
                                             />
                                         ) : (
-                                            <span className="text-black font-semibold text-lg">
+                                            <span className="text-white/90 font-semibold text-lg">
                                                 {name.charAt(0).toUpperCase()}
                                             </span>
                                         )}
