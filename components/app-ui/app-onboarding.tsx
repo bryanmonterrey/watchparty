@@ -13,7 +13,32 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CheckmarkCircle02Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
 import AvatarUpload from "@/components/file-upload/avatar-upload";
+
+// Two-step onboarding (username → photo) with a completion beat. Logic is
+// untouched; the shell follows the current design language — step dots,
+// icon chip, squircle input, wide white pill CTAs.
+function StepDots({ step }: { step: "username_setup" | "avatar_setup" | "complete" }) {
+    const idx = step === "username_setup" ? 0 : 1;
+    if (step === "complete") return null;
+    return (
+        <div className="mb-1 flex justify-center gap-1.5">
+            {[0, 1].map((i) => (
+                <span
+                    key={i}
+                    className={cn(
+                        "h-1.5 rounded-full transition-all duration-300",
+                        i === idx ? "w-6 bg-white" : "w-1.5 bg-white/15",
+                    )}
+                />
+            ))}
+        </div>
+    );
+}
 
 type OnboardingStep =
     | "username_setup"
@@ -26,7 +51,6 @@ export default function OnboardingDialog() {
     const queryClient = useQueryClient();
     const [isOpen, setIsOpen] = useState(false);
     const [step, setStep] = useState<OnboardingStep>("username_setup");
-    const [message, setMessage] = useState("");
     const [username, setUsername] = useState("");
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [error, setError] = useState("");
@@ -100,7 +124,6 @@ export default function OnboardingDialog() {
         try {
             setLoading(true);
             setError("");
-            setMessage("Saving username...");
 
             // Save username first
             const response = await fetch("/api/update-profile", {
@@ -126,11 +149,9 @@ export default function OnboardingDialog() {
             // Move to avatar setup
             setError("");
             setStep("avatar_setup");
-            setMessage("Upload an avatar");
         } catch (error) {
             console.error("❌ Username save failed:", error);
             setError(error instanceof Error ? error.message : "Failed to save username");
-            setMessage("");
         } finally {
             setLoading(false);
         }
@@ -147,7 +168,6 @@ export default function OnboardingDialog() {
         try {
             setLoading(true);
             setError("");
-            setMessage("Uploading avatar...");
 
             // Upload avatar only (username already saved)
             const formData = new FormData();
@@ -174,7 +194,6 @@ export default function OnboardingDialog() {
             router.refresh();
 
             setStep("complete");
-            setMessage("Profile completed successfully!");
 
             setTimeout(() => {
                 setIsOpen(false);
@@ -184,7 +203,6 @@ export default function OnboardingDialog() {
         } catch (error) {
             console.error("❌ Avatar upload failed:", error);
             setError(error instanceof Error ? error.message : "Failed to upload avatar");
-            setMessage("");
         } finally {
             setLoading(false);
         }
@@ -200,20 +218,20 @@ export default function OnboardingDialog() {
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent
-                className="sm:max-w-xl rounded-4xl border-none p-8 gap-6"
+                className="gap-6 rounded-4xl border-none p-8 sm:max-w-md"
                 showCloseButton={step === "complete"}
             >
+                <StepDots step={step} />
+
                 {step === "username_setup" && (
                     <>
                         <DialogHeader>
-                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-900 flex items-center justify-center">
-                                <svg className="w-8 h-8 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
+                            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-white/5">
+                                <HugeiconsIcon icon={UserCircleIcon} className="size-7 text-zinc-400" strokeWidth={1.8} />
                             </div>
-                            <DialogTitle className="text-center text-white text-xl">Choose Username</DialogTitle>
-                            <DialogDescription className="text-center text-zinc-400">
-                                This will be your unique identifier
+                            <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">Choose your username</DialogTitle>
+                            <DialogDescription className="text-center text-[13px] font-medium text-zinc-500">
+                                Your unique @handle on watchparty
                             </DialogDescription>
                         </DialogHeader>
                         <form
@@ -224,29 +242,33 @@ export default function OnboardingDialog() {
                             }}
                         >
                             <div>
-                                <input
+                                <Input
+                                    radius={16}
                                     type="text"
                                     value={username}
                                     onChange={(e) => {
                                         setUsername(e.target.value);
                                         setError("");
                                     }}
-                                    placeholder="Enter username"
+                                    placeholder="username"
                                     autoFocus
-                                    className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-white placeholder:text-zinc-500 focus:outline-none focus:ring-none"
+                                    className="h-12 text-center text-[15px] font-semibold tracking-tight"
                                 />
-                                {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
-                                <p className="text-zinc-500 text-xs mt-2">
-                                    3-20 characters, letters, numbers, underscores and hyphens only
-                                </p>
+                                {error ? (
+                                    <p className="mt-2 text-center text-[12px] font-medium text-pastelred">{error}</p>
+                                ) : (
+                                    <p className="mt-2 text-center text-[12px] font-medium text-zinc-600">
+                                        3–20 characters · letters, numbers, underscores and hyphens
+                                    </p>
+                                )}
                             </div>
                             <Button
                                 type="submit"
-                                size="lg"
-                                className="w-full bg-zinc-900 border border-zinc-600/10 hover:bg-zinc-800 text-white text-lg font-semibold py-6 rounded-full"
+                                size="wide"
+                                className="bg-white font-bold text-black hover:bg-white/90"
                                 disabled={loading || !username.trim()}
                             >
-                                {loading ? "Saving..." : "Next"}
+                                {loading ? "Saving…" : "Continue"}
                             </Button>
                         </form>
                     </>
@@ -255,40 +277,40 @@ export default function OnboardingDialog() {
                 {step === "avatar_setup" && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="text-center text-white text-2xl">Upload Avatar</DialogTitle>
-                            <DialogDescription className="text-center text-zinc-400">
-
+                            <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">Add a profile photo</DialogTitle>
+                            <DialogDescription className="text-center text-[13px] font-medium text-zinc-500">
+                                Help people recognize you, @{username || "you"}
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                             <AvatarUpload
                                 onFileChange={handleFileChange}
                             />
-                            {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+                            {error && <p className="text-center text-[12px] font-medium text-pastelred">{error}</p>}
                             <Button
                                 onClick={handleAvatarUpload}
-                                className="w-full bg-neutral-900 border border-zinc-600/10 hover:bg-neutral-800 text-white text-lg font-semibold py-6.5 rounded-full"
+                                size="wide"
+                                className="bg-white font-bold text-black hover:bg-white/90"
                                 disabled={loading || !avatarFile}
                             >
-                                {loading ? "Uploading..." : "Complete Profile"}
+                                {loading ? "Uploading…" : "Complete profile"}
                             </Button>
                         </div>
                     </>
                 )}
 
                 {step === "complete" && (
-                    <>
-                        <DialogHeader>
-                            <div className="flex flex-col items-center">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                                    <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </div>
-                                <DialogTitle className="text-center text-white">{message}</DialogTitle>
+                    <DialogHeader>
+                        <div className="flex flex-col items-center py-2">
+                            <div className="mx-auto mb-4 grid size-14 place-items-center rounded-full bg-white/10">
+                                <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-7 text-white" strokeWidth={2} />
                             </div>
-                        </DialogHeader>
-                    </>
+                            <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">You&apos;re all set</DialogTitle>
+                            <DialogDescription className="mt-1 text-center text-[13px] font-medium text-zinc-500">
+                                Welcome to watchparty, @{username || "friend"}
+                            </DialogDescription>
+                        </div>
+                    </DialogHeader>
                 )}
             </DialogContent>
         </Dialog>
