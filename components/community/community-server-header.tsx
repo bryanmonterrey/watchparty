@@ -10,6 +10,7 @@ import {
     UserPlus,
     Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { trpc } from "@/lib/trpc/client";
@@ -26,7 +27,11 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
     const { onOpen } = useCommunityModal();
     const utils = trpc.useUtils();
     const toggleBoost = trpc.community.toggleBoost.useMutation({
-        onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
+        onSuccess: () => {
+            utils.community.getServer.invalidate({ serverId: server.id });
+            utils.community.boostBalance.invalidate();
+        },
+        onError: (err) => toast.error(err.message),
     });
 
     const isAdmin = role === "ADMIN";

@@ -35,6 +35,12 @@ export interface PremiumTier {
      * non-refundable and expire at period end. Tune freely; 0 = none included.
      */
     adCreditsMonthly: number;
+    /**
+     * Community boost slots included while the subscription is active (slots,
+     * not a consumable — lapse and the tier slots go away; purchased packs from
+     * the community shop are permanent and stack on top).
+     */
+    boostSlots: number;
     /** Self-serve tiers get on-chain plans; biz_custom is contact-sales only. */
     selfServe: boolean;
     /** Center/recommended card in its group. */
@@ -56,6 +62,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         tagline: "For everyday viewers",
         monthlyUsd: 9,
         adCreditsMonthly: 10,
+        boostSlots: 2,
         selfServe: true,
         planIdMonthly: 1,
         features: [
@@ -73,6 +80,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         tagline: "For power users & creators",
         monthlyUsd: 36,
         adCreditsMonthly: 50,
+        boostSlots: 6,
         selfServe: true,
         highlighted: true,
         planIdMonthly: 3,
@@ -92,6 +100,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         tagline: "For growing teams",
         monthlyUsd: 199,
         adCreditsMonthly: 200,
+        boostSlots: 12,
         selfServe: true,
         planIdMonthly: 5,
         features: [
@@ -108,6 +117,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         tagline: "For established brands",
         monthlyUsd: 999,
         adCreditsMonthly: 1000,
+        boostSlots: 30,
         selfServe: true,
         highlighted: true,
         planIdMonthly: 7,
@@ -125,6 +135,7 @@ export const TIERS: Record<TierKey, PremiumTier> = {
         tagline: "For large organizations",
         monthlyUsd: 0,
         adCreditsMonthly: 0,
+        boostSlots: 0,
         selfServe: false,
         planIdMonthly: 0,
         features: [
@@ -188,6 +199,7 @@ export const COMPARISON: CompareGroup[] = [
             { label: "Edit posts", values: { basic: true, premium: true, biz_basic: true, biz_pro: true } },
             { label: "Longer posts", values: { basic: true, premium: true, biz_basic: true, biz_pro: true } },
             { label: "Highest upload limits", values: { basic: false, premium: true, biz_basic: true, biz_pro: true } },
+            { label: "Community boosts", values: { basic: "2", premium: "6", biz_basic: "12", biz_pro: "30" } },
         ],
     },
     {

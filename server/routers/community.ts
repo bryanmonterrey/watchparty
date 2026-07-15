@@ -9,8 +9,13 @@ import {
     communityChannelReads,
     communityMessageReactions,
     communityServerBoosts,
+    communityBoostGrants,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
+import { premiumSubscriptions } from "@/db/schema/content";
+import { TIERS, USDC_MINT, type TierKey } from "@/lib/premium/tiers";
+import { BOOST_PACKS, getBoostTreasuryOwner } from "@/lib/premium/boosts";
+import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { eq, and, desc, asc, sql, lt, ne, count, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { TRPCError } from "@trpc/server";
@@ -44,6 +49,38 @@ function isPublicHttpUrl(u: URL): boolean {
     if (host.includes(":") || host.startsWith("[")) return false; // IPv6 literal
     if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return false; // IPv4 literal
     return true;
+}
+
+/**
+ * Boost allowance for a user: slots from their active premium tier (computed
+ * live — lapse and they're gone) + purchased packs (permanent) − boosts in use.
+ */
+async function boostAllowance(userId: string) {
+    const [sub] = await db
+        .select({ tierKey: premiumSubscriptions.tierKey, status: premiumSubscriptions.status, currentPeriodEnd: premiumSubscriptions.currentPeriodEnd })
+        .from(premiumSubscriptions)
+        .where(eq(premiumSubscriptions.userId, userId))
+        .limit(1);
+    const tierActive =
+        !!sub &&
+        (sub.status === "active" || sub.status === "past_due") &&
+        sub.currentPeriodEnd.getTime() > Date.now();
+    const tierSlots = tierActive ? (TIERS[sub.tierKey as TierKey]?.boostSlots ?? 0) : 0;
+
+    const [grantRow] = await db
+        .select({ purchased: sql<number>`COALESCE(SUM(${communityBoostGrants.amount}), 0)` })
+        .from(communityBoostGrants)
+        .where(eq(communityBoostGrants.userId, userId));
+    const purchased = Number(grantRow?.purchased ?? 0);
+
+    const [usedRow] = await db
+        .select({ used: count() })
+        .from(communityServerBoosts)
+        .innerJoin(communityMembers, eq(communityServerBoosts.memberId, communityMembers.id))
+        .where(eq(communityMembers.userId, userId));
+    const used = Number(usedRow?.used ?? 0);
+
+    return { tierSlots, purchased, used, available: tierSlots + purchased - used };
 }
 
 /** Notify connected clients that a channel's messages changed → they refetch. */
@@ -612,9 +649,92 @@ export const communityRouter = router({
             if (existing.length) {
                 await db.delete(communityServerBoosts).where(eq(communityServerBoosts.id, existing[0].id));
             } else {
+                const { available } = await boostAllowance(ctx.user.id);
+                if (available <= 0) {
+                    throw new TRPCError({ code: "FORBIDDEN", message: "No boost slots available — get more in the shop or upgrade premium" });
+                }
                 await db.insert(communityServerBoosts).values({ serverId: input.serverId, memberId: member.id });
             }
             return { boosted: !existing.length };
+        }),
+
+    /** The caller's boost slots: tier + purchased − in use */
+    boostBalance: protectedProcedure.query(({ ctx }) => boostAllowance(ctx.user.id)),
+
+    /**
+     * Redeem an on-chain USDC payment for a boost pack. The client transfers
+     * the pack price to the premium treasury's USDC ATA, then submits the
+     * signature here; we verify the transfer on-chain and grant the slots.
+     * tx_signature is UNIQUE so a payment redeems exactly once.
+     */
+    purchaseBoosts: protectedProcedure
+        .input(z.object({ txSignature: z.string().min(64).max(120), boosts: z.number().int().positive() }))
+        .mutation(async ({ ctx, input }) => {
+            const pack = BOOST_PACKS.find((p) => p.boosts === input.boosts);
+            if (!pack) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown boost pack" });
+
+            const already = await db
+                .select({ id: communityBoostGrants.id })
+                .from(communityBoostGrants)
+                .where(eq(communityBoostGrants.txSignature, input.txSignature))
+                .limit(1);
+            if (already.length) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
+
+            const res = await fetch(getRpcUrl(), {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    id: 1,
+                    method: "getTransaction",
+                    params: [input.txSignature, { encoding: "jsonParsed", commitment: "confirmed", maxSupportedTransactionVersion: 0 }],
+                }),
+            });
+            const tx = (await res.json())?.result;
+            if (!tx) throw new TRPCError({ code: "NOT_FOUND", message: "Transaction not found yet — wait a moment and retry" });
+            if (tx.meta?.err) throw new TRPCError({ code: "BAD_REQUEST", message: "Transaction failed on-chain" });
+            if (tx.blockTime && Date.now() / 1000 - tx.blockTime > 2 * 60 * 60) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Payment too old to redeem" });
+            }
+
+            // Expected destination: the treasury's USDC ATA. ATAs are per-mint,
+            // so destination equality alone proves the token is USDC.
+            const { getAssociatedTokenAddressSync } = await import("@solana/spl-token");
+            const { PublicKey } = await import("@solana/web3.js");
+            const treasuryAta = getAssociatedTokenAddressSync(
+                new PublicKey(USDC_MINT),
+                new PublicKey(getBoostTreasuryOwner()),
+                true,
+            ).toBase58();
+            const expected = BigInt(pack.usd) * BigInt(1_000_000);
+
+            type ParsedIx = { program?: string; parsed?: { type?: string; info?: Record<string, unknown> } };
+            const instructions: ParsedIx[] = [
+                ...(tx.transaction?.message?.instructions ?? []),
+                ...((tx.meta?.innerInstructions ?? []) as { instructions: ParsedIx[] }[]).flatMap((i) => i.instructions),
+            ];
+            const paid = instructions.some((ix) => {
+                if (ix.program !== "spl-token") return false;
+                const { type, info } = ix.parsed ?? {};
+                if ((type !== "transfer" && type !== "transferChecked") || !info) return false;
+                if (info.destination !== treasuryAta) return false;
+                const raw = type === "transfer"
+                    ? (info.amount as string | undefined)
+                    : (info.tokenAmount as { amount?: string } | undefined)?.amount;
+                return !!raw && BigInt(raw) >= expected;
+            });
+            if (!paid) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "No matching USDC payment to the treasury in that transaction" });
+            }
+
+            await db.insert(communityBoostGrants).values({
+                userId: ctx.user.id,
+                amount: pack.boosts,
+                source: "purchase",
+                txSignature: input.txSignature,
+                usdPaid: pack.usd,
+            });
+            return { granted: pack.boosts };
         }),
 
     /** OG unfurl for link embeds in chat. Cached per isolate; null = no card. */

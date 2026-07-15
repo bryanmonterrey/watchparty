@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from "react";
 import { CommunityQuickSwitcher } from "./community-quick-switcher";
-import { CommunitiesIcon, WaveIcon, TeamIcon, SearchIcon, MicIcon } from "../icons";
+import { CommunitiesIcon, WaveIcon, TeamIcon, SearchIcon, MicIcon, BagIcon, QuestsIcon } from "../icons";
 
 export function CommunityHomeSidebar() {
     const pathname = usePathname();
@@ -31,6 +31,18 @@ export function CommunityHomeSidebar() {
             icon: MicIcon,
             href: "/communities/spaces",
             active: pathname === "/communities/spaces",
+        },
+        {
+            label: "Shop",
+            icon: BagIcon,
+            href: "/communities/shop",
+            active: pathname === "/communities/shop",
+        },
+        {
+            label: "Quests",
+            icon: QuestsIcon,
+            href: "/communities/quests",
+            active: pathname === "/communities/quests",
         },
     ];
 

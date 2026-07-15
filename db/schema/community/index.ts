@@ -206,3 +206,22 @@ export const communityServerBoosts = pgTable('community_server_boosts', {
 ]).enableRLS();
 
 export type CommunityServerBoost = typeof communityServerBoosts.$inferSelect;
+
+// ─── Boost grants (purchased packs; tier slots are computed live) ──
+export const communityBoostGrants = pgTable('community_boost_grants', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+        .references(() => user.id, { onDelete: 'cascade' })
+        .notNull(),
+    amount: integer('amount').notNull(),
+    source: text('source').default('purchase').notNull(),
+    // On-chain USDC payment signature; UNIQUE = a tx redeems exactly once
+    txSignature: text('tx_signature').unique(),
+    usdPaid: integer('usd_paid'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_boost_grants_user').on(table.userId),
+    pgPolicy('community_boost_grants_select_own', { for: 'select', to: 'authenticated', using: sql`user_id = (SELECT auth.uid()::text)` }),
+]).enableRLS();
+
+export type CommunityBoostGrant = typeof communityBoostGrants.$inferSelect;
