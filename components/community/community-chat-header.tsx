@@ -24,12 +24,15 @@ export function CommunityChatHeader({
 }: Props) {
     const [pinnedOpen, setPinnedOpen] = useState(false);
 
+    // Everything clusters LEFT: the floating app header's wallet/create
+    // buttons own the top-right of the viewport, so nothing interactive
+    // may live at this bar's right edge.
     return (
-        <div className="group h-17 shrink-0 flex items-center bg-black/50 backdrop-blur-xl w-full">
+        <div className="group h-17 shrink-0 flex items-center bg-black/50 backdrop-blur-xl w-full px-2">
             <button
                 type="button"
                 onClick={onOpenInfo}
-                className="flex min-w-0 flex-1 cursor-pointer items-center gap-x-2 self-stretch px-4 text-left transition-colors hover:bg-white/[0.05]"
+                className="flex min-w-0 cursor-pointer items-center gap-x-2 self-stretch px-2 text-left transition-colors hover:bg-white/[0.05]"
             >
                 {type === "channel" && <Hash className="w-7 h-7 text-flexwhite/40 shrink-0" />}
 
@@ -39,7 +42,7 @@ export function CommunityChatHeader({
                     </span>
                 </div>
 
-                <ChevronRight className="ml-auto w-4 h-4 text-flexwhite/30 group-hover:text-flexwhite/60 transition-colors" />
+                <ChevronRight className="w-4 h-4 shrink-0 text-flexwhite/30 group-hover:text-flexwhite/60 transition-colors" />
             </button>
 
             {type === "channel" && channelId && (
@@ -48,7 +51,7 @@ export function CommunityChatHeader({
                         type="button"
                         onClick={() => setPinnedOpen(true)}
                         aria-label="Pinned messages"
-                        className="mx-2 grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-flexwhite/40 transition-colors hover:bg-white/10 hover:text-white"
+                        className="ml-1 grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-flexwhite/40 transition-colors hover:bg-white/10 hover:text-white"
                     >
                         <HugeiconsIcon icon={PinIcon} className="size-5" strokeWidth={2} />
                     </button>
@@ -60,6 +63,9 @@ export function CommunityChatHeader({
                     />
                 </>
             )}
+
+            {/* dead space under the floating wallet/create cluster */}
+            <div className="flex-1" />
         </div>
     );
 }

@@ -106,7 +106,7 @@ export function ShopView() {
                     {b && b.tierSlots === 0 && (
                         <Link
                             href="/premium"
-                            className="ml-auto flex h-11 shrink-0 items-center rounded-full bg-white/10 px-5 text-[13px] font-bold text-white transition-colors hover:bg-white/20"
+                            className="flex h-11 shrink-0 items-center rounded-full bg-white/10 px-5 text-[13px] font-bold text-white transition-colors hover:bg-white/20"
                         >
                             Premium includes boosts
                         </Link>

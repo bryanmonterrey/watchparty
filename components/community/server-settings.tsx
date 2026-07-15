@@ -84,21 +84,21 @@ export function ServerSettings({ serverId }: { serverId: string }) {
 
     return (
         <div className="flex flex-col h-full min-w-0">
-            {/* Header — same bar anatomy as the chat header */}
-            <div className="h-17 shrink-0 flex items-center bg-black/50 backdrop-blur-xl w-full px-4">
-                <span className="font-semibold text-lg text-flexwhite truncate leading-tight">
+            {/* Header — same bar anatomy as the chat header. Everything sits
+                on the LEFT: the floating app header's wallet/create cluster
+                owns the top-right of every page, so no controls live there. */}
+            <div className="h-17 shrink-0 flex items-center gap-3 bg-black/50 backdrop-blur-xl w-full px-4">
+                <span className="min-w-0 truncate font-semibold text-lg text-flexwhite leading-tight">
                     {sectionLabel(active)}
                 </span>
-                <div className="ml-auto flex items-center gap-2">
-                    <span className="hidden text-[11px] font-bold text-zinc-600 sm:block">ESC</span>
-                    <button
-                        onClick={() => router.push(`/communities/${serverId}`)}
-                        aria-label="Close settings"
-                        className="grid size-10 cursor-pointer place-items-center rounded-full text-flexwhite/40 transition-colors hover:bg-white/10 hover:text-white"
-                    >
-                        <HugeiconsIcon icon={Cancel01Icon} className="size-4" strokeWidth={2.5} />
-                    </button>
-                </div>
+                <button
+                    onClick={() => router.push(`/communities/${serverId}`)}
+                    aria-label="Close settings"
+                    title="Close settings"
+                    className="shrink-0 cursor-pointer rounded-[8px] bg-white/[0.06] px-2 py-1 text-[11px] font-bold tracking-wide text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                    esc
+                </button>
             </div>
 
             <ScrollArea className="flex-1">
