@@ -41,13 +41,16 @@ References (in `docs/references/`, named by what they exemplify):
   Squircle). Cards/panels use **Lisse squircle** via `components/ui/squircle.tsx`
   (`<Squircle asChild radius={20}>…`) — do NOT also add `rounded-*` to a
   squircled element. Pick one radius scale per surface and hold it.
-- **Button heights (the standard — don't restate per button)**: every button
-  is **h-11** unless it spans wide; **wide buttons (w-full / flex-1 CTAs) are
-  h-12**. The primitives already encode this — `components/ui/button.tsx`
-  (`size="default"` = h-11, `size="lg"`/`size="wide"` = h-12) and the settings
-  kit's `PillButton` (h-11 default; pass `h-12` with `w-full`/`flex-1`). Never
-  hand-set other heights on buttons; compact list-row *chips* (py-1.5 text-12
-  actions inside rows) are chips, not buttons, and stay small.
+- **Button heights (the standard — don't restate per button)**: the longer a
+  button runs, the taller it gets. **h-11** default → **h-12** wide (w-full /
+  flex-1 CTAs in forms and panels) → **h-20 hero** (the full-width CTA in a
+  big ceremonial dialog: onboarding, upgrade, crop). The primitives encode
+  this — `components/ui/button.tsx` (`size="default"` = h-11, `size="lg"`/
+  `size="wide"` = h-12, `size="hero"` = h-20 w-full 16px bold) and the
+  settings kit's `PillButton` (h-11 default; pass `h-12` with `w-full`/
+  `flex-1`). Never hand-set other heights on buttons; compact list-row
+  *chips* (py-1.5 text-12 actions inside rows) are chips, not buttons, and
+  stay small.
 
 ## 1.5 Learnings from real reference sites (screenshotted 2026-06-28)
 
