@@ -29,7 +29,7 @@ import { LinkPreviewCard } from "@/components/browse/link-preview-card";
 import { VoiceRecorder, VoiceRecorderTrigger } from "@/components/browse/voice-recorder";
 import { ScheduledPostsDrawer } from "@/components/browse/scheduled-posts-drawer";
 import { nanoid } from "nanoid";
-import { PollComposer } from "@/components/browse/poll-composer";
+import { PollComposer, type PollOption } from "@/components/browse/poll-composer";
 
 export function PostComposer() {
     const [content, setContent] = useState("");
@@ -52,7 +52,7 @@ export function PostComposer() {
     // Poll
     const [showPoll, setShowPoll] = useState(false);
     const [pollQuestion, setPollQuestion] = useState("");
-    const [pollOptions, setPollOptions] = useState([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }]);
+    const [pollOptions, setPollOptions] = useState<PollOption[]>([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }]);
     const [pollEndsAt, setPollEndsAt] = useState<"1d" | "3d" | "7d">("1d");
     // PPV
     const [isPaywalled, setIsPaywalled] = useState(false);
@@ -344,7 +344,7 @@ export function PostComposer() {
             contentWarningText: hasContentWarning ? contentWarningText || undefined : undefined,
             poll: showPoll && pollQuestion.trim() && validPollOptions.length >= 2 ? {
                 question: pollQuestion.trim(),
-                options: validPollOptions.map(o => ({ id: o.id, text: o.text.trim() })),
+                options: validPollOptions.map(o => ({ id: o.id, text: o.text.trim(), imageUrl: o.imageUrl })),
                 allowMultiple: false,
                 endsAt: new Date(Date.now() + ({ "1d": 86400000, "3d": 259200000, "7d": 604800000 }[pollEndsAt])),
             } : undefined,

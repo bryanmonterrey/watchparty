@@ -29,7 +29,7 @@ import { ScheduledPostsDrawer } from "@/components/browse/scheduled-posts-drawer
 import { LinkPreviewCard } from "@/components/browse/link-preview-card"
 import { useLinkPreview } from "@/hooks/use-link-preview"
 import { nanoid } from "nanoid"
-import { PollComposer } from "@/components/browse/poll-composer"
+import { PollComposer, type PollOption } from "@/components/browse/poll-composer"
 
 interface CreateDialogProps extends React.HTMLAttributes<HTMLElement> {
     children: React.ReactNode
@@ -76,7 +76,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
     // Poll State
     const [showPoll, setShowPoll] = React.useState(false)
     const [pollQuestion, setPollQuestion] = React.useState("")
-    const [pollOptions, setPollOptions] = React.useState([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }])
+    const [pollOptions, setPollOptions] = React.useState<PollOption[]>([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }])
     const [pollEndsAt, setPollEndsAt] = React.useState<"1d" | "3d" | "7d">("1d")
 
     // Paywall State
@@ -369,7 +369,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                 contentWarningText: hasContentWarning ? contentWarningText || undefined : undefined,
                 poll: showPoll && pollQuestion.trim() && validPollOptions.length >= 2 ? {
                     question: pollQuestion.trim(),
-                    options: validPollOptions.map(o => ({ id: o.id, text: o.text.trim() })),
+                    options: validPollOptions.map(o => ({ id: o.id, text: o.text.trim(), imageUrl: o.imageUrl })),
                     allowMultiple: false,
                     endsAt: new Date(Date.now() + ({ "1d": 86400000, "3d": 259200000, "7d": 604800000 }[pollEndsAt])),
                 } : undefined,

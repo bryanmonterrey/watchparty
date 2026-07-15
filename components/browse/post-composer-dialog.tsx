@@ -31,7 +31,7 @@ import { TokenLaunchTrigger, TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/co
 import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 import { useTokenLaunch } from "@/hooks/use-token-launch";
 import { nanoid } from "nanoid"
-import { PollComposer } from "@/components/browse/poll-composer";
+import { PollComposer, type PollOption } from "@/components/browse/poll-composer";
 
 interface PostRef {
     id: string;
@@ -73,7 +73,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
     // ── Poll ─────────────────────────────────────────────────────────────────
     const [showPoll, setShowPoll] = useState(false);
     const [pollQuestion, setPollQuestion] = useState("");
-    const [pollOptions, setPollOptions] = useState([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }]);
+    const [pollOptions, setPollOptions] = useState<PollOption[]>([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }]);
     const [pollEndsAt, setPollEndsAt] = useState<"1d" | "3d" | "7d">("1d");
 
     // ── Paywall ───────────────────────────────────────────────────────────────
@@ -242,7 +242,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                 contentWarningText: hasContentWarning ? contentWarningText || undefined : undefined,
                 poll: showPoll && pollQuestion.trim() && validPollOptions.length >= 2 ? {
                     question: pollQuestion.trim(),
-                    options: validPollOptions.map(o => ({ id: o.id, text: o.text.trim() })),
+                    options: validPollOptions.map(o => ({ id: o.id, text: o.text.trim(), imageUrl: o.imageUrl })),
                     allowMultiple: false,
                     endsAt: new Date(Date.now() + ({ "1d": 86400000, "3d": 259200000, "7d": 604800000 }[pollEndsAt])),
                 } : undefined,

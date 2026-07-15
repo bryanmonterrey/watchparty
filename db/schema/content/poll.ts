@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm"
 import { user } from "../auth/user"
 import { posts } from "./post"
 
-export type PollOption = { id: string; text: string; votesCount: number }
+export type PollOption = { id: string; text: string; votesCount: number; imageUrl?: string }
 
 export const polls = pgTable("polls", {
     id: text("id").primaryKey(),

@@ -32,6 +32,10 @@ export function PollDisplay({ postId }: PollDisplayProps) {
         vote.mutate({ pollId: poll.id, optionIds: [optionId] });
     };
 
+    // Any option carrying an image switches the whole poll to image rows —
+    // mixed pill/row heights inside one poll read as broken.
+    const hasImages = (poll.options as any[]).some((o: any) => !!o.imageUrl);
+
     return (
         <div className="mb-3 rounded-2xl border border-white/10 bg-zinc-900/40 p-4">
             <p className="text-[15px] text-zinc-100 font-medium mb-3">{poll.question}</p>
@@ -39,7 +43,6 @@ export function PollDisplay({ postId }: PollDisplayProps) {
                 {(poll.options as any[]).map((option: any) => {
                     const pct = poll.totalVotes > 0 ? Math.round((option.votesCount / poll.totalVotes) * 100) : 0;
                     const isSelected = poll.userVote?.includes(option.id);
-                    const isWinner = showResults && (poll.options as any[]).reduce((max: any, o: any) => o.votesCount > max.votesCount ? o : max, (poll.options as any[])[0]).id === option.id;
 
                     return (
                         <button
@@ -47,7 +50,8 @@ export function PollDisplay({ postId }: PollDisplayProps) {
                             disabled={hasVoted || isEnded || vote.isPending}
                             onClick={() => handleVote(option.id)}
                             className={cn(
-                                "relative w-full rounded-full border text-left px-4 py-2 text-sm font-medium transition-colors overflow-hidden",
+                                "relative w-full border text-left text-sm font-medium transition-colors overflow-hidden",
+                                hasImages ? "rounded-[16px] px-2 py-1.5" : "rounded-full px-4 py-2",
                                 showResults ? "cursor-default" : "cursor-pointer hover:border-white/30",
                                 isSelected
                                     ? "border-lantern text-lantern"
@@ -58,16 +62,24 @@ export function PollDisplay({ postId }: PollDisplayProps) {
                             {showResults && (
                                 <span
                                     className={cn(
-                                        "absolute inset-y-0 left-0 rounded-full transition-all duration-500",
+                                        "absolute inset-y-0 left-0 transition-all duration-500",
+                                        hasImages ? "rounded-[14px]" : "rounded-full",
                                         isSelected ? "bg-lantern/20" : "bg-white/8"
                                     )}
                                     style={{ width: `${pct}%` }}
                                 />
                             )}
-                            <span className="relative flex items-center justify-between">
-                                <span>{option.text}</span>
+                            <span className="relative flex items-center gap-2.5">
+                                {hasImages && (
+                                    option.imageUrl ? (
+                                        <img src={option.imageUrl} alt="" className="size-10 shrink-0 rounded-[10px] object-cover" />
+                                    ) : (
+                                        <span className="size-10 shrink-0" />
+                                    )
+                                )}
+                                <span className="min-w-0 flex-1 truncate">{option.text}</span>
                                 {showResults && (
-                                    <span className={cn("text-xs font-bold", isSelected ? "text-lantern" : "text-zinc-400")}>
+                                    <span className={cn("shrink-0 text-xs font-bold", isSelected ? "text-lantern" : "text-zinc-400")}>
                                         {pct}%
                                     </span>
                                 )}

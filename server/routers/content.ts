@@ -221,7 +221,7 @@ export const contentRouter = router({
                 // Poll
                 poll: z.object({
                     question: z.string().min(1),
-                    options: z.array(z.object({ id: z.string(), text: z.string() })).min(2).max(4),
+                    options: z.array(z.object({ id: z.string(), text: z.string(), imageUrl: z.string().url().optional() })).min(2).max(4),
                     allowMultiple: z.boolean().default(false),
                     endsAt: z.date().optional(),
                 }).optional(),
