@@ -4,6 +4,7 @@ import {
     ChevronDown,
     LogOut,
     PlusCircle,
+    Rocket,
     Settings,
     Trash,
     UserPlus,
@@ -11,15 +12,22 @@ import {
 } from "lucide-react";
 import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 import { useCommunityModal } from "@/hooks/use-community-modal";
+import { trpc } from "@/lib/trpc/client";
 import type { CommunityServer } from "@/db/schema/community";
 
 type Props = {
     server: CommunityServer;
     role?: string;
+    boostCount?: number;
+    boostedByMe?: boolean;
 };
 
-export function CommunityServerHeader({ server, role }: Props) {
+export function CommunityServerHeader({ server, role, boostCount = 0, boostedByMe = false }: Props) {
     const { onOpen } = useCommunityModal();
+    const utils = trpc.useUtils();
+    const toggleBoost = trpc.community.toggleBoost.useMutation({
+        onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
+    });
 
     const isAdmin = role === "ADMIN";
     const isModerator = isAdmin || role === "MODERATOR";
@@ -27,6 +35,23 @@ export function CommunityServerHeader({ server, role }: Props) {
     const rowClass = "px-3 text-sm cursor-pointer text-neutral-400 font-medium hover:bg-zinc-800 hover:text-neutral-200";
 
     const items: GooDropdownItem[] = [
+        {
+            key: "boost",
+            onClick: () => toggleBoost.mutate({ serverId: server.id }),
+            className: `${rowClass} ${boostedByMe ? "text-white hover:text-white" : ""}`,
+            label: (
+                <>
+                    {boostedByMe ? "Boosted" : "Boost Server"}
+                    {boostCount > 0 && (
+                        <span className="ml-1.5 rounded-full bg-white/10 px-1.5 py-0.5 text-[11px] font-bold leading-none">
+                            {boostCount}
+                        </span>
+                    )}
+                    <Rocket className="h-4 w-4 ml-auto" />
+                </>
+            ),
+        },
+        { key: "boost-sep", type: "separator" as const },
         ...(isModerator
             ? [
                   {

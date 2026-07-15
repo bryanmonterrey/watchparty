@@ -8,6 +8,7 @@ import {
     communityMessages,
     communityChannelReads,
     communityMessageReactions,
+    communityServerBoosts,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
 import { eq, and, desc, asc, sql, lt, ne, count, inArray } from "drizzle-orm";
@@ -16,6 +17,34 @@ import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { rooms } from "@/lib/realtime/protocol";
+
+// In-memory OG unfurl cache (per isolate). Small + TTL'd; misses just refetch.
+type LinkPreviewData = { title: string | null; description: string | null; image: string | null; siteName: string | null };
+const linkPreviewCache = new Map<string, { data: LinkPreviewData | null; exp: number }>();
+
+const decodeEntities = (s: string) =>
+    s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&#x27;/gi, "'");
+
+/** meta by property/name, tolerant of attribute order */
+function metaContent(html: string, key: string): string | null {
+    const re = new RegExp(
+        `<meta[^>]+(?:property|name)=["']${key}["'][^>]*content=["']([^"']*)["']|<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${key}["']`,
+        "i",
+    );
+    const m = html.match(re);
+    const raw = m?.[1] ?? m?.[2];
+    return raw ? decodeEntities(raw).trim() || null : null;
+}
+
+/** Reject URLs that could reach internal services (SSRF guard). */
+function isPublicHttpUrl(u: URL): boolean {
+    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+    const host = u.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return false;
+    if (host.includes(":") || host.startsWith("[")) return false; // IPv6 literal
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return false; // IPv4 literal
+    return true;
+}
 
 /** Notify connected clients that a channel's messages changed → they refetch. */
 function notifyChannelChange(channelId: string) {
@@ -222,11 +251,18 @@ export const communityRouter = router({
                 .where(eq(communityMembers.serverId, input.serverId))
                 .orderBy(asc(communityMembers.role));
 
+            const boosts = await db
+                .select({ memberId: communityServerBoosts.memberId })
+                .from(communityServerBoosts)
+                .where(eq(communityServerBoosts.serverId, input.serverId));
+
             return {
                 server: server[0],
                 channels: channelsWithUnread,
                 members,
                 currentMember: membership[0],
+                boostCount: boosts.length,
+                boostedByMe: boosts.some((b) => b.memberId === membership[0].id),
             };
         }),
 
@@ -467,6 +503,7 @@ export const communityRouter = router({
                 serverId: z.string().uuid(),
                 name: z.string().min(1).max(100).optional(),
                 type: z.enum(["TEXT", "AUDIO", "VIDEO"]).optional(),
+                readOnly: z.boolean().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -477,6 +514,7 @@ export const communityRouter = router({
                 .set({
                     ...(input.name && { name: input.name.toLowerCase().replace(/\s+/g, "-") }),
                     ...(input.type && { type: input.type }),
+                    ...(input.readOnly !== undefined && { readOnly: input.readOnly }),
                     updatedAt: new Date(),
                 })
                 .where(eq(communityChannels.id, input.channelId))
@@ -552,6 +590,86 @@ export const communityRouter = router({
             }
             await notifyChannelChange(msg.channelId);
             return { reacted: !existing.length };
+        }),
+
+    /** Toggle the caller's boost on a server (one per member, free v1) */
+    toggleBoost: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            const [member] = await db
+                .select({ id: communityMembers.id })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, input.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .limit(1);
+            if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+
+            const existing = await db
+                .select({ id: communityServerBoosts.id })
+                .from(communityServerBoosts)
+                .where(and(eq(communityServerBoosts.serverId, input.serverId), eq(communityServerBoosts.memberId, member.id)))
+                .limit(1);
+
+            if (existing.length) {
+                await db.delete(communityServerBoosts).where(eq(communityServerBoosts.id, existing[0].id));
+            } else {
+                await db.insert(communityServerBoosts).values({ serverId: input.serverId, memberId: member.id });
+            }
+            return { boosted: !existing.length };
+        }),
+
+    /** OG unfurl for link embeds in chat. Cached per isolate; null = no card. */
+    linkPreview: protectedProcedure
+        .input(z.object({ url: z.string().url().max(2000) }))
+        .query(async ({ input }): Promise<LinkPreviewData | null> => {
+            let target: URL;
+            try {
+                target = new URL(input.url);
+            } catch {
+                return null;
+            }
+            if (!isPublicHttpUrl(target)) return null;
+
+            const cached = linkPreviewCache.get(target.href);
+            if (cached && cached.exp > Date.now()) return cached.data;
+
+            let data: LinkPreviewData | null = null;
+            try {
+                const res = await fetch(target.href, {
+                    redirect: "follow",
+                    signal: AbortSignal.timeout(5000),
+                    headers: {
+                        "user-agent": "Mozilla/5.0 (compatible; watchparty-unfurl/1.0)",
+                        accept: "text/html,application/xhtml+xml",
+                    },
+                });
+                const finalUrl = new URL(res.url || target.href);
+                const contentType = res.headers.get("content-type") ?? "";
+                if (res.ok && isPublicHttpUrl(finalUrl) && contentType.includes("text/html")) {
+                    const html = (await res.text()).slice(0, 300_000);
+                    const title =
+                        metaContent(html, "og:title") ??
+                        metaContent(html, "twitter:title") ??
+                        (html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() || null);
+                    const image = metaContent(html, "og:image") ?? metaContent(html, "twitter:image");
+                    data = {
+                        title: title ? decodeEntities(title) : null,
+                        description: metaContent(html, "og:description") ?? metaContent(html, "twitter:description"),
+                        image: image && /^https?:\/\//.test(image) ? image : null,
+                        siteName: metaContent(html, "og:site_name") ?? finalUrl.hostname.replace(/^www\./, ""),
+                    };
+                    if (!data.title && !data.image) data = null;
+                }
+            } catch {
+                data = null;
+            }
+
+            // Cap the cache so a link-spam channel can't grow it unbounded.
+            if (linkPreviewCache.size > 500) {
+                const oldest = linkPreviewCache.keys().next().value;
+                if (oldest) linkPreviewCache.delete(oldest);
+            }
+            linkPreviewCache.set(target.href, { data, exp: Date.now() + 60 * 60 * 1000 });
+            return data;
         }),
 
     /** Reorder the caller's server rail — serverIds in desired order */
@@ -756,7 +874,7 @@ export const communityRouter = router({
             // Reactions for this page, aggregated per message+emoji with
             // whether the current member reacted.
             const ids = msgs.map((m) => m.id);
-            let reactionsByMessage = new Map<string, { emoji: string; count: number; reactedByMe: boolean }[]>();
+            const reactionsByMessage = new Map<string, { emoji: string; count: number; reactedByMe: boolean }[]>();
             if (ids.length) {
                 const rows = await db
                     .select({
@@ -815,6 +933,10 @@ export const communityRouter = router({
 
             if (!member.length) {
                 throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+            }
+
+            if (channel[0].readOnly && member[0].role === "GUEST") {
+                throw new TRPCError({ code: "FORBIDDEN", message: "This channel is read-only" });
             }
 
             const [message] = await db

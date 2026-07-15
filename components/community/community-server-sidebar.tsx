@@ -24,7 +24,7 @@ export function CommunityServerSidebar({ serverId }: Props) {
         return <ServerSidebarSkeleton />;
     }
 
-    const { server, channels, members, currentMember } = data;
+    const { server, channels, members, currentMember, boostCount, boostedByMe } = data;
     const role = currentMember.role;
 
     const textChannels = channels.filter((c) => c.type === "TEXT");
@@ -36,7 +36,7 @@ export function CommunityServerSidebar({ serverId }: Props) {
 
     return (
         <div className="flex flex-col h-full w-76 shrink-0 bg-zinc-900/60 overflow-hidden">
-            <CommunityServerHeader server={server} role={role} />
+            <CommunityServerHeader server={server} role={role} boostCount={boostCount} boostedByMe={boostedByMe} />
 
             <ScrollArea className="flex-1">
 

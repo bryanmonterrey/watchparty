@@ -70,6 +70,7 @@ export default function ChannelPage() {
             <CommunityChatInput
                 channelId={channelId}
                 channelName={channel.name}
+                locked={!!channel.readOnly && serverData.currentMember.role === "GUEST"}
                 onTyping={sendTyping}
                 onStopTyping={sendStopTyping}
                 mentionables={serverData.members

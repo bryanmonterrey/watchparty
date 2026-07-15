@@ -4,25 +4,33 @@ import { ShieldAlert, ShieldCheck, Edit, Trash } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
+import { CommunityLinkEmbed, extractFirstUrl } from "./community-link-embed";
 import { CommunityMessageReactions, type MessageReaction } from "./community-message-reactions";
 import { EmojiPicker } from "@/components/messages/emoji-picker";
 import { SmileIcon } from "@hugeicons/core-free-icons";
 
-// Render @mentions as highlighted chips (Discord-style); plain text otherwise.
+// Render @mentions as highlighted chips and URLs as links; plain text otherwise.
 function MessageContent({ content, deleted, isUpdated }: { content: string; deleted: boolean; isUpdated: boolean }) {
-    const parts = content.split(/(@[a-zA-Z0-9_-]+|@everyone)/g);
+    const parts = content.split(/(@[a-zA-Z0-9_-]+|@everyone|https?:\/\/[^\s]+)/g);
     return (
         <p className={cn(
-            "text-sm text-flexwhite/90 mt-0.5 leading-relaxed",
+            "text-sm text-flexwhite/90 mt-0.5 leading-relaxed break-words",
             deleted && "italic text-zinc-500 text-sm"
         )}>
-            {parts.map((part, i) =>
-                /^@([a-zA-Z0-9_-]+|everyone)$/.test(part) && !deleted ? (
-                    <span key={i} className="rounded-[4px] bg-twitter/20 px-1 py-0.5 font-semibold text-twitter2">{part}</span>
-                ) : (
-                    <span key={i}>{part}</span>
-                )
-            )}
+            {parts.map((part, i) => {
+                if (deleted) return <span key={i}>{part}</span>;
+                if (/^@([a-zA-Z0-9_-]+|everyone)$/.test(part)) {
+                    return <span key={i} className="rounded-[4px] bg-twitter/20 px-1 py-0.5 font-semibold text-twitter2">{part}</span>;
+                }
+                if (/^https?:\/\//.test(part)) {
+                    return (
+                        <a key={i} href={part} target="_blank" rel="noreferrer noopener" className="break-all text-twitter2 hover:underline">
+                            {part}
+                        </a>
+                    );
+                }
+                return <span key={i}>{part}</span>;
+            })}
             {isUpdated && !deleted && (
                 <span className="text-[10px] mx-2 text-zinc-500">(edited)</span>
             )}
@@ -114,6 +122,7 @@ export function CommunityChatItem({
     const canDelete = !deleted && (isAdmin || isMod || isOwner);
     const canEdit = !deleted && isOwner && !fileUrl;
     const canPin = !deleted && (isAdmin || isMod);
+    const embedUrl = extractFirstUrl(content);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -190,7 +199,10 @@ export function CommunityChatItem({
                     )}
 
                     {!fileUrl && !isEditing && (
-                        <MessageContent content={content} deleted={deleted} isUpdated={isUpdated} />
+                        <>
+                            <MessageContent content={content} deleted={deleted} isUpdated={isUpdated} />
+                            {!deleted && embedUrl && <CommunityLinkEmbed url={embedUrl} />}
+                        </>
                     )}
 
                     {!fileUrl && isEditing && (

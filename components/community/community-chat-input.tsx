@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc/client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
-import { ArrowUpIcon, CreateIcon } from "../icons";
+import { ArrowUpIcon, CreateIcon, LockIcon } from "../icons";
 
 type Mentionable = { username: string; name: string | null };
 
@@ -16,9 +16,11 @@ type Props = {
     onStopTyping?: () => void;
     /** server members for @autocomplete */
     mentionables?: Mentionable[];
+    /** read-only channel + guest role → show the locked bar instead of the input */
+    locked?: boolean;
 };
 
-export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyping, mentionables = [] }: Props) {
+export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyping, mentionables = [], locked = false }: Props) {
     const [content, setContent] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
     // @autocomplete: the token being typed after the last "@" (null = closed)
@@ -77,6 +79,19 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
         if (!content.trim()) return;
         sendMessage.mutate({ channelId, content, replyToId: replyTo?.id });
     };
+
+    if (locked) {
+        return (
+            <div className="px-4 pb-5 pt-1">
+                <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-4 py-3.5">
+                    <LockIcon className="size-5 shrink-0 text-zinc-500" />
+                    <p className="text-[13px] font-medium text-zinc-500">
+                        <span className="font-bold text-zinc-400">#{channelName}</span> is read-only — only mods can post here
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <form onSubmit={onSubmit} className="px-4 pb-5 pt-1">

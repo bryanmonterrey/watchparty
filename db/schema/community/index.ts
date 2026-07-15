@@ -61,6 +61,8 @@ export const communityChannels = pgTable('community_channels', {
         .notNull(),
     // Sort order within the server (null = fall back to createdAt)
     position: integer('position'),
+    // Read-only: guests can read but only mods/admins post (null = writable)
+    readOnly: boolean('read_only'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -186,3 +188,21 @@ export const communityMessageReactions = pgTable('community_message_reactions', 
 ]).enableRLS();
 
 export type CommunityMessageReaction = typeof communityMessageReactions.$inferSelect;
+
+// ─── Server boosts (one per member per server, free v1) ──
+export const communityServerBoosts = pgTable('community_server_boosts', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    memberId: uuid('member_id')
+        .references(() => communityMembers.id, { onDelete: 'cascade' })
+        .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('uq_server_boosts_server_member').on(table.serverId, table.memberId),
+    index('idx_server_boosts_server').on(table.serverId),
+    pgPolicy('community_server_boosts_own', { for: 'all', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members WHERE community_members.id = member_id AND community_members.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityServerBoost = typeof communityServerBoosts.$inferSelect;

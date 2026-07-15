@@ -56,6 +56,9 @@ export function CommunityChannelItem({ channel, server, role }: Props) {
             >
                 {channel.name}
             </p>
+            {channel.readOnly && (
+                <LockIcon aria-label="Read-only channel" className="w-4 h-4 shrink-0 text-zinc-500" />
+            )}
             {hasUnread && (
                 <span
                     aria-label={`${channel.unreadCount} unread messages`}

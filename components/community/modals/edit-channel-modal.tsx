@@ -7,6 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { trpc } from "@/lib/trpc/client";
 
@@ -15,6 +16,7 @@ const slugify = (s: string) => s.toLowerCase().replace(/\s+/g, "-").replace(/[^a
 export function EditChannelModal() {
     const { isOpen, onClose, type, data } = useCommunityModal();
     const [name, setName] = useState("");
+    const [readOnly, setReadOnly] = useState(false);
     const utils = trpc.useUtils();
 
     const isModalOpen = isOpen && type === "editChannel";
@@ -25,6 +27,7 @@ export function EditChannelModal() {
     if (isModalOpen && channel && seededFor !== channel.id) {
         setSeededFor(channel.id);
         setName(channel.name);
+        setReadOnly(!!channel.readOnly);
     }
     if (!isModalOpen && seededFor !== null) setSeededFor(null);
 
@@ -42,6 +45,7 @@ export function EditChannelModal() {
             channelId: channel.id,
             serverId: data.server.id,
             name: slugify(name),
+            readOnly,
         });
     };
 
@@ -49,7 +53,7 @@ export function EditChannelModal() {
         <Dialog open={isModalOpen} onOpenChange={onClose}>
             <DialogContent className="gap-5 rounded-4xl border-none p-6 sm:max-w-[420px]" showCloseButton={false}>
                 <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">
-                    Rename {channel?.type === "TEXT" ? `#${channel?.name}` : channel?.name}
+                    Edit {channel?.type === "TEXT" ? `#${channel?.name}` : channel?.name}
                 </DialogTitle>
 
                 <form onSubmit={onSubmit} className="space-y-4">
@@ -70,6 +74,14 @@ export function EditChannelModal() {
                             </p>
                         )}
                     </div>
+
+                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-white/[0.03] px-4 py-3.5 transition-colors hover:bg-white/[0.05]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[14px] font-bold text-white">Read-only</p>
+                            <p className="mt-0.5 text-[12px] font-medium text-zinc-500">Only mods and admins can post here</p>
+                        </div>
+                        <Switch checked={readOnly} onCheckedChange={setReadOnly} disabled={updateChannel.isPending} />
+                    </label>
 
                     <div className="flex gap-2">
                         <button
