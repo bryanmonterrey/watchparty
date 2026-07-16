@@ -15,14 +15,20 @@ import { MarketingFooter } from "@/components/marketing/footer"
 export const dynamic = "force-dynamic";
 
 // Landing page — to be designed separately. Intentionally minimal for now.
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ ref?: string }>;
+}) {
+  const { ref } = await searchParams;
   // Already signed in? Skip the marketing page and go to the app.
   const session = await getServerSession();
   if (session) redirect("/home");
 
   // Marketing landing is parked for now — send everyone to login.
+  // Referral links land here (/?ref=username) — carry the ref through.
   // Delete this line to bring the landing page back.
-  redirect("/login");
+  redirect(ref ? `/login?ref=${encodeURIComponent(ref)}` : "/login");
 
   // min-h-svh + content-driven height (NOT flex-1: a basis-0 flex child
   // contributes nothing to document height, which swallows the pin-spacer

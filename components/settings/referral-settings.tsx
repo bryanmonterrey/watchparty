@@ -23,8 +23,11 @@ export function ReferralSettings() {
     const [copied, setCopied] = useState(false);
     const [applyInput, setApplyInput] = useState("");
 
+    // Username-based link when the account has one (reads as YOURS, not a
+    // random code); the alphanumeric code stays valid for old links.
     const code = codeData?.code ?? stats?.code;
-    const referralLink = code ? `${typeof window !== "undefined" ? window.location.origin : ""}/?ref=${code}` : "";
+    const refSlug = codeData?.username ?? code;
+    const referralLink = refSlug ? `${typeof window !== "undefined" ? window.location.origin : ""}/?ref=${refSlug}` : "";
 
     const copyLink = () => {
         if (!referralLink) return;

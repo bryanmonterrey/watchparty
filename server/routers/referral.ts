@@ -13,14 +13,17 @@ function generateReferralCode(): string {
 }
 
 export const referralRouter = router({
-    // Get or generate the current user's referral code
+    // Get or generate the current user's referral code. The shareable link
+    // uses the USERNAME when one exists (watchparty.xyz/?ref=bry) — the code
+    // is the fallback for accounts without a username, and legacy codes keep
+    // working because applyCode matches both.
     getMyCode: protectedProcedure.query(async ({ ctx }) => {
-        const [u] = await db.select({ referralCode: user.referralCode })
+        const [u] = await db.select({ referralCode: user.referralCode, username: user.username })
             .from(user)
             .where(eq(user.id, ctx.user.id))
             .limit(1);
 
-        if (u?.referralCode) return { code: u.referralCode };
+        if (u?.referralCode) return { code: u.referralCode, username: u.username ?? null };
 
         // Generate a unique code
         let code = generateReferralCode();
@@ -34,21 +37,26 @@ export const referralRouter = router({
         }
 
         await db.update(user).set({ referralCode: code }).where(eq(user.id, ctx.user.id));
-        return { code };
+        const [me] = await db.select({ username: user.username }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+        return { code, username: me?.username ?? null };
     }),
 
-    // Apply a referral code (called after account creation)
+    // Apply a referral (code or username — links carry the username)
     applyCode: protectedProcedure
-        .input(z.object({ code: z.string().min(4).max(12) }))
+        .input(z.object({ code: z.string().min(2).max(40) }))
         .mutation(async ({ ctx, input }) => {
             // Check user hasn't already been referred
             const [me] = await db.select({ referredBy: user.referredBy })
                 .from(user).where(eq(user.id, ctx.user.id)).limit(1);
             if (me?.referredBy) throw new TRPCError({ code: "BAD_REQUEST", message: "Already applied a referral code" });
 
-            // Find the referrer
-            const [referrer] = await db.select({ id: user.id })
+            // Find the referrer: legacy code first, then username
+            let [referrer] = await db.select({ id: user.id })
                 .from(user).where(eq(user.referralCode, input.code.toUpperCase())).limit(1);
+            if (!referrer) {
+                [referrer] = await db.select({ id: user.id })
+                    .from(user).where(eq(user.username, input.code.toLowerCase())).limit(1);
+            }
             if (!referrer) throw new TRPCError({ code: "NOT_FOUND", message: "Invalid referral code" });
             if (referrer.id === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot refer yourself" });
 

@@ -3,17 +3,19 @@
 // ride in a shared chunk). Reads come straight from Solana RPC via the SDK —
 // Drift's hosted data APIs are US-geoblocked, RPC is permissionless.
 //
+// SIGNING MODEL: the SDK never signs or sends. Every action returns an
+// UNSIGNED transaction built from the SDK's instruction getters, and the view
+// submits it through the app's dual path — extension wallets sendTransaction,
+// Swig wallets go through useWalletSigning's signAndSubmit (which wraps the
+// instructions in Swig execute; the exact flow boost purchases already use).
+// The DriftClient itself holds a pubkey-only stub wallet: it exists to derive
+// the user's accounts and read state, not to sign.
+//
 // SDK pinned to the stable dist-tag (2.156.0): the `latest` beta line
 // (2.163.0-beta.x) fails account decoding at subscribe() — buffer-layout
 // "clo.property" TypeError. Re-test before any bump past stable.
-import type { Connection, PublicKey } from "@solana/web3.js";
-import type {
-    DriftClient,
-    User,
-    IWallet,
-    PerpMarketAccount,
-    OraclePriceData,
-} from "@drift-labs/sdk";
+import type { Connection, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
+import type { DriftClient, User, OraclePriceData } from "@drift-labs/sdk";
 
 /** Curated market list — majors + the meme pairs our traders actually know. */
 export const PERP_SYMBOLS = [
@@ -26,6 +28,8 @@ export const PERP_SYMBOLS = [
     "JUP-PERP",
     "XRP-PERP",
 ] as const;
+
+const USDC_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 export type PerpMarketRow = {
     symbol: string;
@@ -59,78 +63,71 @@ export type AccountSummary = {
 
 let readClient: DriftClient | null = null;
 let tradeClient: DriftClient | null = null;
-let tradeWalletKey: string | null = null;
+let tradeAuthority: string | null = null;
 
 async function sdk() {
     return import("@drift-labs/sdk");
 }
 
-function marketInfos(driftSdk: Awaited<ReturnType<typeof sdk>>) {
+type DriftSdk = Awaited<ReturnType<typeof sdk>>;
+
+function marketInfos(driftSdk: DriftSdk) {
     const all = driftSdk.PerpMarkets["mainnet-beta"];
     return PERP_SYMBOLS
         .map((s) => all.find((m) => m.symbol === s))
         .filter((m): m is NonNullable<typeof m> => !!m);
 }
 
-// The SDK nests its own @solana/web3.js, so the app's Connection/Keypair are
+// The SDK nests its own @solana/web3.js, so the app's Connection/PublicKey are
 // a different TYPE identity than the SDK's (same runtime shape/wire protocol).
 // This module is the boundary — cast here, nowhere else.
-type DriftClientConfigLoose = ConstructorParameters<
-    Awaited<ReturnType<typeof sdk>>["DriftClient"]
->[0];
+type DriftClientConfigLoose = ConstructorParameters<DriftSdk["DriftClient"]>[0];
 
-function clientConfig(
-    driftSdk: Awaited<ReturnType<typeof sdk>>,
-    connection: Connection,
-    wallet: IWallet,
-): DriftClientConfigLoose {
-    const infos = marketInfos(driftSdk);
+/** Pubkey-only wallet: derives accounts, refuses to sign (we never ask it to). */
+function stubWallet(publicKey: PublicKey) {
     return {
+        publicKey,
+        signTransaction: () => Promise.reject(new Error("read-only wallet")),
+        signAllTransactions: () => Promise.reject(new Error("read-only wallet")),
+    };
+}
+
+async function makeClient(connection: Connection, authority: PublicKey): Promise<DriftClient> {
+    const driftSdk = await sdk();
+    const infos = marketInfos(driftSdk);
+    const client = new driftSdk.DriftClient({
         connection,
-        wallet,
-        env: "mainnet-beta" as const,
+        wallet: stubWallet(authority),
+        env: "mainnet-beta",
         perpMarketIndexes: infos.map((m) => m.marketIndex),
         spotMarketIndexes: [0], // USDC
         oracleInfos: infos.map((m) => ({ publicKey: m.oracle, source: m.oracleSource })),
-        accountSubscription: { type: "websocket" as const },
-    } as unknown as DriftClientConfigLoose;
+        accountSubscription: { type: "websocket" },
+    } as unknown as DriftClientConfigLoose);
+    await client.subscribe();
+    return client;
 }
 
-/** Read-only client (throwaway keypair — nothing ever signs). */
+/** Read-only client (throwaway pubkey — market data only). */
 export async function getReadClient(connection: Connection): Promise<DriftClient> {
     if (readClient) return readClient;
-    const driftSdk = await sdk();
-    const { Keypair: KP } = await import("@solana/web3.js");
-    const wallet = new driftSdk.Wallet(KP.generate() as unknown as ConstructorParameters<typeof driftSdk.Wallet>[0]);
-    const client = new driftSdk.DriftClient(clientConfig(driftSdk, connection, wallet));
-    await client.subscribe();
-    readClient = client;
-    return client;
+    const { Keypair } = await import("@solana/web3.js");
+    readClient = await makeClient(connection, Keypair.generate().publicKey);
+    return readClient;
 }
 
-/** Trading client bound to the connected wallet (wallet-adapter shape). */
-export async function getTradeClient(
-    connection: Connection,
-    wallet: IWallet,
-): Promise<DriftClient> {
-    const key = wallet.publicKey.toBase58();
-    if (tradeClient && tradeWalletKey === key) return tradeClient;
+/** Client bound to the user's wallet address (extension or Swig — just a pubkey). */
+export async function getTradeClient(connection: Connection, authority: PublicKey): Promise<DriftClient> {
+    const key = authority.toBase58();
+    if (tradeClient && tradeAuthority === key) return tradeClient;
     if (tradeClient) await tradeClient.unsubscribe().catch(() => {});
-    const driftSdk = await sdk();
-    const client = new driftSdk.DriftClient(clientConfig(driftSdk, connection, wallet));
-    await client.subscribe();
-    tradeClient = client;
-    tradeWalletKey = key;
-    return client;
+    tradeClient = await makeClient(connection, authority);
+    tradeAuthority = key;
+    return tradeClient;
 }
 
-function rowFor(
-    driftSdk: Awaited<ReturnType<typeof sdk>>,
-    client: DriftClient,
-    symbol: string,
-    marketIndex: number,
-): PerpMarketRow | null {
-    const market: PerpMarketAccount | undefined = client.getPerpMarketAccount(marketIndex);
+function rowFor(driftSdk: DriftSdk, client: DriftClient, symbol: string, marketIndex: number): PerpMarketRow | null {
+    const market = client.getPerpMarketAccount(marketIndex);
     if (!market) return null;
     const oracle: OraclePriceData = client.getOracleDataForPerpMarket(marketIndex);
     const [bid, ask] = driftSdk.calculateBidAskPrice(market.amm, { ...oracle, isMMOracleActive: false });
@@ -141,14 +138,7 @@ function rowFor(
     const funding24 = driftSdk.convertToNumber(market.amm.last24HAvgFundingRate, driftSdk.PRICE_PRECISION);
     const fundingHourlyPct = twap > 0 ? (funding24 / twap) * 100 : 0;
 
-    return {
-        symbol,
-        marketIndex,
-        oraclePrice: px(oracle.price),
-        bid: px(bid),
-        ask: px(ask),
-        fundingHourlyPct,
-    };
+    return { symbol, marketIndex, oraclePrice: px(oracle.price), bid: px(bid), ask: px(ask), fundingHourlyPct };
 }
 
 /** Market rows for the list view. */
@@ -160,34 +150,34 @@ export async function getMarkets(connection: Connection): Promise<PerpMarketRow[
         .filter((r): r is PerpMarketRow => !!r);
 }
 
-/** The connected wallet's Drift account: collateral + open positions. */
+function userExists(client: DriftClient): boolean {
+    try {
+        return !!client.getUserAccount();
+    } catch {
+        return false;
+    }
+}
+
+/** The wallet's Drift account: collateral + open positions. */
 export async function getAccountSummary(client: DriftClient): Promise<AccountSummary> {
     const driftSdk = await sdk();
-    let exists = false;
-    try {
-        exists = !!client.getUserAccount();
-    } catch {
-        exists = false;
-    }
-    if (!exists) return { exists: false, freeCollateralUsd: 0, totalCollateralUsd: 0, positions: [] };
+    if (!userExists(client)) return { exists: false, freeCollateralUsd: 0, totalCollateralUsd: 0, positions: [] };
 
     const user: User = client.getUser();
     const q = (v: InstanceType<typeof driftSdk.BN>) => driftSdk.convertToNumber(v, driftSdk.QUOTE_PRECISION);
-    const infos = marketInfos(driftSdk);
 
     const positions: PerpPositionRow[] = [];
-    for (const m of infos) {
+    for (const m of marketInfos(driftSdk)) {
         const p = user.getPerpPosition(m.marketIndex);
         if (!p || p.baseAssetAmount.isZero()) continue;
         const oracle = client.getOracleDataForPerpMarket(m.marketIndex);
         const base = driftSdk.convertToNumber(p.baseAssetAmount, driftSdk.BASE_PRECISION);
-        const entry = driftSdk.calculateEntryPrice(p);
         positions.push({
             marketIndex: m.marketIndex,
             symbol: m.symbol,
             direction: base >= 0 ? "long" : "short",
             baseSize: Math.abs(base),
-            entryPrice: driftSdk.convertToNumber(entry, driftSdk.PRICE_PRECISION),
+            entryPrice: driftSdk.convertToNumber(driftSdk.calculateEntryPrice(p), driftSdk.PRICE_PRECISION),
             oraclePrice: driftSdk.convertToNumber(oracle.price, driftSdk.PRICE_PRECISION),
             pnlUsd: q(user.getUnrealizedPNL(false, m.marketIndex)),
         });
@@ -201,63 +191,158 @@ export async function getAccountSummary(client: DriftClient): Promise<AccountSum
     };
 }
 
-/** Deposit USDC (creates the Drift account on first use). Returns tx sig. */
-export async function depositUsdc(client: DriftClient, owner: PublicKey, usd: number): Promise<string> {
+// ─── Unsigned-transaction builders ──────────────────────────
+
+async function buildTx(
+    connection: Connection,
+    feePayer: PublicKey,
+    ixs: TransactionInstruction[],
+): Promise<Transaction> {
+    const { Transaction: Tx } = await import("@solana/web3.js");
+    const tx = new Tx();
+    const { blockhash } = await connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = feePayer;
+    for (const ix of ixs) tx.add(ix);
+    return tx;
+}
+
+/**
+ * watchparty's Drift referral (35% of referred taker fees). Only attached
+ * when the referrer accounts actually exist on-chain — otherwise account
+ * creation would fail for the user.
+ */
+async function referrerInfo(driftSdk: DriftSdk, client: DriftClient, connection: Connection) {
+    const treasury = process.env.NEXT_PUBLIC_TREASURY_PUBKEY;
+    if (!treasury) return undefined;
+    try {
+        const { PublicKey: PK } = await import("@solana/web3.js");
+        const authority = new PK(treasury);
+        const programId = client.program.programId;
+        const referrer = await driftSdk.getUserAccountPublicKey(
+            programId,
+            authority as unknown as Parameters<typeof driftSdk.getUserAccountPublicKey>[1],
+            0,
+        );
+        const referrerStats = driftSdk.getUserStatsAccountPublicKey(
+            programId,
+            authority as unknown as Parameters<typeof driftSdk.getUserStatsAccountPublicKey>[1],
+        );
+        const statsInfo = await connection.getAccountInfo(new PK(referrerStats.toBase58()));
+        if (!statsInfo) return undefined;
+        return { referrer, referrerStats };
+    } catch {
+        return undefined;
+    }
+}
+
+/** Deposit USDC (first deposit also creates the Drift account). Unsigned tx. */
+export async function prepareDeposit(
+    client: DriftClient,
+    connection: Connection,
+    owner: PublicKey,
+    usd: number,
+): Promise<Transaction> {
     const driftSdk = await sdk();
     const spl = await import("@solana/spl-token");
     const { PublicKey: PK } = await import("@solana/web3.js");
-    const usdcMint = new PK("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-    const ata = spl.getAssociatedTokenAddressSync(usdcMint, owner, true);
+    const ata = spl.getAssociatedTokenAddressSync(new PK(USDC_MINT_ADDRESS), owner, true);
     const amount = new driftSdk.BN(Math.round(usd * 1_000_000));
 
-    let hasAccount = false;
-    try {
-        hasAccount = !!client.getUserAccount();
-    } catch {
-        hasAccount = false;
+    const ixs: TransactionInstruction[] = [];
+    const exists = userExists(client);
+    if (!exists) {
+        const ref = await referrerInfo(driftSdk, client, connection);
+        const [initIxs] = await client.getInitializeUserAccountIxs(
+            0,
+            undefined,
+            ref as Parameters<typeof client.getInitializeUserAccountIxs>[2],
+        );
+        ixs.push(...(initIxs as unknown as TransactionInstruction[]));
     }
-    if (!hasAccount) {
-        const [sig] = await client.initializeUserAccountAndDepositCollateral(amount, ata, 0);
-        return sig;
-    }
-    return client.deposit(amount, 0, ata);
+    const depositIx = await client.getDepositInstruction(
+        amount,
+        0,
+        ata as unknown as Parameters<typeof client.getDepositInstruction>[2],
+        0,
+        false,
+        exists,
+    );
+    ixs.push(depositIx as unknown as TransactionInstruction);
+    return buildTx(connection, owner, ixs);
 }
 
-/** Withdraw free USDC collateral back to the wallet. */
-export async function withdrawUsdc(client: DriftClient, owner: PublicKey, usd: number): Promise<string> {
+/** Withdraw free USDC collateral back to the wallet. Unsigned tx. */
+export async function prepareWithdraw(
+    client: DriftClient,
+    connection: Connection,
+    owner: PublicKey,
+    usd: number,
+): Promise<Transaction> {
     const driftSdk = await sdk();
     const spl = await import("@solana/spl-token");
     const { PublicKey: PK } = await import("@solana/web3.js");
-    const usdcMint = new PK("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-    const ata = spl.getAssociatedTokenAddressSync(usdcMint, owner, true);
-    return client.withdraw(new driftSdk.BN(Math.round(usd * 1_000_000)), 0, ata);
+    const mint = new PK(USDC_MINT_ADDRESS);
+    const ata = spl.getAssociatedTokenAddressSync(mint, owner, true);
+
+    // The user's USDC ATA may have been closed — recreate idempotently.
+    const ataIx = spl.createAssociatedTokenAccountIdempotentInstruction(owner, ata, owner, mint);
+    const withdrawIxs = await client.getWithdrawalIxs(
+        new driftSdk.BN(Math.round(usd * 1_000_000)),
+        0,
+        ata as unknown as Parameters<typeof client.getWithdrawalIxs>[2],
+        true, // reduceOnly: never open a borrow from the withdraw box
+    );
+    return buildTx(connection, owner, [ataIx, ...(withdrawIxs as unknown as TransactionInstruction[])]);
 }
 
-/** Open a market-order position sized in USD notional. Returns tx sig. */
-export async function openPosition(
+/** Open a market-order position sized in USD notional. Unsigned tx. */
+export async function prepareOpenPosition(
     client: DriftClient,
+    connection: Connection,
+    owner: PublicKey,
     marketIndex: number,
     direction: "long" | "short",
     usdNotional: number,
-): Promise<string> {
+): Promise<Transaction> {
     const driftSdk = await sdk();
     const oracle = client.getOracleDataForPerpMarket(marketIndex);
     const price = driftSdk.convertToNumber(oracle.price, driftSdk.PRICE_PRECISION);
     if (price <= 0) throw new Error("No oracle price");
     const baseAmount = driftSdk.numberToSafeBN(usdNotional / price, driftSdk.BASE_PRECISION);
 
-    return client.placePerpOrder(
+    const ix = await client.getPlacePerpOrderIx(
         driftSdk.getMarketOrderParams({
             marketIndex,
             direction: direction === "long" ? driftSdk.PositionDirection.LONG : driftSdk.PositionDirection.SHORT,
             baseAssetAmount: baseAmount,
         }),
     );
+    return buildTx(connection, owner, [ix as unknown as TransactionInstruction]);
 }
 
-/** Close the whole position in a market with a reduce-only market order. */
-export async function closePosition(client: DriftClient, marketIndex: number): Promise<string> {
-    return client.closePosition(marketIndex);
+/** Close the whole position with a reduce-only market order. Unsigned tx. */
+export async function prepareClosePosition(
+    client: DriftClient,
+    connection: Connection,
+    owner: PublicKey,
+    marketIndex: number,
+): Promise<Transaction> {
+    const driftSdk = await sdk();
+    const user: User = client.getUser();
+    const p = user.getPerpPosition(marketIndex);
+    if (!p || p.baseAssetAmount.isZero()) throw new Error("No open position");
+
+    const long = !p.baseAssetAmount.isNeg();
+    const ix = await client.getPlacePerpOrderIx(
+        driftSdk.getMarketOrderParams({
+            marketIndex,
+            direction: long ? driftSdk.PositionDirection.SHORT : driftSdk.PositionDirection.LONG,
+            baseAssetAmount: p.baseAssetAmount.abs(),
+            reduceOnly: true,
+        }),
+    );
+    return buildTx(connection, owner, [ix as unknown as TransactionInstruction]);
 }
 
 /** Tear down subscriptions (route unmount). */
@@ -266,5 +351,5 @@ export async function teardown(): Promise<void> {
     await tradeClient?.unsubscribe().catch(() => {});
     readClient = null;
     tradeClient = null;
-    tradeWalletKey = null;
+    tradeAuthority = null;
 }

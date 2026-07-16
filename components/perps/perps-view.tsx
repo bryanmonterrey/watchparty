@@ -1,28 +1,43 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon, TradeDownIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import type { Transaction } from "@solana/web3.js";
 import type { PerpMarketRow, AccountSummary } from "@/lib/perps/drift";
 
-// Perpetuals on Drift — non-custodial: every order is signed by the user's
-// own wallet, positions live in THEIR Drift account. The SDK (heavy) loads
-// only inside this route, and only via await import() in effects/handlers.
+// Perpetuals on Drift — non-custodial: positions live in the USER's Drift
+// account. Works for both wallet types: the SDK only BUILDS unsigned
+// transactions; Swig wallets submit through signAndSubmit (session key /
+// FROST), extension wallets through sendTransaction. Same dual path as boost
+// purchases. The SDK (heavy) loads only inside this route via await import().
 
 const fmt = (n: number, dp = 2) =>
     n >= 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toFixed(n < 1 ? 4 : dp);
+
+/** The wallet address trades come from: Swig custodial first, else extension. */
+function useTradeAuthority(): { authority: string | null; isSwig: boolean } {
+    const { data: session } = useAuthSession();
+    const wallet = useWallet();
+    const custodial = session?.user?.wallet_address ?? null;
+    if (custodial) return { authority: custodial, isSwig: true };
+    return { authority: wallet.publicKey?.toBase58() ?? null, isSwig: false };
+}
 
 export function PerpsView() {
     const { connection } = useConnection();
     const wallet = useWallet();
     const { data: session } = useAuthSession();
+    const { signAndSubmit } = useWalletSigning();
+    const { authority, isSwig } = useTradeAuthority();
 
     const [markets, setMarkets] = useState<PerpMarketRow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,26 +45,37 @@ export function PerpsView() {
     const [trade, setTrade] = useState<{ market: PerpMarketRow; direction: "long" | "short" } | null>(null);
     const [managing, setManaging] = useState(false);
 
-    // Extension wallet required: perps orders are signed by the user's own
-    // wallet via the Drift SDK (Swig's sign-and-submit flow can't hand the
-    // SDK a signTransaction, so custodial users see a connect prompt).
-    const canTrade = !!wallet.publicKey && !!wallet.signTransaction;
+    /** Sign + submit an unsigned tx via whichever wallet the user has. */
+    const submit = useCallback(async (tx: Transaction): Promise<string> => {
+        if (isSwig) {
+            const serialized = Buffer.from(tx.serialize({ requireAllSignatures: false })).toString("base64");
+            const { signature } = await signAndSubmit({ transaction: serialized });
+            return signature;
+        }
+        if (!wallet.sendTransaction) throw new Error("Connect a wallet first");
+        const sig = await wallet.sendTransaction(tx, connection);
+        await connection.confirmTransaction(sig, "confirmed");
+        return sig;
+    }, [isSwig, signAndSubmit, wallet, connection]);
+
+    const getClient = useCallback(async () => {
+        if (!authority) throw new Error("Connect a wallet first");
+        const [{ getTradeClient }, { PublicKey }] = await Promise.all([
+            import("@/lib/perps/drift"),
+            import("@solana/web3.js"),
+        ]);
+        return getTradeClient(connection, new PublicKey(authority));
+    }, [authority, connection]);
 
     const refreshAccount = useCallback(async () => {
-        if (!canTrade) return;
+        if (!authority) return;
         try {
-            const { getTradeClient, getAccountSummary } = await import("@/lib/perps/drift");
-            const client = await getTradeClient(connection, {
-                publicKey: wallet.publicKey!,
-                signTransaction: wallet.signTransaction!,
-                signAllTransactions: wallet.signAllTransactions!,
-            // Drift's IWallet expects a payer Keypair only for keypair wallets
-            } as never);
-            setAccount(await getAccountSummary(client));
+            const { getAccountSummary } = await import("@/lib/perps/drift");
+            setAccount(await getAccountSummary(await getClient()));
         } catch (err) {
             console.error("perps account refresh failed", err);
         }
-    }, [canTrade, connection, wallet.publicKey, wallet.signTransaction, wallet.signAllTransactions]);
+    }, [authority, getClient]);
 
     // Market list: load on mount, refresh on an interval, tear down on unmount.
     useEffect(() => {
@@ -83,6 +109,8 @@ export function PerpsView() {
         refreshAccount();
     }, [refreshAccount]);
 
+    const canTrade = !!authority;
+
     return (
         <ScrollArea className="h-full bg-background">
             <div className="mx-auto max-w-4xl px-4 pb-16 pt-6 md:pt-(--header-height)">
@@ -106,9 +134,9 @@ export function PerpsView() {
 
                 {!canTrade && session?.user && (
                     <div className="mt-5 rounded-2xl bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
-                        <p className="text-[14px] font-bold text-white">Connect an extension wallet to trade</p>
+                        <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
-                            Perps orders are signed directly by your wallet — Phantom, Solflare, or Backpack.
+                            Your watchparty wallet or any extension wallet works.
                         </p>
                     </div>
                 )}
@@ -119,7 +147,21 @@ export function PerpsView() {
                         <p className="px-1 text-[13px] font-bold text-zinc-400">Your positions</p>
                         <div className="mt-2 space-y-1.5">
                             {account.positions.map((p) => (
-                                <PositionRow key={p.marketIndex} position={p} onClosed={refreshAccount} />
+                                <PositionRow
+                                    key={p.marketIndex}
+                                    position={p}
+                                    onClose={async () => {
+                                        const [{ prepareClosePosition }, { PublicKey }] = await Promise.all([
+                                            import("@/lib/perps/drift"),
+                                            import("@solana/web3.js"),
+                                        ]);
+                                        const tx = await prepareClosePosition(
+                                            await getClient(), connection, new PublicKey(authority!), p.marketIndex,
+                                        );
+                                        await submit(tx);
+                                        refreshAccount();
+                                    }}
+                                />
                             ))}
                         </div>
                     </div>
@@ -189,36 +231,42 @@ export function PerpsView() {
                 </p>
             </div>
 
-            {trade && (
+            {trade && authority && (
                 <TradeDialog
                     market={trade.market}
                     direction={trade.direction}
                     account={account}
                     onDone={() => { setTrade(null); refreshAccount(); }}
                     onClose={() => setTrade(null)}
-                    getClient={async () => {
-                        const { getTradeClient } = await import("@/lib/perps/drift");
-                        return getTradeClient(connection, {
-                            publicKey: wallet.publicKey!,
-                            signTransaction: wallet.signTransaction!,
-                            signAllTransactions: wallet.signAllTransactions!,
-                        } as never);
+                    placeOrder={async (usdNotional) => {
+                        const [{ prepareOpenPosition }, { PublicKey }] = await Promise.all([
+                            import("@/lib/perps/drift"),
+                            import("@solana/web3.js"),
+                        ]);
+                        const tx = await prepareOpenPosition(
+                            await getClient(), connection, new PublicKey(authority),
+                            trade.market.marketIndex, trade.direction, usdNotional,
+                        );
+                        return submit(tx);
                     }}
                 />
             )}
-            {managing && wallet.publicKey && (
+            {managing && authority && (
                 <CollateralDialog
                     account={account}
-                    owner={wallet.publicKey}
                     onDone={() => { setManaging(false); refreshAccount(); }}
                     onClose={() => setManaging(false)}
-                    getClient={async () => {
-                        const { getTradeClient } = await import("@/lib/perps/drift");
-                        return getTradeClient(connection, {
-                            publicKey: wallet.publicKey!,
-                            signTransaction: wallet.signTransaction!,
-                            signAllTransactions: wallet.signAllTransactions!,
-                        } as never);
+                    transfer={async (mode, usd) => {
+                        const [{ prepareDeposit, prepareWithdraw }, { PublicKey }] = await Promise.all([
+                            import("@/lib/perps/drift"),
+                            import("@solana/web3.js"),
+                        ]);
+                        const owner = new PublicKey(authority);
+                        const client = await getClient();
+                        const tx = mode === "deposit"
+                            ? await prepareDeposit(client, connection, owner, usd)
+                            : await prepareWithdraw(client, connection, owner, usd);
+                        return submit(tx);
                     }}
                 />
             )}
@@ -226,23 +274,14 @@ export function PerpsView() {
     );
 }
 
-function PositionRow({ position: p, onClosed }: { position: import("@/lib/perps/drift").PerpPositionRow; onClosed: () => void }) {
+function PositionRow({ position: p, onClose }: { position: import("@/lib/perps/drift").PerpPositionRow; onClose: () => Promise<void> }) {
     const [closing, setClosing] = useState(false);
-    const { connection } = useConnection();
-    const wallet = useWallet();
 
     const close = async () => {
         setClosing(true);
         try {
-            const { getTradeClient, closePosition } = await import("@/lib/perps/drift");
-            const client = await getTradeClient(connection, {
-                publicKey: wallet.publicKey!,
-                signTransaction: wallet.signTransaction!,
-                signAllTransactions: wallet.signAllTransactions!,
-            } as never);
-            await closePosition(client, p.marketIndex);
+            await onClose();
             toast.success(`${p.symbol.replace("-PERP", "")} position closed`);
-            onClosed();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Close failed");
         } finally {
@@ -293,14 +332,14 @@ function TradeDialog({
     account,
     onDone,
     onClose,
-    getClient,
+    placeOrder,
 }: {
     market: PerpMarketRow;
     direction: "long" | "short";
     account: AccountSummary | null;
     onDone: () => void;
     onClose: () => void;
-    getClient: () => Promise<import("@drift-labs/sdk").DriftClient>;
+    placeOrder: (usdNotional: number) => Promise<string>;
 }) {
     const [usd, setUsd] = useState("");
     const [placing, setPlacing] = useState(false);
@@ -313,9 +352,7 @@ function TradeDialog({
         if (notional < 1) return;
         setPlacing(true);
         try {
-            const { openPosition } = await import("@/lib/perps/drift");
-            const client = await getClient();
-            await openPosition(client, market.marketIndex, direction, notional);
+            await placeOrder(notional);
             toast.success(`${long ? "Long" : "Short"} ${market.symbol.replace("-PERP", "")} opened`);
             onDone();
         } catch (err) {
@@ -388,16 +425,14 @@ function TradeDialog({
 
 function CollateralDialog({
     account,
-    owner,
     onDone,
     onClose,
-    getClient,
+    transfer,
 }: {
     account: AccountSummary | null;
-    owner: import("@solana/web3.js").PublicKey;
     onDone: () => void;
     onClose: () => void;
-    getClient: () => Promise<import("@drift-labs/sdk").DriftClient>;
+    transfer: (mode: "deposit" | "withdraw", usd: number) => Promise<string>;
 }) {
     const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
     const [usd, setUsd] = useState("");
@@ -408,15 +443,8 @@ function CollateralDialog({
         if (!Number.isFinite(amount) || amount <= 0) return;
         setBusy(true);
         try {
-            const { depositUsdc, withdrawUsdc } = await import("@/lib/perps/drift");
-            const client = await getClient();
-            if (mode === "deposit") {
-                await depositUsdc(client, owner, amount);
-                toast.success(`Deposited $${amount} USDC`);
-            } else {
-                await withdrawUsdc(client, owner, amount);
-                toast.success(`Withdrew $${amount} USDC`);
-            }
+            await transfer(mode, amount);
+            toast.success(mode === "deposit" ? `Deposited $${amount} USDC` : `Withdrew $${amount} USDC`);
             onDone();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Transfer failed");
