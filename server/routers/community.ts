@@ -14,6 +14,7 @@ import {
     communityAuditLog,
     communityExpressions,
     communitySounds,
+    communityChannelCategories,
     communityRoles,
     communityMemberRoles,
     communityInvites,
@@ -494,9 +495,16 @@ export const communityRouter = router({
                 return roles.find((r) => mine.includes(r.id))?.color ?? null;
             };
 
+            const categories = await db
+                .select()
+                .from(communityChannelCategories)
+                .where(eq(communityChannelCategories.serverId, input.serverId))
+                .orderBy(sql`${communityChannelCategories.position} ASC NULLS LAST`, asc(communityChannelCategories.createdAt));
+
             return {
                 server: server[0],
                 channels: channelsWithUnread,
+                categories,
                 members: members.map((m) => ({
                     ...m,
                     roleIds: rolesByMember.get(m.id) ?? [],
@@ -1794,10 +1802,20 @@ export const communityRouter = router({
                 serverId: z.string().uuid(),
                 name: z.string().min(1).max(100),
                 type: z.enum(["TEXT", "AUDIO", "VIDEO"]).default("TEXT"),
+                categoryId: z.string().uuid().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            if (input.categoryId) {
+                const [cat] = await db
+                    .select({ id: communityChannelCategories.id })
+                    .from(communityChannelCategories)
+                    .where(and(eq(communityChannelCategories.id, input.categoryId), eq(communityChannelCategories.serverId, input.serverId)))
+                    .limit(1);
+                if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
+            }
 
             const [channel] = await db
                 .insert(communityChannels)
@@ -1806,12 +1824,74 @@ export const communityRouter = router({
                     type: input.type,
                     serverId: input.serverId,
                     createdById: ctx.user.id,
+                    categoryId: input.categoryId ?? null,
                 })
                 .returning();
 
             await logAudit(input.serverId, ctx.user.id, "channel.create", `created #${channel.name}`);
             return channel;
         }),
+
+    // ─── Channel categories (Discord-style sidebar groups) ───
+
+    /** Create a category (admin/mod) */
+    createCategory: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), name: z.string().min(1).max(50) }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [{ maxPos }] = await db
+                .select({ maxPos: sql<number | null>`MAX(${communityChannelCategories.position})` })
+                .from(communityChannelCategories)
+                .where(eq(communityChannelCategories.serverId, input.serverId));
+
+            const [created] = await db
+                .insert(communityChannelCategories)
+                .values({
+                    serverId: input.serverId,
+                    name: input.name.trim(),
+                    position: (maxPos ?? -1) + 1,
+                })
+                .returning();
+
+            await logAudit(input.serverId, ctx.user.id, "category.create", `created category ${created.name}`);
+            return created;
+        }),
+
+    /** Rename a category (admin/mod) */
+    renameCategory: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), categoryId: z.string().uuid(), name: z.string().min(1).max(50) }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [updated] = await db
+                .update(communityChannelCategories)
+                .set({ name: input.name.trim() })
+                .where(and(eq(communityChannelCategories.id, input.categoryId), eq(communityChannelCategories.serverId, input.serverId)))
+                .returning();
+            if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
+
+            await logAudit(input.serverId, ctx.user.id, "category.rename", `renamed category to ${updated.name}`);
+            return updated;
+        }),
+
+    /** Delete a category — its channels are ungrouped, never deleted (admin/mod) */
+    deleteCategory: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), categoryId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [removed] = await db
+                .delete(communityChannelCategories)
+                .where(and(eq(communityChannelCategories.id, input.categoryId), eq(communityChannelCategories.serverId, input.serverId)))
+                .returning();
+            if (removed) {
+                await logAudit(input.serverId, ctx.user.id, "category.delete", `deleted category ${removed.name}`);
+            }
+            return { success: true };
+        }),
+
+    // (moving a channel between categories = updateChannel's categoryId)
 
     /** Update a channel */
     updateChannel: protectedProcedure
@@ -1822,10 +1902,20 @@ export const communityRouter = router({
                 name: z.string().min(1).max(100).optional(),
                 type: z.enum(["TEXT", "AUDIO", "VIDEO"]).optional(),
                 readOnly: z.boolean().optional(),
+                categoryId: z.string().uuid().nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            if (input.categoryId) {
+                const [cat] = await db
+                    .select({ id: communityChannelCategories.id })
+                    .from(communityChannelCategories)
+                    .where(and(eq(communityChannelCategories.id, input.categoryId), eq(communityChannelCategories.serverId, input.serverId)))
+                    .limit(1);
+                if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
+            }
 
             const [updated] = await db
                 .update(communityChannels)
@@ -1833,9 +1923,12 @@ export const communityRouter = router({
                     ...(input.name && { name: input.name.toLowerCase().replace(/\s+/g, "-") }),
                     ...(input.type && { type: input.type }),
                     ...(input.readOnly !== undefined && { readOnly: input.readOnly }),
+                    ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
                     updatedAt: new Date(),
                 })
-                .where(eq(communityChannels.id, input.channelId))
+                // Scope to the role-checked server — the id alone would let an
+                // admin of one server edit another server's channels.
+                .where(and(eq(communityChannels.id, input.channelId), eq(communityChannels.serverId, input.serverId)))
                 .returning();
 
             if (updated) await logAudit(input.serverId, ctx.user.id, "channel.update", `updated #${updated.name}`);

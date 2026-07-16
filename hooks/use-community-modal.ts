@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { CommunityServer, CommunityChannel } from "@/db/schema/community";
+import type { CommunityServer, CommunityChannel, CommunityChannelCategory } from "@/db/schema/community";
 
 export type CommunityModalType =
     | "createServer"
@@ -14,7 +14,8 @@ export type CommunityModalType =
     | "editChannel"
     | "deleteChannel"
     | "deleteMessage"
-    | "nickname";
+    | "nickname"
+    | "createCategory";
 
 type CommunityModalData = {
     server?: CommunityServer;
@@ -22,6 +23,10 @@ type CommunityModalData = {
     channelType?: "TEXT" | "AUDIO" | "VIDEO";
     messageId?: string;
     serverId?: string;
+    /** createCategory: when set, the modal renames this category instead */
+    category?: CommunityChannelCategory;
+    /** createChannel: pre-select this category */
+    categoryId?: string;
 };
 
 type CommunityModalStore = {

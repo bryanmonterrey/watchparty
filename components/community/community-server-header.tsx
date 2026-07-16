@@ -11,6 +11,7 @@ import {
     Notification01Icon,
     NotificationOff01Icon,
     PencilEdit01Icon,
+    FolderAddIcon,
     PlusSignIcon,
     Rocket01Icon,
     Settings01Icon,
@@ -146,6 +147,17 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
                           <>
                               Create Channel
                               <HugeiconsIcon icon={PlusSignIcon} className={iconClass} strokeWidth={2} />
+                          </>
+                      ),
+                  },
+                  {
+                      key: "create-category",
+                      onClick: () => onOpen("createCategory", { server }),
+                      className: rowClass,
+                      label: (
+                          <>
+                              Create Category
+                              <HugeiconsIcon icon={FolderAddIcon} className={iconClass} strokeWidth={2} />
                           </>
                       ),
                   },

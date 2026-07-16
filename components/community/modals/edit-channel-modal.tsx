@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { trpc } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
 
 const slugify = (s: string) => s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-_]/g, "");
 
@@ -17,10 +18,18 @@ export function EditChannelModal() {
     const { isOpen, onClose, type, data } = useCommunityModal();
     const [name, setName] = useState("");
     const [readOnly, setReadOnly] = useState(false);
+    const [categoryId, setCategoryId] = useState<string | null>(null);
     const utils = trpc.useUtils();
 
     const isModalOpen = isOpen && type === "editChannel";
     const channel = data.channel;
+
+    // Category options come from the already-cached server payload
+    const { data: serverData } = trpc.community.getServer.useQuery(
+        { serverId: data.server?.id ?? "" },
+        { enabled: isModalOpen && !!data.server?.id },
+    );
+    const categories = serverData?.categories ?? [];
 
     // Render-time seed (react-hooks/set-state-in-effect).
     const [seededFor, setSeededFor] = useState<string | null>(null);
@@ -28,6 +37,7 @@ export function EditChannelModal() {
         setSeededFor(channel.id);
         setName(channel.name);
         setReadOnly(!!channel.readOnly);
+        setCategoryId(channel.categoryId ?? null);
     }
     if (!isModalOpen && seededFor !== null) setSeededFor(null);
 
@@ -46,6 +56,7 @@ export function EditChannelModal() {
             serverId: data.server.id,
             name: slugify(name),
             readOnly,
+            categoryId,
         });
     };
 
@@ -82,6 +93,38 @@ export function EditChannelModal() {
                         </div>
                         <Switch checked={readOnly} onCheckedChange={setReadOnly} disabled={updateChannel.isPending} />
                     </label>
+
+                    {/* Category — where the channel lives in the sidebar */}
+                    {categories.length > 0 && (
+                        <div className="rounded-2xl bg-white/[0.03] px-4 py-3.5">
+                            <p className="text-[14px] font-bold text-white">Category</p>
+                            <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setCategoryId(null)}
+                                    className={cn(
+                                        "cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors",
+                                        categoryId === null ? "bg-white text-black" : "bg-white/[0.06] text-zinc-400 hover:text-white",
+                                    )}
+                                >
+                                    None
+                                </button>
+                                {categories.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        type="button"
+                                        onClick={() => setCategoryId(cat.id)}
+                                        className={cn(
+                                            "max-w-full cursor-pointer truncate rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors",
+                                            categoryId === cat.id ? "bg-white text-black" : "bg-white/[0.06] text-zinc-400 hover:text-white",
+                                        )}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex gap-2">
                         <button

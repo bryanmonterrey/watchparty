@@ -57,6 +57,7 @@ export function CreateChannelModal() {
             serverId: data.server.id,
             name: slugify(name),
             type: effectiveType,
+            categoryId: data.categoryId,
         });
     };
 

@@ -115,6 +115,22 @@ export const communityMembers = pgTable('community_members', {
     pgPolicy('community_members_delete_own', { for: 'delete', to: 'authenticated', using: sql`user_id = (SELECT auth.uid()::text)` }),
 ]).enableRLS();
 
+// ─── Channel categories (Discord-style collapsible groups) ──
+export const communityChannelCategories = pgTable('community_channel_categories', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: text('name').notNull(),
+    position: integer('position'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_community_categories_server').on(table.serverId),
+    pgPolicy('community_categories_select_member', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = server_id AND cm.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityChannelCategory = typeof communityChannelCategories.$inferSelect;
+
 // ─── Channels ────────────────────────────────────────────
 export const communityChannels = pgTable('community_channels', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -128,6 +144,9 @@ export const communityChannels = pgTable('community_channels', {
         .notNull(),
     // Sort order within the server (null = fall back to createdAt)
     position: integer('position'),
+    // Collapsible sidebar group; NULL = ungrouped (the plain type sections)
+    categoryId: uuid('category_id')
+        .references(() => communityChannelCategories.id, { onDelete: 'set null' }),
     // Read-only: guests can read but only mods/admins post (null = writable)
     readOnly: boolean('read_only'),
     // RealtimeKit meeting for AUDIO/VIDEO channels (lazy, like Spaces)
