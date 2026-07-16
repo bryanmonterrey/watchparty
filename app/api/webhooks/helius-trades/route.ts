@@ -55,7 +55,16 @@ export async function POST(req: NextRequest) {
     const candidates = [...touched].slice(0, 2000);
 
     const rows = await db
-        .select({ id: tokens.id, poolAddress: tokens.poolAddress, phase: tokens.phase })
+        .select({
+            id: tokens.id,
+            poolAddress: tokens.poolAddress,
+            phase: tokens.phase,
+            tokenAddress: tokens.tokenAddress,
+            name: tokens.name,
+            ticker: tokens.ticker,
+            lastAlertPriceUsd: tokens.lastAlertPriceUsd,
+            lastAlertAt: tokens.lastAlertAt,
+        })
         .from(tokens)
         .where(and(
             eq(tokens.status, "live"),
@@ -70,7 +79,7 @@ export async function POST(req: NextRequest) {
     for (const row of rows) {
         const claim = `${Date.now()}:${Math.random()}`;
         const winner = await withCache(`token:sync-req:${row.id}`, THROTTLE_SECONDS, async () => claim);
-        if (winner === claim) toSync.push({ id: row.id, poolAddress: row.poolAddress!, phase: row.phase });
+        if (winner === claim) toSync.push({ ...row, poolAddress: row.poolAddress! });
     }
     if (toSync.length === 0) return NextResponse.json({ ok: true, synced: 0, throttled: rows.length });
 

@@ -1,4 +1,4 @@
-import { index, pgPolicy, pgTable, text, timestamp, integer, boolean, jsonb, doublePrecision } from "drizzle-orm/pg-core"
+import { index, pgPolicy, pgTable, primaryKey, text, timestamp, integer, boolean, jsonb, doublePrecision } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { user } from "../auth/user"
 
@@ -36,6 +36,10 @@ export const tokens = pgTable("tokens", {
     txCount24h: integer("txCount24h").default(0),
     holderCount: integer("holderCount").default(0),
     lastSyncedAt: timestamp("lastSyncedAt"),
+    // Price-alert baseline (web push): price at the last alert; a push fires
+    // on a ≥20% move from here, at most once per hour per token.
+    lastAlertPriceUsd: doublePrecision("lastAlertPriceUsd"),
+    lastAlertAt: timestamp("lastAlertAt"),
 
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
@@ -56,3 +60,16 @@ export const tokensRelations = relations(tokens, ({ one }) => ({
         references: [user.id],
     }),
 }))
+
+// ─── Coin notification subscriptions (web push price/migration alerts) ───
+export const tokenAlertSubscriptions = pgTable("token_alert_subscriptions", {
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    tokenId: text("token_id").notNull().references(() => tokens.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    primaryKey({ columns: [table.userId, table.tokenId] }),
+    index("idx_token_alert_subs_token").on(table.tokenId),
+    pgPolicy("token_alert_subs_owner_all", { for: "all", to: "authenticated", using: sql`user_id = (SELECT auth.uid()::text)` }),
+]).enableRLS()
+
+export type TokenAlertSubscription = typeof tokenAlertSubscriptions.$inferSelect

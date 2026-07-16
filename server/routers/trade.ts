@@ -151,7 +151,7 @@ export const tradeRouter = router({
                     updatedAt: new Date(),
                 })
                 .where(and(eq(tokens.id, input.tokenId), eq(tokens.status, "draft")))
-                .returning({ id: tokens.id });
+                .returning({ id: tokens.id, name: tokens.name, ticker: tokens.ticker });
             if (!updated) return { activated: false, alreadyLive: true };
 
             // Fire-and-forget: watch the pool for external trades + pull the
@@ -161,7 +161,16 @@ export const tradeRouter = router({
                 .catch(() => {});
             import("@/lib/tokens/market-sync")
                 .then(({ syncMarketData, syncCurveProgress }) => {
-                    const syncable = [{ id: input.tokenId, poolAddress: input.poolAddress, phase: "new" as const }];
+                    const syncable = [{
+                        id: input.tokenId,
+                        poolAddress: input.poolAddress,
+                        phase: "new" as const,
+                        tokenAddress: input.tokenAddress,
+                        name: updated.name,
+                        ticker: updated.ticker,
+                        lastAlertPriceUsd: null,
+                        lastAlertAt: null,
+                    }];
                     return Promise.all([syncMarketData(syncable), syncCurveProgress(syncable)]);
                 })
                 .catch(() => {});
@@ -178,7 +187,16 @@ export const tradeRouter = router({
         .input(z.object({ mint: z.string().min(32).max(44) }))
         .mutation(async ({ input }) => {
             const [row] = await db
-                .select({ id: tokens.id, poolAddress: tokens.poolAddress, phase: tokens.phase })
+                .select({
+                    id: tokens.id,
+                    poolAddress: tokens.poolAddress,
+                    phase: tokens.phase,
+                    tokenAddress: tokens.tokenAddress,
+                    name: tokens.name,
+                    ticker: tokens.ticker,
+                    lastAlertPriceUsd: tokens.lastAlertPriceUsd,
+                    lastAlertAt: tokens.lastAlertAt,
+                })
                 .from(tokens)
                 .where(and(eq(tokens.tokenAddress, input.mint), isNotNull(tokens.poolAddress)))
                 .limit(1);
@@ -193,7 +211,7 @@ export const tradeRouter = router({
             if (winner !== claim) return { synced: false };
 
             const { syncMarketData, syncCurveProgress } = await import("@/lib/tokens/market-sync");
-            const syncable = [{ id: row.id, poolAddress: row.poolAddress!, phase: row.phase }];
+            const syncable = [{ ...row, poolAddress: row.poolAddress! }];
             await syncMarketData(syncable);
             await syncCurveProgress(syncable);
             return { synced: true };

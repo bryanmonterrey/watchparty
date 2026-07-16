@@ -11,6 +11,7 @@ import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { eq } from "drizzle-orm";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
+import { maybePriceAlert, migrationAlert } from "@/lib/push/token-alerts";
 
 const GT = "https://api.geckoterminal.com/api/v2/networks/solana";
 const GT_HEADERS = { Accept: "application/json;version=20230302" };
@@ -20,6 +21,13 @@ export type SyncableToken = {
     id: string;
     poolAddress: string;
     phase: "new" | "migrating" | "migrated";
+    // Alert fields (web push) — callers select these so the sync passes can
+    // fire price/migration notifications without extra reads.
+    tokenAddress: string | null;
+    name: string;
+    ticker: string;
+    lastAlertPriceUsd: number | null;
+    lastAlertAt: Date | null;
 };
 
 type GtPool = {
@@ -72,6 +80,7 @@ export async function syncMarketData(rows: SyncableToken[]): Promise<number> {
                     lastSyncedAt: new Date(),
                 }).where(eq(tokens.id, row.id));
                 synced++;
+                await maybePriceAlert(row, num(a.base_token_price_usd)).catch(() => {});
             }
         } catch {
             // one bad batch never kills the pass
@@ -108,6 +117,9 @@ export async function syncCurveProgress(rows: SyncableToken[]): Promise<number> 
                     phase: migrated ? "migrated" : progress >= 70 ? "migrating" : "new",
                 }).where(eq(tokens.id, row.id));
                 curves++;
+                if (migrated && row.phase !== "migrated") {
+                    await migrationAlert(row).catch(() => {});
+                }
             } catch {
                 // pool read failures are per-token, not per-pass
             }

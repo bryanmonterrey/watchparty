@@ -95,7 +95,7 @@ export function TokenProfile({ token }: TokenProfileProps) {
                     <TokenSwapCard token={token} creatorWallet={token.creator.wallet_address ?? null} />
                     <TokenBondingCurve token={token} />
                     <TokenChatCard token={token} creatorUsername={token.creator.username} />
-                    <TokenNotifiedBanner />
+                    <TokenNotifiedBanner tokenId={token.id} />
                 </div>
             </div>
         </div>

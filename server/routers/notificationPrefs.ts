@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '@/db';
 import { notificationPrefs, webPushSubscriptions } from '@/db/schema/content/notification_prefs';
-import { eq } from 'drizzle-orm';
+import { tokenAlertSubscriptions } from '@/db/schema/content/token';
+import { and, eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 export const notificationPrefsRouter = router({
@@ -52,5 +53,34 @@ export const notificationPrefsRouter = router({
         .mutation(async ({ ctx, input }) => {
             await db.delete(webPushSubscriptions).where(eq(webPushSubscriptions.endpoint, input.endpoint));
             return { success: true };
+        }),
+
+    // ─── Per-token coin alerts (price moves + migration) ───
+
+    getTokenAlert: protectedProcedure
+        .input(z.object({ tokenId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const [row] = await db
+                .select({ tokenId: tokenAlertSubscriptions.tokenId })
+                .from(tokenAlertSubscriptions)
+                .where(and(eq(tokenAlertSubscriptions.userId, ctx.user.id), eq(tokenAlertSubscriptions.tokenId, input.tokenId)))
+                .limit(1);
+            return { subscribed: !!row };
+        }),
+
+    setTokenAlert: protectedProcedure
+        .input(z.object({ tokenId: z.string(), enabled: z.boolean() }))
+        .mutation(async ({ ctx, input }) => {
+            if (input.enabled) {
+                await db
+                    .insert(tokenAlertSubscriptions)
+                    .values({ userId: ctx.user.id, tokenId: input.tokenId })
+                    .onConflictDoNothing();
+            } else {
+                await db
+                    .delete(tokenAlertSubscriptions)
+                    .where(and(eq(tokenAlertSubscriptions.userId, ctx.user.id), eq(tokenAlertSubscriptions.tokenId, input.tokenId)));
+            }
+            return { subscribed: input.enabled };
         }),
 });

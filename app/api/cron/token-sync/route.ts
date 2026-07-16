@@ -22,7 +22,16 @@ export async function GET(req: NextRequest) {
     }
 
     const rows = await db
-        .select({ id: tokens.id, poolAddress: tokens.poolAddress, phase: tokens.phase })
+        .select({
+            id: tokens.id,
+            poolAddress: tokens.poolAddress,
+            phase: tokens.phase,
+            tokenAddress: tokens.tokenAddress,
+            name: tokens.name,
+            ticker: tokens.ticker,
+            lastAlertPriceUsd: tokens.lastAlertPriceUsd,
+            lastAlertAt: tokens.lastAlertAt,
+        })
         .from(tokens)
         .where(and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress)))
         .orderBy(sql`${tokens.lastSyncedAt} asc nulls first`)
