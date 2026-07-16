@@ -1,24 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+    ArrowDown01Icon,
     Copy01Icon,
+    Key01Icon,
+    Link01Icon,
     LiveStreaming02Icon,
-    RefreshIcon,
     Tick02Icon,
-    ViewIcon,
-    ViewOffSlashIcon,
 } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Squircle } from "@/components/ui/squircle";
 import { appToast } from "@/components/app-ui/app-toast";
 
-// The Create dialog's Stream tab: generate a stream connection, grab your
-// credentials, set the stream info, go live from OBS. Ceremonial first-run
-// (the upgrade-overlay language), utilitarian once connected. Flat fills +
-// uniform inner hairlines only — no gradients, no gray shadows.
+// The Create dialog's Stream tab. Friendly product moment, not a settings
+// form: status hero, two big copy cards (the key is copy-only — never shown
+// on screen), title + category pills that save themselves, OBS steps behind
+// a collapsible. Flat fills + hairlines only.
 
 type Protocol = "RTMP" | "WHIP";
 
@@ -26,6 +27,8 @@ const PROTOCOLS: { key: Protocol; label: string; hint: string }[] = [
     { key: "RTMP", label: "RTMP", hint: "OBS, Streamlabs & most encoders" },
     { key: "WHIP", label: "WHIP", hint: "Browser encoders, ultra-low latency" },
 ];
+
+const CATEGORIES = ["Gaming", "Music", "Crypto", "IRL", "Just chatting", "Sports", "Art"];
 
 export function StreamSetup() {
     const utils = trpc.useUtils();
@@ -102,7 +105,7 @@ function FirstRun({ onGenerate, generating }: { onGenerate: (p: Protocol) => voi
     );
 }
 
-// ─── Connected: credentials + stream info ───────────────────
+// ─── Connected ───────────────────────────────────────────────
 
 function Connected({
     stream,
@@ -120,116 +123,79 @@ function Connected({
     onSwitchProtocol: (p: Protocol) => void;
     switching: boolean;
 }) {
-    const utils = trpc.useUtils();
-    // null = untouched (mirror the server value); string = user is editing
-    const [titleDraft, setTitleDraft] = useState<string | null>(null);
-    const [categoryDraft, setCategoryDraft] = useState<string | null>(null);
-    const title = titleDraft ?? stream.title ?? "";
-    const category = categoryDraft ?? stream.category ?? "";
-    const dirty = title !== (stream.title ?? "") || category !== (stream.category ?? "");
-
-    const updateInfo = trpc.stream.updateInfo.useMutation({
-        onSuccess: () => {
-            utils.stream.getMine.invalidate();
-            setTitleDraft(null);
-            setCategoryDraft(null);
-            appToast.success("Stream info saved");
-        },
-        onError: (e) => appToast.error(e.message),
-    });
-
     const protocol: Protocol = stream.serverUrl?.startsWith("https") ? "WHIP" : "RTMP";
     const other: Protocol = protocol === "RTMP" ? "WHIP" : "RTMP";
 
     return (
-        <div className="space-y-4 px-1 pb-2">
-            {/* Header */}
-            <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2.5">
-                    <h2 className="text-[19px] font-black tracking-tight text-white">Your stream</h2>
-                    {stream.isLive ? (
-                        <span className="flex items-center gap-1.5 rounded-full bg-pastelred/15 px-2.5 py-1 text-[11px] font-bold tracking-wide text-pastelred">
-                            <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
-                            LIVE
-                        </span>
-                    ) : (
-                        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold tracking-wide text-zinc-500">
-                            OFFLINE
-                        </span>
+        <div className="mx-auto max-w-md px-2 pb-3">
+            {/* Status hero */}
+            <div className="flex flex-col items-center pt-4 text-center">
+                <div className="relative grid size-16 place-items-center rounded-full bg-pastelred/10">
+                    {stream.isLive && (
+                        <span className="absolute inset-0 animate-ping rounded-full bg-pastelred/20" />
                     )}
+                    <HugeiconsIcon icon={LiveStreaming02Icon} className="size-8 text-pastelred" strokeWidth={1.8} />
                 </div>
+                <h2 className="mt-4 text-[24px] font-black tracking-tight text-white">
+                    {stream.isLive ? "You're live!" : "You're ready to stream"}
+                </h2>
+                <p className="mt-1 text-[14px] font-medium text-zinc-500">
+                    {stream.isLive
+                        ? "Your channel is broadcasting right now."
+                        : "Copy your details into OBS and hit Start Streaming."}
+                </p>
+            </div>
+
+            {/* Big copy cards — the whole card is the button */}
+            <div className="mt-6 grid grid-cols-2 gap-3">
+                <CopyCard icon={Link01Icon} label="Server URL" value={stream.serverUrl} hint="Paste into “Server”" />
+                <CopyCard icon={Key01Icon} label="Stream key" value={stream.streamKey} hint="Secret — copy only" accent />
+            </div>
+
+            {/* Stream info — saves itself */}
+            <StreamInfo title={stream.title} category={stream.category} />
+
+            {/* How to go live — tucked away once you've seen it */}
+            <ObsSteps />
+
+            {/* Quiet plumbing row */}
+            <div className="mt-4 flex items-center justify-between px-1 text-[12px] font-semibold text-zinc-600">
                 <button
                     onClick={() => onSwitchProtocol(other)}
                     disabled={switching}
-                    title={`Switch the ingest to ${other}`}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] font-bold text-zinc-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                    className="cursor-pointer transition-colors hover:text-zinc-300 disabled:opacity-50"
                 >
-                    <HugeiconsIcon icon={RefreshIcon} className={cn("size-3.5", switching && "animate-spin")} strokeWidth={2.5} />
-                    {protocol} · switch to {other}
+                    {switching ? "Switching…" : `Using ${protocol} — switch to ${other}`}
                 </button>
-            </div>
-
-            {/* Credentials */}
-            <div className="divide-y divide-white/[0.06] rounded-3xl bg-white/[0.03] ring-1 ring-white/10">
-                <CredentialRow label="Server URL" value={stream.serverUrl} />
-                <CredentialRow label="Stream key" value={stream.streamKey} secret />
-                <CredentialRow label="Playback URL" value={stream.playbackUrl} />
-            </div>
-
-            {/* Stream info */}
-            <div className="space-y-3 rounded-3xl bg-white/[0.03] p-5 ring-1 ring-white/10">
-                <p className="text-[14px] font-bold text-white">Stream info</p>
-                <Input
-                    radius={14}
-                    value={title}
-                    onChange={(e) => setTitleDraft(e.target.value)}
-                    placeholder="What are you streaming today?"
-                    maxLength={100}
-                    className="h-11 bg-white/[0.04] text-[14px] font-medium"
-                />
-                <div className="flex items-center gap-2">
-                    <Input
-                        radius={14}
-                        value={category}
-                        onChange={(e) => setCategoryDraft(e.target.value)}
-                        placeholder="Category — Gaming, Music, Crypto…"
-                        maxLength={50}
-                        className="h-11 flex-1 bg-white/[0.04] text-[14px] font-medium"
-                    />
+                {stream.playbackUrl && (
                     <button
-                        onClick={() => updateInfo.mutate({ title: title || undefined, category: category || undefined })}
-                        disabled={updateInfo.isPending || !dirty}
-                        className="h-11 shrink-0 cursor-pointer rounded-full bg-white px-5 text-[14px] font-extrabold text-black transition-colors hover:bg-white/90 disabled:opacity-40"
+                        onClick={() => {
+                            navigator.clipboard.writeText(stream.playbackUrl!);
+                            appToast.success("Playback URL copied");
+                        }}
+                        className="cursor-pointer transition-colors hover:text-zinc-300"
                     >
-                        {updateInfo.isPending ? "Saving…" : "Save"}
+                        Copy playback URL
                     </button>
-                </div>
-            </div>
-
-            {/* How to go live */}
-            <div className="rounded-3xl bg-white/[0.03] p-5 ring-1 ring-white/10">
-                <p className="text-[14px] font-bold text-white">Go live in OBS</p>
-                <div className="mt-3 space-y-2.5">
-                    {[
-                        "Settings → Stream → set Service to “Custom…”",
-                        "Paste the Server URL and Stream key above",
-                        "Start Streaming — your channel flips live automatically",
-                    ].map((step, i) => (
-                        <div key={i} className="flex items-start gap-2.5">
-                            <span className="mt-px grid size-5 shrink-0 place-items-center rounded-full bg-white/[0.06] text-[11px] font-black text-zinc-400">
-                                {i + 1}
-                            </span>
-                            <p className="text-[13px] font-medium leading-snug text-zinc-500">{step}</p>
-                        </div>
-                    ))}
-                </div>
+                )}
             </div>
         </div>
     );
 }
 
-function CredentialRow({ label, value, secret }: { label: string; value: string | null; secret?: boolean }) {
-    const [show, setShow] = useState(false);
+function CopyCard({
+    icon,
+    label,
+    value,
+    hint,
+    accent,
+}: {
+    icon: typeof Link01Icon;
+    label: string;
+    value: string | null;
+    hint: string;
+    accent?: boolean;
+}) {
     const [copied, setCopied] = useState(false);
 
     const copy = () => {
@@ -240,32 +206,142 @@ function CredentialRow({ label, value, secret }: { label: string; value: string 
     };
 
     return (
-        <div className="flex items-center gap-3 px-5 py-3.5">
-            <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-600">{label}</p>
-                <p className={cn("truncate font-mono text-[13px] font-medium", value ? "text-zinc-300" : "text-zinc-600")}>
-                    {value ? (secret && !show ? "•".repeat(28) : value) : "Not generated yet"}
-                </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-0.5">
-                {secret && value && (
-                    <button
-                        onClick={() => setShow((v) => !v)}
-                        aria-label={show ? `Hide ${label}` : `Reveal ${label}`}
-                        className="grid size-9 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white"
-                    >
-                        <HugeiconsIcon icon={show ? ViewOffSlashIcon : ViewIcon} className="size-4" strokeWidth={2} />
-                    </button>
+        <Squircle asChild radius={22}>
+            <button
+                onClick={copy}
+                disabled={!value}
+                className={cn(
+                    "group flex cursor-pointer flex-col items-start gap-3 p-4 text-left transition-colors disabled:opacity-40",
+                    accent ? "bg-pastelred/[0.08] hover:bg-pastelred/[0.13]" : "bg-white/[0.04] hover:bg-white/[0.08]",
                 )}
-                <button
-                    onClick={copy}
-                    disabled={!value}
-                    aria-label={`Copy ${label}`}
-                    className="grid size-9 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
+            >
+                <span
+                    className={cn(
+                        "grid size-9 place-items-center rounded-full",
+                        accent ? "bg-pastelred/15 text-pastelred" : "bg-white/[0.07] text-zinc-300",
+                    )}
                 >
-                    <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} className={cn("size-4", copied && "text-lantern")} strokeWidth={2} />
-                </button>
+                    <HugeiconsIcon icon={copied ? Tick02Icon : icon} className={cn("size-4.5", copied && "text-lantern")} strokeWidth={2} />
+                </span>
+                <span className="min-w-0">
+                    <span className="block text-[14px] font-bold text-white">{label}</span>
+                    <span className={cn("mt-0.5 block text-[12px] font-semibold", copied ? "text-lantern" : "text-zinc-500")}>
+                        {copied ? "Copied!" : hint}
+                    </span>
+                </span>
+                <span className="flex items-center gap-1 text-[12px] font-bold text-zinc-400 transition-colors group-hover:text-white">
+                    <HugeiconsIcon icon={Copy01Icon} className="size-3.5" strokeWidth={2.5} />
+                    Copy
+                </span>
+            </button>
+        </Squircle>
+    );
+}
+
+// Title + category save themselves (blur/Enter for the title, click for a
+// pill) — a transient "Saved" flash instead of a Save button.
+function StreamInfo({ title: savedTitle, category: savedCategory }: { title: string | null; category: string | null }) {
+    const utils = trpc.useUtils();
+    const [title, setTitle] = useState(savedTitle ?? "");
+    const [savedFlash, setSavedFlash] = useState(false);
+    const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const updateInfo = trpc.stream.updateInfo.useMutation({
+        onSuccess: () => {
+            utils.stream.getMine.invalidate();
+            setSavedFlash(true);
+            if (flashTimer.current) clearTimeout(flashTimer.current);
+            flashTimer.current = setTimeout(() => setSavedFlash(false), 2000);
+        },
+        onError: (e) => appToast.error(e.message),
+    });
+    useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
+
+    const saveTitle = () => {
+        if (title.trim() === (savedTitle ?? "")) return;
+        updateInfo.mutate({ title: title.trim() || undefined });
+    };
+
+    return (
+        <div className="mt-6">
+            <div className="flex items-center justify-between px-1">
+                <p className="text-[13px] font-bold text-zinc-400">Stream info</p>
+                <span
+                    className={cn(
+                        "flex items-center gap-1 text-[12px] font-bold text-lantern transition-opacity",
+                        savedFlash ? "opacity-100" : "opacity-0",
+                    )}
+                >
+                    <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.5} />
+                    Saved
+                </span>
             </div>
+            <Input
+                radius={16}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                placeholder="What are you streaming today?"
+                maxLength={100}
+                className="mt-2 h-12 bg-white/[0.04] text-[14px] font-medium"
+            />
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {CATEGORIES.map((c) => {
+                    const active = (savedCategory ?? "") === c;
+                    return (
+                        <button
+                            key={c}
+                            onClick={() => updateInfo.mutate({ category: active ? "" : c })}
+                            disabled={updateInfo.isPending}
+                            className={cn(
+                                "cursor-pointer rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-colors",
+                                active ? "bg-white text-black" : "bg-white/[0.06] text-zinc-400 hover:text-white",
+                            )}
+                        >
+                            {c}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function ObsSteps() {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <div className="mt-5">
+            <Squircle asChild radius={18}>
+                <button
+                    onClick={() => setOpen((v) => !v)}
+                    className="flex w-full cursor-pointer items-center justify-between bg-white/[0.03] px-4 py-3.5 text-left transition-colors hover:bg-white/[0.05]"
+                >
+                    <span className="text-[14px] font-bold text-white">How to go live in OBS</span>
+                    <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        className={cn("size-4 text-zinc-500 transition-transform duration-200", open && "rotate-180")}
+                        strokeWidth={2.5}
+                    />
+                </button>
+            </Squircle>
+            {open && (
+                <div className="space-y-2.5 px-4 pb-1 pt-3">
+                    {[
+                        "Settings → Stream → set Service to “Custom…”",
+                        "Paste the Server URL and Stream key",
+                        "Start Streaming — your channel flips live here automatically",
+                    ].map((step, i) => (
+                        <div key={i} className="flex items-start gap-2.5">
+                            <span className="mt-px grid size-5 shrink-0 place-items-center rounded-full bg-white/[0.06] text-[11px] font-black text-zinc-400">
+                                {i + 1}
+                            </span>
+                            <p className="text-[13px] font-medium leading-snug text-zinc-500">{step}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
