@@ -38,10 +38,10 @@ interface CreateDialogProps extends React.HTMLAttributes<HTMLElement> {
 
 type Tab = "video" | "post" | "stream"
 
-// Full stream setup (connection generation, keys, info, OBS steps) — the same
-// surface as the premium hub's Stream section, paid for only when the tab opens.
-const LazyStreamSettings = dynamic(
-    () => import("@/components/settings/stream-settings").then((m) => m.StreamSettings),
+// Full stream setup (generate connection, keys, info, OBS steps), designed for
+// this dialog — paid for only when the tab opens.
+const LazyStreamSetup = dynamic(
+    () => import("./create-dialog/stream-setup").then((m) => m.StreamSetup),
     {
         ssr: false,
         loading: () => (
@@ -1009,7 +1009,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                     transition={{ duration: 0.125 }}
                                     className="max-h-[70vh] min-h-[350px] overflow-y-auto"
                                 >
-                                    <LazyStreamSettings />
+                                    <LazyStreamSetup />
                                 </motion.div>
                             ) : null}
                         </AnimatePresence>
