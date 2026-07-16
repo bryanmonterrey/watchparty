@@ -101,7 +101,8 @@ export function TokenRow({ token }: TokenRowProps) {
 
     const handleBuy = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // TODO: quick-buy execution (Meteora DBC swap for bonding tokens, Jupiter once migrated)
+        // Lands on the token page's swap card (quote + one-click execute).
+        // In-row quick-buy (no navigation) is a later upgrade.
         router.push(`/${slug}`);
     };
 

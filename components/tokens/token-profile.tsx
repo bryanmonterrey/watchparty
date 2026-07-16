@@ -28,7 +28,7 @@ interface TokenProfileProps {
 export function TokenProfile({ token }: TokenProfileProps) {
     const [activeTab, setActiveTab] = useState<"holders" | "trades">("holders")
 
-    const holderCount = token.holderCount || 342
+    const holderCount = token.holderCount ?? 0
 
     return (
         <div className="w-full px-4 mx-auto p-2 pt-header flex flex-col gap-6 text-zinc-100 min-h-screen">
@@ -90,9 +90,9 @@ export function TokenProfile({ token }: TokenProfileProps) {
 
                 {/* Right Column */}
                 <div className="lg:col-span-3 flex flex-col gap-3">
-                    <TokenSwapCard />
-                    <TokenBondingCurve />
-                    <TokenChatCard token={token} />
+                    <TokenSwapCard token={token} />
+                    <TokenBondingCurve token={token} />
+                    <TokenChatCard token={token} creatorUsername={token.creator.username} />
                     <TokenNotifiedBanner />
                 </div>
             </div>

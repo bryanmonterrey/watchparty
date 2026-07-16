@@ -1,9 +1,11 @@
+import { z } from "zod";
 import { router, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
 import { eq, and, desc, sql, isNotNull, type SQL } from "drizzle-orm";
+import { withCache } from "@/lib/cache";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -95,4 +97,53 @@ export const tradeRouter = router({
             migrated: migratedCol.map(toTradeToken),
         };
     }),
+
+    /**
+     * Top holders for a token page. Helius DAS getTokenAccounts returns
+     * owner+amount per token account; we aggregate per owner and express
+     * shares against on-chain supply. Cached 60s — holder churn is slow.
+     */
+    getHolders: publicProcedure
+        .input(z.object({ mint: z.string().min(32).max(44) }))
+        .query(async ({ input }) => {
+            const heliusKey = process.env.HELIUS_API_KEY;
+            if (!heliusKey) return { holders: [], supply: 0 };
+            const url = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
+            const post = (id: string, body: object) =>
+                fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    signal: AbortSignal.timeout(10000),
+                    body: JSON.stringify({ jsonrpc: "2.0", id, ...body }),
+                }).then((r) => r.json()).catch(() => ({ result: null }));
+
+            return withCache(`token:holders:${input.mint}`, 60, async () => {
+                const [accountsRes, supplyRes] = await Promise.all([
+                    post("holders", { method: "getTokenAccounts", params: { mint: input.mint, limit: 1000 } }),
+                    post("supply", { method: "getTokenSupply", params: [input.mint] }),
+                ]);
+
+                const accounts: { owner?: string; amount?: number }[] =
+                    accountsRes?.result?.token_accounts ?? [];
+                const supplyRaw = Number(supplyRes?.result?.value?.amount ?? 0);
+                const decimals = Number(supplyRes?.result?.value?.decimals ?? 0);
+
+                const byOwner = new Map<string, number>();
+                for (const a of accounts) {
+                    if (!a.owner) continue;
+                    byOwner.set(a.owner, (byOwner.get(a.owner) ?? 0) + Number(a.amount ?? 0));
+                }
+
+                const holders = [...byOwner.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 20)
+                    .map(([owner, raw]) => ({
+                        owner,
+                        amount: decimals ? raw / 10 ** decimals : raw,
+                        sharePercent: supplyRaw > 0 ? (raw / supplyRaw) * 100 : 0,
+                    }));
+
+                return { holders, supply: decimals ? supplyRaw / 10 ** decimals : supplyRaw };
+            });
+        }),
 });
