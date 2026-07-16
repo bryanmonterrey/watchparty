@@ -22,7 +22,7 @@ import { TIERS, USDC_MINT, type TierKey } from "@/lib/premium/tiers";
 import { BOOST_PACKS, getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { boostLevelFor } from "@/lib/premium/boost-levels";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
-import { eq, and, desc, asc, sql, lt, ne, count, inArray } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql, lt, ne, count, inArray, gt } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
@@ -166,6 +166,56 @@ const WELCOME_TEMPLATES = [
     "{name} joined the server",
 ];
 
+// AutoMod "commonly flagged words" — a small built-in list; the custom
+// keywords field covers anything server-specific.
+const FLAGGED_WORDS = [
+    "nigger", "faggot", "retard", "kike", "spic", "chink", "tranny",
+    "rape", "kys", "kill yourself",
+];
+
+// Activity alerts: joins in the last 10 min above this → one system notice
+// (throttled to one notice per window by the audit trail).
+const ACTIVITY_ALERT_JOINS = 10;
+const ACTIVITY_ALERT_WINDOW_MS = 10 * 60 * 1000;
+
+/** Join-surge notice for servers with activity alerts on. Best-effort. */
+async function maybeActivityAlert(
+    server: { id: string; activityAlerts: boolean | null },
+    memberId: string,
+) {
+    if (!server.activityAlerts) return;
+    try {
+        const windowStart = new Date(Date.now() - ACTIVITY_ALERT_WINDOW_MS);
+        const [{ n }] = await db
+            .select({ n: count() })
+            .from(communityMembers)
+            .where(and(eq(communityMembers.serverId, server.id), gt(communityMembers.createdAt, windowStart)));
+        if (Number(n) < ACTIVITY_ALERT_JOINS) return;
+
+        // One alert per window: skip if we already posted one recently.
+        const [recent] = await db
+            .select({ id: communityAuditLog.id })
+            .from(communityAuditLog)
+            .where(and(
+                eq(communityAuditLog.serverId, server.id),
+                eq(communityAuditLog.action, "safety.activity_alert"),
+                gt(communityAuditLog.createdAt, windowStart),
+            ))
+            .limit(1);
+        if (recent) return;
+
+        await db.insert(communityAuditLog).values({
+            serverId: server.id,
+            actorUserId: "system",
+            action: "safety.activity_alert",
+            detail: `unusual join activity: ${n} joins in 10 minutes`,
+        });
+        await sendSystemMessage(server.id, memberId, `Unusual activity: ${n} people joined in the last 10 minutes`);
+    } catch {
+        // alerts are best-effort
+    }
+}
+
 /** Notify connected clients that a channel's messages changed → they refetch. */
 function notifyChannelChange(channelId: string) {
     return publishToRoom(rooms.communityChannel(channelId), {
@@ -189,6 +239,7 @@ export const communityRouter = router({
                 ownerId: communityServers.ownerId,
                 createdAt: communityServers.createdAt,
                 muted: communityMembers.muted,
+                defaultNotifications: communityServers.defaultNotifications,
             })
             .from(communityServers)
             .innerJoin(communityMembers, eq(communityServers.id, communityMembers.serverId))
@@ -242,10 +293,11 @@ export const communityRouter = router({
             mentionMap = new Map(mentionRows.map((r) => [r.serverId, Number(r.cnt)]));
         }
 
-        // Muted servers stay quiet on the rail: no unread pill; mentions still show.
+        // Muted servers stay quiet on the rail: no unread pill; mentions still
+        // show. Servers set to mentions-only skip the generic unread pill too.
         return servers.map((s) => ({
             ...s,
-            hasUnread: !s.muted && unreadSet.has(s.id),
+            hasUnread: !s.muted && s.defaultNotifications !== "mentions" && unreadSet.has(s.id),
             mentionCount: mentionMap.get(s.id) ?? 0,
         }));
     }),
@@ -368,6 +420,7 @@ export const communityRouter = router({
                     userImage: user.avatar_url,
                     userUsername: user.username,
                     nickname: communityMembers.nickname,
+                    joinMethod: communityMembers.joinMethod,
                 })
                 .from(communityMembers)
                 .innerJoin(user, eq(communityMembers.userId, user.id))
@@ -417,16 +470,28 @@ export const communityRouter = router({
             };
         }),
 
-    /** Create a new server */
+    /** Create a new server (optionally from a template — copies structure) */
     createServer: protectedProcedure
         .input(
             z.object({
                 name: z.string().min(1).max(100),
                 imageUrl: z.string().optional(),
+                templateCode: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
             const inviteCode = nanoid(8);
+
+            // Template source: channels + safety/automod/engagement settings.
+            // Never messages, members, expressions, boosts, or the icon.
+            let template: typeof communityServers.$inferSelect | undefined;
+            if (input.templateCode) {
+                [template] = await db
+                    .select()
+                    .from(communityServers)
+                    .where(eq(communityServers.templateCode, input.templateCode))
+                    .limit(1);
+            }
 
             const [newServer] = await db
                 .insert(communityServers)
@@ -435,6 +500,19 @@ export const communityRouter = router({
                     imageUrl: input.imageUrl ?? null,
                     inviteCode,
                     ownerId: ctx.user.id,
+                    ...(template ? {
+                        automodKeywords: template.automodKeywords,
+                        automodBlockLinks: template.automodBlockLinks,
+                        automodBlockMentions: template.automodBlockMentions,
+                        automodFlaggedWords: template.automodFlaggedWords,
+                        verificationLevel: template.verificationLevel,
+                        blurMedia: template.blurMedia,
+                        welcomeMessages: template.welcomeMessages,
+                        boostMessages: template.boostMessages,
+                        defaultNotifications: template.defaultNotifications,
+                        rules: template.rules,
+                        rulesRequired: template.rulesRequired,
+                    } : {}),
                 })
                 .returning();
 
@@ -445,8 +523,30 @@ export const communityRouter = router({
                 role: "ADMIN",
             });
 
-            // Create default #general channel
-            await db.insert(communityChannels).values({
+            // Channels: the template's structure, or the default #general
+            if (template) {
+                const templateChannels = await db
+                    .select({ name: communityChannels.name, type: communityChannels.type, position: communityChannels.position, readOnly: communityChannels.readOnly })
+                    .from(communityChannels)
+                    .where(eq(communityChannels.serverId, template.id))
+                    .orderBy(sql`${communityChannels.position} ASC NULLS LAST`, asc(communityChannels.createdAt));
+                if (templateChannels.length > 0) {
+                    await db.insert(communityChannels).values(templateChannels.map((c, i) => ({
+                        name: c.name,
+                        type: c.type,
+                        position: c.position ?? i,
+                        readOnly: c.readOnly,
+                        serverId: newServer.id,
+                        createdById: ctx.user.id,
+                    })));
+                }
+            }
+            const [hasChannel] = await db
+                .select({ id: communityChannels.id })
+                .from(communityChannels)
+                .where(eq(communityChannels.serverId, newServer.id))
+                .limit(1);
+            if (!hasChannel) await db.insert(communityChannels).values({
                 name: "general",
                 type: "TEXT",
                 serverId: newServer.id,
@@ -479,6 +579,16 @@ export const communityRouter = router({
                 blurMedia: z.boolean().optional(),
                 discoverable: z.boolean().optional(),
                 bannerImageUrl: z.string().url().nullable().optional(),
+                rules: z.string().max(4000).nullable().optional(),
+                rulesRequired: z.boolean().optional(),
+                ageRestricted: z.boolean().optional(),
+                tagBadge: z.string().max(8).nullable().optional(),
+                tagColor: z.string().max(64).nullable().optional(),
+                customInvite: z.string().regex(/^[a-z0-9-]{3,24}$/).nullable().optional(),
+                showBoostBar: z.boolean().optional(),
+                defaultNotifications: z.enum(["all", "mentions"]).optional(),
+                activityAlerts: z.boolean().optional(),
+                automodFlaggedWords: z.boolean().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -514,6 +624,23 @@ export const communityRouter = router({
                 }
             }
 
+            // Custom invite links are the level-3 boost perk, and codes are global.
+            if (input.customInvite) {
+                const [{ n }] = await db
+                    .select({ n: count() })
+                    .from(communityServerBoosts)
+                    .where(eq(communityServerBoosts.serverId, input.serverId));
+                if (boostLevelFor(Number(n)).level < 3) {
+                    throw new TRPCError({ code: "FORBIDDEN", message: "Custom invite links unlock at boost level 3 (14 boosts)" });
+                }
+                const [taken] = await db
+                    .select({ id: communityServers.id })
+                    .from(communityServers)
+                    .where(and(eq(communityServers.customInvite, input.customInvite), ne(communityServers.id, input.serverId)))
+                    .limit(1);
+                if (taken) throw new TRPCError({ code: "CONFLICT", message: "That invite link is taken — try another" });
+            }
+
             const [updated] = await db
                 .update(communityServers)
                 .set({
@@ -535,6 +662,16 @@ export const communityRouter = router({
                     ...(input.blurMedia !== undefined && { blurMedia: input.blurMedia }),
                     ...(input.discoverable !== undefined && { discoverable: input.discoverable }),
                     ...(input.bannerImageUrl !== undefined && { bannerImageUrl: input.bannerImageUrl }),
+                    ...(input.rules !== undefined && { rules: input.rules?.trim() || null }),
+                    ...(input.rulesRequired !== undefined && { rulesRequired: input.rulesRequired }),
+                    ...(input.ageRestricted !== undefined && { ageRestricted: input.ageRestricted }),
+                    ...(input.tagBadge !== undefined && { tagBadge: input.tagBadge }),
+                    ...(input.tagColor !== undefined && { tagColor: input.tagColor }),
+                    ...(input.customInvite !== undefined && { customInvite: input.customInvite }),
+                    ...(input.showBoostBar !== undefined && { showBoostBar: input.showBoostBar }),
+                    ...(input.defaultNotifications !== undefined && { defaultNotifications: input.defaultNotifications }),
+                    ...(input.activityAlerts !== undefined && { activityAlerts: input.activityAlerts }),
+                    ...(input.automodFlaggedWords !== undefined && { automodFlaggedWords: input.automodFlaggedWords }),
                     updatedAt: new Date(),
                 })
                 .where(eq(communityServers.id, input.serverId))
@@ -578,7 +715,7 @@ export const communityRouter = router({
             const [server] = await db
                 .select()
                 .from(communityServers)
-                .where(eq(communityServers.inviteCode, input.inviteCode))
+                .where(or(eq(communityServers.inviteCode, input.inviteCode), eq(communityServers.customInvite, input.inviteCode)))
                 .limit(1);
             if (!server) throw new TRPCError({ code: "NOT_FOUND", message: "This invite is invalid or expired" });
 
@@ -618,7 +755,7 @@ export const communityRouter = router({
             const server = await db
                 .select()
                 .from(communityServers)
-                .where(eq(communityServers.inviteCode, input.inviteCode))
+                .where(or(eq(communityServers.inviteCode, input.inviteCode), eq(communityServers.customInvite, input.inviteCode)))
                 .limit(1);
 
             if (!server.length) {
@@ -660,6 +797,7 @@ export const communityRouter = router({
                     userId: ctx.user.id,
                     serverId: server[0].id,
                     role: "GUEST",
+                    joinMethod: "invite",
                 })
                 .returning();
 
@@ -669,6 +807,8 @@ export const communityRouter = router({
                 const template = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
                 await sendSystemMessage(server[0].id, newMember.id, template.replace("{name}", u?.name ?? "Someone"));
             }
+
+            if (newMember) await maybeActivityAlert(server[0], newMember.id);
 
             return { serverId: server[0].id, alreadyMember: false };
         }),
@@ -841,6 +981,7 @@ export const communityRouter = router({
                     action: communityAuditLog.action,
                     detail: communityAuditLog.detail,
                     createdAt: communityAuditLog.createdAt,
+                    actorUserId: communityAuditLog.actorUserId,
                     actorName: user.name,
                     actorImage: user.avatar_url,
                 })
@@ -1142,7 +1283,7 @@ export const communityRouter = router({
 
             const [newMember] = await db
                 .insert(communityMembers)
-                .values({ userId: ctx.user.id, serverId: server.id, role: "GUEST" })
+                .values({ userId: ctx.user.id, serverId: server.id, role: "GUEST", joinMethod: "discovery" })
                 .returning();
 
             if (server.welcomeMessages !== false && newMember) {
@@ -1150,6 +1291,8 @@ export const communityRouter = router({
                 const template = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
                 await sendSystemMessage(server.id, newMember.id, template.replace("{name}", u?.name ?? "Someone"));
             }
+
+            if (newMember) await maybeActivityAlert(server, newMember.id);
 
             return { serverId: server.id, alreadyMember: false };
         }),
@@ -1236,6 +1379,61 @@ export const communityRouter = router({
                 await logAudit(input.serverId, ctx.user.id, "expression.delete", `removed ${removed.kind} :${removed.name}:`);
             }
             return { success: true };
+        }),
+
+    /** Accept the server rules (unlocks chatting when rules are required) */
+    agreeToRules: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            const [updated] = await db
+                .update(communityMembers)
+                .set({ rulesAgreedAt: new Date(), updatedAt: new Date() })
+                .where(and(eq(communityMembers.serverId, input.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .returning();
+            if (!updated) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+            return { agreed: true };
+        }),
+
+    /**
+     * Generate (or return) the server's template code — a link that pre-fills
+     * a NEW server with this one's channels + settings (never messages,
+     * members, or expressions).
+     */
+    generateTemplate: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            const [srv] = await db
+                .select({ templateCode: communityServers.templateCode })
+                .from(communityServers)
+                .where(eq(communityServers.id, input.serverId))
+                .limit(1);
+            if (srv?.templateCode) return { templateCode: srv.templateCode };
+
+            const code = nanoid(10);
+            await db.update(communityServers)
+                .set({ templateCode: code, updatedAt: new Date() })
+                .where(eq(communityServers.id, input.serverId));
+            await logAudit(input.serverId, ctx.user.id, "server.template", "generated a server template");
+            return { templateCode: code };
+        }),
+
+    /** What a template link creates — name + channel list preview */
+    getTemplatePreview: protectedProcedure
+        .input(z.object({ templateCode: z.string().min(1) }))
+        .query(async ({ input }) => {
+            const [srv] = await db
+                .select({ id: communityServers.id, name: communityServers.name, description: communityServers.description })
+                .from(communityServers)
+                .where(eq(communityServers.templateCode, input.templateCode))
+                .limit(1);
+            if (!srv) throw new TRPCError({ code: "NOT_FOUND", message: "This template link is invalid" });
+            const channels = await db
+                .select({ name: communityChannels.name, type: communityChannels.type })
+                .from(communityChannels)
+                .where(eq(communityChannels.serverId, srv.id))
+                .orderBy(sql`${communityChannels.position} ASC NULLS LAST`, asc(communityChannels.createdAt));
+            return { name: srv.name, description: srv.description, channels };
         }),
 
     /** Per-server nickname ("per-server profile"); null clears it */
@@ -1866,11 +2064,19 @@ export const communityRouter = router({
                         automodKeywords: communityServers.automodKeywords,
                         automodBlockLinks: communityServers.automodBlockLinks,
                         automodBlockMentions: communityServers.automodBlockMentions,
+                        automodFlaggedWords: communityServers.automodFlaggedWords,
                         verificationLevel: communityServers.verificationLevel,
+                        rulesRequired: communityServers.rulesRequired,
+                        rules: communityServers.rules,
                     })
                     .from(communityServers)
                     .where(eq(communityServers.id, channel[0].serverId))
                     .limit(1);
+
+                // Server rules gate: members must agree before chatting.
+                if (srv?.rulesRequired && srv.rules && !member[0].rulesAgreedAt) {
+                    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Agree to the server rules before chatting" });
+                }
 
                 // Verification level: posting requirements for regular members.
                 // low = account 10+ min old · medium = account 1+ day old ·
@@ -1895,6 +2101,9 @@ export const communityRouter = router({
                 const blocked = parseKeywords(srv?.automodKeywords);
                 const lower = input.content.toLowerCase();
                 if (blocked.some((w) => lower.includes(w))) {
+                    throw new TRPCError({ code: "BAD_REQUEST", message: "Message blocked by this server's AutoMod" });
+                }
+                if (srv?.automodFlaggedWords && FLAGGED_WORDS.some((w) => lower.includes(w))) {
                     throw new TRPCError({ code: "BAD_REQUEST", message: "Message blocked by this server's AutoMod" });
                 }
                 if (srv?.automodBlockLinks && /https?:\/\//i.test(input.content)) {

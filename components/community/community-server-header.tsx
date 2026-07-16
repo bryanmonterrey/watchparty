@@ -234,7 +234,11 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
                 <>
                     <span className="truncate">{server.name}</span>
                     {server.tag && (
-                        <span className="ml-2 shrink-0 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-zinc-300">
+                        <span
+                            className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-zinc-300"
+                            style={server.tagColor ? { backgroundColor: `${server.tagColor}26`, color: server.tagColor } : undefined}
+                        >
+                            {server.tagBadge && <span className="text-[10px] leading-none">{server.tagBadge}</span>}
                             {server.tag}
                         </span>
                     )}

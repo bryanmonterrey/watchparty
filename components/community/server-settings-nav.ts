@@ -30,6 +30,8 @@ export const SETTINGS_SECTIONS = [
     "automod",
     // Channels
     "channels",
+    // Server template (near delete, like the reference)
+    "template",
 ] as const;
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
@@ -53,6 +55,7 @@ const LABELS: Record<SettingsSection, string> = {
     bans: "Bans",
     automod: "AutoMod",
     channels: "Channels",
+    template: "Server template",
 };
 
 export function sectionLabel(s: SettingsSection): string {
@@ -60,7 +63,7 @@ export function sectionLabel(s: SettingsSection): string {
 }
 
 /** Sections only admins can open; everyone else lands on Engagement. */
-export const ADMIN_ONLY_SECTIONS: SettingsSection[] = ["profile", "tag", "automod", "access"];
+export const ADMIN_ONLY_SECTIONS: SettingsSection[] = ["profile", "tag", "automod", "access", "template"];
 
 export function useSettingsSection() {
     return useQueryState("s", parseAsStringLiteral(SETTINGS_SECTIONS).withDefault("profile"));

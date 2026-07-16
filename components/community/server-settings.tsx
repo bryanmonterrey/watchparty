@@ -141,9 +141,9 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     {active === "profile" && isAdmin && <ProfileSection server={server} memberCount={members.length} boostCount={boostCount} />}
                     {active === "tag" && isAdmin && <TagSection server={server} />}
                     {active === "engagement" && <EngagementSection server={server} channels={channels} isAdmin={isAdmin} />}
-                    {active === "boosts" && <BoostsSection serverId={server.id} boostCount={boostCount} boostedByMe={boostedByMe} />}
-                    {active === "emoji" && <ExpressionsSection serverId={server.id} kind="emoji" />}
-                    {active === "stickers" && <ExpressionsSection serverId={server.id} kind="sticker" />}
+                    {active === "boosts" && <BoostsSection server={server} boostCount={boostCount} boostedByMe={boostedByMe} isAdmin={isAdmin} />}
+                    {active === "emoji" && <ExpressionsSection serverId={server.id} kind="emoji" boostCount={boostCount} />}
+                    {active === "stickers" && <ExpressionsSection serverId={server.id} kind="sticker" boostCount={boostCount} />}
                     {active === "soundboard" && <SoundboardSection />}
                     {active === "members" && (
                         <MembersSection serverId={server.id} members={members} customRoles={roles} isAdmin={isAdmin} currentUserId={session?.user?.id} />
@@ -160,6 +160,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     {active === "channels" && <ChannelsSection server={server} channels={channels} role={currentMember.role} />}
                     {active === "automod" && isAdmin && <AutomodSection server={server} />}
                     {active === "audit" && <AuditSection serverId={server.id} />}
+                    {active === "template" && isAdmin && <TemplateSection server={server} />}
                 </div>
             </ScrollArea>
         </div>
@@ -716,6 +717,39 @@ function EngagementSection({
                             />
                         </div>
                     </div>
+
+                    {/* Default notifications — what lights up the rail badge */}
+                    <h2 className="mb-3 mt-9 text-[14px] font-semibold text-zinc-500">Default notifications</h2>
+                    <div className="space-y-2">
+                        {([
+                            { key: "all" as const, label: "All messages", hint: "The unread pill lights up for any new message" },
+                            { key: "mentions" as const, label: "Only @mentions", hint: "The rail stays quiet unless someone mentions a member" },
+                        ]).map((opt) => {
+                            const selected = (server.defaultNotifications ?? "all") === opt.key;
+                            return (
+                                <button
+                                    key={opt.key}
+                                    onClick={() => updateServer.mutate({ serverId, defaultNotifications: opt.key })}
+                                    disabled={updateServer.isPending}
+                                    className={cn(
+                                        "flex w-full cursor-pointer items-center gap-3 rounded-3xl px-5 py-4 text-left transition-colors",
+                                        selected ? "bg-white/[0.08]" : "bg-white/[0.03] hover:bg-white/[0.05]",
+                                    )}
+                                >
+                                    <span className={cn(
+                                        "grid size-5 shrink-0 place-items-center rounded-full border-2",
+                                        selected ? "border-white" : "border-zinc-600",
+                                    )}>
+                                        {selected && <span className="size-2.5 rounded-full bg-white" />}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className={cn("block text-[15px] font-bold", selected ? "text-white" : "text-zinc-300")}>{opt.label}</span>
+                                        <span className="mt-0.5 block text-[13px] font-medium text-zinc-500">{opt.hint}</span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </>
             )}
         </div>
@@ -725,14 +759,17 @@ function EngagementSection({
 // ─── Boosts ──────────────────────────────────────────────
 
 function BoostsSection({
-    serverId,
+    server,
     boostCount,
     boostedByMe,
+    isAdmin,
 }: {
-    serverId: string;
+    server: CommunityServer;
     boostCount: number;
     boostedByMe: boolean;
+    isAdmin: boolean;
 }) {
+    const serverId = server.id;
     const utils = trpc.useUtils();
     const balance = trpc.community.boostBalance.useQuery();
     const toggleBoost = trpc.community.toggleBoost.useMutation({
@@ -742,6 +779,11 @@ function BoostsSection({
         },
         onError: (err) => toast.error(err.message),
     });
+    const updateServer = trpc.community.updateServer.useMutation({
+        onSuccess: () => utils.community.getServer.invalidate({ serverId }),
+        onError: (err) => toast.error(err.message),
+    });
+    const [vanity, setVanity] = useState(server.customInvite ?? "");
 
     const level = boostLevelFor(boostCount);
     const next = nextBoostLevel(boostCount);
@@ -831,6 +873,59 @@ function BoostsSection({
                     {balance.data ? `${balance.data.available} boost${balance.data.available === 1 ? "" : "s"} available · Shop` : "Shop"}
                 </Link>
             </div>
+
+            {isAdmin && (
+                <>
+                    {/* Boost progress bar in the channel sidebar */}
+                    <label className="mt-8 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[15px] font-bold text-white">Show boost progress bar</p>
+                            <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                                Members see progress to the next level at the top of the channel list.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={!!server.showBoostBar}
+                            onCheckedChange={(v) => updateServer.mutate({ serverId, showBoostBar: v })}
+                            disabled={updateServer.isPending}
+                        />
+                    </label>
+
+                    {/* Custom invite link — level 3 perk */}
+                    <div className="mt-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+                        <div className="flex items-center gap-2">
+                            <p className="text-[15px] font-bold text-white">Custom invite link</p>
+                            {level.level < 3 && <LockIcon className="size-3.5 shrink-0 text-zinc-600" />}
+                        </div>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            {level.level >= 3
+                                ? "A memorable link that never changes — it works alongside the regular invite."
+                                : "Unlocks at boost level 3 (14 boosts)."}
+                        </p>
+                        {level.level >= 3 && (
+                            <div className="mt-3 flex items-center gap-2">
+                                <span className="shrink-0 text-[14px] font-semibold text-zinc-500">/communities/invite/</span>
+                                <Input
+                                    radius={14}
+                                    value={vanity}
+                                    onChange={(e) => setVanity(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                                    placeholder="your-server"
+                                    maxLength={24}
+                                    className="h-12 flex-1 text-[14px] font-semibold"
+                                />
+                                <ActionButton
+                                    variant="soft"
+                                    className="h-12 shrink-0 px-5"
+                                    onClick={() => updateServer.mutate({ serverId, customInvite: vanity.trim() || null })}
+                                    disabled={updateServer.isPending || vanity === (server.customInvite ?? "") || (vanity !== "" && vanity.length < 3)}
+                                >
+                                    Save
+                                </ActionButton>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -847,6 +942,7 @@ type Member = {
     createdAt: string | Date;
     roleIds?: string[];
     roleColor?: string | null;
+    joinMethod?: string | null;
 };
 
 type CustomRole = { id: string; name: string; color: string };
@@ -893,6 +989,7 @@ function MemberRow({
                 </p>
                 <p className="truncate text-[13px] font-medium text-zinc-500">
                     @{m.userUsername || "user"} · joined {formatDistanceToNow(new Date(m.createdAt), { addSuffix: true })}
+                    {m.joinMethod ? ` · via ${m.joinMethod === "discovery" ? "discovery" : "invite"}` : ""}
                 </p>
             </div>
 
@@ -1132,10 +1229,13 @@ function CustomRoleRow({
     serverId,
     role,
     memberCount,
+    onMove,
 }: {
     serverId: string;
     role: CustomRole;
     memberCount: number;
+    /** move within the order: -1 up (higher priority), +1 down */
+    onMove: (dir: -1 | 1) => void;
 }) {
     const utils = trpc.useUtils();
     const invalidate = () => utils.community.getServer.invalidate({ serverId });
@@ -1203,6 +1303,23 @@ function CustomRoleRow({
             <span className="shrink-0 text-[12px] font-bold tabular-nums text-zinc-600">
                 {memberCount} {memberCount === 1 ? "member" : "members"}
             </span>
+            {/* Order = priority: the highest role a member has colors their name */}
+            <span className="flex shrink-0 items-center">
+                <button
+                    onClick={() => onMove(-1)}
+                    aria-label={`Move ${role.name} up`}
+                    className="grid size-7 cursor-pointer place-items-center rounded-full text-zinc-600 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 rotate-180" strokeWidth={2.5} />
+                </button>
+                <button
+                    onClick={() => onMove(1)}
+                    aria-label={`Move ${role.name} down`}
+                    className="grid size-7 cursor-pointer place-items-center rounded-full text-zinc-600 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5" strokeWidth={2.5} />
+                </button>
+            </span>
             <button
                 onClick={() => deleteRole.mutate({ serverId, roleId: role.id })}
                 disabled={deleteRole.isPending}
@@ -1244,6 +1361,18 @@ function RolesSection({
         },
         onError: (err) => toast.error(err.message),
     });
+    const reorderRoles = trpc.community.reorderRoles.useMutation({
+        onSuccess: () => utils.community.getServer.invalidate({ serverId }),
+        onError: (err) => toast.error(err.message),
+    });
+
+    const moveRole = (index: number, dir: -1 | 1) => {
+        const target = index + dir;
+        if (target < 0 || target >= customRoles.length) return;
+        const ids = customRoles.map((r) => r.id);
+        [ids[index], ids[target]] = [ids[target], ids[index]];
+        reorderRoles.mutate({ serverId, roleIds: ids });
+    };
 
     const countFor = (roleId: string) => members.filter((m) => m.roleIds?.includes(roleId)).length;
 
@@ -1265,8 +1394,8 @@ function RolesSection({
 
                     {customRoles.length > 0 && (
                         <div className="mb-3 space-y-0.5">
-                            {customRoles.map((r) => (
-                                <CustomRoleRow key={r.id} serverId={serverId} role={r} memberCount={countFor(r.id)} />
+                            {customRoles.map((r, i) => (
+                                <CustomRoleRow key={r.id} serverId={serverId} role={r} memberCount={countFor(r.id)} onMove={(dir) => moveRole(i, dir)} />
                             ))}
                         </div>
                     )}
@@ -1602,6 +1731,21 @@ function AutomodSection({ server }: { server: CommunityServer }) {
                     />
                 </label>
 
+                {/* Rule: commonly flagged words */}
+                <label className="flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Block commonly flagged words</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            A built-in filter for slurs and abuse — no setup needed.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.automodFlaggedWords}
+                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, automodFlaggedWords: v })}
+                        disabled={updateServer.isPending}
+                    />
+                </label>
+
                 {/* Rule: custom words */}
                 <div className="rounded-3xl bg-white/[0.03] px-5 py-4">
                     <p className="text-[15px] font-bold text-white">Block custom words</p>
@@ -1636,9 +1780,39 @@ function AutomodSection({ server }: { server: CommunityServer }) {
 
 // ─── Server tag ──────────────────────────────────────────
 
+// Tag badges: emoji identity marks (our spin on the reference's pixel badges)
+const TAG_BADGES = ["⚔️", "🔥", "💎", "🌊", "🍄", "⚡", "🌙", "💀", "🪷", "🎯", "🃏", "🫧"] as const;
+// Flat chip colors — brand tokens only
+const TAG_COLORS: { name: string; value: string }[] = [
+    { name: "Default", value: "" },
+    { name: "Sunset", value: "#FFCC00" },
+    { name: "Lantern", value: "#00ED89" },
+    { name: "Sky", value: "#1DA1F2" },
+    { name: "Rose", value: "#FF746C" },
+    { name: "Violet", value: "#A78BFA" },
+];
+
+/** The tag chip, rendered identically here and wherever the tag shows. */
+export function ServerTagChip({ tag, badge, color, className }: { tag: string; badge?: string | null; color?: string | null; className?: string }) {
+    return (
+        <span
+            className={cn("inline-flex shrink-0 items-center gap-1 rounded-[8px] px-2 py-1 text-[12px] font-bold tracking-wide", className)}
+            style={color
+                ? { backgroundColor: `${color}26`, color }
+                : undefined}
+            {...(!color ? { "data-plain": true } : {})}
+        >
+            {badge && <span className="text-[11px] leading-none">{badge}</span>}
+            {tag}
+        </span>
+    );
+}
+
 function TagSection({ server }: { server: CommunityServer }) {
     const utils = trpc.useUtils();
     const [tag, setTag] = useState(server.tag ?? "");
+    const [badge, setBadge] = useState(server.tagBadge ?? "");
+    const [color, setColor] = useState(server.tagColor ?? "");
     const updateServer = trpc.community.updateServer.useMutation({
         onSuccess: () => {
             utils.community.getServer.invalidate({ serverId: server.id });
@@ -1648,7 +1822,10 @@ function TagSection({ server }: { server: CommunityServer }) {
     });
 
     const cleanTag = tag.trim().toUpperCase().slice(0, 8);
-    const dirty = cleanTag !== (server.tag ?? "");
+    const dirty =
+        cleanTag !== (server.tag ?? "") ||
+        badge !== (server.tagBadge ?? "") ||
+        color !== (server.tagColor ?? "");
 
     return (
         <div>
@@ -1658,9 +1835,12 @@ function TagSection({ server }: { server: CommunityServer }) {
             <div className="mb-7 flex items-center gap-3 rounded-3xl bg-white/[0.03] p-5">
                 <p className="truncate text-[17px] font-bold tracking-tight text-white">{server.name}</p>
                 {cleanTag ? (
-                    <span className="shrink-0 rounded-[8px] bg-white/10 px-2 py-1 text-[12px] font-bold tracking-wide text-zinc-200">
-                        {cleanTag}
-                    </span>
+                    <ServerTagChip
+                        tag={cleanTag}
+                        badge={badge || null}
+                        color={color || null}
+                        className={!color ? "bg-white/10 text-zinc-200" : undefined}
+                    />
                 ) : (
                     <span className="shrink-0 text-[13px] font-medium text-zinc-600">no tag</span>
                 )}
@@ -1677,9 +1857,62 @@ function TagSection({ server }: { server: CommunityServer }) {
             />
             <p className="mt-1.5 px-1 text-[13px] font-medium text-zinc-600">Up to 8 letters or numbers. Clear it to remove the badge.</p>
 
+            {/* Badge */}
+            <p className="mb-1.5 mt-6 px-1 text-[14px] font-semibold text-zinc-500">Badge</p>
+            <div className="flex flex-wrap gap-1.5">
+                <button
+                    onClick={() => setBadge("")}
+                    className={cn(
+                        "grid size-11 cursor-pointer place-items-center rounded-2xl text-[12px] font-bold text-zinc-500 transition-colors",
+                        badge === "" ? "bg-white/15 text-white" : "bg-white/[0.04] hover:bg-white/10",
+                    )}
+                >
+                    none
+                </button>
+                {TAG_BADGES.map((b) => (
+                    <button
+                        key={b}
+                        onClick={() => setBadge(b)}
+                        aria-label={`Badge ${b}`}
+                        className={cn(
+                            "grid size-11 cursor-pointer place-items-center rounded-2xl text-[18px] transition-colors",
+                            badge === b ? "bg-white/15 ring-2 ring-white" : "bg-white/[0.04] hover:bg-white/10",
+                        )}
+                    >
+                        {b}
+                    </button>
+                ))}
+            </div>
+
+            {/* Color */}
+            <p className="mb-1.5 mt-6 px-1 text-[14px] font-semibold text-zinc-500">Color</p>
+            <div className="flex flex-wrap gap-1.5">
+                {TAG_COLORS.map((c) => (
+                    <button
+                        key={c.name}
+                        onClick={() => setColor(c.value)}
+                        aria-label={`${c.name} tag color`}
+                        title={c.name}
+                        className={cn(
+                            "h-11 cursor-pointer rounded-2xl px-4 text-[13px] font-bold transition-colors",
+                            color === c.value ? "ring-2 ring-white" : "",
+                            !c.value && "bg-white/[0.06] text-zinc-300",
+                        )}
+                        style={c.value ? { backgroundColor: `${c.value}26`, color: c.value } : undefined}
+                    >
+                        {c.name}
+                    </button>
+                ))}
+            </div>
+
             <ActionButton
-                className="mt-5"
-                onClick={() => updateServer.mutate({ serverId: server.id, tag: cleanTag || null })}
+                className="mt-7"
+                onClick={() => updateServer.mutate({
+                    serverId: server.id,
+                    tag: cleanTag || null,
+                    tagBadge: badge || null,
+                    tagColor: color || null,
+                })}
                 disabled={!dirty || updateServer.isPending}
             >
                 {updateServer.isPending ? "Saving…" : "Save tag"}
@@ -1690,7 +1923,7 @@ function TagSection({ server }: { server: CommunityServer }) {
 
 // ─── Expressions (emoji + stickers) ──────────────────────
 
-function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji" | "sticker" }) {
+function ExpressionsSection({ serverId, kind, boostCount }: { serverId: string; kind: "emoji" | "sticker"; boostCount: number }) {
     const utils = trpc.useUtils();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -1700,6 +1933,12 @@ function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji
 
     const { data: expressions = [], isLoading } = trpc.community.listExpressions.useQuery({ serverId });
     const items = expressions.filter((e) => e.kind === kind);
+
+    // Slot caps scale with the boost level (enforced server-side too)
+    const level = boostLevelFor(boostCount);
+    const next = nextBoostLevel(boostCount);
+    const cap = kind === "emoji" ? level.emojiSlots : level.stickerSlots;
+    const nextCap = next ? (kind === "emoji" ? next.emojiSlots : next.stickerSlots) : null;
 
     const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation();
     const addExpression = trpc.community.addExpression.useMutation();
@@ -1753,6 +1992,27 @@ function ExpressionsSection({ serverId, kind }: { serverId: string; kind: "emoji
                     ? "Custom emoji render inline when anyone types :name: in chat."
                     : "Stickers send as images from the sticker picker in the chat bar."}
             </SectionHint>
+
+            {/* Slot usage — caps come from the boost level */}
+            <div className="mb-5 rounded-3xl bg-white/[0.03] px-5 py-4">
+                <div className="flex items-center justify-between">
+                    <p className="text-[15px] font-bold text-white">
+                        {items.length} of {cap} slots used
+                    </p>
+                    <span className="text-[12px] font-bold text-zinc-600">level {level.level}</span>
+                </div>
+                <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                        className="h-full rounded-full bg-white transition-all"
+                        style={{ width: `${Math.min(100, (items.length / cap) * 100)}%` }}
+                    />
+                </div>
+                {nextCap && (
+                    <p className="mt-2 text-[13px] font-medium text-zinc-500">
+                        Level {next!.level} unlocks {nextCap} slots — {next!.threshold - boostCount} more boost{next!.threshold - boostCount === 1 ? "" : "s"}.
+                    </p>
+                )}
+            </div>
 
             {/* Upload */}
             {!pendingFile ? (
@@ -1879,24 +2139,96 @@ function AccessSection({
     });
 
     const readOnlyCount = channels.filter((c) => c.readOnly).length;
+    const [rulesDraft, setRulesDraft] = useState(server.rules ?? "");
+    const rulesDirty = rulesDraft.trim() !== (server.rules ?? "");
+
+    const JOIN_METHODS = [
+        {
+            key: "invite" as const,
+            title: "Invite only",
+            desc: "People join with your invite link",
+            active: !server.discoverable,
+        },
+        {
+            key: "discoverable" as const,
+            title: "Discoverable",
+            desc: "Anyone can find and join from the Communities page",
+            active: !!server.discoverable,
+        },
+    ];
 
     return (
         <div>
             <SectionHint>Who can get in, and what they can touch once they&apos;re here.</SectionHint>
 
+            {/* Join method */}
+            <p className="mb-2 px-1 text-[14px] font-semibold text-zinc-500">How can people join?</p>
+            <div className="mb-6 grid grid-cols-2 gap-2">
+                {JOIN_METHODS.map((m) => (
+                    <button
+                        key={m.key}
+                        onClick={() => updateServer.mutate({ serverId: server.id, discoverable: m.key === "discoverable" })}
+                        disabled={updateServer.isPending}
+                        className={cn(
+                            "cursor-pointer rounded-3xl px-5 py-5 text-left transition-colors",
+                            m.active ? "bg-white/[0.08] ring-2 ring-white/40" : "bg-white/[0.03] hover:bg-white/[0.05]",
+                        )}
+                    >
+                        <span className={cn("block text-[15px] font-bold", m.active ? "text-white" : "text-zinc-300")}>{m.title}</span>
+                        <span className="mt-1 block text-[13px] font-medium leading-relaxed text-zinc-500">{m.desc}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Age restriction */}
             <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
                 <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-white">Discoverable</p>
+                    <p className="text-[15px] font-bold text-white">Age-restricted server</p>
                     <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
-                        List this server on the Communities page so anyone can find and join it — no invite needed. Banned users still can&apos;t get in.
+                        Visitors confirm they&apos;re over the legal age before viewing anything here.
                     </p>
                 </div>
                 <Switch
-                    checked={!!server.discoverable}
-                    onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, discoverable: v })}
+                    checked={!!server.ageRestricted}
+                    onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, ageRestricted: v })}
                     disabled={updateServer.isPending}
                 />
             </label>
+
+            {/* Server rules */}
+            <div className="mb-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+                <label className="flex cursor-pointer items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Server rules</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Members must agree to the rules before they can chat. One rule per line.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.rulesRequired}
+                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, rulesRequired: v })}
+                        disabled={updateServer.isPending || !(server.rules ?? rulesDraft.trim())}
+                    />
+                </label>
+                <textarea
+                    value={rulesDraft}
+                    onChange={(e) => setRulesDraft(e.target.value)}
+                    placeholder={"Be civil and respectful\nNo spam or self-promotion\nHelp keep things safe"}
+                    rows={4}
+                    maxLength={4000}
+                    className="mt-3 w-full resize-none rounded-2xl bg-white/[0.04] px-4 py-3.5 text-[14px] font-medium leading-relaxed text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.06]"
+                />
+                {rulesDirty && (
+                    <ActionButton
+                        variant="soft"
+                        className="mt-2 h-11 px-5 text-[14px]"
+                        onClick={() => updateServer.mutate({ serverId: server.id, rules: rulesDraft.trim() || null })}
+                        disabled={updateServer.isPending}
+                    >
+                        Save rules
+                    </ActionButton>
+                )}
+            </div>
 
             <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
                 <div className="min-w-0 flex-1">
@@ -2088,7 +2420,7 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
             )}
 
             {isAdmin && (
-                <label className="mb-6 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
                     <div className="min-w-0 flex-1">
                         <p className="text-[15px] font-bold text-white">Blur media</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
@@ -2098,6 +2430,22 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
                     <Switch
                         checked={!!server.blurMedia}
                         onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, blurMedia: v })}
+                        disabled={updateServer.isPending}
+                    />
+                </label>
+            )}
+
+            {isAdmin && (
+                <label className="mb-6 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Activity alerts</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Post a notice to the system channel when join activity spikes above normal.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.activityAlerts}
+                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, activityAlerts: v })}
                         disabled={updateServer.isPending}
                     />
                 </label>
@@ -2122,6 +2470,63 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
     );
 }
 
+// ─── Server template ─────────────────────────────────────
+
+function TemplateSection({ server }: { server: CommunityServer }) {
+    const utils = trpc.useUtils();
+    const [copied, setCopied] = useState(false);
+    const generateTemplate = trpc.community.generateTemplate.useMutation({
+        onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
+        onError: (err) => toast.error(err.message),
+    });
+
+    const templateUrl = server.templateCode && typeof window !== "undefined"
+        ? `${window.location.origin}/communities?template=${server.templateCode}`
+        : null;
+
+    const copy = () => {
+        if (!templateUrl) return;
+        void navigator.clipboard.writeText(templateUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+        <div>
+            <SectionHint>Share your setup — anyone with the link creates a new server pre-filled like yours.</SectionHint>
+
+            <div className="mb-6 grid grid-cols-2 gap-2">
+                <div className="rounded-3xl bg-white/[0.03] px-5 py-4">
+                    <p className="text-[14px] font-semibold text-zinc-500">Templates copy</p>
+                    <p className="mt-1.5 text-[14px] font-medium leading-relaxed text-zinc-300">
+                        Channels and their order · AutoMod and safety settings · system message and notification defaults · server rules
+                    </p>
+                </div>
+                <div className="rounded-3xl bg-white/[0.03] px-5 py-4">
+                    <p className="text-[14px] font-semibold text-zinc-500">Templates never copy</p>
+                    <p className="mt-1.5 text-[14px] font-medium leading-relaxed text-zinc-300">
+                        Messages · members · emoji and stickers · boosts · your icon and profile
+                    </p>
+                </div>
+            </div>
+
+            {templateUrl ? (
+                <div className="flex items-center gap-2">
+                    <Input radius={14} readOnly value={templateUrl} onFocus={(e) => e.target.select()} className="h-13 flex-1 text-[14px] text-zinc-300" />
+                    <ActionButton variant={copied ? "soft" : "primary"} className="h-13 shrink-0 px-5" onClick={copy}>
+                        <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} className="size-4" strokeWidth={2} />
+                        {copied ? "Copied" : "Copy"}
+                    </ActionButton>
+                </div>
+            ) : (
+                <ActionButton onClick={() => generateTemplate.mutate({ serverId: server.id })} disabled={generateTemplate.isPending}>
+                    {generateTemplate.isPending ? "Generating…" : "Generate template"}
+                </ActionButton>
+            )}
+        </div>
+    );
+}
+
 // ─── Audit log ───────────────────────────────────────────
 
 const AUDIT_FILTERS: { label: string; prefixes: string[] | null }[] = [
@@ -2134,18 +2539,22 @@ const AUDIT_FILTERS: { label: string; prefixes: string[] | null }[] = [
 
 function AuditSection({ serverId }: { serverId: string }) {
     const [filter, setFilter] = useState("All");
+    const [actorFilter, setActorFilter] = useState<string | null>(null);
     const { data: allEntries = [], isLoading } = trpc.community.getAuditLog.useQuery({ serverId });
 
     const prefixes = AUDIT_FILTERS.find((f) => f.label === filter)?.prefixes ?? null;
-    const entries = prefixes
-        ? allEntries.filter((e) => prefixes.some((p) => e.action.startsWith(p)))
-        : allEntries;
+    const entries = allEntries
+        .filter((e) => !prefixes || prefixes.some((p) => e.action.startsWith(p)))
+        .filter((e) => !actorFilter || e.actorUserId === actorFilter);
+
+    // Everyone who appears in the log → the user filter
+    const actors = [...new Map(allEntries.map((e) => [e.actorUserId, e.actorName])).entries()];
 
     return (
         <div>
             <SectionHint>Every management action on this server, newest first.</SectionHint>
 
-            <div className="mb-4 flex flex-wrap gap-1.5">
+            <div className="mb-4 flex flex-wrap items-center gap-1.5">
                 {AUDIT_FILTERS.map((f) => (
                     <button
                         key={f.label}
@@ -2160,6 +2569,39 @@ function AuditSection({ serverId }: { serverId: string }) {
                         {f.label}
                     </button>
                 ))}
+                {actors.length > 1 && (
+                    <GooDropdown
+                        side="bottom"
+                        align="end"
+                        width={190}
+                        gap={6}
+                        fill="#101011"
+                        buttonRadius={16}
+                        panelRadius={16}
+                        triggerAriaLabel="Filter by user"
+                        triggerClassName="ml-auto flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                        trigger={
+                            <>
+                                {actorFilter ? (actors.find(([id]) => id === actorFilter)?.[1] ?? "User") : "All users"}
+                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                            </>
+                        }
+                        items={[
+                            {
+                                key: "all",
+                                onClick: () => setActorFilter(null),
+                                className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                                label: <>All users</>,
+                            },
+                            ...actors.map(([id, name]) => ({
+                                key: id,
+                                onClick: () => setActorFilter(id),
+                                className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                                label: <>{name ?? "Unknown"}</>,
+                            })),
+                        ]}
+                    />
+                )}
             </div>
 
             {isLoading && (

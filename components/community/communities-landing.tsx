@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Users2, Hash, ArrowRight, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
@@ -12,6 +12,50 @@ import { CategoryList } from "@/components/home/video-feed/category-list";
 import { CreateIcon } from "../icons";
 
 const COMMUNITY_CATEGORIES = ["All", "Gaming", "Crypto", "Music", "Art", "Tech", "Trading", "IRL"];
+
+// ?template=CODE — create a new server pre-filled with another's structure.
+function TemplateCreateCard({ code }: { code: string }) {
+    const router = useRouter();
+    const utils = trpc.useUtils();
+    const [name, setName] = useState("");
+    const { data, error } = trpc.community.getTemplatePreview.useQuery({ templateCode: code });
+    const createServer = trpc.community.createServer.useMutation({
+        onSuccess: (server) => {
+            utils.community.listServers.invalidate();
+            router.push(`/communities/${server.id}`);
+        },
+        onError: (err) => toast.error(err.message),
+    });
+
+    if (error) return null;
+    if (!data) return <div className="mb-8 h-40 overflow-hidden rounded-[28px]"><div className="size-full shimmer-skeleton" /></div>;
+
+    return (
+        <div className="mb-8 rounded-[28px] bg-white/[0.03] p-6">
+            <p className="text-[13px] font-semibold text-zinc-500">Server template</p>
+            <h2 className="mt-1 text-xl font-black tracking-tight text-white">Start from “{data.name}”</h2>
+            <p className="mt-1 text-[14px] font-medium text-zinc-500">
+                {data.channels.length} channel{data.channels.length === 1 ? "" : "s"}: {data.channels.map((c) => `#${c.name}`).join(", ")} — plus its moderation and safety settings. No messages or members.
+            </p>
+            <div className="mt-4 flex items-center gap-2">
+                <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Name your server"
+                    maxLength={100}
+                    className="h-12 flex-1 rounded-2xl bg-white/[0.04] px-4 text-[14px] font-semibold text-white outline-none placeholder:text-zinc-600 focus:bg-white/[0.06]"
+                />
+                <button
+                    onClick={() => createServer.mutate({ name: name.trim(), templateCode: code })}
+                    disabled={!name.trim() || createServer.isPending}
+                    className="h-12 shrink-0 cursor-pointer rounded-full bg-white px-6 text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:opacity-40"
+                >
+                    {createServer.isPending ? "Creating…" : "Create server"}
+                </button>
+            </div>
+        </div>
+    );
+}
 
 // Servers that opted into discovery — join without an invite.
 function DiscoverSection() {
@@ -93,6 +137,8 @@ export function CommunitiesLanding() {
     const { onOpen } = useCommunityModal();
     const router = useRouter();
     const utils = trpc.useUtils();
+    const searchParams = useSearchParams();
+    const templateCode = searchParams?.get("template") ?? null;
 
     const [code, setCode] = useState("");
     const [activeCat, setActiveCat] = useState("All");
@@ -151,6 +197,8 @@ export function CommunitiesLanding() {
                         </button>
                     </div>
                 )}
+
+                {mounted && session?.user && templateCode && <TemplateCreateCard code={templateCode} />}
 
                 {mounted && session?.user && (
                     <>

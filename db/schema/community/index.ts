@@ -43,6 +43,26 @@ export const communityServers = pgTable('community_servers', {
     discoverable: boolean('discoverable'),
     // Profile-card banner image (boost level 1+ perk; wins over bannerColor)
     bannerImageUrl: text('banner_image_url'),
+    // Server rules (newline-separated) + must-agree-before-chatting gate
+    rules: text('rules'),
+    rulesRequired: boolean('rules_required'),
+    // 18+ confirmation before viewing the server
+    ageRestricted: boolean('age_restricted'),
+    // Server tag chip: badge emoji + color token
+    tagBadge: text('tag_badge'),
+    tagColor: text('tag_color'),
+    // Vanity invite code (boost level 3 perk) — resolves like inviteCode
+    customInvite: text('custom_invite'),
+    // Boost progress bar in the channel sidebar
+    showBoostBar: boolean('show_boost_bar'),
+    // Rail badge default: 'all' (any unread) | 'mentions' (mentions only)
+    defaultNotifications: text('default_notifications'),
+    // Join-surge notice posted to the system channel
+    activityAlerts: boolean('activity_alerts'),
+    // Built-in profanity filter for members (AutoMod)
+    automodFlaggedWords: boolean('automod_flagged_words'),
+    // Shareable code that pre-fills a new server's structure
+    templateCode: text('template_code'),
     inviteCode: text('invite_code').notNull().unique(),
     ownerId: text('owner_id')
         .references(() => user.id, { onDelete: 'cascade' })
@@ -73,6 +93,10 @@ export const communityMembers = pgTable('community_members', {
     nickname: text('nickname'),
     // Per-member server mute (suppresses unread badges)
     muted: boolean('muted'),
+    // When they agreed to the server rules (null = not yet)
+    rulesAgreedAt: timestamp('rules_agreed_at', { withTimezone: true }),
+    // How they joined: 'invite' | 'discovery'
+    joinMethod: text('join_method'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

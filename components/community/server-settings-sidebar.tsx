@@ -51,6 +51,7 @@ export function ServerSettingsSidebar({ serverId }: { serverId: string }) {
                   rows: ["safety", "audit", "bans", ...(isAdmin ? (["automod"] as const) : [])],
               },
               { label: "Channels", rows: ["channels"] },
+              ...(isAdmin ? [{ label: "Setup", rows: ["template"] as SettingsSection[] }] : []),
           ]
         : [];
 

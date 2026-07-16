@@ -8,6 +8,8 @@ import { useCommunityChannel } from "@/hooks/use-community-channel";
 import { CommunityChatHeader } from "@/components/community/community-chat-header";
 import { CommunityChatMessages } from "@/components/community/community-chat-messages";
 import { CommunityChatInput } from "@/components/community/community-chat-input";
+import { CommunityRulesGate } from "@/components/community/community-rules-gate";
+import { CommunityAgeGate } from "@/components/community/community-age-gate";
 import { CommunityChannelInfo } from "@/components/community/community-channel-info";
 import { ChannelChatSkeleton } from "@/components/community/community-skeletons";
 
@@ -79,17 +81,26 @@ export default function ChannelPage() {
                 blurMedia={!!serverData.server.blurMedia}
             />
 
-            <CommunityChatInput
-                channelId={channelId}
-                channelName={channel.name}
-                locked={!!channel.readOnly && serverData.currentMember.role === "GUEST"}
-                onTyping={sendTyping}
-                onStopTyping={sendStopTyping}
-                mentionables={serverData.members
-                    .filter((m) => m.userUsername)
-                    .map((m) => ({ username: m.userUsername!, name: m.userName }))}
-                stickers={stickers}
-            />
+            {serverData.server.rulesRequired && serverData.server.rules &&
+             serverData.currentMember.role === "GUEST" && !serverData.currentMember.rulesAgreedAt ? (
+                <CommunityRulesGate serverId={serverId} rules={serverData.server.rules} />
+            ) : (
+                <CommunityChatInput
+                    channelId={channelId}
+                    channelName={channel.name}
+                    locked={!!channel.readOnly && serverData.currentMember.role === "GUEST"}
+                    onTyping={sendTyping}
+                    onStopTyping={sendStopTyping}
+                    mentionables={serverData.members
+                        .filter((m) => m.userUsername)
+                        .map((m) => ({ username: m.userUsername!, name: m.userName }))}
+                    stickers={stickers}
+                />
+            )}
+
+            {serverData.server.ageRestricted && (
+                <CommunityAgeGate serverId={serverId} serverName={serverData.server.name} />
+            )}
 
             <CommunityChannelInfo
                 open={infoOpen}
