@@ -63,6 +63,13 @@ export const communityServers = pgTable('community_servers', {
     automodFlaggedWords: boolean('automod_flagged_words'),
     // Shareable code that pre-fills a new server's structure
     templateCode: text('template_code'),
+    // Public /widget/[serverId] embed page
+    widgetEnabled: boolean('widget_enabled'),
+    // "Active now" (live members) in the channel sidebar
+    activityFeed: boolean('activity_feed'),
+    // Voice AFK: idle members move here after the timeout
+    inactiveChannelId: uuid('inactive_channel_id'),
+    inactiveTimeoutMinutes: integer('inactive_timeout_minutes'),
     inviteCode: text('invite_code').notNull().unique(),
     ownerId: text('owner_id')
         .references(() => user.id, { onDelete: 'cascade' })
@@ -123,6 +130,8 @@ export const communityChannels = pgTable('community_channels', {
     position: integer('position'),
     // Read-only: guests can read but only mods/admins post (null = writable)
     readOnly: boolean('read_only'),
+    // RealtimeKit meeting for AUDIO/VIDEO channels (lazy, like Spaces)
+    mediaMeetingId: text('media_meeting_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -380,3 +389,24 @@ export const communityMemberRoles = pgTable('community_member_roles', {
 ]).enableRLS();
 
 export type CommunityMemberRole = typeof communityMemberRoles.$inferSelect;
+
+// ─── Invite links (multiple per server, with uses/expiry) ──
+export const communityInvites = pgTable('community_invites', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    code: text('code').notNull().unique(),
+    createdBy: text('created_by').notNull(),
+    // null = unlimited
+    maxUses: integer('max_uses'),
+    uses: integer('uses').default(0).notNull(),
+    // null = never expires
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_community_invites_server').on(table.serverId),
+    pgPolicy('community_invites_select_member', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = server_id AND cm.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityInvite = typeof communityInvites.$inferSelect;

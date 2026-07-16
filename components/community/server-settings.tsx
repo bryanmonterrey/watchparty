@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isPast } from "date-fns";
 import Link from "next/link";
 import type { Area } from "react-easy-crop";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -750,8 +750,109 @@ function EngagementSection({
                             );
                         })}
                     </div>
+
+                    {/* Activity feed */}
+                    <h2 className="mb-3 mt-9 text-[14px] font-semibold text-zinc-500">Activity</h2>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[15px] font-bold text-white">Active now</p>
+                            <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                                Show recently active members at the top of the channel list.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={!!server.activityFeed}
+                            onCheckedChange={(v) => updateServer.mutate({ serverId, activityFeed: v })}
+                            disabled={updateServer.isPending}
+                        />
+                    </label>
+
+                    {/* Inactive voice channel */}
+                    <div className="mt-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+                        <p className="text-[15px] font-bold text-white">Inactive channel</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Members idle in voice longer than the timeout get disconnected automatically.
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <GooDropdown
+                                side="top"
+                                align="start"
+                                width={190}
+                                gap={6}
+                                fill="#101011"
+                                buttonRadius={16}
+                                panelRadius={16}
+                                triggerAriaLabel="Inactive timeout"
+                                triggerClassName={cn(
+                                    "flex h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
+                                    updateServer.isPending && "pointer-events-none opacity-50",
+                                )}
+                                trigger={<>
+                                    {server.inactiveTimeoutMinutes ? `After ${server.inactiveTimeoutMinutes} min` : "Off"}
+                                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                                </>}
+                                items={[
+                                    { label: "Off", v: null },
+                                    { label: "5 minutes", v: 5 },
+                                    { label: "15 minutes", v: 15 },
+                                    { label: "30 minutes", v: 30 },
+                                    { label: "1 hour", v: 60 },
+                                ].map((o) => ({
+                                    key: o.label,
+                                    onClick: () => updateServer.mutate({ serverId, inactiveTimeoutMinutes: o.v }),
+                                    className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                                    label: <>{o.label}</>,
+                                }))}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Server widget */}
+                    <h2 className="mb-3 mt-9 text-[14px] font-semibold text-zinc-500">Server widget</h2>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[15px] font-bold text-white">Enable server widget</p>
+                            <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                                A public embed for your own site: name, member count, who&apos;s online, and a join button.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={!!server.widgetEnabled}
+                            onCheckedChange={(v) => updateServer.mutate({ serverId, widgetEnabled: v })}
+                            disabled={updateServer.isPending}
+                        />
+                    </label>
+                    {server.widgetEnabled && <WidgetSnippet serverId={serverId} />}
                 </>
             )}
+        </div>
+    );
+}
+
+// The copy-paste iframe snippet shown once the widget is enabled.
+function WidgetSnippet({ serverId }: { serverId: string }) {
+    const [copied, setCopied] = useState(false);
+    const snippet = `<iframe src="${typeof window !== "undefined" ? window.location.origin : "https://watchparty.xyz"}/widget/${serverId}" width="360" height="260" frameborder="0" title="watchparty server"></iframe>`;
+
+    return (
+        <div className="mt-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+                <p className="text-[14px] font-semibold text-zinc-500">Embed code</p>
+                <button
+                    onClick={() => {
+                        void navigator.clipboard.writeText(snippet);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                    }}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                    <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} className="size-3" strokeWidth={2} />
+                    {copied ? "Copied" : "Copy"}
+                </button>
+            </div>
+            <pre className="mt-2 overflow-x-auto rounded-2xl bg-black/40 p-3.5 text-[12px] font-medium leading-relaxed text-zinc-400">
+                {snippet}
+            </pre>
         </div>
     );
 }
@@ -1539,6 +1640,143 @@ function InvitesSection({ server, isAdmin }: { server: CommunityServer; isAdmin:
                         disabled={setPaused.isPending}
                     />
                 </label>
+            )}
+
+            <ExtraInvites serverId={serverId} />
+        </div>
+    );
+}
+
+// Per-link invites: limited-use / expiring codes alongside the main link.
+const INVITE_EXPIRIES = [
+    { label: "Never", hours: null },
+    { label: "1 day", hours: 24 },
+    { label: "7 days", hours: 24 * 7 },
+    { label: "30 days", hours: 24 * 30 },
+] as const;
+const INVITE_USES = [
+    { label: "Unlimited", value: null },
+    { label: "1 use", value: 1 },
+    { label: "10 uses", value: 10 },
+    { label: "50 uses", value: 50 },
+] as const;
+
+function ExtraInvites({ serverId }: { serverId: string }) {
+    const utils = trpc.useUtils();
+    const [expiry, setExpiry] = useState<(typeof INVITE_EXPIRIES)[number]>(INVITE_EXPIRIES[0]);
+    const [uses, setUses] = useState<(typeof INVITE_USES)[number]>(INVITE_USES[0]);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const { data: invites = [] } = trpc.community.listInvites.useQuery({ serverId });
+    const createInvite = trpc.community.createInvite.useMutation({
+        onSuccess: () => utils.community.listInvites.invalidate({ serverId }),
+        onError: (err) => toast.error(err.message),
+    });
+    const deleteInvite = trpc.community.deleteInvite.useMutation({
+        onSuccess: () => utils.community.listInvites.invalidate({ serverId }),
+        onError: (err) => toast.error(err.message),
+    });
+
+    const copy = (id: string, code: string) => {
+        void navigator.clipboard.writeText(`${window.location.origin}/communities/invite/${code}`);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 1500);
+    };
+
+    const inviteStatus = (inv: (typeof invites)[number]) => {
+        if (inv.expiresAt && isPast(new Date(inv.expiresAt))) return "expired";
+        if (inv.maxUses !== null && inv.uses >= inv.maxUses) return "used up";
+        return null;
+    };
+
+    return (
+        <div className="mt-8">
+            <h2 className="mb-1 px-1 text-[15px] font-semibold text-zinc-300">Extra invite links</h2>
+            <p className="mb-3 px-1 text-[13px] font-medium text-zinc-600">
+                One-off links with their own limits — revoke any of them without touching the main link.
+            </p>
+
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+                <GooDropdown
+                    side="bottom"
+                    align="start"
+                    width={150}
+                    gap={6}
+                    fill="#101011"
+                    buttonRadius={16}
+                    panelRadius={16}
+                    triggerAriaLabel="Invite expiry"
+                    triggerClassName="flex h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                    trigger={<>Expires: {expiry.label}<HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} /></>}
+                    items={INVITE_EXPIRIES.map((e) => ({
+                        key: e.label,
+                        onClick: () => setExpiry(e),
+                        className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                        label: <>{e.label}</>,
+                    }))}
+                />
+                <GooDropdown
+                    side="bottom"
+                    align="start"
+                    width={150}
+                    gap={6}
+                    fill="#101011"
+                    buttonRadius={16}
+                    panelRadius={16}
+                    triggerAriaLabel="Invite max uses"
+                    triggerClassName="flex h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                    trigger={<>{uses.label}<HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} /></>}
+                    items={INVITE_USES.map((u) => ({
+                        key: u.label,
+                        onClick: () => setUses(u),
+                        className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                        label: <>{u.label}</>,
+                    }))}
+                />
+                <ActionButton
+                    variant="soft"
+                    className="h-11 px-5 text-[14px]"
+                    onClick={() => createInvite.mutate({ serverId, maxUses: uses.value, expiresInHours: expiry.hours })}
+                    disabled={createInvite.isPending}
+                >
+                    Create link
+                </ActionButton>
+            </div>
+
+            {invites.length > 0 && (
+                <div className="space-y-0.5">
+                    {invites.map((inv) => {
+                        const status = inviteStatus(inv);
+                        return (
+                            <div key={inv.id} className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
+                                <button
+                                    onClick={() => copy(inv.id, inv.code)}
+                                    className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left"
+                                >
+                                    <span className={cn("truncate text-[14px] font-bold", status ? "text-zinc-600 line-through" : "text-zinc-200")}>
+                                        /invite/{inv.code}
+                                    </span>
+                                    {copiedId === inv.id
+                                        ? <HugeiconsIcon icon={Tick02Icon} className="size-3.5 shrink-0 text-white" strokeWidth={2.5} />
+                                        : <HugeiconsIcon icon={Copy01Icon} className="size-3 shrink-0 text-zinc-600" strokeWidth={2} />}
+                                </button>
+                                <span className="min-w-0 flex-1 truncate text-right text-[12px] font-medium text-zinc-600">
+                                    {status ?? <>
+                                        {inv.maxUses !== null ? `${inv.uses}/${inv.maxUses} uses` : `${inv.uses} uses`}
+                                        {inv.expiresAt ? ` · expires ${formatDistanceToNow(new Date(inv.expiresAt), { addSuffix: true })}` : ""}
+                                    </>}
+                                </span>
+                                <button
+                                    onClick={() => deleteInvite.mutate({ serverId, inviteId: inv.id })}
+                                    disabled={deleteInvite.isPending}
+                                    aria-label="Revoke invite"
+                                    className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-full text-zinc-600 transition-colors hover:bg-pastelred/10 hover:text-pastelred disabled:opacity-50"
+                                >
+                                    <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" strokeWidth={2.5} />
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
             )}
         </div>
     );

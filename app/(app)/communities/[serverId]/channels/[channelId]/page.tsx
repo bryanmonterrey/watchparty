@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -12,6 +13,13 @@ import { CommunityRulesGate } from "@/components/community/community-rules-gate"
 import { CommunityAgeGate } from "@/components/community/community-age-gate";
 import { CommunityChannelInfo } from "@/components/community/community-channel-info";
 import { ChannelChatSkeleton } from "@/components/community/community-skeletons";
+
+// Voice room pulls in the RealtimeKit SFU SDK — load it only when a voice
+// channel is actually opened (the speed rule).
+const VoiceRoom = dynamic(
+    () => import("@/components/community/voice-room").then((m) => m.VoiceRoom),
+    { ssr: false, loading: () => <ChannelChatSkeleton /> },
+);
 
 // Port of sidebar's (browse)/communities/[serverId]/channels/[channelId]/page.tsx.
 export default function ChannelPage() {
@@ -47,6 +55,24 @@ export default function ChannelPage() {
         return (
             <div className="flex flex-1 items-center justify-center">
                 <p className="text-zinc-400">Channel not found</p>
+            </div>
+        );
+    }
+
+    // AUDIO/VIDEO channels are voice rooms, not chat
+    if (channel.type !== "TEXT") {
+        return (
+            <div className="relative flex h-full min-w-0 flex-col">
+                <VoiceRoom
+                    channelId={channelId}
+                    channelName={channel.name}
+                    channelType={channel.type}
+                    serverId={serverId}
+                    userName={session.user.name ?? "You"}
+                />
+                {serverData.server.ageRestricted && (
+                    <CommunityAgeGate serverId={serverId} serverName={serverData.server.name} />
+                )}
             </div>
         );
     }

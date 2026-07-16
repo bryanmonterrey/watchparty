@@ -11,6 +11,7 @@ import { ServerSidebarSkeleton } from "./community-skeletons";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { boostLevelFor, nextBoostLevel } from "@/lib/premium/boost-levels";
+import { isAfter, subMinutes } from "date-fns";
 
 type Props = {
     serverId: string;
@@ -68,6 +69,41 @@ export function CommunityServerSidebar({ serverId }: Props) {
             })()}
 
             <ScrollArea className="flex-1">
+
+                {/* Active now — members seen in the last 10 min (Engagement → Activity) */}
+                {server.activityFeed && (() => {
+                    const active = members.filter((m) =>
+                        m.lastSeenAt && isAfter(new Date(m.lastSeenAt), subMinutes(new Date(), 10)),
+                    );
+                    if (active.length === 0) return null;
+                    return (
+                        <div className="px-3 pb-1 pt-2">
+                            <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                                Active now — {active.length}
+                            </p>
+                            <div className="flex items-center gap-1 overflow-hidden px-1">
+                                {active.slice(0, 8).map((m) => (
+                                    <div key={m.id} className="relative shrink-0" title={m.userName ?? undefined}>
+                                        <div className="size-7 overflow-hidden rounded-full bg-zinc-800">
+                                            {m.userImage ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={m.userImage} alt="" className="size-full object-cover" />
+                                            ) : (
+                                                <span className="grid size-full place-items-center text-[11px] font-bold text-zinc-400">
+                                                    {(m.userName ?? "?").charAt(0).toUpperCase()}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-lantern ring-2 ring-zinc-900" />
+                                    </div>
+                                ))}
+                                {active.length > 8 && (
+                                    <span className="ml-1 text-[11px] font-bold text-zinc-600">+{active.length - 8}</span>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {!!textChannels.length && (
                     <div className="mb-2">

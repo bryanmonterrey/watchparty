@@ -15,6 +15,7 @@ import {
     communityExpressions,
     communityRoles,
     communityMemberRoles,
+    communityInvites,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
 import { premiumSubscriptions } from "@/db/schema/content";
@@ -22,12 +23,13 @@ import { TIERS, USDC_MINT, type TierKey } from "@/lib/premium/tiers";
 import { BOOST_PACKS, getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { boostLevelFor } from "@/lib/premium/boost-levels";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
-import { eq, and, or, desc, asc, sql, lt, ne, count, inArray, gt } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql, lt, ne, count, inArray, gt, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { rooms } from "@/lib/realtime/protocol";
+import { isMediaEnabled, createMeeting, addParticipant, REALTIMEKIT_PRESETS } from "@/lib/realtime/media/realtimekit";
 
 // In-memory OG unfurl cache (per isolate). Small + TTL'd; misses just refetch.
 type LinkPreviewData = { title: string | null; description: string | null; image: string | null; siteName: string | null };
@@ -84,6 +86,41 @@ async function require2faIfEnforced(serverId: string, userId: string) {
             message: "This server requires two-factor authentication for moderator actions — enable 2FA in your account settings first",
         });
     }
+}
+
+/**
+ * Resolve any invite code — the server's main code, its vanity code, or a
+ * per-link code from community_invites. Per-link codes carry uses/expiry;
+ * `invite` is returned so joins can count the use.
+ */
+async function resolveInviteCode(code: string): Promise<{
+    server: typeof communityServers.$inferSelect;
+    invite: typeof communityInvites.$inferSelect | null;
+    expired: boolean;
+} | null> {
+    const [direct] = await db
+        .select()
+        .from(communityServers)
+        .where(or(eq(communityServers.inviteCode, code), eq(communityServers.customInvite, code)))
+        .limit(1);
+    if (direct) return { server: direct, invite: null, expired: false };
+
+    const [inviteRow] = await db
+        .select()
+        .from(communityInvites)
+        .where(eq(communityInvites.code, code))
+        .limit(1);
+    if (!inviteRow) return null;
+    const [server] = await db
+        .select()
+        .from(communityServers)
+        .where(eq(communityServers.id, inviteRow.serverId))
+        .limit(1);
+    if (!server) return null;
+    const expired =
+        (inviteRow.expiresAt !== null && inviteRow.expiresAt.getTime() < Date.now()) ||
+        (inviteRow.maxUses !== null && inviteRow.uses >= inviteRow.maxUses);
+    return { server, invite: inviteRow, expired };
 }
 
 /** Comma-separated automod keywords → normalized list. */
@@ -421,6 +458,7 @@ export const communityRouter = router({
                     userUsername: user.username,
                     nickname: communityMembers.nickname,
                     joinMethod: communityMembers.joinMethod,
+                    lastSeenAt: user.lastSeenAt,
                 })
                 .from(communityMembers)
                 .innerJoin(user, eq(communityMembers.userId, user.id))
@@ -589,6 +627,10 @@ export const communityRouter = router({
                 defaultNotifications: z.enum(["all", "mentions"]).optional(),
                 activityAlerts: z.boolean().optional(),
                 automodFlaggedWords: z.boolean().optional(),
+                widgetEnabled: z.boolean().optional(),
+                activityFeed: z.boolean().optional(),
+                inactiveChannelId: z.string().uuid().nullable().optional(),
+                inactiveTimeoutMinutes: z.number().int().min(1).max(120).nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -672,6 +714,10 @@ export const communityRouter = router({
                     ...(input.defaultNotifications !== undefined && { defaultNotifications: input.defaultNotifications }),
                     ...(input.activityAlerts !== undefined && { activityAlerts: input.activityAlerts }),
                     ...(input.automodFlaggedWords !== undefined && { automodFlaggedWords: input.automodFlaggedWords }),
+                    ...(input.widgetEnabled !== undefined && { widgetEnabled: input.widgetEnabled }),
+                    ...(input.activityFeed !== undefined && { activityFeed: input.activityFeed }),
+                    ...(input.inactiveChannelId !== undefined && { inactiveChannelId: input.inactiveChannelId }),
+                    ...(input.inactiveTimeoutMinutes !== undefined && { inactiveTimeoutMinutes: input.inactiveTimeoutMinutes }),
                     updatedAt: new Date(),
                 })
                 .where(eq(communityServers.id, input.serverId))
@@ -708,16 +754,56 @@ export const communityRouter = router({
             return { inviteCode: updated.inviteCode };
         }),
 
+    /**
+     * PUBLIC widget data for the embeddable /widget/[serverId] page — only
+     * servers that opted in (widgetEnabled) respond, and only with safe
+     * fields: name, icon, member count, online count, invite code.
+     */
+    getWidget: publicProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ input }) => {
+            const [server] = await db
+                .select()
+                .from(communityServers)
+                .where(and(eq(communityServers.id, input.serverId), eq(communityServers.widgetEnabled, true)))
+                .limit(1);
+            if (!server) throw new TRPCError({ code: "NOT_FOUND", message: "Widget not available" });
+
+            const [{ n: memberCount }] = await db
+                .select({ n: count() })
+                .from(communityMembers)
+                .where(eq(communityMembers.serverId, server.id));
+
+            // "Online" = members seen in the last 10 minutes
+            const [{ n: onlineCount }] = await db
+                .select({ n: count() })
+                .from(communityMembers)
+                .innerJoin(user, eq(communityMembers.userId, user.id))
+                .where(and(
+                    eq(communityMembers.serverId, server.id),
+                    gt(user.lastSeenAt, new Date(Date.now() - 10 * 60 * 1000)),
+                ));
+
+            return {
+                name: server.name,
+                imageUrl: server.imageUrl,
+                tag: server.tag,
+                bannerColor: server.bannerColor,
+                memberCount: Number(memberCount),
+                onlineCount: Number(onlineCount),
+                inviteCode: server.customInvite ?? server.inviteCode,
+            };
+        }),
+
     /** Invite-link landing data. Private profiles reveal only name + icon. */
     getInvitePreview: protectedProcedure
         .input(z.object({ inviteCode: z.string().min(1) }))
         .query(async ({ ctx, input }) => {
-            const [server] = await db
-                .select()
-                .from(communityServers)
-                .where(or(eq(communityServers.inviteCode, input.inviteCode), eq(communityServers.customInvite, input.inviteCode)))
-                .limit(1);
-            if (!server) throw new TRPCError({ code: "NOT_FOUND", message: "This invite is invalid or expired" });
+            const resolved = await resolveInviteCode(input.inviteCode);
+            if (!resolved || resolved.expired) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "This invite is invalid or expired" });
+            }
+            const { server } = resolved;
 
             const [member] = await db
                 .select({ id: communityMembers.id })
@@ -752,15 +838,14 @@ export const communityRouter = router({
     joinServer: protectedProcedure
         .input(z.object({ inviteCode: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            const server = await db
-                .select()
-                .from(communityServers)
-                .where(or(eq(communityServers.inviteCode, input.inviteCode), eq(communityServers.customInvite, input.inviteCode)))
-                .limit(1);
-
-            if (!server.length) {
+            const resolved = await resolveInviteCode(input.inviteCode);
+            if (!resolved) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "Invalid invite code" });
             }
+            if (resolved.expired) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "This invite has expired or hit its use limit" });
+            }
+            const server = [resolved.server];
 
             // Check if already a member
             const existing = await db
@@ -800,6 +885,15 @@ export const communityRouter = router({
                     joinMethod: "invite",
                 })
                 .returning();
+
+            // Per-link invites count their use (best-effort)
+            if (resolved.invite && newMember) {
+                await db
+                    .update(communityInvites)
+                    .set({ uses: sql`${communityInvites.uses} + 1` })
+                    .where(eq(communityInvites.id, resolved.invite.id))
+                    .catch(() => {});
+            }
 
             // Welcome announcement (on unless explicitly disabled)
             if (server[0].welcomeMessages !== false && newMember) {
@@ -1378,6 +1472,151 @@ export const communityRouter = router({
             if (removed) {
                 await logAudit(input.serverId, ctx.user.id, "expression.delete", `removed ${removed.kind} :${removed.name}:`);
             }
+            return { success: true };
+        }),
+
+    /**
+     * WebRTC token for an AUDIO/VIDEO channel — the Spaces RealtimeKit stack
+     * reused for persistent voice channels. Unlike Spaces (host/speaker/
+     * listener), every member of a voice channel can speak; VIDEO channels
+     * additionally allow camera + screenshare (canVideo drives the client UI;
+     * the SFU preset already permits publishing).
+     */
+    getVoiceToken: protectedProcedure
+        .input(z.object({ channelId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            if (!isMediaEnabled()) return { enabled: false as const };
+
+            const [channel] = await db
+                .select()
+                .from(communityChannels)
+                .where(eq(communityChannels.id, input.channelId))
+                .limit(1);
+            if (!channel) throw new TRPCError({ code: "NOT_FOUND", message: "Channel not found" });
+            if (channel.type === "TEXT") {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Not a voice channel" });
+            }
+
+            const [member] = await db
+                .select({ id: communityMembers.id })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, channel.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .limit(1);
+            if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+
+            // Lazily create the meeting; guard the concurrent first-join race.
+            let meetingId = channel.mediaMeetingId;
+            if (!meetingId) {
+                const created = await createMeeting(`#${channel.name}`);
+                const [won] = await db
+                    .update(communityChannels)
+                    .set({ mediaMeetingId: created })
+                    .where(and(eq(communityChannels.id, input.channelId), isNull(communityChannels.mediaMeetingId)))
+                    .returning({ id: communityChannels.mediaMeetingId });
+                if (won?.id) {
+                    meetingId = won.id;
+                } else {
+                    const [fresh] = await db
+                        .select({ id: communityChannels.mediaMeetingId })
+                        .from(communityChannels)
+                        .where(eq(communityChannels.id, input.channelId))
+                        .limit(1);
+                    meetingId = fresh?.id ?? created;
+                }
+            }
+
+            const authToken = await addParticipant(meetingId, {
+                name: ctx.user.name ?? "Guest",
+                presetName: REALTIMEKIT_PRESETS.speaker,
+                customParticipantId: ctx.user.id,
+            });
+
+            const [srv] = await db
+                .select({
+                    inactiveChannelId: communityServers.inactiveChannelId,
+                    inactiveTimeoutMinutes: communityServers.inactiveTimeoutMinutes,
+                })
+                .from(communityServers)
+                .where(eq(communityServers.id, channel.serverId))
+                .limit(1);
+
+            return {
+                enabled: true as const,
+                authToken,
+                canVideo: channel.type === "VIDEO",
+                // Voice AFK config for the client-side idle watchdog
+                inactiveTimeoutMinutes: srv?.inactiveTimeoutMinutes ?? null,
+                inactiveChannelId: srv?.inactiveChannelId ?? null,
+            };
+        }),
+
+    // ─── Invite links (multiple, with uses/expiry) ───────
+
+    /** All invite links for a server (admin/mod) */
+    listInvites: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+            const rows = await db
+                .select({
+                    id: communityInvites.id,
+                    code: communityInvites.code,
+                    maxUses: communityInvites.maxUses,
+                    uses: communityInvites.uses,
+                    expiresAt: communityInvites.expiresAt,
+                    createdAt: communityInvites.createdAt,
+                    creatorName: user.name,
+                })
+                .from(communityInvites)
+                .leftJoin(user, eq(communityInvites.createdBy, user.id))
+                .where(eq(communityInvites.serverId, input.serverId))
+                .orderBy(desc(communityInvites.createdAt));
+            return rows;
+        }),
+
+    /** Create an invite link with optional uses/expiry (admin/mod) */
+    createInvite: protectedProcedure
+        .input(z.object({
+            serverId: z.string().uuid(),
+            maxUses: z.number().int().positive().max(10_000).nullable().optional(),
+            expiresInHours: z.number().int().positive().max(24 * 30).nullable().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [{ n }] = await db
+                .select({ n: count() })
+                .from(communityInvites)
+                .where(eq(communityInvites.serverId, input.serverId));
+            if (Number(n) >= 50) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Servers can have up to 50 invite links" });
+            }
+
+            const [created] = await db
+                .insert(communityInvites)
+                .values({
+                    serverId: input.serverId,
+                    code: nanoid(8),
+                    createdBy: ctx.user.id,
+                    maxUses: input.maxUses ?? null,
+                    expiresAt: input.expiresInHours
+                        ? new Date(Date.now() + input.expiresInHours * 60 * 60 * 1000)
+                        : null,
+                })
+                .returning();
+            await logAudit(input.serverId, ctx.user.id, "invite.create", "created an invite link");
+            return created;
+        }),
+
+    /** Revoke one invite link (admin/mod) */
+    deleteInvite: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), inviteId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+            await db
+                .delete(communityInvites)
+                .where(and(eq(communityInvites.id, input.inviteId), eq(communityInvites.serverId, input.serverId)));
+            await logAudit(input.serverId, ctx.user.id, "invite.delete", "revoked an invite link");
             return { success: true };
         }),
 

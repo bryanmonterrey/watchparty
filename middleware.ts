@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
-import { apiAuthPrefix, authRoutes, publicRoutes } from "./routes";
+import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
 
 // Edge middleware. Next 16 deprecated `middleware` in favor of `proxy`, BUT
 // `proxy` is locked to the Node.js runtime, which OpenNext/Cloudflare Workers
@@ -35,7 +35,7 @@ export function middleware(request: NextRequest) {
   // destination through login (invite links, deep links) — the login card
   // funnels every auth method through resolvePostLoginRedirect(callbackUrl),
   // which only honors same-site targets.
-  const isPublic = publicRoutes.includes(pathname);
+  const isPublic = publicRoutes.includes(pathname) || publicPrefixes.some((p) => pathname.startsWith(p));
   if (!session && !isPublic) {
     const login = new URL("/login", request.url);
     login.searchParams.set("callbackUrl", pathname + request.nextUrl.search);
