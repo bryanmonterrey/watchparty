@@ -60,6 +60,7 @@ export default function InvitePage() {
                             imageUrl={data.imageUrl}
                             tag={data.tag}
                             bannerColor={data.bannerColor}
+                            bannerImageUrl={data.bannerImageUrl}
                             description={data.description}
                             traits={data.traits}
                             memberCount={data.memberCount}

@@ -28,6 +28,7 @@ import { useCommunityModal } from "@/hooks/use-community-modal";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { supabase } from "@/lib/supabase/client";
+import { BOOST_LEVELS, boostLevelFor, nextBoostLevel } from "@/lib/premium/boost-levels";
 import { cn } from "@/lib/utils";
 import { ADMIN_ONLY_SECTIONS, sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
 import { ServerProfileCard, BANNER_COLORS, DEFAULT_BANNER, parseTraits } from "./server-profile-card";
@@ -82,7 +83,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
         );
     }
 
-    const { server, channels, members, currentMember, boostCount, boostedByMe } = data;
+    const { server, channels, members, currentMember, roles, boostCount, boostedByMe } = data;
 
     return (
         <div className="flex flex-col h-full min-w-0">
@@ -105,7 +106,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
 
             <ScrollArea className="flex-1">
                 <div className={cn("p-6", active === "profile" ? "max-w-5xl" : "max-w-2xl")}>
-                    {active === "profile" && isAdmin && <ProfileSection server={server} memberCount={members.length} />}
+                    {active === "profile" && isAdmin && <ProfileSection server={server} memberCount={members.length} boostCount={boostCount} />}
                     {active === "tag" && isAdmin && <TagSection server={server} />}
                     {active === "engagement" && <EngagementSection server={server} channels={channels} isAdmin={isAdmin} />}
                     {active === "boosts" && <BoostsSection serverId={server.id} boostCount={boostCount} boostedByMe={boostedByMe} />}
@@ -113,10 +114,10 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     {active === "stickers" && <ExpressionsSection serverId={server.id} kind="sticker" />}
                     {active === "soundboard" && <SoundboardSection />}
                     {active === "members" && (
-                        <MembersSection serverId={server.id} members={members} isAdmin={isAdmin} currentUserId={session?.user?.id} />
+                        <MembersSection serverId={server.id} members={members} customRoles={roles} isAdmin={isAdmin} currentUserId={session?.user?.id} />
                     )}
                     {active === "roles" && (
-                        <RolesSection serverId={server.id} members={members} isAdmin={isAdmin} currentUserId={session?.user?.id} />
+                        <RolesSection serverId={server.id} members={members} customRoles={roles} isAdmin={isAdmin} currentUserId={session?.user?.id} />
                     )}
                     {active === "invites" && <InvitesSection server={server} isAdmin={isAdmin} />}
                     {active === "access" && isAdmin && <AccessSection server={server} channels={channels} />}
@@ -164,22 +165,27 @@ function ActionButton({
 
 // ─── Profile ─────────────────────────────────────────────
 
-function ProfileSection({ server, memberCount }: { server: CommunityServer; memberCount: number }) {
+function ProfileSection({ server, memberCount, boostCount }: { server: CommunityServer; memberCount: number; boostCount: number }) {
     const utils = trpc.useUtils();
     const [name, setName] = useState(server.name);
     const [description, setDescription] = useState(server.description ?? "");
     const [bannerColor, setBannerColor] = useState(server.bannerColor ?? DEFAULT_BANNER);
+    // Banner image (boost perk): existing URL, a fresh data: URL, or null
+    const [bannerImage, setBannerImage] = useState<string | null>(server.bannerImageUrl ?? null);
     const [traits, setTraits] = useState<string[]>(parseTraits(server.traits));
     const [traitInput, setTraitInput] = useState("");
     const [privateProfile, setPrivateProfile] = useState(!!server.privateProfile);
     const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
     const [cropFile, setCropFile] = useState<File | null>(null);
     const cropStateRef = useRef<{ src: string; area: Area } | null>(null);
 
     const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation();
     const updateServer = trpc.community.updateServer.useMutation();
+
+    const bannerUnlocked = boostLevelFor(boostCount).bannerImage;
 
     const previewSrc = iconDataUrl ?? server.imageUrl ?? null;
     const traitsStr = traits.join(",");
@@ -188,6 +194,7 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
         !!iconDataUrl ||
         description.trim() !== (server.description ?? "") ||
         bannerColor !== (server.bannerColor ?? DEFAULT_BANNER) ||
+        bannerImage !== (server.bannerImageUrl ?? null) ||
         traitsStr !== (server.traits ?? "") ||
         privateProfile !== !!server.privateProfile;
 
@@ -224,6 +231,22 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                     imageUrl = supabase.storage.from("avatars").getPublicUrl(up.path).data.publicUrl;
                 }
             }
+            // Fresh banner upload (data: URL) → banners bucket → public URL
+            let bannerImageUrl: string | null | undefined =
+                bannerImage === (server.bannerImageUrl ?? null) ? undefined : bannerImage;
+            if (bannerImage?.startsWith("data:")) {
+                const blob = await (await fetch(bannerImage)).blob();
+                const file = new File([blob], "server-banner.png", { type: blob.type || "image/png" });
+                const { token, path } = await getPresignedUrl.mutateAsync({
+                    bucket: "banners",
+                    filename: "server-banner.png",
+                    contentType: file.type,
+                });
+                const { data: up, error } = await supabase.storage.from("banners").uploadToSignedUrl(path, token, file);
+                if (error || !up) throw error ?? new Error("banner upload failed");
+                bannerImageUrl = supabase.storage.from("banners").getPublicUrl(up.path).data.publicUrl;
+            }
+
             await updateServer.mutateAsync({
                 serverId: server.id,
                 name: name.trim(),
@@ -232,10 +255,12 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                 traits: traitsStr || null,
                 privateProfile,
                 ...(imageUrl ? { imageUrl } : {}),
+                ...(bannerImageUrl !== undefined ? { bannerImageUrl } : {}),
             });
             utils.community.listServers.invalidate();
             utils.community.getServer.invalidate({ serverId: server.id });
             setIconDataUrl(null);
+            if (bannerImageUrl !== undefined) setBannerImage(bannerImageUrl);
             toast.success("Server updated");
         } catch {
             toast.error("Update failed");
@@ -311,16 +336,76 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                                     key={c.name}
                                     aria-label={`${c.name} banner`}
                                     title={c.name}
-                                    onClick={() => setBannerColor(c.value)}
+                                    onClick={() => { setBannerColor(c.value); setBannerImage(null); }}
                                     className={cn(
                                         "h-14 cursor-pointer rounded-2xl transition-all",
-                                        bannerColor === c.value && "ring-2 ring-white ring-offset-2 ring-offset-background",
+                                        !bannerImage && bannerColor === c.value && "ring-2 ring-white ring-offset-2 ring-offset-background",
                                     )}
                                     style={{ backgroundColor: c.value }}
                                 />
                             ))}
                         </div>
                         <p className="mt-1.5 px-1 text-[13px] font-medium text-zinc-600">Flat color behind your icon on the profile card.</p>
+
+                        {/* Banner image — boost level 1+ perk */}
+                        <div className="mt-3">
+                            {bannerUnlocked ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                        onClick={() => bannerInputRef.current?.click()}
+                                        className={cn(
+                                            "group relative h-14 w-full max-w-55 cursor-pointer overflow-hidden rounded-2xl transition-all",
+                                            bannerImage
+                                                ? "ring-2 ring-white ring-offset-2 ring-offset-background"
+                                                : "border border-dashed border-white/15 hover:border-white/30",
+                                        )}
+                                    >
+                                        {bannerImage ? (
+                                            <>
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src={bannerImage} alt="" className="size-full object-cover" />
+                                                <span className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                                    <HugeiconsIcon icon={ImageUploadIcon} className="size-4 text-white" strokeWidth={2} />
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <span className="flex size-full items-center justify-center gap-2 text-[13px] font-semibold text-zinc-500 transition-colors group-hover:text-zinc-300">
+                                                <HugeiconsIcon icon={ImageUploadIcon} className="size-4" strokeWidth={2} />
+                                                Upload a banner image
+                                            </span>
+                                        )}
+                                    </button>
+                                    {bannerImage && (
+                                        <button
+                                            onClick={() => setBannerImage(null)}
+                                            className="cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white"
+                                        >
+                                            Remove image
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="flex items-center gap-1.5 px-1 text-[13px] font-medium text-zinc-600">
+                                    <LockIcon className="size-3.5 shrink-0" />
+                                    Banner images unlock at boost level 1 — 2 boosts.
+                                </p>
+                            )}
+                            <input
+                                ref={bannerInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) {
+                                        const reader = new FileReader();
+                                        reader.onload = () => setBannerImage(reader.result as string);
+                                        reader.readAsDataURL(f);
+                                    }
+                                    e.target.value = "";
+                                }}
+                            />
+                        </div>
                     </div>
 
                     {/* Traits */}
@@ -408,6 +493,7 @@ function ProfileSection({ server, memberCount }: { server: CommunityServer; memb
                         imageUrl={previewSrc}
                         tag={server.tag}
                         bannerColor={bannerColor}
+                        bannerImageUrl={bannerImage}
                         description={description}
                         traits={traitsStr}
                         memberCount={memberCount}
@@ -625,26 +711,77 @@ function BoostsSection({
         onError: (err) => toast.error(err.message),
     });
 
+    const level = boostLevelFor(boostCount);
+    const next = nextBoostLevel(boostCount);
+    const progress = next
+        ? Math.min(1, (boostCount - level.threshold) / (next.threshold - level.threshold))
+        : 1;
+
     return (
         <div>
-            <SectionHint>Boosts are a signal of support from members.</SectionHint>
+            <SectionHint>Boosts unlock perks for everyone — more emoji and sticker slots, and a banner image.</SectionHint>
 
-            <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-3xl bg-white/[0.03] p-5">
-                <div className="flex items-center gap-3.5">
-                    <div className="grid size-12 shrink-0 place-items-center rounded-full bg-white/[0.06]">
-                        <HugeiconsIcon icon={Rocket01Icon} className="size-5 text-white" strokeWidth={2} />
+            <div className="mb-4 rounded-3xl bg-white/[0.03] p-5">
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+                    <div className="flex items-center gap-3.5">
+                        <div className="grid size-12 shrink-0 place-items-center rounded-full bg-white/[0.06]">
+                            <HugeiconsIcon icon={Rocket01Icon} className="size-5 text-white" strokeWidth={2} />
+                        </div>
+                        <div>
+                            <p className="text-[26px] font-bold leading-tight tabular-nums tracking-tight text-white">{boostCount}</p>
+                            <p className="text-[13px] font-medium text-zinc-500">boost{boostCount === 1 ? "" : "s"} · level {level.level}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-[26px] font-bold leading-tight tabular-nums tracking-tight text-white">{boostCount}</p>
-                        <p className="text-[13px] font-medium text-zinc-500">boost{boostCount === 1 ? "" : "s"} on this server</p>
-                    </div>
+                    {boostedByMe && (
+                        <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-bold text-white">
+                            <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.5} />
+                            You boost this server
+                        </span>
+                    )}
                 </div>
-                {boostedByMe && (
-                    <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-bold text-white">
-                        <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.5} />
-                        You boost this server
-                    </span>
-                )}
+
+                {/* Progress to the next level */}
+                <div className="mt-5">
+                    <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                        <div className="h-full rounded-full bg-white transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
+                    </div>
+                    <p className="mt-1.5 text-[13px] font-medium text-zinc-500">
+                        {next
+                            ? `${next.threshold - boostCount} more boost${next.threshold - boostCount === 1 ? "" : "s"} to level ${next.level}`
+                            : "Max level — every perk is unlocked"}
+                    </p>
+                </div>
+            </div>
+
+            {/* Perk ladder */}
+            <div className="mb-6 space-y-2">
+                {BOOST_LEVELS.map((l) => {
+                    const unlocked = level.level >= l.level;
+                    return (
+                        <div
+                            key={l.level}
+                            className={cn(
+                                "flex items-center gap-3 rounded-3xl px-5 py-4",
+                                unlocked ? "bg-white/[0.05]" : "bg-white/[0.02]",
+                            )}
+                        >
+                            <div className="min-w-0 flex-1">
+                                <p className={cn("text-[15px] font-bold", unlocked ? "text-white" : "text-zinc-500")}>
+                                    Level {l.level}
+                                    {l.threshold > 0 && <span className="ml-2 text-[12px] font-semibold text-zinc-600">{l.threshold} boosts</span>}
+                                </p>
+                                <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                                    {l.emojiSlots} emoji slots · {l.stickerSlots} sticker slots{l.bannerImage && l.level === 1 ? " · banner image" : ""}
+                                </p>
+                            </div>
+                            {unlocked ? (
+                                <HugeiconsIcon icon={Tick02Icon} className="size-4 shrink-0 text-lantern" strokeWidth={2.5} />
+                            ) : (
+                                <LockIcon className="size-4 shrink-0 text-zinc-600" />
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -676,31 +813,39 @@ type Member = {
     userImage: string | null;
     userUsername: string | null;
     createdAt: string | Date;
+    roleIds?: string[];
+    roleColor?: string | null;
 };
+
+type CustomRole = { id: string; name: string; color: string };
 
 function MemberRow({
     serverId,
     m,
+    customRoles = [],
     isAdmin,
     isSelf,
 }: {
     serverId: string;
     m: Member;
+    customRoles?: CustomRole[];
     isAdmin: boolean;
     isSelf: boolean;
 }) {
     const utils = trpc.useUtils();
     const invalidate = () => utils.community.getServer.invalidate({ serverId });
-    const updateRole = trpc.community.updateMemberRole.useMutation({ onSuccess: invalidate });
-    const kickMember = trpc.community.kickMember.useMutation({ onSuccess: invalidate });
+    const updateRole = trpc.community.updateMemberRole.useMutation({ onSuccess: invalidate, onError: (err) => toast.error(err.message) });
+    const kickMember = trpc.community.kickMember.useMutation({ onSuccess: invalidate, onError: (err) => toast.error(err.message) });
+    const toggleCustomRole = trpc.community.toggleMemberRole.useMutation({ onSuccess: invalidate, onError: (err) => toast.error(err.message) });
     const banMember = trpc.community.banMember.useMutation({
         onSuccess: () => {
             invalidate();
             utils.community.listBans.invalidate({ serverId });
             toast.success(`${m.userName ?? "Member"} banned`);
         },
+        onError: (err) => toast.error(err.message),
     });
-    const busy = updateRole.isPending || kickMember.isPending || banMember.isPending;
+    const busy = updateRole.isPending || kickMember.isPending || banMember.isPending || toggleCustomRole.isPending;
 
     return (
         <div className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
@@ -711,7 +856,7 @@ function MemberRow({
                 </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-bold text-white">
+                <p className="truncate text-[15px] font-bold text-white" style={m.roleColor ? { color: m.roleColor } : undefined}>
                     {m.userName}{isSelf && <span className="ml-1.5 text-[12px] font-semibold text-zinc-500">you</span>}
                 </p>
                 <p className="truncate text-[13px] font-medium text-zinc-500">
@@ -746,6 +891,21 @@ function MemberRow({
                             className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
                             label: <>Make {ROLE_LABEL[r]}</>,
                         })),
+                        ...customRoles.map((r) => {
+                            const has = m.roleIds?.includes(r.id);
+                            return {
+                                key: `custom-${r.id}`,
+                                onClick: () => toggleCustomRole.mutate({ serverId, memberId: m.id, roleId: r.id }),
+                                className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                                label: (
+                                    <span className="flex w-full items-center gap-2">
+                                        <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: r.color }} />
+                                        <span className="min-w-0 flex-1 truncate">{r.name}</span>
+                                        {has && <HugeiconsIcon icon={Tick02Icon} className="size-3.5 shrink-0 text-zinc-400" strokeWidth={2.5} />}
+                                    </span>
+                                ),
+                            };
+                        }),
                         {
                             key: "kick",
                             onClick: () => kickMember.mutate({ serverId, memberId: m.id }),
@@ -778,16 +938,19 @@ type MemberSort = (typeof MEMBER_SORTS)[number];
 function MembersSection({
     serverId,
     members,
+    customRoles,
     isAdmin,
     currentUserId,
 }: {
     serverId: string;
     members: Member[];
+    customRoles: CustomRole[];
     isAdmin: boolean;
     currentUserId?: string;
 }) {
     const [query, setQuery] = useState("");
     const [sort, setSort] = useState<MemberSort>("Newest");
+    const [pruneOpen, setPruneOpen] = useState(false);
 
     const q = query.trim().toLowerCase();
     const filtered = members
@@ -844,9 +1007,178 @@ function MembersSection({
 
             <div className="space-y-0.5">
                 {filtered.map((m) => (
-                    <MemberRow key={m.userId} serverId={serverId} m={m} isAdmin={isAdmin} isSelf={m.userId === currentUserId} />
+                    <MemberRow key={m.userId} serverId={serverId} m={m} customRoles={customRoles} isAdmin={isAdmin} isSelf={m.userId === currentUserId} />
                 ))}
             </div>
+
+            {isAdmin && (
+                <div className="mt-8 flex items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Prune inactive members</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Remove members who haven&apos;t posted in a while. They can rejoin any time.
+                        </p>
+                    </div>
+                    <ActionButton variant="soft" className="h-11 shrink-0 px-5 text-[14px]" onClick={() => setPruneOpen(true)}>
+                        Prune
+                    </ActionButton>
+                </div>
+            )}
+            {pruneOpen && <PruneDialog serverId={serverId} onClose={() => setPruneOpen(false)} />}
+        </div>
+    );
+}
+
+const PRUNE_WINDOWS = [30, 90, 180] as const;
+
+function PruneDialog({ serverId, onClose }: { serverId: string; onClose: () => void }) {
+    const utils = trpc.useUtils();
+    const [days, setDays] = useState<number>(30);
+    const preview = trpc.community.getPruneCount.useQuery({ serverId, days });
+    const prune = trpc.community.pruneMembers.useMutation({
+        onSuccess: (res) => {
+            utils.community.getServer.invalidate({ serverId });
+            toast.success(res.removed === 0 ? "Nobody to prune" : `Pruned ${res.removed} member${res.removed === 1 ? "" : "s"}`);
+            onClose();
+        },
+        onError: (err) => toast.error(err.message),
+    });
+    const n = preview.data?.count;
+
+    return (
+        <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+            <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+                <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Prune inactive members</DialogTitle>
+                <p className="text-center text-[14px] font-medium text-zinc-500">
+                    Removes members with no messages in the window. Mods, admins, and the owner are never pruned — and anyone removed can rejoin.
+                </p>
+
+                <div className="mt-2 flex justify-center gap-1.5">
+                    {PRUNE_WINDOWS.map((d) => (
+                        <button
+                            key={d}
+                            onClick={() => setDays(d)}
+                            className={cn(
+                                "h-10 cursor-pointer rounded-full px-4 text-[14px] font-bold transition-colors",
+                                days === d ? "bg-white text-black" : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                            )}
+                        >
+                            {d} days
+                        </button>
+                    ))}
+                </div>
+
+                <p className="mt-1 text-center text-[14px] font-semibold text-zinc-300">
+                    {preview.isLoading || n == null
+                        ? "Counting…"
+                        : n === 0
+                            ? "Nobody has been quiet that long"
+                            : `${n} member${n === 1 ? "" : "s"} would be removed`}
+                </p>
+
+                <div className="mt-2 flex gap-2">
+                    <ActionButton variant="soft" className="flex-1" onClick={onClose}>
+                        Cancel
+                    </ActionButton>
+                    <ActionButton
+                        className="flex-1 bg-pastelred text-black hover:bg-pastelred/90"
+                        onClick={() => prune.mutate({ serverId, days })}
+                        disabled={prune.isPending || !n}
+                    >
+                        {prune.isPending ? "Pruning…" : "Prune"}
+                    </ActionButton>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+// Flat hex palette for custom role colors (name tint in chat + member lists)
+const ROLE_COLORS = ["#FFCC00", "#00ED89", "#1DA1F2", "#FF746C", "#A78BFA", "#F9A8D4", "#FB923C", "#E4E4E7"] as const;
+
+function CustomRoleRow({
+    serverId,
+    role,
+    memberCount,
+}: {
+    serverId: string;
+    role: CustomRole;
+    memberCount: number;
+}) {
+    const utils = trpc.useUtils();
+    const invalidate = () => utils.community.getServer.invalidate({ serverId });
+    const [name, setName] = useState(role.name);
+    const updateRole = trpc.community.updateRole.useMutation({ onSuccess: invalidate, onError: (err) => toast.error(err.message) });
+    const deleteRole = trpc.community.deleteRole.useMutation({ onSuccess: invalidate, onError: (err) => toast.error(err.message) });
+
+    const commitName = () => {
+        const trimmed = name.trim();
+        if (!trimmed || trimmed === role.name) {
+            setName(role.name);
+            return;
+        }
+        updateRole.mutate({ serverId, roleId: role.id, name: trimmed });
+    };
+
+    return (
+        <div className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
+            <GooDropdown
+                side="bottom"
+                align="start"
+                width={168}
+                gap={6}
+                fill="#101011"
+                buttonRadius={16}
+                panelRadius={16}
+                triggerAriaLabel={`Change ${role.name} color`}
+                triggerClassName="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full bg-white/5 transition-colors hover:bg-white/10"
+                trigger={<span className="size-4 rounded-full" style={{ backgroundColor: role.color }} />}
+                items={[{
+                    key: "palette",
+                    className: "hover:bg-transparent cursor-default",
+                    onClick: () => {},
+                    label: (
+                        <span className="grid w-full grid-cols-4 gap-1.5 py-0.5">
+                            {ROLE_COLORS.map((c) => (
+                                <button
+                                    key={c}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        updateRole.mutate({ serverId, roleId: role.id, color: c });
+                                    }}
+                                    aria-label={`Use ${c}`}
+                                    className={cn(
+                                        "size-7 cursor-pointer rounded-full transition-transform hover:scale-110",
+                                        role.color.toLowerCase() === c.toLowerCase() && "ring-2 ring-white ring-offset-2 ring-offset-[#101011]",
+                                    )}
+                                    style={{ backgroundColor: c }}
+                                />
+                            ))}
+                        </span>
+                    ),
+                }]}
+            />
+            <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={commitName}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                maxLength={32}
+                aria-label="Role name"
+                className="min-w-0 flex-1 bg-transparent text-[15px] font-bold outline-none"
+                style={{ color: role.color }}
+            />
+            <span className="shrink-0 text-[12px] font-bold tabular-nums text-zinc-600">
+                {memberCount} {memberCount === 1 ? "member" : "members"}
+            </span>
+            <button
+                onClick={() => deleteRole.mutate({ serverId, roleId: role.id })}
+                disabled={deleteRole.isPending}
+                aria-label={`Delete ${role.name}`}
+                className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-full text-zinc-600 transition-colors hover:bg-pastelred/10 hover:text-pastelred disabled:opacity-50"
+            >
+                <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" strokeWidth={2.5} />
+            </button>
         </div>
     );
 }
@@ -854,11 +1186,13 @@ function MembersSection({
 function RolesSection({
     serverId,
     members,
+    customRoles,
     isAdmin,
     currentUserId,
 }: {
     serverId: string;
     members: Member[];
+    customRoles: CustomRole[];
     isAdmin: boolean;
     currentUserId?: string;
 }) {
@@ -868,9 +1202,83 @@ function RolesSection({
         GUEST: "Chat and join voice",
     };
 
+    const utils = trpc.useUtils();
+    const [newName, setNewName] = useState("");
+    const [newColor, setNewColor] = useState<string>(ROLE_COLORS[0]);
+    const createRole = trpc.community.createRole.useMutation({
+        onSuccess: () => {
+            utils.community.getServer.invalidate({ serverId });
+            setNewName("");
+        },
+        onError: (err) => toast.error(err.message),
+    });
+
+    const countFor = (roleId: string) => members.filter((m) => m.roleIds?.includes(roleId)).length;
+
     return (
         <div>
-            <SectionHint>Three roles, clear powers. Change a member&apos;s role from their row.</SectionHint>
+            <SectionHint>
+                Three functional roles carry the permissions. Custom roles add identity on top — a name and a color that tints members in chat.
+            </SectionHint>
+
+            {isAdmin && (
+                <div className="mb-7">
+                    <div className="mb-1 flex items-baseline gap-2 px-1">
+                        <h2 className="text-[15px] font-semibold text-zinc-300">Custom roles</h2>
+                        <span className="text-[12px] font-bold tabular-nums text-zinc-600">{customRoles.length}</span>
+                    </div>
+                    <p className="mb-2 px-1 text-[13px] font-medium text-zinc-600">
+                        Hand them out from any member&apos;s row. Up to 20.
+                    </p>
+
+                    {customRoles.length > 0 && (
+                        <div className="mb-3 space-y-0.5">
+                            {customRoles.map((r) => (
+                                <CustomRoleRow key={r.id} serverId={serverId} role={r} memberCount={countFor(r.id)} />
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-1">
+                            {ROLE_COLORS.slice(0, 4).map((c) => (
+                                <button
+                                    key={c}
+                                    onClick={() => setNewColor(c)}
+                                    aria-label={`New role color ${c}`}
+                                    className={cn(
+                                        "size-7 cursor-pointer rounded-full transition-all",
+                                        newColor === c && "ring-2 ring-white ring-offset-2 ring-offset-background",
+                                    )}
+                                    style={{ backgroundColor: c }}
+                                />
+                            ))}
+                        </div>
+                        <Input
+                            radius={14}
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && newName.trim()) {
+                                    createRole.mutate({ serverId, name: newName.trim(), color: newColor });
+                                }
+                            }}
+                            placeholder="OG, artist, degen…"
+                            maxLength={32}
+                            className="h-12 flex-1 text-[14px] font-semibold"
+                        />
+                        <ActionButton
+                            variant="soft"
+                            className="h-12 shrink-0 px-5"
+                            onClick={() => createRole.mutate({ serverId, name: newName.trim(), color: newColor })}
+                            disabled={!newName.trim() || createRole.isPending || customRoles.length >= 20}
+                        >
+                            Add
+                        </ActionButton>
+                    </div>
+                </div>
+            )}
+
             {ROLES.map((role) => {
                 const group = members.filter((m) => m.role === role);
                 return (
@@ -887,7 +1295,7 @@ function RolesSection({
                         ) : (
                             <div className="space-y-0.5">
                                 {group.map((m) => (
-                                    <MemberRow key={m.userId} serverId={serverId} m={m} isAdmin={isAdmin} isSelf={m.userId === currentUserId} />
+                                    <MemberRow key={m.userId} serverId={serverId} m={m} customRoles={customRoles} isAdmin={isAdmin} isSelf={m.userId === currentUserId} />
                                 ))}
                             </div>
                         )}
@@ -1433,11 +1841,30 @@ function AccessSection({
         onError: () => toast.error("Update failed"),
     });
 
+    const updateServer = trpc.community.updateServer.useMutation({
+        onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
+        onError: (err) => toast.error(err.message),
+    });
+
     const readOnlyCount = channels.filter((c) => c.readOnly).length;
 
     return (
         <div>
             <SectionHint>Who can get in, and what they can touch once they&apos;re here.</SectionHint>
+
+            <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-bold text-white">Discoverable</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                        List this server on the Communities page so anyone can find and join it — no invite needed. Banned users still can&apos;t get in.
+                    </p>
+                </div>
+                <Switch
+                    checked={!!server.discoverable}
+                    onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, discoverable: v })}
+                    disabled={updateServer.isPending}
+                />
+            </label>
 
             <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
                 <div className="min-w-0 flex-1">
@@ -1497,10 +1924,26 @@ function AppsSection() {
 
 // ─── Safety setup ────────────────────────────────────────
 
+const VERIFICATION_LEVELS: { value: "none" | "low" | "medium" | "high"; label: string; hint: string }[] = [
+    { value: "none", label: "None", hint: "Everyone can post right away" },
+    { value: "low", label: "Low", hint: "Accounts must be 10 minutes old" },
+    { value: "medium", label: "Medium", hint: "Accounts must be a day old" },
+    { value: "high", label: "High", hint: "Day-old account, in the server 10 minutes" },
+];
+
 function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: boolean }) {
     const [, setSection] = useSettingsSection();
+    const { data: session } = useAuthSession();
+    const utils = trpc.useUtils();
     const { data: bans = [] } = trpc.community.listBans.useQuery({ serverId: server.id });
     const automodCount = (server.automodKeywords ?? "").split(",").map((w) => w.trim()).filter(Boolean).length;
+    const isOwner = session?.user?.id === server.ownerId;
+
+    const updateServer = trpc.community.updateServer.useMutation({
+        onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
+        onError: (err) => toast.error(err.message),
+    });
+    const verification = server.verificationLevel ?? "none";
 
     const rows: { label: string; status: string; target: SettingsSection; show: boolean }[] = [
         {
@@ -1531,7 +1974,69 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
 
     return (
         <div>
-            <SectionHint>Your safety tools at a glance.</SectionHint>
+            <SectionHint>Who can post, and what it takes to moderate.</SectionHint>
+
+            {isAdmin && (
+                <div className="mb-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+                    <p className="text-[15px] font-bold text-white">Verification level</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                        What a regular member needs before they can post. Mods and admins are exempt.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                        {VERIFICATION_LEVELS.map((l) => (
+                            <button
+                                key={l.value}
+                                onClick={() => updateServer.mutate({ serverId: server.id, verificationLevel: l.value })}
+                                disabled={updateServer.isPending}
+                                className={cn(
+                                    "h-10 cursor-pointer rounded-full px-4 text-[14px] font-bold transition-colors",
+                                    verification === l.value
+                                        ? "bg-white text-black"
+                                        : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                )}
+                            >
+                                {l.label}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="mt-2 text-[13px] font-medium text-zinc-600">
+                        {VERIFICATION_LEVELS.find((l) => l.value === verification)?.hint}
+                    </p>
+                </div>
+            )}
+
+            {isOwner && (
+                <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Require 2FA for moderation</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Kicks, bans, role changes, and channel deletes need two-factor auth on the moderator&apos;s account. You need 2FA yourself to turn this on.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.requireMod2fa}
+                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, requireMod2fa: v })}
+                        disabled={updateServer.isPending}
+                    />
+                </label>
+            )}
+
+            {isAdmin && (
+                <label className="mb-6 flex cursor-pointer items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4 transition-colors hover:bg-white/[0.05]">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">Blur media</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            Image attachments in chat stay blurred until a member clicks to reveal them.
+                        </p>
+                    </div>
+                    <Switch
+                        checked={!!server.blurMedia}
+                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, blurMedia: v })}
+                        disabled={updateServer.isPending}
+                    />
+                </label>
+            )}
+
             <div className="space-y-2">
                 {rows.filter((r) => r.show).map((r) => (
                     <button

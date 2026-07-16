@@ -76,6 +76,7 @@ export default function ChannelPage() {
                 currentMemberRole={serverData.currentMember.role}
                 typingUsers={typingUsers}
                 emojiMap={emojiMap}
+                blurMedia={!!serverData.server.blurMedia}
             />
 
             <CommunityChatInput

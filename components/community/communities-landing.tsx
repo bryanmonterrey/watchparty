@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Users2, Hash, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -11,6 +12,77 @@ import { CategoryList } from "@/components/home/video-feed/category-list";
 import { CreateIcon } from "../icons";
 
 const COMMUNITY_CATEGORIES = ["All", "Gaming", "Crypto", "Music", "Art", "Tech", "Trading", "IRL"];
+
+// Servers that opted into discovery — join without an invite.
+function DiscoverSection() {
+    const router = useRouter();
+    const utils = trpc.useUtils();
+    const { data: discoverable = [] } = trpc.community.listDiscoverable.useQuery();
+    const joinDiscoverable = trpc.community.joinDiscoverable.useMutation({
+        onSuccess: (res) => {
+            utils.community.listServers.invalidate();
+            utils.community.listDiscoverable.invalidate();
+            router.push(`/communities/${res.serverId}`);
+        },
+        onError: (err) => toast.error(err.message),
+    });
+
+    const rows = discoverable.filter((s) => !s.joined);
+    if (rows.length === 0) return null;
+
+    return (
+        <div className="mt-12">
+            <h2 className="text-2xl font-black tracking-tighter text-white">Discover</h2>
+            <p className="text-flexwhite/40 mt-1 mb-5 font-medium">
+                Open communities anyone can join
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {rows.map((s) => (
+                    <div key={s.id} className="overflow-hidden rounded-[28px] bg-white/[0.03]">
+                        {s.bannerImageUrl ? (
+                            <img src={s.bannerImageUrl} alt="" className="h-16 w-full object-cover" />
+                        ) : (
+                            <div className="h-16 w-full" style={{ backgroundColor: s.bannerColor || "#17181C" }} />
+                        )}
+                        <div className="px-5 pb-5">
+                            <div className="-mt-6 grid size-12 place-items-center overflow-hidden rounded-[16px] bg-black4 ring-4 ring-background">
+                                {s.imageUrl ? (
+                                    <img src={s.imageUrl} alt="" className="size-full object-cover" />
+                                ) : (
+                                    <span className="text-[16px] font-bold text-white/90">{s.name.charAt(0).toUpperCase()}</span>
+                                )}
+                            </div>
+                            <div className="mt-2.5 flex items-center gap-2">
+                                <p className="min-w-0 truncate text-[16px] font-bold tracking-tight text-white">{s.name}</p>
+                                {s.tag && (
+                                    <span className="shrink-0 rounded-[8px] bg-white/10 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-zinc-200">
+                                        {s.tag}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-0.5 flex items-center gap-1.5 text-[13px] font-medium text-zinc-500">
+                                <span className="inline-block size-2 rounded-full bg-lantern" />
+                                {s.memberCount} member{s.memberCount === 1 ? "" : "s"}
+                            </p>
+                            {s.description && (
+                                <p className="mt-2 line-clamp-2 text-[13px] font-medium leading-relaxed text-zinc-400">
+                                    {s.description}
+                                </p>
+                            )}
+                            <button
+                                onClick={() => joinDiscoverable.mutate({ serverId: s.id })}
+                                disabled={joinDiscoverable.isPending}
+                                className="mt-4 h-11 w-full cursor-pointer rounded-full bg-white/10 text-[14px] font-bold text-white transition-colors hover:bg-white/20 disabled:opacity-50"
+                            >
+                                Join server
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 export function CommunitiesLanding() {
     const { data: session } = useAuthSession();
@@ -182,6 +254,8 @@ export function CommunitiesLanding() {
                         </motion.button>
                     </div>
                 )}
+
+                {mounted && session?.user && !isLoading && <DiscoverSection />}
             </div>
         </div>
     );

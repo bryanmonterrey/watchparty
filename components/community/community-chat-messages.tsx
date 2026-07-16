@@ -23,6 +23,8 @@ type Props = {
     typingUsers?: TypingUser[];
     /** server custom emoji: name → image url (renders :name: inline) */
     emojiMap?: Record<string, string>;
+    /** server safety setting: image attachments blur until clicked */
+    blurMedia?: boolean;
 };
 
 function typingLabel(users: TypingUser[]) {
@@ -41,6 +43,7 @@ export function CommunityChatMessages({
     currentMemberRole,
     typingUsers = [],
     emojiMap,
+    blurMedia = false,
 }: Props) {
     const { data: session } = useAuthSession();
     const currentUsername = session?.user?.username ?? null;
@@ -163,6 +166,8 @@ export function CommunityChatMessages({
                                 currentUsername={currentUsername}
                                 emojiMap={emojiMap}
                                 system={message.system ?? false}
+                                roleColor={message.roleColor}
+                                blurMedia={blurMedia}
                             />
                             {/* AFTER the item in DOM = visually ABOVE it under
                                 flex-col-reverse — the divider heads the day. */}

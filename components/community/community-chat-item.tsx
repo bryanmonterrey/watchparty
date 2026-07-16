@@ -83,6 +83,10 @@ type Props = {
     emojiMap?: Record<string, string>;
     /** join/boost announcements render as a compact system row */
     system?: boolean;
+    /** custom-role name tint (hex) — wins over the tier color */
+    roleColor?: string | null;
+    /** server safety setting: image attachments blur until clicked */
+    blurMedia?: boolean;
 };
 
 const roleIconMap: Record<string, React.ReactNode> = {
@@ -117,9 +121,12 @@ export function CommunityChatItem({
     currentUsername = null,
     emojiMap,
     system = false,
+    roleColor = null,
+    blurMedia = false,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(content);
+    const [revealed, setRevealed] = useState(false);
 
     const utils = trpc.useUtils();
     const updateMessage = trpc.community.updateMessage.useMutation({
@@ -204,7 +211,10 @@ export function CommunityChatItem({
                     )}
                     <div className="flex items-center gap-x-2">
                         <div className="flex items-center">
-                            <span className={cn("font-semibold text-sm", roleColorMap[memberRole] ?? "text-zinc-300")}>
+                            <span
+                                className={cn("font-semibold text-sm", roleColorMap[memberRole] ?? "text-zinc-300")}
+                                style={roleColor ? { color: roleColor } : undefined}
+                            >
                                 {userName ?? "Unknown"}
                             </span>
                             <TooltipProvider delayDuration={50}>
@@ -223,7 +233,20 @@ export function CommunityChatItem({
                         </span>
                     </div>
 
-                    {fileUrl && (
+                    {fileUrl && (blurMedia && !revealed ? (
+                        // Blur media (server safety setting): hidden until clicked
+                        <button
+                            onClick={() => setRevealed(true)}
+                            className="relative aspect-square rounded-md mt-2 overflow-hidden border border-zinc-700 flex items-center bg-zinc-800 h-48 w-48 cursor-pointer"
+                        >
+                            <img src={fileUrl} alt="" aria-hidden className="object-cover w-full h-full blur-2xl scale-110" />
+                            <span className="absolute inset-0 grid place-items-center">
+                                <span className="rounded-full bg-black/60 px-3 py-1.5 text-[12px] font-bold text-white">
+                                    Click to reveal
+                                </span>
+                            </span>
+                        </button>
+                    ) : (
                         <a
                             href={fileUrl}
                             target="_blank"
@@ -232,7 +255,7 @@ export function CommunityChatItem({
                         >
                             <img src={fileUrl} alt={content} className="object-cover w-full h-full" />
                         </a>
-                    )}
+                    ))}
 
                     {!fileUrl && !isEditing && (
                         <>

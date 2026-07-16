@@ -13,6 +13,8 @@ type Props = {
         userName: string | null;
         userImage: string | null;
         userUsername: string | null;
+        /** custom-role name tint (hex) */
+        roleColor?: string | null;
     };
 };
 
@@ -38,7 +40,10 @@ export function CommunityMemberItem({ member }: Props) {
                     {(member.userName ?? "?").charAt(0).toUpperCase()}
                 </AvatarFallback>
             </Avatar>
-            <p className="font-medium text-sm text-zinc-400 group-hover:text-zinc-300 transition line-clamp-1">
+            <p
+                className="font-medium text-sm text-zinc-400 group-hover:text-zinc-300 transition line-clamp-1"
+                style={member.roleColor ? { color: member.roleColor } : undefined}
+            >
                 {member.userName ?? member.userUsername ?? "Unknown"}
             </p>
             {roleIconMap[member.role]}

@@ -33,6 +33,16 @@ export const communityServers = pgTable('community_servers', {
     // AutoMod rules for members (mods/admins exempt)
     automodBlockLinks: boolean('automod_block_links'),
     automodBlockMentions: boolean('automod_block_mentions'),
+    // Safety: posting requirements for guests (null = 'none')
+    verificationLevel: text('verification_level'),
+    // Destructive mod actions require the actor to have 2FA enabled
+    requireMod2fa: boolean('require_mod_2fa'),
+    // Image attachments render blurred until clicked
+    blurMedia: boolean('blur_media'),
+    // Listed on the communities landing; joinable without an invite
+    discoverable: boolean('discoverable'),
+    // Profile-card banner image (boost level 1+ perk; wins over bannerColor)
+    bannerImageUrl: text('banner_image_url'),
     inviteCode: text('invite_code').notNull().unique(),
     ownerId: text('owner_id')
         .references(() => user.id, { onDelete: 'cascade' })
@@ -310,3 +320,39 @@ export const communityExpressions = pgTable('community_expressions', {
 ]).enableRLS();
 
 export type CommunityExpression = typeof communityExpressions.$inferSelect;
+
+// ─── Custom roles (cosmetic identity over the 3 functional tiers) ──
+export const communityRoles = pgTable('community_roles', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: text('name').notNull(),
+    // Flat hex token; colors the member's name in chat + member lists
+    color: text('color').notNull(),
+    position: integer('position'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_community_roles_server').on(table.serverId),
+    pgPolicy('community_roles_select_member', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = server_id AND cm.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityRole = typeof communityRoles.$inferSelect;
+
+export const communityMemberRoles = pgTable('community_member_roles', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    memberId: uuid('member_id')
+        .references(() => communityMembers.id, { onDelete: 'cascade' })
+        .notNull(),
+    roleId: uuid('role_id')
+        .references(() => communityRoles.id, { onDelete: 'cascade' })
+        .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('uq_member_roles').on(table.memberId, table.roleId),
+    index('idx_member_roles_member').on(table.memberId),
+    index('idx_member_roles_role').on(table.roleId),
+    pgPolicy('community_member_roles_select', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members m JOIN community_members me ON me.server_id = m.server_id WHERE m.id = member_id AND me.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunityMemberRole = typeof communityMemberRoles.$inferSelect;

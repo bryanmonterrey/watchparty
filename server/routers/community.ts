@@ -13,11 +13,14 @@ import {
     communityBans,
     communityAuditLog,
     communityExpressions,
+    communityRoles,
+    communityMemberRoles,
 } from "@/db/schema/community";
 import { user } from "@/db/schema";
 import { premiumSubscriptions } from "@/db/schema/content";
 import { TIERS, USDC_MINT, type TierKey } from "@/lib/premium/tiers";
 import { BOOST_PACKS, getBoostTreasuryOwner } from "@/lib/premium/boosts";
+import { boostLevelFor } from "@/lib/premium/boost-levels";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { eq, and, desc, asc, sql, lt, ne, count, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -57,6 +60,30 @@ function isPublicHttpUrl(u: URL): boolean {
 /** Fire-and-forget audit trail entry — management actions only, never chat. */
 function logAudit(serverId: string, actorUserId: string, action: string, detail?: string) {
     return db.insert(communityAuditLog).values({ serverId, actorUserId, action, detail }).catch(() => {});
+}
+
+/**
+ * When the server enforces mod 2FA, destructive actions (kick/ban/role
+ * changes/channel deletes) require the acting moderator to have 2FA enabled.
+ */
+async function require2faIfEnforced(serverId: string, userId: string) {
+    const [srv] = await db
+        .select({ requireMod2fa: communityServers.requireMod2fa })
+        .from(communityServers)
+        .where(eq(communityServers.id, serverId))
+        .limit(1);
+    if (!srv?.requireMod2fa) return;
+    const [u] = await db
+        .select({ twoFactorEnabled: user.twoFactorEnabled })
+        .from(user)
+        .where(eq(user.id, userId))
+        .limit(1);
+    if (!u?.twoFactorEnabled) {
+        throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This server requires two-factor authentication for moderator actions — enable 2FA in your account settings first",
+        });
+    }
 }
 
 /** Comma-separated automod keywords → normalized list. */
@@ -352,11 +379,39 @@ export const communityRouter = router({
                 .from(communityServerBoosts)
                 .where(eq(communityServerBoosts.serverId, input.serverId));
 
+            // Custom roles + assignments → colored names in chat/member lists.
+            const roles = await db
+                .select()
+                .from(communityRoles)
+                .where(eq(communityRoles.serverId, input.serverId))
+                .orderBy(sql`${communityRoles.position} ASC NULLS LAST`, asc(communityRoles.createdAt));
+            const assignments = roles.length
+                ? await db
+                    .select({ memberId: communityMemberRoles.memberId, roleId: communityMemberRoles.roleId })
+                    .from(communityMemberRoles)
+                    .where(inArray(communityMemberRoles.roleId, roles.map((r) => r.id)))
+                : [];
+            const rolesByMember = new Map<string, string[]>();
+            for (const a of assignments) {
+                rolesByMember.set(a.memberId, [...(rolesByMember.get(a.memberId) ?? []), a.roleId]);
+            }
+            // Name color = the member's highest role (first in position order)
+            const colorFor = (memberId: string) => {
+                const mine = rolesByMember.get(memberId);
+                if (!mine?.length) return null;
+                return roles.find((r) => mine.includes(r.id))?.color ?? null;
+            };
+
             return {
                 server: server[0],
                 channels: channelsWithUnread,
-                members,
+                members: members.map((m) => ({
+                    ...m,
+                    roleIds: rolesByMember.get(m.id) ?? [],
+                    roleColor: colorFor(m.id),
+                })),
                 currentMember: membership[0],
+                roles,
                 boostCount: boosts.length,
                 boostedByMe: boosts.some((b) => b.memberId === membership[0].id),
             };
@@ -419,10 +474,45 @@ export const communityRouter = router({
                 boostMessages: z.boolean().optional(),
                 automodBlockLinks: z.boolean().optional(),
                 automodBlockMentions: z.boolean().optional(),
+                verificationLevel: z.enum(["none", "low", "medium", "high"]).optional(),
+                requireMod2fa: z.boolean().optional(),
+                blurMedia: z.boolean().optional(),
+                discoverable: z.boolean().optional(),
+                bannerImageUrl: z.string().url().nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            // The 2FA requirement is owner-only, and turning it on requires
+            // the owner to have 2FA themselves (they're bound by it too).
+            if (input.requireMod2fa !== undefined) {
+                const [srv] = await db
+                    .select({ ownerId: communityServers.ownerId })
+                    .from(communityServers)
+                    .where(eq(communityServers.id, input.serverId))
+                    .limit(1);
+                if (srv?.ownerId !== ctx.user.id) {
+                    throw new TRPCError({ code: "FORBIDDEN", message: "Only the server owner can change the 2FA requirement" });
+                }
+                if (input.requireMod2fa) {
+                    const [me] = await db.select({ twoFactorEnabled: user.twoFactorEnabled }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+                    if (!me?.twoFactorEnabled) {
+                        throw new TRPCError({ code: "FORBIDDEN", message: "Enable 2FA on your own account before requiring it for moderators" });
+                    }
+                }
+            }
+
+            // Banner images are a boost perk (level 1+)
+            if (input.bannerImageUrl) {
+                const [{ n }] = await db
+                    .select({ n: count() })
+                    .from(communityServerBoosts)
+                    .where(eq(communityServerBoosts.serverId, input.serverId));
+                if (!boostLevelFor(Number(n)).bannerImage) {
+                    throw new TRPCError({ code: "FORBIDDEN", message: "Banner images unlock at boost level 1 (2 boosts)" });
+                }
+            }
 
             const [updated] = await db
                 .update(communityServers)
@@ -440,6 +530,11 @@ export const communityRouter = router({
                     ...(input.boostMessages !== undefined && { boostMessages: input.boostMessages }),
                     ...(input.automodBlockLinks !== undefined && { automodBlockLinks: input.automodBlockLinks }),
                     ...(input.automodBlockMentions !== undefined && { automodBlockMentions: input.automodBlockMentions }),
+                    ...(input.verificationLevel !== undefined && { verificationLevel: input.verificationLevel }),
+                    ...(input.requireMod2fa !== undefined && { requireMod2fa: input.requireMod2fa }),
+                    ...(input.blurMedia !== undefined && { blurMedia: input.blurMedia }),
+                    ...(input.discoverable !== undefined && { discoverable: input.discoverable }),
+                    ...(input.bannerImageUrl !== undefined && { bannerImageUrl: input.bannerImageUrl }),
                     updatedAt: new Date(),
                 })
                 .where(eq(communityServers.id, input.serverId))
@@ -507,6 +602,7 @@ export const communityRouter = router({
                 imageUrl: server.imageUrl,
                 tag: isPrivate ? null : server.tag,
                 bannerColor: isPrivate ? null : server.bannerColor,
+                bannerImageUrl: isPrivate ? null : server.bannerImageUrl,
                 description: isPrivate ? null : server.description,
                 traits: isPrivate ? null : server.traits,
                 memberCount: isPrivate ? null : Number(memberCount),
@@ -614,6 +710,7 @@ export const communityRouter = router({
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            await require2faIfEnforced(input.serverId, ctx.user.id);
 
             const [updated] = await db
                 .update(communityMembers)
@@ -638,6 +735,7 @@ export const communityRouter = router({
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            await require2faIfEnforced(input.serverId, ctx.user.id);
 
             // Prevent kicking yourself
             const target = await db
@@ -669,6 +767,7 @@ export const communityRouter = router({
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            await require2faIfEnforced(input.serverId, ctx.user.id);
 
             const [target] = await db
                 .select()
@@ -829,6 +928,232 @@ export const communityRouter = router({
             return { paused: input.paused };
         }),
 
+    // ─── Prune inactive members ──────────────────────────
+
+    /** How many members a prune would remove (admin). Preview before pulling the trigger. */
+    getPruneCount: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), days: z.number().int().min(7).max(180) }))
+        .query(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            const cutoff = new Date(Date.now() - input.days * 24 * 60 * 60 * 1000);
+
+            const [{ n }] = await db
+                .select({ n: count() })
+                .from(communityMembers)
+                .where(and(
+                    eq(communityMembers.serverId, input.serverId),
+                    eq(communityMembers.role, "GUEST"),
+                    lt(communityMembers.createdAt, cutoff),
+                    sql`NOT EXISTS (SELECT 1 FROM community_messages msg WHERE msg.member_id = ${communityMembers.id} AND msg.created_at > ${cutoff})`,
+                ));
+            return { count: Number(n) };
+        }),
+
+    /**
+     * Remove members with no messages in the window (admin). Only GUESTs who
+     * joined before the cutoff are eligible; kicked members can rejoin.
+     */
+    pruneMembers: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), days: z.number().int().min(7).max(180) }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            await require2faIfEnforced(input.serverId, ctx.user.id);
+            const cutoff = new Date(Date.now() - input.days * 24 * 60 * 60 * 1000);
+
+            const removed = await db
+                .delete(communityMembers)
+                .where(and(
+                    eq(communityMembers.serverId, input.serverId),
+                    eq(communityMembers.role, "GUEST"),
+                    lt(communityMembers.createdAt, cutoff),
+                    sql`NOT EXISTS (SELECT 1 FROM community_messages msg WHERE msg.member_id = ${communityMembers.id} AND msg.created_at > ${cutoff})`,
+                ))
+                .returning({ id: communityMembers.id });
+
+            await logAudit(input.serverId, ctx.user.id, "member.prune", `pruned ${removed.length} inactive member${removed.length === 1 ? "" : "s"} (${input.days} days)`);
+            return { removed: removed.length };
+        }),
+
+    // ─── Custom roles (colored names over the 3 tiers) ───
+
+    /** Create a custom role (admin) */
+    createRole: protectedProcedure
+        .input(z.object({
+            serverId: z.string().uuid(),
+            name: z.string().min(1).max(32),
+            color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color must be a hex value"),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            const [{ n }] = await db
+                .select({ n: count() })
+                .from(communityRoles)
+                .where(eq(communityRoles.serverId, input.serverId));
+            if (Number(n) >= 20) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Servers can have up to 20 custom roles" });
+            }
+
+            const [created] = await db
+                .insert(communityRoles)
+                .values({ serverId: input.serverId, name: input.name.trim(), color: input.color, position: Number(n) })
+                .returning();
+            await logAudit(input.serverId, ctx.user.id, "role.create", `created the ${created.name} role`);
+            return created;
+        }),
+
+    /** Rename/recolor a custom role (admin) */
+    updateRole: protectedProcedure
+        .input(z.object({
+            serverId: z.string().uuid(),
+            roleId: z.string().uuid(),
+            name: z.string().min(1).max(32).optional(),
+            color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            const [updated] = await db
+                .update(communityRoles)
+                .set({
+                    ...(input.name && { name: input.name.trim() }),
+                    ...(input.color && { color: input.color }),
+                })
+                .where(and(eq(communityRoles.id, input.roleId), eq(communityRoles.serverId, input.serverId)))
+                .returning();
+            if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Role not found" });
+            await logAudit(input.serverId, ctx.user.id, "role.update", `updated the ${updated.name} role`);
+            return updated;
+        }),
+
+    /** Reorder custom roles (admin) — roleIds in desired order; first = highest */
+    reorderRoles: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), roleIds: z.array(z.string().uuid()).min(1) }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+            await Promise.all(input.roleIds.map((id, i) =>
+                db.update(communityRoles)
+                    .set({ position: i })
+                    .where(and(eq(communityRoles.id, id), eq(communityRoles.serverId, input.serverId)))
+            ));
+            return { success: true };
+        }),
+
+    /** Delete a custom role (admin) — assignments cascade */
+    deleteRole: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), roleId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN");
+
+            const [removed] = await db
+                .delete(communityRoles)
+                .where(and(eq(communityRoles.id, input.roleId), eq(communityRoles.serverId, input.serverId)))
+                .returning();
+            if (removed) await logAudit(input.serverId, ctx.user.id, "role.delete", `deleted the ${removed.name} role`);
+            return { success: true };
+        }),
+
+    /** Give or take a custom role on a member (admin/mod) */
+    toggleMemberRole: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), memberId: z.string().uuid(), roleId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [role] = await db
+                .select()
+                .from(communityRoles)
+                .where(and(eq(communityRoles.id, input.roleId), eq(communityRoles.serverId, input.serverId)))
+                .limit(1);
+            if (!role) throw new TRPCError({ code: "NOT_FOUND", message: "Role not found" });
+            const [target] = await db
+                .select({ id: communityMembers.id, userId: communityMembers.userId })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.id, input.memberId), eq(communityMembers.serverId, input.serverId)))
+                .limit(1);
+            if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
+
+            const existing = await db
+                .select({ id: communityMemberRoles.id })
+                .from(communityMemberRoles)
+                .where(and(eq(communityMemberRoles.memberId, input.memberId), eq(communityMemberRoles.roleId, input.roleId)))
+                .limit(1);
+            if (existing.length) {
+                await db.delete(communityMemberRoles).where(eq(communityMemberRoles.id, existing[0].id));
+            } else {
+                await db.insert(communityMemberRoles).values({ memberId: input.memberId, roleId: input.roleId }).onConflictDoNothing();
+            }
+
+            const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, target.userId)).limit(1);
+            await logAudit(input.serverId, ctx.user.id, "role.assign", `${existing.length ? "removed" : "gave"} ${role.name} ${existing.length ? "from" : "to"} ${u?.name ?? "a member"}`);
+            return { assigned: !existing.length };
+        }),
+
+    // ─── Discovery (join without an invite) ──────────────
+
+    /** Servers that opted into discovery, biggest first */
+    listDiscoverable: protectedProcedure.query(async ({ ctx }) => {
+        const rows = await db
+            .select({
+                id: communityServers.id,
+                name: communityServers.name,
+                imageUrl: communityServers.imageUrl,
+                tag: communityServers.tag,
+                bannerColor: communityServers.bannerColor,
+                bannerImageUrl: communityServers.bannerImageUrl,
+                description: communityServers.description,
+                memberCount: sql<number>`(SELECT COUNT(*) FROM community_members cm WHERE cm.server_id = ${communityServers.id})`,
+                joined: sql<boolean>`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = ${communityServers.id} AND cm.user_id = ${ctx.user.id})`,
+            })
+            .from(communityServers)
+            .where(eq(communityServers.discoverable, true))
+            .orderBy(sql`(SELECT COUNT(*) FROM community_members cm WHERE cm.server_id = ${communityServers.id}) DESC`)
+            .limit(24);
+        return rows.map((r) => ({ ...r, memberCount: Number(r.memberCount), joined: !!r.joined }));
+    }),
+
+    /** Join a discoverable server directly (no invite code) */
+    joinDiscoverable: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            const [server] = await db
+                .select()
+                .from(communityServers)
+                .where(eq(communityServers.id, input.serverId))
+                .limit(1);
+            if (!server?.discoverable) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "This server isn't open to discovery" });
+            }
+
+            const existing = await db
+                .select({ id: communityMembers.id })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, server.id), eq(communityMembers.userId, ctx.user.id)))
+                .limit(1);
+            if (existing.length) return { serverId: server.id, alreadyMember: true };
+
+            const banned = await db
+                .select({ id: communityBans.id })
+                .from(communityBans)
+                .where(and(eq(communityBans.serverId, server.id), eq(communityBans.userId, ctx.user.id)))
+                .limit(1);
+            if (banned.length) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "You are banned from this server" });
+            }
+
+            const [newMember] = await db
+                .insert(communityMembers)
+                .values({ userId: ctx.user.id, serverId: server.id, role: "GUEST" })
+                .returning();
+
+            if (server.welcomeMessages !== false && newMember) {
+                const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+                const template = WELCOME_TEMPLATES[Math.floor(Math.random() * WELCOME_TEMPLATES.length)];
+                await sendSystemMessage(server.id, newMember.id, template.replace("{name}", u?.name ?? "Someone"));
+            }
+
+            return { serverId: server.id, alreadyMember: false };
+        }),
+
     // ─── Expressions (custom emoji + stickers) ───────────
 
     /** All expressions on a server (member) */
@@ -861,6 +1186,24 @@ export const communityRouter = router({
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            // Slot caps scale with the server's boost level
+            const [{ n: boostCount }] = await db
+                .select({ n: count() })
+                .from(communityServerBoosts)
+                .where(eq(communityServerBoosts.serverId, input.serverId));
+            const level = boostLevelFor(Number(boostCount));
+            const cap = input.kind === "emoji" ? level.emojiSlots : level.stickerSlots;
+            const [{ n: existing }] = await db
+                .select({ n: count() })
+                .from(communityExpressions)
+                .where(and(eq(communityExpressions.serverId, input.serverId), eq(communityExpressions.kind, input.kind)));
+            if (Number(existing) >= cap) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: `All ${cap} ${input.kind} slots are used — boost the server to unlock more`,
+                });
+            }
 
             const [created] = await db
                 .insert(communityExpressions)
@@ -988,6 +1331,7 @@ export const communityRouter = router({
         )
         .mutation(async ({ ctx, input }) => {
             await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+            await require2faIfEnforced(input.serverId, ctx.user.id);
 
             // Prevent deleting "general"
             const channel = await db
@@ -1446,8 +1790,31 @@ export const communityRouter = router({
                 }
             }
 
+            // Custom-role name colors for this page's authors (highest role wins)
+            const roleColorByMember = new Map<string, string>();
+            if (ids.length) {
+                const memberIds = [...new Set(msgs.map((m) => m.memberId))];
+                const colorRows = await db
+                    .select({
+                        memberId: communityMemberRoles.memberId,
+                        color: communityRoles.color,
+                        position: communityRoles.position,
+                    })
+                    .from(communityMemberRoles)
+                    .innerJoin(communityRoles, eq(communityMemberRoles.roleId, communityRoles.id))
+                    .where(inArray(communityMemberRoles.memberId, memberIds))
+                    .orderBy(sql`${communityRoles.position} ASC NULLS LAST`);
+                for (const r of colorRows) {
+                    if (!roleColorByMember.has(r.memberId)) roleColorByMember.set(r.memberId, r.color);
+                }
+            }
+
             return {
-                items: msgs.map((m) => ({ ...m, reactions: reactionsByMessage.get(m.id) ?? [] })),
+                items: msgs.map((m) => ({
+                    ...m,
+                    reactions: reactionsByMessage.get(m.id) ?? [],
+                    roleColor: roleColorByMember.get(m.memberId) ?? null,
+                })),
                 nextCursor,
             };
         }),
@@ -1499,10 +1866,32 @@ export const communityRouter = router({
                         automodKeywords: communityServers.automodKeywords,
                         automodBlockLinks: communityServers.automodBlockLinks,
                         automodBlockMentions: communityServers.automodBlockMentions,
+                        verificationLevel: communityServers.verificationLevel,
                     })
                     .from(communityServers)
                     .where(eq(communityServers.id, channel[0].serverId))
                     .limit(1);
+
+                // Verification level: posting requirements for regular members.
+                // low = account 10+ min old · medium = account 1+ day old ·
+                // high = medium AND a server member for 10+ minutes.
+                if (srv?.verificationLevel && srv.verificationLevel !== "none") {
+                    const TEN_MIN = 10 * 60 * 1000;
+                    const ONE_DAY = 24 * 60 * 60 * 1000;
+                    const [me] = await db.select({ createdAt: user.createdAt }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+                    const accountAge = Date.now() - (me?.createdAt?.getTime() ?? Date.now());
+                    const memberAge = Date.now() - member[0].createdAt.getTime();
+                    if (srv.verificationLevel === "low" && accountAge < TEN_MIN) {
+                        throw new TRPCError({ code: "FORBIDDEN", message: "Your account is too new to post here yet — try again in a few minutes" });
+                    }
+                    if (srv.verificationLevel === "medium" && accountAge < ONE_DAY) {
+                        throw new TRPCError({ code: "FORBIDDEN", message: "This server requires accounts to be at least a day old to post" });
+                    }
+                    if (srv.verificationLevel === "high" && (accountAge < ONE_DAY || memberAge < TEN_MIN)) {
+                        throw new TRPCError({ code: "FORBIDDEN", message: "This server requires a day-old account and 10 minutes of membership to post" });
+                    }
+                }
+
                 const blocked = parseKeywords(srv?.automodKeywords);
                 const lower = input.content.toLowerCase();
                 if (blocked.some((w) => lower.includes(w))) {
