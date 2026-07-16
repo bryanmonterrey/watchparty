@@ -1,6 +1,5 @@
 import { Metadata } from "next";
-import { Target02Icon } from "@hugeicons/core-free-icons";
-import { TradeComingSoon } from "@/components/trade/coming-soon";
+import { PredictionsView } from "@/components/predictions/predictions-view";
 
 export const metadata: Metadata = {
     title: "Predictions",
@@ -8,10 +7,8 @@ export const metadata: Metadata = {
 
 export default function PredictionsPage() {
     return (
-        <TradeComingSoon
-            icon={Target02Icon}
-            title="Predictions"
-            description="Markets on outcomes — creators, streams, and the wider world. Coming soon."
-        />
+        <div className="h-full">
+            <PredictionsView />
+        </div>
     );
 }

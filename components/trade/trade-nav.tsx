@@ -51,7 +51,7 @@ const SECTIONS: {
     {
         href: "/trade/predictions",
         label: "Predictions",
-        description: "Markets on outcomes — coming soon",
+        description: "Back outcomes in USDC",
         icon: Target02Icon,
     },
 ];

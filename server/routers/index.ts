@@ -30,6 +30,7 @@ import { spacesRouter } from "./spaces";
 import { tradeRouter } from "./trade";
 import { calloutRouter } from "./callout";
 import { questRouter } from "./quest";
+import { predictionsRouter } from "./predictions";
 
 /**
  * Root application router
@@ -65,6 +66,7 @@ export const appRouter = router({
     trade: tradeRouter,
     callout: calloutRouter,
     quest: questRouter,
+    predictions: predictionsRouter,
 });
 
 /**
