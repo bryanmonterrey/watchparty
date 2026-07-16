@@ -17,6 +17,8 @@ import {
     VideoOffIcon,
     ComputerIcon,
     CallEnd01Icon,
+    AudioWave01Icon,
+    MusicNote01Icon,
 } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { trpc } from "@/lib/trpc/client";
@@ -196,6 +198,51 @@ function ConnectedRoom({
         return () => clearInterval(t);
     }, [inactiveTimeoutMinutes, leave]);
 
+    // ── Soundboard ────────────────────────────────────────
+    // Plays are broadcast over the meeting's data channel; every client plays
+    // the clip locally from its OWN sound list (payload carries only the sound
+    // id, so a hand-rolled broadcast can't make peers fetch arbitrary URLs).
+    const [soundboardOpen, setSoundboardOpen] = useState(false);
+    const [nowPlaying, setNowPlaying] = useState<{ by: string; label: string } | null>(null);
+    const { data: sounds = [] } = trpc.community.listSounds.useQuery({ serverId });
+    const soundsRef = useRef(sounds);
+    soundsRef.current = sounds;
+
+    const playClip = useCallback((url: string) => {
+        const el = new Audio(url);
+        el.volume = 0.6;
+        el.play().catch(() => {});
+    }, []);
+
+    const fireSound = (sound: { id: string; name: string; emoji: string | null; audioUrl: string }) => {
+        playClip(sound.audioUrl);
+        setNowPlaying({ by: "you", label: sound.emoji ?? sound.name });
+        meeting.participants
+            .broadcastMessage("soundboard", { soundId: sound.id, peerId: meeting.self.id, senderName: userName })
+            .catch(() => {});
+    };
+
+    useEffect(() => {
+        const onBroadcast = ({ type, payload }: { type: string; payload: Record<string, unknown> }) => {
+            if (type !== "soundboard") return;
+            if (payload.peerId === meeting.self.id) return; // we already played it on click
+            const sound = soundsRef.current.find((s) => s.id === payload.soundId);
+            if (!sound) return;
+            playClip(sound.audioUrl);
+            setNowPlaying({ by: String(payload.senderName ?? "someone"), label: sound.emoji ?? sound.name });
+        };
+        meeting.participants.on("broadcastedMessage", onBroadcast);
+        return () => {
+            meeting.participants.off("broadcastedMessage", onBroadcast);
+        };
+    }, [meeting, playClip]);
+
+    useEffect(() => {
+        if (!nowPlaying) return;
+        const t = setTimeout(() => setNowPlaying(null), 3000);
+        return () => clearTimeout(t);
+    }, [nowPlaying]);
+
     const toggleMic = () => (micEnabled ? meeting.self.disableAudio() : meeting.self.enableAudio()).catch(() => {});
     const toggleVideo = () => (videoEnabled ? meeting.self.disableVideo() : meeting.self.enableVideo()).catch(() => {});
     const toggleScreenShare = () =>
@@ -218,6 +265,12 @@ function ConnectedRoom({
                 <span className="rounded-full bg-lantern/15 px-2 py-0.5 text-[11px] font-bold text-lantern">
                     {tiles.length} in voice
                 </span>
+                {nowPlaying && (
+                    <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-bold text-zinc-300">
+                        <HugeiconsIcon icon={AudioWave01Icon} className="size-3.5 text-lantern" strokeWidth={2.5} />
+                        {nowPlaying.by} played {nowPlaying.label}
+                    </span>
+                )}
             </div>
 
             {/* Remote audio */}
@@ -245,8 +298,43 @@ function ConnectedRoom({
                 </div>
             </div>
 
+            {/* Soundboard panel — sits above the control bar */}
+            {soundboardOpen && (
+                <div className="mx-auto mb-2 w-full max-w-md shrink-0 rounded-3xl bg-white/[0.04] p-3">
+                    {sounds.length === 0 ? (
+                        <p className="py-4 text-center text-[13px] font-medium text-zinc-500">
+                            No sounds yet — add some in Server Settings → Soundboard
+                        </p>
+                    ) : (
+                        <div className="grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto">
+                            {sounds.map((s) => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => fireSound(s)}
+                                    title={s.name}
+                                    className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl bg-white/[0.04] px-1 py-2.5 transition-colors hover:bg-white/[0.09]"
+                                >
+                                    {s.emoji ? (
+                                        <span className="text-[20px] leading-none">{s.emoji}</span>
+                                    ) : (
+                                        <HugeiconsIcon icon={AudioWave01Icon} className="size-5 text-zinc-300" strokeWidth={2} />
+                                    )}
+                                    <span className="w-full truncate text-[11px] font-bold text-zinc-400">{s.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Control bar — clustered center-left, away from the app header */}
             <div className="flex shrink-0 items-center justify-center gap-2 pb-5 pt-1">
+                <ControlButton
+                    active={soundboardOpen}
+                    onClick={() => setSoundboardOpen((v) => !v)}
+                    label={soundboardOpen ? "Close soundboard" : "Soundboard"}
+                    icon={MusicNote01Icon}
+                />
                 <ControlButton
                     active={micEnabled}
                     onClick={toggleMic}

@@ -354,6 +354,25 @@ export const communityExpressions = pgTable('community_expressions', {
 
 export type CommunityExpression = typeof communityExpressions.$inferSelect;
 
+// ─── Soundboard (short clips played into voice channels) ──
+export const communitySounds = pgTable('community_sounds', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: text('name').notNull(),
+    emoji: text('emoji'),
+    audioUrl: text('audio_url').notNull(),
+    createdBy: text('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('uq_sounds_server_name').on(table.serverId, table.name),
+    index('idx_community_sounds_server').on(table.serverId),
+    pgPolicy('community_sounds_select_member', { for: 'select', to: 'authenticated', using: sql`EXISTS (SELECT 1 FROM community_members cm WHERE cm.server_id = server_id AND cm.user_id = (SELECT auth.uid()::text))` }),
+]).enableRLS();
+
+export type CommunitySound = typeof communitySounds.$inferSelect;
+
 // ─── Custom roles (cosmetic identity over the 3 functional tiers) ──
 export const communityRoles = pgTable('community_roles', {
     id: uuid('id').primaryKey().defaultRandom(),

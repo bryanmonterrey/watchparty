@@ -9,15 +9,17 @@ export type BoostLevel = {
     emojiSlots: number;
     /** sticker slots (expressions kind='sticker') */
     stickerSlots: number;
+    /** soundboard sound slots */
+    soundSlots: number;
     /** profile-card banner image upload */
     bannerImage: boolean;
 };
 
 export const BOOST_LEVELS: BoostLevel[] = [
-    { level: 0, threshold: 0, emojiSlots: 10, stickerSlots: 5, bannerImage: false },
-    { level: 1, threshold: 2, emojiSlots: 25, stickerSlots: 15, bannerImage: true },
-    { level: 2, threshold: 7, emojiSlots: 50, stickerSlots: 30, bannerImage: true },
-    { level: 3, threshold: 14, emojiSlots: 100, stickerSlots: 60, bannerImage: true },
+    { level: 0, threshold: 0, emojiSlots: 10, stickerSlots: 5, soundSlots: 8, bannerImage: false },
+    { level: 1, threshold: 2, emojiSlots: 25, stickerSlots: 15, soundSlots: 24, bannerImage: true },
+    { level: 2, threshold: 7, emojiSlots: 50, stickerSlots: 30, soundSlots: 36, bannerImage: true },
+    { level: 3, threshold: 14, emojiSlots: 100, stickerSlots: 60, soundSlots: 48, bannerImage: true },
 ];
 
 export function boostLevelFor(boostCount: number): BoostLevel {

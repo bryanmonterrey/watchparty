@@ -22,7 +22,7 @@ export const uploadRouter = router({
 
     getPresignedUrl: protectedProcedure
         .input(z.object({
-            bucket: z.enum(["videos", "posts", "attachments", "thumbnails", "avatars", "banners", "stories", "emotes", "vault"]),
+            bucket: z.enum(["videos", "posts", "attachments", "thumbnails", "avatars", "banners", "stories", "emotes", "sounds", "vault"]),
             filename: z.string().min(1),
             contentType: z.string().optional(),
         }))

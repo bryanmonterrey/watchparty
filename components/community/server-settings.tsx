@@ -8,9 +8,12 @@ import type { Area } from "react-easy-crop";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     ArrowDown01Icon,
+    AudioWave01Icon,
     Cancel01Icon,
     Copy01Icon,
+    FileAudioIcon,
     ImageUploadIcon,
+    PlayIcon,
     RefreshIcon,
     Rocket01Icon,
     Tick02Icon,
@@ -144,7 +147,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     {active === "boosts" && <BoostsSection server={server} boostCount={boostCount} boostedByMe={boostedByMe} isAdmin={isAdmin} />}
                     {active === "emoji" && <ExpressionsSection serverId={server.id} kind="emoji" boostCount={boostCount} />}
                     {active === "stickers" && <ExpressionsSection serverId={server.id} kind="sticker" boostCount={boostCount} />}
-                    {active === "soundboard" && <SoundboardSection />}
+                    {active === "soundboard" && <SoundboardSection serverId={server.id} boostCount={boostCount} />}
                     {active === "members" && (
                         <MembersSection serverId={server.id} members={members} customRoles={roles} isAdmin={isAdmin} currentUserId={session?.user?.id} />
                     )}
@@ -2368,15 +2371,220 @@ function ExpressionsSection({ serverId, kind, boostCount }: { serverId: string; 
 
 // ─── Soundboard ──────────────────────────────────────────
 
-function SoundboardSection() {
+const SOUND_MAX_SECONDS = 10;
+const SOUND_MAX_BYTES = 2 * 1024 * 1024;
+
+function SoundboardSection({ serverId, boostCount }: { serverId: string; boostCount: number }) {
+    const utils = trpc.useUtils();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+    const [name, setName] = useState("");
+    const [emoji, setEmoji] = useState("");
+    const [uploading, setUploading] = useState(false);
+    const previewRef = useRef<HTMLAudioElement | null>(null);
+
+    const { data: sounds = [], isLoading } = trpc.community.listSounds.useQuery({ serverId });
+
+    const level = boostLevelFor(boostCount);
+    const next = nextBoostLevel(boostCount);
+    const cap = level.soundSlots;
+
+    const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation();
+    const addSound = trpc.community.addSound.useMutation();
+    const deleteSound = trpc.community.deleteSound.useMutation({
+        onSuccess: () => utils.community.listSounds.invalidate({ serverId }),
+    });
+
+    const play = (url: string) => {
+        previewRef.current?.pause();
+        const el = new Audio(url);
+        el.volume = 0.75;
+        previewRef.current = el;
+        el.play().catch(() => {});
+    };
+
+    const pickFile = (f: File) => {
+        if (f.size > SOUND_MAX_BYTES) {
+            toast.error("Sounds max out at 2MB");
+            return;
+        }
+        const url = URL.createObjectURL(f);
+        // Enforce the clip length before paying for the upload
+        const probe = new Audio(url);
+        probe.addEventListener("loadedmetadata", () => {
+            if (probe.duration > SOUND_MAX_SECONDS) {
+                toast.error(`Sounds max out at ${SOUND_MAX_SECONDS} seconds`);
+                URL.revokeObjectURL(url);
+                return;
+            }
+            setPendingFile(f);
+            setPendingUrl(url);
+            setName(f.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 32));
+        });
+        probe.addEventListener("error", () => {
+            toast.error("That file doesn't decode as audio");
+            URL.revokeObjectURL(url);
+        });
+    };
+
+    const clearPending = () => {
+        if (pendingUrl) URL.revokeObjectURL(pendingUrl);
+        setPendingFile(null);
+        setPendingUrl(null);
+        setName("");
+        setEmoji("");
+    };
+
+    const upload = async () => {
+        if (!pendingFile || !/^[a-z0-9_]{2,32}$/.test(name) || uploading) return;
+        setUploading(true);
+        try {
+            const ext = pendingFile.name.split(".").pop() || "mp3";
+            const { token, path } = await getPresignedUrl.mutateAsync({
+                bucket: "sounds",
+                filename: `${name}.${ext}`,
+                contentType: pendingFile.type || "audio/mpeg",
+            });
+            const { data: up, error } = await supabase.storage.from("sounds").uploadToSignedUrl(path, token, pendingFile);
+            if (error || !up) throw new Error("Upload failed");
+            const audioUrl = supabase.storage.from("sounds").getPublicUrl(up.path).data.publicUrl;
+            await addSound.mutateAsync({ serverId, name, emoji: emoji || undefined, audioUrl });
+            utils.community.listSounds.invalidate({ serverId });
+            clearPending();
+            toast.success(`${name} added to the soundboard`);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Upload failed");
+        } finally {
+            setUploading(false);
+        }
+    };
+
     return (
         <div>
-            <SectionHint>Short sounds members can play in voice channels.</SectionHint>
-            <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
-                <p className="text-[16px] font-bold text-zinc-300">Arrives with voice rooms</p>
-                <p className="mx-auto mt-1 max-w-xs text-[14px] font-medium leading-relaxed text-zinc-500">
-                    The soundboard needs live voice under it. It unlocks when realtime voice ships.
-                </p>
+            <SectionHint>
+                Short clips (up to {SOUND_MAX_SECONDS}s) anyone in a voice channel can fire from the soundboard — everyone in the room hears them.
+            </SectionHint>
+
+            {/* Slot usage — caps come from the boost level */}
+            <div className="mb-5 rounded-3xl bg-white/[0.03] px-5 py-4">
+                <div className="flex items-center justify-between">
+                    <p className="text-[15px] font-bold text-white">
+                        {sounds.length} of {cap} slots used
+                    </p>
+                    <span className="text-[12px] font-bold text-zinc-600">level {level.level}</span>
+                </div>
+                <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                        className="h-full rounded-full bg-white transition-all"
+                        style={{ width: `${Math.min(100, (sounds.length / cap) * 100)}%` }}
+                    />
+                </div>
+                {next && (
+                    <p className="mt-2 text-[13px] font-medium text-zinc-500">
+                        Level {next.level} unlocks {next.soundSlots} slots — {next.threshold - boostCount} more boost{next.threshold - boostCount === 1 ? "" : "s"}.
+                    </p>
+                )}
+            </div>
+
+            {/* Upload */}
+            {!pendingFile ? (
+                <ActionButton className="mb-7" onClick={() => fileInputRef.current?.click()}>
+                    <HugeiconsIcon icon={FileAudioIcon} className="size-4" strokeWidth={2} />
+                    Upload sound
+                </ActionButton>
+            ) : (
+                <div className="mb-7 flex flex-wrap items-center gap-3 rounded-3xl bg-white/[0.03] p-4">
+                    <button
+                        onClick={() => pendingUrl && play(pendingUrl)}
+                        aria-label="Preview sound"
+                        className="grid size-12 shrink-0 cursor-pointer place-items-center rounded-[14px] bg-black4 text-zinc-300 transition-colors hover:text-white"
+                    >
+                        <HugeiconsIcon icon={PlayIcon} className="size-5" strokeWidth={2} />
+                    </button>
+                    <Input
+                        radius={12}
+                        value={emoji}
+                        onChange={(e) => setEmoji(e.target.value.slice(0, 4))}
+                        placeholder="🙂"
+                        aria-label="Sound emoji (optional)"
+                        className="h-11 w-14 shrink-0 text-center text-[16px]"
+                    />
+                    <Input
+                        radius={12}
+                        value={name}
+                        onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                        placeholder="name"
+                        maxLength={32}
+                        autoFocus
+                        className="h-11 min-w-24 flex-1 text-[14px] font-bold"
+                    />
+                    <div className="flex shrink-0 gap-1.5">
+                        <ActionButton variant="soft" className="h-11 px-4 text-[14px]" onClick={clearPending}>
+                            Cancel
+                        </ActionButton>
+                        <ActionButton
+                            className="h-11 px-4 text-[14px]"
+                            onClick={upload}
+                            disabled={uploading || !/^[a-z0-9_]{2,32}$/.test(name)}
+                        >
+                            {uploading ? "Uploading…" : "Add"}
+                        </ActionButton>
+                    </div>
+                </div>
+            )}
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) pickFile(f);
+                    e.target.value = "";
+                }}
+            />
+
+            {isLoading && (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="aspect-square overflow-hidden rounded-2xl"><div className="size-full shimmer-skeleton" /></div>
+                    ))}
+                </div>
+            )}
+
+            {!isLoading && sounds.length === 0 && (
+                <div className="py-10 text-center">
+                    <p className="text-[15px] font-bold text-zinc-400">No sounds yet</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">Upload the first one — it shows up in every voice channel</p>
+                </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {sounds.map((s) => (
+                    <div key={s.id} className="group relative flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
+                        <button
+                            onClick={() => play(s.audioUrl)}
+                            aria-label={`Play ${s.name}`}
+                            className="grid size-full cursor-pointer place-items-center"
+                        >
+                            {s.emoji ? (
+                                <span className="text-[28px] leading-none">{s.emoji}</span>
+                            ) : (
+                                <HugeiconsIcon icon={AudioWave01Icon} className="size-7 text-zinc-300" strokeWidth={2} />
+                            )}
+                        </button>
+                        <p className="w-full truncate text-center text-[12px] font-bold text-zinc-500">{s.name}</p>
+                        <button
+                            onClick={() => deleteSound.mutate({ serverId, soundId: s.id })}
+                            disabled={deleteSound.isPending}
+                            aria-label={`Delete ${s.name}`}
+                            className="absolute -right-1.5 -top-1.5 grid size-6 cursor-pointer place-items-center rounded-full bg-black4 text-zinc-400 opacity-0 ring-1 ring-white/10 transition-all hover:text-pastelred group-hover:opacity-100"
+                        >
+                            <HugeiconsIcon icon={Cancel01Icon} className="size-3" strokeWidth={2.5} />
+                        </button>
+                    </div>
+                ))}
             </div>
         </div>
     );

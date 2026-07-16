@@ -13,6 +13,7 @@ import {
     communityBans,
     communityAuditLog,
     communityExpressions,
+    communitySounds,
     communityRoles,
     communityMemberRoles,
     communityInvites,
@@ -1471,6 +1472,89 @@ export const communityRouter = router({
                 .returning();
             if (removed) {
                 await logAudit(input.serverId, ctx.user.id, "expression.delete", `removed ${removed.kind} :${removed.name}:`);
+            }
+            return { success: true };
+        }),
+
+    // ─── Soundboard (short clips played into voice channels) ───
+
+    /** All soundboard sounds on a server (member) */
+    listSounds: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const [member] = await db
+                .select({ id: communityMembers.id })
+                .from(communityMembers)
+                .where(and(eq(communityMembers.serverId, input.serverId), eq(communityMembers.userId, ctx.user.id)))
+                .limit(1);
+            if (!member) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" });
+
+            return db
+                .select()
+                .from(communitySounds)
+                .where(eq(communitySounds.serverId, input.serverId))
+                .orderBy(asc(communitySounds.name));
+        }),
+
+    /** Add a soundboard sound (admin/mod) */
+    addSound: protectedProcedure
+        .input(
+            z.object({
+                serverId: z.string().uuid(),
+                name: z.string().min(2).max(32).regex(/^[a-z0-9_]+$/, "Lowercase letters, numbers, and underscores only"),
+                emoji: z.string().max(16).optional(),
+                audioUrl: z.string().url(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            // Slot caps scale with the server's boost level
+            const [{ n: boostCount }] = await db
+                .select({ n: count() })
+                .from(communityServerBoosts)
+                .where(eq(communityServerBoosts.serverId, input.serverId));
+            const cap = boostLevelFor(Number(boostCount)).soundSlots;
+            const [{ n: existing }] = await db
+                .select({ n: count() })
+                .from(communitySounds)
+                .where(eq(communitySounds.serverId, input.serverId));
+            if (Number(existing) >= cap) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: `All ${cap} sound slots are used — boost the server to unlock more`,
+                });
+            }
+
+            const [created] = await db
+                .insert(communitySounds)
+                .values({
+                    serverId: input.serverId,
+                    name: input.name,
+                    emoji: input.emoji ?? null,
+                    audioUrl: input.audioUrl,
+                    createdBy: ctx.user.id,
+                })
+                .onConflictDoNothing()
+                .returning();
+            if (!created) throw new TRPCError({ code: "CONFLICT", message: `A sound named ${input.name} already exists` });
+
+            await logAudit(input.serverId, ctx.user.id, "sound.add", `added sound ${input.name}`);
+            return created;
+        }),
+
+    /** Remove a soundboard sound (admin/mod) */
+    deleteSound: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), soundId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [removed] = await db
+                .delete(communitySounds)
+                .where(and(eq(communitySounds.id, input.soundId), eq(communitySounds.serverId, input.serverId)))
+                .returning();
+            if (removed) {
+                await logAudit(input.serverId, ctx.user.id, "sound.delete", `removed sound ${removed.name}`);
             }
             return { success: true };
         }),
