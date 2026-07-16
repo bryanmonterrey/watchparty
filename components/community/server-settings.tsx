@@ -1938,6 +1938,7 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
     const { data: bans = [] } = trpc.community.listBans.useQuery({ serverId: server.id });
     const automodCount = (server.automodKeywords ?? "").split(",").map((w) => w.trim()).filter(Boolean).length;
     const isOwner = session?.user?.id === server.ownerId;
+    const viewerHas2fa = (session?.user as { twoFactorEnabled?: boolean } | undefined)?.twoFactorEnabled ?? false;
 
     const updateServer = trpc.community.updateServer.useMutation({
         onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
@@ -2010,15 +2011,48 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
                     <div className="min-w-0 flex-1">
                         <p className="text-[15px] font-bold text-white">Require 2FA for moderation</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
-                            Kicks, bans, role changes, and channel deletes need two-factor auth on the moderator&apos;s account. You need 2FA yourself to turn this on.
+                            Kicks, bans, role changes, and channel deletes need two-factor auth on the moderator&apos;s account.
                         </p>
+                        {!viewerHas2fa && !server.requireMod2fa && (
+                            <Link
+                                href="/settings?tab=2fa"
+                                className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-zinc-400 transition-colors hover:text-white"
+                            >
+                                <LockIcon className="size-3.5 shrink-0" />
+                                Set up 2FA on your own account first — it applies to you too
+                            </Link>
+                        )}
                     </div>
                     <Switch
                         checked={!!server.requireMod2fa}
                         onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, requireMod2fa: v })}
-                        disabled={updateServer.isPending}
+                        disabled={updateServer.isPending || (!viewerHas2fa && !server.requireMod2fa)}
                     />
                 </label>
+            )}
+
+            {/* Mods see where they stand when the server enforces 2FA */}
+            {!isOwner && server.requireMod2fa && (
+                <div className="mb-3 flex items-center gap-3 rounded-3xl bg-white/[0.03] px-5 py-4">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-white">This server requires 2FA for moderation</p>
+                        <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
+                            {viewerHas2fa
+                                ? "You're covered — your account has two-factor auth."
+                                : "Kicks, bans, role changes, and channel deletes are locked until you enable two-factor auth."}
+                        </p>
+                        {!viewerHas2fa && (
+                            <Link
+                                href="/settings?tab=2fa"
+                                className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-zinc-400 transition-colors hover:text-white"
+                            >
+                                <LockIcon className="size-3.5 shrink-0" />
+                                Set up 2FA in account settings
+                            </Link>
+                        )}
+                    </div>
+                    {viewerHas2fa && <HugeiconsIcon icon={Tick02Icon} className="size-4 shrink-0 text-lantern" strokeWidth={2.5} />}
+                </div>
             )}
 
             {isAdmin && (
