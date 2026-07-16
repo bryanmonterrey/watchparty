@@ -30,7 +30,7 @@ import { trpc } from "@/lib/trpc/client";
 import { supabase } from "@/lib/supabase/client";
 import { BOOST_LEVELS, boostLevelFor, nextBoostLevel } from "@/lib/premium/boost-levels";
 import { cn } from "@/lib/utils";
-import { ADMIN_ONLY_SECTIONS, sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
+import { ADMIN_ONLY_SECTIONS, SETTINGS_SECTIONS, sectionLabel, useSettingsSection, type SettingsSection } from "./server-settings-nav";
 import { ServerProfileCard, BANNER_COLORS, DEFAULT_BANNER, parseTraits } from "./server-profile-card";
 import { Switch } from "@/components/ui/switch";
 import { Squircle } from "@/components/ui/squircle";
@@ -47,7 +47,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
     const router = useRouter();
     const { data: session } = useAuthSession();
     const { data, isLoading } = trpc.community.getServer.useQuery({ serverId });
-    const [section] = useSettingsSection();
+    const [section, setSection] = useSettingsSection();
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -91,7 +91,39 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                 on the LEFT: the floating app header's wallet/create cluster
                 owns the top-right of every page, so no controls live there. */}
             <div className="h-17 shrink-0 flex items-center gap-3 bg-black/50 backdrop-blur-xl w-full px-4">
-                <span className="min-w-0 truncate font-semibold text-lg text-flexwhite leading-tight">
+                {/* Phone: the settings rail is hidden, so the title becomes
+                    the section switcher */}
+                <GooDropdown
+                    side="bottom"
+                    align="start"
+                    width={210}
+                    gap={6}
+                    fill="#101011"
+                    buttonRadius={16}
+                    panelRadius={16}
+                    triggerAriaLabel="Switch settings section"
+                    triggerClassName="flex min-w-0 cursor-pointer items-center gap-1.5 md:hidden"
+                    trigger={
+                        <>
+                            <span className="min-w-0 truncate font-semibold text-lg text-flexwhite leading-tight">
+                                {sectionLabel(active)}
+                            </span>
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0 text-zinc-500" strokeWidth={2} />
+                        </>
+                    }
+                    items={SETTINGS_SECTIONS
+                        .filter((s) => isAdmin || !ADMIN_ONLY_SECTIONS.includes(s))
+                        .map((s) => ({
+                            key: s,
+                            onClick: () => setSection(s),
+                            className: cn(
+                                "text-[14px] font-medium hover:bg-white/10",
+                                s === active ? "text-white font-semibold" : "text-zinc-300",
+                            ),
+                            label: <>{sectionLabel(s)}</>,
+                        }))}
+                />
+                <span className="min-w-0 truncate font-semibold text-lg text-flexwhite leading-tight max-md:hidden">
                     {sectionLabel(active)}
                 </span>
                 <button

@@ -356,7 +356,7 @@ export default function PremiumPage() {
     const signals = useHubSignals(!!session?.user);
 
     return (
-        <div className="flex w-full gap-12 px-(--header-px) pb-16 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+        <div className="flex w-full gap-12 px-(--header-px) pb-16 pt-6 max-md:pt-20 md:pt-[calc(var(--header-height)+16px)]">
             {/* Left rail — plan banner + grouped sections, always visible */}
             <aside className="w-80 shrink-0 max-lg:w-72 max-md:hidden">
                 <div className="sticky top-[calc(var(--header-height)+16px)] -m-2 max-h-[calc(100vh-var(--header-height)-24px)] overflow-y-auto p-2 pb-4 hidden-scrollbar">
@@ -386,6 +386,21 @@ export default function PremiumPage() {
                 transition={{ duration: 0.35, ease: EASE }}
                 className="min-w-0 max-w-4xl flex-1"
             >
+                {/* Phone: the rail is hidden — swipeable pill row switches sections */}
+                <div className="mb-5 flex gap-1.5 overflow-x-auto pb-1 hidden-scrollbar md:hidden">
+                    {[{ s: "plan" as const, label: "Plan" }, ...HUB_GROUPS.flatMap((g) => g.rows.map((r) => ({ s: r.s, label: r.label })))].map((row) => (
+                        <button
+                            key={row.s}
+                            onClick={() => setSection(row.s)}
+                            className={cn(
+                                "h-10 shrink-0 cursor-pointer rounded-full px-4 text-[13px] font-semibold transition-colors",
+                                section === row.s ? "bg-white text-black" : "bg-white/5 text-zinc-400",
+                            )}
+                        >
+                            {row.label}
+                        </button>
+                    ))}
+                </div>
                 <h1 className="mb-5 text-[20px] font-bold tracking-tight text-white">{SECTION_TITLES[section]}</h1>
                 {section === "plan" && <PremiumSettings />}
                 {section === "analytics" && <AnalyticsSection />}

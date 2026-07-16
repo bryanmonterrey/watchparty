@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Hash, ChevronRight } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PinIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, PinIcon } from "@hugeicons/core-free-icons";
 import { CommunityPinnedDialog } from "./community-pinned-dialog";
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
 
 export function CommunityChatHeader({
     channelName,
+    serverId,
     type,
     onlineCount,
     onOpenInfo,
@@ -29,6 +31,16 @@ export function CommunityChatHeader({
     // may live at this bar's right edge.
     return (
         <div className="group h-17 shrink-0 flex items-center bg-black/50 backdrop-blur-xl w-full px-2">
+            {/* Phone: chat is full-width, so back out to the channel list */}
+            {type === "channel" && (
+                <Link
+                    href={`/communities/${serverId}`}
+                    aria-label="Back to channels"
+                    className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-flexwhite/60 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+                >
+                    <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" strokeWidth={2} />
+                </Link>
+            )}
             <button
                 type="button"
                 onClick={onOpenInfo}

@@ -62,7 +62,7 @@ export default function SettingsPage() {
     if (movedTo) return null;
 
     return (
-        <div className="flex w-full gap-12 px-(--header-px) pb-10 pt-6 md:pt-[calc(var(--header-height)+16px)]">
+        <div className="flex w-full gap-12 px-(--header-px) pb-10 pt-6 max-md:pt-20 md:pt-[calc(var(--header-height)+16px)]">
             {/* Left rail — grouped section list */}
             <aside className="w-72 shrink-0 max-lg:w-60 max-md:hidden">
                 <div className="sticky top-[calc(var(--header-height)+16px)]">
@@ -72,6 +72,25 @@ export default function SettingsPage() {
 
             {/* Active panel */}
             <div className="min-w-0 max-w-4xl flex-1">
+                {/* Phone: the rail is hidden — swipeable pill row switches sections */}
+                <div className="mb-5 flex gap-1.5 overflow-x-auto pb-1 hidden-scrollbar md:hidden">
+                    {ALL_SETTINGS_ITEMS.filter((i) => i.id !== "admin" || isAdmin).map((item) => {
+                        const isActive = itemOwnsTab(item, tab);
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => setTab(item.id)}
+                                className={cn(
+                                    "h-10 shrink-0 cursor-pointer rounded-full px-4 text-[13px] font-semibold transition-colors",
+                                    isActive ? "bg-white text-black" : "bg-white/5 text-zinc-400",
+                                )}
+                            >
+                                {item.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
                 {/* Sub-section pills for consolidated nav items */}
                 {active?.subs && (
                     <div className="mb-5 flex flex-wrap gap-1.5">

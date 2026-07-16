@@ -6,6 +6,7 @@ import { CommunityHomeSidebar } from "@/components/community/community-home-side
 import { ServerSettingsSidebar } from "@/components/community/server-settings-sidebar";
 import { CommunityModalProvider } from "@/components/community/community-modal-provider";
 import { useParams, usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 // Communities, full-bleed (same treatment as /messages): rail, sidebar and
 // content run edge to edge and top to bottom — no rounded card, no outer
@@ -25,27 +26,53 @@ export default function CommunitiesLayout({
     // Server settings swaps the channel sidebar for the settings rail —
     // same columns, same anatomy, no overlay.
     const isSettings = !!serverId && pathname?.startsWith(`/communities/${serverId}/settings`);
+    const inChannel = !!serverId && pathname?.includes("/channels/");
+
+    // Phone shows ONE column at a time (Discord-mobile style):
+    // - /communities            → rail + home sidebar (main hidden)
+    // - /communities/[serverId] → rail + channel list (main hidden)
+    // - a channel or settings   → main only, full width (back affordances
+    //   live in the chat/settings headers)
+    // - other home paths (shop, quests, friends…) → rail + main
+    const isCommunitiesRoot = pathname === "/communities";
+    const phoneShowsSidebar = isCommunitiesRoot || (!isHome && !isSettings && !inChannel);
+    const phoneShowsMain = !phoneShowsSidebar;
+    const phoneShowsRail = !inChannel && !isSettings;
 
     return (
-        <div className="flex h-svh w-screen flex-col overflow-hidden">
+        <div className="flex h-svh w-screen flex-col overflow-hidden max-md:pt-16 max-md:pb-20">
             <CommunityModalProvider />
 
             <div className="flex min-h-0 w-full flex-1 overflow-hidden">
                 {/* Column 1: server tile rail (full height; content pads below
                     the floating header internally) */}
-                <CommunityServerList />
+                <div className={cn("flex h-full", !phoneShowsRail && "max-md:hidden")}>
+                    <CommunityServerList />
+                </div>
 
                 {/* Columns 2+3 */}
                 <div className="flex min-w-0 flex-1 overflow-hidden md:pl-2">
-                    {isHome ? (
-                        <CommunityHomeSidebar />
-                    ) : isSettings ? (
-                        <ServerSettingsSidebar serverId={serverId} />
-                    ) : (
-                        <CommunityServerSidebar serverId={serverId} />
-                    )}
+                    <div
+                        className={cn(
+                            "flex h-full min-w-0",
+                            phoneShowsSidebar ? "max-md:flex-1" : "max-md:hidden",
+                        )}
+                    >
+                        {isHome ? (
+                            <CommunityHomeSidebar />
+                        ) : isSettings ? (
+                            <ServerSettingsSidebar serverId={serverId} />
+                        ) : (
+                            <CommunityServerSidebar serverId={serverId} />
+                        )}
+                    </div>
 
-                    <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+                    <main
+                        className={cn(
+                            "relative flex min-w-0 flex-1 flex-col overflow-hidden",
+                            !phoneShowsMain && "max-md:hidden",
+                        )}
+                    >
                         {children}
                     </main>
                 </div>

@@ -47,7 +47,7 @@ export function CommunityHomeSidebar() {
     ];
 
     return (
-        <div className="flex flex-col h-full py-4 w-76 shrink-0 bg-zinc-900/60 overflow-hidden">
+        <div className="flex flex-col h-full py-4 w-76 shrink-0 bg-zinc-900/60 overflow-hidden max-md:w-full">
             <div className="p-3 -mt-1 px-2 h-12 flex items-center text-lg justify-center">
                 <button
                     onClick={() => setSearchOpen(true)}
