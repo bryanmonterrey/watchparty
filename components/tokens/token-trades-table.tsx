@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState } from "react"
-import { Settings, Copy, Check, ExternalLink } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Copy01Icon, Tick02Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons"
 import { formatDistanceToNowStrict } from "date-fns"
 import { Token } from "@/db/schema/content"
 import { Switch } from "@/components/ui/switch"
@@ -48,7 +49,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                     <Switch
                         checked={filterSize}
                         onCheckedChange={setFilterSize}
-                        className="data-[state=checked]:bg-emerald-500"
+                        className="data-[state=checked]:bg-lantern"
                     />
                     <div className="bg-zinc-850 border border-zinc-800 rounded-full px-3 py-1 text-xs text-zinc-300 flex items-center gap-1.5 font-bold shadow-inner">
                         &gt; $100
@@ -68,12 +69,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                             <th className="px-5 py-4">Type</th>
                             <th className="px-5 py-4">Value (USD)</th>
                             <th className="px-5 py-4">Amount ({token.ticker})</th>
-                            <th className="px-5 py-4">
-                                <div className="flex items-center gap-1">
-                                    <span>Time</span>
-                                    <Settings className="size-3 text-zinc-600" />
-                                </div>
-                            </th>
+                            <th className="px-5 py-4">Time</th>
                             <th className="px-5 py-4 text-right">Txn</th>
                         </tr>
                     </thead>
@@ -84,7 +80,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                                 <td className="px-5 py-4">
                                     <div className="flex items-center gap-2">
                                         <div className={`size-2.5 rounded-full shrink-0 ${
-                                            trade.isBuy ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-pastelred shadow-[0_0_8px_rgba(255,116,108,0.5)]'
+                                            trade.isBuy ? 'bg-lantern shadow-[0_0_8px_rgba(0,237,137,0.5)]' : 'bg-pastelred shadow-[0_0_8px_rgba(255,116,108,0.5)]'
                                         }`} />
                                         <div
                                             onClick={() => copyToClipboard(trade.account, idx)}
@@ -92,9 +88,9 @@ export function TokenTradesTable({ token }: { token: Token }) {
                                         >
                                             <span>{truncateAddress(trade.account)}</span>
                                             {copiedIndex === idx ? (
-                                                <Check className="size-3.5 text-emerald-500" />
+                                                <HugeiconsIcon icon={Tick02Icon} className="size-3.5 text-lantern" strokeWidth={2.5} />
                                             ) : (
-                                                <Copy className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <HugeiconsIcon icon={Copy01Icon} className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
                                             )}
                                         </div>
                                     </div>
@@ -103,7 +99,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                                 {/* Type Column */}
                                 <td className="px-5 py-4">
                                     <span className={`font-extrabold text-sm ${
-                                        trade.isBuy ? 'text-emerald-500' : 'text-pastelred'
+                                        trade.isBuy ? 'text-lantern' : 'text-pastelred'
                                     }`}>
                                         {trade.isBuy ? "Buy" : "Sell"}
                                     </span>
@@ -119,7 +115,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                                 {/* Amount (TICKER) Column */}
                                 <td className="px-5 py-4">
                                     <span className={`font-extrabold text-sm ${
-                                        trade.isBuy ? 'text-emerald-500' : 'text-pastelred'
+                                        trade.isBuy ? 'text-lantern' : 'text-pastelred'
                                     }`}>
                                         {formatAmount(trade.tokenAmount)}
                                     </span>
@@ -141,7 +137,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                                         className="inline-flex items-center gap-1 font-semibold text-zinc-500 hover:text-zinc-300 text-sm cursor-pointer transition-colors"
                                     >
                                         <span>{trade.txHash ? truncateAddress(trade.txHash) : "—"}</span>
-                                        <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <HugeiconsIcon icon={LinkSquare02Icon} className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
                                     </a>
                                 </td>
                             </tr>
