@@ -21,6 +21,8 @@ interface TokenProfileProps {
             name: string
             username: string | null
             avatar_url: string | null
+            /** first-buy launches route fees/identity to this wallet */
+            wallet_address?: string | null
         }
     }
 }
@@ -90,7 +92,7 @@ export function TokenProfile({ token }: TokenProfileProps) {
 
                 {/* Right Column */}
                 <div className="lg:col-span-3 flex flex-col gap-3">
-                    <TokenSwapCard token={token} />
+                    <TokenSwapCard token={token} creatorWallet={token.creator.wallet_address ?? null} />
                     <TokenBondingCurve token={token} />
                     <TokenChatCard token={token} creatorUsername={token.creator.username} />
                     <TokenNotifiedBanner />

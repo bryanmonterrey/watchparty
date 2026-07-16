@@ -107,7 +107,11 @@ export function useTokenLaunch() {
 
     const launchToken = async (
         metadata: { name: string; symbol: string; image: string; description: string },
-        launchState: TokenLaunchState
+        launchState: TokenLaunchState,
+        // First-buy on someone ELSE'S draft: the connected wallet pays and
+        // buys, but the pool identity + fees + leftover belong to the token's
+        // creator. Omitted = self-launch (creator == buyer), the original flow.
+        opts?: { creatorWallet?: PublicKey }
     ) => {
         console.log("[launchToken] called with:", {
             earningsEnabled: launchState.earningsEnabled,
@@ -224,8 +228,12 @@ export function useTokenLaunch() {
                 liquidityWeights,
             } as any);
 
+            // Economic principal: the creator when buying someone's draft,
+            // the connected wallet when self-launching.
+            const creatorPubkey = opts?.creatorWallet ?? publicKey;
+
             const preInstructions: TransactionInstruction[] = [];
-            let feeClaimerPubkey = publicKey;
+            let feeClaimerPubkey = creatorPubkey;
 
             if (launchState.splits && launchState.splits.length > 0) {
                 const dfsClient = new DynamicFeeSharingClient(connection, 'confirmed');
@@ -246,7 +254,7 @@ export function useTokenLaunch() {
                 const creatorResidual = Math.max(0, 100 - totalSplit);
                 if (creatorResidual > 0) {
                     userShares.push({
-                        address: publicKey,
+                        address: creatorPubkey,
                         share: Math.floor(creatorResidual * 100)
                     });
                 }
@@ -258,7 +266,7 @@ export function useTokenLaunch() {
                     base: baseMintKeypair.publicKey,
                     tokenMint: NATIVE_MINT,
                     tokenProgram: TOKEN_PROGRAM_ID,
-                    owner: publicKey,
+                    owner: creatorPubkey,
                     payer: publicKey,
                     userShare: userShares
                 });
@@ -277,7 +285,7 @@ export function useTokenLaunch() {
             const { createConfigTx, createPoolWithFirstBuyTx } = await dbcClient.partner.createConfigAndPoolWithFirstBuy({
                 config: configKeypair.publicKey,
                 feeClaimer: feeClaimerPubkey,
-                leftoverReceiver: publicKey,
+                leftoverReceiver: creatorPubkey,
                 payer: publicKey,
                 quoteMint: NATIVE_MINT,
                 ...curveConfig,
@@ -285,7 +293,7 @@ export function useTokenLaunch() {
                     name: metadata.name,
                     symbol: metadata.symbol,
                     uri: metadata.image, // Using image URL as URI for now, ideally upload full metadata JSON
-                    poolCreator: publicKey,
+                    poolCreator: creatorPubkey,
                     baseMint: baseMintKeypair.publicKey,
                 },
                 firstBuyParam: {

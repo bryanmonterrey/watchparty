@@ -1,12 +1,15 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
+import { toast } from "sonner"
 import { Token } from "@/db/schema/content"
 import { trpc } from "@/lib/trpc/client"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useWalletSigning } from "@/hooks/use-wallet-signing"
+import { useTokenLaunch } from "@/hooks/use-token-launch"
 import { toPublicKey } from "@/lib/utils"
 import { showSwapToast } from "@/components/wallet/wallet-drawer/views/swap/swap-transaction-toast"
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip"
@@ -37,7 +40,120 @@ function formatAmount(v: number): string {
     return v.toPrecision(3)
 }
 
-export function TokenSwapCard({ token }: { token: Token }) {
+// First-buy panel for DRAFT tokens: content creates the token record, but the
+// pool only exists once SOMEONE makes the first buy — creator or anyone else.
+// The buyer pays and gets the first tokens; the pool identity, trading fees,
+// and leftover supply stay with the creator.
+const FIRST_BUY_PRESETS = [0.1, 0.5, 1] as const
+
+function FirstBuyCard({ token, creatorWallet }: { token: Token; creatorWallet: string | null }) {
+    const router = useRouter()
+    const { data: session } = useAuthSession()
+    const { publicKey: adapterPublicKey } = useWallet()
+    const { launchToken, isLaunching } = useTokenLaunch()
+    const activateToken = trpc.trade.activateToken.useMutation()
+    const [amount, setAmount] = useState("")
+
+    const walletAddress = adapterPublicKey?.toBase58() || session?.user?.wallet_address || null
+    const amountSol = parseFloat(amount) || 0
+
+    const firstBuy = async () => {
+        if (!walletAddress) {
+            window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))
+            return
+        }
+        if (amountSol <= 0 || isLaunching || activateToken.isPending) return
+
+        const creatorPk = toPublicKey(creatorWallet ?? undefined)
+        const result = await launchToken(
+            {
+                name: token.name,
+                symbol: token.ticker,
+                image: token.imageUrl ?? "",
+                description: token.description ?? "",
+            },
+            {
+                earningsEnabled: true,
+                ticker: token.ticker,
+                creatorFee: token.creatorFeePercent ?? 0,
+                splits: (token.splits as never[] | null) ?? [],
+                buyAmount: amountSol,
+            },
+            // Creator keeps the pool identity + fees even when a fan launches it
+            creatorPk ? { creatorWallet: creatorPk } : undefined,
+        )
+
+        if (result.success && result.status === "live" && result.tokenAddress && result.poolAddress) {
+            try {
+                await activateToken.mutateAsync({
+                    tokenId: token.id,
+                    tokenAddress: result.tokenAddress,
+                    poolAddress: result.poolAddress,
+                })
+                toast.success(`$${token.ticker} is live — you made the first buy`)
+                router.refresh()
+            } catch (e) {
+                console.error("activateToken failed after launch:", e)
+                toast.error("Launched on-chain but the page didn't update — refresh in a moment")
+            }
+        }
+    }
+
+    return (
+        <div className="bg-panel rounded-[25px] p-5 flex flex-col">
+            <p className="text-lg font-bold text-zinc-200">Be the first buyer</p>
+            <p className="mt-1 text-sm font-medium leading-relaxed text-zinc-500">
+                This token isn&apos;t on-chain yet. The first buy launches it — the creator keeps the fees, you get the first tokens.
+            </p>
+
+            <div className="mt-5 flex items-center justify-center gap-1">
+                <input
+                    type="text"
+                    inputMode="decimal"
+                    value={amount}
+                    onChange={(e) => {
+                        const v = e.target.value.replace(/[^0-9.]/g, "")
+                        if ((v.match(/\./g)?.length ?? 0) <= 1) setAmount(v)
+                    }}
+                    placeholder="0"
+                    className="bg-transparent text-5xl font-bold outline-none text-center text-zinc-100 placeholder:text-zinc-600"
+                    style={{ width: `${Math.max(1.5, (amount.length || 1) * 0.72)}ch` }}
+                />
+                <div className="bg-zinc-800 rounded-full px-3 py-1 text-xs font-semibold text-zinc-400 ml-2">SOL</div>
+            </div>
+
+            <div className="mt-5 mb-6 flex items-center gap-2">
+                {FIRST_BUY_PRESETS.map((v) => (
+                    <button
+                        key={v}
+                        onClick={() => setAmount(String(v))}
+                        className="cursor-pointer flex-1 py-3 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition-colors text-md font-semibold text-zinc-300"
+                    >
+                        {v} SOL
+                    </button>
+                ))}
+            </div>
+
+            <button
+                onClick={firstBuy}
+                disabled={!!walletAddress && (amountSol <= 0 || isLaunching || activateToken.isPending)}
+                className="cursor-pointer w-full h-15 bg-white hover:bg-white/90 text-black font-bold rounded-full text-lg transition-colors disabled:opacity-40 disabled:cursor-default"
+            >
+                {!walletAddress
+                    ? "Connect wallet"
+                    : isLaunching || activateToken.isPending
+                        ? "Launching…"
+                        : `Buy & launch $${token.ticker}`}
+            </button>
+
+            <p className="mt-4 text-right text-sm font-semibold text-zinc-500">
+                + ~0.03 SOL launch fees
+            </p>
+        </div>
+    )
+}
+
+export function TokenSwapCard({ token, creatorWallet = null }: { token: Token; creatorWallet?: string | null }) {
     const { connection } = useConnection()
     const { publicKey: adapterPublicKey, sendTransaction } = useWallet()
     const { signAndSubmit } = useWalletSigning()
@@ -214,14 +330,10 @@ export function TokenSwapCard({ token }: { token: Token }) {
         localStorage.setItem(SLIPPAGE_KEY, String(v))
     }
 
-    // Drafts have no mint yet — nothing to trade
-    if (!mint) {
-        return (
-            <div className="bg-panel rounded-[25px] p-5">
-                <p className="text-lg font-bold text-zinc-200">Trading not open yet</p>
-                <p className="mt-1 text-sm font-medium text-zinc-500">The swap unlocks as soon as this token launches on-chain.</p>
-            </div>
-        )
+    // Drafts have no pool yet — the first buy IS the launch, and anyone can
+    // make it (content creates the token; the crowd puts it on-chain).
+    if (!mint || token.status === "draft") {
+        return <FirstBuyCard token={token} creatorWallet={creatorWallet} />
     }
 
     const buttonLabel = !walletAddress

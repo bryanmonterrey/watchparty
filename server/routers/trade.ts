@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
@@ -6,6 +7,7 @@ import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
 import { eq, and, desc, sql, isNotNull, type SQL } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
+import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -102,6 +104,70 @@ export const tradeRouter = router({
             migrated: migratedCol.map(toTradeToken),
         };
     }),
+
+    /**
+     * Flip a draft token live after a first buy launched it on-chain. ANYONE
+     * can be the first buyer of a draft (the buy IS the launch), so this is
+     * not creator-gated — instead we verify the pool actually exists on-chain
+     * and its base mint matches before trusting the addresses. The draft
+     * guard (status='draft' in the WHERE) makes concurrent launches
+     * first-writer-wins.
+     */
+    activateToken: protectedProcedure
+        .input(z.object({
+            tokenId: z.string().min(1),
+            tokenAddress: z.string().min(32).max(44),
+            poolAddress: z.string().min(32).max(44),
+        }))
+        .mutation(async ({ input }) => {
+            const [row] = await db
+                .select({ id: tokens.id, status: tokens.status })
+                .from(tokens)
+                .where(eq(tokens.id, input.tokenId))
+                .limit(1);
+            if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Token not found" });
+            if (row.status === "live") return { activated: false, alreadyLive: true };
+
+            // On-chain proof: the pool must exist and be for this mint.
+            const [{ DynamicBondingCurveClient }, { Connection }] = await Promise.all([
+                import("@meteora-ag/dynamic-bonding-curve-sdk"),
+                import("@solana/web3.js"),
+            ]);
+            const client = new DynamicBondingCurveClient(new Connection(getRpcUrl()), "confirmed");
+            const pool = await client.state.getPool(input.poolAddress).catch(() => null);
+            const baseMint = (pool as unknown as { poolState?: { baseMint?: { toBase58(): string } } })?.poolState?.baseMint
+                ?? (pool as unknown as { baseMint?: { toBase58(): string } })?.baseMint;
+            if (!pool || baseMint?.toBase58() !== input.tokenAddress) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Pool not found on-chain for that mint yet — wait a moment and retry" });
+            }
+
+            const [updated] = await db
+                .update(tokens)
+                .set({
+                    tokenAddress: input.tokenAddress,
+                    poolAddress: input.poolAddress,
+                    status: "live",
+                    phase: "new",
+                    updatedAt: new Date(),
+                })
+                .where(and(eq(tokens.id, input.tokenId), eq(tokens.status, "draft")))
+                .returning({ id: tokens.id });
+            if (!updated) return { activated: false, alreadyLive: true };
+
+            // Fire-and-forget: watch the pool for external trades + pull the
+            // first market snapshot now.
+            import("@/lib/tokens/trades-webhook")
+                .then(({ syncTradesWebhook }) => syncTradesWebhook())
+                .catch(() => {});
+            import("@/lib/tokens/market-sync")
+                .then(({ syncMarketData, syncCurveProgress }) => {
+                    const syncable = [{ id: input.tokenId, poolAddress: input.poolAddress, phase: "new" as const }];
+                    return Promise.all([syncMarketData(syncable), syncCurveProgress(syncable)]);
+                })
+                .catch(() => {});
+
+            return { activated: true };
+        }),
 
     /**
      * Event-driven market refresh: called fire-and-forget after an in-app
