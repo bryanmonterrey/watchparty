@@ -171,6 +171,55 @@ function SectionHint({ children }: { children: React.ReactNode }) {
     return <p className="mb-6 text-[14px] font-medium text-zinc-500">{children}</p>;
 }
 
+/**
+ * updateServer with an optimistic cache patch: toggles and pickers flip the
+ * moment they're clicked instead of waiting a mutation + refetch round-trip
+ * (which read as multi-second lag). Input keys match `server` columns, so
+ * the patch is a shallow merge of the defined keys; errors roll back.
+ */
+function useUpdateServer(serverId: string) {
+    const utils = trpc.useUtils();
+    return trpc.community.updateServer.useMutation({
+        onMutate: async (input) => {
+            await utils.community.getServer.cancel({ serverId });
+            const prev = utils.community.getServer.getData({ serverId });
+            if (prev) {
+                const patch = Object.fromEntries(
+                    Object.entries(input).filter(([k, v]) => k !== "serverId" && v !== undefined),
+                ) as Partial<CommunityServer>;
+                utils.community.getServer.setData({ serverId }, { ...prev, server: { ...prev.server, ...patch } });
+            }
+            return { prev };
+        },
+        onError: (err, _input, ctx) => {
+            if (ctx?.prev) utils.community.getServer.setData({ serverId }, ctx.prev);
+            toast.error(err.message);
+        },
+        // Reconcile with the server's canonical row (e.g. trimmed/uppercased fields)
+        onSettled: () => utils.community.getServer.invalidate({ serverId }),
+    });
+}
+
+/** setInvitesPaused with the same optimistic treatment. */
+function useSetInvitesPaused(serverId: string) {
+    const utils = trpc.useUtils();
+    return trpc.community.setInvitesPaused.useMutation({
+        onMutate: async ({ paused }) => {
+            await utils.community.getServer.cancel({ serverId });
+            const prev = utils.community.getServer.getData({ serverId });
+            if (prev) {
+                utils.community.getServer.setData({ serverId }, { ...prev, server: { ...prev.server, invitesPaused: paused } });
+            }
+            return { prev };
+        },
+        onError: (err, _input, ctx) => {
+            if (ctx?.prev) utils.community.getServer.setData({ serverId }, ctx.prev);
+            toast.error(err.message);
+        },
+        onSettled: () => utils.community.getServer.invalidate({ serverId }),
+    });
+}
+
 // Squircle action button for the settings surface (h-12, 15px bold).
 function ActionButton({
     variant = "primary",
@@ -578,10 +627,7 @@ function EngagementSection({
     const serverId = server.id;
     const utils = trpc.useUtils();
     const { data, isLoading } = trpc.community.getEngagement.useQuery({ serverId });
-    const updateServer = trpc.community.updateServer.useMutation({
-        onSuccess: () => utils.community.getServer.invalidate({ serverId }),
-        onError: () => toast.error("Update failed"),
-    });
+    const updateServer = useUpdateServer(serverId);
 
     const textChannels = channels.filter((c) => c.type === "TEXT");
     const systemChannel =
@@ -668,7 +714,6 @@ function EngagementSection({
                             <Switch
                                 checked={server.welcomeMessages !== false}
                                 onCheckedChange={(v) => updateServer.mutate({ serverId, welcomeMessages: v })}
-                                disabled={updateServer.isPending}
                             />
                         </label>
 
@@ -680,7 +725,6 @@ function EngagementSection({
                             <Switch
                                 checked={server.boostMessages !== false}
                                 onCheckedChange={(v) => updateServer.mutate({ serverId, boostMessages: v })}
-                                disabled={updateServer.isPending}
                             />
                         </label>
 
@@ -730,7 +774,6 @@ function EngagementSection({
                                 <button
                                     key={opt.key}
                                     onClick={() => updateServer.mutate({ serverId, defaultNotifications: opt.key })}
-                                    disabled={updateServer.isPending}
                                     className={cn(
                                         "flex w-full cursor-pointer items-center gap-3 rounded-3xl px-5 py-4 text-left transition-colors",
                                         selected ? "bg-white/[0.08]" : "bg-white/[0.03] hover:bg-white/[0.05]",
@@ -763,7 +806,6 @@ function EngagementSection({
                         <Switch
                             checked={!!server.activityFeed}
                             onCheckedChange={(v) => updateServer.mutate({ serverId, activityFeed: v })}
-                            disabled={updateServer.isPending}
                         />
                     </label>
 
@@ -819,7 +861,6 @@ function EngagementSection({
                         <Switch
                             checked={!!server.widgetEnabled}
                             onCheckedChange={(v) => updateServer.mutate({ serverId, widgetEnabled: v })}
-                            disabled={updateServer.isPending}
                         />
                     </label>
                     {server.widgetEnabled && <WidgetSnippet serverId={serverId} />}
@@ -880,10 +921,7 @@ function BoostsSection({
         },
         onError: (err) => toast.error(err.message),
     });
-    const updateServer = trpc.community.updateServer.useMutation({
-        onSuccess: () => utils.community.getServer.invalidate({ serverId }),
-        onError: (err) => toast.error(err.message),
-    });
+    const updateServer = useUpdateServer(serverId);
     const [vanity, setVanity] = useState(server.customInvite ?? "");
 
     const level = boostLevelFor(boostCount);
@@ -988,7 +1026,6 @@ function BoostsSection({
                         <Switch
                             checked={!!server.showBoostBar}
                             onCheckedChange={(v) => updateServer.mutate({ serverId, showBoostBar: v })}
-                            disabled={updateServer.isPending}
                         />
                     </label>
 
@@ -1577,13 +1614,7 @@ function InvitesSection({ server, isAdmin }: { server: CommunityServer; isAdmin:
     const generateInvite = trpc.community.generateInviteCode.useMutation({
         onSuccess: () => utils.community.getServer.invalidate({ serverId }),
     });
-    const setPaused = trpc.community.setInvitesPaused.useMutation({
-        onSuccess: (res) => {
-            utils.community.getServer.invalidate({ serverId });
-            toast.success(res.paused ? "Invites paused" : "Invites resumed");
-        },
-        onError: () => toast.error("Update failed"),
-    });
+    const setPaused = useSetInvitesPaused(serverId);
 
     const inviteUrl = typeof window !== "undefined"
         ? `${window.location.origin}/communities/invite/${server.inviteCode}`
@@ -1637,7 +1668,6 @@ function InvitesSection({ server, isAdmin }: { server: CommunityServer; isAdmin:
                     <Switch
                         checked={!!server.invitesPaused}
                         onCheckedChange={(v) => setPaused.mutate({ serverId, paused: v })}
-                        disabled={setPaused.isPending}
                     />
                 </label>
             )}
@@ -1930,6 +1960,8 @@ function AutomodSection({ server }: { server: CommunityServer }) {
         },
         onError: () => toast.error("Update failed"),
     });
+    // Switch rules flip optimistically; the keywords Save keeps its own toast.
+    const updateServerToggle = useUpdateServer(server.id);
 
     const dirty = keywords !== (server.automodKeywords ?? "");
     const wordCount = keywords.split(",").map((w) => w.trim()).filter(Boolean).length;
@@ -1949,8 +1981,7 @@ function AutomodSection({ server }: { server: CommunityServer }) {
                     </div>
                     <Switch
                         checked={!!server.automodBlockLinks}
-                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, automodBlockLinks: v })}
-                        disabled={updateServer.isPending}
+                        onCheckedChange={(v) => updateServerToggle.mutate({ serverId: server.id, automodBlockLinks: v })}
                     />
                 </label>
 
@@ -1964,8 +1995,7 @@ function AutomodSection({ server }: { server: CommunityServer }) {
                     </div>
                     <Switch
                         checked={!!server.automodBlockMentions}
-                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, automodBlockMentions: v })}
-                        disabled={updateServer.isPending}
+                        onCheckedChange={(v) => updateServerToggle.mutate({ serverId: server.id, automodBlockMentions: v })}
                     />
                 </label>
 
@@ -1979,8 +2009,7 @@ function AutomodSection({ server }: { server: CommunityServer }) {
                     </div>
                     <Switch
                         checked={!!server.automodFlaggedWords}
-                        onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, automodFlaggedWords: v })}
-                        disabled={updateServer.isPending}
+                        onCheckedChange={(v) => updateServerToggle.mutate({ serverId: server.id, automodFlaggedWords: v })}
                     />
                 </label>
 
@@ -2363,18 +2392,8 @@ function AccessSection({
     channels: (CommunityChannel & { unreadCount?: number })[];
 }) {
     const utils = trpc.useUtils();
-    const setPaused = trpc.community.setInvitesPaused.useMutation({
-        onSuccess: (res) => {
-            utils.community.getServer.invalidate({ serverId: server.id });
-            toast.success(res.paused ? "Invites paused" : "Invites resumed");
-        },
-        onError: () => toast.error("Update failed"),
-    });
-
-    const updateServer = trpc.community.updateServer.useMutation({
-        onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
-        onError: (err) => toast.error(err.message),
-    });
+    const setPaused = useSetInvitesPaused(server.id);
+    const updateServer = useUpdateServer(server.id);
 
     const readOnlyCount = channels.filter((c) => c.readOnly).length;
     const [rulesDraft, setRulesDraft] = useState(server.rules ?? "");
@@ -2406,7 +2425,6 @@ function AccessSection({
                     <button
                         key={m.key}
                         onClick={() => updateServer.mutate({ serverId: server.id, discoverable: m.key === "discoverable" })}
-                        disabled={updateServer.isPending}
                         className={cn(
                             "cursor-pointer rounded-3xl px-5 py-5 text-left transition-colors",
                             m.active ? "bg-white/[0.08] ring-2 ring-white/40" : "bg-white/[0.03] hover:bg-white/[0.05]",
@@ -2429,7 +2447,6 @@ function AccessSection({
                 <Switch
                     checked={!!server.ageRestricted}
                     onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, ageRestricted: v })}
-                    disabled={updateServer.isPending}
                 />
             </label>
 
@@ -2445,7 +2462,7 @@ function AccessSection({
                     <Switch
                         checked={!!server.rulesRequired}
                         onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, rulesRequired: v })}
-                        disabled={updateServer.isPending || !(server.rules ?? rulesDraft.trim())}
+                        disabled={!(server.rules ?? rulesDraft.trim())}
                     />
                 </label>
                 <textarea
@@ -2478,7 +2495,6 @@ function AccessSection({
                 <Switch
                     checked={!!server.invitesPaused}
                     onCheckedChange={(v) => setPaused.mutate({ serverId: server.id, paused: v })}
-                    disabled={setPaused.isPending}
                 />
             </label>
 
@@ -2542,10 +2558,7 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
     const isOwner = session?.user?.id === server.ownerId;
     const viewerHas2fa = (session?.user as { twoFactorEnabled?: boolean } | undefined)?.twoFactorEnabled ?? false;
 
-    const updateServer = trpc.community.updateServer.useMutation({
-        onSuccess: () => utils.community.getServer.invalidate({ serverId: server.id }),
-        onError: (err) => toast.error(err.message),
-    });
+    const updateServer = useUpdateServer(server.id);
     const verification = server.verificationLevel ?? "none";
 
     const rows: { label: string; status: string; target: SettingsSection; show: boolean }[] = [
@@ -2590,7 +2603,6 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
                             <button
                                 key={l.value}
                                 onClick={() => updateServer.mutate({ serverId: server.id, verificationLevel: l.value })}
-                                disabled={updateServer.isPending}
                                 className={cn(
                                     "h-10 cursor-pointer rounded-full px-4 text-[14px] font-bold transition-colors",
                                     verification === l.value
@@ -2668,7 +2680,6 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
                     <Switch
                         checked={!!server.blurMedia}
                         onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, blurMedia: v })}
-                        disabled={updateServer.isPending}
                     />
                 </label>
             )}
@@ -2684,7 +2695,6 @@ function SafetySection({ server, isAdmin }: { server: CommunityServer; isAdmin: 
                     <Switch
                         checked={!!server.activityAlerts}
                         onCheckedChange={(v) => updateServer.mutate({ serverId: server.id, activityAlerts: v })}
-                        disabled={updateServer.isPending}
                     />
                 </label>
             )}
