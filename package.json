@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "next build",
+    "build": "NODE_OPTIONS=--max-old-space-size=8192 next build",
     "start": "next start",
     "lint": "eslint",
     "cf:build": "opennextjs-cloudflare build",
@@ -25,6 +25,7 @@
     "@cloudflare/realtimekit-react": "^2.0.0",
     "@coral-xyz/anchor": "^0.32.1",
     "@deepgram/sdk": "^5.5.0",
+    "@drift-labs/sdk": "2.156.0",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@giphy/js-fetch-api": "^5.8.0",

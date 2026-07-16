@@ -45,7 +45,7 @@ const SECTIONS: {
     {
         href: "/trade/perpetuals",
         label: "Perpetuals",
-        description: "Leverage — coming soon",
+        description: "Leverage on Drift, from your wallet",
         icon: TradeUpIcon,
     },
     {

@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   // widens Turbopack's file-watching scope to every sibling project.
   turbopack: {
     root: __dirname,
+    resolveAlias: {
+      // @drift-labs/sdk's browser build (keypair loader, anchor NodeWallet)
+      // still references `fs` on never-taken paths — stub it for the browser.
+      fs: { browser: "./lib/node-browser-stub.js" },
+    },
   },
   experimental: {
     // View Transitions — global-search ("search-bar") and app-container
