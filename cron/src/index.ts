@@ -41,9 +41,13 @@ export default {
             ctx.waitUntil(call(env, "/api/cron/callout-performance"));
             // Settle pending server-witnessed trades on-chain (Phase 4a).
             ctx.waitUntil(call(env, "/api/cron/trade-verify"));
-        } else if (event.cron === "*/2 * * * *") {
-            // IVS viewer counts + live-state reconcile (heals missed webhooks).
+        } else if (event.cron === "* * * * *") {
+            // Every minute — the CF cron floor. Both are cheap single-digit
+            // API-call passes; in-app swaps additionally trigger instant
+            // per-token refreshes so this is the fallback, not the source of
+            // truth for perceived latency.
             ctx.waitUntil(call(env, "/api/cron/ivs-viewers"));
+            ctx.waitUntil(call(env, "/api/cron/token-sync"));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }

@@ -78,9 +78,13 @@ function XIcon({ className }: { className?: string }) {
 
 interface TokenRowProps {
     token: TradeToken;
+    /** in-row quick-buy (from useQuickBuy) — falls back to navigation without it */
+    quickBuy?: (t: TradeToken) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
+    buying?: boolean;
+    amountSol?: number;
 }
 
-export function TokenRow({ token }: TokenRowProps) {
+export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRowProps) {
     const router = useRouter();
     const [copied, setCopied] = useState(false);
 
@@ -99,11 +103,14 @@ export function TokenRow({ token }: TokenRowProps) {
         if (url) window.open(url, "_blank", "noopener,noreferrer");
     };
 
-    const handleBuy = (e: React.MouseEvent) => {
+    const handleBuy = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Lands on the token page's swap card (quote + one-click execute).
-        // In-row quick-buy (no navigation) is a later upgrade.
-        router.push(`/${slug}`);
+        if (!quickBuy) {
+            router.push(`/${slug}`);
+            return;
+        }
+        const result = await quickBuy(token);
+        if (result === "no-mint") router.push(`/${slug}`);
     };
 
     const up = token.changePercent >= 0;
@@ -173,13 +180,14 @@ export function TokenRow({ token }: TokenRowProps) {
                 </div>
             </div>
 
-            {/* Buy */}
+            {/* Buy — quick-buy in place when wired, else the token page */}
             <button
                 onClick={handleBuy}
-                className="flex cursor-pointer items-center gap-1.5 self-center rounded-full bg-white/10 px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95"
+                disabled={buying}
+                className="flex cursor-pointer items-center gap-1.5 self-center rounded-full bg-white/10 px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-default"
             >
                 <SolanaIcon className="size-3.5" />
-                Buy
+                {buying ? "Buying…" : quickBuy && amountSol ? `Buy ${amountSol}` : "Buy"}
             </button>
         </div>
     );

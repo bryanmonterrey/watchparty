@@ -22,6 +22,12 @@ export interface TradeToken {
   buyPercent: number;
   sellPercent: number;
   changePercent: number;
+  /** short-window deltas (null until the sync has seen the window) */
+  changePercent5m: number | null;
+  changePercent1h: number | null;
+  changePercent6h: number | null;
+  volume5m: number | null;
+  volume1h: number | null;
   status: TokenStatus;
   tokenAddress?: string | null;
   poolAddress?: string | null;

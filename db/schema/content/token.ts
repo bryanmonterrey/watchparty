@@ -26,6 +26,12 @@ export const tokens = pgTable("tokens", {
     marketCapUsd: doublePrecision("marketCapUsd"),
     volume24hUsd: doublePrecision("volume24hUsd"),
     priceChange24h: doublePrecision("priceChange24h"),
+    // Short-window deltas (Surge tab + timeframe pills)
+    priceChange5m: doublePrecision("priceChange5m"),
+    priceChange1h: doublePrecision("priceChange1h"),
+    priceChange6h: doublePrecision("priceChange6h"),
+    volume5mUsd: doublePrecision("volume5mUsd"),
+    volume1hUsd: doublePrecision("volume1hUsd"),
     bondingProgress: doublePrecision("bondingProgress").default(0), // 0–100
     txCount24h: integer("txCount24h").default(0),
     holderCount: integer("holderCount").default(0),

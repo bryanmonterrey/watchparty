@@ -17,6 +17,7 @@ import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/re
 import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { Squircle } from "@/components/ui/squircle";
 import { SolanaIcon } from "@/components/icons";
+import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
 import type { TokenStatus, TradeToken } from "./types";
 
 // Discover: the /trade landing (per the Axiom reference, in watchparty's
@@ -30,10 +31,11 @@ import type { TokenStatus, TradeToken } from "./types";
 
 const EMPTY: Record<TokenStatus, TradeToken[]> = { new: [], migrating: [], migrated: [] };
 
-type Tab = "trending" | "live" | "top" | "new";
+type Tab = "trending" | "surge" | "live" | "top" | "new";
 
 const TABS: { key: Tab; label: string }[] = [
     { key: "trending", label: "Trending" },
+    { key: "surge", label: "Surge" },
     { key: "live", label: "Live" },
     { key: "top", label: "Top" },
     { key: "new", label: "New" },
@@ -44,6 +46,7 @@ type SortKey = "volume" | "marketCap" | "txCount" | "newest";
 // Each tab's natural ordering; the sort dropdown can override it afterwards.
 const TAB_SORT: Record<Tab, SortKey> = {
     trending: "volume",
+    surge: "volume",
     live: "volume",
     top: "marketCap",
     new: "newest",
@@ -51,6 +54,7 @@ const TAB_SORT: Record<Tab, SortKey> = {
 
 const EMPTY_COPY: Record<Tab, { title: string; hint: string }> = {
     trending: { title: "No tokens here yet", hint: "New launches show up the moment they go live." },
+    surge: { title: "Nothing surging right now", hint: "Tokens with sudden 5-minute momentum land here." },
     live: { title: "No creators live right now", hint: "Tokens appear here while their creator is streaming." },
     top: { title: "No tokens here yet", hint: "New launches show up the moment they go live." },
     new: { title: "No fresh launches yet", hint: "Brand-new tokens land here first." },
@@ -62,6 +66,23 @@ const SORTS: { key: SortKey; label: string }[] = [
     { key: "txCount", label: "Transactions" },
     { key: "newest", label: "Newest" },
 ];
+
+// Timeframe pills drive which window the %-change and volume cells show.
+// Falls back to 24h until the sync has data for a window.
+type Timeframe = "5m" | "1h" | "24h";
+const TIMEFRAMES: Timeframe[] = ["5m", "1h", "24h"];
+
+function changeFor(t: TradeToken, tf: Timeframe): number {
+    if (tf === "5m") return t.changePercent5m ?? t.changePercent;
+    if (tf === "1h") return t.changePercent1h ?? t.changePercent;
+    return t.changePercent;
+}
+
+function volumeFor(t: TradeToken, tf: Timeframe): number {
+    if (tf === "5m") return t.volume5m ?? t.volume;
+    if (tf === "1h") return t.volume1h ?? t.volume;
+    return t.volume;
+}
 
 function formatUsd(value: number): string {
     if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
@@ -136,7 +157,19 @@ function TokenAvatar({ token }: { token: TradeToken }) {
 // Shared grid template so the header row and token rows stay aligned.
 const GRID = "grid grid-cols-[minmax(220px,1.5fr)_minmax(96px,1fr)_minmax(88px,1fr)_minmax(88px,1fr)_minmax(72px,0.8fr)_minmax(96px,auto)] max-lg:grid-cols-[minmax(200px,1.6fr)_minmax(96px,1fr)_minmax(88px,1fr)_minmax(96px,auto)] max-md:grid-cols-[minmax(0,1.6fr)_minmax(90px,1fr)_minmax(84px,auto)] items-center gap-3";
 
-function DiscoverRow({ token }: { token: TradeToken }) {
+function DiscoverRow({
+    token,
+    timeframe,
+    quickBuy,
+    buying,
+    amountSol,
+}: {
+    token: TradeToken;
+    timeframe: Timeframe;
+    quickBuy: (t: TradeToken) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
+    buying: boolean;
+    amountSol: number;
+}) {
     const router = useRouter();
     const [copied, setCopied] = useState(false);
     const slug = token.tokenAddress || token.id;
@@ -153,7 +186,15 @@ function DiscoverRow({ token }: { token: TradeToken }) {
         if (url) window.open(url, "_blank", "noopener,noreferrer");
     };
 
-    const up = token.changePercent >= 0;
+    const handleBuy = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const result = await quickBuy(token);
+        if (result === "no-mint") router.push(`/${slug}`);
+    };
+
+    const change = changeFor(token, timeframe);
+    const vol = volumeFor(token, timeframe);
+    const up = change >= 0;
 
     return (
         <div
@@ -208,18 +249,18 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                 </div>
             </div>
 
-            {/* Market cap + 24h change */}
+            {/* Market cap + window change */}
             <div className="min-w-0">
                 <p className="text-[15px] font-bold tabular-nums tracking-tight text-white">{formatUsd(token.marketCap)}</p>
                 <p className={cn("mt-0.5 text-[13px] font-semibold tabular-nums", up ? "text-lantern" : "text-pastelred")}>
-                    {up ? "+" : ""}{token.changePercent.toFixed(1)}%
+                    {up ? "+" : ""}{change.toFixed(1)}%
                 </p>
             </div>
 
-            {/* Volume 24h */}
+            {/* Window volume */}
             <div className="min-w-0 max-md:hidden">
-                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{token.volume > 0 ? formatUsd(token.volume) : "—"}</p>
-                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">24h vol</p>
+                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{vol > 0 ? formatUsd(vol) : "—"}</p>
+                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">{timeframe} vol</p>
             </div>
 
             {/* Price */}
@@ -237,17 +278,15 @@ function DiscoverRow({ token }: { token: TradeToken }) {
                 </p>
             </div>
 
-            {/* Buy */}
+            {/* Quick buy — preset SOL amount, swaps in place */}
             <div className="flex justify-end">
                 <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/${slug}`);
-                    }}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95"
+                    onClick={handleBuy}
+                    disabled={buying}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-default"
                 >
                     <SolanaIcon className="size-3.5" />
-                    Buy
+                    {buying ? "Buying…" : `Buy ${amountSol}`}
                 </button>
             </div>
         </div>
@@ -276,6 +315,8 @@ function RowSkeleton() {
 export function TradeDiscover() {
     const [tab, setTab] = useState<Tab>("trending");
     const [sort, setSort] = useState<SortKey>("volume");
+    const [timeframe, setTimeframe] = useState<Timeframe>("24h");
+    const { quickBuy, buyingId, amountSol, setAmountSol } = useQuickBuy();
     const utils = trpc.useUtils();
 
     const { data = EMPTY, isLoading } = trpc.trade.getFeed.useQuery(undefined, {
@@ -323,6 +364,8 @@ export function TradeDiscover() {
     const tokens = useMemo(() => {
         const base =
             tab === "live" ? all.filter((t) => t.creatorIsLive)
+            // Surge = positive 5-minute momentum with real 5-minute volume
+            : tab === "surge" ? all.filter((t) => (t.changePercent5m ?? 0) > 0 && (t.volume5m ?? 0) > 0)
             : tab === "new" ? [...data.new]
             : [...all];
         const by: Record<SortKey, (a: TradeToken, b: TradeToken) => number> = {
@@ -333,15 +376,19 @@ export function TradeDiscover() {
             // "newest" keeps the natural order.
             newest: () => 0,
         };
-        // Live tab: most-watched streams first, market sort as tiebreaker.
         return base.sort((a, b) =>
-            tab === "live" ? b.liveViewerCount - a.liveViewerCount || by[sort](a, b) : by[sort](a, b),
+            // Live tab: most-watched streams first; Surge: hottest 5m move
+            // first, 5m volume as tiebreaker; market sort breaks remaining ties.
+            tab === "live" ? b.liveViewerCount - a.liveViewerCount || by[sort](a, b)
+            : tab === "surge" ? (b.changePercent5m ?? 0) - (a.changePercent5m ?? 0) || (b.volume5m ?? 0) - (a.volume5m ?? 0)
+            : by[sort](a, b),
         );
     }, [data, all, tab, sort]);
 
     const selectTab = (t: Tab) => {
         setTab(t);
         setSort(TAB_SORT[t]);
+        if (t === "surge") setTimeframe("5m"); // surge reads in 5m terms
     };
 
     return (
@@ -380,6 +427,53 @@ export function TradeDiscover() {
                         ))}
                     </div>
 
+                    <div className="flex items-center gap-2">
+                    {/* Timeframe — drives the % + volume cells */}
+                    <div className="flex items-center rounded-full bg-white/5 p-1">
+                        {TIMEFRAMES.map((tf) => (
+                            <button
+                                key={tf}
+                                onClick={() => setTimeframe(tf)}
+                                className={cn(
+                                    "h-8 cursor-pointer rounded-full px-3 text-[13px] font-bold transition-colors",
+                                    timeframe === tf ? "bg-white text-black" : "text-zinc-400 hover:text-white",
+                                )}
+                            >
+                                {tf}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Quick-buy amount */}
+                    <GooDropdown
+                        align="end"
+                        width={148}
+                        gap={8}
+                        fill="#101011"
+                        panelRadius={20}
+                        itemHeight={40}
+                        triggerAriaLabel="Quick-buy amount"
+                        triggerClassName="flex h-10 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                        trigger={
+                            <>
+                                <SolanaIcon className="size-3.5" />
+                                {amountSol}
+                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                            </>
+                        }
+                        items={QUICK_BUY_PRESETS.map((v) => ({
+                            key: String(v),
+                            onClick: () => setAmountSol(v),
+                            className: "justify-between px-3 rounded-full cursor-pointer text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-white",
+                            label: (
+                                <>
+                                    {v} SOL
+                                    {amountSol === v && <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />}
+                                </>
+                            ),
+                        }))}
+                    />
+
                     <GooDropdown
                         align="end"
                         width={192}
@@ -408,6 +502,7 @@ export function TradeDiscover() {
                             ),
                         }))}
                     />
+                    </div>
                 </div>
             </div>
 
@@ -434,7 +529,16 @@ export function TradeDiscover() {
                                     <p className="text-xs text-zinc-600">{EMPTY_COPY[tab].hint}</p>
                                 </div>
                             ) : (
-                                tokens.map((t) => <DiscoverRow key={t.id} token={t} />)
+                                tokens.map((t) => (
+                                    <DiscoverRow
+                                        key={t.id}
+                                        token={t}
+                                        timeframe={timeframe}
+                                        quickBuy={quickBuy}
+                                        buying={buyingId === t.id}
+                                        amountSol={amountSol}
+                                    />
+                                ))
                             )}
                         </div>
                     </div>

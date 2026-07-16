@@ -10,6 +10,9 @@ interface TokenColumnProps {
   tokens: TradeToken[];
   loading?: boolean;
   className?: string;
+  quickBuy?: (t: TradeToken) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
+  buyingId?: string | null;
+  amountSol?: number;
 }
 
 const EMPTY_COPY: Record<TokenStatus, { title: string; hint: string }> = {
@@ -18,7 +21,7 @@ const EMPTY_COPY: Record<TokenStatus, { title: string; hint: string }> = {
   migrated: { title: "No graduates yet", hint: "Tokens that complete their curve appear here." },
 };
 
-export function TokenColumn({ status, tokens, loading, className }: TokenColumnProps) {
+export function TokenColumn({ status, tokens, loading, className, quickBuy, buyingId, amountSol }: TokenColumnProps) {
   return (
     <div className={cn("h-full overflow-y-auto scroll-smooth hidden-scrollbar", className)}>
       {/* Pushes initial content below the fixed header; scrolls away as you go up */}
@@ -38,7 +41,15 @@ export function TokenColumn({ status, tokens, loading, className }: TokenColumnP
             </div>
           ) : (
             <div className="flex flex-col py-1">
-              {tokens.map((token) => <TokenRow key={token.id} token={token} />)}
+              {tokens.map((token) => (
+                <TokenRow
+                  key={token.id}
+                  token={token}
+                  quickBuy={quickBuy}
+                  buying={buyingId === token.id}
+                  amountSol={amountSol}
+                />
+              ))}
             </div>
           )}
         </div>

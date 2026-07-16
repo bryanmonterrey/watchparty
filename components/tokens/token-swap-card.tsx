@@ -65,6 +65,7 @@ export function TokenSwapCard({ token }: { token: Token }) {
     const getQuoteMutation = trpc.wallet.getQuote.useMutation()
     const getSwapTxMutation = trpc.wallet.getSwapTransaction.useMutation()
     const reportSwapSignature = trpc.wallet.reportSwapSignature.useMutation()
+    const syncToken = trpc.trade.syncToken.useMutation()
 
     // SOL price for the USD-denominated buy side
     const { data: priceData } = trpc.wallet.getPrices.useQuery(
@@ -197,6 +198,9 @@ export function TokenSwapCard({ token }: { token: Token }) {
             swapToast.success(signature)
             setInput("")
             setQuote(null)
+            // Event-driven freshness: this token's market row updates now,
+            // not on the next minute sweep.
+            syncToken.mutate({ mint })
         } catch (error) {
             const msg = (error as Error)?.message || "Something went wrong. Please try again."
             swapToast.error(msg.includes("address table") ? "Route unavailable — try a different amount." : msg)

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "@/server/trpc";
+import { router, publicProcedure, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { streams } from "@/db/schema/content/stream";
@@ -65,6 +65,11 @@ function toTradeToken({ token: t, creatorIsLive, liveViewerCount, creatorUsernam
         buyPercent: 0,
         sellPercent: 0,
         changePercent: t.priceChange24h ?? 0,
+        changePercent5m: t.priceChange5m,
+        changePercent1h: t.priceChange1h,
+        changePercent6h: t.priceChange6h,
+        volume5m: t.volume5mUsd,
+        volume1h: t.volume1hUsd,
         status: t.phase,
         tokenAddress: t.tokenAddress,
         poolAddress: t.poolAddress,
@@ -97,6 +102,34 @@ export const tradeRouter = router({
             migrated: migratedCol.map(toTradeToken),
         };
     }),
+
+    /**
+     * Event-driven market refresh: called fire-and-forget after an in-app
+     * swap so THAT token's price/volume/curve update immediately instead of
+     * waiting for the minute sweep. Throttled per mint (10s) — spam no-ops.
+     */
+    syncToken: protectedProcedure
+        .input(z.object({ mint: z.string().min(32).max(44) }))
+        .mutation(async ({ input }) => {
+            // Throttle: stamp a unique claim into the cache. Getting back a
+            // DIFFERENT claim means another call synced within the window.
+            const claim = `${Date.now()}:${Math.random()}`;
+            const winner = await withCache(`token:sync-req:${input.mint}`, 10, async () => claim);
+            if (winner !== claim) return { synced: false };
+
+            const [row] = await db
+                .select({ id: tokens.id, poolAddress: tokens.poolAddress, phase: tokens.phase })
+                .from(tokens)
+                .where(and(eq(tokens.tokenAddress, input.mint), isNotNull(tokens.poolAddress)))
+                .limit(1);
+            if (!row) return { synced: false };
+
+            const { syncMarketData, syncCurveProgress } = await import("@/lib/tokens/market-sync");
+            const syncable = [{ id: row.id, poolAddress: row.poolAddress!, phase: row.phase }];
+            await syncMarketData(syncable);
+            await syncCurveProgress(syncable);
+            return { synced: true };
+        }),
 
     /**
      * Top holders for a token page. Helius DAS getTokenAccounts returns
