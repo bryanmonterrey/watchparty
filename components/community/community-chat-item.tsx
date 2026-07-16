@@ -87,6 +87,8 @@ type Props = {
     roleColor?: string | null;
     /** server safety setting: image attachments blur until clicked */
     blurMedia?: boolean;
+    /** posted by an incoming webhook — APP badge, no member affordances */
+    isWebhook?: boolean;
 };
 
 const roleIconMap: Record<string, React.ReactNode> = {
@@ -123,6 +125,7 @@ export function CommunityChatItem({
     system = false,
     roleColor = null,
     blurMedia = false,
+    isWebhook = false,
 }: Props) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(content);
@@ -217,16 +220,22 @@ export function CommunityChatItem({
                             >
                                 {userName ?? "Unknown"}
                             </span>
-                            <TooltipProvider delayDuration={50}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span>{roleIconMap[memberRole]}</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                        <p className="text-xs capitalize">{memberRole.toLowerCase()}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                            {isWebhook ? (
+                                <span className="ml-1.5 rounded-md bg-twitter/15 px-1.5 py-px text-[10px] font-bold tracking-wide text-twitter">
+                                    APP
+                                </span>
+                            ) : (
+                                <TooltipProvider delayDuration={50}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span>{roleIconMap[memberRole]}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">
+                                            <p className="text-xs capitalize">{memberRole.toLowerCase()}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
                         </div>
                         <span className="text-xs text-zinc-500">
                             {timestamp}

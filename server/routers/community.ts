@@ -15,6 +15,7 @@ import {
     communityExpressions,
     communitySounds,
     communityChannelCategories,
+    communityWebhooks,
     communityRoles,
     communityMemberRoles,
     communityInvites,
@@ -440,7 +441,8 @@ export const communityRouter = router({
                 ))
                 .where(and(
                     eq(communityChannels.serverId, input.serverId),
-                    ne(communityMessages.memberId, membership[0].id),
+                    // IS DISTINCT FROM: webhook messages (NULL member) still count
+                    sql`${communityMessages.memberId} IS DISTINCT FROM ${membership[0].id}`,
                     eq(communityMessages.deleted, false),
                     sql`${communityMessages.createdAt} > COALESCE(${communityChannelReads.lastReadAt}, 'epoch'::timestamptz)`,
                 ))
@@ -1893,6 +1895,80 @@ export const communityRouter = router({
 
     // (moving a channel between categories = updateChannel's categoryId)
 
+    // ─── Incoming webhooks (Integrations) ────────────────
+
+    /** List a server's webhooks, tokens included for URL display (admin/mod) */
+    listWebhooks: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            return db
+                .select({
+                    id: communityWebhooks.id,
+                    channelId: communityWebhooks.channelId,
+                    name: communityWebhooks.name,
+                    avatarUrl: communityWebhooks.avatarUrl,
+                    token: communityWebhooks.token,
+                    lastUsedAt: communityWebhooks.lastUsedAt,
+                    createdAt: communityWebhooks.createdAt,
+                    channelName: communityChannels.name,
+                })
+                .from(communityWebhooks)
+                .innerJoin(communityChannels, eq(communityWebhooks.channelId, communityChannels.id))
+                .where(eq(communityWebhooks.serverId, input.serverId))
+                .orderBy(desc(communityWebhooks.createdAt));
+        }),
+
+    /** Create an incoming webhook for a text channel (admin/mod) */
+    createWebhook: protectedProcedure
+        .input(z.object({
+            serverId: z.string().uuid(),
+            channelId: z.string().uuid(),
+            name: z.string().min(1).max(50),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [channel] = await db
+                .select({ id: communityChannels.id, type: communityChannels.type })
+                .from(communityChannels)
+                .where(and(eq(communityChannels.id, input.channelId), eq(communityChannels.serverId, input.serverId)))
+                .limit(1);
+            if (!channel) throw new TRPCError({ code: "NOT_FOUND", message: "Channel not found" });
+            if (channel.type !== "TEXT") throw new TRPCError({ code: "BAD_REQUEST", message: "Webhooks post into text channels" });
+
+            const [created] = await db
+                .insert(communityWebhooks)
+                .values({
+                    serverId: input.serverId,
+                    channelId: input.channelId,
+                    name: input.name.trim(),
+                    token: nanoid(64),
+                    createdBy: ctx.user.id,
+                })
+                .returning();
+
+            await logAudit(input.serverId, ctx.user.id, "webhook.create", `created webhook ${created.name}`);
+            return created;
+        }),
+
+    /** Delete a webhook — its past messages stay (admin/mod) */
+    deleteWebhook: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), webhookId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
+
+            const [removed] = await db
+                .delete(communityWebhooks)
+                .where(and(eq(communityWebhooks.id, input.webhookId), eq(communityWebhooks.serverId, input.serverId)))
+                .returning();
+            if (removed) {
+                await logAudit(input.serverId, ctx.user.id, "webhook.delete", `deleted webhook ${removed.name}`);
+            }
+            return { success: true };
+        }),
+
     /** Update a channel */
     updateChannel: protectedProcedure
         .input(
@@ -2357,18 +2433,21 @@ export const communityRouter = router({
                     updatedAt: communityMessages.updatedAt,
                     memberId: communityMessages.memberId,
                     channelId: communityMessages.channelId,
-                    memberRole: communityMembers.role,
-                    userId: communityMembers.userId,
-                    userName: sql<string>`COALESCE(${communityMembers.nickname}, ${user.name})`,
-                    userImage: user.avatar_url,
+                    // Webhook messages have no member/user — coalesce into the
+                    // shape the chat UI already renders.
+                    memberRole: sql<string>`COALESCE(${communityMembers.role}, 'GUEST')`,
+                    userId: sql<string>`COALESCE(${communityMembers.userId}, '')`,
+                    userName: sql<string>`COALESCE(${communityMembers.nickname}, ${user.name}, ${communityMessages.webhookName}, 'Webhook')`,
+                    userImage: sql<string | null>`COALESCE(${user.avatar_url}, ${communityMessages.webhookAvatar})`,
                     userUsername: user.username,
+                    isWebhook: sql<boolean>`(${communityMessages.webhookName} IS NOT NULL)`,
                     replyContent: replyMsg.content,
                     replyDeleted: replyMsg.deleted,
-                    replyUserName: sql<string | null>`COALESCE(${replyMember.nickname}, ${replyUser.name})`,
+                    replyUserName: sql<string | null>`COALESCE(${replyMember.nickname}, ${replyUser.name}, ${replyMsg.webhookName})`,
                 })
                 .from(communityMessages)
-                .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
-                .innerJoin(user, eq(communityMembers.userId, user.id))
+                .leftJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
+                .leftJoin(user, eq(communityMembers.userId, user.id))
                 .leftJoin(replyMsg, eq(communityMessages.replyToId, replyMsg.id))
                 .leftJoin(replyMember, eq(replyMsg.memberId, replyMember.id))
                 .leftJoin(replyUser, eq(replyMember.userId, replyUser.id))
@@ -2406,8 +2485,8 @@ export const communityRouter = router({
 
             // Custom-role name colors for this page's authors (highest role wins)
             const roleColorByMember = new Map<string, string>();
-            if (ids.length) {
-                const memberIds = [...new Set(msgs.map((m) => m.memberId))];
+            const memberIds = [...new Set(msgs.map((m) => m.memberId).filter((id): id is string => !!id))];
+            if (memberIds.length) {
                 const colorRows = await db
                     .select({
                         memberId: communityMemberRoles.memberId,
@@ -2427,7 +2506,7 @@ export const communityRouter = router({
                 items: msgs.map((m) => ({
                     ...m,
                     reactions: reactionsByMessage.get(m.id) ?? [],
-                    roleColor: roleColorByMember.get(m.memberId) ?? null,
+                    roleColor: (m.memberId && roleColorByMember.get(m.memberId)) || null,
                 })),
                 nextCursor,
             };
@@ -2587,14 +2666,15 @@ export const communityRouter = router({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            // Check if current user is admin/mod OR the message owner
+            // Check if current user is admin/mod OR the message owner.
+            // Left join: webhook messages have no member, but mods can delete them.
             const msg = await db
                 .select({
                     id: communityMessages.id,
                     userId: communityMembers.userId,
                 })
                 .from(communityMessages)
-                .innerJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
+                .leftJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
                 .where(eq(communityMessages.id, input.messageId))
                 .limit(1);
 

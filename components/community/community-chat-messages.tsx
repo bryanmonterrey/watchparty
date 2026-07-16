@@ -168,6 +168,7 @@ export function CommunityChatMessages({
                                 system={message.system ?? false}
                                 roleColor={message.roleColor}
                                 blurMedia={blurMedia}
+                                isWebhook={message.isWebhook}
                             />
                             {/* AFTER the item in DOM = visually ABOVE it under
                                 flex-col-reverse — the divider heads the day. */}

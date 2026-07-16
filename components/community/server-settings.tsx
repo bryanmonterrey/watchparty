@@ -14,6 +14,7 @@ import {
     FileAudioIcon,
     ImageUploadIcon,
     PlayIcon,
+    PlusSignIcon,
     RefreshIcon,
     Rocket01Icon,
     Tick02Icon,
@@ -156,7 +157,9 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     )}
                     {active === "invites" && <InvitesSection server={server} isAdmin={isAdmin} />}
                     {active === "access" && isAdmin && <AccessSection server={server} channels={channels} />}
-                    {active === "integrations" && <IntegrationsSection />}
+                    {active === "integrations" && (
+                        <IntegrationsSection serverId={server.id} channels={channels} canManage={currentMember.role !== "GUEST"} />
+                    )}
                     {active === "apps" && <AppsSection />}
                     {active === "safety" && <SafetySection server={server} isAdmin={isAdmin} />}
                     {active === "bans" && <BansSection serverId={server.id} isAdmin={isAdmin} />}
@@ -2720,15 +2723,161 @@ function AccessSection({
 
 // ─── Apps ────────────────────────────────────────────────
 
-function IntegrationsSection() {
+function IntegrationsSection({
+    serverId,
+    channels,
+    canManage,
+}: {
+    serverId: string;
+    channels: (CommunityChannel & { unreadCount?: number })[];
+    canManage: boolean;
+}) {
+    const utils = trpc.useUtils();
+    const textChannels = channels.filter((c) => c.type === "TEXT");
+    const [creating, setCreating] = useState(false);
+    const [name, setName] = useState("");
+    const [channelId, setChannelId] = useState(textChannels[0]?.id ?? "");
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    const { data: webhooks = [], isLoading } = trpc.community.listWebhooks.useQuery(
+        { serverId },
+        { enabled: canManage },
+    );
+    const createWebhook = trpc.community.createWebhook.useMutation({
+        onSuccess: () => {
+            utils.community.listWebhooks.invalidate({ serverId });
+            setCreating(false);
+            setName("");
+            toast.success("Webhook created — copy its URL");
+        },
+        onError: (e) => toast.error(e.message),
+    });
+    const deleteWebhook = trpc.community.deleteWebhook.useMutation({
+        onSuccess: () => utils.community.listWebhooks.invalidate({ serverId }),
+    });
+
+    const webhookUrl = (id: string, token: string) =>
+        `${window.location.origin}/api/webhooks/community/${id}/${token}`;
+
+    const copyUrl = (id: string, token: string) => {
+        navigator.clipboard.writeText(webhookUrl(id, token));
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    if (!canManage) {
+        return (
+            <div>
+                <SectionHint>Services connected to this server.</SectionHint>
+                <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
+                    <p className="text-[16px] font-bold text-zinc-300">Mods only</p>
+                    <p className="mx-auto mt-1 max-w-xs text-[14px] font-medium leading-relaxed text-zinc-500">
+                        Webhooks carry posting credentials, so only admins and moderators can see them.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div>
-            <SectionHint>Services connected to this server.</SectionHint>
-            <div className="rounded-3xl bg-white/[0.03] p-8 text-center">
-                <p className="text-[16px] font-bold text-zinc-300">No integrations yet</p>
-                <p className="mx-auto mt-1 max-w-xs text-[14px] font-medium leading-relaxed text-zinc-500">
-                    Webhooks and connected services land here as the platform opens up.
-                </p>
+            <SectionHint>
+                Webhooks let outside services — GitHub, alerts, your own scripts — post messages into a channel. POST JSON{" "}
+                <code className="rounded bg-white/[0.06] px-1 py-0.5 text-[12px]">{"{ content, username?, avatar_url? }"}</code> to the URL.
+            </SectionHint>
+
+            {/* Create */}
+            {!creating ? (
+                <ActionButton className="mb-7" onClick={() => setCreating(true)} disabled={textChannels.length === 0}>
+                    <HugeiconsIcon icon={PlusSignIcon} className="size-4" strokeWidth={2} />
+                    New webhook
+                </ActionButton>
+            ) : (
+                <div className="mb-7 space-y-3 rounded-3xl bg-white/[0.03] p-4">
+                    <Input
+                        radius={12}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Webhook name — e.g. GitHub"
+                        maxLength={50}
+                        autoFocus
+                        className="h-11 text-[14px] font-bold"
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                        {textChannels.map((c) => (
+                            <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => setChannelId(c.id)}
+                                className={cn(
+                                    "max-w-full cursor-pointer truncate rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors",
+                                    channelId === c.id ? "bg-white text-black" : "bg-white/[0.06] text-zinc-400 hover:text-white",
+                                )}
+                            >
+                                #{c.name}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex justify-end gap-1.5">
+                        <ActionButton variant="soft" className="h-11 px-4 text-[14px]" onClick={() => { setCreating(false); setName(""); }}>
+                            Cancel
+                        </ActionButton>
+                        <ActionButton
+                            className="h-11 px-4 text-[14px]"
+                            onClick={() => createWebhook.mutate({ serverId, channelId, name })}
+                            disabled={createWebhook.isPending || !name.trim() || !channelId}
+                        >
+                            {createWebhook.isPending ? "Creating…" : "Create webhook"}
+                        </ActionButton>
+                    </div>
+                </div>
+            )}
+
+            {isLoading && (
+                <div className="space-y-2">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="h-16 overflow-hidden rounded-2xl"><div className="size-full shimmer-skeleton" /></div>
+                    ))}
+                </div>
+            )}
+
+            {!isLoading && webhooks.length === 0 && (
+                <div className="py-10 text-center">
+                    <p className="text-[15px] font-bold text-zinc-400">No webhooks yet</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-zinc-600">
+                        Create one and paste its URL into any service that can send a POST
+                    </p>
+                </div>
+            )}
+
+            <div className="space-y-2">
+                {webhooks.map((w) => (
+                    <div key={w.id} className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-4 py-3.5">
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14px] font-bold text-white">{w.name}</p>
+                            <p className="truncate text-[12px] font-medium text-zinc-500">
+                                #{w.channelName}
+                                {w.lastUsedAt
+                                    ? ` · last used ${formatDistanceToNow(new Date(w.lastUsedAt), { addSuffix: true })}`
+                                    : " · never used"}
+                            </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                            <ActionButton variant="soft" className="h-9 px-3.5 text-[13px]" onClick={() => copyUrl(w.id, w.token)}>
+                                <HugeiconsIcon icon={copiedId === w.id ? Tick02Icon : Copy01Icon} className="size-3.5" strokeWidth={2.5} />
+                                {copiedId === w.id ? "Copied" : "Copy URL"}
+                            </ActionButton>
+                            <button
+                                onClick={() => deleteWebhook.mutate({ serverId, webhookId: w.id })}
+                                disabled={deleteWebhook.isPending}
+                                aria-label={`Delete ${w.name}`}
+                                className="grid size-9 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-pastelred"
+                            >
+                                <HugeiconsIcon icon={Cancel01Icon} className="size-4" strokeWidth={2.5} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

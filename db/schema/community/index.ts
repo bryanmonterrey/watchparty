@@ -115,6 +115,30 @@ export const communityMembers = pgTable('community_members', {
     pgPolicy('community_members_delete_own', { for: 'delete', to: 'authenticated', using: sql`user_id = (SELECT auth.uid()::text)` }),
 ]).enableRLS();
 
+// ─── Incoming webhooks (external services post into a channel) ──
+// Tokens are secrets — deliberately NO member SELECT policy (RLS enabled with
+// no policies = server-side/service-role access only).
+export const communityWebhooks = pgTable('community_webhooks', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    channelId: uuid('channel_id')
+        .references(() => communityChannels.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: text('name').notNull(),
+    avatarUrl: text('avatar_url'),
+    token: text('token').notNull(),
+    createdBy: text('created_by'),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_community_webhooks_server').on(table.serverId),
+    index('idx_community_webhooks_channel').on(table.channelId),
+]).enableRLS();
+
+export type CommunityWebhook = typeof communityWebhooks.$inferSelect;
+
 // ─── Channel categories (Discord-style collapsible groups) ──
 export const communityChannelCategories = pgTable('community_channel_categories', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -165,12 +189,18 @@ export const communityMessages = pgTable('community_messages', {
     id: uuid('id').primaryKey().defaultRandom(),
     content: text('content').notNull(),
     fileUrl: text('file_url'),
+    // NULL for webhook messages (webhookId/webhookName carry the author)
     memberId: uuid('member_id')
-        .references(() => communityMembers.id, { onDelete: 'cascade' })
-        .notNull(),
+        .references(() => communityMembers.id, { onDelete: 'cascade' }),
     channelId: uuid('channel_id')
         .references(() => communityChannels.id, { onDelete: 'cascade' })
         .notNull(),
+    // Incoming-webhook authorship: display fields are denormalized per message
+    // so per-request username overrides work and deletion keeps the name.
+    webhookId: uuid('webhook_id')
+        .references(() => communityWebhooks.id, { onDelete: 'set null' }),
+    webhookName: text('webhook_name'),
+    webhookAvatar: text('webhook_avatar'),
     // Reply threading (SET NULL keeps the child when the parent is removed)
     replyToId: uuid('reply_to_id'),
     pinned: boolean('pinned').default(false).notNull(),
