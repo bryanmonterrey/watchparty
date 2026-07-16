@@ -111,18 +111,20 @@ export const tradeRouter = router({
     syncToken: protectedProcedure
         .input(z.object({ mint: z.string().min(32).max(44) }))
         .mutation(async ({ input }) => {
-            // Throttle: stamp a unique claim into the cache. Getting back a
-            // DIFFERENT claim means another call synced within the window.
-            const claim = `${Date.now()}:${Math.random()}`;
-            const winner = await withCache(`token:sync-req:${input.mint}`, 10, async () => claim);
-            if (winner !== claim) return { synced: false };
-
             const [row] = await db
                 .select({ id: tokens.id, poolAddress: tokens.poolAddress, phase: tokens.phase })
                 .from(tokens)
                 .where(and(eq(tokens.tokenAddress, input.mint), isNotNull(tokens.poolAddress)))
                 .limit(1);
             if (!row) return { synced: false };
+
+            // Throttle: stamp a unique claim into the cache. Getting back a
+            // DIFFERENT claim means another call synced within the window.
+            // Keyed on token id — shared with the Helius trades webhook so
+            // the two paths dedupe each other.
+            const claim = `${Date.now()}:${Math.random()}`;
+            const winner = await withCache(`token:sync-req:${row.id}`, 10, async () => claim);
+            if (winner !== claim) return { synced: false };
 
             const { syncMarketData, syncCurveProgress } = await import("@/lib/tokens/market-sync");
             const syncable = [{ id: row.id, poolAddress: row.poolAddress!, phase: row.phase }];

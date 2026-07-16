@@ -101,6 +101,15 @@ export const contentRouter = router({
                     creatorId: ctx.session.user.id,
                 });
                 upsertToken({ id: tokenId, name: tokenName, ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: tokenImage, createdAt: new Date() });
+
+                // Live launch with a pool → put its pool on the Helius trades
+                // webhook now (not at the daily re-sync) so external trades
+                // stream in from the first minute. Fire-and-forget.
+                if (input.tokenStatus === "live" && input.poolAddress) {
+                    import("@/lib/tokens/trades-webhook")
+                        .then(({ syncTradesWebhook }) => syncTradesWebhook())
+                        .catch((e) => console.error("trades-webhook sync after launch failed", e));
+                }
             }
 
             await db.insert(posts).values({
@@ -269,6 +278,15 @@ export const contentRouter = router({
                     creatorId: ctx.session.user.id,
                 });
                 upsertToken({ id: tokenId, name: tokenName, ticker: input.ticker, tokenAddress: input.tokenAddress, imageUrl: tokenImage, createdAt: new Date() });
+
+                // Live launch with a pool → put its pool on the Helius trades
+                // webhook now (not at the daily re-sync) so external trades
+                // stream in from the first minute. Fire-and-forget.
+                if (input.tokenStatus === "live" && input.poolAddress) {
+                    import("@/lib/tokens/trades-webhook")
+                        .then(({ syncTradesWebhook }) => syncTradesWebhook())
+                        .catch((e) => console.error("trades-webhook sync after launch failed", e));
+                }
             }
 
             await db.insert(posts).values({
