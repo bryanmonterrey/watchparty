@@ -41,6 +41,9 @@ export default {
             ctx.waitUntil(call(env, "/api/cron/callout-performance"));
             // Settle pending server-witnessed trades on-chain (Phase 4a).
             ctx.waitUntil(call(env, "/api/cron/trade-verify"));
+        } else if (event.cron === "*/2 * * * *") {
+            // IVS viewer counts + live-state reconcile (heals missed webhooks).
+            ctx.waitUntil(call(env, "/api/cron/ivs-viewers"));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }

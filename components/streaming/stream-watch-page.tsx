@@ -22,11 +22,18 @@ export function StreamWatchPage({ host }: StreamWatchPageProps) {
 
     const { data: stream, isLoading } = trpc.stream.getByUserId.useQuery({ userId: host.id });
 
-    // Safely extract stream fields
-    const isLive = stream?.isLive ?? false;
+    // Live viewer count + live-state: polled while watching (server caches
+    // GetStream ~20s per channel, so many viewers share one AWS call).
+    const { data: live } = trpc.stream.getViewers.useQuery(
+        { userId: host.id },
+        { refetchInterval: 30_000, refetchIntervalInBackground: false },
+    );
+
+    // Safely extract stream fields (live poll wins once it lands)
+    const isLive = live?.isLive ?? stream?.isLive ?? false;
     const streamTitle = stream?.title ?? null;
     const streamCategory = stream?.category ?? null;
-    const viewerCount = stream?.viewerCount ?? 0;
+    const viewerCount = live?.viewerCount ?? stream?.viewerCount ?? 0;
     const playbackUrl = stream?.playbackUrl ?? null;
     const chatRoomArn = stream?.chatRoomArn ?? null;
     // Assuming stream.createdAt exists, fallback to now if missing for the UI

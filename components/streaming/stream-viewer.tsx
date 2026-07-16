@@ -127,6 +127,10 @@ export function StreamViewer({ hostUserId, hostUsername, viewerUsername }: Strea
     const [chatToken, setChatToken] = useState<{ token: string; chatRoomArn: string } | null>(null);
 
     const { data: stream } = trpc.stream.getByUserId.useQuery({ userId: hostUserId });
+    const { data: live } = trpc.stream.getViewers.useQuery(
+        { userId: hostUserId },
+        { refetchInterval: 30_000, refetchIntervalInBackground: false },
+    );
     const getChatToken = trpc.stream.getChatToken.useMutation({
         onSuccess: (data) => setChatToken(data),
     });
@@ -183,7 +187,7 @@ export function StreamViewer({ hostUserId, hostUsername, viewerUsername }: Strea
                 {stream.title && <p className="text-sm font-semibold text-zinc-200">{stream.title}</p>}
                 {stream.category && <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">{stream.category}</span>}
                 <span className="ml-auto flex items-center gap-1 text-xs text-zinc-500">
-                    <Users className="w-3 h-3" />{stream.viewerCount ?? 0}
+                    <Users className="w-3 h-3" />{live?.viewerCount ?? stream.viewerCount ?? 0}
                 </span>
             </div>
 

@@ -13,6 +13,7 @@ import {
     GetChannelCommand,
     ListStreamKeysCommand,
     GetStreamKeyCommand,
+    GetStreamCommand,
     CreateRecordingConfigurationCommand,
     ListRecordingConfigurationsCommand,
 } from "@aws-sdk/client-ivs";
@@ -64,6 +65,39 @@ async function getOrCreateRecordingConfig(ivs: IvsClient) {
     }
 }
 
+// Live viewer counts: IVS GetStream is a poll API (counts refresh ~1/min at
+// AWS), so watch pages poll our cached query instead of hammering AWS. One
+// entry per channel, shared by every viewer on this isolate.
+const VIEWERS_TTL_MS = 20_000;
+const viewersCache = new Map<string, { data: { isLive: boolean; viewerCount: number }; exp: number }>();
+
+async function fetchLiveViewers(channelArn: string): Promise<{ isLive: boolean; viewerCount: number }> {
+    const cached = viewersCache.get(channelArn);
+    if (cached && cached.exp > Date.now()) return cached.data;
+
+    let data: { isLive: boolean; viewerCount: number };
+    try {
+        const res = await ivsClient().send(new GetStreamCommand({ channelArn }));
+        data = { isLive: true, viewerCount: res.stream?.viewerCount ?? 0 };
+    } catch (err) {
+        // ChannelNotBroadcasting = definitively offline; anything else, don't guess
+        if ((err as { name?: string })?.name === "ChannelNotBroadcasting") {
+            data = { isLive: false, viewerCount: 0 };
+        } else {
+            throw err;
+        }
+    }
+    viewersCache.set(channelArn, { data, exp: Date.now() + VIEWERS_TTL_MS });
+
+    // Write-through so browse surfaces (feed, discover) stay fresh too
+    await db.update(streams)
+        .set({ isLive: data.isLive, viewerCount: data.viewerCount, updatedAt: new Date() })
+        .where(eq(streams.channelArn, channelArn))
+        .catch(() => {});
+
+    return data;
+}
+
 export const streamRouter = router({
     // Get stream config for a user (by userId or username)
     getByUserId: publicProcedure
@@ -80,6 +114,24 @@ export const streamRouter = router({
             if (!u) return null;
             const row = await db.select().from(streams).where(eq(streams.userId, u.id)).limit(1);
             return row[0] ?? null;
+        }),
+
+    // Live viewer count for a host — watch pages poll this (~30s interval)
+    getViewers: publicProcedure
+        .input(z.object({ userId: z.string() }))
+        .query(async ({ input }) => {
+            const [row] = await db
+                .select({ channelArn: streams.channelArn, isLive: streams.isLive, viewerCount: streams.viewerCount })
+                .from(streams)
+                .where(eq(streams.userId, input.userId))
+                .limit(1);
+            if (!row?.channelArn) return { isLive: false, viewerCount: 0 };
+            try {
+                return await fetchLiveViewers(row.channelArn);
+            } catch {
+                // AWS hiccup — fall back to the last known DB state
+                return { isLive: row.isLive, viewerCount: row.viewerCount };
+            }
         }),
 
     // Get current user's stream config

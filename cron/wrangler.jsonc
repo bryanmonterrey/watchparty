@@ -7,8 +7,9 @@
   // Drives the premium/treasury/feed crons by calling the app's guarded endpoints.
   // Collect hourly; sweep every 30 min; feed-corpus hourly at :17 (own slot so it
   // never coincides with the others); assets-webhook sync daily at 04:30 UTC;
-  // callout-performance every 10 min. Dispatched by event.cron in code.
-  "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *", "*/10 * * * *"] },
+  // callout-performance every 10 min; ivs-viewers every 2 min (viewer counts +
+  // live-state self-heal). Dispatched by event.cron in code.
+  "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *", "*/10 * * * *", "*/2 * * * *"] },
   "vars": { "TARGET_BASE_URL": "https://watchparty.xyz" },
   "observability": { "enabled": true }
   // CRON_SECRET is a secret and MUST equal the app's CRON_SECRET. Set out-of-band:
