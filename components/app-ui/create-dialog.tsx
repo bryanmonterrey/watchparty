@@ -562,7 +562,9 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                     )}
 
                     {/* Content Area */}
-                    <div className={cn("p-0", step === "upload" && "p-6 pt-2", step === "upload" && activeTab !== "post" && "min-h-[500px]")}>
+                    {/* min-w-0: DialogContent is a grid — without it, unbreakable
+                        content (long stream URLs) inflates the track past max-w. */}
+                    <div className={cn("min-w-0 p-0", step === "upload" && "p-6 pt-2", step === "upload" && activeTab !== "post" && "min-h-[500px]")}>
                         <AnimatePresence mode="wait">
                             {activeTab === "video" ? (
                                 <motion.div
