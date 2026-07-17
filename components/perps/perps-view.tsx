@@ -242,7 +242,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
         <ScrollArea className="h-full bg-background">
             <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 md:pt-(--header-height)">
                 {geoBlocked && (
-                    <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-sunset/10 px-5 py-3">
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-sunset/10 px-5 py-3">
                         <p className="text-center text-[13px] font-semibold text-sunset">
                             Access to this product isn&apos;t available in your region. Prices and markets stay visible.
                         </p>
@@ -254,7 +254,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                 </p>
 
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-5 rounded-2xl bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
+                    <div className="mt-5 rounded-lg bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -264,7 +264,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
                 <div className="mt-6 lg:grid lg:grid-cols-[250px_minmax(0,1fr)_340px] lg:items-start lg:gap-4">
                     {/* Markets rail — desktop */}
-                    <aside className="hidden overflow-hidden rounded-3xl bg-white/[0.03] ring-1 ring-white/10 lg:block">
+                    <aside className="hidden overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10 lg:block">
                         <p className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wide text-zinc-600">
                             Markets
                         </p>
@@ -316,7 +316,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             })}
                         </div>
 
-                        <div className="overflow-hidden rounded-3xl bg-white/[0.03] ring-1 ring-white/10">
+                        <div className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10">
                             {market ? (
                                 <>
                                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5">
@@ -375,7 +375,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         <button
                             onClick={() => canTrade && setManaging(true)}
                             disabled={!canTrade}
-                            className="mt-4 flex w-full cursor-pointer items-center justify-between rounded-3xl bg-white/[0.03] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
+                            className="mt-4 flex w-full cursor-pointer items-center justify-between rounded-xl bg-white/[0.03] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
                         >
                             <div className="flex items-center gap-2.5">
                                 <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-zinc-300">
@@ -557,7 +557,7 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-3xl bg-white/[0.03] p-4 ring-1 ring-white/10">
+        <div className="rounded-xl bg-white/[0.03] p-4 ring-1 ring-white/10">
             {/* Direction */}
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
                 <button
@@ -640,7 +640,7 @@ function OrderPanel({
             </div>
 
             {insufficient && (
-                <p className="mt-3 rounded-2xl bg-sunset/10 px-4 py-2.5 text-[12px] font-semibold text-sunset">
+                <p className="mt-3 rounded-lg bg-sunset/10 px-4 py-2.5 text-[12px] font-semibold text-sunset">
                     That&apos;s more than your ${fmtUsd(balance)} trading balance — deposit USDC first.
                 </p>
             )}
@@ -709,7 +709,7 @@ function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onCl
 
     const up = p.pnlUsd >= 0;
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
             <div className="flex items-center gap-3">
                 <span
                     className={cn(
