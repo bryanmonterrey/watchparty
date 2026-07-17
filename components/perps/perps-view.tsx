@@ -281,7 +281,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                     className={cn(
                                         "flex-1 cursor-pointer py-3 text-[13px] font-bold capitalize transition-colors",
                                         i < 1 && "border-r border-white/[0.06]",
-                                        railTab === t ? "text-white" : "text-zinc-500 hover:text-white",
+                                        railTab === t ? "bg-white/[0.04] text-white" : "text-zinc-500 hover:text-white",
                                     )}
                                 >
                                     {t}
@@ -356,35 +356,13 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
                             <div className="overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
                                 {market ? (
-                                    <>
-                                        {/* Slim chart chrome, Phantom-style: symbol · price · 24h
-                                            in one hairline-bordered strip, meta pushed right. */}
-                                        <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-3.5 py-2.5">
-                                            <h2 className="text-[13px] font-extrabold tracking-tight text-white">
-                                                {market.symbol}
-                                                <span className="text-zinc-600">-PERP</span>
-                                            </h2>
-                                            <span className="h-3.5 w-px bg-white/[0.08]" />
-                                            <span className="text-[13px] font-bold tabular-nums text-zinc-300">
-                                                ${fmtPrice(market.price)}
-                                            </span>
-                                            {(() => {
-                                                const ch = change24h(market);
-                                                return ch !== null && (
-                                                    <span className={cn(
-                                                        "text-[12px] font-bold tabular-nums",
-                                                        ch >= 0 ? "text-lantern" : "text-pastelred",
-                                                    )}>
-                                                        {ch >= 0 ? "+" : ""}{ch.toFixed(2)}%
-                                                    </span>
-                                                );
-                                            })()}
-                                            <span className="ml-auto text-[11px] font-semibold tabular-nums text-zinc-600">
-                                                borrow {market.borrowHourlyPctLong.toFixed(4)}%/h · {market.maxLeverage}×
-                                            </span>
-                                        </div>
-                                        <PerpsTVChart pythTicker={market.pythTicker} className="px-2 pb-2 pt-2" />
-                                    </>
+                                    // Phantom chrome: no header strip — the chart's own
+                                    // toolbar + in-chart legend carry symbol/price.
+                                    <PerpsTVChart
+                                        pythTicker={market.pythTicker}
+                                        symbol={`${market.symbol}-PERP`}
+                                        className="px-2 pb-2 pt-2"
+                                    />
                                 ) : (
                                     <div className="h-[380px] overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
                                 )}
@@ -827,7 +805,7 @@ function TerminalTabs({
                         className={cn(
                             "flex-1 cursor-pointer truncate py-2.5 text-[12px] font-bold transition-colors",
                             i < TERM_TABS.length - 1 && "border-r border-white/[0.06]",
-                            tab === t ? "text-white" : "text-zinc-500 hover:text-white",
+                            tab === t ? "bg-white/[0.04] text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
                         {labels[t]}

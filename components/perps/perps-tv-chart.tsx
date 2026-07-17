@@ -19,7 +19,15 @@ const DOWN = "#FF746C"; // pastelred
 
 type LoadState = "loading" | "ready" | "missing";
 
-export function PerpsTVChart({ pythTicker, className }: { pythTicker: string; className?: string }) {
+export function PerpsTVChart({
+    pythTicker,
+    symbol,
+    className,
+}: {
+    pythTicker: string;
+    symbol?: string;
+    className?: string;
+}) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const widgetRef = React.useRef<TradingViewWidgetInstance | null>(null);
     const [state, setState] = React.useState<LoadState>("loading");
@@ -82,7 +90,7 @@ export function PerpsTVChart({ pythTicker, className }: { pythTicker: string; cl
     }, [pythTicker]);
 
     if (state === "missing") {
-        return <PerpsChart pythTicker={pythTicker} className={className} />;
+        return <PerpsChart pythTicker={pythTicker} symbol={symbol} className={className} />;
     }
 
     return (

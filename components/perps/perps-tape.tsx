@@ -59,7 +59,7 @@ export function PerpsTape({ pythTicker, livePrice }: { pythTicker: string; liveP
                         onClick={() => setTab(t)}
                         className={cn(
                             "flex-1 cursor-pointer py-2.5 text-[12px] font-bold transition-colors first:border-r first:border-white/[0.06]",
-                            tab === t ? "text-white" : "text-zinc-500 hover:text-white",
+                            tab === t ? "bg-white/[0.04] text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
                         {t === "book" ? "Order Book" : "Trades"}
