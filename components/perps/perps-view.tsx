@@ -248,13 +248,10 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </p>
                     </div>
                 )}
-                {/* Page header */}
-                <div className="pt-4">
-                    <h1 className="font-pixel text-4xl tracking-tighter text-white">Perpetuals</h1>
-                    <p className="mt-1.5 text-[14px] font-medium text-zinc-500">
-                        Long or short with leverage, settled in USDC on Flash. Your wallet, your positions.
-                    </p>
-                </div>
+                {/* The nav tab already names the page — just the tagline. */}
+                <p className="pt-4 text-[14px] font-medium text-zinc-500">
+                    Long or short with leverage, settled in USDC on Flash. Your wallet, your positions.
+                </p>
 
                 {!canTrade && !geoBlocked && session?.user && (
                     <div className="mt-5 rounded-2xl bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">

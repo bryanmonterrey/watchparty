@@ -63,14 +63,11 @@ export function PredictionsView() {
     return (
         <ScrollArea className="h-full bg-background">
             <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 md:pt-(--header-height)">
-                {/* Header */}
-                <div className="flex flex-wrap items-end justify-between gap-3 pt-4">
-                    <div>
-                        <h1 className="font-pixel text-4xl tracking-tighter text-white">Predictions</h1>
-                        <p className="mt-1.5 text-[14px] font-medium text-zinc-500">
-                            Back an outcome in USDC — winners split the other side.
-                        </p>
-                    </div>
+                {/* The nav tab already names the page — just the tagline + actions. */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+                    <p className="text-[14px] font-medium text-zinc-500">
+                        Back an outcome in USDC — winners split the other side.
+                    </p>
                     {isAdmin && (
                         <button
                             onClick={() => setCreating(true)}

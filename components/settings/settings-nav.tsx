@@ -171,13 +171,11 @@ export function SettingsRail() {
                             >
                                 <span
                                     className={cn(
-                                        "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors",
-                                        isActive
-                                            ? "bg-white text-black"
-                                            : "bg-white/5 text-zinc-400 group-hover:text-white",
+                                        "flex size-9 shrink-0 items-center justify-center transition-colors",
+                                        isActive ? "text-white" : "text-zinc-400 group-hover:text-white",
                                     )}
                                 >
-                                    <HugeiconsIcon icon={item.icon} className="size-4.5" strokeWidth={1.8} />
+                                    <HugeiconsIcon icon={item.icon} className="size-6" strokeWidth={1.8} />
                                 </span>
                                 <span className="flex min-w-0 flex-col">
                                     <span className={cn("text-[14px] font-bold", isActive ? "text-white" : "text-zinc-200")}>{item.label}</span>
@@ -234,13 +232,11 @@ export function SettingsNav() {
                             <>
                                 <span
                                     className={cn(
-                                        "flex size-9 shrink-0 items-center justify-center rounded-full",
-                                        isActive
-                                            ? "bg-white text-black"
-                                            : "bg-white/5 text-zinc-400 transition-colors group-hover:text-white",
+                                        "flex size-9 shrink-0 items-center justify-center",
+                                        isActive ? "text-white" : "text-zinc-400 transition-colors group-hover:text-white",
                                     )}
                                 >
-                                    <HugeiconsIcon icon={item.icon} className="size-4.5" strokeWidth={1.8} />
+                                    <HugeiconsIcon icon={item.icon} className="size-6" strokeWidth={1.8} />
                                 </span>
                                 <span className="flex min-w-0 flex-col">
                                     <span className="text-[15px] font-bold text-white">{item.label}</span>

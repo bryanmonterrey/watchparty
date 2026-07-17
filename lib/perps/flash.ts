@@ -627,6 +627,24 @@ async function erOraclePrice(flash: FlashSdk, venue: Venue, target: { intOracleA
     return venue.client.program.coder.accounts.decode("customOracle", info.data);
 }
 
+/**
+ * Program error 6024 (CustodyAmountLimit) = Flash's funding vaults are at
+ * cap until their keeper next settles them into pool custodies. It hits ALL
+ * traders (verified 2026-07-17: every market/pool/funding token at once,
+ * with permissions open and pool ratios far under max) and self-heals.
+ * Surface it as "try again shortly", not a scary failure.
+ */
+function friendlyTradeError(err: unknown): Error {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("6024") || msg.includes("CustodyAmountLimit")) {
+        return new Error("Flash is at capacity for this market right now — usually clears within minutes. Try again shortly.");
+    }
+    if (msg.includes("6023") || msg.includes("MinLeverage")) {
+        return new Error("Position too small for this leverage — raise the amount or leverage.");
+    }
+    return err instanceof Error ? err : new Error(msg);
+}
+
 /** Open a position: quote → build → session-sign → send to the ER. */
 export async function openPosition(
     connection: Connection,
@@ -665,10 +683,14 @@ export async function openPosition(
         referral?.referralAccount,
         referral?.tokenStakeAccount,
     );
-    return venue.client.sendErTransaction(
-        instructions,
-        [session.keypair as unknown as Parameters<FlashPerpetualsClient["sendErTransaction"]>[1][number]],
-    );
+    try {
+        return await venue.client.sendErTransaction(
+            instructions,
+            [session.keypair as unknown as Parameters<FlashPerpetualsClient["sendErTransaction"]>[1][number]],
+        );
+    } catch (err) {
+        throw friendlyTradeError(err);
+    }
 }
 
 /** Close a whole position (and clear its trigger orders). ER, session-signed. */
@@ -710,10 +732,14 @@ export async function closePosition(
     const { instructions: cancelIxs } = await venue.client.cancelAllTriggerOrders(
         marketPk as unknown as SdkPublicKey,
     );
-    return venue.client.sendErTransaction(
-        [...instructions, ...cancelIxs],
-        [session.keypair as unknown as Parameters<FlashPerpetualsClient["sendErTransaction"]>[1][number]],
-    );
+    try {
+        return await venue.client.sendErTransaction(
+            [...instructions, ...cancelIxs],
+            [session.keypair as unknown as Parameters<FlashPerpetualsClient["sendErTransaction"]>[1][number]],
+        );
+    } catch (err) {
+        throw friendlyTradeError(err);
+    }
 }
 
 /** Drop cached clients (route unmount). */

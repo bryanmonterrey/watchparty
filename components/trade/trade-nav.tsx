@@ -45,7 +45,7 @@ const SECTIONS: {
     {
         href: "/trade/perpetuals",
         label: "Perpetuals",
-        description: "Leverage on Drift, from your wallet",
+        description: "Leverage on Flash, from your wallet",
         icon: TradeUpIcon,
     },
     {
@@ -94,11 +94,11 @@ export function TradeNav() {
                                 <span
                                     className={
                                         active
-                                            ? "flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-black"
-                                            : "flex size-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition-colors group-hover:text-white"
+                                            ? "flex size-9 shrink-0 items-center justify-center text-white"
+                                            : "flex size-9 shrink-0 items-center justify-center text-zinc-400 transition-colors group-hover:text-white"
                                     }
                                 >
-                                    <HugeiconsIcon icon={s.icon} className="size-4.5" strokeWidth={1.8} />
+                                    <HugeiconsIcon icon={s.icon} className="size-6" strokeWidth={1.8} />
                                 </span>
                                 <span className="flex min-w-0 flex-col">
                                     <span className="text-[15px] font-bold text-white">
@@ -117,8 +117,8 @@ export function TradeNav() {
                     className: "gap-3 px-3 rounded-2xl cursor-pointer hover:bg-white/5 group",
                     label: (
                         <>
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition-colors group-hover:text-white">
-                                <WalletIcon className="size-4.5" />
+                            <span className="flex size-9 shrink-0 items-center justify-center text-zinc-400 transition-colors group-hover:text-white">
+                                <WalletIcon className="size-6" />
                             </span>
                             <span className="flex min-w-0 flex-col">
                                 <span className="text-[15px] font-bold text-white">Portfolio</span>
