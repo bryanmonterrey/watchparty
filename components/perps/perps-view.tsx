@@ -63,6 +63,55 @@ function useTradeAuthority(): { authority: string | null; isSwig: boolean } {
     return { authority: wallet.publicKey?.toBase58() ?? null, isSwig: false };
 }
 
+/** Followed perp markets (Phantom's Follow button) — localStorage, feeds the rail's Follows tab. */
+function usePerpFollows(): [Set<string>, (symbol: string) => void] {
+    const [follows, setFollows] = useState<Set<string>>(new Set());
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem("perps-follows");
+            if (raw) setFollows(new Set(JSON.parse(raw) as string[]));
+        } catch { /* fresh set */ }
+    }, []);
+    const toggle = useCallback((symbol: string) => {
+        setFollows((prev) => {
+            const next = new Set(prev);
+            if (next.has(symbol)) next.delete(symbol);
+            else next.add(symbol);
+            localStorage.setItem("perps-follows", JSON.stringify([...next]));
+            return next;
+        });
+    }, []);
+    return [follows, toggle];
+}
+
+/** Latest Pyth benchmark print for the header's Oracle section (Mark = live ER price). */
+function useOraclePrice(pythTicker: string | undefined) {
+    const [price, setPrice] = useState<number | null>(null);
+    useEffect(() => {
+        if (!pythTicker) return;
+        let alive = true;
+        setPrice(null);
+        const load = async () => {
+            try {
+                const to = Math.floor(Date.now() / 1000);
+                const res = await fetch(
+                    `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
+                    `?symbol=${encodeURIComponent(pythTicker)}&resolution=1&from=${to - 300}&to=${to}`,
+                );
+                const d = (await res.json()) as { s: string; c: number[] };
+                if (alive && d.s === "ok" && d.c.length) setPrice(d.c[d.c.length - 1]);
+            } catch { /* keep last */ }
+        };
+        load();
+        const timer = setInterval(load, 30_000);
+        return () => {
+            alive = false;
+            clearInterval(timer);
+        };
+    }, [pythTicker]);
+    return price;
+}
+
 /** 24h-ago reference prices — one shared server sweep (see trade.getPerpDayRefs). */
 function useDayRefs(markets: PerpMarketRow[]) {
     const tickers = useMemo(() => [...new Set(markets.map((m) => m.pythTicker))].sort(), [markets]);
@@ -93,6 +142,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const [managing, setManaging] = useState(false);
     const [fills, setFills] = useState<TradeFill[]>([]);
     const [railTab, setRailTab] = useState<"perps" | "follows">("perps");
+    const [perpFollows, toggleFollow] = usePerpFollows();
     const followedTokens = trpc.trade.getFollowedTokens.useQuery(undefined, {
         enabled: railTab === "follows" && !!session?.user,
     });
@@ -105,6 +155,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
     const dayRefs = useDayRefs(markets);
     const market = markets.find((m) => m.symbol === selected) ?? null;
+    const oraclePrice = useOraclePrice(market?.pythTicker);
     const canTrade = !!authority;
 
     const change24h = useCallback(
@@ -303,20 +354,37 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             onSelect={() => setSelected(m.symbol)}
                                         />
                                     )))}
-                            {railTab === "follows" &&
-                                (followedTokens.isLoading
-                                    ? Array.from({ length: 4 }).map((_, i) => (
-                                        <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
-                                    ))
-                                    : (followedTokens.data ?? []).length === 0
-                                        ? (
-                                            <p className="px-2.5 py-6 text-center text-[12px] font-medium text-zinc-600">
-                                                No coins from creators you follow yet.
-                                            </p>
-                                        )
-                                        : (followedTokens.data ?? []).map((t) => (
-                                            <TokenRailRow key={t.id} token={t} onOpen={() => router.push(`/${t.tokenAddress || t.id}`)} />
-                                        )))}
+                            {railTab === "follows" && (() => {
+                                const followedMarkets = markets.filter((m) => perpFollows.has(m.symbol));
+                                const coins = followedTokens.data ?? [];
+                                if (!followedTokens.isLoading && followedMarkets.length === 0 && coins.length === 0) {
+                                    return (
+                                        <p className="px-2.5 py-6 text-center text-[12px] font-medium text-zinc-600">
+                                            Nothing followed yet — hit Follow on a market, or follow creators to see their coins.
+                                        </p>
+                                    );
+                                }
+                                return (
+                                    <>
+                                        {followedMarkets.map((m) => (
+                                            <MarketRow
+                                                key={m.symbol}
+                                                market={m}
+                                                change={change24h(m)}
+                                                active={m.symbol === selected}
+                                                onSelect={() => setSelected(m.symbol)}
+                                            />
+                                        ))}
+                                        {followedTokens.isLoading
+                                            ? Array.from({ length: 3 }).map((_, i) => (
+                                                <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                                            ))
+                                            : coins.map((t) => (
+                                                <TokenRailRow key={t.id} token={t} onOpen={() => router.push(`/${t.tokenAddress || t.id}`)} />
+                                            ))}
+                                    </>
+                                );
+                            })()}
                         </div>
                     </aside>
 
@@ -356,13 +424,49 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
                             <div className="overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
                                 {market ? (
-                                    // Phantom chrome: no header strip — the chart's own
-                                    // toolbar + in-chart legend carry symbol/price.
-                                    <PerpsTVChart
-                                        pythTicker={market.pythTicker}
-                                        symbol={`${market.symbol}-PERP`}
-                                        className="px-2 pb-2 pt-2"
-                                    />
+                                    <>
+                                        {/* Market header — Phantom band: icon · symbol · Follow,
+                                            then Mark (live ER price, what fills settle at) and
+                                            Oracle (latest Pyth benchmark print). */}
+                                        <div className="flex flex-wrap items-center gap-3 px-4 pb-1 pt-3.5">
+                                            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/[0.08] text-[12px] font-extrabold text-zinc-300">
+                                                {market.symbol[0]}
+                                            </span>
+                                            <h2 className="text-[20px] font-extrabold tracking-tight text-white">
+                                                {market.symbol}
+                                            </h2>
+                                            <button
+                                                onClick={() => toggleFollow(market.symbol)}
+                                                className={cn(
+                                                    "cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors",
+                                                    perpFollows.has(market.symbol)
+                                                        ? "bg-white text-black hover:bg-white/90"
+                                                        : "bg-white/[0.08] text-white hover:bg-white/[0.12]",
+                                                )}
+                                            >
+                                                {perpFollows.has(market.symbol) ? "Following" : "Follow"}
+                                            </button>
+                                            <div className="ml-5 flex gap-10">
+                                                <div>
+                                                    <p className="text-[12px] font-semibold text-zinc-500">Mark</p>
+                                                    <p className="text-[15px] font-bold tabular-nums text-white">
+                                                        ${fmtPrice(market.price)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[12px] font-semibold text-zinc-500">Oracle</p>
+                                                    <p className="text-[15px] font-bold tabular-nums text-white">
+                                                        {oraclePrice !== null ? `$${fmtPrice(oraclePrice)}` : "—"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <PerpsTVChart
+                                            pythTicker={market.pythTicker}
+                                            symbol={`${market.symbol}-PERP`}
+                                            className="px-2 pb-2 pt-1"
+                                        />
+                                    </>
                                 ) : (
                                     <div className="h-[380px] overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
                                 )}
