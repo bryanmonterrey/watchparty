@@ -154,15 +154,82 @@ const OUTPUT_SCHEMA = {
     additionalProperties: false,
 };
 
-/**
- * Generate up to `count` markets from live platform + majors data.
- * Requires ANTHROPIC_API_KEY; returns [] without it (generation is optional,
- * resolution never is).
- */
-export async function generateMarkets(count: number): Promise<GeneratedMarket[]> {
-    if (!process.env.ANTHROPIC_API_KEY || count <= 0) return [];
+const SYSTEM_PROMPT = [
+    "You create pari-mutuel prediction markets for watchparty, a Solana streaming + trading platform.",
+    "Every market MUST be objectively resolvable by a price comparison at close — no vibes, no interpretation.",
+    "Rules:",
+    "- Exactly two outcomes. Outcome 0 is the 'price at or above the line' side, outcome 1 is 'below'. Phrase them naturally (e.g. ['$180 or above', 'Below $180']).",
+    "- Pick thresholds that are genuinely uncertain (near current price, interesting round numbers) — a market that's 99% one side is boring.",
+    "- For majors (SOL/BTC/ETH) use resolution.type 'pyth_price' with the exact ticker provided and NO mint. Category 'crypto'.",
+    "- For platform tokens use resolution.type 'token_price' with the exact mint provided and NO ticker. Category 'tokens'. Only use tokens with real volume.",
+    "- The description must state the exact resolution rule: the data source, the line, and when it's checked.",
+    "- Questions must not duplicate any existing open market.",
+    "- Write like a sharp crypto-native product, not a bureaucrat. Short questions.",
+].join("\n");
+
+/** Anthropic path — best quality, used when a key is configured. */
+async function generateViaAnthropic(userPayload: string): Promise<string | null> {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const client = new Anthropic();
+    const response = await client.messages.create({
+        model: "claude-opus-4-8",
+        max_tokens: 16000,
+        thinking: { type: "adaptive" },
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userPayload }],
+        output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
+    });
+    if (response.stop_reason === "refusal") return null;
+    const text = response.content.find((b) => b.type === "text");
+    return text && text.type === "text" ? text.text : null;
+}
+
+/**
+ * Cloudflare Workers AI path — free tier, reuses the account + token the
+ * deploy pipeline already has. OpenAI-compatible endpoint; json_object mode
+ * (no schema enforcement server-side, so the validation below is what
+ * guarantees shape — same guard both providers get).
+ * Model is env-swappable: "@cf/zai-org/glm-5.2" (default) and
+ * "@cf/moonshotai/kimi-k2.7-code" both live on the account's catalog.
+ */
+async function generateViaWorkersAI(userPayload: string): Promise<string | null> {
+    const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const token = process.env.CLOUDFLARE_API_TOKEN;
+    if (!account || !token) return null;
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/v1/chat/completions`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({
+            model: process.env.PREDICTIONS_FACTORY_MODEL ?? "@cf/zai-org/glm-5.2",
+            messages: [
+                {
+                    role: "system",
+                    content: SYSTEM_PROMPT +
+                        "\nReply with ONLY a JSON object, no prose, exactly matching this schema: " +
+                        JSON.stringify(OUTPUT_SCHEMA),
+                },
+                { role: "user", content: userPayload },
+            ],
+            response_format: { type: "json_object" },
+            max_tokens: 4000,
+        }),
+    });
+    if (!res.ok) {
+        console.error("workers-ai generation failed:", res.status, (await res.text()).slice(0, 300));
+        return null;
+    }
+    const d = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return d.choices?.[0]?.message?.content ?? null;
+}
+
+/**
+ * Generate up to `count` markets from live platform + majors data.
+ * Provider: Anthropic when ANTHROPIC_API_KEY is set, else Cloudflare
+ * Workers AI (free) via the existing CF credentials. Returns [] when
+ * neither is available — generation is optional, resolution never is.
+ */
+export async function generateMarkets(count: number): Promise<GeneratedMarket[]> {
+    if (count <= 0) return [];
 
     // Live context: majors from Pyth + the platform's most-traded tokens.
     const majors = await Promise.all(
@@ -182,41 +249,26 @@ export async function generateMarkets(count: number): Promise<GeneratedMarket[]>
         .from(predictionMarkets)
         .where(eq(predictionMarkets.status, "open"));
 
-    const response = await client.messages.create({
-        model: "claude-opus-4-8",
-        max_tokens: 16000,
-        thinking: { type: "adaptive" },
-        system: [
-            "You create pari-mutuel prediction markets for watchparty, a Solana streaming + trading platform.",
-            "Every market MUST be objectively resolvable by a price comparison at close — no vibes, no interpretation.",
-            "Rules:",
-            "- Exactly two outcomes. Outcome 0 is the 'price at or above the line' side, outcome 1 is 'below'. Phrase them naturally (e.g. ['$180 or above', 'Below $180']).",
-            "- Pick thresholds that are genuinely uncertain (near current price, interesting round numbers) — a market that's 99% one side is boring.",
-            "- For majors (SOL/BTC/ETH) use resolution.type 'pyth_price' with the exact ticker provided. Category 'crypto'.",
-            "- For platform tokens use resolution.type 'token_price' with the exact mint provided. Category 'tokens'. Only use tokens with real volume.",
-            "- The description must state the exact resolution rule: the data source, the line, and when it's checked.",
-            "- Questions must not duplicate any existing open market.",
-            "- Write like a sharp crypto-native product, not a bureaucrat. Short questions.",
-        ].join("\n"),
-        messages: [{
-            role: "user",
-            content: JSON.stringify({
-                now: new Date().toISOString(),
-                majors,
-                platform_tokens: hotTokens,
-                existing_open_questions: existing.map((e) => e.question),
-                markets_wanted: count,
-            }),
-        }],
-        output_config: {
-            format: { type: "json_schema", schema: OUTPUT_SCHEMA },
-        },
+    const userPayload = JSON.stringify({
+        now: new Date().toISOString(),
+        majors,
+        platform_tokens: hotTokens,
+        existing_open_questions: existing.map((e) => e.question),
+        markets_wanted: count,
     });
 
-    if (response.stop_reason === "refusal") return [];
-    const text = response.content.find((b) => b.type === "text");
-    if (!text || text.type !== "text") return [];
-    const parsed = JSON.parse(text.text) as { markets: GeneratedMarket[] };
+    const raw = process.env.ANTHROPIC_API_KEY
+        ? await generateViaAnthropic(userPayload)
+        : await generateViaWorkersAI(userPayload);
+    if (!raw) return [];
+
+    let parsed: { markets: GeneratedMarket[] };
+    try {
+        parsed = JSON.parse(raw) as { markets: GeneratedMarket[] };
+        if (!Array.isArray(parsed.markets)) return [];
+    } catch {
+        return [];
+    }
 
     // Trust but verify — the spec must reference real data or we drop it.
     const validMints = new Set(hotTokens.map((t) => t.mint));
