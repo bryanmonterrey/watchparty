@@ -6,6 +6,7 @@ import { toPublicKey } from '@/lib/utils';
 import { trpc } from '@/lib/trpc/client';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { SplitShare } from '@/components/app-ui/create-dialog/token-launch-section';
+import { getBoostTreasuryOwner } from '@/lib/premium/boosts';
 import {
     DynamicFeeSharingClient,
     deriveFeeVaultPdaAddress,
@@ -186,8 +187,15 @@ export function useTokenLaunch() {
             const creatorFeeBps = launchState.creatorFee * 100;
             const totalFeeBps = platformFeeBps + creatorFeeBps;
 
-            // creatorTradingFeePercentage in Meteora SDK is a u16 of the percentage of the TOTAL fee pool they take (0-100)
-            const creatorTradingFeePercentage = totalFeeBps > 0 ? Math.floor((creatorFeeBps / totalFeeBps) * 100) : 0;
+            // creatorTradingFeePercentage in Meteora SDK is a u16 of the percentage of the TOTAL fee pool they take (0-100).
+            // With splits, it's 0: ALL fees route to the partner pot → the DFS
+            // vault, which pays platform + collaborators + creator by share.
+            // Without splits, the creator keeps their portion via the creator
+            // pot and the treasury (feeClaimer) keeps the platform's.
+            const hasSplits = !!(launchState.splits && launchState.splits.length > 0);
+            const creatorTradingFeePercentage = hasSplits
+                ? 0
+                : totalFeeBps > 0 ? Math.floor((creatorFeeBps / totalFeeBps) * 100) : 0;
 
             const dynamicFeeConfigParams = {
                 ...STANDARD_CURVE_CONFIG_PARAMS,
@@ -232,8 +240,13 @@ export function useTokenLaunch() {
             // the connected wallet when self-launching.
             const creatorPubkey = opts?.creatorWallet ?? publicKey;
 
+            // The platform's 1% claims through the PARTNER pot (feeClaimer).
+            // Historically this was set to the creator, which routed the
+            // platform fee to creators — the treasury is the partner.
+            const treasuryPubkey = new PublicKey(getBoostTreasuryOwner());
+
             const preInstructions: TransactionInstruction[] = [];
-            let feeClaimerPubkey = creatorPubkey;
+            let feeClaimerPubkey = treasuryPubkey;
 
             if (launchState.splits && launchState.splits.length > 0) {
                 const dfsClient = new DynamicFeeSharingClient(connection, 'confirmed');
@@ -241,23 +254,34 @@ export function useTokenLaunch() {
                 // 1. Resolve splits (DB check + Treasury fallback)
                 const resolvedSplits = await resolveSplitsMutation.mutateAsync(launchState.splits);
 
-                // 2. Convert to UserShare[] mapping percentage to raw BPS or matching basis
-                // The total percentage should be 100%, meaning the fee vault distributes all funds sent to it.
-                // We will use 10,000 as 100% basis.
+                // 2. With splits, ALL fees flow into one DFS vault
+                // (creatorTradingFeePercentage is forced to 0 below, so the
+                // partner pot = 100% of fees) and every party — platform,
+                // collaborators, creator — is a proportional vault share on a
+                // 10,000 basis. platform = platformFeeBps/totalFeeBps; the
+                // creator-fee portion divides among collabs + creator residual.
+                const platformShare10k = Math.round((platformFeeBps / totalFeeBps) * 10_000);
+                const creatorPortion10k = 10_000 - platformShare10k;
                 const userShares = resolvedSplits.map(s => ({
                     address: new PublicKey(s.resolvedAddress),
-                    share: Math.floor(s.percentage * 100)
+                    share: Math.floor((s.percentage / 100) * creatorPortion10k)
                 }));
 
-                // Append Creator residual share if there's any remaining percentage
+                // Creator residual share of the creator portion
                 const totalSplit = launchState.splits.reduce((acc, curr) => acc + (curr.percentage || 0), 0);
                 const creatorResidual = Math.max(0, 100 - totalSplit);
                 if (creatorResidual > 0) {
                     userShares.push({
                         address: creatorPubkey,
-                        share: Math.floor(creatorResidual * 100)
+                        share: Math.floor((creatorResidual / 100) * creatorPortion10k)
                     });
                 }
+                // Platform share — absorb rounding dust so shares sum to 10,000
+                const assigned = userShares.reduce((acc, s) => acc + s.share, 0);
+                userShares.unshift({
+                    address: treasuryPubkey,
+                    share: 10_000 - assigned
+                });
 
                 // 3. Generate create PDA instructions
                 const { TOKEN_PROGRAM_ID } = await import('@solana/spl-token');

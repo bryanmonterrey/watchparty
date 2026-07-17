@@ -94,6 +94,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
+    "drift-sdk-beta": "npm:@drift-labs/sdk@2.163.0-beta.13",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "embla-carousel-react": "^8.6.0",

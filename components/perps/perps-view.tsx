@@ -144,6 +144,22 @@ export function PerpsView() {
                     </div>
                 )}
 
+                {/* Drift is mid-migration to their new program (velocity): the old
+                    program rejects account creation from EVERY published SDK, and
+                    the new one isn't initialized on mainnet yet (verified by
+                    simulation 2026-07-16). Prices/positions read fine; first-time
+                    deposits fail upstream. Remove once their stable SDK lands. */}
+                {canTrade && account && !account.exists && (
+                    <div className="mt-5 rounded-2xl bg-sunset/10 px-5 py-4">
+                        <p className="text-[14px] font-bold text-sunset">New Drift accounts are briefly paused</p>
+                        <p className="mt-0.5 text-[13px] font-medium leading-relaxed text-zinc-500">
+                            Drift is upgrading their protocol and isn&apos;t accepting new trading accounts
+                            right now. Prices are live, and existing Drift accounts work normally — first-time
+                            setup will open as soon as their upgrade completes.
+                        </p>
+                    </div>
+                )}
+
                 {/* Positions */}
                 {account && account.positions.length > 0 && (
                     <div className="mt-6">
