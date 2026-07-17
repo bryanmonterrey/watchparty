@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -107,6 +108,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const { signAndSubmit } = useWalletSigning();
     const swigSession = useSwigSession();
     const { authority: walletAuthority, isSwig } = useTradeAuthority();
+    const router = useRouter();
     // Geo-block = read-only mode (Phantom's pattern): everything renders,
     // no authority means every trading affordance is disabled.
     const authority = geoBlocked ? null : walletAuthority;
@@ -272,14 +274,14 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
         <ScrollArea className="h-full bg-background">
             <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 md:pt-(--header-height)">
                 {geoBlocked && (
-                    <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-sunset/10 px-5 py-3">
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-5 py-3">
                         <p className="text-center text-[13px] font-semibold text-sunset">
                             Access to this product isn&apos;t available in your region. Prices and markets stay visible.
                         </p>
                     </div>
                 )}
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-5 rounded-lg bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
+                    <div className="mt-5 rounded-md bg-white/[0.05] px-5 py-4 ring-1 ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -288,24 +290,39 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                 )}
 
                 <div className="mt-4 lg:grid lg:grid-cols-[250px_minmax(0,1fr)_340px] lg:items-start lg:gap-2">
-                    {/* Markets rail — desktop */}
-                    <aside className="hidden overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10 lg:block">
-                        <p className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wide text-zinc-600">
-                            Markets
-                        </p>
-                        {loading
-                            ? Array.from({ length: 9 }).map((_, i) => (
-                                <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
-                            ))
-                            : markets.map((m) => (
-                                <MarketRow
-                                    key={m.symbol}
-                                    market={m}
-                                    change={change24h(m)}
-                                    active={m.symbol === selected}
-                                    onSelect={() => setSelected(m.symbol)}
-                                />
-                            ))}
+                    {/* Markets rail — desktop. Tokens|Perps|Follows tabs per the
+                        Phantom reference; Tokens routes to spot, Follows is a
+                        placeholder until a follows feed exists. */}
+                    <aside className="hidden overflow-hidden rounded-lg bg-white/[0.05] ring-1 ring-white/10 lg:block">
+                        <div className="flex border-b border-white/[0.06]">
+                            <button
+                                onClick={() => router.push("/trade")}
+                                className="flex-1 cursor-pointer border-r border-white/[0.06] py-3 text-[13px] font-bold text-zinc-500 transition-colors hover:text-white"
+                            >
+                                Tokens
+                            </button>
+                            <button className="flex-1 cursor-default border-r border-white/[0.06] py-3 text-[13px] font-bold text-white">
+                                Perps
+                            </button>
+                            <button className="flex-1 cursor-default py-3 text-[13px] font-bold text-zinc-700">
+                                Follows
+                            </button>
+                        </div>
+                        <div className="p-1.5">
+                            {loading
+                                ? Array.from({ length: 9 }).map((_, i) => (
+                                    <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                                ))
+                                : markets.map((m) => (
+                                    <MarketRow
+                                        key={m.symbol}
+                                        market={m}
+                                        change={change24h(m)}
+                                        active={m.symbol === selected}
+                                        onSelect={() => setSelected(m.symbol)}
+                                    />
+                                ))}
+                        </div>
                     </aside>
 
                     {/* Center: market header + chart (+ positions on desktop) */}
@@ -342,7 +359,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-2">
-                            <div className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10">
+                            <div className="overflow-hidden rounded-lg bg-white/[0.05] ring-1 ring-white/10">
                                 {market ? (
                                     <>
                                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5">
@@ -414,7 +431,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         <button
                             onClick={() => canTrade && setManaging(true)}
                             disabled={!canTrade}
-                            className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-xl bg-white/[0.03] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
+                            className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-lg bg-white/[0.05] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.07] disabled:cursor-default"
                         >
                             <div className="flex items-center gap-2.5">
                                 <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-zinc-300">
@@ -487,8 +504,8 @@ function MarketRow({
         <button
             onClick={onSelect}
             className={cn(
-                "flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left transition-colors",
-                active ? "bg-white/[0.06]" : "hover:bg-white/[0.03]",
+                "flex w-full cursor-pointer items-center justify-between rounded-md px-2.5 py-2.5 text-left transition-colors",
+                active ? "bg-white/[0.06]" : "hover:bg-white/[0.04]",
             )}
         >
             <span className="flex items-center gap-2">
@@ -609,7 +626,7 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-xl bg-white/[0.03] p-4 ring-1 ring-white/10">
+        <div className="rounded-lg bg-white/[0.05] p-4 ring-1 ring-white/10">
             {/* Direction */}
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
                 <button
@@ -692,7 +709,7 @@ function OrderPanel({
             </div>
 
             {insufficient && (
-                <p className="mt-3 rounded-lg bg-sunset/10 px-4 py-2.5 text-[12px] font-semibold text-sunset">
+                <p className="mt-3 rounded-md bg-sunset/10 px-4 py-2.5 text-[12px] font-semibold text-sunset">
                     That&apos;s more than your ${fmtUsd(balance)} trading balance — deposit USDC first.
                 </p>
             )}
@@ -754,7 +771,7 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="rounded-xl bg-white/[0.03] ring-1 ring-white/10">
+        <div className="rounded-lg bg-white/[0.05] ring-1 ring-white/10">
             <div className="flex items-center gap-1 overflow-x-auto px-2 pt-2 [scrollbar-width:none]">
                 {TERM_TABS.map((t) => (
                     <button
@@ -818,7 +835,7 @@ function TermEmpty({ title, sub }: { title: string; sub: string }) {
 function FillRow({ fill: f }: { fill: TradeFill }) {
     const long = f.direction === "long";
     return (
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.03]">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md px-3 py-2 transition-colors hover:bg-white/[0.03]">
             <div className="flex items-center gap-2.5">
                 <span className={cn("text-[12px] font-extrabold", long ? "text-lantern" : "text-pastelred")}>
                     {long ? "Long" : "Short"}
@@ -845,7 +862,7 @@ function FillRow({ fill: f }: { fill: TradeFill }) {
 
 function OrderRow({ fill: f }: { fill: TradeFill }) {
     return (
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.03]">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md px-3 py-2 transition-colors hover:bg-white/[0.03]">
             <div className="flex items-center gap-2.5">
                 <span className="text-[13px] font-bold text-white">{f.symbol}</span>
                 <span className="text-[12px] font-semibold capitalize text-zinc-500">
@@ -876,7 +893,7 @@ function FundingTable({ markets }: { markets: PerpMarketRow[] }) {
             {markets.map((m) => (
                 <div
                     key={m.symbol}
-                    className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.03]"
+                    className="flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-white/[0.03]"
                 >
                     <span className="text-[13px] font-bold text-white">{m.symbol}</span>
                     <span className="flex gap-2 tabular-nums">
@@ -913,7 +930,7 @@ function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onCl
 
     const up = p.pnlUsd >= 0;
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
             <div className="flex items-center gap-3">
                 <span
                     className={cn(
