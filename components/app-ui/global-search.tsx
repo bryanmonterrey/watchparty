@@ -76,11 +76,15 @@ export function GlobalSearch({
             <form
                 onSubmit={handleSubmit}
                 className={cn(
+                    // z-50 keeps the bar above the attached suggestion panel
+                    // (docs/searchbar.svg: the panel wraps the bar at a 2px
+                    // inset and renders behind it).
+                    "relative z-50 h-[52px] backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-zinc-500/35 rounded-full transition-colors",
                     // Single source of truth for the ring: isFocused (set on
-                    // input focus, cleared on submit / outside click) — the old
-                    // extra focus-within ring doubled it in a second color.
-                    "relative h-[52px] backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-zinc-500/35 rounded-full transition-colors",
-                    isFocused && "ring-2 ring-white/35"
+                    // input focus, cleared on submit / outside click). No ring
+                    // while the panel is showing — it would sit inside the
+                    // panel's 2px inset and read as a double border.
+                    isFocused && !(showDropdown && (inputValue.length > 0 || history.length > 0)) && "ring-2 ring-white/35"
                 )}
             >
                 <SearchIcon className="absolute left-4 size-6 text-zinc-400" />

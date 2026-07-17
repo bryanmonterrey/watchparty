@@ -72,6 +72,11 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
         onClose();
     };
 
+    // Container geometry comes from docs/searchbar.svg: one panel (rx 27)
+    // wrapping the search bar at a 2px inset on top/sides (bar rx 25.5,
+    // 25.5 + 2 ≈ 27 — concentric), extending down to hold the results.
+    // The panel renders BEHIND the bar (z-40 vs the form's z-50); pt-[58px]
+    // = 2px inset + 52px bar + 4px gap before the first row.
     const isHistoryView = query.length === 0;
     const hasUsers  = (data?.users?.length  ?? 0) > 0;
     const hasTokens = (data?.tokens?.length ?? 0) > 0;
@@ -84,7 +89,7 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
         return (
             <div
                 ref={ref}
-                className="absolute top-full -left-1 -right-1 mt-1 z-50 rounded-[30px] bg-input1 ring-1 ring-white/5 py-2 overflow-hidden"
+                className="absolute -top-0.5 -left-0.5 -right-0.5 z-40 rounded-[27px] bg-input1 ring-1 ring-white/5 pt-[58px] pb-2 overflow-hidden"
             >
                 <p className="px-4 pt-3 pb-1.5 text-sm font-semibold tracking-wide text-zinc-500">Recent</p>
                 {history.map(item => (
@@ -102,7 +107,7 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
     return (
         <div
             ref={ref}
-            className="absolute top-full -left-1 -right-1 mt-1 z-50 rounded-[30px] bg-input1 ring-1 ring-white/5 py-2 overflow-hidden"
+            className="absolute -top-0.5 -left-0.5 -right-0.5 z-40 rounded-[27px] bg-input1 ring-1 ring-white/5 pt-[58px] pb-2 overflow-hidden"
         >
             {isLoading && (
                 <div className="px-4 py-3 space-y-3">
