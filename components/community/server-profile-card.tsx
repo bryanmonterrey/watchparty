@@ -70,8 +70,7 @@ export function ServerProfileCard({
                     {imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={imageUrl} alt="" className="size-full object-cover" />
-                    ) : (
-                    )}
+                    ) : null}
                 </div>
 
                 <div className="mt-3 flex items-center gap-2">

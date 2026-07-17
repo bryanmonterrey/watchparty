@@ -92,8 +92,7 @@ function DiscoverSection() {
                             <div className="-mt-6 grid size-12 place-items-center overflow-hidden rounded-[16px] bg-black4 ring-4 ring-background">
                                 {s.imageUrl ? (
                                     <img src={s.imageUrl} alt="" className="size-full object-cover" />
-                                ) : (
-                                )}
+                                ) : null}
                             </div>
                             <div className="mt-2.5 flex items-center gap-2">
                                 <p className="min-w-0 truncate text-[16px] font-bold tracking-tight text-white">{s.name}</p>
