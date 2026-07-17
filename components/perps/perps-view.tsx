@@ -277,7 +277,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
     return (
         <ScrollArea className="h-full bg-background">
-            <div className="mx-auto max-w-[1440px] px-2 pb-16 pt-4 md:pt-(--header-height)">
+            <div className="mx-auto flex max-w-[1440px] flex-col px-2 pb-4 pt-4 md:pt-(--header-height) lg:h-dvh lg:pb-2">
                 {geoBlocked && (
                     <div className="mt-2 flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-4 py-2.5">
                         <p className="text-center text-[13px] font-semibold text-sunset">
@@ -286,7 +286,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </div>
                 )}
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-2 rounded-md bg-white/[0.05] px-4 py-3 ring-1 ring-white/10">
+                    <div className="mt-2 rounded-md bg-panel px-4 py-3 ring-1 ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -296,12 +296,12 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
                 {/* Column widths measured off docs/perpsterminal.png @1440:
                     rail 320 / chart flex / book 320 / ticket 320, 8px gutters. */}
-                <div className="mt-2 lg:grid lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:items-start lg:gap-2">
+                <div className="mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:gap-2">
                     {/* Markets rail — desktop. Tokens|Perps|Follows switch the
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
-                    <aside className="hidden overflow-hidden rounded-lg bg-white/[0.05] ring-1 ring-white/10 lg:block">
+                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg bg-panel ring-1 ring-white/10 lg:flex">
                         <div className="flex border-b border-white/[0.06]">
                             {(["tokens", "perps", "follows"] as const).map((t, i) => (
                                 <button
@@ -317,7 +317,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                 </button>
                             ))}
                         </div>
-                        <div className="p-1.5">
+                        <div className="min-h-0 flex-1 overflow-y-auto p-1.5 [scrollbar-width:none]">
                             {railTab === "perps" &&
                                 (loading
                                     ? Array.from({ length: 9 }).map((_, i) => (
@@ -358,7 +358,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </aside>
 
                     {/* Center: market header + chart (+ positions on desktop) */}
-                    <div className="min-w-0">
+                    <div className="min-w-0 lg:flex lg:min-h-0 lg:flex-col">
                         {/* Markets strip — mobile */}
                         <div className="-mx-2 mb-3 flex gap-1.5 overflow-x-auto px-2 pb-1 lg:hidden [scrollbar-width:none]">
                             {markets.map((m) => {
@@ -391,7 +391,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg bg-white/[0.05] ring-1 ring-white/10">
+                            <div className="overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
                                 {market ? (
                                     <>
                                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5">
@@ -437,13 +437,13 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         {/* Positions / Trades / Funding / Order History — desktop */}
-                        <div className="mt-2 max-lg:hidden">
+                        <div className="mt-2 max-lg:hidden lg:min-h-0 lg:flex-1">
                             <TerminalTabs positions={positions} fills={fills} markets={markets} onClose={closeRow} />
                         </div>
                     </div>
 
                     {/* Order panel */}
-                    <aside className="mt-3 lg:mt-0">
+                    <aside className="mt-3 lg:mt-0 lg:flex lg:min-h-0 lg:flex-col">
                         {market && (
                             <OrderPanel
                                 key={market.symbol}
@@ -463,7 +463,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         <button
                             onClick={() => canTrade && setManaging(true)}
                             disabled={!canTrade}
-                            className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-lg bg-white/[0.05] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.07] disabled:cursor-default"
+                            className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-lg bg-panel px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.07] disabled:cursor-default lg:flex-1 lg:items-start"
                         >
                             <div className="flex items-center gap-2.5">
                                 <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-zinc-300">
@@ -491,10 +491,6 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     <TerminalTabs positions={positions} fills={fills} markets={markets} onClose={closeRow} />
                 </div>
 
-                <p className="mt-6 px-1 text-[12px] font-medium leading-relaxed text-zinc-600">
-                    Trading happens on the Flash Trade protocol from your own wallet — watchparty never holds
-                    your collateral or positions. Leverage can liquidate your full margin; size accordingly.
-                </p>
             </div>
 
             {managing && authority && (
@@ -697,7 +693,7 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-lg bg-white/[0.05] p-4 ring-1 ring-white/10">
+        <div className="rounded-lg bg-panel p-4 ring-1 ring-white/10">
             {/* Direction */}
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
                 <button
@@ -842,7 +838,7 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="rounded-lg bg-white/[0.05] ring-1 ring-white/10">
+        <div className="flex h-full min-h-0 flex-col rounded-lg bg-panel ring-1 ring-white/10">
             <div className="flex items-center gap-1 overflow-x-auto px-2 pt-2 [scrollbar-width:none]">
                 {TERM_TABS.map((t) => (
                     <button
@@ -865,7 +861,7 @@ function TerminalTabs({
                     </button>
                 ))}
             </div>
-            <div className="p-2">
+            <div className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-width:none]">
                 {tab === "positions" &&
                     (positions.length ? (
                         <div className="space-y-1">

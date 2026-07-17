@@ -164,6 +164,9 @@
   --color-lantern2: #35FFAA;
   --color-lantern: #00ED89;
   --color-gray1: #17171B;
+  /* Terminal panel fill (perps/predictions surfaces) — white 5% composited
+     on black, minted solid so panels don't depend on what's behind them. */
+  --color-panel: #0D0D0D;
   --color-black1: #0C0C0E;
   --color-black: #000000;
   --color-black3: #101114;

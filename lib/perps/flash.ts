@@ -27,19 +27,91 @@ export const ER_ENDPOINT =
     process.env.NEXT_PUBLIC_FLASH_ER_RPC ?? "https://flash.magicblock.xyz";
 
 /**
- * Curated market list — majors + the memes our traders actually know.
- * Each entry names the Flash pool that lists the pair.
+ * Full Flash catalog — every tradeable target across the mainnet pools,
+ * enumerated from the SDK's bundled PoolConfig.json (dist/PoolConfig.json:
+ * non-stable custodies referenced as a market targetCustody). Each entry
+ * names the Flash pool that lists the pair; display order is this order.
  */
 export const PERP_MARKETS = [
+    // Majors
     { symbol: "SOL", pool: "Crypto.1" },
     { symbol: "BTC", pool: "Crypto.1" },
     { symbol: "ETH", pool: "Crypto.1" },
+    // Crypto
+    { symbol: "XRP", pool: "Crypto.1" },
+    { symbol: "BNB", pool: "Crypto.1" },
+    { symbol: "SUI", pool: "Crypto.1" },
+    { symbol: "ADA", pool: "Crypto.1" },
+    { symbol: "NEAR", pool: "Crypto.1" },
+    { symbol: "TRX", pool: "Crypto.1" },
+    { symbol: "ZEC", pool: "Crypto.1" },
+    { symbol: "MON", pool: "Crypto.1" },
+    { symbol: "GRAM", pool: "Crypto.1" },
+    { symbol: "BP", pool: "Crypto.1" },
+    // DeFi / governance
+    { symbol: "HYPE", pool: "Governance.1" },
     { symbol: "JUP", pool: "Governance.1" },
+    { symbol: "PYTH", pool: "Governance.1" },
+    { symbol: "JTO", pool: "Governance.1" },
+    { symbol: "ONDO", pool: "Governance.1" },
+    { symbol: "TAO", pool: "Governance.1" },
+    { symbol: "UNI", pool: "Governance.1" },
+    { symbol: "WLD", pool: "Governance.1" },
+    { symbol: "KMNO", pool: "Governance.1" },
+    { symbol: "CHIP", pool: "Governance.1" },
+    { symbol: "MEGA", pool: "Governance.1" },
+    { symbol: "LIT", pool: "Governance.1" },
+    { symbol: "VVV", pool: "Governance.1" },
+    // Memes & community
     { symbol: "BONK", pool: "Community.1" },
     { symbol: "PENGU", pool: "Community.1" },
     { symbol: "PUMP", pool: "Community.1" },
     { symbol: "WIF", pool: "Community.2" },
     { symbol: "FARTCOIN", pool: "Trump.1" },
+    { symbol: "ORE", pool: "Ore.1" },
+    // US equities & ETFs
+    { symbol: "SPY", pool: "Equity.1" },
+    { symbol: "IWM", pool: "Equity.1" },
+    { symbol: "NVDA", pool: "Equity.1" },
+    { symbol: "TSLA", pool: "Equity.1" },
+    { symbol: "AAPL", pool: "Equity.1" },
+    { symbol: "MSFT", pool: "Equity.1" },
+    { symbol: "AMZN", pool: "Equity.1" },
+    { symbol: "GOOGL", pool: "Equity.1" },
+    { symbol: "META", pool: "Equity.1" },
+    { symbol: "AVGO", pool: "Equity.1" },
+    { symbol: "AMD", pool: "Equity.1" },
+    { symbol: "INTC", pool: "Equity.1" },
+    { symbol: "MU", pool: "Equity.1" },
+    { symbol: "MSTR", pool: "Equity.1" },
+    { symbol: "COIN", pool: "Equity.1" },
+    { symbol: "HOOD", pool: "Equity.1" },
+    { symbol: "CRCL", pool: "Equity.1" },
+    { symbol: "ORCL", pool: "Equity.1" },
+    { symbol: "ADBE", pool: "Equity.1" },
+    { symbol: "QCOM", pool: "Equity.1" },
+    { symbol: "TXN", pool: "Equity.1" },
+    { symbol: "LLY", pool: "Equity.1" },
+    { symbol: "TSM", pool: "Equity.1" },
+    { symbol: "ASML", pool: "Equity.1" },
+    { symbol: "SONY", pool: "Equity.1" },
+    { symbol: "SNDK", pool: "Equity.1" },
+    { symbol: "SKHY", pool: "Equity.1" },
+    { symbol: "SPCX", pool: "Equity.1" },
+    { symbol: "IREN", pool: "Equity.1" },
+    // FX
+    { symbol: "EUR", pool: "Virtual.1" },
+    { symbol: "GBP", pool: "Virtual.1" },
+    { symbol: "USDJPY", pool: "Virtual.1" },
+    { symbol: "USDCNH", pool: "Virtual.1" },
+    // Metals & commodities
+    { symbol: "XAU", pool: "Virtual.1" },
+    { symbol: "XAG", pool: "Virtual.1" },
+    { symbol: "XPT", pool: "Virtual.1" },
+    { symbol: "XPD", pool: "Virtual.1" },
+    { symbol: "CRUDEOIL", pool: "Virtual.1" },
+    { symbol: "NATGAS", pool: "Virtual.1" },
+    { symbol: "COPPER", pool: "Virtual.1" },
 ] as const;
 
 export type PerpSymbol = (typeof PERP_MARKETS)[number]["symbol"];
@@ -284,12 +356,18 @@ export async function getMarkets(connection: Connection): Promise<PerpMarketRow[
     const venue = await getReadVenue(connection);
     const er = await erConn(venue);
 
-    const resolved = PERP_MARKETS.map((m) => {
-        const long = resolveMarket(flash, venue, m.symbol, "long");
-        const short = resolveMarket(flash, venue, m.symbol, "short");
-        const usdc = long.pool.custodies.find((c) => c.symbol === "USDC")!;
-        const lock = long.pool.custodies.find((c) => c.symbol === long.lockSymbol)!;
-        return { def: m, long, short, usdc, lock };
+    const resolved = PERP_MARKETS.flatMap((m) => {
+        try {
+            const long = resolveMarket(flash, venue, m.symbol, "long");
+            const short = resolveMarket(flash, venue, m.symbol, "short");
+            const usdc = long.pool.custodies.find((c) => c.symbol === "USDC")!;
+            const lock = long.pool.custodies.find((c) => c.symbol === long.lockSymbol)!;
+            return [{ def: m, long, short, usdc, lock }];
+        } catch {
+            // Listed in PoolConfig but not resolvable right now (delisted side,
+            // config drift) — drop the row instead of killing the whole rail.
+            return [];
+        }
     });
 
     // One dedup'd account list across pools: target+lock+usdc custodies and
@@ -305,10 +383,13 @@ export async function getMarkets(connection: Connection): Promise<PerpMarketRow[
     }
     const keys = [...custodyByKey.keys()];
     const entries = [...custodyByKey.values()];
-    const infos = await er.getMultipleAccountsInfo([
-        ...entries.map((e) => e.oracle),
-        ...entries.map((e) => e.account),
-    ]);
+    // getMultipleAccountsInfo caps at 100 keys — with the full catalog we read
+    // ~170 accounts, so chunk.
+    const allKeys = [...entries.map((e) => e.oracle), ...entries.map((e) => e.account)];
+    const infos: Awaited<ReturnType<typeof er.getMultipleAccountsInfo>> = [];
+    for (let i = 0; i < allKeys.length; i += 100) {
+        infos.push(...(await er.getMultipleAccountsInfo(allKeys.slice(i, i + 100))));
+    }
 
     const coder = venue.client.program.coder.accounts;
     const price = new Map<string, number>();

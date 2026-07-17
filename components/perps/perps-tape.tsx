@@ -51,7 +51,7 @@ export function PerpsTape({ pythTicker, livePrice }: { pythTicker: string; liveP
     }, [pythTicker]);
 
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-white/[0.05] ring-1 ring-white/10">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
             <div className="flex border-b border-white/[0.06]">
                 {(["book", "trades"] as const).map((t) => (
                     <button
