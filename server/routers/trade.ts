@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
+import { follows } from "@/db/schema/content/follow";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
 import { eq, and, desc, sql, isNotNull, type SQL } from "drizzle-orm";
@@ -103,6 +104,41 @@ export const tradeRouter = router({
             migrating: migratingCol.map(toTradeToken),
             migrated: migratedCol.map(toTradeToken),
         };
+    }),
+
+    /** Perps-rail Tokens tab: hottest live platform tokens, cached columns only. */
+    getRailTokens: publicProcedure.query(async () => {
+        return db
+            .select({
+                id: tokens.id,
+                ticker: tokens.ticker,
+                tokenAddress: tokens.tokenAddress,
+                imageUrl: tokens.imageUrl,
+                priceUsd: tokens.priceUsd,
+                priceChange24h: tokens.priceChange24h,
+            })
+            .from(tokens)
+            .where(and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress), isNotNull(tokens.priceUsd)))
+            .orderBy(sql`${tokens.volume24hUsd} desc nulls last`)
+            .limit(12);
+    }),
+
+    /** Perps-rail Follows tab: live tokens from creators the caller follows. */
+    getFollowedTokens: protectedProcedure.query(async ({ ctx }) => {
+        return db
+            .select({
+                id: tokens.id,
+                ticker: tokens.ticker,
+                tokenAddress: tokens.tokenAddress,
+                imageUrl: tokens.imageUrl,
+                priceUsd: tokens.priceUsd,
+                priceChange24h: tokens.priceChange24h,
+            })
+            .from(tokens)
+            .innerJoin(follows, eq(follows.followingId, tokens.creatorId))
+            .where(and(eq(follows.followerId, ctx.user.id), eq(tokens.status, "live"), isNotNull(tokens.poolAddress)))
+            .orderBy(sql`${tokens.volume24hUsd} desc nulls last`)
+            .limit(20);
     }),
 
     /**

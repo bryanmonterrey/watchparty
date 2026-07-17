@@ -15,7 +15,7 @@ const DATAFEED_SCRIPT = "/datafeeds/udf/dist/bundle.js";
 
 type LoadState = "loading" | "ready" | "missing";
 
-function loadScript(src: string): Promise<void> {
+export function loadScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
         if (existing) {

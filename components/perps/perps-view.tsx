@@ -15,7 +15,7 @@ import { AnimatedSlider } from "@/components/ui/motion-slider";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PerpsChart } from "@/components/perps/perps-chart";
+import { PerpsTVChart } from "@/components/perps/perps-tv-chart";
 import { PerpsTape } from "@/components/perps/perps-tape";
 import { cn } from "@/lib/utils";
 import type { Keypair, Transaction } from "@solana/web3.js";
@@ -120,6 +120,11 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const [account, setAccount] = useState<PerpsAccountState | null>(null);
     const [managing, setManaging] = useState(false);
     const [fills, setFills] = useState<TradeFill[]>([]);
+    const [railTab, setRailTab] = useState<"tokens" | "perps" | "follows">("perps");
+    const railTokens = trpc.trade.getRailTokens.useQuery(undefined, { enabled: railTab === "tokens" });
+    const followedTokens = trpc.trade.getFollowedTokens.useQuery(undefined, {
+        enabled: railTab === "follows" && !!session?.user,
+    });
     const logFill = useCallback((f: Omit<TradeFill, "id">) => {
         setFills((prev) => [{ ...f, id: crypto.randomUUID() }, ...prev].slice(0, 100));
     }, []);
@@ -272,16 +277,16 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
     return (
         <ScrollArea className="h-full bg-background">
-            <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 md:pt-(--header-height)">
+            <div className="mx-auto max-w-[1440px] px-2 pb-16 pt-4 md:pt-(--header-height)">
                 {geoBlocked && (
-                    <div className="mt-4 flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-5 py-3">
+                    <div className="mt-2 flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-4 py-2.5">
                         <p className="text-center text-[13px] font-semibold text-sunset">
                             Access to this product isn&apos;t available in your region. Prices and markets stay visible.
                         </p>
                     </div>
                 )}
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-5 rounded-md bg-white/[0.05] px-5 py-4 ring-1 ring-white/10">
+                    <div className="mt-2 rounded-md bg-white/[0.05] px-4 py-3 ring-1 ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -289,46 +294,73 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </div>
                 )}
 
-                <div className="mt-4 lg:grid lg:grid-cols-[250px_minmax(0,1fr)_340px] lg:items-start lg:gap-2">
-                    {/* Markets rail — desktop. Tokens|Perps|Follows tabs per the
-                        Phantom reference; Tokens routes to spot, Follows is a
-                        placeholder until a follows feed exists. */}
+                {/* Column widths measured off docs/perpsterminal.png @1440:
+                    rail 320 / chart flex / book 320 / ticket 320, 8px gutters. */}
+                <div className="mt-2 lg:grid lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:items-start lg:gap-2">
+                    {/* Markets rail — desktop. Tokens|Perps|Follows switch the
+                        list in place (Phantom anatomy): Perps = Flash markets,
+                        Tokens = hottest platform coins, Follows = coins from
+                        creators you follow. Token rows open the token page. */}
                     <aside className="hidden overflow-hidden rounded-lg bg-white/[0.05] ring-1 ring-white/10 lg:block">
                         <div className="flex border-b border-white/[0.06]">
-                            <button
-                                onClick={() => router.push("/trade")}
-                                className="flex-1 cursor-pointer border-r border-white/[0.06] py-3 text-[13px] font-bold text-zinc-500 transition-colors hover:text-white"
-                            >
-                                Tokens
-                            </button>
-                            <button className="flex-1 cursor-default border-r border-white/[0.06] py-3 text-[13px] font-bold text-white">
-                                Perps
-                            </button>
-                            <button className="flex-1 cursor-default py-3 text-[13px] font-bold text-zinc-700">
-                                Follows
-                            </button>
+                            {(["tokens", "perps", "follows"] as const).map((t, i) => (
+                                <button
+                                    key={t}
+                                    onClick={() => setRailTab(t)}
+                                    className={cn(
+                                        "flex-1 cursor-pointer py-3 text-[13px] font-bold capitalize transition-colors",
+                                        i < 2 && "border-r border-white/[0.06]",
+                                        railTab === t ? "text-white" : "text-zinc-500 hover:text-white",
+                                    )}
+                                >
+                                    {t}
+                                </button>
+                            ))}
                         </div>
                         <div className="p-1.5">
-                            {loading
-                                ? Array.from({ length: 9 }).map((_, i) => (
-                                    <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
-                                ))
-                                : markets.map((m) => (
-                                    <MarketRow
-                                        key={m.symbol}
-                                        market={m}
-                                        change={change24h(m)}
-                                        active={m.symbol === selected}
-                                        onSelect={() => setSelected(m.symbol)}
-                                    />
-                                ))}
+                            {railTab === "perps" &&
+                                (loading
+                                    ? Array.from({ length: 9 }).map((_, i) => (
+                                        <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                                    ))
+                                    : markets.map((m) => (
+                                        <MarketRow
+                                            key={m.symbol}
+                                            market={m}
+                                            change={change24h(m)}
+                                            active={m.symbol === selected}
+                                            onSelect={() => setSelected(m.symbol)}
+                                        />
+                                    )))}
+                            {railTab === "tokens" &&
+                                (railTokens.isLoading
+                                    ? Array.from({ length: 9 }).map((_, i) => (
+                                        <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                                    ))
+                                    : (railTokens.data ?? []).map((t) => (
+                                        <TokenRailRow key={t.id} token={t} onOpen={() => router.push(`/${t.tokenAddress || t.id}`)} />
+                                    )))}
+                            {railTab === "follows" &&
+                                (followedTokens.isLoading
+                                    ? Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                                    ))
+                                    : (followedTokens.data ?? []).length === 0
+                                        ? (
+                                            <p className="px-2.5 py-6 text-center text-[12px] font-medium text-zinc-600">
+                                                No coins from creators you follow yet.
+                                            </p>
+                                        )
+                                        : (followedTokens.data ?? []).map((t) => (
+                                            <TokenRailRow key={t.id} token={t} onOpen={() => router.push(`/${t.tokenAddress || t.id}`)} />
+                                        )))}
                         </div>
                     </aside>
 
                     {/* Center: market header + chart (+ positions on desktop) */}
                     <div className="min-w-0">
                         {/* Markets strip — mobile */}
-                        <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1 lg:hidden [scrollbar-width:none]">
+                        <div className="-mx-2 mb-3 flex gap-1.5 overflow-x-auto px-2 pb-1 lg:hidden [scrollbar-width:none]">
                             {markets.map((m) => {
                                 const ch = change24h(m);
                                 return (
@@ -358,7 +390,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             })}
                         </div>
 
-                        <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-2">
+                        <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
                             <div className="overflow-hidden rounded-lg bg-white/[0.05] ring-1 ring-white/10">
                                 {market ? (
                                     <>
@@ -385,7 +417,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                                 borrow {market.borrowHourlyPctLong.toFixed(4)}%/h · up to {market.maxLeverage}×
                                             </span>
                                         </div>
-                                        <PerpsChart pythTicker={market.pythTicker} className="px-2 pb-3 pt-2" />
+                                        <PerpsTVChart pythTicker={market.pythTicker} className="px-2 pb-2 pt-2" />
                                     </>
                                 ) : (
                                     <div className="h-[380px] overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
@@ -529,6 +561,45 @@ function MarketRow({
     );
 }
 
+function TokenRailRow({
+    token: t,
+    onOpen,
+}: {
+    token: { ticker: string; imageUrl: string | null; priceUsd: number | null; priceChange24h: number | null };
+    onOpen: () => void;
+}) {
+    const ch = t.priceChange24h;
+    return (
+        <button
+            onClick={onOpen}
+            className="flex w-full cursor-pointer items-center justify-between rounded-md px-2.5 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
+        >
+            <span className="flex min-w-0 items-center gap-2">
+                {t.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={t.imageUrl} alt="" className="size-5 shrink-0 rounded-full object-cover" />
+                ) : (
+                    <span className="size-5 shrink-0 rounded-full bg-white/[0.08]" />
+                )}
+                <span className="truncate text-[14px] font-bold text-white">{t.ticker}</span>
+            </span>
+            <span className="text-right">
+                <span className="block text-[13px] font-bold tabular-nums text-zinc-200">
+                    ${fmtPrice(t.priceUsd ?? 0)}
+                </span>
+                {ch !== null && (
+                    <span className={cn(
+                        "block text-[11px] font-extrabold tabular-nums",
+                        ch >= 0 ? "text-lantern" : "text-pastelred",
+                    )}>
+                        {ch >= 0 ? "+" : ""}{ch.toFixed(2)}%
+                    </span>
+                )}
+            </span>
+        </button>
+    );
+}
+
 function OrderPanel({
     market,
     account,
@@ -633,7 +704,7 @@ function OrderPanel({
                     onClick={() => setDirection("long")}
                     className={cn(
                         "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
-                        long ? "bg-lantern text-black" : "text-zinc-400 hover:text-white",
+                        long ? "bg-white text-black" : "text-zinc-400 hover:text-white",
                     )}
                 >
                     <HugeiconsIcon icon={TradeUpIcon} className="size-4" strokeWidth={2.5} />
@@ -719,7 +790,7 @@ function OrderPanel({
                 disabled={placing || !canTrade || amount < 1 || insufficient || !quote}
                 className={cn(
                     "mt-4 h-12 w-full cursor-pointer rounded-full text-[14px] font-extrabold transition-colors disabled:opacity-40",
-                    long ? "bg-lantern text-black hover:bg-lantern/90" : "bg-pastelred text-white hover:bg-pastelred/90",
+                    long ? "bg-white text-black hover:bg-white/90" : "bg-pastelred text-white hover:bg-pastelred/90",
                 )}
             >
                 {placing
