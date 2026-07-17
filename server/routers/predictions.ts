@@ -333,44 +333,11 @@ export const predictionsRouter = router({
         }))
         .mutation(async ({ ctx, input }) => {
             adminOnly(ctx.user.role);
-            const [outcome] = await db
-                .select({ id: predictionOutcomes.id })
-                .from(predictionOutcomes)
-                .where(and(eq(predictionOutcomes.marketId, input.marketId), eq(predictionOutcomes.idx, input.winningOutcome)))
-                .limit(1);
-            if (!outcome) throw new TRPCError({ code: "NOT_FOUND", message: "Outcome not found" });
-
-            const [updated] = await db
-                .update(predictionMarkets)
-                .set({
-                    status: "resolved",
-                    winningOutcome: input.winningOutcome,
-                    resolvedAt: new Date(),
-                    resolutionNote: input.note ?? null,
-                })
-                .where(and(eq(predictionMarkets.id, input.marketId), eq(predictionMarkets.status, "open")))
-                .returning();
-            if (!updated) throw new TRPCError({ code: "BAD_REQUEST", message: "Market is not open" });
-
-            // Referral rewards: the rake comes from LOSING bets, so each losing
-            // bet by a referred user credits their referrer 10% of the rake it
-            // contributed (amount × feeBps). Best-effort; idempotent per bet.
-            try {
-                const { creditReferralReward } = await import("@/lib/referral/rewards");
-                const losers = await db
-                    .select({ id: predictionBets.id, userId: predictionBets.userId, amountUsdc: predictionBets.amountUsdc, outcomeIdx: predictionBets.outcomeIdx })
-                    .from(predictionBets)
-                    .where(eq(predictionBets.marketId, updated.id));
-                for (const bet of losers) {
-                    if (bet.outcomeIdx === updated.winningOutcome) continue;
-                    const rake = (bet.amountUsdc * BigInt(updated.feeBps)) / BigInt(10_000);
-                    if (rake <= BigInt(0)) continue;
-                    await creditReferralReward(bet.userId, rake, `pred:${bet.id}`, "predictions").catch(() => {});
-                }
-            } catch (err) {
-                console.error("prediction referral rewards failed:", err);
-            }
-
+            // Shared with the AI factory cron — marks the winner + credits
+            // referral rewards on the losing pool's rake.
+            const { resolveMarketCore } = await import("@/lib/predictions/resolve");
+            const updated = await resolveMarketCore(input.marketId, input.winningOutcome, input.note);
+            if (!updated) throw new TRPCError({ code: "BAD_REQUEST", message: "Outcome not found or market is not open" });
             return updated;
         }),
 

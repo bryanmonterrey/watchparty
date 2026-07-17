@@ -1,7 +1,7 @@
 // Predictions v1 — in-house pari-mutuel markets in USDC on watchparty's own
 // treasury rails. Winners split the losing pool pro-rata minus the fee (rake
 // applies to the losing pool only, so a one-sided market refunds cleanly).
-import { bigint, index, integer, pgPolicy, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
+import { bigint, index, integer, jsonb, pgPolicy, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const predictionMarkets = pgTable("prediction_markets", {
@@ -19,6 +19,8 @@ export const predictionMarkets = pgTable("prediction_markets", {
     resolutionNote: text("resolution_note"),
     /** rake on the LOSING pool only */
     feeBps: integer("fee_bps").default(500).notNull(),
+    /** machine-checkable resolution recipe for AI-generated markets (null = manual) */
+    resolutionSpec: jsonb("resolution_spec"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
     index("idx_prediction_markets_status").on(table.status, table.closesAt),
