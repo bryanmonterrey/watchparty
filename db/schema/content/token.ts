@@ -1,4 +1,4 @@
-import { index, pgPolicy, pgTable, primaryKey, text, timestamp, integer, boolean, jsonb, doublePrecision } from "drizzle-orm/pg-core"
+import { bigint, index, pgPolicy, pgTable, primaryKey, text, timestamp, integer, boolean, jsonb, doublePrecision } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { user } from "../auth/user"
 
@@ -73,3 +73,15 @@ export const tokenAlertSubscriptions = pgTable("token_alert_subscriptions", {
 ]).enableRLS()
 
 export type TokenAlertSubscription = typeof tokenAlertSubscriptions.$inferSelect
+
+// ─── Drift perps accounts opened through watchparty ───
+// Server-side only (no client RLS policies). sweptTakerFees anchors the
+// perps referral sweep: fees since last sweep = on-chain cumulative − swept.
+export const driftAccounts = pgTable("drift_accounts", {
+    userId: text("user_id").primaryKey(),
+    authority: text("authority").notNull(),
+    sweptTakerFees: bigint("swept_taker_fees", { mode: "bigint" }).default(BigInt(0)).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}).enableRLS()
+
+export type DriftAccount = typeof driftAccounts.$inferSelect

@@ -183,6 +183,19 @@ export const tradeRouter = router({
      * swap so THAT token's price/volume/curve update immediately instead of
      * waiting for the minute sweep. Throttled per mint (10s) — spam no-ops.
      */
+    /** Record that the caller trades Drift perps with this wallet (upsert).
+     *  Called after a successful deposit — feeds the perps referral sweep. */
+    recordDriftAccount: protectedProcedure
+        .input(z.object({ authority: z.string().min(32).max(44) }))
+        .mutation(async ({ ctx, input }) => {
+            const { driftAccounts } = await import("@/db/schema/content/token");
+            await db
+                .insert(driftAccounts)
+                .values({ userId: ctx.user.id, authority: input.authority })
+                .onConflictDoUpdate({ target: driftAccounts.userId, set: { authority: input.authority } });
+            return { ok: true };
+        }),
+
     syncToken: protectedProcedure
         .input(z.object({ mint: z.string().min(32).max(44) }))
         .mutation(async ({ input }) => {

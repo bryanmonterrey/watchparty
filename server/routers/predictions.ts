@@ -351,6 +351,26 @@ export const predictionsRouter = router({
                 .where(and(eq(predictionMarkets.id, input.marketId), eq(predictionMarkets.status, "open")))
                 .returning();
             if (!updated) throw new TRPCError({ code: "BAD_REQUEST", message: "Market is not open" });
+
+            // Referral rewards: the rake comes from LOSING bets, so each losing
+            // bet by a referred user credits their referrer 10% of the rake it
+            // contributed (amount × feeBps). Best-effort; idempotent per bet.
+            try {
+                const { creditReferralReward } = await import("@/lib/referral/rewards");
+                const losers = await db
+                    .select({ id: predictionBets.id, userId: predictionBets.userId, amountUsdc: predictionBets.amountUsdc, outcomeIdx: predictionBets.outcomeIdx })
+                    .from(predictionBets)
+                    .where(eq(predictionBets.marketId, updated.id));
+                for (const bet of losers) {
+                    if (bet.outcomeIdx === updated.winningOutcome) continue;
+                    const rake = (bet.amountUsdc * BigInt(updated.feeBps)) / BigInt(10_000);
+                    if (rake <= BigInt(0)) continue;
+                    await creditReferralReward(bet.userId, rake, `pred:${bet.id}`, "predictions").catch(() => {});
+                }
+            } catch (err) {
+                console.error("prediction referral rewards failed:", err);
+            }
+
             return updated;
         }),
 

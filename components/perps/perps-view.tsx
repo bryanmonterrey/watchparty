@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon, TradeDownIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -44,6 +45,8 @@ export function PerpsView() {
     const [account, setAccount] = useState<AccountSummary | null>(null);
     const [trade, setTrade] = useState<{ market: PerpMarketRow; direction: "long" | "short" } | null>(null);
     const [managing, setManaging] = useState(false);
+    // Feeds the perps referral sweep — which users trade Drift through us.
+    const recordDriftAccount = trpc.trade.recordDriftAccount.useMutation();
 
     /** Sign + submit an unsigned tx via whichever wallet the user has. */
     const submit = useCallback(async (tx: Transaction): Promise<string> => {
@@ -266,7 +269,9 @@ export function PerpsView() {
                         const tx = mode === "deposit"
                             ? await prepareDeposit(client, connection, owner, usd)
                             : await prepareWithdraw(client, connection, owner, usd);
-                        return submit(tx);
+                        const sig = await submit(tx);
+                        if (mode === "deposit") recordDriftAccount.mutate({ authority: authority! });
+                        return sig;
                     }}
                 />
             )}

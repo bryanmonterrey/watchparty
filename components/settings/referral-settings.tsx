@@ -66,7 +66,7 @@ export function ReferralSettings() {
                     <p className="text-[12px] font-medium text-zinc-500">Generating your code…</p>
                 )}
                 <p className="text-[12px] font-medium text-zinc-500">
-                    You earn <span className="font-bold text-zinc-300">10% of everything your referrals spend on premium</span> for their first year — paid in USDC.
+                    You earn <span className="font-bold text-zinc-300">10% of the revenue your referrals generate</span> — premium subscriptions and prediction markets — for their first year, paid in USDC.
                 </p>
             </Panel>
 
@@ -94,7 +94,7 @@ export function ReferralSettings() {
                         {earnings!.rows.slice(0, 5).map((r) => (
                             <div key={r.id} className="flex items-center justify-between text-[12px] font-medium">
                                 <span className="text-zinc-500">
-                                    {r.referredUsername ? `@${r.referredUsername}` : r.referredName ?? "A referral"} · premium
+                                    {r.referredUsername ? `@${r.referredUsername}` : r.referredName ?? "A referral"} · {r.source}
                                 </span>
                                 <span className={r.claimedAt ? "text-zinc-600" : "text-lantern"}>
                                     +${(Number(r.amountUsdc) / 1_000_000).toFixed(2)}{r.claimedAt ? " · paid" : ""}
