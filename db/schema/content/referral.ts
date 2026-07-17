@@ -1,4 +1,4 @@
-import { index, integer, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, index, integer, pgPolicy, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "../auth/user";
 
@@ -19,3 +19,23 @@ export const referrals = pgTable("referrals", {
 ]).enableRLS();
 
 export type Referral = typeof referrals.$inferSelect;
+
+// Accrued referral rewards: 10% of referred users' premium payments for the
+// referral's first 12 months. One row per successful charge (reference =
+// idempotency key); claims pay the unclaimed sum from the treasury.
+export const referralEarnings = pgTable("referral_earnings", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    referrerId: text("referrer_id").notNull(),
+    referredUserId: text("referred_user_id").notNull(),
+    amountUsdc: bigint("amount_usdc", { mode: "bigint" }).notNull(),
+    source: text("source").default("premium").notNull(),
+    reference: text("reference").notNull().unique(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    claimSignature: text("claim_signature"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index("idx_referral_earnings_referrer").on(table.referrerId, table.claimedAt),
+    pgPolicy("referral_earnings_owner_read", { for: "select", to: "authenticated", using: sql`referrer_id = (SELECT auth.uid()::text)` }),
+]).enableRLS();
+
+export type ReferralEarning = typeof referralEarnings.$inferSelect;

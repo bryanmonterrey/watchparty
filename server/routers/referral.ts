@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
-import { referrals } from "@/db/schema/content";
+import { referrals, referralEarnings } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq, count, desc } from "drizzle-orm";
+import { eq, count, desc, and, isNull, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 
@@ -108,5 +108,72 @@ export const referralRouter = router({
             referrals: rows,
             totalReferrals: totals?.total ?? 0,
         };
+    }),
+
+    // ─── Rewards: 10% of referred users' premium payments (12 months) ───
+
+    getEarnings: protectedProcedure.query(async ({ ctx }) => {
+        const rows = await db
+            .select({
+                id: referralEarnings.id,
+                amountUsdc: referralEarnings.amountUsdc,
+                source: referralEarnings.source,
+                claimedAt: referralEarnings.claimedAt,
+                createdAt: referralEarnings.createdAt,
+                referredUsername: user.username,
+                referredName: user.name,
+            })
+            .from(referralEarnings)
+            .leftJoin(user, eq(referralEarnings.referredUserId, user.id))
+            .where(eq(referralEarnings.referrerId, ctx.user.id))
+            .orderBy(desc(referralEarnings.createdAt))
+            .limit(50);
+
+        let claimable = BigInt(0);
+        let lifetime = BigInt(0);
+        const [sums] = await db
+            .select({
+                claimable: sql<string>`COALESCE(SUM(CASE WHEN ${referralEarnings.claimedAt} IS NULL THEN ${referralEarnings.amountUsdc} ELSE 0 END), 0)`,
+                lifetime: sql<string>`COALESCE(SUM(${referralEarnings.amountUsdc}), 0)`,
+            })
+            .from(referralEarnings)
+            .where(eq(referralEarnings.referrerId, ctx.user.id));
+        claimable = BigInt(sums?.claimable ?? "0");
+        lifetime = BigInt(sums?.lifetime ?? "0");
+
+        return {
+            claimableUsdc: claimable.toString(),
+            lifetimeUsdc: lifetime.toString(),
+            rows: rows.map((r) => ({ ...r, amountUsdc: r.amountUsdc.toString() })),
+        };
+    }),
+
+    /** Pay all unclaimed earnings to the caller's wallet from the treasury. */
+    claimEarnings: protectedProcedure.mutation(async ({ ctx }) => {
+        const wallet = ctx.user.wallet_address;
+        if (!wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "Link a wallet to receive your payout" });
+
+        // Claim-once gate BEFORE moving money: stamp the unclaimed rows; a
+        // concurrent claim gets zero rows here and stops.
+        const claimed = await db
+            .update(referralEarnings)
+            .set({ claimedAt: new Date() })
+            .where(and(eq(referralEarnings.referrerId, ctx.user.id), isNull(referralEarnings.claimedAt)))
+            .returning({ id: referralEarnings.id, amountUsdc: referralEarnings.amountUsdc });
+        if (claimed.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Nothing to claim yet" });
+
+        const total = claimed.reduce((s, r) => s + r.amountUsdc, BigInt(0));
+        const ids = claimed.map((r) => r.id);
+        try {
+            const { transferUsdcFromTreasury } = await import("@/lib/chains/solana/subscriptions/collector");
+            const sig = await transferUsdcFromTreasury(wallet, total);
+            await db.update(referralEarnings).set({ claimSignature: sig }).where(inArray(referralEarnings.id, ids));
+            return { amountUsdc: total.toString(), signature: sig };
+        } catch (err) {
+            // roll the gate back — nothing was paid
+            await db.update(referralEarnings).set({ claimedAt: null }).where(inArray(referralEarnings.id, ids));
+            console.error("referral claim payout failed:", err);
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payout failed — nothing was deducted, try again" });
+        }
     }),
 });

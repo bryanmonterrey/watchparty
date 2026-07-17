@@ -152,6 +152,11 @@ export const premiumRouter = router({
             }
 
             const charged = chargeSig !== null;
+            if (charged && chargeSig) {
+                // Referral reward (10% of the payment) — never fails the charge.
+                const { creditReferralReward } = await import("@/lib/referral/rewards");
+                await creditReferralReward(ctx.user.id, BigInt(plan.priceUsdcBaseUnits), chargeSig).catch(() => {});
+            }
             const status = charged ? ("active" as const) : ("past_due" as const);
             // Entitlement keys off currentPeriodEnd; if the first charge failed we
             // leave the period ended (now) so the user isn't entitled until paid.

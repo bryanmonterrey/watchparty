@@ -85,6 +85,14 @@ export async function GET(req: NextRequest) {
                 .where(eq(premiumSubscriptions.id, sub.id));
             charged++;
 
+            // Referral reward (10% of the payment) — never fails the charge.
+            try {
+                const { creditReferralReward } = await import("@/lib/referral/rewards");
+                await creditReferralReward(sub.userId, BigInt(plan.priceUsdcBaseUnits), sig);
+            } catch (e) {
+                errors.push({ id: sub.id, error: `referral reward failed: ${String(e)}` });
+            }
+
             // Grant the tier's included ad credits for this period (annual = 12×
             // a monthly allowance, granted up front). Non-refundable; credits
             // stay valid for 1 year from grant. Best-effort: a grant failure must

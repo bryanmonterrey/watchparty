@@ -19,6 +19,14 @@ export function ReferralSettings() {
         onSuccess: () => { utils.referral.getStats.invalidate(); setApplyInput(""); toast.success("Referral code applied!"); },
         onError: e => toast.error(e.message),
     });
+    const { data: earnings } = trpc.referral.getEarnings.useQuery();
+    const claimEarnings = trpc.referral.claimEarnings.useMutation({
+        onSuccess: (res) => {
+            utils.referral.getEarnings.invalidate();
+            toast.success(`$${(Number(res.amountUsdc) / 1_000_000).toFixed(2)} USDC sent to your wallet`);
+        },
+        onError: (e) => toast.error(e.message),
+    });
 
     const [copied, setCopied] = useState(false);
     const [applyInput, setApplyInput] = useState("");
@@ -57,7 +65,44 @@ export function ReferralSettings() {
                 ) : (
                     <p className="text-[12px] font-medium text-zinc-500">Generating your code…</p>
                 )}
-                <p className="text-[12px] font-medium text-zinc-500">Share this link to invite friends. You'll earn rewards when they join.</p>
+                <p className="text-[12px] font-medium text-zinc-500">
+                    You earn <span className="font-bold text-zinc-300">10% of everything your referrals spend on premium</span> for their first year — paid in USDC.
+                </p>
+            </Panel>
+
+            {/* Earnings */}
+            <Panel className="space-y-3 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="text-[14px] font-semibold text-zinc-300">Referral earnings</p>
+                        <p className="mt-0.5 text-[22px] font-bold tabular-nums tracking-tight text-white">
+                            ${(Number(earnings?.claimableUsdc ?? "0") / 1_000_000).toFixed(2)}
+                            <span className="ml-2 text-[12px] font-medium text-zinc-500">
+                                ${(Number(earnings?.lifetimeUsdc ?? "0") / 1_000_000).toFixed(2)} lifetime
+                            </span>
+                        </p>
+                    </div>
+                    <PillButton
+                        onClick={() => claimEarnings.mutate()}
+                        disabled={claimEarnings.isPending || (earnings?.claimableUsdc ?? "0") === "0"}
+                    >
+                        {claimEarnings.isPending ? "Paying…" : "Claim USDC"}
+                    </PillButton>
+                </div>
+                {(earnings?.rows?.length ?? 0) > 0 && (
+                    <div className="space-y-1">
+                        {earnings!.rows.slice(0, 5).map((r) => (
+                            <div key={r.id} className="flex items-center justify-between text-[12px] font-medium">
+                                <span className="text-zinc-500">
+                                    {r.referredUsername ? `@${r.referredUsername}` : r.referredName ?? "A referral"} · premium
+                                </span>
+                                <span className={r.claimedAt ? "text-zinc-600" : "text-lantern"}>
+                                    +${(Number(r.amountUsdc) / 1_000_000).toFixed(2)}{r.claimedAt ? " · paid" : ""}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </Panel>
 
             {/* Stats */}
