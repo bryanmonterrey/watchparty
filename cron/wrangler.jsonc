@@ -8,9 +8,10 @@
   // Collect hourly; sweep every 30 min; feed-corpus hourly at :17 (own slot so it
   // never coincides with the others); assets-webhook sync daily at 04:30 UTC;
   // callout-performance every 10 min; ivs-viewers + token-sync every minute
-  // (the Cloudflare cron floor — keeps market data + live state near-realtime).
+  // (the Cloudflare cron floor — keeps market data + live state near-realtime);
+  // predictions-factory hourly at :07 (AI market generation + auto-resolve).
   // Dispatched by event.cron in code.
-  "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *", "*/10 * * * *", "* * * * *"] },
+  "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *", "*/10 * * * *", "* * * * *", "7 * * * *"] },
   "vars": { "TARGET_BASE_URL": "https://watchparty.xyz" },
   "observability": { "enabled": true }
   // CRON_SECRET is a secret and MUST equal the app's CRON_SECRET. Set out-of-band:

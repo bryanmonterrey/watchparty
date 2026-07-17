@@ -8,7 +8,8 @@
 //
 // Schedules (wrangler.jsonc): collect "0 * * * *" (hourly), sweep "*/30 * * * *",
 // feed-corpus "17 * * * *" (hourly, Phoenix ranker corpus refresh),
-// sync-assets-webhook "30 4 * * *" (daily, re-sync Helius watched wallets).
+// sync-assets-webhook "30 4 * * *" (daily, re-sync Helius watched wallets),
+// predictions-factory "7 * * * *" (hourly, AI market generation + auto-resolve).
 
 interface Env {
     CRON_SECRET: string;
@@ -36,6 +37,10 @@ export default {
         } else if (event.cron === "30 4 * * *") {
             // Re-sync the Helius wallet-assets webhook with newly linked wallets.
             ctx.waitUntil(call(env, "/api/cron/sync-assets-webhook"));
+        } else if (event.cron === "7 * * * *") {
+            // AI market factory: auto-resolve due prediction markets and top the
+            // board back up with generated markets (Workers AI, free tier).
+            ctx.waitUntil(call(env, "/api/cron/predictions-factory"));
         } else if (event.cron === "*/10 * * * *") {
             // Callout leaderboard: advance peak gains + pay multiplier XP bonuses.
             ctx.waitUntil(call(env, "/api/cron/callout-performance"));
