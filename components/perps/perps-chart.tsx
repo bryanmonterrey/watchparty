@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import {
     createChart,
     ColorType,
@@ -129,6 +130,9 @@ export function PerpsChart({ pythTicker, className }: { pythTicker: string; clas
         };
     }, [pythTicker, timeframe]);
 
+    // Unique per instance so two mounted charts never share a layoutId.
+    const uid = React.useId();
+
     return (
         <div className={className}>
             <div className="flex items-center gap-1 px-1 pb-2">
@@ -137,12 +141,19 @@ export function PerpsChart({ pythTicker, className }: { pythTicker: string; clas
                         key={tf}
                         onClick={() => setTimeframe(tf)}
                         className={
-                            timeframe === tf
-                                ? "cursor-pointer rounded-full bg-white/10 px-3 py-1 text-[12px] font-bold text-white"
-                                : "cursor-pointer rounded-full px-3 py-1 text-[12px] font-bold text-zinc-500 transition-colors hover:text-zinc-300"
+                            "relative z-10 cursor-pointer rounded-full px-3 py-1 text-[12px] font-bold transition-colors " +
+                            (timeframe === tf ? "text-white" : "text-zinc-500 hover:text-zinc-300")
                         }
                     >
                         {tf}
+                        {timeframe === tf && (
+                            <motion.div
+                                layoutId={`perpsTf-${uid}`}
+                                className="absolute inset-0 -z-10 rounded-full bg-white/10"
+                                initial={false}
+                                transition={{ type: "spring", stiffness: 250, damping: 30 }}
+                            />
+                        )}
                     </button>
                 ))}
             </div>

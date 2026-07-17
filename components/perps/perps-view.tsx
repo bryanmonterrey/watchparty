@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon, TradeDownIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import { Star2Icon } from "@/components/icons";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -63,42 +63,14 @@ function useTradeAuthority(): { authority: string | null; isSwig: boolean } {
     return { authority: wallet.publicKey?.toBase58() ?? null, isSwig: false };
 }
 
-/** 24h-ago reference prices from Pyth benchmarks (one hourly fetch per market). */
+/** 24h-ago reference prices — one shared server sweep (see trade.getPerpDayRefs). */
 function useDayRefs(markets: PerpMarketRow[]) {
-    const [refs, setRefs] = useState<Record<string, number>>({});
-    const tickers = useMemo(() => markets.map((m) => m.pythTicker).join(","), [markets]);
-
-    useEffect(() => {
-        if (!tickers) return;
-        let alive = true;
-        const load = async () => {
-            const to = Math.floor(Date.now() / 1000);
-            const from = to - 25 * 3600;
-            const entries = await Promise.all(
-                tickers.split(",").map(async (ticker) => {
-                    try {
-                        const res = await fetch(
-                            `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
-                            `?symbol=${encodeURIComponent(ticker)}&resolution=60&from=${from}&to=${to}`,
-                        );
-                        const d = await res.json();
-                        return [ticker, d.s === "ok" && d.o.length ? d.o[0] : 0] as const;
-                    } catch {
-                        return [ticker, 0] as const;
-                    }
-                }),
-            );
-            if (alive) setRefs(Object.fromEntries(entries));
-        };
-        load();
-        const timer = setInterval(load, 120_000);
-        return () => {
-            alive = false;
-            clearInterval(timer);
-        };
-    }, [tickers]);
-
-    return refs;
+    const tickers = useMemo(() => [...new Set(markets.map((m) => m.pythTicker))].sort(), [markets]);
+    const { data } = trpc.trade.getPerpDayRefs.useQuery(
+        { tickers },
+        { enabled: tickers.length > 0, staleTime: 300_000, refetchInterval: 600_000 },
+    );
+    return data ?? {};
 }
 
 export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
@@ -120,8 +92,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const [account, setAccount] = useState<PerpsAccountState | null>(null);
     const [managing, setManaging] = useState(false);
     const [fills, setFills] = useState<TradeFill[]>([]);
-    const [railTab, setRailTab] = useState<"tokens" | "perps" | "follows">("perps");
-    const railTokens = trpc.trade.getRailTokens.useQuery(undefined, { enabled: railTab === "tokens" });
+    const [railTab, setRailTab] = useState<"perps" | "follows">("perps");
     const followedTokens = trpc.trade.getFollowedTokens.useQuery(undefined, {
         enabled: railTab === "follows" && !!session?.user,
     });
@@ -303,13 +274,13 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         creators you follow. Token rows open the token page. */}
                     <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg bg-panel ring-1 ring-white/10 lg:flex">
                         <div className="flex border-b border-white/[0.06]">
-                            {(["tokens", "perps", "follows"] as const).map((t, i) => (
+                            {(["perps", "follows"] as const).map((t, i) => (
                                 <button
                                     key={t}
                                     onClick={() => setRailTab(t)}
                                     className={cn(
                                         "flex-1 cursor-pointer py-3 text-[13px] font-bold capitalize transition-colors",
-                                        i < 2 && "border-r border-white/[0.06]",
+                                        i < 1 && "border-r border-white/[0.06]",
                                         railTab === t ? "text-white" : "text-zinc-500 hover:text-white",
                                     )}
                                 >
@@ -331,14 +302,6 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             active={m.symbol === selected}
                                             onSelect={() => setSelected(m.symbol)}
                                         />
-                                    )))}
-                            {railTab === "tokens" &&
-                                (railTokens.isLoading
-                                    ? Array.from({ length: 9 }).map((_, i) => (
-                                        <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
-                                    ))
-                                    : (railTokens.data ?? []).map((t) => (
-                                        <TokenRailRow key={t.id} token={t} onOpen={() => router.push(`/${t.tokenAddress || t.id}`)} />
                                     )))}
                             {railTab === "follows" &&
                                 (followedTokens.isLoading
@@ -394,27 +357,30 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             <div className="overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
                                 {market ? (
                                     <>
-                                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5">
-                                            <h2 className="text-[20px] font-extrabold tracking-tight text-white">
+                                        {/* Slim chart chrome, Phantom-style: symbol · price · 24h
+                                            in one hairline-bordered strip, meta pushed right. */}
+                                        <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-3.5 py-2.5">
+                                            <h2 className="text-[13px] font-extrabold tracking-tight text-white">
                                                 {market.symbol}
                                                 <span className="text-zinc-600">-PERP</span>
                                             </h2>
-                                            <span className="text-[20px] font-bold tabular-nums text-zinc-200">
+                                            <span className="h-3.5 w-px bg-white/[0.08]" />
+                                            <span className="text-[13px] font-bold tabular-nums text-zinc-300">
                                                 ${fmtPrice(market.price)}
                                             </span>
                                             {(() => {
                                                 const ch = change24h(market);
                                                 return ch !== null && (
                                                     <span className={cn(
-                                                        "text-[14px] font-extrabold tabular-nums",
+                                                        "text-[12px] font-bold tabular-nums",
                                                         ch >= 0 ? "text-lantern" : "text-pastelred",
                                                     )}>
-                                                        {ch >= 0 ? "+" : ""}{ch.toFixed(2)}% 24h
+                                                        {ch >= 0 ? "+" : ""}{ch.toFixed(2)}%
                                                     </span>
                                                 );
                                             })()}
-                                            <span className="ml-auto text-[12px] font-semibold tabular-nums text-zinc-600">
-                                                borrow {market.borrowHourlyPctLong.toFixed(4)}%/h · up to {market.maxLeverage}×
+                                            <span className="ml-auto text-[11px] font-semibold tabular-nums text-zinc-600">
+                                                borrow {market.borrowHourlyPctLong.toFixed(4)}%/h · {market.maxLeverage}×
                                             </span>
                                         </div>
                                         <PerpsTVChart pythTicker={market.pythTicker} className="px-2 pb-2 pt-2" />
@@ -453,6 +419,8 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                 connection={connection}
                                 authority={authority}
                                 ensureReady={ensureReady}
+                                signedIn={!!session?.user}
+                                onLogin={() => router.push("/login")}
                                 onFill={logFill}
                                 onOpened={() => {
                                     if (authority) recordPerpsAccount.mutate({ authority });
@@ -603,6 +571,8 @@ function OrderPanel({
     connection,
     authority,
     ensureReady,
+    signedIn,
+    onLogin,
     onFill,
     onOpened,
 }: {
@@ -612,6 +582,8 @@ function OrderPanel({
     connection: ReturnType<typeof useConnection>["connection"];
     authority: string | null;
     ensureReady: () => Promise<void>;
+    signedIn: boolean;
+    onLogin: () => void;
     onFill: (f: Omit<TradeFill, "id">) => void;
     onOpened: () => void;
 }) {
@@ -781,20 +753,30 @@ function OrderPanel({
                 </p>
             )}
 
-            <button
-                onClick={place}
-                disabled={placing || !canTrade || amount < 1 || insufficient || !quote}
-                className={cn(
-                    "mt-4 h-12 w-full cursor-pointer rounded-full text-[14px] font-extrabold transition-colors disabled:opacity-40",
-                    long ? "bg-white text-black hover:bg-white/90" : "bg-pastelred text-white hover:bg-pastelred/90",
-                )}
-            >
-                {placing
-                    ? account?.ready ? "Placing…" : "Setting up…"
-                    : account && !account.ready
-                        ? `Enable trading & ${long ? "long" : "short"} ${market.symbol}`
-                        : `${long ? "Long" : "Short"} ${market.symbol} · ${leverage}×`}
-            </button>
+            {!signedIn ? (
+                <button
+                    onClick={onLogin}
+                    className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-[14px] font-extrabold text-black transition-colors hover:bg-white/90"
+                >
+                    <Star2Icon fill="black" className="size-4" />
+                    Login
+                </button>
+            ) : (
+                <button
+                    onClick={place}
+                    disabled={placing || !canTrade || amount < 1 || insufficient || !quote}
+                    className={cn(
+                        "mt-4 h-12 w-full cursor-pointer rounded-full text-[14px] font-extrabold transition-colors disabled:opacity-40",
+                        long ? "bg-white text-black hover:bg-white/90" : "bg-pastelred text-white hover:bg-pastelred/90",
+                    )}
+                >
+                    {placing
+                        ? account?.ready ? "Placing…" : "Setting up…"
+                        : account && !account.ready
+                            ? `Enable trading & ${long ? "long" : "short"} ${market.symbol}`
+                            : `${long ? "Long" : "Short"} ${market.symbol} · ${leverage}×`}
+                </button>
+            )}
         </div>
     );
 }
@@ -828,9 +810,6 @@ function TerminalTabs({
     onClose: (p: PerpPositionRow) => Promise<void>;
 }) {
     const [tab, setTab] = useState<TermTab>("positions");
-    // Unique per instance — desktop and mobile mounts coexist (CSS-hidden),
-    // and a shared layoutId would animate the pill between them.
-    const uid = useId();
     const labels: Record<TermTab, string> = {
         positions: `Positions (${positions.length})`,
         trades: "Trades",
@@ -839,25 +818,19 @@ function TerminalTabs({
     };
     return (
         <div className="flex h-full min-h-0 flex-col rounded-lg bg-panel ring-1 ring-white/10">
-            <div className="flex items-center gap-1 overflow-x-auto px-2 pt-2 [scrollbar-width:none]">
-                {TERM_TABS.map((t) => (
+            {/* Segmented strip, same anatomy as the rail/book tabs. */}
+            <div className="flex border-b border-white/[0.06]">
+                {TERM_TABS.map((t, i) => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "relative z-10 shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-bold transition-all",
-                            tab === t ? "text-white/80" : "text-zinc-500 hover:bg-zinc-900/65 hover:text-white",
+                            "flex-1 cursor-pointer truncate py-2.5 text-[12px] font-bold transition-colors",
+                            i < TERM_TABS.length - 1 && "border-r border-white/[0.06]",
+                            tab === t ? "text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
                         {labels[t]}
-                        {tab === t && (
-                            <motion.div
-                                layoutId={`perpsTermTab-${uid}`}
-                                className="absolute inset-0 -z-10 rounded-full bg-gray1"
-                                initial={false}
-                                transition={{ type: "spring", stiffness: 250, damping: 30 }}
-                            />
-                        )}
                     </button>
                 ))}
             </div>

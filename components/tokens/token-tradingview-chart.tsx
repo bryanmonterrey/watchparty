@@ -31,7 +31,12 @@ export function loadScript(src: string): Promise<void> {
             s.dataset.loaded = "true";
             resolve();
         };
-        s.onerror = () => reject(new Error(`failed: ${src}`));
+        s.onerror = () => {
+            // Remove the failed tag so a later attempt re-tries instead of
+            // finding a dead element and waiting forever for its load event.
+            s.remove();
+            reject(new Error(`failed: ${src}`));
+        };
         document.head.appendChild(s);
     });
 }

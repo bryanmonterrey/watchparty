@@ -106,22 +106,38 @@ export const tradeRouter = router({
         };
     }),
 
-    /** Perps-rail Tokens tab: hottest live platform tokens, cached columns only. */
-    getRailTokens: publicProcedure.query(async () => {
-        return db
-            .select({
-                id: tokens.id,
-                ticker: tokens.ticker,
-                tokenAddress: tokens.tokenAddress,
-                imageUrl: tokens.imageUrl,
-                priceUsd: tokens.priceUsd,
-                priceChange24h: tokens.priceChange24h,
-            })
-            .from(tokens)
-            .where(and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress), isNotNull(tokens.priceUsd)))
-            .orderBy(sql`${tokens.volume24hUsd} desc nulls last`)
-            .limit(12);
-    }),
+    /**
+     * 24h-ago reference prices for the perps rail, one shared server-side
+     * sweep instead of a per-ticker request from every browser (72 parallel
+     * client fetches tripped Pyth benchmarks' rate limit and 429'd the
+     * charts). Cached 10 min; fetched in small chunks to stay under the
+     * limiter ourselves. Missing tickers just omit their key.
+     */
+    getPerpDayRefs: publicProcedure
+        .input(z.object({ tickers: z.array(z.string().max(64)).max(100) }))
+        .query(async ({ input }) => {
+            const tickers = [...new Set(input.tickers)].sort();
+            return withCache(`perps:dayrefs:v1:${tickers.length}`, 600, async () => {
+                const to = Math.floor(Date.now() / 1000) - 23 * 3600;
+                const from = to - 2 * 3600;
+                const refs: Record<string, number> = {};
+                for (let i = 0; i < tickers.length; i += 8) {
+                    await Promise.all(tickers.slice(i, i + 8).map(async (ticker) => {
+                        try {
+                            const res = await fetch(
+                                `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
+                                `?symbol=${encodeURIComponent(ticker)}&resolution=60&from=${from}&to=${to}`,
+                            );
+                            const d = (await res.json()) as { s: string; o: number[] };
+                            if (d.s === "ok" && d.o.length) refs[ticker] = d.o[0];
+                        } catch {
+                            /* omit */
+                        }
+                    }));
+                }
+                return refs;
+            });
+        }),
 
     /** Perps-rail Follows tab: live tokens from creators the caller follows. */
     getFollowedTokens: protectedProcedure.query(async ({ ctx }) => {
