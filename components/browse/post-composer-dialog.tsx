@@ -344,7 +344,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                     <div className="flex flex-col items-center shrink-0">
                                         <Avatar className="w-10 h-10 border border-white/5 relative z-10">
                                             <AvatarImage src={session.user.avatar_url || (session.user as any).image || ""} />
-                                            <AvatarFallback>{session.user.name?.charAt(0)}</AvatarFallback>
+                                            <AvatarFallback />
                                         </Avatar>
                                     </div>
                                     <div className="flex-1 min-w-0 pt-1">

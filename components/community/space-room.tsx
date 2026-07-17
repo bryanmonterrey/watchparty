@@ -261,7 +261,6 @@ function Participant({
                 <Avatar className={cn("size-16", speaking && "ring-2 ring-twitter ring-offset-2 ring-offset-black")}>
                     <AvatarImage src={p.avatar_url ?? undefined} alt={p.name ?? ""} />
                     <AvatarFallback className="bg-zinc-700 text-flexwhite text-lg">
-                        {(p.name ?? p.username ?? "?").charAt(0).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
                 {p.role === "HOST" && (

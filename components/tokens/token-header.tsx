@@ -48,7 +48,6 @@ export function TokenHeader({ token }: TokenHeaderProps) {
                             <img src={token.imageUrl} alt={token.name} className="object-cover size-full animate-fade-in" />
                         ) : (
                             <div className="size-full flex items-center justify-center font-bold text-2xl text-zinc-400 bg-zinc-800">
-                                {token.ticker.slice(0, 2).toUpperCase()}
                             </div>
                         )}
                     </div>
@@ -73,7 +72,6 @@ export function TokenHeader({ token }: TokenHeaderProps) {
                                 <Avatar className="size-5 border border-zinc-700/50">
                                     <AvatarImage src={token.creator.avatar_url || undefined} />
                                     <AvatarFallback className="bg-zinc-800 text-zinc-400 text-[10px] font-bold">
-                                        {(token.creator.username || token.creator.name || "U").slice(0, 2).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                                 <span className="font-semibold text-zinc-300 text-sm">

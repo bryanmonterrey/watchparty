@@ -37,7 +37,6 @@ export function CommunityMemberItem({ member }: Props) {
             <Avatar className="h-7 w-7">
                 <AvatarImage src={member.userImage ?? undefined} alt={member.userName ?? ""} />
                 <AvatarFallback className="bg-indigo-500 text-white text-xs">
-                    {(member.userName ?? "?").charAt(0).toUpperCase()}
                 </AvatarFallback>
             </Avatar>
             <p

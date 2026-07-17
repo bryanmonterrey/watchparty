@@ -688,7 +688,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                                           <span className="flex items-center gap-3">
                                                                               <Avatar className="w-10 h-10 rounded-lg">
                                                                                   <AvatarImage src={community.imageUrl} />
-                                                                                  <AvatarFallback className="rounded-lg bg-zinc-800">{community.name.charAt(0)}</AvatarFallback>
+                                                                                  <AvatarFallback className="rounded-lg bg-zinc-800" />
                                                                               </Avatar>
                                                                               <span className="flex flex-col">
                                                                                   <span className="font-semibold text-white">{community.name}</span>

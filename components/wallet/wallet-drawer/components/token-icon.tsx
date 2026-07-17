@@ -96,7 +96,7 @@ export function TokenIcon({
                 )}>
                     {type === "token" ? (
                         <span className="text-[10px] font-bold text-zinc-300">
-                            {symbol?.slice(0, 2).toUpperCase() || <Coins className="w-4 h-4" />}
+                            <Coins className="w-4 h-4" />
                         </span>
                     ) : (
                         <ImageIcon className="w-5 h-5 text-zinc-600" />

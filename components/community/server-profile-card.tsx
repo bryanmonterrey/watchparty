@@ -71,7 +71,6 @@ export function ServerProfileCard({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={imageUrl} alt="" className="size-full object-cover" />
                     ) : (
-                        <span className="text-[20px] font-bold text-white/90">{name.charAt(0).toUpperCase() || "?"}</span>
                     )}
                 </div>
 

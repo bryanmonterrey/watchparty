@@ -69,9 +69,7 @@ export function StoriesBar() {
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-300">
-                                        {user.name.charAt(0)}
-                                    </div>
+                                    <div className="w-full h-full bg-zinc-700" />
                                 )}
                             </div>
                         </div>

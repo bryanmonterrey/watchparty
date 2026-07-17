@@ -106,7 +106,6 @@ export function CommunityServerSidebar({ serverId }: Props) {
                                                 <img src={m.userImage} alt="" className="size-full object-cover" />
                                             ) : (
                                                 <span className="grid size-full place-items-center text-[11px] font-bold text-zinc-400">
-                                                    {(m.userName ?? "?").charAt(0).toUpperCase()}
                                                 </span>
                                             )}
                                         </div>

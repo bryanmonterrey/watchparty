@@ -150,7 +150,6 @@ export function SpacesView() {
                                     <Avatar className="size-6">
                                         <AvatarImage src={s.hostImage ?? undefined} alt={s.hostName ?? ""} />
                                         <AvatarFallback className="bg-zinc-700 text-flexwhite text-[10px]">
-                                            {(s.hostName ?? "?").charAt(0).toUpperCase()}
                                         </AvatarFallback>
                                     </Avatar>
                                     <span className="text-xs text-flexwhite/50">

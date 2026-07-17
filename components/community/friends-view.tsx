@@ -202,7 +202,6 @@ function FriendRow({
                 <Avatar className="h-10 w-10">
                     <AvatarImage src={user.avatar_url ?? undefined} alt={user.name ?? ""} />
                     <AvatarFallback className="bg-zinc-700 text-flexwhite text-sm">
-                        {(user.name ?? user.username ?? "?").charAt(0).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
                 {typeof user.isOnline === "boolean" && (

@@ -36,7 +36,6 @@ function CallerIdentity({ caller }: { caller: { name: string; username: string |
             <Avatar className="size-9 border border-zinc-700/50 shrink-0">
                 <AvatarImage src={caller.avatar_url || undefined} />
                 <AvatarFallback className="bg-zinc-800 text-zinc-400 text-xs font-bold">
-                    {(caller.username || caller.name || "U").slice(0, 2).toUpperCase()}
                 </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -143,25 +142,77 @@ function CalloutsLeaderboard() {
     );
 }
 
+function TradersLeaderboard() {
+    const { data, isLoading } = trpc.pnl.leaderboard.useQuery({ window: "7d" }, { refetchInterval: 60_000 });
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col gap-2">
+                {Array.from({ length: 5 }, (_, i) => <div key={i} className="shimmer-skeleton h-[64px] rounded-[20px]" />)}
+            </div>
+        );
+    }
+    if (!data || data.traders.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-3 py-20 text-center">
+                <Megaphone className="size-8 text-zinc-600" />
+                <p className="text-sm font-semibold text-zinc-400">
+                    No public traders yet — turn on &quot;Share trades&quot; on your profile to compete here.
+                </p>
+            </div>
+        );
+    }
+    return (
+        <div className="flex flex-col gap-2">
+            {data.traders.map((t, i) => (
+                <div key={t.userId} className="flex items-center gap-3 rounded-[20px] bg-panel px-4 py-3">
+                    <span className={cn("w-7 text-center font-pixel text-sm shrink-0", i === 0 ? "text-sunset" : i < 3 ? "text-zinc-200" : "text-zinc-500")}>
+                        {i + 1}
+                    </span>
+                    <CallerIdentity caller={t} />
+                    <div className="ml-auto flex items-center gap-4 shrink-0 text-right">
+                        <div className="hidden sm:block">
+                            <span className="block text-sm font-bold text-white tabular-nums">{t.tradeCount}</span>
+                            <span className="block text-[11px] text-zinc-500 font-medium">trades</span>
+                        </div>
+                        <div className="hidden sm:block">
+                            <span className="block text-sm font-bold text-white tabular-nums">
+                                {t.winRate != null ? `${Math.round(t.winRate * 100)}%` : "—"}
+                            </span>
+                            <span className="block text-[11px] text-zinc-500 font-medium">win rate</span>
+                        </div>
+                        <div>
+                            <span className={cn("block text-sm font-bold tabular-nums", t.realizedUsd >= 0 ? "text-lantern" : "text-pastelred")}>
+                                {t.realizedUsd >= 0 ? "+" : "-"}${Math.abs(Math.round(t.realizedUsd)).toLocaleString()}
+                            </span>
+                            <span className="block text-[11px] text-zinc-500 font-medium">7d PnL</span>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export function CalloutsView() {
-    const [tab, setTab] = React.useState<"feed" | "leaderboard">("feed");
+    const [tab, setTab] = React.useState<"feed" | "leaderboard" | "traders">("feed");
 
     return (
         <div className="mx-auto w-full max-w-3xl px-4 pt-header pb-10 flex flex-col gap-4 text-zinc-100">
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="relative inline-flex rounded-full bg-[#16181c] p-1 text-sm font-semibold shadow-inner self-start">
-                    {(["feed", "leaderboard"] as const).map((t) => {
+                    {(["feed", "leaderboard", "traders"] as const).map((t) => {
                         const active = tab === t;
                         return (
                             <button
                                 key={t}
                                 onClick={() => setTab(t)}
                                 className={cn(
-                                    "relative z-10 px-5 py-3 rounded-full text-xs sm:text-sm font-bold transition-colors duration-200 select-none cursor-pointer focus:outline-none min-w-[110px]",
+                                    "relative z-10 px-4 sm:px-5 py-3 rounded-full text-xs sm:text-sm font-bold transition-colors duration-200 select-none cursor-pointer focus:outline-none min-w-[96px]",
                                     active ? "text-black" : "text-zinc-400 hover:text-white",
                                 )}
                             >
-                                {t === "feed" ? "Live feed" : "Top callers (7d)"}
+                                {t === "feed" ? "Live feed" : t === "leaderboard" ? "Top callers" : "Top traders"}
                                 {active && (
                                     <motion.div
                                         layoutId="callouts-toggle-bg"
@@ -184,7 +235,7 @@ export function CalloutsView() {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.15, ease: "easeInOut" }}
                 >
-                    {tab === "feed" ? <CalloutsFeed /> : <CalloutsLeaderboard />}
+                    {tab === "feed" ? <CalloutsFeed /> : tab === "leaderboard" ? <CalloutsLeaderboard /> : <TradersLeaderboard />}
                 </motion.div>
             </AnimatePresence>
         </div>

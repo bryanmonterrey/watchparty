@@ -21,7 +21,7 @@ export function TokenDescription({ token }: TokenDescriptionProps) {
                 <div className="flex items-center gap-2">
                     <Avatar className="size-6">
                         <AvatarImage src={token.creator.avatar_url || undefined} />
-                        <AvatarFallback>{(token.creator.username || token.creator.name || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback />
                     </Avatar>
                     <span className="text-lg font-medium text-zinc-300">{token.creator.username || token.creator.name}</span>
                 </div>

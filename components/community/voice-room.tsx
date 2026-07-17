@@ -480,7 +480,6 @@ function CenterAvatar({ name, picture }: { name: string; picture?: string | null
             <Avatar className="size-16">
                 <AvatarImage src={picture || undefined} alt={name} />
                 <AvatarFallback className="bg-white/10 text-[18px] font-bold text-zinc-300">
-                    {name.charAt(0).toUpperCase()}
                 </AvatarFallback>
             </Avatar>
         </div>

@@ -147,7 +147,6 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
                                 <img src={u.avatar_url} alt={u.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
                             ) : (
                                 <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
-                                    <span className="text-[10px] font-bold text-zinc-400">{u.name.slice(0, 2).toUpperCase()}</span>
                                 </div>
                             )}
                             <div className="flex-1 min-w-0">
@@ -174,7 +173,6 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
                                     <img src={token.imageUrl} alt={token.ticker ?? ""} className="w-8 h-8 rounded-full object-cover shrink-0" />
                                 ) : (
                                     <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
-                                        <span className="text-[10px] font-bold text-zinc-400">{token.ticker?.slice(0, 2).toUpperCase()}</span>
                                     </div>
                                 )}
                                 <div className="flex-1 min-w-0">

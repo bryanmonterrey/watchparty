@@ -27,7 +27,6 @@ export function NotificationItem({ notification: n, onMarkRead }: NotificationIt
                 <Avatar className="size-10 border border-zinc-800">
                     <AvatarImage src={n.actor?.avatar_url ?? undefined} />
                     <AvatarFallback className="bg-zinc-800 text-zinc-400 text-xs font-bold">
-                        {n.actor?.name?.charAt(0) ?? "?"}
                     </AvatarFallback>
                 </Avatar>
                 <div className={cn("absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center", cfg.bg)}>

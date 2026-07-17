@@ -251,7 +251,6 @@ function SubscribeChannelElement({
   color: string
 }) {
   const label = el.subscribeLabel ?? el.title ?? (el.type === "subscribe" ? "Subscribe" : "Channel")
-  const firstLetter = label.charAt(0).toUpperCase()
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-start pt-1">
@@ -269,7 +268,6 @@ function SubscribeChannelElement({
           className="font-bold text-sm select-none"
           style={{ color }}
         >
-          {firstLetter}
         </span>
       </div>
       {/* Label */}

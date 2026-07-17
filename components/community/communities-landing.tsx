@@ -93,7 +93,6 @@ function DiscoverSection() {
                                 {s.imageUrl ? (
                                     <img src={s.imageUrl} alt="" className="size-full object-cover" />
                                 ) : (
-                                    <span className="text-[16px] font-bold text-white/90">{s.name.charAt(0).toUpperCase()}</span>
                                 )}
                             </div>
                             <div className="mt-2.5 flex items-center gap-2">
@@ -276,7 +275,6 @@ export function CommunitiesLanding() {
                                 ) : (
                                     <div className="h-full flex items-center justify-center">
                                         <span className="text-5xl font-black text-white/20 group-hover:text-white/40 transition-colors duration-300">
-                                            {server.name.charAt(0).toUpperCase()}
                                         </span>
                                     </div>
                                 )}

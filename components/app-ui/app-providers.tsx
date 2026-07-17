@@ -28,7 +28,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
                 <HeartbeatProvider />
                 <ReferralApply />
                 {children}
-                <Toaster position="bottom-center" />
+                <Toaster position="top-center" />
               </TrayProvider>
             </EvmProvider>
           </SolanaProvider>

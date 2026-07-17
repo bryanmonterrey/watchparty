@@ -167,7 +167,6 @@ export function ShortVideoCard({ video, isActive }: ShortVideoCardProps) {
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
-                                    {video.user.name?.charAt(0) || "U"}
                                 </div>
                             )}
                         </div>

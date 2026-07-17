@@ -61,7 +61,7 @@ function TokenAvatar({ token }: { token: TradeToken }) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
                 ) : (
-                    token.symbol.replace(/^\$/, "").slice(0, 2).toUpperCase()
+                    null
                 )}
             </div>
         </div>

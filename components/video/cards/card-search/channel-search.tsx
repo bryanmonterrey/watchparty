@@ -59,7 +59,6 @@ function ChannelGrid({
                             />
                         ) : (
                             <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-zinc-400 text-xl font-medium">
-                                {channel.name.charAt(0).toUpperCase()}
                             </div>
                         )}
                     </div>

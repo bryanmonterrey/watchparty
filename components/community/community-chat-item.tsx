@@ -195,7 +195,6 @@ export function CommunityChatItem({
                 <Avatar className="h-9 w-9 mt-0.5">
                     <AvatarImage src={userImage ?? undefined} alt={userName ?? ""} />
                     <AvatarFallback className="bg-zinc-700 text-flexwhite text-xs">
-                        {(userName ?? "?").charAt(0).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
 

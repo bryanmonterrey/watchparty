@@ -49,7 +49,6 @@ export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false, men
                                             />
                                         ) : (
                                             <span className="text-white/90 font-semibold text-lg">
-                                                {name.charAt(0).toUpperCase()}
                                             </span>
                                         )}
                                     </div>

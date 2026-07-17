@@ -71,7 +71,6 @@ export function CommunityChannelInfo({
                                 <Avatar className="h-8 w-8">
                                     <AvatarImage src={member.userImage ?? undefined} alt={member.userName ?? ""} />
                                     <AvatarFallback className="bg-zinc-700 text-flexwhite text-xs">
-                                        {(member.userName ?? "?").charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div
