@@ -278,11 +278,6 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </p>
                     </div>
                 )}
-                {/* The nav tab already names the page — just the tagline. */}
-                <p className="pt-4 text-[14px] font-medium text-zinc-500">
-                    Long or short with leverage, settled in USDC on Flash. Your wallet, your positions.
-                </p>
-
                 {!canTrade && !geoBlocked && session?.user && (
                     <div className="mt-5 rounded-lg bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
@@ -380,9 +375,15 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                 )}
                             </div>
 
-                            {/* Book slot — Flash has no orderbook, fills settle at oracle */}
-                            <div className="hidden min-h-0 lg:block">
-                                {market && <PerpsTape pythTicker={market.pythTicker} livePrice={market.price} />}
+                            {/* Book slot — Flash has no orderbook, fills settle at oracle.
+                                Absolutely filled so the tape never sets the row height:
+                                the chart alone decides how tall this band is. */}
+                            <div className="relative hidden lg:block">
+                                {market && (
+                                    <div className="absolute inset-0">
+                                        <PerpsTape pythTicker={market.pythTicker} livePrice={market.price} />
+                                    </div>
+                                )}
                             </div>
                         </div>
 
