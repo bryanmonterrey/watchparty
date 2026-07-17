@@ -8,6 +8,7 @@ import {
     createChart,
     ColorType,
     CandlestickSeries,
+    LineSeries,
     CrosshairMode,
     IChartApi,
     ISeriesApi,
@@ -19,11 +20,9 @@ import { cn } from "@/lib/utils";
 // (benchmarks.pyth.network — public, CORS *, no key). The same Pyth feeds
 // price the Flash oracles, so the chart matches what fills settle against.
 //
-// Chrome mirrors the Phantom perps terminal: a slim toolbar (timeframes ·
-// candle type · ƒx Indicators · camera) and a TV-style legend overlay inside
-// the chart (SYMBOL · tf · source, then O H L C of the hovered candle).
-// Candle-type/Indicators are decorative until the licensed TradingView
-// library replaces this chart; the camera genuinely screenshots.
+// Chrome mirrors the Phantom perps terminal, and every control works:
+// timeframes switch resolution, the candle icon toggles candles ⇄ line,
+// Indicators toggles an SMA(20) overlay, the camera downloads a PNG.
 
 const TIMEFRAMES = ["15m", "1H", "4H", "1D"] as const;
 type Timeframe = (typeof TIMEFRAMES)[number];
@@ -38,6 +37,8 @@ const RANGE: Record<Timeframe, { resolution: string; secondsBack: number }> = {
 
 const UP = "#00ED89"; // lantern
 const DOWN = "#FF746C"; // pastelred
+const SMA_COLOR = "#FFCC00"; // sunset
+const SMA_LEN = 20;
 
 type Candle = { time: UTCTimestamp; open: number; high: number; low: number; close: number };
 
@@ -61,6 +62,17 @@ async function fetchCandles(pythTicker: string, tf: Timeframe): Promise<Candle[]
     }));
 }
 
+function sma(candles: Candle[], length: number) {
+    const out: { time: UTCTimestamp; value: number }[] = [];
+    let sum = 0;
+    for (let i = 0; i < candles.length; i++) {
+        sum += candles[i].close;
+        if (i >= length) sum -= candles[i - length].close;
+        if (i >= length - 1) out.push({ time: candles[i].time, value: sum / length });
+    }
+    return out;
+}
+
 const legendFmt = (n: number) => {
     if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 1 });
     if (n >= 1) return n.toFixed(2);
@@ -79,13 +91,65 @@ export function PerpsChart({
 }) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const chartRef = React.useRef<IChartApi | null>(null);
-    const seriesRef = React.useRef<ISeriesApi<"Candlestick"> | null>(null);
-    const lastCandleRef = React.useRef<Candle | null>(null);
+    const mainSeriesRef = React.useRef<ISeriesApi<"Candlestick"> | ISeriesApi<"Line"> | null>(null);
+    const smaSeriesRef = React.useRef<ISeriesApi<"Line"> | null>(null);
+    const candlesRef = React.useRef<Candle[]>([]);
     const [timeframe, setTimeframe] = React.useState<Timeframe>("1H");
+    const [chartType, setChartType] = React.useState<"candles" | "line">("candles");
+    const [smaOn, setSmaOn] = React.useState(false);
     const [empty, setEmpty] = React.useState(false);
     const [legend, setLegend] = React.useState<Candle | null>(null);
     // Unique per instance so two mounted charts never share a layoutId.
     const uid = React.useId();
+
+    /** (Re)create the main series for the active type and feed it the data. */
+    const rebuildMainSeries = React.useCallback((type: "candles" | "line") => {
+        const chart = chartRef.current;
+        if (!chart) return;
+        if (mainSeriesRef.current) chart.removeSeries(mainSeriesRef.current);
+        const candles = candlesRef.current;
+        const last = candles[candles.length - 1]?.close ?? 1;
+        const precision = last >= 100 ? 2 : last >= 1 ? 4 : last >= 0.001 ? 6 : 10;
+        const priceFormat = { type: "price" as const, precision, minMove: 1 / 10 ** precision };
+        if (type === "candles") {
+            const s = chart.addSeries(CandlestickSeries, {
+                upColor: UP,
+                downColor: DOWN,
+                borderVisible: false,
+                wickUpColor: UP,
+                wickDownColor: DOWN,
+                priceFormat,
+            });
+            s.setData(candles);
+            mainSeriesRef.current = s;
+        } else {
+            const s = chart.addSeries(LineSeries, { color: UP, lineWidth: 2, priceFormat });
+            s.setData(candles.map((c) => ({ time: c.time, value: c.close })));
+            mainSeriesRef.current = s;
+        }
+    }, []);
+
+    /** Sync the SMA overlay with the current data + toggle state. */
+    const syncSma = React.useCallback((on: boolean) => {
+        const chart = chartRef.current;
+        if (!chart) return;
+        if (!on) {
+            if (smaSeriesRef.current) {
+                chart.removeSeries(smaSeriesRef.current);
+                smaSeriesRef.current = null;
+            }
+            return;
+        }
+        if (!smaSeriesRef.current) {
+            smaSeriesRef.current = chart.addSeries(LineSeries, {
+                color: SMA_COLOR,
+                lineWidth: 1,
+                priceLineVisible: false,
+                lastValueVisible: false,
+            });
+        }
+        smaSeriesRef.current.setData(sma(candlesRef.current, SMA_LEN));
+    }, []);
 
     // Build the chart once.
     React.useEffect(() => {
@@ -106,21 +170,15 @@ export function PerpsChart({
             rightPriceScale: { borderVisible: false },
             timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false },
         });
-        const series = chart.addSeries(CandlestickSeries, {
-            upColor: UP,
-            downColor: DOWN,
-            borderVisible: false,
-            wickUpColor: UP,
-            wickDownColor: DOWN,
-            priceFormat: { type: "price", precision: 5, minMove: 0.00001 },
-        });
         chartRef.current = chart;
-        seriesRef.current = series;
 
         // TV-style legend: hovered candle's OHLC, falling back to the latest.
         chart.subscribeCrosshairMove((param) => {
-            const d = param.seriesData.get(series) as Candle | undefined;
-            setLegend(d ?? lastCandleRef.current);
+            const candles = candlesRef.current;
+            const hovered = param.time !== undefined
+                ? candles.find((c) => c.time === param.time)
+                : undefined;
+            setLegend(hovered ?? candles[candles.length - 1] ?? null);
         });
 
         const observer = new ResizeObserver((entries) => {
@@ -132,7 +190,8 @@ export function PerpsChart({
             observer.disconnect();
             chart.remove();
             chartRef.current = null;
-            seriesRef.current = null;
+            mainSeriesRef.current = null;
+            smaSeriesRef.current = null;
         };
     }, []);
 
@@ -142,23 +201,18 @@ export function PerpsChart({
         const load = async (fit: boolean) => {
             try {
                 const candles = await fetchCandles(pythTicker, timeframe);
-                if (!alive || !seriesRef.current) return;
+                if (!alive || !chartRef.current) return;
                 setEmpty(candles.length === 0);
-                // Tighten decimals to the market's magnitude (BONK vs BTC).
-                const last = candles[candles.length - 1]?.close ?? 1;
-                const precision = last >= 100 ? 2 : last >= 1 ? 4 : last >= 0.001 ? 6 : 10;
-                seriesRef.current.applyOptions({
-                    priceFormat: { type: "price", precision, minMove: 1 / 10 ** precision },
-                });
-                seriesRef.current.setData(candles);
-                lastCandleRef.current = candles[candles.length - 1] ?? null;
-                setLegend((cur) => cur ?? lastCandleRef.current);
-                if (fit) chartRef.current?.timeScale().fitContent();
+                candlesRef.current = candles;
+                rebuildMainSeries(chartType);
+                syncSma(smaOn);
+                setLegend(candles[candles.length - 1] ?? null);
+                if (fit) chartRef.current.timeScale().fitContent();
             } catch {
                 if (alive) setEmpty(true);
             }
         };
-        lastCandleRef.current = null;
+        candlesRef.current = [];
         setLegend(null);
         load(true);
         const timer = setInterval(() => load(false), 30_000);
@@ -166,7 +220,21 @@ export function PerpsChart({
             alive = false;
             clearInterval(timer);
         };
+        // chartType/smaOn changes are applied by their own handlers below.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pythTicker, timeframe]);
+
+    const toggleType = () => {
+        const next = chartType === "candles" ? "line" : "candles";
+        setChartType(next);
+        rebuildMainSeries(next);
+    };
+
+    const toggleSma = () => {
+        const next = !smaOn;
+        setSmaOn(next);
+        syncSma(next);
+    };
 
     const screenshot = () => {
         const canvas = chartRef.current?.takeScreenshot();
@@ -182,7 +250,7 @@ export function PerpsChart({
 
     return (
         <div className={className}>
-            {/* Toolbar — Phantom chart chrome */}
+            {/* Toolbar — Phantom chart chrome, every control live */}
             <div className="flex items-center gap-2.5 px-1 pb-2">
                 <div className="flex items-center gap-1">
                     {TIMEFRAMES.map((tf) => (
@@ -207,14 +275,28 @@ export function PerpsChart({
                     ))}
                 </div>
                 <span className="h-4 w-px bg-white/[0.08]" />
-                <span className="text-zinc-500">
+                <button
+                    onClick={toggleType}
+                    aria-label={chartType === "candles" ? "Switch to line chart" : "Switch to candles"}
+                    className={cn(
+                        "cursor-pointer transition-colors",
+                        chartType === "candles" ? "text-white" : "text-zinc-500 hover:text-white",
+                    )}
+                >
                     <HugeiconsIcon icon={ChartCandlestickIcon} className="size-4" strokeWidth={2} />
-                </span>
+                </button>
                 <span className="h-4 w-px bg-white/[0.08]" />
-                <span className="flex items-center gap-1.5 text-zinc-500">
+                <button
+                    onClick={toggleSma}
+                    className={cn(
+                        "flex cursor-pointer items-center gap-1.5 transition-colors",
+                        smaOn ? "text-white" : "text-zinc-500 hover:text-white",
+                    )}
+                >
                     <HugeiconsIcon icon={FunctionOfXIcon} className="size-4" strokeWidth={2} />
                     <span className="text-[13px] font-semibold">Indicators</span>
-                </span>
+                    {smaOn && <span className="text-[11px] font-bold text-sunset">SMA {SMA_LEN}</span>}
+                </button>
                 <span className="ml-auto h-4 w-px bg-white/[0.08]" />
                 <button
                     onClick={screenshot}

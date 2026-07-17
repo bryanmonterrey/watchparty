@@ -388,8 +388,9 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
                     </aside>
 
-                    {/* Center: market header + chart (+ positions on desktop) */}
-                    <div className="min-w-0 lg:flex lg:min-h-0 lg:flex-col">
+                    {/* Center: THE scrollable region — chart band + positions
+                        strip scroll together; rail and ticket stay put. */}
+                    <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:[scrollbar-width:none]">
                         {/* Markets strip — mobile */}
                         <div className="-mx-2 mb-3 flex gap-1.5 overflow-x-auto px-2 pb-1 lg:hidden [scrollbar-width:none]">
                             {markets.map((m) => {
@@ -429,9 +430,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             then Mark (live ER price, what fills settle at) and
                                             Oracle (latest Pyth benchmark print). */}
                                         <div className="flex flex-wrap items-center gap-3 px-4 pb-1 pt-3.5">
-                                            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/[0.08] text-[12px] font-extrabold text-zinc-300">
-                                                {market.symbol[0]}
-                                            </span>
+                                            <span className="size-7 shrink-0 rounded-full bg-white/[0.08]" />
                                             <h2 className="text-[20px] font-extrabold tracking-tight text-white">
                                                 {market.symbol}
                                             </h2>
@@ -446,7 +445,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             >
                                                 {perpFollows.has(market.symbol) ? "Following" : "Follow"}
                                             </button>
-                                            <div className="ml-5 flex gap-10">
+                                            <div className="ml-auto flex gap-10 text-right">
                                                 <div>
                                                     <p className="text-[12px] font-semibold text-zinc-500">Mark</p>
                                                     <p className="text-[15px] font-bold tabular-nums text-white">
@@ -485,7 +484,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         {/* Positions / Trades / Funding / Order History — desktop */}
-                        <div className="mt-2 max-lg:hidden lg:min-h-0 lg:flex-1">
+                        <div className="mt-2 max-lg:hidden">
                             <TerminalTabs positions={positions} fills={fills} markets={markets} onClose={closeRow} />
                         </div>
                     </div>
@@ -747,14 +746,15 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-lg bg-panel p-4 ring-1 ring-white/10">
-            {/* Direction */}
-            <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
+        <div className="overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
+            {/* Direction — segmented like the terminal's other tab strips;
+                active side gets a very light white wash + its accent color. */}
+            <div className="flex border-b border-white/[0.06]">
                 <button
                     onClick={() => setDirection("long")}
                     className={cn(
-                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
-                        long ? "bg-white text-black" : "text-zinc-400 hover:text-white",
+                        "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 border-r border-white/[0.06] text-[14px] font-extrabold transition-colors",
+                        long ? "bg-white/[0.04] text-long" : "text-zinc-500 hover:text-white",
                     )}
                 >
                     <HugeiconsIcon icon={TradeUpIcon} className="size-4" strokeWidth={2.5} />
@@ -763,8 +763,8 @@ function OrderPanel({
                 <button
                     onClick={() => setDirection("short")}
                     className={cn(
-                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
-                        !long ? "bg-pastelred text-white" : "text-zinc-400 hover:text-white",
+                        "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 text-[14px] font-extrabold transition-colors",
+                        !long ? "bg-white/[0.04] text-short" : "text-zinc-500 hover:text-white",
                     )}
                 >
                     <HugeiconsIcon icon={TradeDownIcon} className="size-4" strokeWidth={2.5} />
@@ -772,6 +772,7 @@ function OrderPanel({
                 </button>
             </div>
 
+            <div className="p-4 pt-0">
             {/* Amount */}
             <p className="mt-4 px-1 text-[12px] font-bold text-zinc-500">Collateral (USDC)</p>
             <div className="relative mt-1.5">
@@ -859,6 +860,7 @@ function OrderPanel({
                             : `${long ? "Long" : "Short"} ${market.symbol} · ${leverage}×`}
                 </button>
             )}
+            </div>
         </div>
     );
 }
@@ -899,7 +901,7 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="flex h-full min-h-0 flex-col rounded-lg bg-panel ring-1 ring-white/10">
+        <div className="flex flex-col rounded-lg bg-panel ring-1 ring-white/10">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
             <div className="flex border-b border-white/[0.06]">
                 {TERM_TABS.map((t, i) => (
@@ -916,7 +918,7 @@ function TerminalTabs({
                     </button>
                 ))}
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-width:none]">
+            <div className="min-h-[140px] p-2">
                 {tab === "positions" &&
                     (positions.length ? (
                         <div className="space-y-1">
