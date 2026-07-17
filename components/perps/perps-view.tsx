@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon, TradeDownIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
@@ -14,6 +15,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PerpsChart } from "@/components/perps/perps-chart";
+import { PerpsTape } from "@/components/perps/perps-tape";
 import { cn } from "@/lib/utils";
 import type { Keypair, Transaction } from "@solana/web3.js";
 import type { PerpMarketRow, PerpPositionRow, PerpSymbol, OpenQuote, PerpsAccountState } from "@/lib/perps/flash";
@@ -26,6 +28,20 @@ import type { PerpMarketRow, PerpPositionRow, PerpSymbol, OpenQuote, PerpsAccoun
 // closing positions never prompts the wallet — Swig and extension wallets
 // get the identical instant-trade UX. The SDK (heavy) loads only inside
 // this route via await import().
+
+/** Session-local fill log — nothing indexes Flash fills yet, so the Trades /
+ *  Order History tabs show what happened in this session. */
+type TradeFill = {
+    id: string;
+    time: number;
+    symbol: PerpSymbol;
+    direction: "long" | "short";
+    kind: "open" | "close";
+    sizeUsd: number;
+    price: number;
+    leverage: number;
+    pnlUsd?: number;
+};
 
 const fmtUsd = (n: number, dp = 2) =>
     n >= 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toFixed(n < 1 ? 4 : dp);
@@ -101,6 +117,10 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const [positions, setPositions] = useState<PerpPositionRow[]>([]);
     const [account, setAccount] = useState<PerpsAccountState | null>(null);
     const [managing, setManaging] = useState(false);
+    const [fills, setFills] = useState<TradeFill[]>([]);
+    const logFill = useCallback((f: Omit<TradeFill, "id">) => {
+        setFills((prev) => [{ ...f, id: crypto.randomUUID() }, ...prev].slice(0, 100));
+    }, []);
     const relaySwig = trpc.wallet.relaySwigTransaction.useMutation();
     // Feeds the perps referral sweep — which users trade perps through us.
     const recordPerpsAccount = trpc.trade.recordDriftAccount.useMutation();
@@ -235,8 +255,18 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
             import("@solana/web3.js"),
         ]);
         await closePosition(connection, new PublicKey(authority!), p);
+        logFill({
+            time: Date.now(),
+            symbol: p.symbol,
+            direction: p.direction,
+            kind: "close",
+            sizeUsd: p.sizeUsd,
+            price: p.markPrice,
+            leverage: p.leverage,
+            pnlUsd: p.pnlUsd,
+        });
         refreshAccount();
-    }, [connection, authority, refreshAccount]);
+    }, [connection, authority, refreshAccount, logFill]);
 
     return (
         <ScrollArea className="h-full bg-background">
@@ -262,7 +292,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </div>
                 )}
 
-                <div className="mt-6 lg:grid lg:grid-cols-[250px_minmax(0,1fr)_340px] lg:items-start lg:gap-4">
+                <div className="mt-4 lg:grid lg:grid-cols-[250px_minmax(0,1fr)_340px] lg:items-start lg:gap-2">
                     {/* Markets rail — desktop */}
                     <aside className="hidden overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10 lg:block">
                         <p className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wide text-zinc-600">
@@ -316,47 +346,54 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             })}
                         </div>
 
-                        <div className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10">
-                            {market ? (
-                                <>
-                                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5">
-                                        <h2 className="text-[20px] font-extrabold tracking-tight text-white">
-                                            {market.symbol}
-                                            <span className="text-zinc-600">-PERP</span>
-                                        </h2>
-                                        <span className="text-[20px] font-bold tabular-nums text-zinc-200">
-                                            ${fmtPrice(market.price)}
-                                        </span>
-                                        {(() => {
-                                            const ch = change24h(market);
-                                            return ch !== null && (
-                                                <span className={cn(
-                                                    "text-[14px] font-extrabold tabular-nums",
-                                                    ch >= 0 ? "text-lantern" : "text-pastelred",
-                                                )}>
-                                                    {ch >= 0 ? "+" : ""}{ch.toFixed(2)}% 24h
-                                                </span>
-                                            );
-                                        })()}
-                                        <span className="ml-auto text-[12px] font-semibold tabular-nums text-zinc-600">
-                                            borrow {market.borrowHourlyPctLong.toFixed(4)}%/h · up to {market.maxLeverage}×
-                                        </span>
-                                    </div>
-                                    <PerpsChart pythTicker={market.pythTicker} className="px-2 pb-3 pt-2" />
-                                </>
-                            ) : (
-                                <div className="h-[380px] overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
-                            )}
+                        <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-2">
+                            <div className="overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10">
+                                {market ? (
+                                    <>
+                                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5">
+                                            <h2 className="text-[20px] font-extrabold tracking-tight text-white">
+                                                {market.symbol}
+                                                <span className="text-zinc-600">-PERP</span>
+                                            </h2>
+                                            <span className="text-[20px] font-bold tabular-nums text-zinc-200">
+                                                ${fmtPrice(market.price)}
+                                            </span>
+                                            {(() => {
+                                                const ch = change24h(market);
+                                                return ch !== null && (
+                                                    <span className={cn(
+                                                        "text-[14px] font-extrabold tabular-nums",
+                                                        ch >= 0 ? "text-lantern" : "text-pastelred",
+                                                    )}>
+                                                        {ch >= 0 ? "+" : ""}{ch.toFixed(2)}% 24h
+                                                    </span>
+                                                );
+                                            })()}
+                                            <span className="ml-auto text-[12px] font-semibold tabular-nums text-zinc-600">
+                                                borrow {market.borrowHourlyPctLong.toFixed(4)}%/h · up to {market.maxLeverage}×
+                                            </span>
+                                        </div>
+                                        <PerpsChart pythTicker={market.pythTicker} className="px-2 pb-3 pt-2" />
+                                    </>
+                                ) : (
+                                    <div className="h-[380px] overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                                )}
+                            </div>
+
+                            {/* Book slot — Flash has no orderbook, fills settle at oracle */}
+                            <div className="hidden min-h-0 lg:block">
+                                {market && <PerpsTape pythTicker={market.pythTicker} livePrice={market.price} />}
+                            </div>
                         </div>
 
-                        {/* Positions — desktop position (under the chart) */}
-                        <div className="max-lg:hidden">
-                            <PositionsSection positions={positions} onClose={closeRow} />
+                        {/* Positions / Trades / Funding / Order History — desktop */}
+                        <div className="mt-2 max-lg:hidden">
+                            <TerminalTabs positions={positions} fills={fills} markets={markets} onClose={closeRow} />
                         </div>
                     </div>
 
                     {/* Order panel */}
-                    <aside className="mt-4 lg:mt-0">
+                    <aside className="mt-3 lg:mt-0">
                         {market && (
                             <OrderPanel
                                 key={market.symbol}
@@ -366,6 +403,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                 connection={connection}
                                 authority={authority}
                                 ensureReady={ensureReady}
+                                onFill={logFill}
                                 onOpened={() => {
                                     if (authority) recordPerpsAccount.mutate({ authority });
                                     refreshAccount();
@@ -375,7 +413,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         <button
                             onClick={() => canTrade && setManaging(true)}
                             disabled={!canTrade}
-                            className="mt-4 flex w-full cursor-pointer items-center justify-between rounded-xl bg-white/[0.03] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
+                            className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-xl bg-white/[0.03] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
                         >
                             <div className="flex items-center gap-2.5">
                                 <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-zinc-300">
@@ -398,9 +436,9 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </aside>
                 </div>
 
-                {/* Positions — mobile position (after the order panel) */}
-                <div className="lg:hidden">
-                    <PositionsSection positions={positions} onClose={closeRow} />
+                {/* Positions / Trades / Funding / Order History — mobile */}
+                <div className="mt-3 lg:hidden">
+                    <TerminalTabs positions={positions} fills={fills} markets={markets} onClose={closeRow} />
                 </div>
 
                 <p className="mt-6 px-1 text-[12px] font-medium leading-relaxed text-zinc-600">
@@ -480,6 +518,7 @@ function OrderPanel({
     connection,
     authority,
     ensureReady,
+    onFill,
     onOpened,
 }: {
     market: PerpMarketRow;
@@ -488,6 +527,7 @@ function OrderPanel({
     connection: ReturnType<typeof useConnection>["connection"];
     authority: string | null;
     ensureReady: () => Promise<void>;
+    onFill: (f: Omit<TradeFill, "id">) => void;
     onOpened: () => void;
 }) {
     const [direction, setDirection] = useState<"long" | "short">("long");
@@ -547,6 +587,17 @@ function OrderPanel({
                 connection, new PublicKey(authority), market.symbol, direction, amount, leverage,
             );
             toast.success(`${long ? "Long" : "Short"} ${market.symbol} opened`);
+            if (quote) {
+                onFill({
+                    time: Date.now(),
+                    symbol: market.symbol,
+                    direction,
+                    kind: "open",
+                    sizeUsd: quote.sizeUsd,
+                    price: quote.entryPrice,
+                    leverage,
+                });
+            }
             setUsd("");
             onOpened();
         } catch (err) {
@@ -672,22 +723,174 @@ function QuoteRow({ label, children }: { label: string; children: React.ReactNod
     );
 }
 
-function PositionsSection({
+// ─── Terminal tabs: positions / trades / funding / order history ───
+
+const TERM_TABS = ["positions", "trades", "funding", "orders"] as const;
+type TermTab = (typeof TERM_TABS)[number];
+
+const fmtTime = (t: number) =>
+    new Date(t).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+function TerminalTabs({
     positions,
+    fills,
+    markets,
     onClose,
 }: {
     positions: PerpPositionRow[];
+    fills: TradeFill[];
+    markets: PerpMarketRow[];
     onClose: (p: PerpPositionRow) => Promise<void>;
 }) {
-    if (positions.length === 0) return null;
+    const [tab, setTab] = useState<TermTab>("positions");
+    // Unique per instance — desktop and mobile mounts coexist (CSS-hidden),
+    // and a shared layoutId would animate the pill between them.
+    const uid = useId();
+    const labels: Record<TermTab, string> = {
+        positions: `Positions (${positions.length})`,
+        trades: "Trades",
+        funding: "Funding",
+        orders: "Order History",
+    };
     return (
-        <div className="mt-4">
-            <p className="px-1 text-[13px] font-bold text-zinc-400">Your positions</p>
-            <div className="mt-2 space-y-1.5">
-                {positions.map((p) => (
-                    <PositionRow key={p.marketKey} position={p} onClose={() => onClose(p)} />
+        <div className="rounded-xl bg-white/[0.03] ring-1 ring-white/10">
+            <div className="flex items-center gap-1 overflow-x-auto px-2 pt-2 [scrollbar-width:none]">
+                {TERM_TABS.map((t) => (
+                    <button
+                        key={t}
+                        onClick={() => setTab(t)}
+                        className={cn(
+                            "relative z-10 shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-[12px] font-bold transition-all",
+                            tab === t ? "text-white/80" : "text-zinc-500 hover:bg-zinc-900/65 hover:text-white",
+                        )}
+                    >
+                        {labels[t]}
+                        {tab === t && (
+                            <motion.div
+                                layoutId={`perpsTermTab-${uid}`}
+                                className="absolute inset-0 -z-10 rounded-full bg-gray1"
+                                initial={false}
+                                transition={{ type: "spring", stiffness: 250, damping: 30 }}
+                            />
+                        )}
+                    </button>
                 ))}
             </div>
+            <div className="p-2">
+                {tab === "positions" &&
+                    (positions.length ? (
+                        <div className="space-y-1">
+                            {positions.map((p) => (
+                                <PositionRow key={p.marketKey} position={p} onClose={() => onClose(p)} />
+                            ))}
+                        </div>
+                    ) : (
+                        <TermEmpty title="No open positions" sub="Open a long or short and it lands here." />
+                    ))}
+                {tab === "trades" &&
+                    (fills.length ? (
+                        <div>{fills.map((f) => <FillRow key={f.id} fill={f} />)}</div>
+                    ) : (
+                        <TermEmpty title="No fills yet" sub="Opens and closes from this session show up here." />
+                    ))}
+                {tab === "funding" && <FundingTable markets={markets} />}
+                {tab === "orders" &&
+                    (fills.length ? (
+                        <div>{fills.map((f) => <OrderRow key={f.id} fill={f} />)}</div>
+                    ) : (
+                        <TermEmpty title="No orders yet" sub="Flash fills market orders instantly — yours appear here." />
+                    ))}
+            </div>
+        </div>
+    );
+}
+
+function TermEmpty({ title, sub }: { title: string; sub: string }) {
+    return (
+        <div className="flex min-h-[96px] flex-col items-center justify-center py-4 text-center">
+            <p className="text-[13px] font-bold text-zinc-400">{title}</p>
+            <p className="mt-0.5 text-[12px] font-medium text-zinc-600">{sub}</p>
+        </div>
+    );
+}
+
+function FillRow({ fill: f }: { fill: TradeFill }) {
+    const long = f.direction === "long";
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.03]">
+            <div className="flex items-center gap-2.5">
+                <span className={cn("text-[12px] font-extrabold", long ? "text-lantern" : "text-pastelred")}>
+                    {long ? "Long" : "Short"}
+                </span>
+                <span className="text-[13px] font-bold text-white">{f.symbol}</span>
+                <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-extrabold text-zinc-500">
+                    {f.kind === "open" ? "Open" : "Close"}
+                </span>
+            </div>
+            <div className="flex items-center gap-4 tabular-nums">
+                {f.kind === "close" && f.pnlUsd !== undefined && (
+                    <span className={cn("text-[12px] font-bold", f.pnlUsd >= 0 ? "text-lantern" : "text-pastelred")}>
+                        {f.pnlUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(f.pnlUsd))}
+                    </span>
+                )}
+                <span className="text-[12px] font-semibold text-zinc-400">
+                    ${fmtUsd(f.sizeUsd)} @ ${fmtPrice(f.price)}
+                </span>
+                <span className="text-[11px] font-semibold text-zinc-600">{fmtTime(f.time)}</span>
+            </div>
+        </div>
+    );
+}
+
+function OrderRow({ fill: f }: { fill: TradeFill }) {
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.03]">
+            <div className="flex items-center gap-2.5">
+                <span className="text-[13px] font-bold text-white">{f.symbol}</span>
+                <span className="text-[12px] font-semibold capitalize text-zinc-500">
+                    Market {f.direction} · {f.leverage.toFixed(0)}×
+                </span>
+            </div>
+            <div className="flex items-center gap-4 tabular-nums">
+                <span className="text-[12px] font-bold text-lantern">Filled</span>
+                <span className="text-[12px] font-semibold text-zinc-400">
+                    ${fmtUsd(f.sizeUsd)} @ ${fmtPrice(f.price)}
+                </span>
+                <span className="text-[11px] font-semibold text-zinc-600">{fmtTime(f.time)}</span>
+            </div>
+        </div>
+    );
+}
+
+function FundingTable({ markets }: { markets: PerpMarketRow[] }) {
+    return (
+        <div>
+            <div className="flex items-center justify-between px-3 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wide text-zinc-600">
+                <span>Market</span>
+                <span className="flex gap-2">
+                    <span className="w-20 text-right">Long /h</span>
+                    <span className="w-20 text-right">Short /h</span>
+                </span>
+            </div>
+            {markets.map((m) => (
+                <div
+                    key={m.symbol}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.03]"
+                >
+                    <span className="text-[13px] font-bold text-white">{m.symbol}</span>
+                    <span className="flex gap-2 tabular-nums">
+                        <span className="w-20 text-right text-[12px] font-semibold text-zinc-400">
+                            {m.borrowHourlyPctLong.toFixed(4)}%
+                        </span>
+                        <span className="w-20 text-right text-[12px] font-semibold text-zinc-400">
+                            {m.borrowHourlyPctShort.toFixed(4)}%
+                        </span>
+                    </span>
+                </div>
+            ))}
+            <p className="px-3 pb-1 pt-2 text-[11px] font-medium leading-relaxed text-zinc-600">
+                Hourly borrow cost as % of position size — Flash&apos;s pool model charges borrow instead of bilateral funding.
+            </p>
         </div>
     );
 }
@@ -734,7 +937,7 @@ function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onCl
             </div>
             <div className="flex items-center gap-3">
                 <span className={cn("text-[14px] font-bold tabular-nums", up ? "text-lantern" : "text-pastelred")}>
-                    {up ? "+" : ""}${fmtUsd(p.pnlUsd)}
+                    {up ? "+" : "−"}${fmtUsd(Math.abs(p.pnlUsd))}
                 </span>
                 <button
                     onClick={close}
