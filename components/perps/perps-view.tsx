@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon, TradeDownIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
@@ -8,21 +8,33 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AnimatedSlider } from "@/components/ui/motion-slider";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PerpsChart } from "@/components/perps/perps-chart";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@solana/web3.js";
-import type { PerpMarketRow, AccountSummary } from "@/lib/perps/drift";
+import type { PerpMarketRow, PerpPositionRow, PerpSymbol, OpenQuote } from "@/lib/perps/flash";
 
-// Perpetuals on Drift — non-custodial: positions live in the USER's Drift
-// account. Works for both wallet types: the SDK only BUILDS unsigned
-// transactions; Swig wallets submit through signAndSubmit (session key /
-// FROST), extension wallets through sendTransaction. Same dual path as boost
-// purchases. The SDK (heavy) loads only inside this route via await import().
+// Perpetuals on Flash Trade — non-custodial, GMX-style: collateral leaves the
+// user's wallet at open and returns at close; there is no deposit step.
+// The SDK only BUILDS unsigned transactions; Swig wallets submit through
+// signAndSubmit (session key / FROST), extension wallets through
+// sendTransaction. The SDK (heavy) loads only inside this route via
+// await import().
+//
+// Layout borrows the trading-terminal pattern (market rail / chart /
+// order panel) — expressed in watchparty's identity, not Phantom's.
 
-const fmt = (n: number, dp = 2) =>
+const fmtUsd = (n: number, dp = 2) =>
     n >= 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toFixed(n < 1 ? 4 : dp);
+
+const fmtPrice = (n: number) => {
+    if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    if (n >= 1) return n.toFixed(2);
+    if (n >= 0.01) return n.toFixed(4);
+    return n.toPrecision(4);
+};
 
 /** The wallet address trades come from: Swig custodial first, else extension. */
 function useTradeAuthority(): { authority: string | null; isSwig: boolean } {
@@ -31,6 +43,44 @@ function useTradeAuthority(): { authority: string | null; isSwig: boolean } {
     const custodial = session?.user?.wallet_address ?? null;
     if (custodial) return { authority: custodial, isSwig: true };
     return { authority: wallet.publicKey?.toBase58() ?? null, isSwig: false };
+}
+
+/** 24h-ago reference prices from Pyth benchmarks (one hourly fetch per market). */
+function useDayRefs(markets: PerpMarketRow[]) {
+    const [refs, setRefs] = useState<Record<string, number>>({});
+    const tickers = useMemo(() => markets.map((m) => m.pythTicker).join(","), [markets]);
+
+    useEffect(() => {
+        if (!tickers) return;
+        let alive = true;
+        const load = async () => {
+            const to = Math.floor(Date.now() / 1000);
+            const from = to - 25 * 3600;
+            const entries = await Promise.all(
+                tickers.split(",").map(async (ticker) => {
+                    try {
+                        const res = await fetch(
+                            `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
+                            `?symbol=${encodeURIComponent(ticker)}&resolution=60&from=${from}&to=${to}`,
+                        );
+                        const d = await res.json();
+                        return [ticker, d.s === "ok" && d.o.length ? d.o[0] : 0] as const;
+                    } catch {
+                        return [ticker, 0] as const;
+                    }
+                }),
+            );
+            if (alive) setRefs(Object.fromEntries(entries));
+        };
+        load();
+        const timer = setInterval(load, 120_000);
+        return () => {
+            alive = false;
+            clearInterval(timer);
+        };
+    }, [tickers]);
+
+    return refs;
 }
 
 export function PerpsView() {
@@ -42,11 +92,23 @@ export function PerpsView() {
 
     const [markets, setMarkets] = useState<PerpMarketRow[]>([]);
     const [loading, setLoading] = useState(true);
-    const [account, setAccount] = useState<AccountSummary | null>(null);
-    const [trade, setTrade] = useState<{ market: PerpMarketRow; direction: "long" | "short" } | null>(null);
-    const [managing, setManaging] = useState(false);
-    // Feeds the perps referral sweep — which users trade Drift through us.
-    const recordDriftAccount = trpc.trade.recordDriftAccount.useMutation();
+    const [selected, setSelected] = useState<PerpSymbol>("SOL");
+    const [positions, setPositions] = useState<PerpPositionRow[]>([]);
+    const [balance, setBalance] = useState(0);
+    // Feeds the perps referral sweep — which users trade perps through us.
+    const recordPerpsAccount = trpc.trade.recordDriftAccount.useMutation();
+
+    const dayRefs = useDayRefs(markets);
+    const market = markets.find((m) => m.symbol === selected) ?? null;
+    const canTrade = !!authority;
+
+    const change24h = useCallback(
+        (m: PerpMarketRow) => {
+            const ref = dayRefs[m.pythTicker];
+            return ref ? ((m.price - ref) / ref) * 100 : null;
+        },
+        [dayRefs],
+    );
 
     /** Sign + submit an unsigned tx via whichever wallet the user has. */
     const submit = useCallback(async (tx: Transaction): Promise<string> => {
@@ -61,24 +123,24 @@ export function PerpsView() {
         return sig;
     }, [isSwig, signAndSubmit, wallet, connection]);
 
-    const getClient = useCallback(async () => {
-        if (!authority) throw new Error("Connect a wallet first");
-        const [{ getTradeClient }, { PublicKey }] = await Promise.all([
-            import("@/lib/perps/drift"),
-            import("@solana/web3.js"),
-        ]);
-        return getTradeClient(connection, new PublicKey(authority));
-    }, [authority, connection]);
-
     const refreshAccount = useCallback(async () => {
         if (!authority) return;
         try {
-            const { getAccountSummary } = await import("@/lib/perps/drift");
-            setAccount(await getAccountSummary(await getClient()));
+            const [{ getPositions, getUsdcBalance }, { PublicKey }] = await Promise.all([
+                import("@/lib/perps/flash"),
+                import("@solana/web3.js"),
+            ]);
+            const owner = new PublicKey(authority);
+            const [pos, bal] = await Promise.all([
+                getPositions(connection, owner),
+                getUsdcBalance(connection, owner),
+            ]);
+            setPositions(pos);
+            setBalance(bal);
         } catch (err) {
             console.error("perps account refresh failed", err);
         }
-    }, [authority, getClient]);
+    }, [authority, connection]);
 
     // Market list: load on mount, refresh on an interval, tear down on unmount.
     useEffect(() => {
@@ -86,7 +148,7 @@ export function PerpsView() {
         let timer: ReturnType<typeof setInterval> | null = null;
         (async () => {
             try {
-                const { getMarkets } = await import("@/lib/perps/drift");
+                const { getMarkets } = await import("@/lib/perps/flash");
                 const rows = await getMarkets(connection);
                 if (!alive) return;
                 setMarkets(rows);
@@ -103,36 +165,37 @@ export function PerpsView() {
         return () => {
             alive = false;
             if (timer) clearInterval(timer);
-            import("@/lib/perps/drift").then((m) => m.teardown()).catch(() => {});
+            import("@/lib/perps/flash").then((m) => m.teardown()).catch(() => {});
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Positions + balance: on wallet, then every 15s.
     useEffect(() => {
         refreshAccount();
+        const timer = setInterval(refreshAccount, 15_000);
+        return () => clearInterval(timer);
     }, [refreshAccount]);
 
-    const canTrade = !!authority;
+    const closePosition = useCallback(async (p: PerpPositionRow) => {
+        const [{ prepareClose }, { PublicKey }] = await Promise.all([
+            import("@/lib/perps/flash"),
+            import("@solana/web3.js"),
+        ]);
+        const tx = await prepareClose(connection, new PublicKey(authority!), p.positionKey);
+        await submit(tx);
+        refreshAccount();
+    }, [connection, authority, submit, refreshAccount]);
 
     return (
         <ScrollArea className="h-full bg-background">
-            <div className="mx-auto max-w-4xl px-4 pb-16 pt-6 md:pt-(--header-height)">
-                <div className="flex flex-wrap items-end justify-between gap-3 pt-4">
-                    <div>
-                        <h1 className="font-pixel text-4xl tracking-tighter text-white">Perpetuals</h1>
-                        <p className="mt-1.5 text-[14px] font-medium text-zinc-500">
-                            Long or short with leverage, settled in USDC on Drift. Your wallet, your positions.
-                        </p>
-                    </div>
-                    {canTrade && (
-                        <button
-                            onClick={() => setManaging(true)}
-                            className="flex h-11 items-center gap-2 rounded-full bg-white/[0.06] px-5 text-[14px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
-                        >
-                            <HugeiconsIcon icon={Wallet01Icon} className="size-4" strokeWidth={2} />
-                            {account?.exists ? `$${fmt(account.freeCollateralUsd)} free` : "Deposit USDC"}
-                        </button>
-                    )}
+            <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 md:pt-(--header-height)">
+                {/* Page header */}
+                <div className="pt-4">
+                    <h1 className="font-pixel text-4xl tracking-tighter text-white">Perpetuals</h1>
+                    <p className="mt-1.5 text-[14px] font-medium text-zinc-500">
+                        Long or short with leverage, settled in USDC on Flash. Your wallet, your positions.
+                    </p>
                 </div>
 
                 {!canTrade && session?.user && (
@@ -144,165 +207,407 @@ export function PerpsView() {
                     </div>
                 )}
 
-                {/* Drift is mid-migration to their new program (velocity): the old
-                    program rejects account creation from EVERY published SDK, and
-                    the new one isn't initialized on mainnet yet (verified by
-                    simulation 2026-07-16). Prices/positions read fine; first-time
-                    deposits fail upstream. Remove once their stable SDK lands. */}
-                {canTrade && account && !account.exists && (
-                    <div className="mt-5 rounded-2xl bg-sunset/10 px-5 py-4">
-                        <p className="text-[14px] font-bold text-sunset">New Drift accounts are briefly paused</p>
-                        <p className="mt-0.5 text-[13px] font-medium leading-relaxed text-zinc-500">
-                            Drift is upgrading their protocol and isn&apos;t accepting new trading accounts
-                            right now. Prices are live, and existing Drift accounts work normally — first-time
-                            setup will open as soon as their upgrade completes.
+                <div className="mt-6 lg:grid lg:grid-cols-[250px_minmax(0,1fr)_340px] lg:items-start lg:gap-4">
+                    {/* Markets rail — desktop */}
+                    <aside className="hidden overflow-hidden rounded-3xl bg-white/[0.03] ring-1 ring-white/10 lg:block">
+                        <p className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wide text-zinc-600">
+                            Markets
                         </p>
-                    </div>
-                )}
-
-                {/* Positions */}
-                {account && account.positions.length > 0 && (
-                    <div className="mt-6">
-                        <p className="px-1 text-[13px] font-bold text-zinc-400">Your positions</p>
-                        <div className="mt-2 space-y-1.5">
-                            {account.positions.map((p) => (
-                                <PositionRow
-                                    key={p.marketIndex}
-                                    position={p}
-                                    onClose={async () => {
-                                        const [{ prepareClosePosition }, { PublicKey }] = await Promise.all([
-                                            import("@/lib/perps/drift"),
-                                            import("@solana/web3.js"),
-                                        ]);
-                                        const tx = await prepareClosePosition(
-                                            await getClient(), connection, new PublicKey(authority!), p.marketIndex,
-                                        );
-                                        await submit(tx);
-                                        refreshAccount();
-                                    }}
+                        {loading
+                            ? Array.from({ length: 9 }).map((_, i) => (
+                                <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                            ))
+                            : markets.map((m) => (
+                                <MarketRow
+                                    key={m.symbol}
+                                    market={m}
+                                    change={change24h(m)}
+                                    active={m.symbol === selected}
+                                    onSelect={() => setSelected(m.symbol)}
                                 />
                             ))}
-                        </div>
-                    </div>
-                )}
+                    </aside>
 
-                {/* Markets */}
-                <div className="mt-6 overflow-hidden rounded-3xl bg-white/[0.03] ring-1 ring-white/10">
-                    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-zinc-600 sm:grid-cols-[1fr_110px_110px_150px]">
-                        <span>Market</span>
-                        <span className="text-right max-sm:hidden">Funding / h</span>
-                        <span className="text-right">Price</span>
-                        <span className="text-right">Trade</span>
-                    </div>
-                    {loading ? (
-                        <div className="space-y-px">
-                            {Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="h-14 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
-                            ))}
+                    {/* Center: market header + chart (+ positions on desktop) */}
+                    <div className="min-w-0">
+                        {/* Markets strip — mobile */}
+                        <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1 lg:hidden [scrollbar-width:none]">
+                            {markets.map((m) => {
+                                const ch = change24h(m);
+                                return (
+                                    <button
+                                        key={m.symbol}
+                                        onClick={() => setSelected(m.symbol)}
+                                        className={cn(
+                                            "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors",
+                                            m.symbol === selected
+                                                ? "bg-white text-black"
+                                                : "bg-white/[0.06] text-zinc-300",
+                                        )}
+                                    >
+                                        {m.symbol}
+                                        {ch !== null && (
+                                            <span className={cn(
+                                                "text-[11px] font-extrabold",
+                                                m.symbol === selected
+                                                    ? "text-black/60"
+                                                    : ch >= 0 ? "text-lantern" : "text-pastelred",
+                                            )}>
+                                                {ch >= 0 ? "+" : ""}{ch.toFixed(1)}%
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
-                    ) : markets.length === 0 ? (
-                        <p className="px-5 py-10 text-center text-[14px] font-medium text-zinc-500">
-                            Couldn&apos;t load markets — refresh to retry.
-                        </p>
-                    ) : (
-                        markets.map((m) => (
-                            <div
-                                key={m.marketIndex}
-                                className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t border-white/[0.05] px-5 py-3.5 sm:grid-cols-[1fr_110px_110px_150px]"
-                            >
-                                <span className="text-[15px] font-bold text-white">{m.symbol.replace("-PERP", "")}</span>
-                                <span
-                                    className={cn(
-                                        "text-right text-[13px] font-semibold tabular-nums max-sm:hidden",
-                                        m.fundingHourlyPct >= 0 ? "text-lantern" : "text-pastelred",
-                                    )}
-                                >
-                                    {m.fundingHourlyPct >= 0 ? "+" : ""}
-                                    {m.fundingHourlyPct.toFixed(4)}%
+
+                        <div className="overflow-hidden rounded-3xl bg-white/[0.03] ring-1 ring-white/10">
+                            {market ? (
+                                <>
+                                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-5">
+                                        <h2 className="text-[20px] font-extrabold tracking-tight text-white">
+                                            {market.symbol}
+                                            <span className="text-zinc-600">-PERP</span>
+                                        </h2>
+                                        <span className="text-[20px] font-bold tabular-nums text-zinc-200">
+                                            ${fmtPrice(market.price)}
+                                        </span>
+                                        {(() => {
+                                            const ch = change24h(market);
+                                            return ch !== null && (
+                                                <span className={cn(
+                                                    "text-[14px] font-extrabold tabular-nums",
+                                                    ch >= 0 ? "text-lantern" : "text-pastelred",
+                                                )}>
+                                                    {ch >= 0 ? "+" : ""}{ch.toFixed(2)}% 24h
+                                                </span>
+                                            );
+                                        })()}
+                                        <span className="ml-auto text-[12px] font-semibold tabular-nums text-zinc-600">
+                                            borrow {market.borrowHourlyPctLong.toFixed(4)}%/h · up to {market.maxLeverage}×
+                                        </span>
+                                    </div>
+                                    <PerpsChart pythTicker={market.pythTicker} className="px-2 pb-3 pt-2" />
+                                </>
+                            ) : (
+                                <div className="h-[380px] overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
+                            )}
+                        </div>
+
+                        {/* Positions — desktop position (under the chart) */}
+                        <div className="max-lg:hidden">
+                            <PositionsSection positions={positions} onClose={closePosition} />
+                        </div>
+                    </div>
+
+                    {/* Order panel */}
+                    <aside className="mt-4 lg:mt-0">
+                        {market && (
+                            <OrderPanel
+                                key={market.symbol}
+                                market={market}
+                                balance={balance}
+                                canTrade={canTrade}
+                                connection={connection}
+                                authority={authority}
+                                onSubmit={async (tx) => {
+                                    const sig = await submit(tx);
+                                    // First trade records the wallet for the referral sweep.
+                                    if (authority) recordPerpsAccount.mutate({ authority });
+                                    refreshAccount();
+                                    return sig;
+                                }}
+                            />
+                        )}
+                        <div className="mt-4 flex items-center justify-between rounded-3xl bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
+                            <div className="flex items-center gap-2.5">
+                                <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-zinc-300">
+                                    <HugeiconsIcon icon={Wallet01Icon} className="size-4" strokeWidth={2} />
                                 </span>
-                                <span className="text-right text-[15px] font-bold tabular-nums text-zinc-200">
-                                    ${fmt(m.oraclePrice)}
-                                </span>
-                                <div className="flex justify-end gap-1.5">
-                                    <button
-                                        onClick={() => setTrade({ market: m, direction: "long" })}
-                                        disabled={!canTrade}
-                                        className="cursor-pointer rounded-full bg-lantern/15 px-3.5 py-1.5 text-[12px] font-extrabold text-lantern transition-colors hover:bg-lantern hover:text-black disabled:opacity-40"
-                                    >
-                                        Long
-                                    </button>
-                                    <button
-                                        onClick={() => setTrade({ market: m, direction: "short" })}
-                                        disabled={!canTrade}
-                                        className="cursor-pointer rounded-full bg-pastelred/15 px-3.5 py-1.5 text-[12px] font-extrabold text-pastelred transition-colors hover:bg-pastelred hover:text-white disabled:opacity-40"
-                                    >
-                                        Short
-                                    </button>
+                                <div>
+                                    <p className="text-[12px] font-semibold text-zinc-500">Available to trade</p>
+                                    <p className="text-[15px] font-bold tabular-nums text-white">
+                                        ${fmtUsd(balance)} <span className="text-[12px] font-semibold text-zinc-500">USDC</span>
+                                    </p>
                                 </div>
                             </div>
-                        ))
-                    )}
+                        </div>
+                    </aside>
                 </div>
 
-                <p className="mt-4 px-1 text-[12px] font-medium leading-relaxed text-zinc-600">
-                    Trading happens on the Drift protocol from your own wallet — watchparty never holds your
-                    collateral or positions. Leverage can liquidate your full margin; size accordingly.
+                {/* Positions — mobile position (after the order panel) */}
+                <div className="lg:hidden">
+                    <PositionsSection positions={positions} onClose={closePosition} />
+                </div>
+
+                <p className="mt-6 px-1 text-[12px] font-medium leading-relaxed text-zinc-600">
+                    Trading happens on the Flash Trade protocol from your own wallet — watchparty never holds
+                    your collateral or positions. Leverage can liquidate your full margin; size accordingly.
                 </p>
             </div>
-
-            {trade && authority && (
-                <TradeDialog
-                    market={trade.market}
-                    direction={trade.direction}
-                    account={account}
-                    onDone={() => { setTrade(null); refreshAccount(); }}
-                    onClose={() => setTrade(null)}
-                    placeOrder={async (usdNotional) => {
-                        const [{ prepareOpenPosition }, { PublicKey }] = await Promise.all([
-                            import("@/lib/perps/drift"),
-                            import("@solana/web3.js"),
-                        ]);
-                        const tx = await prepareOpenPosition(
-                            await getClient(), connection, new PublicKey(authority),
-                            trade.market.marketIndex, trade.direction, usdNotional,
-                        );
-                        return submit(tx);
-                    }}
-                />
-            )}
-            {managing && authority && (
-                <CollateralDialog
-                    account={account}
-                    onDone={() => { setManaging(false); refreshAccount(); }}
-                    onClose={() => setManaging(false)}
-                    transfer={async (mode, usd) => {
-                        const [{ prepareDeposit, prepareWithdraw }, { PublicKey }] = await Promise.all([
-                            import("@/lib/perps/drift"),
-                            import("@solana/web3.js"),
-                        ]);
-                        const owner = new PublicKey(authority);
-                        const client = await getClient();
-                        const tx = mode === "deposit"
-                            ? await prepareDeposit(client, connection, owner, usd)
-                            : await prepareWithdraw(client, connection, owner, usd);
-                        const sig = await submit(tx);
-                        if (mode === "deposit") recordDriftAccount.mutate({ authority: authority! });
-                        return sig;
-                    }}
-                />
-            )}
         </ScrollArea>
     );
 }
 
-function PositionRow({ position: p, onClose }: { position: import("@/lib/perps/drift").PerpPositionRow; onClose: () => Promise<void> }) {
+function MarketRow({
+    market: m,
+    change,
+    active,
+    onSelect,
+}: {
+    market: PerpMarketRow;
+    change: number | null;
+    active: boolean;
+    onSelect: () => void;
+}) {
+    return (
+        <button
+            onClick={onSelect}
+            className={cn(
+                "flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left transition-colors",
+                active ? "bg-white/[0.06]" : "hover:bg-white/[0.03]",
+            )}
+        >
+            <span className="flex items-center gap-2">
+                <span className="text-[14px] font-bold text-white">{m.symbol}</span>
+                <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-extrabold text-zinc-500">
+                    {m.maxLeverage}×
+                </span>
+            </span>
+            <span className="text-right">
+                <span className="block text-[13px] font-bold tabular-nums text-zinc-200">${fmtPrice(m.price)}</span>
+                {change !== null && (
+                    <span className={cn(
+                        "block text-[11px] font-extrabold tabular-nums",
+                        change >= 0 ? "text-lantern" : "text-pastelred",
+                    )}>
+                        {change >= 0 ? "+" : ""}{change.toFixed(2)}%
+                    </span>
+                )}
+            </span>
+        </button>
+    );
+}
+
+function OrderPanel({
+    market,
+    balance,
+    canTrade,
+    connection,
+    authority,
+    onSubmit,
+}: {
+    market: PerpMarketRow;
+    balance: number;
+    canTrade: boolean;
+    connection: ReturnType<typeof useConnection>["connection"];
+    authority: string | null;
+    onSubmit: (tx: Transaction) => Promise<string>;
+}) {
+    const [direction, setDirection] = useState<"long" | "short">("long");
+    const [usd, setUsd] = useState("");
+    const [leverage, setLeverage] = useState(5);
+    const [quote, setQuote] = useState<OpenQuote | null>(null);
+    const [quoting, setQuoting] = useState(false);
+    const [placing, setPlacing] = useState(false);
+    const quoteSeq = useRef(0);
+
+    const long = direction === "long";
+    const amount = Number(usd) || 0;
+    const maxLev = market.maxLeverage;
+    const insufficient = canTrade && amount > balance;
+
+    // Live quote, debounced against typing/slider drags.
+    useEffect(() => {
+        if (!authority || amount < 1 || leverage < 1) {
+            setQuote(null);
+            return;
+        }
+        const seq = ++quoteSeq.current;
+        setQuoting(true);
+        const t = setTimeout(async () => {
+            try {
+                const [{ getOpenQuote }, { PublicKey }] = await Promise.all([
+                    import("@/lib/perps/flash"),
+                    import("@solana/web3.js"),
+                ]);
+                const q = await getOpenQuote(
+                    connection, new PublicKey(authority), market.symbol, direction, amount, leverage,
+                );
+                if (quoteSeq.current === seq) setQuote(q);
+            } catch (err) {
+                console.error("perps quote failed", err);
+                if (quoteSeq.current === seq) setQuote(null);
+            } finally {
+                if (quoteSeq.current === seq) setQuoting(false);
+            }
+        }, 350);
+        return () => clearTimeout(t);
+    }, [authority, connection, market.symbol, direction, amount, leverage]);
+
+    const place = async () => {
+        if (amount < 1 || !authority) return;
+        setPlacing(true);
+        try {
+            const [{ prepareOpen }, { PublicKey }] = await Promise.all([
+                import("@/lib/perps/flash"),
+                import("@solana/web3.js"),
+            ]);
+            const tx = await prepareOpen(
+                connection, new PublicKey(authority), market.symbol, direction, amount, leverage,
+            );
+            await onSubmit(tx);
+            toast.success(`${long ? "Long" : "Short"} ${market.symbol} opened`);
+            setUsd("");
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Order failed");
+        } finally {
+            setPlacing(false);
+        }
+    };
+
+    return (
+        <div className="rounded-3xl bg-white/[0.03] p-4 ring-1 ring-white/10">
+            {/* Direction */}
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
+                <button
+                    onClick={() => setDirection("long")}
+                    className={cn(
+                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
+                        long ? "bg-lantern text-black" : "text-zinc-400 hover:text-white",
+                    )}
+                >
+                    <HugeiconsIcon icon={TradeUpIcon} className="size-4" strokeWidth={2.5} />
+                    Long
+                </button>
+                <button
+                    onClick={() => setDirection("short")}
+                    className={cn(
+                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
+                        !long ? "bg-pastelred text-white" : "text-zinc-400 hover:text-white",
+                    )}
+                >
+                    <HugeiconsIcon icon={TradeDownIcon} className="size-4" strokeWidth={2.5} />
+                    Short
+                </button>
+            </div>
+
+            {/* Amount */}
+            <p className="mt-4 px-1 text-[12px] font-bold text-zinc-500">Pay with USDC</p>
+            <div className="relative mt-1.5">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-zinc-500">$</span>
+                <Input
+                    radius={16}
+                    value={usd}
+                    onChange={(e) => setUsd(e.target.value.replace(/[^0-9.]/g, ""))}
+                    placeholder="100"
+                    inputMode="decimal"
+                    className="h-12 bg-white/[0.04] pl-8 pr-16 text-[15px] font-bold"
+                />
+                {balance > 0 && (
+                    <button
+                        onClick={() => setUsd(String(Math.floor(balance * 100) / 100))}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-extrabold text-zinc-400 transition-colors hover:text-white"
+                    >
+                        MAX
+                    </button>
+                )}
+            </div>
+            <div className="mt-2 flex gap-1.5">
+                {[25, 50, 100, 250].map((v) => (
+                    <button
+                        key={v}
+                        onClick={() => setUsd(String(v))}
+                        className="flex-1 cursor-pointer rounded-full bg-white/[0.06] py-1.5 text-[12px] font-bold text-zinc-400 transition-colors hover:text-white"
+                    >
+                        ${v}
+                    </button>
+                ))}
+            </div>
+
+            {/* Leverage */}
+            <div className="mt-4">
+                <AnimatedSlider
+                    label="Leverage"
+                    value={leverage}
+                    onChange={(v) => setLeverage(Math.max(1, Math.min(maxLev, v)))}
+                    min={1}
+                    max={maxLev}
+                    step={1}
+                />
+            </div>
+
+            {/* Quote */}
+            <div className={cn("mt-4 space-y-2 px-1 transition-opacity", quoting && "opacity-50")}>
+                <QuoteRow label="Position size">
+                    {quote ? `$${fmtUsd(quote.sizeUsd)} · ${quote.sizeUi.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${market.symbol}` : "—"}
+                </QuoteRow>
+                <QuoteRow label="Entry price">{quote ? `$${fmtPrice(quote.entryPrice)}` : "—"}</QuoteRow>
+                <QuoteRow label="Liquidation est.">
+                    {quote ? <span className="text-sunset">${fmtPrice(quote.liquidationPrice)}</span> : "—"}
+                </QuoteRow>
+                <QuoteRow label="Fees">{quote ? `$${quote.feesUsd.toFixed(2)}` : "—"}</QuoteRow>
+            </div>
+
+            {insufficient && (
+                <p className="mt-3 rounded-2xl bg-sunset/10 px-4 py-2.5 text-[12px] font-semibold text-sunset">
+                    That&apos;s more USDC than your wallet holds (${fmtUsd(balance)}).
+                </p>
+            )}
+
+            <button
+                onClick={place}
+                disabled={placing || !canTrade || amount < 1 || insufficient || !quote}
+                className={cn(
+                    "mt-4 h-12 w-full cursor-pointer rounded-full text-[14px] font-extrabold transition-colors disabled:opacity-40",
+                    long ? "bg-lantern text-black hover:bg-lantern/90" : "bg-pastelred text-white hover:bg-pastelred/90",
+                )}
+            >
+                {placing
+                    ? "Placing…"
+                    : `${long ? "Long" : "Short"} ${market.symbol} · ${leverage}×`}
+            </button>
+        </div>
+    );
+}
+
+function QuoteRow({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="flex items-center justify-between">
+            <span className="text-[12px] font-semibold text-zinc-500">{label}</span>
+            <span className="text-[13px] font-bold tabular-nums text-zinc-200">{children}</span>
+        </div>
+    );
+}
+
+function PositionsSection({
+    positions,
+    onClose,
+}: {
+    positions: PerpPositionRow[];
+    onClose: (p: PerpPositionRow) => Promise<void>;
+}) {
+    if (positions.length === 0) return null;
+    return (
+        <div className="mt-4">
+            <p className="px-1 text-[13px] font-bold text-zinc-400">Your positions</p>
+            <div className="mt-2 space-y-1.5">
+                {positions.map((p) => (
+                    <PositionRow key={p.positionKey} position={p} onClose={() => onClose(p)} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onClose: () => Promise<void> }) {
     const [closing, setClosing] = useState(false);
 
     const close = async () => {
         setClosing(true);
         try {
             await onClose();
-            toast.success(`${p.symbol.replace("-PERP", "")} position closed`);
+            toast.success(`${p.symbol} position closed`);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Close failed");
         } finally {
@@ -312,11 +617,11 @@ function PositionRow({ position: p, onClose }: { position: import("@/lib/perps/d
 
     const up = p.pnlUsd >= 0;
     return (
-        <div className="flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
             <div className="flex items-center gap-3">
                 <span
                     className={cn(
-                        "grid size-8 place-items-center rounded-full",
+                        "grid size-8 shrink-0 place-items-center rounded-full",
                         p.direction === "long" ? "bg-lantern/15 text-lantern" : "bg-pastelred/15 text-pastelred",
                     )}
                 >
@@ -324,16 +629,20 @@ function PositionRow({ position: p, onClose }: { position: import("@/lib/perps/d
                 </span>
                 <div>
                     <p className="text-[14px] font-bold text-white">
-                        {p.direction === "long" ? "Long" : "Short"} {p.symbol.replace("-PERP", "")}
+                        {p.direction === "long" ? "Long" : "Short"} {p.symbol}
+                        <span className="ml-1.5 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-extrabold text-zinc-500">
+                            {p.leverage.toFixed(1)}×
+                        </span>
                     </p>
                     <p className="text-[12px] font-medium tabular-nums text-zinc-500">
-                        {fmt(p.baseSize, 3)} @ ${fmt(p.entryPrice)} → ${fmt(p.oraclePrice)}
+                        ${fmtUsd(p.sizeUsd)} @ ${fmtPrice(p.entryPrice)} → ${fmtPrice(p.markPrice)}
+                        <span className="text-sunset"> · liq ${fmtPrice(p.liquidationPrice)}</span>
                     </p>
                 </div>
             </div>
             <div className="flex items-center gap-3">
                 <span className={cn("text-[14px] font-bold tabular-nums", up ? "text-lantern" : "text-pastelred")}>
-                    {up ? "+" : ""}${fmt(p.pnlUsd)}
+                    {up ? "+" : ""}${fmtUsd(p.pnlUsd)}
                 </span>
                 <button
                     onClick={close}
@@ -344,184 +653,5 @@ function PositionRow({ position: p, onClose }: { position: import("@/lib/perps/d
                 </button>
             </div>
         </div>
-    );
-}
-
-function TradeDialog({
-    market,
-    direction,
-    account,
-    onDone,
-    onClose,
-    placeOrder,
-}: {
-    market: PerpMarketRow;
-    direction: "long" | "short";
-    account: AccountSummary | null;
-    onDone: () => void;
-    onClose: () => void;
-    placeOrder: (usdNotional: number) => Promise<string>;
-}) {
-    const [usd, setUsd] = useState("");
-    const [placing, setPlacing] = useState(false);
-    const long = direction === "long";
-    const free = account?.freeCollateralUsd ?? 0;
-    const notional = Number(usd) || 0;
-    const leverage = free > 0 && notional > 0 ? notional / free : 0;
-
-    const place = async () => {
-        if (notional < 1) return;
-        setPlacing(true);
-        try {
-            await placeOrder(notional);
-            toast.success(`${long ? "Long" : "Short"} ${market.symbol.replace("-PERP", "")} opened`);
-            onDone();
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Order failed");
-        } finally {
-            setPlacing(false);
-        }
-    };
-
-    return (
-        <Dialog open onOpenChange={onClose}>
-            <DialogContent className="gap-4 rounded-4xl border-none p-6 sm:max-w-[420px]" showCloseButton={false}>
-                <DialogTitle className={cn("text-center text-[18px] font-bold tracking-tight", long ? "text-lantern" : "text-pastelred")}>
-                    {long ? "Long" : "Short"} {market.symbol.replace("-PERP", "")}
-                </DialogTitle>
-                <p className="-mt-2 text-center text-[13px] font-medium text-zinc-500">
-                    ${fmt(market.oraclePrice)} · fills at market
-                </p>
-
-                {(!account?.exists || free < 1) && (
-                    <p className="rounded-2xl bg-sunset/10 px-4 py-3 text-[13px] font-semibold text-sunset">
-                        Deposit USDC collateral first — use the wallet button on the perps page.
-                    </p>
-                )}
-
-                <div className="relative">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-zinc-500">$</span>
-                    <Input
-                        radius={16}
-                        value={usd}
-                        onChange={(e) => setUsd(e.target.value.replace(/[^0-9.]/g, ""))}
-                        placeholder="100"
-                        inputMode="decimal"
-                        autoFocus
-                        className="h-12 bg-white/[0.04] pl-8 text-[15px] font-bold"
-                    />
-                </div>
-                <div className="flex gap-1.5">
-                    {[25, 50, 100, 250].map((v) => (
-                        <button
-                            key={v}
-                            onClick={() => setUsd(String(v))}
-                            className="flex-1 cursor-pointer rounded-full bg-white/[0.06] py-2 text-[13px] font-bold text-zinc-400 transition-colors hover:text-white"
-                        >
-                            ${v}
-                        </button>
-                    ))}
-                </div>
-
-                {leverage > 0 && (
-                    <p className={cn("text-center text-[13px] font-bold", leverage > 5 ? "text-sunset" : "text-zinc-500")}>
-                        ≈ {leverage.toFixed(1)}× your free collateral
-                    </p>
-                )}
-
-                <button
-                    onClick={place}
-                    disabled={placing || notional < 1 || !account?.exists}
-                    className={cn(
-                        "h-12 w-full cursor-pointer rounded-full text-[14px] font-extrabold text-black transition-colors disabled:opacity-40",
-                        long ? "bg-lantern hover:bg-lantern/90" : "bg-pastelred hover:bg-pastelred/90",
-                    )}
-                >
-                    {placing ? "Placing…" : `${long ? "Long" : "Short"} $${usd || "0"} notional`}
-                </button>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function CollateralDialog({
-    account,
-    onDone,
-    onClose,
-    transfer,
-}: {
-    account: AccountSummary | null;
-    onDone: () => void;
-    onClose: () => void;
-    transfer: (mode: "deposit" | "withdraw", usd: number) => Promise<string>;
-}) {
-    const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
-    const [usd, setUsd] = useState("");
-    const [busy, setBusy] = useState(false);
-
-    const go = async () => {
-        const amount = Number(usd);
-        if (!Number.isFinite(amount) || amount <= 0) return;
-        setBusy(true);
-        try {
-            await transfer(mode, amount);
-            toast.success(mode === "deposit" ? `Deposited $${amount} USDC` : `Withdrew $${amount} USDC`);
-            onDone();
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Transfer failed");
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    return (
-        <Dialog open onOpenChange={onClose}>
-            <DialogContent className="gap-4 rounded-4xl border-none p-6 sm:max-w-[400px]" showCloseButton={false}>
-                <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">
-                    Trading collateral
-                </DialogTitle>
-                {account?.exists && (
-                    <p className="-mt-2 text-center text-[13px] font-medium text-zinc-500">
-                        ${fmt(account.freeCollateralUsd)} free · ${fmt(account.totalCollateralUsd)} total
-                    </p>
-                )}
-
-                <div className="inline-flex self-center rounded-full bg-white/[0.06] p-1">
-                    {(["deposit", "withdraw"] as const).map((m) => (
-                        <button
-                            key={m}
-                            onClick={() => setMode(m)}
-                            className={cn(
-                                "cursor-pointer rounded-full px-5 py-1.5 text-[13px] font-bold capitalize transition-colors",
-                                mode === m ? "bg-white text-black" : "text-zinc-400 hover:text-white",
-                            )}
-                        >
-                            {m}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="relative">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-zinc-500">$</span>
-                    <Input
-                        radius={16}
-                        value={usd}
-                        onChange={(e) => setUsd(e.target.value.replace(/[^0-9.]/g, ""))}
-                        placeholder="100"
-                        inputMode="decimal"
-                        autoFocus
-                        className="h-12 bg-white/[0.04] pl-8 text-[15px] font-bold"
-                    />
-                </div>
-
-                <button
-                    onClick={go}
-                    disabled={busy || !Number(usd)}
-                    className="h-12 w-full cursor-pointer rounded-full bg-white text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:opacity-40"
-                >
-                    {busy ? "Signing…" : mode === "deposit" ? `Deposit $${usd || "0"} USDC` : `Withdraw $${usd || "0"} USDC`}
-                </button>
-            </DialogContent>
-        </Dialog>
     );
 }

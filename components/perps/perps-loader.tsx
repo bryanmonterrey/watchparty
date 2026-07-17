@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-// The perps view pulls the Drift SDK graph — keep the whole thing out of the
-// route's initial chunk (the speed rule).
+// The perps view pulls the Flash SDK graph + lightweight-charts — keep the
+// whole thing out of the route's initial chunk (the speed rule).
 const PerpsView = dynamic(
     () => import("./perps-view").then((m) => m.PerpsView),
     {
