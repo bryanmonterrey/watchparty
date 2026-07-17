@@ -8,23 +8,24 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
+import { useSwigSession } from "@/hooks/use-swig-session";
 import { AnimatedSlider } from "@/components/ui/motion-slider";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PerpsChart } from "@/components/perps/perps-chart";
 import { cn } from "@/lib/utils";
-import type { Transaction } from "@solana/web3.js";
-import type { PerpMarketRow, PerpPositionRow, PerpSymbol, OpenQuote } from "@/lib/perps/flash";
+import type { Keypair, Transaction } from "@solana/web3.js";
+import type { PerpMarketRow, PerpPositionRow, PerpSymbol, OpenQuote, PerpsAccountState } from "@/lib/perps/flash";
 
-// Perpetuals on Flash Trade — non-custodial, GMX-style: collateral leaves the
-// user's wallet at open and returns at close; there is no deposit step.
-// The SDK only BUILDS unsigned transactions; Swig wallets submit through
-// signAndSubmit (session key / FROST), extension wallets through
-// sendTransaction. The SDK (heavy) loads only inside this route via
-// await import().
+// Perpetuals on Flash Trade v2 (MagicBlock Ephemeral Rollups) — non-custodial.
 //
-// Layout borrows the trading-terminal pattern (market rail / chart /
-// order panel) — expressed in watchparty's identity, not Phantom's.
+// Money model: wallet USDC → Flash deposit ledger (base-layer tx, wallet-
+// signed through the app's dual path) → trades execute on Flash's ER,
+// signed by a LOCAL SESSION KEY the wallet authorized once. So opening and
+// closing positions never prompts the wallet — Swig and extension wallets
+// get the identical instant-trade UX. The SDK (heavy) loads only inside
+// this route via await import().
 
 const fmtUsd = (n: number, dp = 2) =>
     n >= 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toFixed(n < 1 ? 4 : dp);
@@ -88,13 +89,16 @@ export function PerpsView() {
     const wallet = useWallet();
     const { data: session } = useAuthSession();
     const { signAndSubmit } = useWalletSigning();
+    const swigSession = useSwigSession();
     const { authority, isSwig } = useTradeAuthority();
 
     const [markets, setMarkets] = useState<PerpMarketRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState<PerpSymbol>("SOL");
     const [positions, setPositions] = useState<PerpPositionRow[]>([]);
-    const [balance, setBalance] = useState(0);
+    const [account, setAccount] = useState<PerpsAccountState | null>(null);
+    const [managing, setManaging] = useState(false);
+    const relaySwig = trpc.wallet.relaySwigTransaction.useMutation();
     // Feeds the perps referral sweep — which users trade perps through us.
     const recordPerpsAccount = trpc.trade.recordDriftAccount.useMutation();
 
@@ -110,7 +114,7 @@ export function PerpsView() {
         [dayRefs],
     );
 
-    /** Sign + submit an unsigned tx via whichever wallet the user has. */
+    /** Base-layer tx via whichever wallet the user has (no extra signers). */
     const submit = useCallback(async (tx: Transaction): Promise<string> => {
         if (isSwig) {
             const serialized = Buffer.from(tx.serialize({ requireAllSignatures: false })).toString("base64");
@@ -123,24 +127,69 @@ export function PerpsView() {
         return sig;
     }, [isSwig, signAndSubmit, wallet, connection]);
 
+    /**
+     * Base-layer tx that a local keypair must co-sign (the Flash session
+     * grant / withdraw escrow). Extension wallets pass it as a signer; Swig
+     * wallets take the Tier-1 relay path with the extra signature added to
+     * the wrapped tx before relaying.
+     */
+    const submitCosigned = useCallback(async (tx: Transaction, cosigner: Keypair): Promise<string> => {
+        if (isSwig) {
+            const s = swigSession.session ?? (await swigSession.ensureSession());
+            if (!s) throw new Error("Wallet session unavailable — try again");
+            const [{ buildSwigTransaction }, { PublicKey, Transaction: Tx }] = await Promise.all([
+                import("@/lib/swig/swig-signing"),
+                import("@solana/web3.js"),
+            ]);
+            const inner = Buffer.from(tx.serialize({ requireAllSignatures: false })).toString("base64");
+            const wrapped = await buildSwigTransaction(s, inner, new PublicKey(s.treasuryPubkey), connection);
+            const outer = Tx.from(Buffer.from(wrapped, "base64"));
+            outer.partialSign(cosigner);
+            const { signature } = await relaySwig.mutateAsync({
+                transaction: outer.serialize({ requireAllSignatures: false }).toString("base64"),
+            });
+            return signature;
+        }
+        if (!wallet.sendTransaction) throw new Error("Connect a wallet first");
+        const sig = await wallet.sendTransaction(tx, connection, { signers: [cosigner] });
+        await connection.confirmTransaction(sig, "confirmed");
+        return sig;
+    }, [isSwig, swigSession, relaySwig, wallet, connection]);
+
     const refreshAccount = useCallback(async () => {
         if (!authority) return;
         try {
-            const [{ getPositions, getUsdcBalance }, { PublicKey }] = await Promise.all([
+            const [{ getPositions, getAccountState }, { PublicKey }] = await Promise.all([
                 import("@/lib/perps/flash"),
                 import("@solana/web3.js"),
             ]);
             const owner = new PublicKey(authority);
-            const [pos, bal] = await Promise.all([
+            const [pos, state] = await Promise.all([
                 getPositions(connection, owner),
-                getUsdcBalance(connection, owner),
+                getAccountState(connection, owner),
             ]);
             setPositions(pos);
-            setBalance(bal);
+            setAccount(state);
         } catch (err) {
             console.error("perps account refresh failed", err);
         }
     }, [authority, connection]);
+
+    /** One-time Flash onboarding: base accounts, then the session grant. */
+    const ensureReady = useCallback(async (): Promise<void> => {
+        if (!authority) throw new Error("Connect a wallet first");
+        if (account?.ready) return;
+        const [{ prepareSetup, prepareSession }, { PublicKey }] = await Promise.all([
+            import("@/lib/perps/flash"),
+            import("@solana/web3.js"),
+        ]);
+        const owner = new PublicKey(authority);
+        const setupTx = await prepareSetup(connection, owner);
+        if (setupTx) await submit(setupTx);
+        const sessionReq = await prepareSession(connection, owner);
+        if (sessionReq) await submitCosigned(sessionReq.tx, sessionReq.sessionKeypair);
+        await refreshAccount();
+    }, [authority, account?.ready, connection, submit, submitCosigned, refreshAccount]);
 
     // Market list: load on mount, refresh on an interval, tear down on unmount.
     useEffect(() => {
@@ -170,22 +219,21 @@ export function PerpsView() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Positions + balance: on wallet, then every 15s.
+    // Positions + balances: on wallet, then every 15s.
     useEffect(() => {
         refreshAccount();
         const timer = setInterval(refreshAccount, 15_000);
         return () => clearInterval(timer);
     }, [refreshAccount]);
 
-    const closePosition = useCallback(async (p: PerpPositionRow) => {
-        const [{ prepareClose }, { PublicKey }] = await Promise.all([
+    const closeRow = useCallback(async (p: PerpPositionRow) => {
+        const [{ closePosition }, { PublicKey }] = await Promise.all([
             import("@/lib/perps/flash"),
             import("@solana/web3.js"),
         ]);
-        const tx = await prepareClose(connection, new PublicKey(authority!), p.positionKey);
-        await submit(tx);
+        await closePosition(connection, new PublicKey(authority!), p);
         refreshAccount();
-    }, [connection, authority, submit, refreshAccount]);
+    }, [connection, authority, refreshAccount]);
 
     return (
         <ScrollArea className="h-full bg-background">
@@ -296,7 +344,7 @@ export function PerpsView() {
 
                         {/* Positions — desktop position (under the chart) */}
                         <div className="max-lg:hidden">
-                            <PositionsSection positions={positions} onClose={closePosition} />
+                            <PositionsSection positions={positions} onClose={closeRow} />
                         </div>
                     </div>
 
@@ -306,38 +354,46 @@ export function PerpsView() {
                             <OrderPanel
                                 key={market.symbol}
                                 market={market}
-                                balance={balance}
+                                account={account}
                                 canTrade={canTrade}
                                 connection={connection}
                                 authority={authority}
-                                onSubmit={async (tx) => {
-                                    const sig = await submit(tx);
-                                    // First trade records the wallet for the referral sweep.
+                                ensureReady={ensureReady}
+                                onOpened={() => {
                                     if (authority) recordPerpsAccount.mutate({ authority });
                                     refreshAccount();
-                                    return sig;
                                 }}
                             />
                         )}
-                        <div className="mt-4 flex items-center justify-between rounded-3xl bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
+                        <button
+                            onClick={() => canTrade && setManaging(true)}
+                            disabled={!canTrade}
+                            className="mt-4 flex w-full cursor-pointer items-center justify-between rounded-3xl bg-white/[0.03] px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
+                        >
                             <div className="flex items-center gap-2.5">
                                 <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-zinc-300">
                                     <HugeiconsIcon icon={Wallet01Icon} className="size-4" strokeWidth={2} />
                                 </span>
                                 <div>
-                                    <p className="text-[12px] font-semibold text-zinc-500">Available to trade</p>
+                                    <p className="text-[12px] font-semibold text-zinc-500">Trading balance</p>
                                     <p className="text-[15px] font-bold tabular-nums text-white">
-                                        ${fmtUsd(balance)} <span className="text-[12px] font-semibold text-zinc-500">USDC</span>
+                                        ${fmtUsd(account?.ledgerUsdc ?? 0)}
+                                        <span className="ml-2 text-[12px] font-semibold text-zinc-500">
+                                            ${fmtUsd(account?.walletUsdc ?? 0)} in wallet
+                                        </span>
                                     </p>
                                 </div>
                             </div>
-                        </div>
+                            <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] font-bold text-zinc-300">
+                                Manage
+                            </span>
+                        </button>
                     </aside>
                 </div>
 
                 {/* Positions — mobile position (after the order panel) */}
                 <div className="lg:hidden">
-                    <PositionsSection positions={positions} onClose={closePosition} />
+                    <PositionsSection positions={positions} onClose={closeRow} />
                 </div>
 
                 <p className="mt-6 px-1 text-[12px] font-medium leading-relaxed text-zinc-600">
@@ -345,6 +401,27 @@ export function PerpsView() {
                     your collateral or positions. Leverage can liquidate your full margin; size accordingly.
                 </p>
             </div>
+
+            {managing && authority && (
+                <CollateralDialog
+                    account={account}
+                    onDone={() => { setManaging(false); refreshAccount(); }}
+                    onClose={() => setManaging(false)}
+                    transfer={async (mode, usdAmount) => {
+                        const [{ prepareDeposit, prepareWithdraw }, { PublicKey }] = await Promise.all([
+                            import("@/lib/perps/flash"),
+                            import("@solana/web3.js"),
+                        ]);
+                        const owner = new PublicKey(authority);
+                        if (mode === "deposit") {
+                            await ensureReady();
+                            return submit(await prepareDeposit(connection, owner, usdAmount));
+                        }
+                        const { tx, sessionKeypair } = await prepareWithdraw(connection, owner, usdAmount);
+                        return submitCosigned(tx, sessionKeypair);
+                    }}
+                />
+            )}
         </ScrollArea>
     );
 }
@@ -391,18 +468,20 @@ function MarketRow({
 
 function OrderPanel({
     market,
-    balance,
+    account,
     canTrade,
     connection,
     authority,
-    onSubmit,
+    ensureReady,
+    onOpened,
 }: {
     market: PerpMarketRow;
-    balance: number;
+    account: PerpsAccountState | null;
     canTrade: boolean;
     connection: ReturnType<typeof useConnection>["connection"];
     authority: string | null;
-    onSubmit: (tx: Transaction) => Promise<string>;
+    ensureReady: () => Promise<void>;
+    onOpened: () => void;
 }) {
     const [direction, setDirection] = useState<"long" | "short">("long");
     const [usd, setUsd] = useState("");
@@ -415,9 +494,10 @@ function OrderPanel({
     const long = direction === "long";
     const amount = Number(usd) || 0;
     const maxLev = market.maxLeverage;
-    const insufficient = canTrade && amount > balance;
+    const balance = account?.ledgerUsdc ?? 0;
+    const insufficient = canTrade && !!account?.ready && amount > balance;
 
-    // Live quote, debounced against typing/slider drags.
+    // Live quote from the ER view, debounced against typing/slider drags.
     useEffect(() => {
         if (!authority || amount < 1 || leverage < 1) {
             setQuote(null);
@@ -449,16 +529,19 @@ function OrderPanel({
         if (amount < 1 || !authority) return;
         setPlacing(true);
         try {
-            const [{ prepareOpen }, { PublicKey }] = await Promise.all([
+            // First-time traders run the one-time setup (wallet-signed), then
+            // every trade after this is session-signed — no wallet prompt.
+            await ensureReady();
+            const [{ openPosition }, { PublicKey }] = await Promise.all([
                 import("@/lib/perps/flash"),
                 import("@solana/web3.js"),
             ]);
-            const tx = await prepareOpen(
+            await openPosition(
                 connection, new PublicKey(authority), market.symbol, direction, amount, leverage,
             );
-            await onSubmit(tx);
             toast.success(`${long ? "Long" : "Short"} ${market.symbol} opened`);
             setUsd("");
+            onOpened();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Order failed");
         } finally {
@@ -493,7 +576,7 @@ function OrderPanel({
             </div>
 
             {/* Amount */}
-            <p className="mt-4 px-1 text-[12px] font-bold text-zinc-500">Pay with USDC</p>
+            <p className="mt-4 px-1 text-[12px] font-bold text-zinc-500">Collateral (USDC)</p>
             <div className="relative mt-1.5">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-zinc-500">$</span>
                 <Input
@@ -551,7 +634,7 @@ function OrderPanel({
 
             {insufficient && (
                 <p className="mt-3 rounded-2xl bg-sunset/10 px-4 py-2.5 text-[12px] font-semibold text-sunset">
-                    That&apos;s more USDC than your wallet holds (${fmtUsd(balance)}).
+                    That&apos;s more than your ${fmtUsd(balance)} trading balance — deposit USDC first.
                 </p>
             )}
 
@@ -564,8 +647,10 @@ function OrderPanel({
                 )}
             >
                 {placing
-                    ? "Placing…"
-                    : `${long ? "Long" : "Short"} ${market.symbol} · ${leverage}×`}
+                    ? account?.ready ? "Placing…" : "Setting up…"
+                    : account && !account.ready
+                        ? `Enable trading & ${long ? "long" : "short"} ${market.symbol}`
+                        : `${long ? "Long" : "Short"} ${market.symbol} · ${leverage}×`}
             </button>
         </div>
     );
@@ -593,7 +678,7 @@ function PositionsSection({
             <p className="px-1 text-[13px] font-bold text-zinc-400">Your positions</p>
             <div className="mt-2 space-y-1.5">
                 {positions.map((p) => (
-                    <PositionRow key={p.positionKey} position={p} onClose={() => onClose(p)} />
+                    <PositionRow key={p.marketKey} position={p} onClose={() => onClose(p)} />
                 ))}
             </div>
         </div>
@@ -653,5 +738,100 @@ function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onCl
                 </button>
             </div>
         </div>
+    );
+}
+
+function CollateralDialog({
+    account,
+    onDone,
+    onClose,
+    transfer,
+}: {
+    account: PerpsAccountState | null;
+    onDone: () => void;
+    onClose: () => void;
+    transfer: (mode: "deposit" | "withdraw", usd: number) => Promise<string>;
+}) {
+    const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
+    const [usd, setUsd] = useState("");
+    const [busy, setBusy] = useState(false);
+    const max = mode === "deposit" ? account?.walletUsdc ?? 0 : account?.ledgerUsdc ?? 0;
+
+    const go = async () => {
+        const amount = Number(usd);
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        setBusy(true);
+        try {
+            await transfer(mode, amount);
+            toast.success(mode === "deposit" ? `Deposited $${amount} USDC` : `Withdrawal of $${amount} USDC started`);
+            onDone();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Transfer failed");
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Dialog open onOpenChange={onClose}>
+            <DialogContent className="gap-4 rounded-4xl border-none p-6 sm:max-w-[400px]" showCloseButton={false}>
+                <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">
+                    Trading balance
+                </DialogTitle>
+                <p className="-mt-2 text-center text-[13px] font-medium text-zinc-500">
+                    ${fmtUsd(account?.ledgerUsdc ?? 0)} deposited · ${fmtUsd(account?.walletUsdc ?? 0)} in wallet
+                </p>
+
+                <div className="inline-flex self-center rounded-full bg-white/[0.06] p-1">
+                    {(["deposit", "withdraw"] as const).map((m) => (
+                        <button
+                            key={m}
+                            onClick={() => setMode(m)}
+                            className={cn(
+                                "cursor-pointer rounded-full px-5 py-1.5 text-[13px] font-bold capitalize transition-colors",
+                                mode === m ? "bg-white text-black" : "text-zinc-400 hover:text-white",
+                            )}
+                        >
+                            {m}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-zinc-500">$</span>
+                    <Input
+                        radius={16}
+                        value={usd}
+                        onChange={(e) => setUsd(e.target.value.replace(/[^0-9.]/g, ""))}
+                        placeholder="100"
+                        inputMode="decimal"
+                        autoFocus
+                        className="h-12 bg-white/[0.04] pl-8 pr-16 text-[15px] font-bold"
+                    />
+                    {max > 0 && (
+                        <button
+                            onClick={() => setUsd(String(Math.floor(max * 100) / 100))}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-extrabold text-zinc-400 transition-colors hover:text-white"
+                        >
+                            MAX
+                        </button>
+                    )}
+                </div>
+
+                {mode === "withdraw" && (
+                    <p className="-mt-1 px-1 text-center text-[12px] font-medium text-zinc-600">
+                        Withdrawals settle back to your wallet in about a minute.
+                    </p>
+                )}
+
+                <button
+                    onClick={go}
+                    disabled={busy || !Number(usd)}
+                    className="h-12 w-full cursor-pointer rounded-full bg-white text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:opacity-40"
+                >
+                    {busy ? "Signing…" : mode === "deposit" ? `Deposit $${usd || "0"} USDC` : `Withdraw $${usd || "0"} USDC`}
+                </button>
+            </DialogContent>
+        </Dialog>
     );
 }

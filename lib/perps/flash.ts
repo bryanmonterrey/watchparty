@@ -1,31 +1,34 @@
-// Flash Trade perps integration — client-side only, loaded lazily behind the
-// /trade/perpetuals route (the speed rule: the SDK is heavy and must never
-// ride in a shared chunk). Everything reads straight from Solana RPC + the
-// program's own on-chain view instructions (simulated, free) — no Flash
-// backend dependency, no geoblock surface.
+// Flash Trade perps integration (v2 / Ephemeral Rollups) — client-side only,
+// loaded lazily behind the /trade/perpetuals route (the speed rule).
 //
-// VENUE MODEL (differs from the old Drift module): Flash is GMX-style —
-// there is no deposit/withdraw account step. Collateral is escrowed
-// per-position from the wallet at open and returned at close, so the UX is
-// "wallet USDC in → position → wallet USDC out". Longs collateralize in the
-// target token (the pool swaps USDC in the same tx via swapAndOpen); shorts
-// collateralize in USDC directly.
+// VENUE MODEL: Flash migrated trading onto a MagicBlock Ephemeral Rollup.
+// The base layer only handles setup and money movement; trades execute on
+// Flash's ER validator (https://flash.magicblock.xyz — public endpoint):
 //
-// SIGNING MODEL (unchanged): the SDK never signs or sends. Every action
-// returns an UNSIGNED legacy transaction built from the SDK's instruction
-// getters, and the view submits it through the app's dual path — extension
-// wallets sendTransaction, Swig wallets via useWalletSigning's signAndSubmit.
-// The PerpetualsClient holds a pubkey-only stub wallet: builders read
-// provider.wallet.publicKey as the owner, so the trade client is constructed
-// around the user's address but can never sign.
-import type { Connection, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
-import type { PerpetualsClient, PoolConfig, MarketConfig, CustodyConfig } from "flash-sdk";
+//   base layer (wallet-signed, dual path):  init deposit ledger + basket,
+//     create session, delegate basket, depositDirect / withdrawal
+//   ER (signed by a LOCAL SESSION KEY, no wallet prompt):  open / close /
+//     modify positions, quotes, basket + position reads
+//
+// The session key is a throwaway keypair stored in localStorage and
+// authorized on-chain by the wallet ONCE (MagicBlock session-keys program).
+// This is what makes both wallet types work: Swig-execute doesn't exist on
+// the ER, so Swig wallets could never sign there — but they can sign the
+// base-layer session grant, and after that trading needs no wallet at all.
+// (Bonus: extension users stop getting a popup per trade.)
+//
+// The old base-layer trading path (flash-sdk v1) is DEAD on mainnet — every
+// trading/view/stake instruction returns DeprecatedInstruction 6081.
+import type { Connection, PublicKey, Transaction, TransactionInstruction, Keypair } from "@solana/web3.js";
+import type { FlashPerpetualsClient, PoolConfig, MarketConfig } from "@flash_trade/flash-sdk-v2";
 import type BN from "bn.js";
+
+export const ER_ENDPOINT =
+    process.env.NEXT_PUBLIC_FLASH_ER_RPC ?? "https://flash.magicblock.xyz";
 
 /**
  * Curated market list — majors + the memes our traders actually know.
- * Each entry names the Flash pool that lists the pair; both the long and
- * short market of that pair live in the same pool.
+ * Each entry names the Flash pool that lists the pair.
  */
 export const PERP_MARKETS = [
     { symbol: "SOL", pool: "Crypto.1" },
@@ -48,7 +51,7 @@ const SLIPPAGE_BPS = 50;
 
 export type PerpMarketRow = {
     symbol: PerpSymbol;
-    /** live oracle price (USD) */
+    /** live oracle price (USD), read from the ER (base copies can be stale) */
     price: number;
     /** hourly borrow cost of an open position, % of size (long side) */
     borrowHourlyPctLong: number;
@@ -60,8 +63,8 @@ export type PerpMarketRow = {
 };
 
 export type PerpPositionRow = {
-    /** position account address — the close handle */
-    positionKey: string;
+    /** market account address — the close handle */
+    marketKey: string;
     symbol: PerpSymbol;
     direction: "long" | "short";
     sizeUsd: number;
@@ -80,14 +83,28 @@ export type OpenQuote = {
     /** position size in the target token */
     sizeUi: number;
     sizeUsd: number;
-    /** entry + volatility fees, USD */
     feesUsd: number;
     availableLiquidityUsd: number;
     leverage: number;
+    sizeNative: string;
+};
+
+/** Where the user is in the one-time Flash onboarding. */
+export type PerpsAccountState = {
+    /** deposit ledger + basket + session all live — trading enabled */
+    ready: boolean;
+    /** USDC sitting in the Flash deposit ledger (the trading balance) */
+    ledgerUsdc: number;
+    /** USDC in the wallet itself (available to deposit) */
+    walletUsdc: number;
+    /** base accounts (ledger/basket) missing — first-visit setup needed */
+    needsSetup: boolean;
+    /** an on-chain session grant matching the stored local key exists */
+    sessionValid: boolean;
 };
 
 async function sdk() {
-    return import("flash-sdk");
+    return import("@flash_trade/flash-sdk-v2");
 }
 type FlashSdk = Awaited<ReturnType<typeof sdk>>;
 
@@ -107,8 +124,8 @@ function stubWallet(publicKey: PublicKey) {
 }
 
 type Venue = {
-    client: PerpetualsClient;
-    pools: Map<string, PoolConfig>; // poolName → config
+    client: FlashPerpetualsClient;
+    pools: Map<string, PoolConfig>;
 };
 
 let readVenue: Venue | null = null;
@@ -121,36 +138,29 @@ async function makeVenue(connection: Connection, authority: PublicKey): Promise<
 
     const poolNames = [...new Set(PERP_MARKETS.map((m) => m.pool))];
     const pools = new Map(poolNames.map((n) => [n, flash.PoolConfig.fromIdsByName(n, "mainnet-beta")]));
-    const first = pools.get(poolNames[0])!;
 
     const provider = new AnchorProvider(
         connection as unknown as ConstructorParameters<typeof AnchorProvider>[0],
         stubWallet(authority) as unknown as ConstructorParameters<typeof AnchorProvider>[1],
         { commitment: "confirmed" },
     );
-    const client = new flash.PerpetualsClient(
-        provider as unknown as ConstructorParameters<FlashSdk["PerpetualsClient"]>[0],
-        first.programId,
-        first.perpComposibilityProgramId,
-        first.fbNftRewardProgramId,
-        first.rewardDistributionProgram.programId,
+    const client = new flash.FlashPerpetualsClient(
+        provider as unknown as ConstructorParameters<FlashSdk["FlashPerpetualsClient"]>[0],
+        undefined, // bundled IDL
+        flash.PROGRAM_ID["mainnet-beta"],
         {},
-        // useExtOracleAccount=false → the program's internal (Pyth-pushed)
-        // oracle accounts, which is what the trading ixs settle against.
-        false,
+        ER_ENDPOINT,
     );
     return { client, pools };
 }
 
-/** Read-only venue (throwaway pubkey — market data only). */
 async function getReadVenue(connection: Connection): Promise<Venue> {
     if (readVenue) return readVenue;
-    const { Keypair } = await import("@solana/web3.js");
-    readVenue = await makeVenue(connection, Keypair.generate().publicKey);
+    const { Keypair: KP } = await import("@solana/web3.js");
+    readVenue = await makeVenue(connection, KP.generate().publicKey);
     return readVenue;
 }
 
-/** Venue bound to the user's wallet address (extension or Swig — just a pubkey). */
 async function getTradeVenue(connection: Connection, authority: PublicKey): Promise<Venue> {
     const key = authority.toBase58();
     if (tradeVenue && tradeAuthority === key) return tradeVenue;
@@ -159,21 +169,21 @@ async function getTradeVenue(connection: Connection, authority: PublicKey): Prom
     return tradeVenue;
 }
 
-/** Resolve a market symbol to its pool + long/short market configs + custodies. */
-function resolveMarket(flash: FlashSdk, venue: Venue, symbol: PerpSymbol) {
+function resolveMarket(flash: FlashSdk, venue: Venue, symbol: PerpSymbol, direction: "long" | "short") {
     const def = PERP_MARKETS.find((m) => m.symbol === symbol);
     if (!def) throw new Error(`Unknown market ${symbol}`);
     const pool = venue.pools.get(def.pool)!;
-    const target = pool.custodies.find((c) => c.symbol === symbol);
-    if (!target) throw new Error(`No ${symbol} custody in ${def.pool}`);
-    const usdc = pool.custodies.find((c) => c.symbol === "USDC")!;
-    const markets = pool.markets.filter((m) => m.targetCustodyId === target.custodyId);
-    // Long collateralizes in the target token itself; short in USDC.
-    // (side is an anchor enum variant object, not a string.)
-    const long = markets.find((m) => flash.isVariant(m.side, "long") && m.collateralCustodyId === target.custodyId);
-    const short = markets.find((m) => flash.isVariant(m.side, "short") && m.collateralCustodyId === usdc.custodyId);
-    if (!long || !short) throw new Error(`Missing long/short market for ${symbol}`);
-    return { pool, target, usdc, long, short };
+    const side = direction === "long" ? flash.Side.Long : flash.Side.Short;
+    // Longs may lock a wrapped/LST variant (e.g. SOL longs lock JitoSOL) —
+    // the client resolves the effective lock symbol; shorts lock USDC.
+    const lockSymbol = venue.client.resolveCollateralSymbol(
+        symbol,
+        direction === "long" ? symbol : "USDC",
+        side,
+    );
+    const marketConfig = venue.client.findMarketConfig(pool, symbol, lockSymbol, side);
+    const target = pool.custodies.find((c) => c.symbol === symbol)!;
+    return { pool, side, lockSymbol, marketConfig, target };
 }
 
 const oraclePriceUi = (price: BN, exponent: number | BN) =>
@@ -181,182 +191,215 @@ const oraclePriceUi = (price: BN, exponent: number | BN) =>
 
 const usd = (v: BN) => Number(v.toString()) / 10 ** USD_DECIMALS;
 
-/** Decode the program's CustomOracle accounts for a set of custodies in one RPC call. */
-async function fetchOraclePrices(
-    venue: Venue,
-    connection: Connection,
-    custodies: CustodyConfig[],
-): Promise<Map<string, { price: number; raw: { price: BN; expo: number; ema: BN; conf: BN; publishTime: BN } }>> {
-    const infos = await connection.getMultipleAccountsInfo(
-        custodies.map((c) => c.intOracleAccount as unknown as PublicKey),
-    );
-    const coder = venue.client.program.account.custody.coder.accounts;
-    const out = new Map<string, { price: number; raw: { price: BN; expo: number; ema: BN; conf: BN; publishTime: BN } }>();
-    infos.forEach((info, i) => {
-        if (!info) return;
-        const raw = coder.decode("customOracle", info.data);
-        out.set(custodies[i].custodyAccount.toBase58(), { price: oraclePriceUi(raw.price, raw.expo), raw });
-    });
-    return out;
+/**
+ * Batched CustomOracle + Custody reads. Delegated accounts live on the ER —
+ * read them there (the docs' own pattern: `erProgram ?? program`).
+ */
+async function erConn(venue: Venue): Promise<Connection> {
+    return (venue.client.erConnection ?? venue.client.connection) as unknown as Connection;
 }
 
-/** Market rows for the rail: live oracle price + borrow rates. */
+// ─── Session keys (localStorage, one per authority) ─────────
+
+const SESSION_STORE_PREFIX = "flash-perps-session:";
+
+async function loadSessionKeypair(authority: PublicKey): Promise<Keypair | null> {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(SESSION_STORE_PREFIX + authority.toBase58());
+    if (!raw) return null;
+    try {
+        const { Keypair: KP } = await import("@solana/web3.js");
+        return KP.fromSecretKey(Buffer.from(raw, "base64"));
+    } catch {
+        return null;
+    }
+}
+
+async function ensureSessionKeypair(authority: PublicKey): Promise<Keypair> {
+    const existing = await loadSessionKeypair(authority);
+    if (existing) return existing;
+    const { Keypair: KP } = await import("@solana/web3.js");
+    const kp = KP.generate();
+    localStorage.setItem(
+        SESSION_STORE_PREFIX + authority.toBase58(),
+        Buffer.from(kp.secretKey).toString("base64"),
+    );
+    return kp;
+}
+
+/** The on-chain session-token PDA for the stored local key, if any. */
+async function sessionTokenFor(
+    flash: FlashSdk,
+    venue: Venue,
+    authority: PublicKey,
+): Promise<{ keypair: Keypair; token: PublicKey } | null> {
+    const keypair = await loadSessionKeypair(authority);
+    if (!keypair) return null;
+    const [token] = flash.findSessionTokenAddress(
+        flash.PROGRAM_ID["mainnet-beta"],
+        keypair.publicKey as unknown as SdkPublicKey,
+        authority as unknown as SdkPublicKey,
+    );
+    return { keypair, token: token as unknown as PublicKey };
+}
+
+// ─── Reads ──────────────────────────────────────────────────
+
+/** Market rows for the rail: live ER oracle price + borrow rates. */
 export async function getMarkets(connection: Connection): Promise<PerpMarketRow[]> {
     const flash = await sdk();
     const venue = await getReadVenue(connection);
+    const er = await erConn(venue);
 
-    const resolved = PERP_MARKETS.map((m) => ({ def: m, ...resolveMarket(flash, venue, m.symbol) }));
-    // One custody list across all pools (dedup by account) for both the
-    // oracle batch and the custody-account batch.
-    const custodyByKey = new Map<string, CustodyConfig>();
+    const resolved = PERP_MARKETS.map((m) => {
+        const long = resolveMarket(flash, venue, m.symbol, "long");
+        const short = resolveMarket(flash, venue, m.symbol, "short");
+        const usdc = long.pool.custodies.find((c) => c.symbol === "USDC")!;
+        const lock = long.pool.custodies.find((c) => c.symbol === long.lockSymbol)!;
+        return { def: m, long, short, usdc, lock };
+    });
+
+    // One dedup'd account list across pools: target+lock+usdc custodies and
+    // the targets' internal oracles.
+    const custodyByKey = new Map<string, { account: PublicKey; oracle: PublicKey }>();
     for (const r of resolved) {
-        custodyByKey.set(r.target.custodyAccount.toBase58(), r.target);
-        custodyByKey.set(r.usdc.custodyAccount.toBase58(), r.usdc);
+        for (const c of [r.long.target, r.lock, r.usdc]) {
+            custodyByKey.set(c.custodyAccount.toBase58(), {
+                account: c.custodyAccount as unknown as PublicKey,
+                oracle: c.intOracleAccount as unknown as PublicKey,
+            });
+        }
     }
-    const custodies = [...custodyByKey.values()];
-
-    const [prices, custodyInfos] = await Promise.all([
-        fetchOraclePrices(venue, connection, custodies),
-        connection.getMultipleAccountsInfo(custodies.map((c) => c.custodyAccount as unknown as PublicKey)),
+    const keys = [...custodyByKey.keys()];
+    const entries = [...custodyByKey.values()];
+    const infos = await er.getMultipleAccountsInfo([
+        ...entries.map((e) => e.oracle),
+        ...entries.map((e) => e.account),
     ]);
-    const coder = venue.client.program.account.custody.coder.accounts;
-    const borrowHourlyPct = new Map<string, number>();
-    custodyInfos.forEach((info, i) => {
+
+    const coder = venue.client.program.coder.accounts;
+    const price = new Map<string, number>();
+    const borrow = new Map<string, number>();
+    infos.forEach((info, i) => {
         if (!info) return;
-        const c = coder.decode("custody", info.data);
-        // borrowRateState.currentRate is the hourly rate at RATE_DECIMALS.
-        borrowHourlyPct.set(
-            custodies[i].custodyAccount.toBase58(),
-            (Number(c.borrowRateState.currentRate.toString()) / flash.RATE_POWER) * 100,
-        );
+        if (i < entries.length) {
+            const o = coder.decode("customOracle", info.data);
+            price.set(keys[i], oraclePriceUi(o.price, o.expo));
+        } else {
+            const c = coder.decode("custody", info.data);
+            // borrowRateState.currentRate is the hourly rate at 1e9.
+            borrow.set(keys[i - entries.length], (Number(c.borrowRateState.currentRate.toString()) / 1e9) * 100);
+        }
     });
 
     return resolved.flatMap((r) => {
-        const price = prices.get(r.target.custodyAccount.toBase58())?.price;
-        if (!price) return [];
+        const p = price.get(r.long.target.custodyAccount.toBase58());
+        if (!p) return [];
         return [{
             symbol: r.def.symbol,
-            price,
-            borrowHourlyPctLong: borrowHourlyPct.get(r.target.custodyAccount.toBase58()) ?? 0,
-            borrowHourlyPctShort: borrowHourlyPct.get(r.usdc.custodyAccount.toBase58()) ?? 0,
-            maxLeverage: Math.min(r.long.maxLev, r.short.maxLev),
-            pythTicker: r.target.pythTicker,
+            price: p,
+            borrowHourlyPctLong: borrow.get(r.lock.custodyAccount.toBase58()) ?? 0,
+            borrowHourlyPctShort: borrow.get(r.usdc.custodyAccount.toBase58()) ?? 0,
+            maxLeverage: Math.min(r.long.marketConfig.maxLev, r.short.marketConfig.maxLev),
+            pythTicker: r.long.target.pythTicker,
         }];
     });
 }
 
-/** Decode custody accounts into SDK CustodyAccount objects (batched RPC). */
-async function fetchCustodyAccounts(
-    flash: FlashSdk,
-    venue: Venue,
-    connection: Connection,
-    custodies: CustodyConfig[],
-) {
-    const infos = await connection.getMultipleAccountsInfo(
-        custodies.map((c) => c.custodyAccount as unknown as PublicKey),
-    );
-    const coder = venue.client.program.account.custody.coder.accounts;
-    const out = new Map<string, InstanceType<FlashSdk["CustodyAccount"]>>();
-    infos.forEach((info, i) => {
-        if (!info) return;
-        out.set(
-            custodies[i].custodyAccount.toBase58(),
-            flash.CustodyAccount.from(custodies[i].custodyAccount, coder.decode("custody", info.data)),
-        );
-    });
-    return out;
-}
+/** Onboarding + balances snapshot for the wallet. */
+export async function getAccountState(connection: Connection, owner: PublicKey): Promise<PerpsAccountState> {
+    const flash = await sdk();
+    const spl = await import("@solana/spl-token");
+    const { PublicKey: PK } = await import("@solana/web3.js");
+    const venue = await getTradeVenue(connection, owner);
 
-/** CustomOracle decode → the SDK's OraclePrice pair (spot + EMA). */
-function toOraclePrices(
-    flash: FlashSdk,
-    BNCtor: typeof BN,
-    raw: { price: BN; expo: number; ema: BN; conf: BN; publishTime: BN },
-) {
-    const exponent = new BNCtor(raw.expo);
+    const usdcMint = new PK(USDC_MINT_ADDRESS);
+    const [ledgerPda] = flash.findUserDepositLedgerAddress(owner as unknown as SdkPublicKey);
+    const [basketPda] = flash.findBasketAddress(owner as unknown as SdkPublicKey);
+    const session = await sessionTokenFor(flash, venue, owner);
+
+    const ata = spl.getAssociatedTokenAddressSync(usdcMint, owner, true);
+    const [ledgerInfo, basketInfo, sessionInfo, walletBal] = await Promise.all([
+        connection.getAccountInfo(ledgerPda as unknown as PublicKey),
+        connection.getAccountInfo(basketPda as unknown as PublicKey),
+        session ? connection.getAccountInfo(session.token) : Promise.resolve(null),
+        connection.getTokenAccountBalance(ata).catch(() => null),
+    ]);
+
+    let ledgerUsdc = 0;
+    if (ledgerInfo) {
+        const ledger = venue.client.program.coder.accounts.decode("userDepositLedger", ledgerInfo.data);
+        for (const d of ledger.deposits as { mint: { toBase58(): string }; amount: BN }[]) {
+            if (d.mint.toBase58() === USDC_MINT_ADDRESS) ledgerUsdc += usd(d.amount);
+        }
+    }
+
+    const sessionValid = !!sessionInfo;
     return {
-        price: flash.OraclePrice.from({ price: raw.price, exponent, confidence: raw.conf, timestamp: raw.publishTime }),
-        ema: flash.OraclePrice.from({ price: raw.ema, exponent, confidence: raw.conf, timestamp: raw.publishTime }),
+        ready: !!ledgerInfo && !!basketInfo && sessionValid,
+        ledgerUsdc,
+        walletUsdc: walletBal?.value.uiAmount ?? 0,
+        needsSetup: !ledgerInfo || !basketInfo,
+        sessionValid,
     };
 }
 
-/** The wallet's open positions across all our pools, with live PnL. */
+/** The wallet's open positions (basket on the ER), with live PnL. */
 export async function getPositions(connection: Connection, owner: PublicKey): Promise<PerpPositionRow[]> {
     const flash = await sdk();
-    const { BN: BNCtor } = await import("@coral-xyz/anchor");
     const venue = await getTradeVenue(connection, owner);
+    const fetcher = venue.client.erAccounts ?? venue.client.accounts;
+
+    let basket;
+    try {
+        basket = await fetcher.fetchBasket(owner as unknown as SdkPublicKey);
+    } catch {
+        return []; // no basket yet
+    }
+
     const poolList = [...venue.pools.values()];
-
-    const raw = await venue.client.getUserPositionsMultiPool(owner as unknown as SdkPublicKey, poolList);
-    if (raw.length === 0) return [];
-
-    const now = new BNCtor(Math.floor(Date.now() / 1000));
     const rows: PerpPositionRow[] = [];
-    for (const p of raw) {
-        const pool = poolList.find((pc) => pc.doesMarketExist(p.market));
+    for (const meta of basket.positions) {
+        const pool = poolList.find((pc) => pc.markets.some((m) => m.marketAccount.equals(meta.market)));
         if (!pool) continue;
-        const marketConfig = pool.getMarketConfigByPk(p.market);
+        const marketConfig = pool.markets.find((m) => m.marketAccount.equals(meta.market))!;
         const target = pool.custodies.find((c) => c.custodyAccount.equals(marketConfig.targetCustody))!;
         const collateral = pool.custodies.find((c) => c.custodyAccount.equals(marketConfig.collateralCustody))!;
         const def = PERP_MARKETS.find((m) => m.symbol === target.symbol);
-        if (!def) continue; // position on a market outside our curated list
+        if (!def) continue;
 
-        // All math is the SDK's client-side mirror of the contract (the
-        // program's hosted view instructions are deprecated on mainnet).
-        const [custodyAccts, oracles] = await Promise.all([
-            fetchCustodyAccounts(flash, venue, connection, [target, collateral]),
-            fetchOraclePrices(venue, connection, [target, collateral]),
-        ]);
-        const targetAcct = custodyAccts.get(target.custodyAccount.toBase58())!;
-        const collateralAcct = custodyAccts.get(collateral.custodyAccount.toBase58())!;
-        const targetOracle = toOraclePrices(flash, BNCtor, oracles.get(target.custodyAccount.toBase58())!.raw);
-        const collateralOracle = toOraclePrices(flash, BNCtor, oracles.get(collateral.custodyAccount.toBase58())!.raw);
+        // The program's own view, simulated against the ER — PnL/leverage/liq
+        // exactly as the contract computes them.
+        const data = await venue.client.views.getPositionDataEr(pool, {
+            owner: owner as unknown as SdkPublicKey,
+            market: meta.market,
+            targetSymbol: target.symbol,
+            collateralSymbol: collateral.symbol,
+        });
 
-        const position = flash.PositionAccount.from(p.pubkey, p);
-        const metrics = venue.client.getPositionMetrics(
-            position,
-            targetOracle.price, targetOracle.ema, targetAcct,
-            collateralOracle.price, collateralOracle.ema, collateralAcct,
-            now, pool,
-        );
+        const er = await erConn(venue);
+        const oracleInfo = await er.getAccountInfo(target.intOracleAccount as unknown as PublicKey);
+        const markPrice = oracleInfo
+            ? (() => { const o = venue.client.program.coder.accounts.decode("customOracle", oracleInfo.data); return oraclePriceUi(o.price, o.expo); })()
+            : 0;
 
-        const feesUsd = usd(metrics.fees.exitFeeUsd) + usd(metrics.fees.lockAndUnsettledFeeUsd);
         rows.push({
-            positionKey: p.pubkey.toBase58(),
+            marketKey: meta.market.toBase58(),
             symbol: def.symbol,
             direction: flash.isVariant(marketConfig.side, "long") ? "long" : "short",
-            sizeUsd: usd(position.sizeUsd),
-            collateralUsd: usd(position.collateralUsd),
-            entryPrice: oraclePriceUi(position.entryPrice.price, position.entryPrice.exponent),
-            markPrice: oracles.get(target.custodyAccount.toBase58())!.price,
-            liquidationPrice: oraclePriceUi(metrics.liquidationPrice.price, metrics.liquidationPrice.exponent),
-            leverage: Number(metrics.leverage.toString()) / 10 ** 4,
-            pnlUsd: usd(metrics.pnl.profitUsd) - usd(metrics.pnl.lossUsd) - feesUsd,
+            sizeUsd: usd(data.sizeUsd),
+            collateralUsd: usd(data.collateralUsd),
+            entryPrice: oraclePriceUi(data.entryOraclePrice.price, data.entryOraclePrice.exponent),
+            markPrice,
+            liquidationPrice: oraclePriceUi(data.liquidationPrice.price, data.liquidationPrice.exponent),
+            leverage: Number(data.leverage.toString()) / 10 ** 4,
+            pnlUsd: usd(data.pnlWithFeeUsd),
         });
     }
     return rows;
 }
 
-/** Wallet USDC balance (Flash has no deposit account — the wallet IS the balance). */
-export async function getUsdcBalance(connection: Connection, owner: PublicKey): Promise<number> {
-    const spl = await import("@solana/spl-token");
-    const { PublicKey: PK } = await import("@solana/web3.js");
-    const ata = spl.getAssociatedTokenAddressSync(new PK(USDC_MINT_ADDRESS), owner, true);
-    try {
-        const bal = await connection.getTokenAccountBalance(ata);
-        return bal.value.uiAmount ?? 0;
-    } catch {
-        return 0; // ATA doesn't exist
-    }
-}
-
-/**
- * Quote an open, computed entirely client-side with the SDK's sync mirror of
- * the contract math (the program's hosted view instructions are deprecated
- * on mainnet — they return DeprecatedInstruction 6081). `usdcIn` is what
- * leaves the wallet; leverage is a UI multiplier (e.g. 5). Longs account for
- * the USDC→token swap fee.
- */
+/** Live open quote from the program's ER view (read-only simulation). */
 export async function getOpenQuote(
     connection: Connection,
     owner: PublicKey,
@@ -364,89 +407,37 @@ export async function getOpenQuote(
     direction: "long" | "short",
     usdcIn: number,
     leverage: number,
-): Promise<OpenQuote & { sizeNative: string }> {
+): Promise<OpenQuote> {
     const flash = await sdk();
     const { BN: BNCtor } = await import("@coral-xyz/anchor");
     const venue = await getTradeVenue(connection, owner);
-    const { pool, target, usdc, long, short } = resolveMarket(flash, venue, symbol);
-    const marketConfig: MarketConfig = direction === "long" ? long : short;
-    const isLong = direction === "long";
+    const { pool, lockSymbol, marketConfig, target } = resolveMarket(flash, venue, symbol, direction);
 
-    const amountIn = new BNCtor(Math.round(usdcIn * 10 ** USD_DECIMALS));
-    const now = new BNCtor(Math.floor(Date.now() / 1000));
+    const q = await venue.client.views.getOpenPositionQuoteEr(pool, {
+        market: marketConfig.marketAccount,
+        targetSymbol: symbol,
+        collateralSymbol: lockSymbol,
+        receivingSymbol: "USDC",
+        amountIn: new BNCtor(Math.round(usdcIn * 10 ** USD_DECIMALS)),
+        leverage: new BNCtor(Math.round(leverage * 10 ** 4)),
+        owner: owner as unknown as SdkPublicKey,
+    });
 
-    const [custodyAccts, oracles, poolInfo] = await Promise.all([
-        fetchCustodyAccounts(flash, venue, connection, [target, usdc]),
-        fetchOraclePrices(venue, connection, [target, usdc]),
-        connection.getAccountInfo(pool.poolAddress as unknown as PublicKey),
-    ]);
-    const targetAcct = custodyAccts.get(target.custodyAccount.toBase58())!;
-    const usdcAcct = custodyAccts.get(usdc.custodyAccount.toBase58())!;
-    const targetOracle = toOraclePrices(flash, BNCtor, oracles.get(target.custodyAccount.toBase58())!.raw);
-    const usdcOracle = toOraclePrices(flash, BNCtor, oracles.get(usdc.custodyAccount.toBase58())!.raw);
-    const collateralAcct = isLong ? targetAcct : usdcAcct;
-    const collateralOracle = isLong ? targetOracle : usdcOracle;
-
-    // Position size in the target token for the requested leverage. Longs
-    // first swap USDC→token in the pool, so size against the swap output.
-    let sizeAmount: BN;
-    let collateralDelta: BN;
-    if (isLong) {
-        if (!poolInfo) throw new Error("Pool account missing");
-        const poolAccount = flash.PoolAccount.from(
-            pool.poolAddress,
-            venue.client.program.account.pool.coder.accounts.decode("pool", poolInfo.data),
-        );
-        const swap = venue.client.getSwapAmountAndFeesSync(
-            amountIn, new BNCtor(0), poolAccount,
-            usdcOracle.price, usdcOracle.ema, usdcAcct,
-            targetOracle.price, targetOracle.ema, targetAcct,
-            poolAccount.rawAumUsd, pool,
-        );
-        collateralDelta = swap.minAmountOut;
-        sizeAmount = venue.client.getSizeAmountFromLeverageAndCollateral(
-            collateralDelta, String(leverage), pool.getTokenFromSymbol(target.symbol),
-            pool.getTokenFromSymbol(target.symbol), flash.Side.Long,
-            targetOracle.price, targetOracle.ema, targetAcct,
-            targetOracle.price, targetOracle.ema, targetAcct,
-        );
-    } else {
-        collateralDelta = amountIn;
-        sizeAmount = venue.client.getSizeAmountFromLeverageAndCollateral(
-            amountIn, String(leverage), pool.getTokenFromSymbol(target.symbol),
-            pool.getTokenFromSymbol("USDC"), flash.Side.Short,
-            targetOracle.price, targetOracle.ema, targetAcct,
-            usdcOracle.price, usdcOracle.ema, usdcAcct,
-        );
-    }
-
-    const entry = venue.client.getEntryPriceAndFeeSyncV2(
-        null, marketConfig.marketCorrelation, collateralDelta, sizeAmount,
-        isLong ? flash.Side.Long : flash.Side.Short,
-        targetOracle.price, targetOracle.ema, targetAcct,
-        collateralOracle.price, collateralOracle.ema, collateralAcct,
-        now,
-    );
-
-    const entryPrice = Number(entry.entryAvgOraclePrice.toUiPrice(9));
-    const sizeUi = Number(sizeAmount.toString()) / 10 ** target.decimals;
-    const available = targetAcct.assets.owned.sub(targetAcct.assets.locked);
-
+    const sizeUi = Number(q.sizeAmount.toString()) / 10 ** target.decimals;
+    const entryPrice = oraclePriceUi(q.entryPrice.price, q.entryPrice.exponent);
     return {
         entryPrice,
-        liquidationPrice: Number(entry.liquidationPrice.toUiPrice(9)),
+        liquidationPrice: oraclePriceUi(q.liquidationPrice.price, q.liquidationPrice.exponent),
         sizeUi,
-        sizeUsd: sizeUi * entryPrice,
-        feesUsd: usd(entry.feeUsd) + usd(entry.vbFeeUsd),
-        availableLiquidityUsd:
-            (Number(available.toString()) / 10 ** target.decimals) *
-            oracles.get(target.custodyAccount.toBase58())!.price,
+        sizeUsd: usd(q.sizeUsd),
+        feesUsd: usd(q.totalFeeUsd),
+        availableLiquidityUsd: usd(q.availableLiquidityUsd),
         leverage,
-        sizeNative: sizeAmount.toString(),
+        sizeNative: q.sizeAmount.toString(),
     };
 }
 
-// ─── Unsigned-transaction builders ──────────────────────────
+// ─── Base-layer transactions (wallet-signed, unsigned here) ─
 
 async function buildTx(
     connection: Connection,
@@ -456,9 +447,7 @@ async function buildTx(
     const { Transaction: Tx, ComputeBudgetProgram } = await import("@solana/web3.js");
     const { getRecommendedMicrolamports } = await import("@/lib/solana/priority-fees");
     const tx = new Tx();
-    // Perps ixs are compute-heavy (swap + open in one ix): request headroom.
-    // The Swig relay path strips-and-reapplies this limit on its side.
-    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 600_000 }));
+    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
     tx.add(ComputeBudgetProgram.setComputeUnitPrice({
         microLamports: await getRecommendedMicrolamports([feePayer.toBase58()]),
     }));
@@ -469,127 +458,201 @@ async function buildTx(
     return tx;
 }
 
-/** The SDK's slippage bound: entry/exit-aware, side-aware, contract-encoded. */
-function priceWithSlippage(
-    venue: Venue,
-    BNCtor: typeof BN,
-    isEntry: boolean,
-    oracle: { price: InstanceType<FlashSdk["OraclePrice"]> },
-    side: unknown,
-) {
-    return venue.client.getPriceAfterSlippage(
-        isEntry,
-        new BNCtor(SLIPPAGE_BPS),
-        oracle.price,
-        side as Parameters<PerpetualsClient["getPriceAfterSlippage"]>[3],
-    );
+/**
+ * One-time onboarding, phase 1 (wallet only): deposit ledger + basket +
+ * basket delegation. Idempotent — already-existing accounts contribute no
+ * instructions; returns null when there's nothing to do.
+ */
+export async function prepareSetup(connection: Connection, owner: PublicKey): Promise<Transaction | null> {
+    const venue = await getTradeVenue(connection, owner);
+    const ixs: TransactionInstruction[] = [];
+    for (const r of [
+        await venue.client.initializeUserDepositLedger(),
+        await venue.client.initializeBasket(),
+        await venue.client.delegateBasket(owner as unknown as SdkPublicKey),
+    ]) {
+        ixs.push(...(r.instructions as unknown as TransactionInstruction[]));
+    }
+    if (ixs.length === 0) return null;
+    return buildTx(connection, owner, ixs);
 }
 
 /**
- * Open a position. Longs: USDC is swapped to the target token and escrowed
- * as collateral in one tx (swapAndOpen). Shorts: USDC escrowed directly
- * (openPosition). Unsigned legacy tx.
+ * One-time onboarding, phase 2: authorize a local session key for trading.
+ * The returned tx must be signed by BOTH the wallet (owner) and the returned
+ * session keypair (the view co-signs with it before submitting).
  */
-export async function prepareOpen(
+export async function prepareSession(
+    connection: Connection,
+    owner: PublicKey,
+): Promise<{ tx: Transaction; sessionKeypair: Keypair } | null> {
+    const flash = await sdk();
+    const venue = await getTradeVenue(connection, owner);
+
+    const existing = await sessionTokenFor(flash, venue, owner);
+    if (existing && (await connection.getAccountInfo(existing.token))) return null; // already active
+
+    const sessionKeypair = await ensureSessionKeypair(owner);
+    const r = await venue.client.createSession(
+        sessionKeypair.publicKey as unknown as SdkPublicKey,
+        false,
+        undefined,
+        { skipExistingSessionTokenCheck: true },
+    );
+    const tx = await buildTx(connection, owner, r.instructions as unknown as TransactionInstruction[]);
+    return { tx, sessionKeypair };
+}
+
+/** Move wallet USDC into the Flash deposit ledger. Unsigned base-layer tx. */
+export async function prepareDeposit(
+    connection: Connection,
+    owner: PublicKey,
+    usdAmount: number,
+): Promise<Transaction> {
+    const { BN: BNCtor } = await import("@coral-xyz/anchor");
+    const { PublicKey: PK } = await import("@solana/web3.js");
+    const venue = await getTradeVenue(connection, owner);
+    const r = await venue.client.depositDirect(
+        new PK(USDC_MINT_ADDRESS) as unknown as SdkPublicKey,
+        new BNCtor(Math.round(usdAmount * 10 ** USD_DECIMALS)),
+    );
+    return buildTx(connection, owner, r.instructions as unknown as TransactionInstruction[]);
+}
+
+/**
+ * Move ledger USDC back to the wallet. Two-phase on Flash (WithAction queues
+ * the ER-side release, a keeper settles). The session key co-signs as the
+ * escrow fee payer (it must differ from the owner), so the view submits this
+ * like the session grant: wallet + session keypair.
+ */
+export async function prepareWithdraw(
+    connection: Connection,
+    owner: PublicKey,
+    usdAmount: number,
+): Promise<{ tx: Transaction; sessionKeypair: Keypair }> {
+    const flash = await sdk();
+    const spl = await import("@solana/spl-token");
+    const { BN: BNCtor } = await import("@coral-xyz/anchor");
+    const { PublicKey: PK } = await import("@solana/web3.js");
+    const venue = await getTradeVenue(connection, owner);
+
+    const session = await sessionTokenFor(flash, venue, owner);
+    if (!session) throw new Error("Set up trading first");
+
+    const usdcMint = new PK(USDC_MINT_ADDRESS);
+    const ata = spl.getAssociatedTokenAddressSync(usdcMint, owner, true);
+    const ixs: TransactionInstruction[] = [
+        // The destination ATA may have been closed — recreate idempotently.
+        spl.createAssociatedTokenAccountIdempotentInstruction(owner, ata, owner, usdcMint),
+    ];
+    const r = await venue.client.withdrawalWithAction(
+        usdcMint as unknown as SdkPublicKey,
+        ata as unknown as SdkPublicKey,
+        new BNCtor(Math.round(usdAmount * 10 ** USD_DECIMALS)),
+        session.keypair.publicKey as unknown as SdkPublicKey,
+    );
+    ixs.push(...(r.instructions as unknown as TransactionInstruction[]));
+    return { tx: await buildTx(connection, owner, ixs), sessionKeypair: session.keypair };
+}
+
+// ─── ER trades (session-signed inside the module, no wallet) ─
+
+async function useSessionOrThrow(flash: FlashSdk, venue: Venue, owner: PublicKey) {
+    const session = await sessionTokenFor(flash, venue, owner);
+    if (!session) throw new Error("Trading session missing — set up trading first");
+    venue.client.useSession(session.keypair.publicKey as unknown as SdkPublicKey);
+    return session;
+}
+
+async function erOraclePrice(flash: FlashSdk, venue: Venue, target: { intOracleAccount: unknown }) {
+    const er = await erConn(venue);
+    const info = await er.getAccountInfo(target.intOracleAccount as PublicKey);
+    if (!info) throw new Error("No oracle price");
+    return venue.client.program.coder.accounts.decode("customOracle", info.data);
+}
+
+/** Open a position: quote → build → session-sign → send to the ER. */
+export async function openPosition(
     connection: Connection,
     owner: PublicKey,
     symbol: PerpSymbol,
     direction: "long" | "short",
     usdcIn: number,
     leverage: number,
-    /** true only in tests: skip the SDK's wallet-balance preflight */
-    skipBalanceChecks = false,
-): Promise<Transaction> {
+): Promise<string> {
     const flash = await sdk();
     const { BN: BNCtor } = await import("@coral-xyz/anchor");
     const venue = await getTradeVenue(connection, owner);
-    const { pool, long, short } = resolveMarket(flash, venue, symbol);
+    const session = await useSessionOrThrow(flash, venue, owner);
+    const { pool, side, lockSymbol, target } = resolveMarket(flash, venue, symbol, direction);
 
     const quote = await getOpenQuote(connection, owner, symbol, direction, usdcIn, leverage);
-    const marketConfig = direction === "long" ? long : short;
-    const target = pool.custodies.find((c) => c.custodyAccount.equals(marketConfig.targetCustody))!;
-
-    const amountIn = new BNCtor(Math.round(usdcIn * 10 ** USD_DECIMALS));
-    const sizeAmount = new BNCtor(quote.sizeNative);
-    const side = direction === "long" ? flash.Side.Long : flash.Side.Short;
-
-    const targetOracle = toOraclePrices(
-        flash, BNCtor,
-        [...(await fetchOraclePrices(venue, connection, [target])).values()][0].raw,
+    const oracle = await erOraclePrice(flash, venue, target);
+    const price = venue.client.getPriceAfterSlippage(
+        true,
+        new BNCtor(SLIPPAGE_BPS),
+        { price: oracle.price, exponent: new BNCtor(oracle.expo) },
+        side,
     );
-    const pws = priceWithSlippage(venue, BNCtor, true, targetOracle, side);
 
-    const built = direction === "long"
-        ? await venue.client.swapAndOpen(
-            target.symbol, target.symbol, "USDC",
-            amountIn, pws,
-            sizeAmount, flash.Side.Long, pool, flash.Privilege.None,
-            undefined, undefined, skipBalanceChecks,
-        )
-        : await venue.client.openPosition(
-            target.symbol, "USDC",
-            pws,
-            amountIn, sizeAmount, flash.Side.Short, pool, flash.Privilege.None,
-            undefined, undefined, skipBalanceChecks,
-        );
-
-    if (built.additionalSigners.length > 0) {
-        // Only the SOL-input path creates ephemeral signers; we always pay in
-        // USDC, so this firing means the assumption broke — refuse to build a
-        // tx the dual signing path can't complete.
-        throw new Error("Unexpected ephemeral signer in open transaction");
-    }
-    return buildTx(connection, owner, built.instructions as unknown as TransactionInstruction[]);
+    const { instructions } = await venue.client.openPosition(
+        symbol,
+        lockSymbol,
+        "USDC", // funded from the ledger's USDC; the program swaps to the lock custody
+        side,
+        pool,
+        price,
+        new BNCtor(Math.round(usdcIn * 10 ** USD_DECIMALS)),
+        new BNCtor(quote.sizeNative),
+    );
+    return venue.client.sendErTransaction(
+        instructions,
+        [session.keypair as unknown as Parameters<FlashPerpetualsClient["sendErTransaction"]>[1][number]],
+    );
 }
 
-/** Close a whole position back to wallet USDC. Unsigned legacy tx. */
-export async function prepareClose(
+/** Close a whole position (and clear its trigger orders). ER, session-signed. */
+export async function closePosition(
     connection: Connection,
     owner: PublicKey,
-    positionKey: string,
-): Promise<Transaction> {
+    row: PerpPositionRow,
+): Promise<string> {
     const flash = await sdk();
+    const { BN: BNCtor } = await import("@coral-xyz/anchor");
+    const { PublicKey: PK } = await import("@solana/web3.js");
     const venue = await getTradeVenue(connection, owner);
+    const session = await useSessionOrThrow(flash, venue, owner);
 
     const poolList = [...venue.pools.values()];
-    const positions = await venue.client.getUserPositionsMultiPool(owner as unknown as SdkPublicKey, poolList);
-    const p = positions.find((x) => x.pubkey.toBase58() === positionKey);
-    if (!p) throw new Error("Position not found");
-
-    const { BN: BNCtor } = await import("@coral-xyz/anchor");
-    const pool = poolList.find((pc) => pc.doesMarketExist(p.market))!;
-    const marketConfig = pool.getMarketConfigByPk(p.market);
+    const marketPk = new PK(row.marketKey);
+    const pool = poolList.find((pc) => pc.markets.some((m) => m.marketAccount.equals(marketPk as unknown as SdkPublicKey)))!;
+    const marketConfig: MarketConfig = pool.markets.find((m) => m.marketAccount.equals(marketPk as unknown as SdkPublicKey))!;
     const target = pool.custodies.find((c) => c.custodyAccount.equals(marketConfig.targetCustody))!;
-    const isLong = flash.isVariant(marketConfig.side, "long");
+    const collateral = pool.custodies.find((c) => c.custodyAccount.equals(marketConfig.collateralCustody))!;
+    const side = flash.isVariant(marketConfig.side, "long") ? flash.Side.Long : flash.Side.Short;
 
-    const side = isLong ? flash.Side.Long : flash.Side.Short;
-    const targetOracle = toOraclePrices(
-        flash, BNCtor,
-        [...(await fetchOraclePrices(venue, connection, [target])).values()][0].raw,
+    const oracle = await erOraclePrice(flash, venue, target);
+    const price = venue.client.getPriceAfterSlippage(
+        false,
+        new BNCtor(SLIPPAGE_BPS),
+        { price: oracle.price, exponent: new BNCtor(oracle.expo) },
+        side,
     );
-    const pws = priceWithSlippage(venue, BNCtor, false, targetOracle, side);
 
-    const built = isLong
-        ? await venue.client.closeAndSwap(
-            target.symbol, "USDC", target.symbol,
-            pws,
-            flash.Side.Long, pool, flash.Privilege.None,
-        )
-        : await venue.client.closePosition(
-            target.symbol, "USDC",
-            pws,
-            flash.Side.Short, pool, flash.Privilege.None,
-            undefined, undefined,
-            true, // createUserATA — the USDC ATA may have been closed
-        );
-
-    if (built.additionalSigners.length > 0) {
-        throw new Error("Unexpected ephemeral signer in close transaction");
-    }
-    return buildTx(connection, owner, built.instructions as unknown as TransactionInstruction[]);
+    const { instructions } = await venue.client.closePosition(
+        target.symbol, collateral.symbol, side, pool, price,
+        "USDC", // proceeds land back in the ledger as USDC
+    );
+    const { instructions: cancelIxs } = await venue.client.cancelAllTriggerOrders(
+        marketPk as unknown as SdkPublicKey,
+    );
+    return venue.client.sendErTransaction(
+        [...instructions, ...cancelIxs],
+        [session.keypair as unknown as Parameters<FlashPerpetualsClient["sendErTransaction"]>[1][number]],
+    );
 }
 
-/** Drop cached clients (route unmount). Flash clients hold no subscriptions. */
+/** Drop cached clients (route unmount). */
 export function teardown(): void {
     readVenue = null;
     tradeVenue = null;

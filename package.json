@@ -28,6 +28,7 @@
     "@drift-labs/sdk": "2.156.0",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
+    "@flash_trade/flash-sdk-v2": "^1.0.43",
     "@giphy/js-fetch-api": "^5.8.0",
     "@giphy/react-components": "^10.1.2",
     "@gsap/react": "^2.1.2",
