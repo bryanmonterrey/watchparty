@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -80,7 +81,7 @@ export function PredictionsView() {
             <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 md:pt-(--header-height)">
                 {/* Category tabs (Kalshi's top rail) + sort + admin create */}
                 <div className="flex items-center gap-3 pt-4">
-                    <div className="-mx-1 flex min-w-0 flex-1 items-center gap-5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+                    <div className="-mx-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
                         <Tab active={category === null} onClick={() => setCategory(null)}>
                             <HugeiconsIcon icon={FireIcon} className="size-4" strokeWidth={2} />
                             Trending
@@ -172,11 +173,19 @@ function Tab({ active, onClick, children }: { active: boolean; onClick: () => vo
         <button
             onClick={onClick}
             className={cn(
-                "flex shrink-0 cursor-pointer items-center gap-1.5 py-1 text-[15px] font-bold transition-colors",
-                active ? "text-white" : "text-zinc-500 hover:text-zinc-300",
+                "relative z-10 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[15px] font-bold transition-all",
+                active ? "text-white/80" : "text-zinc-500 hover:bg-zinc-900/65 hover:text-white",
             )}
         >
             {children}
+            {active && (
+                <motion.div
+                    layoutId="predictionsTabHighlight"
+                    className="absolute inset-0 -z-10 rounded-full bg-gray1"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 250, damping: 30 }}
+                />
+            )}
         </button>
     );
 }
