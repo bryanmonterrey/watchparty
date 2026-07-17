@@ -84,13 +84,16 @@ function useDayRefs(markets: PerpMarketRow[]) {
     return refs;
 }
 
-export function PerpsView() {
+export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const { connection } = useConnection();
     const wallet = useWallet();
     const { data: session } = useAuthSession();
     const { signAndSubmit } = useWalletSigning();
     const swigSession = useSwigSession();
-    const { authority, isSwig } = useTradeAuthority();
+    const { authority: walletAuthority, isSwig } = useTradeAuthority();
+    // Geo-block = read-only mode (Phantom's pattern): everything renders,
+    // no authority means every trading affordance is disabled.
+    const authority = geoBlocked ? null : walletAuthority;
 
     const [markets, setMarkets] = useState<PerpMarketRow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -238,6 +241,13 @@ export function PerpsView() {
     return (
         <ScrollArea className="h-full bg-background">
             <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 md:pt-(--header-height)">
+                {geoBlocked && (
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-sunset/10 px-5 py-3">
+                        <p className="text-center text-[13px] font-semibold text-sunset">
+                            Access to this product isn&apos;t available in your region. Prices and markets stay visible.
+                        </p>
+                    </div>
+                )}
                 {/* Page header */}
                 <div className="pt-4">
                     <h1 className="font-pixel text-4xl tracking-tighter text-white">Perpetuals</h1>
@@ -246,7 +256,7 @@ export function PerpsView() {
                     </p>
                 </div>
 
-                {!canTrade && session?.user && (
+                {!canTrade && !geoBlocked && session?.user && (
                     <div className="mt-5 rounded-2xl bg-white/[0.03] px-5 py-4 ring-1 ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">

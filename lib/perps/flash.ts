@@ -49,6 +49,15 @@ const USD_DECIMALS = 6;
 /** Max acceptable fill drift from the quoted price, in bps. */
 const SLIPPAGE_BPS = 50;
 
+/**
+ * watchparty's Flash referrer: the treasury's delegated token_stake earns
+ * 2.5%–10% of referred traders' fees (tier scales with FAF staked). Created
+ * on-chain 2026-07-17 by scripts/perps/setup-flash-referrer.ts. Onboarding
+ * points each trader's Referral account here; every trade then carries
+ * Privilege.Referral. Unset env = no referral tail, trades still work.
+ */
+const REFERRER_PUBKEY = process.env.NEXT_PUBLIC_TREASURY_PUBKEY;
+
 export type PerpMarketRow = {
     symbol: PerpSymbol;
     /** live oracle price (USD), read from the ER (base copies can be stale) */
@@ -241,6 +250,30 @@ async function sessionTokenFor(
         authority as unknown as SdkPublicKey,
     );
     return { keypair, token: token as unknown as PublicKey };
+}
+
+// ─── Referral ───────────────────────────────────────────────
+
+/** Cached per-authority: does this trader's Referral account exist on-chain? */
+const referralExists = new Map<string, boolean>();
+
+/**
+ * The referral tail for a trade: [Privilege.Referral, trader's Referral PDA,
+ * treasury's token_stake]. Null (→ Privilege.None, full fee, no rebate) when
+ * the referrer env is unset or the trader hasn't onboarded through us.
+ */
+async function referralArgs(flash: FlashSdk, connection: Connection, owner: PublicKey) {
+    if (!REFERRER_PUBKEY) return null;
+    const key = owner.toBase58();
+    const { PublicKey: PK } = await import("@solana/web3.js");
+    const [referralPda] = flash.findReferralAddress(owner as unknown as SdkPublicKey);
+    if (!referralExists.get(key)) {
+        const info = await connection.getAccountInfo(referralPda as unknown as PublicKey);
+        referralExists.set(key, !!info);
+        if (!info) return null;
+    }
+    const [tokenStake] = flash.findTokenStakeAddress(new PK(REFERRER_PUBKEY) as unknown as SdkPublicKey);
+    return { privilege: flash.Privilege.Referral, referralAccount: referralPda, tokenStakeAccount: tokenStake };
 }
 
 // ─── Reads ──────────────────────────────────────────────────
@@ -460,10 +493,13 @@ async function buildTx(
 
 /**
  * One-time onboarding, phase 1 (wallet only): deposit ledger + basket +
- * basket delegation. Idempotent — already-existing accounts contribute no
- * instructions; returns null when there's nothing to do.
+ * basket delegation + the trader's Referral account (pointing at the
+ * watchparty referrer — earns the platform a fee rebate on every trade).
+ * Idempotent — already-existing accounts contribute no instructions;
+ * returns null when there's nothing to do.
  */
 export async function prepareSetup(connection: Connection, owner: PublicKey): Promise<Transaction | null> {
+    const flash = await sdk();
     const venue = await getTradeVenue(connection, owner);
     const ixs: TransactionInstruction[] = [];
     for (const r of [
@@ -473,6 +509,26 @@ export async function prepareSetup(connection: Connection, owner: PublicKey): Pr
     ]) {
         ixs.push(...(r.instructions as unknown as TransactionInstruction[]));
     }
+
+    if (REFERRER_PUBKEY) {
+        const { PublicKey: PK } = await import("@solana/web3.js");
+        const [referralPda] = flash.findReferralAddress(owner as unknown as SdkPublicKey);
+        if (!(await connection.getAccountInfo(referralPda as unknown as PublicKey))) {
+            const [tokenStake] = flash.findTokenStakeAddress(new PK(REFERRER_PUBKEY) as unknown as SdkPublicKey);
+            const ix = await venue.client.program.methods
+                .createReferral({})
+                .accountsPartial({
+                    owner: owner as unknown as SdkPublicKey,
+                    feePayer: owner as unknown as SdkPublicKey,
+                    tokenStakeAccount: tokenStake,
+                    referralAccount: referralPda,
+                })
+                .instruction();
+            ixs.push(ix as unknown as TransactionInstruction);
+            referralExists.set(owner.toBase58(), true);
+        }
+    }
+
     if (ixs.length === 0) return null;
     return buildTx(connection, owner, ixs);
 }
@@ -595,6 +651,7 @@ export async function openPosition(
         side,
     );
 
+    const referral = await referralArgs(flash, connection, owner);
     const { instructions } = await venue.client.openPosition(
         symbol,
         lockSymbol,
@@ -604,6 +661,9 @@ export async function openPosition(
         price,
         new BNCtor(Math.round(usdcIn * 10 ** USD_DECIMALS)),
         new BNCtor(quote.sizeNative),
+        referral?.privilege,
+        referral?.referralAccount,
+        referral?.tokenStakeAccount,
     );
     return venue.client.sendErTransaction(
         instructions,
@@ -639,9 +699,13 @@ export async function closePosition(
         side,
     );
 
+    const referral = await referralArgs(flash, connection, owner);
     const { instructions } = await venue.client.closePosition(
         target.symbol, collateral.symbol, side, pool, price,
         "USDC", // proceeds land back in the ledger as USDC
+        referral?.privilege,
+        referral?.referralAccount,
+        referral?.tokenStakeAccount,
     );
     const { instructions: cancelIxs } = await venue.client.cancelAllTriggerOrders(
         marketPk as unknown as SdkPublicKey,

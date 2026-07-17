@@ -16,6 +16,6 @@ const PerpsView = dynamic(
     },
 );
 
-export function PerpsLoader() {
-    return <PerpsView />;
+export function PerpsLoader({ geoBlocked = false }: { geoBlocked?: boolean }) {
+    return <PerpsView geoBlocked={geoBlocked} />;
 }
