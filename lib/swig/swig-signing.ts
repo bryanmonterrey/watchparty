@@ -43,10 +43,18 @@ export async function buildSwigTransaction(
         innerInstructions = legacyTx.instructions;
     }
 
-    // Strip ComputeBudget — we add our own outside the Swig boundary
-    const userInstructions = innerInstructions.filter(
-        ix => !ix.programId.equals(ComputeBudgetProgram.programId)
-    );
+    // Strip ComputeBudget — we add our own outside the Swig boundary. But if
+    // the inner tx requested a HIGHER unit limit (compute-heavy flows like
+    // perps swap+open), honor it: Swig execute adds overhead, never less.
+    let requestedUnits = 0;
+    const userInstructions = innerInstructions.filter(ix => {
+        if (!ix.programId.equals(ComputeBudgetProgram.programId)) return true;
+        // setComputeUnitLimit = discriminator 2, u32 LE units
+        if (ix.data.length === 5 && ix.data[0] === 2) {
+            requestedUnits = Math.max(requestedUnits, ix.data.readUInt32LE(1));
+        }
+        return false;
+    });
 
     const swig = await fetchSwig(connection, new PublicKey(session.swigAddress));
     const sessionRole = swig.findRoleBySessionKey(session.keypair.publicKey);
@@ -65,7 +73,7 @@ export async function buildSwigTransaction(
     // ComputeBudget must be OUTSIDE Swig-signed instructions
     const tx = new Transaction();
     tx.add(
-        ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }),
+        ComputeBudgetProgram.setComputeUnitLimit({ units: Math.max(200_000, requestedUnits) }),
         ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
         ...signIxs,
     );
