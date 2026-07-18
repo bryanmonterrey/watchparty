@@ -167,6 +167,9 @@
   /* Terminal panel fill (perps/predictions surfaces) — white 5% composited
      on black, minted solid so panels don't depend on what's behind them. */
   --color-panel: #0D0D0D;
+  /* Raised terminal surface: panel body + active-tab fill (the active tab
+     merges seamlessly into the body; inactive tabs sit on --color-panel). */
+  --color-panel2: #171717;
   /* Trade-direction accents (perps Long/Short tabs). */
   --color-long: #33FDA1;
   --color-short: #FFA3AC;

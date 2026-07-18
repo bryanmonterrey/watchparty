@@ -121,15 +121,15 @@ export function PerpsTape({
     ) || 1;
 
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
-            <div className="flex border-b border-white/[0.06]">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2">
+            <div className="flex border-b border-white/[0.06] bg-panel">
                 {(["book", "trades"] as const).map((t) => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
                             "flex-1 cursor-pointer py-2.5 text-[12px] font-bold transition-colors first:border-r first:border-white/[0.06]",
-                            tab === t ? "bg-white/[0.04] text-white" : "text-zinc-500 hover:text-white",
+                            tab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
                         {t === "book" ? "Order Book" : "Trades"}
@@ -138,14 +138,14 @@ export function PerpsTape({
             </div>
 
             {/* Column header */}
-            <div className="flex items-center justify-between px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-zinc-600">
+            <div className="flex items-center justify-between px-3 pb-1 pt-2 text-[11px] font-semibold text-zinc-600">
                 <span className="w-[34%]">Price</span>
                 <span className="w-[36%] text-right">Size ({symbol})</span>
                 <span className="w-[30%] text-right">{tab === "book" ? `Total (${symbol})` : "Time"}</span>
             </div>
 
             {tab === "book" ? (
-                <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
+                <div className="min-h-0 flex-1 space-y-1 overflow-y-auto [scrollbar-width:none]">
                     {livePrice === 0 ? (
                         <BookSkeleton />
                     ) : (
@@ -212,11 +212,11 @@ export function PerpsTape({
 function LadderRow({ level, maxTotal, side }: { level: Level; maxTotal: number; side: "ask" | "bid" }) {
     const pct = Math.min(100, (level.total / maxTotal) * 100);
     return (
-        <div className="relative flex items-center justify-between px-3 py-[4.5px]">
+        <div className="relative flex items-center justify-between px-3 py-[3.5px]">
             {/* Cumulative depth bar, anchored left like Phantom's */}
             <div
                 className={cn(
-                    "absolute inset-y-0 left-0 opacity-[0.14]",
+                    "absolute inset-y-0 left-0 rounded-r-sm opacity-[0.14]",
                     side === "ask" ? "bg-pastelred" : "bg-lantern",
                 )}
                 style={{ width: `${pct}%` }}

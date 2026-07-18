@@ -310,8 +310,9 @@ export function PerpsChart({
             <div className="relative h-[280px] w-full sm:h-[420px]">
                 <div ref={containerRef} className="absolute inset-0" />
 
-                {/* TV-style legend overlay */}
-                {symbol && !empty && (
+                {/* TV-style legend overlay — always shown so the market is
+                    identifiable even while data loads or errors. */}
+                {symbol && (
                     <div className="pointer-events-none absolute left-2 top-1 z-10">
                         <p className="flex items-center gap-2 text-[15px] font-semibold text-zinc-100">
                             {symbol} · {timeframe} · watchparty

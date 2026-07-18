@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TradeUpIcon, TradeDownIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import { TradeUpIcon, TradeDownIcon } from "@hugeicons/core-free-icons";
 import { Star2Icon } from "@/components/icons";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
@@ -139,7 +139,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const [selected, setSelected] = useState<PerpSymbol>("SOL");
     const [positions, setPositions] = useState<PerpPositionRow[]>([]);
     const [account, setAccount] = useState<PerpsAccountState | null>(null);
-    const [managing, setManaging] = useState(false);
+    const [managing, setManaging] = useState<false | "deposit" | "withdraw">(false);
     const [fills, setFills] = useState<TradeFill[]>([]);
     const [railTab, setRailTab] = useState<"perps" | "follows">("perps");
     const [perpFollows, toggleFollow] = usePerpFollows();
@@ -323,8 +323,8 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
-                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg bg-panel ring-1 ring-white/10 lg:flex">
-                        <div className="flex border-b border-white/[0.06]">
+                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2 lg:flex">
+                        <div className="flex border-b border-white/[0.06] bg-panel">
                             {(["perps", "follows"] as const).map((t, i) => (
                                 <button
                                     key={t}
@@ -332,7 +332,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                     className={cn(
                                         "flex-1 cursor-pointer py-3 text-[13px] font-bold capitalize transition-colors",
                                         i < 1 && "border-r border-white/[0.06]",
-                                        railTab === t ? "bg-white/[0.04] text-white" : "text-zinc-500 hover:text-white",
+                                        railTab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
                                     )}
                                 >
                                     {t}
@@ -423,7 +423,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
+                            <div className="overflow-hidden rounded-lg border border-white/10 bg-panel">
                                 {market ? (
                                     <>
                                         {/* Market header — Phantom band: icon · symbol · Follow,
@@ -509,29 +509,36 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                 }}
                             />
                         )}
-                        <button
-                            onClick={() => canTrade && setManaging(true)}
-                            disabled={!canTrade}
-                            className="mt-2 flex w-full cursor-pointer items-center justify-between rounded-lg bg-panel px-5 py-4 text-left ring-1 ring-white/10 transition-colors hover:bg-white/[0.07] disabled:cursor-default lg:flex-1 lg:items-start"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <span className="grid size-9 place-items-center rounded-full bg-white/[0.06] text-zinc-300">
-                                    <HugeiconsIcon icon={Wallet01Icon} className="size-4" strokeWidth={2} />
-                                </span>
-                                <div>
-                                    <p className="text-[12px] font-semibold text-zinc-500">Trading balance</p>
-                                    <p className="text-[15px] font-bold tabular-nums text-white">
-                                        ${fmtUsd(account?.ledgerUsdc ?? 0)}
-                                        <span className="ml-2 text-[12px] font-semibold text-zinc-500">
-                                            ${fmtUsd(account?.walletUsdc ?? 0)} in wallet
-                                        </span>
-                                    </p>
-                                </div>
+                        {/* Trading balance — Phantom's bottom-right card: label/value
+                            rows, then stacked Deposit (primary) / Withdraw. */}
+                        <div className="mt-2 rounded-lg bg-panel p-4 ring-1 ring-white/10 lg:flex-1">
+                            <div className="flex items-center justify-between">
+                                <p className="text-[13px] font-semibold text-zinc-500">Total Balance</p>
+                                <p className="text-[13px] font-bold tabular-nums text-white">
+                                    ${fmtUsd((account?.ledgerUsdc ?? 0) + (account?.walletUsdc ?? 0))}
+                                </p>
                             </div>
-                            <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] font-bold text-zinc-300">
-                                Manage
-                            </span>
-                        </button>
+                            <div className="mt-1.5 flex items-center justify-between">
+                                <p className="text-[13px] font-semibold text-zinc-500">Available Balance</p>
+                                <p className="text-[13px] font-bold tabular-nums text-white">
+                                    ${fmtUsd(account?.ledgerUsdc ?? 0)}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => canTrade && setManaging("deposit")}
+                                disabled={!canTrade}
+                                className="mt-4 h-11 w-full cursor-pointer rounded-full bg-white text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:cursor-default disabled:opacity-40"
+                            >
+                                Deposit
+                            </button>
+                            <button
+                                onClick={() => canTrade && setManaging("withdraw")}
+                                disabled={!canTrade || (account?.ledgerUsdc ?? 0) <= 0}
+                                className="mt-2 h-11 w-full cursor-pointer rounded-full bg-white/[0.06] text-[14px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-default disabled:opacity-40"
+                            >
+                                Withdraw
+                            </button>
+                        </div>
                     </aside>
                 </div>
 
@@ -544,6 +551,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
             {managing && authority && (
                 <CollateralDialog
+                    initialMode={managing}
                     account={account}
                     onDone={() => { setManaging(false); refreshAccount(); }}
                     onClose={() => setManaging(false)}
@@ -753,21 +761,19 @@ function OrderPanel({
                 <button
                     onClick={() => setDirection("long")}
                     className={cn(
-                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
+                        "flex h-10 cursor-pointer items-center justify-center rounded-full text-[14px] font-extrabold transition-colors",
                         long ? "bg-white/[0.08] text-long" : "text-zinc-500 hover:text-white",
                     )}
                 >
-                    <HugeiconsIcon icon={TradeUpIcon} className="size-4" strokeWidth={2.5} />
                     Long
                 </button>
                 <button
                     onClick={() => setDirection("short")}
                     className={cn(
-                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
+                        "flex h-10 cursor-pointer items-center justify-center rounded-full text-[14px] font-extrabold transition-colors",
                         !long ? "bg-white/[0.08] text-short" : "text-zinc-500 hover:text-white",
                     )}
                 >
-                    <HugeiconsIcon icon={TradeDownIcon} className="size-4" strokeWidth={2.5} />
                     Short
                 </button>
             </div>
@@ -899,9 +905,9 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="flex flex-col rounded-lg bg-panel ring-1 ring-white/10">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
-            <div className="flex border-b border-white/[0.06]">
+            <div className="flex border-b border-white/[0.06] bg-panel">
                 {TERM_TABS.map((t, i) => (
                     <button
                         key={t}
@@ -909,14 +915,14 @@ function TerminalTabs({
                         className={cn(
                             "flex-1 cursor-pointer truncate py-2.5 text-[12px] font-bold transition-colors",
                             i < TERM_TABS.length - 1 && "border-r border-white/[0.06]",
-                            tab === t ? "bg-white/[0.04] text-white" : "text-zinc-500 hover:text-white",
+                            tab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
                         {labels[t]}
                     </button>
                 ))}
             </div>
-            <div className="min-h-[140px] p-2">
+            <div className="min-h-[240px] p-2">
                 {tab === "positions" &&
                     (positions.length ? (
                         <div className="space-y-1">
@@ -947,7 +953,7 @@ function TerminalTabs({
 
 function TermEmpty({ title, sub }: { title: string; sub: string }) {
     return (
-        <div className="flex min-h-[96px] flex-col items-center justify-center py-4 text-center">
+        <div className="flex min-h-[200px] flex-col items-center justify-center py-4 text-center">
             <p className="text-[13px] font-bold text-zinc-400">{title}</p>
             <p className="mt-0.5 text-[12px] font-medium text-zinc-600">{sub}</p>
         </div>
@@ -1092,17 +1098,19 @@ function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onCl
 }
 
 function CollateralDialog({
+    initialMode,
     account,
     onDone,
     onClose,
     transfer,
 }: {
+    initialMode: "deposit" | "withdraw";
     account: PerpsAccountState | null;
     onDone: () => void;
     onClose: () => void;
     transfer: (mode: "deposit" | "withdraw", usd: number) => Promise<string>;
 }) {
-    const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
+    const [mode, setMode] = useState<"deposit" | "withdraw">(initialMode);
     const [usd, setUsd] = useState("");
     const [busy, setBusy] = useState(false);
     const max = mode === "deposit" ? account?.walletUsdc ?? 0 : account?.ledgerUsdc ?? 0;
