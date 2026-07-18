@@ -331,14 +331,14 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2 lg:flex">
                         {/* Inactive tabs carry the dark fill; the active tab is
                             transparent so it IS the body color at any opacity. */}
-                        <div className="flex border-b border-white/[0.06]">
+                        <div className="flex">
                             {(["perps", "follows"] as const).map((t, i) => (
                                 <button
                                     key={t}
                                     onClick={() => setRailTab(t)}
                                     className={cn(
                                         "flex-1 cursor-pointer py-3 text-base font-bold capitalize transition-colors",
-                                        i < 1 && "border-r border-white/[0.06]",
+                                        i < 1 && "",
                                         railTab === t ? "text-white" : "bg-panel1 text-zinc-500 hover:text-white",
                                     )}
                                 >
@@ -917,7 +917,7 @@ function TerminalTabs({
     return (
         <div className="flex flex-col overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
-            <div className="flex border-b border-white/[0.06]">
+            <div className="flex">
                 {TERM_TABS.map((t) => (
                     <button
                         key={t}
