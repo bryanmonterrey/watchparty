@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PerpsTVChart } from "@/components/perps/perps-tv-chart";
 import { PerpsTape } from "@/components/perps/perps-tape";
+import { PerpsSkeleton } from "@/components/perps/perps-skeleton";
 import { cn } from "@/lib/utils";
 import type { Keypair, Transaction } from "@solana/web3.js";
 import type { PerpMarketRow, PerpPositionRow, PerpSymbol, OpenQuote, PerpsAccountState } from "@/lib/perps/flash";
@@ -296,6 +297,10 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
         });
         refreshAccount();
     }, [connection, authority, refreshAccount, logFill]);
+
+    // Same surface the chunk loader shows — one continuous loading state
+    // from route entry until markets render.
+    if (loading) return <PerpsSkeleton geoBlocked={geoBlocked} />;
 
     return (
         <ScrollArea className="h-full bg-background">
