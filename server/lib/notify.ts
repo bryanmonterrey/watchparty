@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { notifications } from "@/db/schema/content";
 import { nanoid } from "nanoid";
 
-type NotifType = "follow" | "like" | "comment" | "repost" | "mention" | "quote" | "callout" | "system";
+type NotifType = "follow" | "like" | "comment" | "repost" | "mention" | "quote" | "callout" | "trade" | "system";
 
 interface CreateNotifOptions {
     userId: string;       // recipient

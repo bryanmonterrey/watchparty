@@ -20,6 +20,9 @@ export const XP_AWARDS = {
     callout_2x: { amount: 100, maxPerDay: 10 },
     callout_5x: { amount: 300, maxPerDay: 10 },
     callout_10x: { amount: 1000, maxPerDay: 10 },
+    // Server-verified USDC bet on a prediction market (predictions.placeBet
+    // verifies the treasury transfer on-chain; refId = betId).
+    prediction_bet: { amount: 20, maxPerDay: 10 },
     // Reward varies per quest (lib/quests.ts xpReward, passed as an override);
     // refId = `${questId}:${periodKey}` so each window pays once.
     quest_completed: { amount: 0, maxPerDay: 20 },

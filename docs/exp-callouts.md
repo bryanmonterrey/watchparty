@@ -124,6 +124,17 @@ are then a single indexed query, same shape as the callout leaderboard.
    expires unreported rows after 1h. Reads are owner-only (RLS) until the opt-in public
    trader profile ships.
 
-NEXT UP: Phase 4b PnL computation (cost basis + `pnl_snapshots` cron) → 4c social
-surfaces (trade feed/notifications, profile PnL card, leaderboard) → 4a-2 Helius
-webhook wallet tracking → 4d copy-trade.
+5. ✅ Phase 4b PnL — SHIPPED 2026-07-17: `pnl_snapshots` (24h/7d/30d) rebuilt every 10 min
+   by `/api/cron/pnl-snapshots` from confirmed trades. **Realized-only by design** —
+   cash-sided swaps (SOL/USDC/USDT ↔ token), window-scoped average cost basis in raw
+   units so decimals cancel; unrealized needs a decimals/price layer (later).
+6. ✅ Phase 4c — SHIPPED 2026-07-17: `user.shareTrades` opt-in; confirmed trades of
+   sharing users fan out `"trade"` notifications + web push from trade-verify; profile
+   PnL card (owner always sees it + toggle; others only when shared); "Top traders"
+   7d-PnL tab on `/trade/callouts`. Also: callout fan-out now sends web push;
+   level-ups emit a system notification; predictions placeBet awards `prediction_bet`
+   XP + daily/weekly quests (server-verified USDC payment = unfarmable).
+
+NOT DONE: perps XP (no server-side router — fills are client-side via Flash SDK; needs
+fill verification infra first) → 4a-2 Helius webhook wallet tracking (template:
+`lib/tokens/trades-webhook.ts`) → 4d copy-trade → unrealized PnL (decimals/price layer).

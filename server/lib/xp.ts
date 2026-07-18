@@ -4,6 +4,7 @@ import { user } from "@/db/schema/auth/user";
 import { nanoid } from "nanoid";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { XP_AWARDS, levelForXp, type XpKind } from "@/lib/xp";
+import { createNotification } from "./notify";
 
 interface AwardResult {
     awarded: boolean;
@@ -55,6 +56,13 @@ export async function awardXP(
         const newLevel = levelForXp(updated.xp);
         if (newLevel !== updated.level) {
             await db.update(user).set({ level: newLevel }).where(eq(user.id, userId));
+            if (newLevel > updated.level) {
+                await createNotification({
+                    userId,
+                    type: "system",
+                    body: `Level up! You reached Level ${newLevel} 🎉`,
+                });
+            }
             return { awarded: true, leveledUp: { from: updated.level, to: newLevel } };
         }
         return { awarded: true };

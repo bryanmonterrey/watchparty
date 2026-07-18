@@ -17,6 +17,8 @@ import { db } from "@/db";
 import { predictionMarkets, predictionOutcomes, predictionBets } from "@/db/schema/content/predictions";
 import { eq, and, desc, asc, sql, inArray, isNull } from "drizzle-orm";
 import { USDC_MINT } from "@/lib/premium/tiers";
+import { awardXP } from "@/server/lib/xp";
+import { recordQuestEvent } from "@/server/lib/quests";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 
@@ -222,6 +224,10 @@ export const predictionsRouter = router({
                 .update(predictionOutcomes)
                 .set({ poolUsdc: sql`${predictionOutcomes.poolUsdc} + ${amount}` })
                 .where(eq(predictionOutcomes.id, outcome.id));
+
+            // Unfarmable XP: the USDC payment was just verified on-chain above.
+            await awardXP(ctx.user.id, "prediction_bet", bet.id);
+            await recordQuestEvent(ctx.user.id, "prediction_bet");
 
             return { betId: bet.id };
         }),

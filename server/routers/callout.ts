@@ -7,6 +7,7 @@ import { user } from "@/db/schema/auth";
 import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { recordQuestEvent } from "@/server/lib/quests";
+import { sendPushToUsers } from "@/lib/push/send";
 
 /**
  * pump.fun-style callouts (docs/exp-callouts.md, Phase 2).
@@ -87,6 +88,15 @@ export const calloutRouter = router({
                 }
                 if (notified > 0) {
                     await db.update(callouts).set({ notifiedCount: notified }).where(eq(callouts.id, id));
+                    // Web push is what makes a callout land when followers aren't
+                    // on the site. Subscriptions are the opt-in; dead ones prune.
+                    const caller = ctx.user.name || "Someone you follow";
+                    await sendPushToUsers(followers.map((f) => f.followerId), {
+                        title: `${caller} called out $${token.ticker}`,
+                        body: token.marketCapUsd ? `at $${Math.round(token.marketCapUsd).toLocaleString()} mcap — see the call` : "See the call",
+                        url: "/trade/callouts",
+                        tag: `callout-${id}`,
+                    });
                 }
             } catch { /* fan-out failure must not undo the callout */ }
 

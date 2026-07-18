@@ -46,6 +46,8 @@ export default {
             ctx.waitUntil(call(env, "/api/cron/callout-performance"));
             // Settle pending server-witnessed trades on-chain (Phase 4a).
             ctx.waitUntil(call(env, "/api/cron/trade-verify"));
+            // Rebuild realized-PnL snapshots from confirmed trades (Phase 4b).
+            ctx.waitUntil(call(env, "/api/cron/pnl-snapshots"));
         } else if (event.cron === "* * * * *") {
             // Every minute — the CF cron floor. Both are cheap single-digit
             // API-call passes; in-app swaps additionally trigger instant
