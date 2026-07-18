@@ -141,6 +141,8 @@ export type PerpMarketRow = {
     maxLeverage: number;
     /** Pyth ticker (e.g. "Crypto.SOL/USD") — feeds the benchmarks candle API */
     pythTicker: string;
+    /** Flash's official token icon (their CloudFront CDN); null if unlisted */
+    iconUrl: string | null;
 };
 
 export type PerpPositionRow = {
@@ -450,6 +452,9 @@ export async function getMarkets(connection: Connection): Promise<PerpMarketRow[
             borrowHourlyPctShort: borrow.get(r.usdc.custodyAccount.toBase58()) ?? 0,
             maxLeverage: Math.min(r.long.marketConfig.maxLev, r.short.marketConfig.maxLev),
             pythTicker: r.long.target.pythTicker,
+            iconUrl:
+                (r.long.pool.tokens.find((t) => t.symbol === r.def.symbol) as { iconUrl?: string } | undefined)
+                    ?.iconUrl ?? null,
         }];
     });
 }

@@ -304,7 +304,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
     return (
         <ScrollArea className="h-full bg-background">
-            <div className="mx-auto flex max-w-[1440px] flex-col px-2 pb-4 pt-4 md:pt-(--header-height) lg:h-dvh lg:pb-2">
+            <div className="mx-auto flex max-w-[1440px] flex-col px-2 pb-4 pt-2 md:pt-(--header-height) lg:h-dvh lg:pb-2">
                 {geoBlocked && (
                     <div className="mt-2 flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-4 py-2.5">
                         <p className="text-center text-[13px] font-semibold text-sunset">
@@ -313,7 +313,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </div>
                 )}
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-2 rounded-md bg-panel1 px-4 py-3 ring-1 ring-white/10">
+                    <div className="mt-2 rounded-md bg-panel1 px-4 py-3 ring-1 ring-inset ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -328,7 +328,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
-                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2 lg:flex">
+                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg ring-1 ring-inset ring-white/10 bg-panel2 lg:flex">
                         {/* Inactive tabs carry the dark fill; the active tab is
                             transparent so it IS the body color at any opacity. */}
                         <div className="flex">
@@ -430,14 +430,19 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel1">
+                            <div className="overflow-hidden rounded-lg ring-1 ring-inset ring-white/10 bg-panel1">
                                 {market ? (
                                     <>
                                         {/* Market header — Phantom band: icon · symbol · Follow,
                                             then Mark (live ER price, what fills settle at) and
                                             Oracle (latest Pyth benchmark print). */}
                                         <div className="flex flex-wrap items-center gap-3 px-4 pb-1 pt-3.5">
-                                            <span className="size-7 shrink-0 rounded-full bg-white/[0.08]" />
+                                            {market.iconUrl ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={market.iconUrl} alt="" className="size-7 shrink-0 rounded-full object-cover" />
+                                            ) : (
+                                                <span className="size-7 shrink-0 rounded-full bg-white/[0.08]" />
+                                            )}
                                             <h2 className="text-[20px] font-semibold tracking-tight text-white">
                                                 {market.symbol}
                                             </h2>
@@ -518,7 +523,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         )}
                         {/* Trading balance — Phantom's bottom-right card: label/value
                             rows, then stacked Deposit (primary) / Withdraw. */}
-                        <div className="mt-2 rounded-lg bg-panel1 p-4 ring-1 ring-white/10 lg:flex-1">
+                        <div className="mt-2 rounded-lg bg-panel1 p-4 ring-1 ring-inset ring-white/10 lg:flex-1">
                             <div className="flex items-center justify-between">
                                 <p className="text-[13px] font-semibold text-zinc-500">Total Balance</p>
                                 <p className="text-[13px] font-bold tabular-nums text-white">
@@ -601,6 +606,12 @@ function MarketRow({
             )}
         >
             <span className="flex items-center gap-2">
+                {m.iconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.iconUrl} alt="" className="size-5 shrink-0 rounded-full object-cover" />
+                ) : (
+                    <span className="size-5 shrink-0 rounded-full bg-white/[0.08]" />
+                )}
                 <span className="text-[14px] font-bold text-white">{m.symbol}</span>
                 <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-extrabold text-zinc-500">
                     {m.maxLeverage}×
@@ -764,7 +775,7 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-lg bg-panel1 p-4 ring-1 ring-white/10">
+        <div className="rounded-lg bg-panel1 p-4 ring-1 ring-inset ring-white/10">
             {/* Direction — rounded pills; active side gets a very light white
                 wash + its accent color. */}
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
@@ -915,7 +926,7 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="flex flex-col overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2">
+        <div className="flex flex-col overflow-hidden rounded-lg ring-1 ring-inset ring-white/10 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
             <div className="flex">
                 {TERM_TABS.map((t) => (
@@ -1067,7 +1078,7 @@ function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onCl
 
     const up = p.pnlUsd >= 0;
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-white/[0.03] px-4 py-3 ring-1 ring-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-white/[0.03] px-4 py-3 ring-1 ring-inset ring-white/10">
             <div className="flex items-center gap-3">
                 <span
                     className={cn(
