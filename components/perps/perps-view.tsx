@@ -865,7 +865,7 @@ function OrderPanel({
             {!signedIn ? (
                 <button
                     onClick={onLogin}
-                    className="mt-4 flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-[14px] font-extrabold text-black transition-colors hover:bg-white/90"
+                    className="mt-4 flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-base font-extrabold text-black transition-colors hover:bg-white/90"
                 >
                     <Star2Icon fill="black" className="size-4" />
                     Login
