@@ -313,7 +313,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </div>
                 )}
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-2 rounded-md bg-panel1 px-4 py-3 ring-1 ring-inset ring-white/10">
+                    <div className="mt-2 rounded-md bg-panel1 px-4 py-3 border border-white/5">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -328,7 +328,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
-                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg ring-1 ring-inset ring-white/10 bg-panel2 lg:flex">
+                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/5 bg-panel2 lg:flex">
                         {/* Inactive tabs carry the dark fill; the active tab is
                             transparent so it IS the body color at any opacity. */}
                         <div className="flex">
@@ -430,7 +430,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg ring-1 ring-inset ring-white/10 bg-panel1">
+                            <div className="overflow-hidden rounded-lg border border-white/5 bg-panel1">
                                 {market ? (
                                     <>
                                         {/* Market header — Phantom band: icon · symbol · Follow,
@@ -523,30 +523,30 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         )}
                         {/* Trading balance — Phantom's bottom-right card: label/value
                             rows, then stacked Deposit (primary) / Withdraw. */}
-                        <div className="mt-2 rounded-lg bg-panel1 p-4 ring-1 ring-inset ring-white/10 lg:flex-1">
+                        <div className="mt-2 rounded-lg bg-panel1 p-4 border border-white/5 lg:flex-1">
                             <div className="flex items-center justify-between">
-                                <p className="text-[13px] font-semibold text-zinc-500">Total Balance</p>
-                                <p className="text-[13px] font-bold tabular-nums text-white">
+                                <p className="text-sm font-semibold text-zinc-500">Total Balance</p>
+                                <p className="text-sm font-bold tabular-nums text-white">
                                     ${fmtUsd((account?.ledgerUsdc ?? 0) + (account?.walletUsdc ?? 0))}
                                 </p>
                             </div>
                             <div className="mt-1.5 flex items-center justify-between">
-                                <p className="text-[13px] font-semibold text-zinc-500">Available Balance</p>
-                                <p className="text-[13px] font-bold tabular-nums text-white">
+                                <p className="text-sm font-semibold text-zinc-500">Available Balance</p>
+                                <p className="text-sm font-bold tabular-nums text-white">
                                     ${fmtUsd(account?.ledgerUsdc ?? 0)}
                                 </p>
                             </div>
                             <button
                                 onClick={() => canTrade && setManaging("deposit")}
                                 disabled={!canTrade}
-                                className="mt-4 h-11 w-full cursor-pointer rounded-full bg-white text-[14px] font-bold text-black transition-colors hover:bg-white/90 disabled:cursor-default disabled:opacity-40"
+                                className="mt-4 h-16 w-full cursor-pointer rounded-full bg-white text-base font-bold text-black transition-colors hover:bg-white/90 disabled:cursor-default disabled:opacity-40"
                             >
                                 Deposit
                             </button>
                             <button
                                 onClick={() => canTrade && setManaging("withdraw")}
                                 disabled={!canTrade || (account?.ledgerUsdc ?? 0) <= 0}
-                                className="mt-2 h-11 w-full cursor-pointer rounded-full bg-white/[0.06] text-[14px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-default disabled:opacity-40"
+                                className="mt-2 h-16 w-full cursor-pointer rounded-full bg-white/[0.06] text-base font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-default disabled:opacity-40"
                             >
                                 Withdraw
                             </button>
@@ -775,7 +775,7 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-lg bg-panel1 p-4 ring-1 ring-inset ring-white/10">
+        <div className="rounded-lg bg-panel1 p-4 border border-white/5">
             {/* Direction — rounded pills; active side gets a very light white
                 wash + its accent color. */}
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
@@ -865,7 +865,7 @@ function OrderPanel({
             {!signedIn ? (
                 <button
                     onClick={onLogin}
-                    className="mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-[14px] font-extrabold text-black transition-colors hover:bg-white/90"
+                    className="mt-4 flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-[14px] font-extrabold text-black transition-colors hover:bg-white/90"
                 >
                     <Star2Icon fill="black" className="size-4" />
                     Login
@@ -875,7 +875,7 @@ function OrderPanel({
                     onClick={place}
                     disabled={placing || !canTrade || amount < 1 || insufficient || !quote}
                     className={cn(
-                        "mt-4 h-12 w-full cursor-pointer rounded-full text-[14px] font-extrabold transition-colors disabled:opacity-40",
+                        "mt-4 h-16 w-full cursor-pointer rounded-full text-base font-extrabold transition-colors disabled:opacity-40",
                         long ? "bg-white text-black hover:bg-white/90" : "bg-pastelred text-white hover:bg-pastelred/90",
                     )}
                 >
@@ -926,7 +926,7 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="flex flex-col overflow-hidden rounded-lg ring-1 ring-inset ring-white/10 bg-panel2">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-white/5 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
             <div className="flex">
                 {TERM_TABS.map((t) => (
@@ -1078,7 +1078,7 @@ function PositionRow({ position: p, onClose }: { position: PerpPositionRow; onCl
 
     const up = p.pnlUsd >= 0;
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-white/[0.03] px-4 py-3 ring-1 ring-inset ring-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-white/5 bg-white/[0.03] px-4 py-3">
             <div className="flex items-center gap-3">
                 <span
                     className={cn(
