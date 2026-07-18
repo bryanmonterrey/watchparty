@@ -308,7 +308,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     </div>
                 )}
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-2 rounded-md bg-panel px-4 py-3 ring-1 ring-white/10">
+                    <div className="mt-2 rounded-md bg-panel1 px-4 py-3 ring-1 ring-white/10">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -324,7 +324,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
                     <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2 lg:flex">
-                        <div className="flex border-b border-white/[0.06] bg-panel">
+                        <div className="flex border-b border-white/[0.06] bg-panel1">
                             {(["perps", "follows"] as const).map((t, i) => (
                                 <button
                                     key={t}
@@ -423,7 +423,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg border border-white/10 bg-panel">
+                            <div className="overflow-hidden rounded-lg border border-white/10 bg-panel1">
                                 {market ? (
                                     <>
                                         {/* Market header — Phantom band: icon · symbol · Follow,
@@ -511,7 +511,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         )}
                         {/* Trading balance — Phantom's bottom-right card: label/value
                             rows, then stacked Deposit (primary) / Withdraw. */}
-                        <div className="mt-2 rounded-lg bg-panel p-4 ring-1 ring-white/10 lg:flex-1">
+                        <div className="mt-2 rounded-lg bg-panel1 p-4 ring-1 ring-white/10 lg:flex-1">
                             <div className="flex items-center justify-between">
                                 <p className="text-[13px] font-semibold text-zinc-500">Total Balance</p>
                                 <p className="text-[13px] font-bold tabular-nums text-white">
@@ -754,7 +754,7 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-lg bg-panel p-4 ring-1 ring-white/10">
+        <div className="rounded-lg bg-panel1 p-4 ring-1 ring-white/10">
             {/* Direction — rounded pills; active side gets a very light white
                 wash + its accent color. */}
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
@@ -907,7 +907,7 @@ function TerminalTabs({
     return (
         <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
-            <div className="flex border-b border-white/[0.06] bg-panel">
+            <div className="flex border-b border-white/[0.06] bg-panel1">
                 {TERM_TABS.map((t, i) => (
                     <button
                         key={t}

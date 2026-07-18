@@ -122,7 +122,7 @@ export function PerpsTape({
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2">
-            <div className="flex border-b border-white/[0.06] bg-panel">
+            <div className="flex border-b border-white/[0.06] bg-panel1">
                 {(["book", "trades"] as const).map((t) => (
                     <button
                         key={t}

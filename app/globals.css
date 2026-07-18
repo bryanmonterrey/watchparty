@@ -164,11 +164,12 @@
   --color-lantern2: #35FFAA;
   --color-lantern: #00ED89;
   --color-gray1: #17171B;
-  /* Terminal panel fill (perps/predictions surfaces) — white 5% composited
-     on black, minted solid so panels don't depend on what's behind them. */
-  --color-panel: #0D0D0D;
-  /* Raised terminal surface: panel body + active-tab fill (the active tab
-     merges seamlessly into the body; inactive tabs sit on --color-panel). */
+  /* Terminal surfaces (perps). NOTE: NOT named --color-panel — that name is
+     taken by the legacy translucent card wash below (later declaration wins,
+     which once silently turned these panels translucent).
+     panel1 = base/chrome (tab strips, chart, ticket); panel2 = raised body +
+     active-tab fill (active tab merges seamlessly into the body). */
+  --color-panel1: #0D0D0D;
   --color-panel2: #171717;
   /* Trade-direction accents (perps Long/Short tabs). */
   --color-long: #33FDA1;
