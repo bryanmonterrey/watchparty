@@ -496,20 +496,26 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                         {/* Market header — Phantom band: icon · symbol · Follow,
                                             then Mark (live ER price, what fills settle at) and
                                             Oracle (latest Pyth benchmark print). */}
-                                        <div className="flex flex-wrap items-center gap-3 px-4 pb-1 pt-3.5 lg:pl-6">
+                                        {/* One line always on lg (the band's height is pinned by
+                                            chartH, so a wrapping header would grow the panel):
+                                            prices and the Follow pill never shrink or wrap —
+                                            the symbol truncates as the pressure valve. The
+                                            pill is fixed-width so Follow ⇄ Following doesn't
+                                            reflow the row. Mobile keeps wrapping (page scrolls). */}
+                                        <div className="flex flex-wrap items-center gap-2.5 px-4 pb-1 pt-3.5 lg:flex-nowrap lg:pl-6">
                                             {market.iconUrl ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img src={market.iconUrl} alt="" className="size-7 shrink-0 rounded-full object-cover" />
                                             ) : (
                                                 <span className="size-7 shrink-0 rounded-full bg-white/[0.08]" />
                                             )}
-                                            <h2 className="text-[20px] font-semibold tracking-tight text-white">
+                                            <h2 className="min-w-0 truncate text-[20px] font-semibold tracking-tight text-white">
                                                 {market.symbol}
                                             </h2>
                                             <button
                                                 onClick={() => toggleFollow(market.symbol)}
                                                 className={cn(
-                                                    "cursor-pointer rounded-full px-5 py-2 text-base font-semibold transition-colors",
+                                                    "w-[108px] shrink-0 cursor-pointer whitespace-nowrap rounded-full py-2 text-center text-[15px] font-semibold transition-colors",
                                                     perpFollows.has(market.symbol)
                                                         ? "bg-white text-black hover:bg-white/90"
                                                         : "bg-white/[0.08] text-white hover:bg-white/[0.12]",
@@ -517,16 +523,16 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             >
                                                 {perpFollows.has(market.symbol) ? "Following" : "Follow"}
                                             </button>
-                                            <div className="ml-auto flex gap-10 text-right">
+                                            <div className="ml-auto flex shrink-0 gap-5 pl-2 text-right">
                                                 <div>
                                                     <p className="text-sm font-semibold text-zinc-500">Mark</p>
-                                                    <p className="text-[15px] font-bold tabular-nums text-white">
+                                                    <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-white">
                                                         ${fmtPrice(market.price)}
                                                     </p>
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-semibold text-zinc-500">Oracle</p>
-                                                    <p className="text-[15px] font-bold tabular-nums text-white">
+                                                    <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-white">
                                                         {oraclePrice !== null ? `$${fmtPrice(oraclePrice)}` : "—"}
                                                     </p>
                                                 </div>
