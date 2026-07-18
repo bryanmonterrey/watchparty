@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TradeUpIcon, TradeDownIcon } from "@hugeicons/core-free-icons";
+import { TradeUpIcon, TradeDownIcon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { Star2Icon } from "@/components/icons";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -449,7 +450,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             <button
                                                 onClick={() => toggleFollow(market.symbol)}
                                                 className={cn(
-                                                    "cursor-pointer rounded-full px-3.5 py-2 text-base font-semibold transition-colors",
+                                                    "cursor-pointer rounded-full px-5 py-2 text-base font-semibold transition-colors",
                                                     perpFollows.has(market.symbol)
                                                         ? "bg-white text-black hover:bg-white/90"
                                                         : "bg-white/[0.08] text-white hover:bg-white/[0.12]",
@@ -704,6 +705,17 @@ function OrderPanel({
 
     const long = direction === "long";
     const amount = Number(usd) || 0;
+    // Wallet assets for the pay-with dropdown (Phantom's "You Pay" selector).
+    const assets = trpc.wallet.getWalletAssets.useQuery(
+        { address: authority ?? undefined },
+        { enabled: signedIn && !!authority, staleTime: 60_000 },
+    );
+    const walletAssets = (assets.data?.tokens ?? []) as {
+        mint: string;
+        symbol: string;
+        icon?: string;
+        balance: number;
+    }[];
     const maxLev = market.maxLeverage;
     const balance = account?.ledgerUsdc ?? 0;
     const insufficient = canTrade && !!account?.ready && amount > balance;
@@ -799,41 +811,103 @@ function OrderPanel({
                 </button>
             </div>
 
-            {/* Amount */}
-            <p className="mt-4 px-1 text-[12px] font-bold text-zinc-500">Collateral (USDC)</p>
-            <div className="relative mt-1.5">
+            {/* Anatomy rows — Phantom's ticket */}
+            <div className="mt-4 flex items-center justify-between px-1">
+                <span className="text-sm font-semibold text-zinc-500">Available to Trade</span>
+                <span className="text-sm font-bold tabular-nums text-white">${fmtUsd(balance)}</span>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between px-1">
+                <span className="text-sm font-semibold text-zinc-500">Order Type</span>
+                <span className="text-sm font-bold text-white">Market</span>
+            </div>
+
+            {/* Amount + pay-asset selector */}
+            <div className="relative mt-3">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-zinc-500">$</span>
                 <Input
                     radius={16}
                     value={usd}
                     onChange={(e) => setUsd(e.target.value.replace(/[^0-9.]/g, ""))}
-                    placeholder="100"
+                    placeholder="0"
                     inputMode="decimal"
-                    className="h-12 bg-white/[0.04] pl-8 pr-16 text-[15px] font-bold"
+                    className="h-12 bg-white/[0.04] pl-8 pr-24 text-[15px] font-bold"
                 />
-                {balance > 0 && (
-                    <button
-                        onClick={() => setUsd(String(Math.floor(balance * 100) / 100))}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-extrabold text-zinc-400 transition-colors hover:text-white"
-                    >
-                        MAX
-                    </button>
-                )}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <GooDropdown
+                        align="end"
+                        side="bottom"
+                        width={260}
+                        gap={10}
+                        fill="#101011"
+                        panelRadius={20}
+                        itemHeight={48}
+                        triggerAriaLabel="Pay with"
+                        triggerClassName="flex h-8 cursor-pointer items-center gap-1.5 rounded-full bg-white/[0.08] pl-1.5 pr-2 text-sm font-bold text-white transition-colors hover:bg-white/[0.12]"
+                        trigger={
+                            <>
+                                <span className="grid size-5 place-items-center overflow-hidden rounded-full bg-white/[0.1] text-[9px] font-extrabold text-zinc-300">
+                                    $
+                                </span>
+                                USDC
+                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                            </>
+                        }
+                        items={[
+                            {
+                                key: "usdc",
+                                onClick: () => {},
+                                className: "justify-between gap-3 rounded-full px-3 cursor-pointer hover:bg-white/5",
+                                label: (
+                                    <>
+                                        <span className="flex items-center gap-2.5">
+                                            <span className="grid size-6 place-items-center rounded-full bg-white/[0.1] text-[10px] font-extrabold text-zinc-300">$</span>
+                                            <span className="text-sm font-bold text-white">USDC</span>
+                                        </span>
+                                        <span className="text-sm font-semibold tabular-nums text-zinc-400">${fmtUsd(balance)}</span>
+                                    </>
+                                ),
+                            },
+                            ...(walletAssets ?? []).map((t) => ({
+                                key: t.mint,
+                                onClick: () =>
+                                    toast(`Paying with ${t.symbol} is coming soon — trades draw from your USDC balance for now`),
+                                className: "justify-between gap-3 rounded-full px-3 cursor-pointer hover:bg-white/5 opacity-60",
+                                label: (
+                                    <>
+                                        <span className="flex min-w-0 items-center gap-2.5">
+                                            {t.icon ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={t.icon} alt="" className="size-6 shrink-0 rounded-full object-cover" />
+                                            ) : (
+                                                <span className="size-6 shrink-0 rounded-full bg-white/[0.1]" />
+                                            )}
+                                            <span className="truncate text-sm font-bold text-white">{t.symbol}</span>
+                                        </span>
+                                        <span className="shrink-0 text-sm font-semibold tabular-nums text-zinc-400">
+                                            {t.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                        </span>
+                                    </>
+                                ),
+                            })),
+                        ]}
+                    />
+                </div>
             </div>
-            <div className="mt-2 flex gap-1.5">
-                {[25, 50, 100, 250].map((v) => (
-                    <button
-                        key={v}
-                        onClick={() => setUsd(String(v))}
-                        className="flex-1 cursor-pointer rounded-full bg-white/[0.06] py-1.5 text-[12px] font-bold text-zinc-400 transition-colors hover:text-white"
-                    >
-                        ${v}
-                    </button>
-                ))}
+
+            {/* Size as % of available balance — Phantom's first slider */}
+            <div className="mt-3">
+                <AnimatedSlider
+                    label="Size"
+                    value={balance > 0 ? Math.min(100, Math.round((amount / balance) * 100)) : 0}
+                    onChange={(v) => balance > 0 && setUsd(String(Math.floor(balance * v) / 100))}
+                    min={0}
+                    max={100}
+                    step={1}
+                />
             </div>
 
             {/* Leverage */}
-            <div className="mt-4">
+            <div className="mt-3">
                 <AnimatedSlider
                     label="Leverage"
                     value={leverage}
@@ -876,7 +950,9 @@ function OrderPanel({
                     disabled={placing || !canTrade || amount < 1 || insufficient || !quote}
                     className={cn(
                         "mt-4 h-14 w-full cursor-pointer rounded-full text-base font-extrabold transition-colors disabled:opacity-40",
-                        long ? "bg-white text-black hover:bg-white/90" : "bg-pastelred text-white hover:bg-pastelred/90",
+                        long
+                            ? "bg-long-soft text-long-ink hover:bg-long-soft/90"
+                            : "bg-short-soft text-short-ink hover:bg-short-soft/90",
                     )}
                 >
                     {placing
