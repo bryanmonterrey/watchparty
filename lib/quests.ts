@@ -17,7 +17,8 @@ export type QuestEvent =
     | "follow_received"
     | "token_launched"
     | "callout_created"
-    | "prediction_bet";
+    | "prediction_bet"
+    | "perps_trade";
 
 export interface QuestDef {
     id: string;
@@ -38,6 +39,8 @@ export const QUESTS: QuestDef[] = [
     { id: "weekly_launch", title: "Launch a token", event: "token_launched", target: 1, xpReward: 250, period: "weekly" },
     { id: "daily_prediction", title: "Back a prediction", event: "prediction_bet", target: 1, xpReward: 30, period: "daily" },
     { id: "weekly_predictions", title: "Place 5 prediction bets", event: "prediction_bet", target: 5, xpReward: 150, period: "weekly" },
+    { id: "daily_perps", title: "Open a perps position", event: "perps_trade", target: 1, xpReward: 40, period: "daily" },
+    { id: "weekly_perps", title: "Open 10 perps positions", event: "perps_trade", target: 10, xpReward: 200, period: "weekly" },
 ];
 
 /** "2026-07-13" (UTC) for daily; ISO week "2026-W28" for weekly. */

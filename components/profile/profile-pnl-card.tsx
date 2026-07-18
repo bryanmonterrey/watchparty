@@ -35,6 +35,7 @@ export function ProfilePnlCard({ userId }: { userId: string }) {
 
     const w7 = data.windows.find((w) => w.window === "7d");
     const realized = w7?.realizedUsd ?? 0;
+    const unrealized = w7?.unrealizedUsd ?? 0;
 
     return (
         <div className="mt-2 flex max-w-2xl items-center gap-5 rounded-[20px] bg-panel px-5 py-3.5">
@@ -46,6 +47,7 @@ export function ProfilePnlCard({ userId }: { userId: string }) {
                 {fmtUsd(realized)}
             </span>
             <div className="hidden sm:flex items-center gap-4 text-xs font-semibold text-zinc-400 tabular-nums">
+                <span className={cn(unrealized >= 0 ? "text-zinc-400" : "text-pastelred/80")}>{fmtUsd(unrealized)} open</span>
                 <span>{w7?.tradeCount ?? 0} trades</span>
                 <span>{w7?.winRate != null ? `${Math.round(w7.winRate * 100)}% wins` : "— wins"}</span>
                 <span>${Math.round(w7?.volumeUsd ?? 0).toLocaleString()} vol</span>

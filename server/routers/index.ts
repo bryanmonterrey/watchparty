@@ -32,6 +32,7 @@ import { calloutRouter } from "./callout";
 import { questRouter } from "./quest";
 import { predictionsRouter } from "./predictions";
 import { pnlRouter } from "./pnl";
+import { perpsRouter } from "./perps";
 
 /**
  * Root application router
@@ -69,6 +70,7 @@ export const appRouter = router({
     quest: questRouter,
     predictions: predictionsRouter,
     pnl: pnlRouter,
+    perps: perpsRouter,
 });
 
 /**

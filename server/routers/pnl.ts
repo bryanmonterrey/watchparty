@@ -24,6 +24,7 @@ export const pnlRouter = router({
                     avatar_url: user.avatar_url,
                     level: user.level,
                     realizedUsd: pnlSnapshots.realizedUsd,
+                    unrealizedUsd: pnlSnapshots.unrealizedUsd,
                     volumeUsd: pnlSnapshots.volumeUsd,
                     tradeCount: pnlSnapshots.tradeCount,
                     winRate: pnlSnapshots.winRate,
@@ -57,6 +58,7 @@ export const pnlRouter = router({
                 windows: rows.map((r) => ({
                     window: r.window,
                     realizedUsd: r.realizedUsd,
+                    unrealizedUsd: r.unrealizedUsd,
                     volumeUsd: r.volumeUsd,
                     tradeCount: r.tradeCount,
                     winRate: r.winRate,
@@ -69,6 +71,12 @@ export const pnlRouter = router({
         .input(z.object({ share: z.boolean() }))
         .mutation(async ({ ctx, input }) => {
             await db.update(user).set({ shareTrades: input.share }).where(eq(user.id, ctx.user.id));
+            // Keep the Helius user-trades webhook in step so external swaps
+            // start/stop counting immediately (daily cron self-heals misses).
+            try {
+                const { syncUserTradesWebhook } = await import("@/lib/wallet/user-trades-webhook");
+                await syncUserTradesWebhook();
+            } catch { /* non-critical; daily sync recovers */ }
             return { shareTrades: input.share };
         }),
 });

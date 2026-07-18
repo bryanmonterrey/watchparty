@@ -182,8 +182,8 @@ function TradersLeaderboard() {
                             <span className="block text-[11px] text-zinc-500 font-medium">win rate</span>
                         </div>
                         <div>
-                            <span className={cn("block text-sm font-bold tabular-nums", t.realizedUsd >= 0 ? "text-lantern" : "text-pastelred")}>
-                                {t.realizedUsd >= 0 ? "+" : "-"}${Math.abs(Math.round(t.realizedUsd)).toLocaleString()}
+                            <span className={cn("block text-sm font-bold tabular-nums", t.realizedUsd + t.unrealizedUsd >= 0 ? "text-lantern" : "text-pastelred")}>
+                                {t.realizedUsd + t.unrealizedUsd >= 0 ? "+" : "-"}${Math.abs(Math.round(t.realizedUsd + t.unrealizedUsd)).toLocaleString()}
                             </span>
                             <span className="block text-[11px] text-zinc-500 font-medium">7d PnL</span>
                         </div>

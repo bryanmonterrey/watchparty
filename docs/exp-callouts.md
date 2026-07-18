@@ -135,6 +135,32 @@ are then a single indexed query, same shape as the callout leaderboard.
    level-ups emit a system notification; predictions placeBet awards `prediction_bet`
    XP + daily/weekly quests (server-verified USDC payment = unfarmable).
 
-NOT DONE: perps XP (no server-side router — fills are client-side via Flash SDK; needs
-fill verification infra first) → 4a-2 Helius webhook wallet tracking (template:
-`lib/tokens/trades-webhook.ts`) → 4d copy-trade → unrealized PnL (decimals/price layer).
+7. ✅ SHIPPED 2026-07-18 — the remaining stack:
+   - **Unrealized PnL**: `mint_prices` cache (Jupiter lite prices + Helius DAS decimals,
+     launchpad `tokens.priceUsd` fallback) refreshed inside the pnl-snapshots cron;
+     `pnl_snapshots.unrealizedUsd` marks open positions; leaderboard ranks by total.
+   - **4a-2 external trades**: Helius SWAP webhook on sharing users' wallets
+     (`lib/wallet/user-trades-webhook.ts` → `/api/webhooks/helius-user-trades`).
+     Records `source: "wallet"` confirmed trades (signature-deduped against the app
+     path), USD from the cash leg (USDC direct / SOL × cached price). Synced on the
+     sharing toggle + the daily webhook-sync cron.
+   - **Perps XP**: `perps.reportFill` verifies the reported signature on the Flash ER
+     (exists + succeeded + caller's wallet in account keys) before paying `perps_trade`
+     XP + daily/weekly perps quests; wired into the order panel after `openPosition`.
+   - **4d tiers 1–2**: alerts (4c) + one-tap copy — trade/callout notifications carry the
+     token slug in `postId` and render a Copy/View chip → token page swap card.
+
+## 4d tier 3 — auto-copy (DESIGNED, NOT BUILT — needs owner sign-off)
+
+Server-executed copying for **Swig custodial wallets only** (server can sign). Ship only
+after tiers 1–2 have real usage. Proposed shape:
+- `copy_subscriptions` table: follower → trader, `maxUsdcPerCopy` (hard cap),
+  `dailyUsdcCap`, `minTraderPnl7d`, `paused` (kill switch), `consentTxSignature`
+  (explicit on-chain-style consent record), timestamps.
+- Execution: on a confirmed leader trade, a queue (not inline in the webhook) sizes the
+  copy (min of caps), builds the same Jupiter route via the existing server rails, signs
+  with the follower's Swig session, records it as a `source: "app"` trade.
+- Safety: global kill switch env, per-user daily cap enforced in SQL, auto-pause on 3
+  consecutive failed copies, copy only `source` trades ≥ N minutes old to damp MEV-bait.
+This moves user funds server-side — do not build until the caps/consent UX above is
+approved.

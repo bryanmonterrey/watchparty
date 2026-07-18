@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { trades, pnlSnapshots } from "@/db/schema/content";
 import { nanoid } from "nanoid";
 import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { getMintPriceMap } from "./mint-prices";
 
 /**
  * Realized-PnL computation from confirmed trades (docs/exp-callouts.md §4b).
@@ -64,11 +65,32 @@ export async function computePnlSnapshots(window: PnlWindow): Promise<number> {
         users.set(t.userId, u);
     }
 
+    // Marks for open positions (unrealized): price+decimals from the cache,
+    // refreshed just before this in the same cron pass.
+    const heldMints = new Set<string>();
+    for (const u of users.values()) {
+        for (const [mint, p] of u.positions) {
+            if (p.boughtRaw - p.soldRaw > 0) heldMints.add(mint);
+        }
+    }
+    const marks = await getMintPriceMap([...heldMints]);
+
     let written = 0;
     for (const [userId, u] of users) {
         let realizedUsd = 0;
+        let unrealizedUsd = 0;
         let closed = 0;
         let won = 0;
+        for (const [mint, p] of u.positions) {
+            const heldRaw = p.boughtRaw - p.soldRaw;
+            if (heldRaw > 0 && p.boughtRaw > 0) {
+                const mark = marks.get(mint);
+                if (mark?.priceUsd != null && mark.decimals != null) {
+                    const avgCostPerRaw = p.costUsd / p.boughtRaw;
+                    unrealizedUsd += (heldRaw / 10 ** mark.decimals) * mark.priceUsd - avgCostPerRaw * heldRaw;
+                }
+            }
+        }
         for (const p of u.positions.values()) {
             if (p.soldRaw <= 0) continue;
             // Sells beyond window-tracked buys have no basis — count at zero cost
@@ -90,6 +112,7 @@ export async function computePnlSnapshots(window: PnlWindow): Promise<number> {
                 userId,
                 window,
                 realizedUsd,
+                unrealizedUsd,
                 volumeUsd: u.volumeUsd,
                 tradeCount: u.tradeCount,
                 winRate: closed > 0 ? won / closed : null,
@@ -98,6 +121,7 @@ export async function computePnlSnapshots(window: PnlWindow): Promise<number> {
                 target: [pnlSnapshots.userId, pnlSnapshots.window],
                 set: {
                     realizedUsd,
+                    unrealizedUsd,
                     volumeUsd: u.volumeUsd,
                     tradeCount: u.tradeCount,
                     winRate: closed > 0 ? won / closed : null,

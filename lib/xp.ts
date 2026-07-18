@@ -23,6 +23,9 @@ export const XP_AWARDS = {
     // Server-verified USDC bet on a prediction market (predictions.placeBet
     // verifies the treasury transfer on-chain; refId = betId).
     prediction_bet: { amount: 20, maxPerDay: 10 },
+    // Perps fill verified against the Flash ER (perps.reportFill checks the tx
+    // succeeded and the caller's wallet is in its account keys; refId = sig).
+    perps_trade: { amount: 25, maxPerDay: 10 },
     // Reward varies per quest (lib/quests.ts xpReward, passed as an override);
     // refId = `${questId}:${periodKey}` so each window pays once.
     quest_completed: { amount: 0, maxPerDay: 20 },

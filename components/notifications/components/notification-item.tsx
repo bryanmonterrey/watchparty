@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { formatRelativeTime } from "@/lib/date-utils"
@@ -47,6 +48,18 @@ export function NotificationItem({ notification: n, onMarkRead }: NotificationIt
                     {formatRelativeTime(new Date(n.createdAt).toISOString())}
                 </p>
             </div>
+
+            {/* One-tap copy: trade/callout alerts carry the token slug in
+                postId — jump straight to the token page's swap card. */}
+            {(n.type === "trade" || n.type === "callout") && n.postId && (
+                <Link
+                    href={`/${n.postId}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 rounded-full bg-lantern/10 px-3 py-1.5 text-xs font-bold text-lantern hover:bg-lantern/20 transition-colors"
+                >
+                    {n.type === "trade" ? "Copy" : "View"}
+                </Link>
+            )}
 
             {!n.isRead && (
                 <div className="w-2 h-2 rounded-full bg-twitter2 shrink-0" />

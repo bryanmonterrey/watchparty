@@ -718,6 +718,7 @@ function OrderPanel({
         return () => clearTimeout(t);
     }, [authority, connection, market.symbol, direction, amount, leverage]);
 
+    const reportFill = trpc.perps.reportFill.useMutation();
     const place = async () => {
         if (amount < 1 || !authority) return;
         setPlacing(true);
@@ -729,9 +730,11 @@ function OrderPanel({
                 import("@/lib/perps/flash"),
                 import("@solana/web3.js"),
             ]);
-            await openPosition(
+            const fillSig = await openPosition(
                 connection, new PublicKey(authority), market.symbol, direction, amount, leverage,
             );
+            // Verified XP: the server checks this sig on the ER before paying.
+            reportFill.mutate({ signature: fillSig });
             toast.success(`${long ? "Long" : "Short"} ${market.symbol} opened`);
             if (quote) {
                 onFill({

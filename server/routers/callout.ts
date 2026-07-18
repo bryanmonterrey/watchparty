@@ -82,6 +82,7 @@ export const calloutRouter = router({
                         userId: f.followerId,
                         actorId: ctx.user.id,
                         type: "callout" as const,
+                        postId: token.id, // token slug for the View deep link
                         body,
                     })));
                     notified += chunk.length;

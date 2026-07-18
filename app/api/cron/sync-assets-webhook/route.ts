@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncAssetsWebhook } from "@/lib/wallet/assets-webhook";
 import { syncTradesWebhook } from "@/lib/tokens/trades-webhook";
+import { syncUserTradesWebhook } from "@/lib/wallet/user-trades-webhook";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +15,13 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [assets, trades] = await Promise.allSettled([syncAssetsWebhook(), syncTradesWebhook()]);
+    const [assets, trades, userTrades] = await Promise.allSettled([syncAssetsWebhook(), syncTradesWebhook(), syncUserTradesWebhook()]);
     const out = {
         assets: assets.status === "fulfilled" ? assets.value : { error: String(assets.reason) },
         trades: trades.status === "fulfilled" ? trades.value : { error: String(trades.reason) },
+        userTrades: userTrades.status === "fulfilled" ? userTrades.value : { error: String(userTrades.reason) },
     };
-    const ok = assets.status === "fulfilled" && trades.status === "fulfilled";
+    const ok = assets.status === "fulfilled" && trades.status === "fulfilled" && userTrades.status === "fulfilled";
     if (!ok) console.error("webhook sync failures", out);
     return NextResponse.json({ ok, ...out }, { status: ok ? 200 : 500 });
 }

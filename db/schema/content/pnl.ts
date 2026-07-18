@@ -15,6 +15,7 @@ export const pnlSnapshots = pgTable("pnl_snapshots", {
     userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
     window: text("window", { enum: ["24h", "7d", "30d"] }).notNull(),
     realizedUsd: doublePrecision("realizedUsd").default(0).notNull(),
+    unrealizedUsd: doublePrecision("unrealizedUsd").default(0).notNull(), // open positions marked via mint_prices
     volumeUsd: doublePrecision("volumeUsd").default(0).notNull(),
     tradeCount: integer("tradeCount").default(0).notNull(),
     winRate: doublePrecision("winRate"), // closed positions won / closed positions, null = nothing closed
