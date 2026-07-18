@@ -512,6 +512,8 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                 canTrade={canTrade}
                                 connection={connection}
                                 authority={authority}
+                                walletAddress={walletAuthority}
+                                submitBase={submit}
                                 ensureReady={ensureReady}
                                 signedIn={!!session?.user}
                                 onLogin={() => router.push("/login")}
@@ -672,12 +674,32 @@ function TokenRailRow({
     );
 }
 
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const WSOL_MINT = "So11111111111111111111111111111111111111112";
+const USDC_ICON = "https://dxjms0h859jb3.cloudfront.net/token-icons/usdc.png";
+
+type WalletAsset = {
+    mint: string;
+    symbol: string;
+    icon?: string;
+    balance: number;
+    decimals: number;
+    price?: number;
+    usdValue?: number;
+};
+
+/** What funds the order: the USDC trading balance, or a wallet asset that
+ *  gets swapped to USDC (Jupiter) + deposited in one flow at submit. */
+type PayAsset = { kind: "ledger" } | ({ kind: "wallet" } & WalletAsset);
+
 function OrderPanel({
     market,
     account,
     canTrade,
     connection,
     authority,
+    walletAddress,
+    submitBase,
     ensureReady,
     signedIn,
     onLogin,
@@ -689,6 +711,10 @@ function OrderPanel({
     canTrade: boolean;
     connection: ReturnType<typeof useConnection>["connection"];
     authority: string | null;
+    /** Real wallet address for informational reads — NOT nulled by geo-block. */
+    walletAddress: string | null;
+    /** Base-layer tx through whichever wallet the user has (from PerpsView). */
+    submitBase: (tx: Transaction) => Promise<string>;
     ensureReady: () => Promise<void>;
     signedIn: boolean;
     onLogin: () => void;
@@ -701,24 +727,30 @@ function OrderPanel({
     const [quote, setQuote] = useState<OpenQuote | null>(null);
     const [quoting, setQuoting] = useState(false);
     const [placing, setPlacing] = useState(false);
+    const [payAsset, setPayAsset] = useState<PayAsset>({ kind: "ledger" });
     const quoteSeq = useRef(0);
+
+    // Swap engine (same rails as quick-buy): Jupiter quote + swap tx, signed
+    // by the adapter or relayed for Swig.
+    const wallet = useWallet();
+    const { signAndSubmit } = useWalletSigning();
+    const getQuoteMutation = trpc.wallet.getQuote.useMutation();
+    const getSwapTxMutation = trpc.wallet.getSwapTransaction.useMutation();
 
     const long = direction === "long";
     const amount = Number(usd) || 0;
     // Wallet assets for the pay-with dropdown (Phantom's "You Pay" selector).
+    // Keyed to the real wallet address so holdings show even under geo-block.
     const assets = trpc.wallet.getWalletAssets.useQuery(
-        { address: authority ?? undefined },
-        { enabled: signedIn && !!authority, staleTime: 60_000 },
+        { address: walletAddress ?? undefined },
+        { enabled: signedIn && !!walletAddress, staleTime: 60_000 },
     );
-    const walletAssets = (assets.data?.tokens ?? []) as {
-        mint: string;
-        symbol: string;
-        icon?: string;
-        balance: number;
-    }[];
+    const walletAssets = ((assets.data?.tokens ?? []) as WalletAsset[]).filter((t) => t.balance > 0);
     const maxLev = market.maxLeverage;
     const balance = account?.ledgerUsdc ?? 0;
-    const insufficient = canTrade && !!account?.ready && amount > balance;
+    /** USD spendable through the selected source. */
+    const available = payAsset.kind === "ledger" ? balance : payAsset.usdValue ?? 0;
+    const insufficient = canTrade && !!account?.ready && amount > 0 && amount > available;
 
     // Live quote from the ER view, debounced against typing/slider drags.
     useEffect(() => {
@@ -753,6 +785,52 @@ function OrderPanel({
         if (amount < 1 || !authority) return;
         setPlacing(true);
         try {
+            // Paying from a wallet asset: swap → USDC (Jupiter, wallet-signed),
+            // then deposit the order's USD into the Flash ledger. Wallet USDC
+            // skips the swap. Ledger source skips both.
+            if (payAsset.kind === "wallet") {
+                if (!walletAddress) throw new Error("Connect a wallet first");
+                if (payAsset.mint !== USDC_MINT) {
+                    if (!payAsset.price || payAsset.price <= 0) {
+                        throw new Error(`No price for ${payAsset.symbol} — try USDC`);
+                    }
+                    toast(`Swapping ${payAsset.symbol} → USDC…`);
+                    // 1% buffer over spot so the output clears the deposit even
+                    // after slippage; leftover USDC dust stays in the wallet.
+                    const inputMint = payAsset.mint.endsWith("11111111111111111111111111111111111111111")
+                        ? WSOL_MINT
+                        : payAsset.mint;
+                    const inAmount = Math.ceil((amount / payAsset.price) * 1.01 * 10 ** payAsset.decimals);
+                    const jupQuote = await getQuoteMutation.mutateAsync({
+                        inputMint,
+                        outputMint: USDC_MINT,
+                        amount: inAmount,
+                        slippageBps: 100,
+                    });
+                    const { swapTransaction } = await getSwapTxMutation.mutateAsync({
+                        quoteResponse: jupQuote,
+                        userPublicKey: walletAddress,
+                        wrapAndUnwrapSol: true,
+                    });
+                    const { VersionedTransaction } = await import("@solana/web3.js");
+                    const swapTx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
+                    let swapSig: string;
+                    if (wallet.publicKey && wallet.sendTransaction) {
+                        swapSig = await wallet.sendTransaction(swapTx, connection);
+                    } else {
+                        swapSig = (await signAndSubmit({ transaction: swapTransaction })).signature;
+                    }
+                    await connection.confirmTransaction(swapSig, "confirmed");
+                }
+                toast(`Depositing $${fmtUsd(amount)} USDC…`);
+                await ensureReady();
+                const [{ prepareDeposit }, { PublicKey: PK }] = await Promise.all([
+                    import("@/lib/perps/flash"),
+                    import("@solana/web3.js"),
+                ]);
+                await submitBase(await prepareDeposit(connection, new PK(authority), amount));
+            }
+
             // First-time traders run the one-time setup (wallet-signed), then
             // every trade after this is session-signed — no wallet prompt.
             await ensureReady();
@@ -814,7 +892,7 @@ function OrderPanel({
             {/* Anatomy rows — Phantom's ticket */}
             <div className="mt-4 flex items-center justify-between px-1">
                 <span className="text-sm font-semibold text-zinc-500">Available to Trade</span>
-                <span className="text-sm font-bold tabular-nums text-white">${fmtUsd(balance)}</span>
+                <span className="text-sm font-bold tabular-nums text-white">${fmtUsd(available)}</span>
             </div>
             <div className="mt-1.5 flex items-center justify-between px-1">
                 <span className="text-sm font-semibold text-zinc-500">Order Type</span>
@@ -845,33 +923,36 @@ function OrderPanel({
                         triggerClassName="flex h-8 cursor-pointer items-center gap-1.5 rounded-full bg-white/[0.08] pl-1.5 pr-2 text-sm font-bold text-white transition-colors hover:bg-white/[0.12]"
                         trigger={
                             <>
-                                <span className="grid size-5 place-items-center overflow-hidden rounded-full bg-white/[0.1] text-[9px] font-extrabold text-zinc-300">
-                                    $
-                                </span>
-                                USDC
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={payAsset.kind === "ledger" ? USDC_ICON : payAsset.icon ?? USDC_ICON}
+                                    alt=""
+                                    className="size-5 shrink-0 rounded-full object-cover"
+                                />
+                                {payAsset.kind === "ledger" ? "USDC" : payAsset.symbol}
                                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
                             </>
                         }
                         items={[
                             {
-                                key: "usdc",
-                                onClick: () => {},
+                                key: "usdc-ledger",
+                                onClick: () => setPayAsset({ kind: "ledger" }),
                                 className: "justify-between gap-3 rounded-full px-3 cursor-pointer hover:bg-white/5",
                                 label: (
                                     <>
                                         <span className="flex items-center gap-2.5">
-                                            <span className="grid size-6 place-items-center rounded-full bg-white/[0.1] text-[10px] font-extrabold text-zinc-300">$</span>
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={USDC_ICON} alt="" className="size-6 shrink-0 rounded-full object-cover" />
                                             <span className="text-sm font-bold text-white">USDC</span>
                                         </span>
                                         <span className="text-sm font-semibold tabular-nums text-zinc-400">${fmtUsd(balance)}</span>
                                     </>
                                 ),
                             },
-                            ...(walletAssets ?? []).map((t) => ({
+                            ...walletAssets.map((t) => ({
                                 key: t.mint,
-                                onClick: () =>
-                                    toast(`Paying with ${t.symbol} is coming soon — trades draw from your USDC balance for now`),
-                                className: "justify-between gap-3 rounded-full px-3 cursor-pointer hover:bg-white/5 opacity-60",
+                                onClick: () => setPayAsset({ kind: "wallet", ...t }),
+                                className: "justify-between gap-3 rounded-full px-3 cursor-pointer hover:bg-white/5",
                                 label: (
                                     <>
                                         <span className="flex min-w-0 items-center gap-2.5">
@@ -898,8 +979,8 @@ function OrderPanel({
             <div className="mt-3">
                 <AnimatedSlider
                     label="Size"
-                    value={balance > 0 ? Math.min(100, Math.round((amount / balance) * 100)) : 0}
-                    onChange={(v) => balance > 0 && setUsd(String(Math.floor(balance * v) / 100))}
+                    value={available > 0 ? Math.min(100, Math.round((amount / available) * 100)) : 0}
+                    onChange={(v) => available > 0 && setUsd(String(Math.floor(available * v) / 100))}
                     min={0}
                     max={100}
                     step={1}
@@ -932,7 +1013,9 @@ function OrderPanel({
 
             {insufficient && (
                 <p className="mt-3 rounded-md bg-sunset/10 px-4 py-2.5 text-[12px] font-semibold text-sunset">
-                    That&apos;s more than your ${fmtUsd(balance)} trading balance — deposit USDC first.
+                    {payAsset.kind === "ledger"
+                        ? `That's more than your $${fmtUsd(balance)} trading balance — deposit USDC first.`
+                        : `That's more than your ${payAsset.symbol} is worth (~$${fmtUsd(available)}).`}
                 </p>
             )}
 
