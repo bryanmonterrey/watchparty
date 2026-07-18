@@ -328,7 +328,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
-                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2 lg:flex">
+                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2 lg:flex">
                         {/* Inactive tabs carry the dark fill; the active tab is
                             transparent so it IS the body color at any opacity. */}
                         <div className="flex border-b border-white/[0.06]">
@@ -430,7 +430,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg border border-white/10 bg-panel1">
+                            <div className="overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel1">
                                 {market ? (
                                     <>
                                         {/* Market header — Phantom band: icon · symbol · Follow,
@@ -915,7 +915,7 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2">
+        <div className="flex flex-col overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
             <div className="flex border-b border-white/[0.06]">
                 {TERM_TABS.map((t) => (

@@ -56,7 +56,7 @@ export function PerpsSkeleton({ geoBlocked = false }: { geoBlocked?: boolean }) 
                 )}
                 <div className="mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:gap-2">
                     {/* Markets rail */}
-                    <div className="hidden overflow-hidden rounded-lg border border-white/10 bg-panel2 lg:block">
+                    <div className="hidden overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2 lg:block">
                         <TabStrip tabs={2} />
                         <Rows count={12} />
                     </div>
@@ -64,7 +64,7 @@ export function PerpsSkeleton({ geoBlocked = false }: { geoBlocked?: boolean }) 
                     {/* Center: chart + book, positions beneath */}
                     <div className="min-w-0 lg:flex lg:min-h-0 lg:flex-col">
                         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg border border-white/10 bg-panel1 p-4">
+                            <div className="overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel1 p-4">
                                 <div className="flex items-center gap-3">
                                     <div className="size-7 rounded-full bg-white/[0.06]" />
                                     <Bar className="h-5 w-24" />
@@ -77,12 +77,12 @@ export function PerpsSkeleton({ geoBlocked = false }: { geoBlocked?: boolean }) 
                                     <div className="size-full shimmer-skeleton" />
                                 </div>
                             </div>
-                            <div className="hidden overflow-hidden rounded-lg border border-white/10 bg-panel2 lg:block">
+                            <div className="hidden overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2 lg:block">
                                 <TabStrip tabs={2} />
                                 <Rows count={11} />
                             </div>
                         </div>
-                        <div className="mt-2 hidden overflow-hidden rounded-lg border border-white/10 bg-panel2 lg:block">
+                        <div className="mt-2 hidden overflow-hidden rounded-lg ring-1 ring-white/10 bg-panel2 lg:block">
                             <TabStrip tabs={4} />
                             <div className="min-h-[240px] p-2">
                                 <Rows count={2} />
