@@ -539,14 +539,14 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             <button
                                 onClick={() => canTrade && setManaging("deposit")}
                                 disabled={!canTrade}
-                                className="mt-4 h-16 w-full cursor-pointer rounded-full bg-white text-base font-bold text-black transition-colors hover:bg-white/90 disabled:cursor-default disabled:opacity-40"
+                                className="mt-4 h-14 w-full cursor-pointer rounded-full bg-white text-base font-bold text-black transition-colors hover:bg-white/90 disabled:cursor-default disabled:opacity-40"
                             >
                                 Deposit
                             </button>
                             <button
                                 onClick={() => canTrade && setManaging("withdraw")}
                                 disabled={!canTrade || (account?.ledgerUsdc ?? 0) <= 0}
-                                className="mt-2 h-16 w-full cursor-pointer rounded-full bg-white/[0.06] text-base font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-default disabled:opacity-40"
+                                className="mt-2 h-14 w-full cursor-pointer rounded-full bg-white/[0.06] text-base font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-default disabled:opacity-40"
                             >
                                 Withdraw
                             </button>
@@ -865,7 +865,7 @@ function OrderPanel({
             {!signedIn ? (
                 <button
                     onClick={onLogin}
-                    className="mt-4 flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-base font-extrabold text-black transition-colors hover:bg-white/90"
+                    className="mt-4 flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-base font-extrabold text-black transition-colors hover:bg-white/90"
                 >
                     <Star2Icon fill="black" className="size-4" />
                     Login
@@ -875,7 +875,7 @@ function OrderPanel({
                     onClick={place}
                     disabled={placing || !canTrade || amount < 1 || insufficient || !quote}
                     className={cn(
-                        "mt-4 h-16 w-full cursor-pointer rounded-full text-base font-extrabold transition-colors disabled:opacity-40",
+                        "mt-4 h-14 w-full cursor-pointer rounded-full text-base font-extrabold transition-colors disabled:opacity-40",
                         long ? "bg-white text-black hover:bg-white/90" : "bg-pastelred text-white hover:bg-pastelred/90",
                     )}
                 >
