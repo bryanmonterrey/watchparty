@@ -324,7 +324,10 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
 
                 {/* Column widths measured off docs/perpsterminal.png @1440:
                     rail 320 / chart flex / book 320 / ticket 320, 8px gutters. */}
-                <div className="mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:gap-2">
+                {/* grid-rows pins the single row to the container height —
+                    without it the row auto-sizes to the tallest column, the
+                    page outgrows the viewport, and the whole thing scrolls. */}
+                <div className="mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:grid-rows-[minmax(0,1fr)] lg:gap-2">
                     {/* Markets rail — desktop. Tokens|Perps|Follows switch the
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
@@ -502,8 +505,8 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
                     </div>
 
-                    {/* Order panel */}
-                    <aside className="mt-3 lg:mt-0 lg:flex lg:min-h-0 lg:flex-col">
+                    {/* Order panel — scrolls internally if taller than the row */}
+                    <aside className="mt-3 lg:mt-0 lg:flex lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:[scrollbar-width:none]">
                         {market && (
                             <OrderPanel
                                 key={market.symbol}
@@ -975,8 +978,9 @@ function OrderPanel({
                 </div>
             </div>
 
-            {/* Size as % of available balance — Phantom's first slider */}
-            <div className="mt-3">
+            {/* Size as % of available balance — Phantom's first slider.
+                Nothing to size against => visibly disabled, not silently inert. */}
+            <div className={cn("mt-3", available <= 0 && "pointer-events-none opacity-40")}>
                 <AnimatedSlider
                     label="Size"
                     value={available > 0 ? Math.min(100, Math.round((amount / available) * 100)) : 0}

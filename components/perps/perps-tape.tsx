@@ -1,6 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { cn } from "@/lib/utils";
 
 // Book column, Phantom-anatomy: Order Book | Trades tabs.
@@ -41,25 +44,31 @@ function seeded(seed: number): number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
-/** Price grid step ~1bp of price, snapped to a clean decimal. */
-function tickOf(price: number): number {
-    const raw = price / 10_000;
-    const mag = 10 ** Math.floor(Math.log10(raw));
-    return Math.max(mag, Math.round(raw / mag) * mag);
+/** Smallest clean grouping step for a price (BTC → 1, SOL → 0.001). */
+function baseStepOf(price: number): number {
+    return 10 ** Math.floor(Math.log10(Math.max(price * 1e-4, 1e-9)));
 }
+
+/** Grouping choices, Phantom-style: base × 1 / 10 / 100 / 1000. */
+const GROUP_MULTS = [1, 10, 100, 1000] as const;
+
+const fmtStep = (n: number) =>
+    n >= 1000 ? n.toLocaleString() : parseFloat(n.toPrecision(6)).toString();
 
 const LEVELS = 9;
 
 type Level = { price: number; size: number; total: number };
 
-/** Build one side of the ladder walking away from the mark. */
+/** Build one side of the ladder walking away from the mark, snapped to the
+ *  grouping grid so levels read as clean steps (64,440 / 64,450 …). */
 function ladder(mark: number, tick: number, dir: 1 | -1): Level[] {
     const out: Level[] = [];
+    const center = Math.round(mark / tick);
     let total = 0;
     for (let i = 1; i <= LEVELS; i++) {
-        const price = mark + dir * i * tick;
+        const slot = center + dir * i;
+        const price = slot * tick;
         // Seed by absolute grid slot so sizes don't reshuffle every render.
-        const slot = Math.round(price / tick);
         const notional = 800 + seeded(slot * 2 + (dir > 0 ? 1 : 0)) * 24_000 * (1 + i / LEVELS);
         const size = notional / mark;
         total += size;
@@ -79,6 +88,10 @@ export function PerpsTape({
 }) {
     const [tab, setTab] = React.useState<TapeTab>("book");
     const [prints, setPrints] = React.useState<Print[]>([]);
+    // Grouping multiplier over the market's base step (default ×10 — matches
+    // Phantom's default of "10" on BTC). Resets when the market changes.
+    const [groupMult, setGroupMult] = React.useState<number>(10);
+    React.useEffect(() => setGroupMult(10), [pythTicker]);
 
     React.useEffect(() => {
         let alive = true;
@@ -106,7 +119,7 @@ export function PerpsTape({
         };
     }, [pythTicker]);
 
-    const tick = tickOf(livePrice || 1);
+    const tick = baseStepOf(livePrice || 1) * groupMult;
     const asks = React.useMemo(
         () => (livePrice ? ladder(livePrice, tick, 1).reverse() : []),
         [livePrice, tick],
@@ -128,7 +141,7 @@ export function PerpsTape({
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "flex-1 cursor-pointer py-2.5 text-base font-bold transition-colors first:border-r first:border-white/[0.06]",
+                            "flex-1 cursor-pointer py-2.5 text-base font-bold transition-colors",
                             tab === t ? "text-white" : "bg-panel1 text-zinc-500 hover:text-white",
                         )}
                     >
@@ -153,11 +166,37 @@ export function PerpsTape({
                             {asks.map((l) => (
                                 <LadderRow key={l.price} level={l} maxTotal={maxTotal} side="ask" />
                             ))}
-                            <div className="my-0.5 flex items-center justify-between bg-white/[0.04] px-3 py-1.5">
+                            <div className="my-0.5 flex items-center justify-between bg-white/[0.04] px-3 py-1">
                                 <span className="text-sm font-bold text-zinc-500">Spread</span>
-                                <span className="text-sm font-bold tabular-nums text-zinc-300">
-                                    {fmtPrice(tick)}
-                                </span>
+                                <GooDropdown
+                                    align="end"
+                                    side="bottom"
+                                    width={140}
+                                    gap={8}
+                                    fill="#101011"
+                                    panelRadius={16}
+                                    itemHeight={40}
+                                    triggerAriaLabel="Group prices by"
+                                    triggerClassName="flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-sm font-bold tabular-nums text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+                                    trigger={
+                                        <>
+                                            {fmtStep(tick)}
+                                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                                        </>
+                                    }
+                                    items={GROUP_MULTS.map((m) => {
+                                        const step = baseStepOf(livePrice || 1) * m;
+                                        return {
+                                            key: String(m),
+                                            onClick: () => setGroupMult(m),
+                                            className: cn(
+                                                "rounded-full px-4 cursor-pointer text-sm font-bold tabular-nums hover:bg-white/5",
+                                                m === groupMult ? "text-white" : "text-zinc-400",
+                                            ),
+                                            label: <>{fmtStep(step)}</>,
+                                        };
+                                    })}
+                                />
                                 <span className="text-sm font-semibold tabular-nums text-zinc-500">
                                     {((tick / livePrice) * 100).toFixed(3)}%
                                 </span>
