@@ -170,7 +170,7 @@
      panel1 = base/chrome (tab strips, chart, ticket); panel2 = raised body +
      active-tab fill (active tab merges seamlessly into the body). */
   --color-panel1: #0D0D0D;
-  --color-panel2: #161616;
+  --color-panel2: #191919;
   /* Trade-direction accents (perps Long/Short tabs). */
   --color-long: #33FDA1;
   --color-short: #FFA3AC;
