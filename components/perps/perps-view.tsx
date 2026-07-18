@@ -335,7 +335,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                     key={t}
                                     onClick={() => setRailTab(t)}
                                     className={cn(
-                                        "flex-1 cursor-pointer py-3 text-[13px] font-bold capitalize transition-colors",
+                                        "flex-1 cursor-pointer py-3 text-base font-bold capitalize transition-colors",
                                         i < 1 && "border-r border-white/[0.06]",
                                         railTab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
                                     )}
@@ -364,7 +364,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                 const coins = followedTokens.data ?? [];
                                 if (!followedTokens.isLoading && followedMarkets.length === 0 && coins.length === 0) {
                                     return (
-                                        <p className="px-2.5 py-6 text-center text-[12px] font-medium text-zinc-600">
+                                        <p className="px-2.5 py-6 text-center text-sm font-medium text-zinc-600">
                                             Nothing followed yet — hit Follow on a market, or follow creators to see their coins.
                                         </p>
                                     );
@@ -436,13 +436,13 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             Oracle (latest Pyth benchmark print). */}
                                         <div className="flex flex-wrap items-center gap-3 px-4 pb-1 pt-3.5">
                                             <span className="size-7 shrink-0 rounded-full bg-white/[0.08]" />
-                                            <h2 className="text-[20px] font-extrabold tracking-tight text-white">
+                                            <h2 className="text-[20px] font-semibold tracking-tight text-white">
                                                 {market.symbol}
                                             </h2>
                                             <button
                                                 onClick={() => toggleFollow(market.symbol)}
                                                 className={cn(
-                                                    "cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-colors",
+                                                    "cursor-pointer rounded-full px-3.5 py-2.5 text-base font-semibold transition-colors",
                                                     perpFollows.has(market.symbol)
                                                         ? "bg-white text-black hover:bg-white/90"
                                                         : "bg-white/[0.08] text-white hover:bg-white/[0.12]",
@@ -452,13 +452,13 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             </button>
                                             <div className="ml-auto flex gap-10 text-right">
                                                 <div>
-                                                    <p className="text-[12px] font-semibold text-zinc-500">Mark</p>
+                                                    <p className="text-sm font-semibold text-zinc-500">Mark</p>
                                                     <p className="text-[15px] font-bold tabular-nums text-white">
                                                         ${fmtPrice(market.price)}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[12px] font-semibold text-zinc-500">Oracle</p>
+                                                    <p className="text-sm font-semibold text-zinc-500">Oracle</p>
                                                     <p className="text-[15px] font-bold tabular-nums text-white">
                                                         {oraclePrice !== null ? `$${fmtPrice(oraclePrice)}` : "—"}
                                                     </p>
@@ -921,8 +921,8 @@ function TerminalTabs({
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "flex-1 cursor-pointer truncate py-2.5 text-[12px] font-bold transition-colors",
-                            i < TERM_TABS.length - 1 && "border-r border-white/[0.06]",
+                            "flex-1 cursor-pointer truncate py-2.5 text-sm font-bold transition-colors",
+                            i < TERM_TABS.length - 1 && "",
                             tab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
@@ -962,8 +962,8 @@ function TerminalTabs({
 function TermEmpty({ title, sub }: { title: string; sub: string }) {
     return (
         <div className="flex min-h-[200px] flex-col items-center justify-center py-4 text-center">
-            <p className="text-[13px] font-bold text-zinc-400">{title}</p>
-            <p className="mt-0.5 text-[12px] font-medium text-zinc-600">{sub}</p>
+            <p className="text-base font-bold text-zinc-400">{title}</p>
+            <p className="mt-0.5 text-sm font-medium text-zinc-600">{sub}</p>
         </div>
     );
 }
@@ -973,17 +973,17 @@ function FillRow({ fill: f }: { fill: TradeFill }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md px-3 py-2 transition-colors hover:bg-white/[0.03]">
             <div className="flex items-center gap-2.5">
-                <span className={cn("text-[12px] font-extrabold", long ? "text-lantern" : "text-pastelred")}>
+                <span className={cn("text-sm font-extrabold", long ? "text-lantern" : "text-pastelred")}>
                     {long ? "Long" : "Short"}
                 </span>
-                <span className="text-[13px] font-bold text-white">{f.symbol}</span>
-                <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-extrabold text-zinc-500">
+                <span className="text-sm font-bold text-white">{f.symbol}</span>
+                <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-xs font-extrabold text-zinc-500">
                     {f.kind === "open" ? "Open" : "Close"}
                 </span>
             </div>
             <div className="flex items-center gap-4 tabular-nums">
                 {f.kind === "close" && f.pnlUsd !== undefined && (
-                    <span className={cn("text-[12px] font-bold", f.pnlUsd >= 0 ? "text-lantern" : "text-pastelred")}>
+                    <span className={cn("text-sm font-bold", f.pnlUsd >= 0 ? "text-lantern" : "text-pastelred")}>
                         {f.pnlUsd >= 0 ? "+" : "−"}${fmtUsd(Math.abs(f.pnlUsd))}
                     </span>
                 )}

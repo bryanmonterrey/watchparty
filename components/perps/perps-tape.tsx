@@ -128,7 +128,7 @@ export function PerpsTape({
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "flex-1 cursor-pointer py-2.5 text-[12px] font-bold transition-colors first:border-r first:border-white/[0.06]",
+                            "flex-1 cursor-pointer py-2.5 text-base font-bold transition-colors first:border-r first:border-white/[0.06]",
                             tab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
@@ -138,7 +138,7 @@ export function PerpsTape({
             </div>
 
             {/* Column header */}
-            <div className="flex items-center justify-between px-3 pb-1 pt-2 text-[11px] font-semibold text-zinc-600">
+            <div className="flex items-center justify-between px-3 pb-1 pt-2 text-sm font-semibold text-zinc-600">
                 <span className="w-[34%]">Price</span>
                 <span className="w-[36%] text-right">Size ({symbol})</span>
                 <span className="w-[30%] text-right">{tab === "book" ? `Total (${symbol})` : "Time"}</span>
@@ -154,11 +154,11 @@ export function PerpsTape({
                                 <LadderRow key={l.price} level={l} maxTotal={maxTotal} side="ask" />
                             ))}
                             <div className="my-0.5 flex items-center justify-between bg-white/[0.04] px-3 py-1.5">
-                                <span className="text-[11px] font-bold text-zinc-500">Spread</span>
-                                <span className="text-[11px] font-bold tabular-nums text-zinc-300">
+                                <span className="text-sm font-bold text-zinc-500">Spread</span>
+                                <span className="text-sm font-bold tabular-nums text-zinc-300">
                                     {fmtPrice(tick)}
                                 </span>
-                                <span className="text-[11px] font-semibold tabular-nums text-zinc-500">
+                                <span className="text-sm font-semibold tabular-nums text-zinc-500">
                                     {((tick / livePrice) * 100).toFixed(3)}%
                                 </span>
                             </div>
@@ -182,16 +182,16 @@ export function PerpsTape({
                                 <div key={p.time} className="flex items-center justify-between px-3 py-[4.5px]">
                                     <span
                                         className={cn(
-                                            "w-[34%] text-[12px] font-bold tabular-nums",
+                                            "w-[34%] text-sm font-bold tabular-nums",
                                             up ? "text-lantern" : "text-pastelred",
                                         )}
                                     >
                                         {fmtPrice(p.price)}
                                     </span>
-                                    <span className="w-[36%] text-right text-[12px] font-semibold tabular-nums text-zinc-300">
+                                    <span className="w-[36%] text-right text-sm font-semibold tabular-nums text-zinc-300">
                                         {fmtSize(size)}
                                     </span>
-                                    <span className="w-[30%] text-right text-[11px] font-semibold tabular-nums text-zinc-600">
+                                    <span className="w-[30%] text-right text-sm font-semibold tabular-nums text-zinc-600">
                                         {new Date(p.time).toLocaleTimeString(undefined, {
                                             hour: "2-digit",
                                             minute: "2-digit",
@@ -223,16 +223,16 @@ function LadderRow({ level, maxTotal, side }: { level: Level; maxTotal: number; 
             />
             <span
                 className={cn(
-                    "relative w-[34%] text-[12px] font-bold tabular-nums",
+                    "relative w-[34%] text-sm font-bold tabular-nums",
                     side === "ask" ? "text-pastelred" : "text-lantern",
                 )}
             >
                 {fmtPrice(level.price)}
             </span>
-            <span className="relative w-[36%] text-right text-[12px] font-semibold tabular-nums text-zinc-300">
+            <span className="relative w-[36%] text-right text-sm font-semibold tabular-nums text-zinc-300">
                 {fmtSize(level.size)}
             </span>
-            <span className="relative w-[30%] text-right text-[12px] font-semibold tabular-nums text-zinc-500">
+            <span className="relative w-[30%] text-right text-sm font-semibold tabular-nums text-zinc-500">
                 {fmtSize(level.total)}
             </span>
         </div>
