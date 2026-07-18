@@ -17,8 +17,9 @@ import {
 import { cn } from "@/lib/utils";
 
 // Candle chart for a perp market, fed by Pyth's benchmarks TradingView shim
-// (benchmarks.pyth.network — public, CORS *, no key). The same Pyth feeds
-// price the Flash oracles, so the chart matches what fills settle against.
+// via our caching proxy (/api/pyth-udf — direct browser calls tripped Pyth's
+// per-IP rate limit). The same Pyth feeds price the Flash oracles, so the
+// chart matches what fills settle against.
 //
 // Chrome mirrors the Phantom perps terminal, and every control works:
 // timeframes switch resolution, the candle icon toggles candles ⇄ line,
@@ -47,7 +48,7 @@ async function fetchCandles(pythTicker: string, tf: Timeframe): Promise<Candle[]
     const to = Math.floor(Date.now() / 1000);
     const from = to - secondsBack;
     const url =
-        `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
+        `/api/pyth-udf/history` +
         `?symbol=${encodeURIComponent(pythTicker)}&resolution=${resolution}&from=${from}&to=${to}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`benchmarks ${res.status}`);
@@ -212,7 +213,9 @@ export function PerpsChart({
                 setLegend(candles[candles.length - 1] ?? null);
                 if (fit) chartRef.current.timeScale().fitContent();
             } catch {
-                if (alive) setEmpty(true);
+                // A failed refresh keeps the last candles — only claim "no
+                // data" when there's actually nothing on screen.
+                if (alive) setEmpty(candlesRef.current.length === 0);
             }
         };
         candlesRef.current = [];

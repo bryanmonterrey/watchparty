@@ -101,7 +101,7 @@ export function PerpsTape({
                 const to = Math.floor(Date.now() / 1000);
                 const from = to - 45 * 60;
                 const res = await fetch(
-                    `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
+                    `/api/pyth-udf/history` +
                     `?symbol=${encodeURIComponent(pythTicker)}&resolution=1&from=${from}&to=${to}`,
                 );
                 const d = (await res.json()) as { s: string; t: number[]; c: number[] };

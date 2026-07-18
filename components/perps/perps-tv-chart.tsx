@@ -5,14 +5,14 @@ import { loadScript } from "@/components/tokens/token-tradingview-chart";
 import { PerpsChart } from "@/components/perps/perps-chart";
 
 // TradingView Advanced Charts for perps — same self-hosted library as the
-// token page, but fed by Pyth's UDF-compatible TradingView shim
-// (benchmarks.pyth.network), the exact feed Flash fills settle against.
+// token page, but fed by Pyth's UDF-compatible TradingView shim via our
+// caching proxy (/api/pyth-udf), the exact feed Flash fills settle against.
 // If the licensed library files aren't installed, falls back to the
 // lightweight-charts PerpsChart so the terminal always has a chart.
 
 const LIBRARY_SCRIPT = "/charting_library/charting_library.standalone.js";
 const DATAFEED_SCRIPT = "/datafeeds/udf/dist/bundle.js";
-const PYTH_UDF = "https://benchmarks.pyth.network/v1/shims/tradingview";
+const PYTH_UDF = "/api/pyth-udf";
 
 const UP = "#00ED89"; // lantern
 const DOWN = "#FF746C"; // pastelred

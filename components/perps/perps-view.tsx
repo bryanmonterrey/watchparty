@@ -97,7 +97,7 @@ function useOraclePrice(pythTicker: string | undefined) {
             try {
                 const to = Math.floor(Date.now() / 1000);
                 const res = await fetch(
-                    `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
+                    `/api/pyth-udf/history` +
                     `?symbol=${encodeURIComponent(pythTicker)}&resolution=1&from=${to - 300}&to=${to}`,
                 );
                 const d = (await res.json()) as { s: string; c: number[] };
