@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TradeUpIcon, TradeDownIcon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { TradeUpIcon, TradeDownIcon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { Star2Icon } from "@/components/icons";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
@@ -144,6 +144,41 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const [managing, setManaging] = useState<false | "deposit" | "withdraw">(false);
     const [fills, setFills] = useState<TradeFill[]>([]);
     const [railTab, setRailTab] = useState<"perps" | "follows">("perps");
+    // Panel geometry — collapse toggle for the rail + drag-resizable chart
+    // band (the splitter under chart/book), both persisted per browser.
+    const [railCollapsed, setRailCollapsed] = useState<boolean>(() => {
+        if (typeof localStorage === "undefined") return false;
+        return localStorage.getItem("perps-rail-collapsed") === "1";
+    });
+    const [chartH, setChartH] = useState<number>(() => {
+        if (typeof localStorage === "undefined") return 420;
+        const saved = Number(localStorage.getItem("perps-chart-h"));
+        return saved >= 240 && saved <= 720 ? saved : 420;
+    });
+    const toggleRail = useCallback(() => {
+        setRailCollapsed((c) => {
+            localStorage.setItem("perps-rail-collapsed", c ? "0" : "1");
+            return !c;
+        });
+    }, []);
+    const startBandResize = useCallback((e: React.PointerEvent) => {
+        e.preventDefault();
+        const startY = e.clientY;
+        const startH = chartH;
+        const move = (ev: PointerEvent) => {
+            const next = Math.max(240, Math.min(720, startH + ev.clientY - startY));
+            setChartH(next);
+        };
+        const up = () => {
+            window.removeEventListener("pointermove", move);
+            setChartH((h) => {
+                localStorage.setItem("perps-chart-h", String(h));
+                return h;
+            });
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up, { once: true });
+    }, [chartH]);
     const [perpFollows, toggleFollow] = usePerpFollows();
     const followedTokens = trpc.trade.getFollowedTokens.useQuery(undefined, {
         enabled: railTab === "follows" && !!session?.user,
@@ -159,6 +194,8 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     const market = markets.find((m) => m.symbol === selected) ?? null;
     const oraclePrice = useOraclePrice(market?.pythTicker);
     const canTrade = !!authority;
+    // Desktop-only chart-height override (ssr:false, so window exists).
+    const [isLg] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches);
 
     const change24h = useCallback(
         (m: PerpMarketRow) => {
@@ -307,14 +344,14 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
         <ScrollArea className="h-full bg-background">
             <div className="mx-auto flex max-w-[1440px] flex-col px-2 pb-4 pt-2 md:pt-(--header-height) lg:h-dvh lg:pb-2">
                 {geoBlocked && (
-                    <div className="mt-2 flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-4 py-2.5">
+                    <div className=" flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-4 py-2.5">
                         <p className="text-center text-[13px] font-semibold text-sunset">
                             Access to this product isn&apos;t available in your region. Prices and markets stay visible.
                         </p>
                     </div>
                 )}
                 {!canTrade && !geoBlocked && session?.user && (
-                    <div className="mt-2 rounded-md bg-panel1 px-4 py-3 border border-white/5">
+                    <div className="rounded-md bg-panel1 px-4 py-3 border border-white/5">
                         <p className="text-[14px] font-bold text-white">Connect a wallet to trade</p>
                         <p className="mt-0.5 text-[13px] font-medium text-zinc-500">
                             Your watchparty wallet or any extension wallet works.
@@ -327,12 +364,19 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                 {/* grid-rows pins the single row to the container height —
                     without it the row auto-sizes to the tallest column, the
                     page outgrows the viewport, and the whole thing scrolls. */}
-                <div className="mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:grid-rows-[minmax(0,1fr)] lg:gap-2">
+                <div
+                    className={cn(
+                        "mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:gap-2",
+                        railCollapsed
+                            ? "lg:grid-cols-[minmax(0,1fr)_320px]"
+                            : "lg:grid-cols-[320px_minmax(0,1fr)_320px]",
+                    )}
+                >
                     {/* Markets rail — desktop. Tokens|Perps|Follows switch the
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
-                    <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/5 bg-panel2 lg:flex">
+                    <aside className={cn("hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/5 bg-panel2", !railCollapsed && "lg:flex")}>
                         {/* Inactive tabs carry the dark fill; the active tab is
                             transparent so it IS the body color at any opacity. */}
                         <div className="flex">
@@ -434,13 +478,25 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         </div>
 
                         <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="overflow-hidden rounded-lg border border-white/5 bg-panel1">
+                            <div className="relative overflow-hidden rounded-lg border border-white/5 bg-panel1">
+                                {/* Rail collapse toggle — Phantom's edge tab */}
+                                <button
+                                    onClick={toggleRail}
+                                    aria-label={railCollapsed ? "Show markets" : "Hide markets"}
+                                    className="absolute left-0 top-4 z-10 hidden h-9 w-4 cursor-pointer items-center justify-center rounded-r-md bg-white/[0.06] text-zinc-500 transition-colors hover:bg-white/[0.1] hover:text-white lg:flex"
+                                >
+                                    <HugeiconsIcon
+                                        icon={railCollapsed ? ArrowRight01Icon : ArrowLeft01Icon}
+                                        className="size-3"
+                                        strokeWidth={2.5}
+                                    />
+                                </button>
                                 {market ? (
                                     <>
                                         {/* Market header — Phantom band: icon · symbol · Follow,
                                             then Mark (live ER price, what fills settle at) and
                                             Oracle (latest Pyth benchmark print). */}
-                                        <div className="flex flex-wrap items-center gap-3 px-4 pb-1 pt-3.5">
+                                        <div className="flex flex-wrap items-center gap-3 px-4 pb-1 pt-3.5 lg:pl-6">
                                             {market.iconUrl ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img src={market.iconUrl} alt="" className="size-7 shrink-0 rounded-full object-cover" />
@@ -479,6 +535,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                         <PerpsTVChart
                                             pythTicker={market.pythTicker}
                                             symbol={`${market.symbol}-PERP`}
+                                            height={isLg ? chartH : undefined}
                                             className="px-2 pb-2 pt-1"
                                         />
                                     </>
@@ -499,8 +556,18 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             </div>
                         </div>
 
+                        {/* Splitter — drag to trade height between the chart/book
+                            band and the positions strip */}
+                        <div
+                            onPointerDown={startBandResize}
+                            aria-label="Resize chart"
+                            className="group hidden h-2 shrink-0 cursor-row-resize items-center lg:flex"
+                        >
+                            <div className="h-px w-full bg-white/5 transition-colors group-hover:bg-white/25 group-active:bg-white/25" />
+                        </div>
+
                         {/* Positions / Trades / Funding / Order History — desktop */}
-                        <div className="mt-2 max-lg:hidden">
+                        <div className="max-lg:hidden">
                             <TerminalTabs positions={positions} fills={fills} markets={markets} onClose={closeRow} />
                         </div>
                     </div>

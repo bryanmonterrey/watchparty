@@ -22,10 +22,13 @@ type LoadState = "loading" | "ready" | "missing";
 export function PerpsTVChart({
     pythTicker,
     symbol,
+    height,
     className,
 }: {
     pythTicker: string;
     symbol?: string;
+    /** Chart-area height in px (drag-resizable); defaults to responsive classes. */
+    height?: number;
     className?: string;
 }) {
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -90,12 +93,15 @@ export function PerpsTVChart({
     }, [pythTicker]);
 
     if (state === "missing") {
-        return <PerpsChart pythTicker={pythTicker} symbol={symbol} className={className} />;
+        return <PerpsChart pythTicker={pythTicker} symbol={symbol} height={height} className={className} />;
     }
 
     return (
         <div className={className}>
-            <div className="relative h-[280px] w-full sm:h-[420px]">
+            <div
+                className={height ? "relative w-full" : "relative h-[280px] w-full sm:h-[420px]"}
+                style={height ? { height } : undefined}
+            >
                 <div ref={containerRef} className="absolute inset-0" />
                 {state !== "ready" && (
                     <div className="absolute inset-0 overflow-hidden">

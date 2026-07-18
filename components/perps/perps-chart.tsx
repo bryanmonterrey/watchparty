@@ -83,10 +83,13 @@ const legendFmt = (n: number) => {
 export function PerpsChart({
     pythTicker,
     symbol,
+    height,
     className,
 }: {
     pythTicker: string;
     symbol?: string;
+    /** Chart-area height in px (drag-resizable); defaults to responsive classes. */
+    height?: number;
     className?: string;
 }) {
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -307,7 +310,10 @@ export function PerpsChart({
                 </button>
             </div>
 
-            <div className="relative h-[280px] w-full sm:h-[420px]">
+            <div
+                className={cn("relative w-full", !height && "h-[280px] sm:h-[420px]")}
+                style={height ? { height } : undefined}
+            >
                 <div ref={containerRef} className="absolute inset-0" />
 
                 {/* TV-style legend overlay — always shown so the market is
