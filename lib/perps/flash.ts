@@ -255,15 +255,49 @@ function resolveMarket(flash: FlashSdk, venue: Venue, symbol: PerpSymbol, direct
     if (!def) throw new Error(`Unknown market ${symbol}`);
     const pool = venue.pools.get(def.pool)!;
     const side = direction === "long" ? flash.Side.Long : flash.Side.Short;
-    // Longs may lock a wrapped/LST variant (e.g. SOL longs lock JitoSOL) —
-    // the client resolves the effective lock symbol; shorts lock USDC.
-    const lockSymbol = venue.client.resolveCollateralSymbol(
-        symbol,
-        direction === "long" ? symbol : "USDC",
-        side,
-    );
-    const marketConfig = venue.client.findMarketConfig(pool, symbol, lockSymbol, side);
-    const target = pool.custodies.find((c) => c.symbol === symbol)!;
+    const target = pool.custodies.find((c) => c.symbol === symbol);
+    if (!target) throw new Error(`No custody for ${symbol}`);
+
+    // Canonical path: SDK-resolved collateral (SOL longs lock JitoSOL etc.).
+    let lockSymbol: string | null = null;
+    let marketConfig: MarketConfig | null = null;
+    try {
+        const ls = venue.client.resolveCollateralSymbol(
+            symbol,
+            direction === "long" ? symbol : "USDC",
+            side,
+        );
+        const mc = venue.client.findMarketConfig(pool, symbol, ls, side);
+        if (mc) {
+            lockSymbol = ls;
+            marketConfig = mc;
+        }
+    } catch {
+        /* fall through to the market table */
+    }
+
+    // Table path: many longs lock a DESIGNATED collateral that isn't the
+    // target and isn't LST-derivable — XRP longs lock BTC, equities lock SPY,
+    // gold locks XAUt, ADA locks USDC. The pool's market list is the source
+    // of truth, so read the collateral custody straight from it. (Without
+    // this, 56 of the 72 catalog markets silently failed to resolve.)
+    if (!marketConfig) {
+        const wantLong = direction === "long";
+        const sideMatches = (s: unknown) =>
+            typeof s === "string"
+                ? (s === "long") === wantLong
+                : !!s && typeof s === "object" && ("long" in (s as Record<string, unknown>)) === wantLong;
+        const mc = pool.markets.find(
+            (m) => m.targetCustodyId === target.custodyId && sideMatches(m.side),
+        );
+        const lock = mc && pool.custodies.find((c) => c.custodyId === mc.collateralCustodyId);
+        if (mc && lock) {
+            lockSymbol = lock.symbol;
+            marketConfig = mc;
+        }
+    }
+
+    if (!marketConfig || !lockSymbol) throw new Error(`No ${direction} market for ${symbol}`);
     return { pool, side, lockSymbol, marketConfig, target };
 }
 

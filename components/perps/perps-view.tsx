@@ -746,15 +746,15 @@ function OrderPanel({
     };
 
     return (
-        <div className="overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
-            {/* Direction — segmented like the terminal's other tab strips;
-                active side gets a very light white wash + its accent color. */}
-            <div className="flex border-b border-white/[0.06]">
+        <div className="rounded-lg bg-panel p-4 ring-1 ring-white/10">
+            {/* Direction — rounded pills; active side gets a very light white
+                wash + its accent color. */}
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
                 <button
                     onClick={() => setDirection("long")}
                     className={cn(
-                        "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 border-r border-white/[0.06] text-[14px] font-extrabold transition-colors",
-                        long ? "bg-white/[0.04] text-long" : "text-zinc-500 hover:text-white",
+                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
+                        long ? "bg-white/[0.08] text-long" : "text-zinc-500 hover:text-white",
                     )}
                 >
                     <HugeiconsIcon icon={TradeUpIcon} className="size-4" strokeWidth={2.5} />
@@ -763,8 +763,8 @@ function OrderPanel({
                 <button
                     onClick={() => setDirection("short")}
                     className={cn(
-                        "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 text-[14px] font-extrabold transition-colors",
-                        !long ? "bg-white/[0.04] text-short" : "text-zinc-500 hover:text-white",
+                        "flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-full text-[14px] font-extrabold transition-colors",
+                        !long ? "bg-white/[0.08] text-short" : "text-zinc-500 hover:text-white",
                     )}
                 >
                     <HugeiconsIcon icon={TradeDownIcon} className="size-4" strokeWidth={2.5} />
@@ -772,7 +772,6 @@ function OrderPanel({
                 </button>
             </div>
 
-            <div className="p-4 pt-0">
             {/* Amount */}
             <p className="mt-4 px-1 text-[12px] font-bold text-zinc-500">Collateral (USDC)</p>
             <div className="relative mt-1.5">
@@ -860,7 +859,6 @@ function OrderPanel({
                             : `${long ? "Long" : "Short"} ${market.symbol} · ${leverage}×`}
                 </button>
             )}
-            </div>
         </div>
     );
 }
