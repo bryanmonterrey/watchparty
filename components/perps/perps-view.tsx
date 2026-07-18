@@ -329,7 +329,9 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
                     <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2 lg:flex">
-                        <div className="flex border-b border-white/[0.06] bg-panel1">
+                        {/* Inactive tabs carry the dark fill; the active tab is
+                            transparent so it IS the body color at any opacity. */}
+                        <div className="flex border-b border-white/[0.06]">
                             {(["perps", "follows"] as const).map((t, i) => (
                                 <button
                                     key={t}
@@ -337,7 +339,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                     className={cn(
                                         "flex-1 cursor-pointer py-3 text-base font-bold capitalize transition-colors",
                                         i < 1 && "border-r border-white/[0.06]",
-                                        railTab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
+                                        railTab === t ? "text-white" : "bg-panel1 text-zinc-500 hover:text-white",
                                     )}
                                 >
                                     {t}
@@ -442,7 +444,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                             <button
                                                 onClick={() => toggleFollow(market.symbol)}
                                                 className={cn(
-                                                    "cursor-pointer rounded-full px-3.5 py-2.5 text-base font-semibold transition-colors",
+                                                    "cursor-pointer rounded-full px-3.5 py-2 text-base font-semibold transition-colors",
                                                     perpFollows.has(market.symbol)
                                                         ? "bg-white text-black hover:bg-white/90"
                                                         : "bg-white/[0.08] text-white hover:bg-white/[0.12]",
@@ -769,7 +771,7 @@ function OrderPanel({
                 <button
                     onClick={() => setDirection("long")}
                     className={cn(
-                        "flex h-10 cursor-pointer items-center justify-center rounded-full text-[14px] font-extrabold transition-colors",
+                        "flex h-11 cursor-pointer items-center justify-center rounded-full text-base font-extrabold transition-colors",
                         long ? "bg-white/[0.08] text-long" : "text-zinc-500 hover:text-white",
                     )}
                 >
@@ -778,7 +780,7 @@ function OrderPanel({
                 <button
                     onClick={() => setDirection("short")}
                     className={cn(
-                        "flex h-10 cursor-pointer items-center justify-center rounded-full text-[14px] font-extrabold transition-colors",
+                        "flex h-11 cursor-pointer items-center justify-center rounded-full text-base font-extrabold transition-colors",
                         !long ? "bg-white/[0.08] text-short" : "text-zinc-500 hover:text-white",
                     )}
                 >
@@ -915,15 +917,14 @@ function TerminalTabs({
     return (
         <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
-            <div className="flex border-b border-white/[0.06] bg-panel1">
-                {TERM_TABS.map((t, i) => (
+            <div className="flex border-b border-white/[0.06]">
+                {TERM_TABS.map((t) => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "flex-1 cursor-pointer truncate py-2.5 text-sm font-bold transition-colors",
-                            i < TERM_TABS.length - 1 && "",
-                            tab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
+                            "flex-1 cursor-pointer truncate py-2.5 text-base font-semibold transition-colors",
+                            tab === t ? "text-white" : "bg-panel1 text-zinc-500 hover:text-white",
                         )}
                     >
                         {labels[t]}

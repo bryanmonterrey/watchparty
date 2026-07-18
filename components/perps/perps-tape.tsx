@@ -122,14 +122,14 @@ export function PerpsTape({
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-panel2">
-            <div className="flex border-b border-white/[0.06] bg-panel1">
+            <div className="flex border-b border-white/[0.06]">
                 {(["book", "trades"] as const).map((t) => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
                             "flex-1 cursor-pointer py-2.5 text-base font-bold transition-colors first:border-r first:border-white/[0.06]",
-                            tab === t ? "bg-panel2 text-white" : "text-zinc-500 hover:text-white",
+                            tab === t ? "text-white" : "bg-panel1 text-zinc-500 hover:text-white",
                         )}
                     >
                         {t === "book" ? "Order Book" : "Trades"}
