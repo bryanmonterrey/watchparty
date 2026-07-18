@@ -477,7 +477,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             <div className="relative hidden lg:block">
                                 {market && (
                                     <div className="absolute inset-0">
-                                        <PerpsTape pythTicker={market.pythTicker} livePrice={market.price} />
+                                        <PerpsTape pythTicker={market.pythTicker} symbol={market.symbol} livePrice={market.price} />
                                     </div>
                                 )}
                             </div>

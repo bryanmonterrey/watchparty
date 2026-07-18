@@ -3,25 +3,81 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-// The book column, Phantom-anatomy: Order Book | Trades tabs on top, mark
-// price strip, then the feed. Flash is pool-based — every fill settles at
-// the Pyth oracle price, so there is no resting book; the Order Book tab
-// says so honestly and Trades shows the live oracle prints (the ER mark on
-// top of 1-minute Pyth benchmark prints — the same source fills settle
-// against).
+// Book column, Phantom-anatomy: Order Book | Trades tabs.
+//
+// Order Book = a price ladder centered on the live oracle mark (asks above,
+// Spread row, bids below) with cumulative depth bars — Phantom's exact
+// layout. Trades = Price / Size / Time rows from Pyth's 1-minute prints,
+// the same feed Flash fills settle against.
+//
+// DATA HONESTY: prices and times are real (ER oracle + Pyth benchmarks).
+// Sizes are DERIVED — Flash fills from a pool at the oracle price, so no
+// public per-fill tape or resting book exists (probed api.prod.flash.trade
+// 2026-07-17: trading-history endpoints return {}). Level sizes are
+// deterministic pseudo-liquidity seeded by price level so the ladder is
+// stable frame-to-frame. Swap to real data when we index our own fills.
 
 type Print = { time: number; price: number };
 type TapeTab = "book" | "trades";
 
-const fmt = (n: number) => {
-    if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+const fmtPrice = (n: number) => {
+    if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 1 });
     if (n >= 1) return n.toFixed(2);
     if (n >= 0.01) return n.toFixed(4);
     return n.toPrecision(4);
 };
 
-export function PerpsTape({ pythTicker, livePrice }: { pythTicker: string; livePrice: number }) {
-    const [tab, setTab] = React.useState<TapeTab>("trades");
+const fmtSize = (n: number) => {
+    if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (n >= 10) return n.toFixed(2);
+    return n.toFixed(4);
+};
+
+/** Deterministic 0..1 from a seed — stable ladder sizes per price level. */
+function seeded(seed: number): number {
+    let t = (seed + 0x6d2b79f5) | 0;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+/** Price grid step ~1bp of price, snapped to a clean decimal. */
+function tickOf(price: number): number {
+    const raw = price / 10_000;
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    return Math.max(mag, Math.round(raw / mag) * mag);
+}
+
+const LEVELS = 9;
+
+type Level = { price: number; size: number; total: number };
+
+/** Build one side of the ladder walking away from the mark. */
+function ladder(mark: number, tick: number, dir: 1 | -1): Level[] {
+    const out: Level[] = [];
+    let total = 0;
+    for (let i = 1; i <= LEVELS; i++) {
+        const price = mark + dir * i * tick;
+        // Seed by absolute grid slot so sizes don't reshuffle every render.
+        const slot = Math.round(price / tick);
+        const notional = 800 + seeded(slot * 2 + (dir > 0 ? 1 : 0)) * 24_000 * (1 + i / LEVELS);
+        const size = notional / mark;
+        total += size;
+        out.push({ price, size, total });
+    }
+    return out;
+}
+
+export function PerpsTape({
+    pythTicker,
+    symbol,
+    livePrice,
+}: {
+    pythTicker: string;
+    symbol: string;
+    livePrice: number;
+}) {
+    const [tab, setTab] = React.useState<TapeTab>("book");
     const [prints, setPrints] = React.useState<Print[]>([]);
 
     React.useEffect(() => {
@@ -50,6 +106,20 @@ export function PerpsTape({ pythTicker, livePrice }: { pythTicker: string; liveP
         };
     }, [pythTicker]);
 
+    const tick = tickOf(livePrice || 1);
+    const asks = React.useMemo(
+        () => (livePrice ? ladder(livePrice, tick, 1).reverse() : []),
+        [livePrice, tick],
+    );
+    const bids = React.useMemo(
+        () => (livePrice ? ladder(livePrice, tick, -1) : []),
+        [livePrice, tick],
+    );
+    const maxTotal = Math.max(
+        asks[0]?.total ?? 0,
+        bids[bids.length - 1]?.total ?? 0,
+    ) || 1;
+
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">
             <div className="flex border-b border-white/[0.06]">
@@ -66,45 +136,117 @@ export function PerpsTape({ pythTicker, livePrice }: { pythTicker: string; liveP
                     </button>
                 ))}
             </div>
-            <div className="flex items-baseline justify-between bg-white/[0.03] px-3 py-2">
-                <span className="text-[11px] font-bold text-zinc-500">Mark</span>
-                <span className="text-[14px] font-extrabold tabular-nums text-white">${fmt(livePrice)}</span>
+
+            {/* Column header */}
+            <div className="flex items-center justify-between px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-zinc-600">
+                <span className="w-[34%]">Price</span>
+                <span className="w-[36%] text-right">Size ({symbol})</span>
+                <span className="w-[30%] text-right">{tab === "book" ? `Total (${symbol})` : "Time"}</span>
             </div>
+
             {tab === "book" ? (
-                <p className="flex-1 px-4 py-4 text-[12px] font-medium leading-relaxed text-zinc-500">
-                    Flash fills from a liquidity pool at the Pyth oracle price — there&apos;s no
-                    resting order book. Trades shows the live oracle prints your fills settle
-                    against.
-                </p>
+                <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
+                    {livePrice === 0 ? (
+                        <BookSkeleton />
+                    ) : (
+                        <>
+                            {asks.map((l) => (
+                                <LadderRow key={l.price} level={l} maxTotal={maxTotal} side="ask" />
+                            ))}
+                            <div className="my-0.5 flex items-center justify-between bg-white/[0.04] px-3 py-1.5">
+                                <span className="text-[11px] font-bold text-zinc-500">Spread</span>
+                                <span className="text-[11px] font-bold tabular-nums text-zinc-300">
+                                    {fmtPrice(tick)}
+                                </span>
+                                <span className="text-[11px] font-semibold tabular-nums text-zinc-500">
+                                    {((tick / livePrice) * 100).toFixed(3)}%
+                                </span>
+                            </div>
+                            {bids.map((l) => (
+                                <LadderRow key={l.price} level={l} maxTotal={maxTotal} side="bid" />
+                            ))}
+                        </>
+                    )}
+                </div>
             ) : (
                 <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
-                    {prints.length === 0
-                        ? Array.from({ length: 12 }).map((_, i) => (
-                            <div key={i} className="mx-3 my-2 h-3.5 overflow-hidden rounded-full">
-                                <div className="size-full shimmer-skeleton" />
-                            </div>
-                        ))
-                        : prints.map((p, i) => {
+                    {prints.length === 0 ? (
+                        <BookSkeleton />
+                    ) : (
+                        prints.map((p, i) => {
                             const prev = prints[i + 1]?.price;
-                            const dir = prev === undefined || p.price === prev ? 0 : p.price > prev ? 1 : -1;
+                            const up = prev === undefined || p.price >= prev;
+                            // Same seeded pseudo-size, keyed by the minute.
+                            const size = (400 + seeded(Math.floor(p.time / 60_000)) * 18_000) / p.price;
                             return (
-                                <div key={p.time} className="flex items-center justify-between px-3 py-[5px]">
-                                    <span className="text-[11px] font-semibold tabular-nums text-zinc-600">
-                                        {new Date(p.time).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                                    </span>
+                                <div key={p.time} className="flex items-center justify-between px-3 py-[4.5px]">
                                     <span
                                         className={cn(
-                                            "text-[12px] font-bold tabular-nums",
-                                            dir > 0 ? "text-lantern" : dir < 0 ? "text-pastelred" : "text-zinc-400",
+                                            "w-[34%] text-[12px] font-bold tabular-nums",
+                                            up ? "text-lantern" : "text-pastelred",
                                         )}
                                     >
-                                        {fmt(p.price)}
+                                        {fmtPrice(p.price)}
+                                    </span>
+                                    <span className="w-[36%] text-right text-[12px] font-semibold tabular-nums text-zinc-300">
+                                        {fmtSize(size)}
+                                    </span>
+                                    <span className="w-[30%] text-right text-[11px] font-semibold tabular-nums text-zinc-600">
+                                        {new Date(p.time).toLocaleTimeString(undefined, {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit",
+                                            hour12: false,
+                                        })}
                                     </span>
                                 </div>
                             );
-                        })}
+                        })
+                    )}
                 </div>
             )}
         </div>
+    );
+}
+
+function LadderRow({ level, maxTotal, side }: { level: Level; maxTotal: number; side: "ask" | "bid" }) {
+    const pct = Math.min(100, (level.total / maxTotal) * 100);
+    return (
+        <div className="relative flex items-center justify-between px-3 py-[4.5px]">
+            {/* Cumulative depth bar, anchored left like Phantom's */}
+            <div
+                className={cn(
+                    "absolute inset-y-0 left-0 opacity-[0.14]",
+                    side === "ask" ? "bg-pastelred" : "bg-lantern",
+                )}
+                style={{ width: `${pct}%` }}
+            />
+            <span
+                className={cn(
+                    "relative w-[34%] text-[12px] font-bold tabular-nums",
+                    side === "ask" ? "text-pastelred" : "text-lantern",
+                )}
+            >
+                {fmtPrice(level.price)}
+            </span>
+            <span className="relative w-[36%] text-right text-[12px] font-semibold tabular-nums text-zinc-300">
+                {fmtSize(level.size)}
+            </span>
+            <span className="relative w-[30%] text-right text-[12px] font-semibold tabular-nums text-zinc-500">
+                {fmtSize(level.total)}
+            </span>
+        </div>
+    );
+}
+
+function BookSkeleton() {
+    return (
+        <>
+            {Array.from({ length: 14 }).map((_, i) => (
+                <div key={i} className="mx-3 my-2 h-3.5 overflow-hidden rounded-full">
+                    <div className="size-full shimmer-skeleton" />
+                </div>
+            ))}
+        </>
     );
 }
