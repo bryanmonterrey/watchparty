@@ -87,6 +87,13 @@ Cron/infra spot-checks (read-only):
   logs every 10 min; `sync-assets-webhook` daily run lists `userTrades` webhook.
 
 ## 🔭 Bigger workstreams (own focus / own chat)
+- **Design pass across surfaces (NEXT — own chat)** — owner-led, reference-driven.
+  Order: (1) profile pages: Discord-style earned-badge strip + roles/identity stacking
+  + avatar-anchored mini-profile popout — reference distilled in
+  `docs/references/design-profile-badges-discord.md`, badge sources already live
+  (levels, callout hits, top-caller/trader finishes, premium tier, quests);
+  (2) video + live pages; (3) predictions redesign; (4) callouts page; (5) token page;
+  (6) community pages tinkering. Read `docs/design-principles.md` first, as always.
 - **XP / quests / callouts (gamification)** — full design in `docs/exp-callouts.md`. Phases 1–3 SHIPPED (XP ledger/levels/profile badge 07-12; callouts + `/trade/callouts` + performance cron 07-12; quests + `/quests` sidebar page 07-13). Phase 4a-1 trade recording SHIPPED 07-13; Phase 4b realized-PnL snapshots + Phase 4c social layer (shareTrades opt-in, trade notifications + push, profile PnL card, Top Traders tab) SHIPPED 07-17, plus callout web push, level-up notifications, predictions XP/quests. 07-18: unrealized PnL (mint_prices cache), 4a-2 external-trade webhook, perps XP (ER-verified fills), copy-trade tiers 1–2 all SHIPPED. 07-19: copy-trade SHIPPED (sub-gated caps + sized "Copy ready" pushes + dialog/management UI), profile Trades tab, Live trades feed, XP toasts + breakdown popover, referral XP cap tightened. Walk-away auto-copy BUILT 07-19 (chain-capped Swig executor role via FROST; inert until `COPY_EXECUTOR_SECRET` is provisioned — see doc §4d OPS). Gamification arc COMPLETE. fomo.family PnL/copy-trade layer deferred until per-user trades are tracked (design in doc §4).
 - **Realtime/PartyKit migration** — `realtime/` worker + `deploy-realtime` job exist; remaining surfaces: DMs, presence/typing, feeds, live stream chat, Spaces coordination; then delete `lib/supabase/realtime-client.ts`. (See `realtime-video-architecture-direction` memory.)
 - **IVS + Cloudflare video hybrid** with admin toggle — StreamProvider abstraction (ivs + cloudflare-stream), per-stream + global toggle, mirroring `lib/chains/` ChainAdapter pattern.
