@@ -41,6 +41,51 @@ DOTENV_PRODUCTION < .env.production` — that file lacks ALERT_WEBHOOK_URL.)
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.
 
+## 🧪 Gamification test runbook (all shipped code, zero live usage — run in order)
+
+Automated (green as of 07-19): `bun run test` — 14 unit tests pinning the frozen XP
+curve, award-catalog caps, and quest periodKey/reset ISO-week edges. Run before any
+change to `lib/xp.ts` or `lib/quests.ts`.
+
+Manual, cheap (one account, minutes each):
+- [ ] **XP basics** — make a post → `xp_events` row (+10), LV pill progresses; comment on
+  someone else's post (+5); click your own exp bar → breakdown popover lists both.
+- [ ] **Quests** — after the post above, `/quests` shows "Make a post" complete, quest
+  toast fired top-center, +25 XP auto-claimed (check breakdown).
+- [ ] **Toasts** — earn ~100 XP total → "Level up! You reached Level 2 🎉" toast +
+  notification within ~45s of the award.
+- [ ] **Prediction XP** — place a $1 bet → +20 XP + "Back a prediction" quest completes.
+- [ ] **Perps XP** — open a tiny position → +25 XP within seconds (reportFill verified
+  against the ER; a rejected/failed open must NOT award).
+
+Manual, two accounts (A = trader, B = follower):
+- [ ] **Follow/like XP** — B follows A (+15 to A, once ever per pair); B likes A's post
+  (+2 to A; unlike→relike must not double-award — check xp_events count).
+- [ ] **Callout loop** — A calls out a live token: button cooldown starts (6h countdown),
+  B gets in-app notif + **web push** (B needs push enabled in settings first),
+  `/trade/callouts` feed shows the row, View chip opens the token.
+- [ ] **Trade pipeline** — A enables "Share trades", buys ~$2 of a token in-app →
+  within 10 min: trade confirmed (trade-verify), PnL card shows volume/trades,
+  Trades tab row appears, B gets "bought $TICK" notif + push with Copy chip.
+- [ ] **External trade (4a-2)** — with sharing ON, A swaps directly on Jupiter from the
+  linked wallet → trade appears (source `wallet`) within seconds, same fan-out.
+- [ ] **Prepared copy** — B subscribes to A (creator sub), sets copy config ($2/copy,
+  $5/day) → A buys → B gets sized "Copy ready" push.
+- [ ] **🔴 HANDS-FREE E2E (supervised, $2 cap — the gate before real users)** —
+  B enables hands-free (one FROST signature; verify the executor role appears
+  on-chain), A buys ~$3 in-app → B should get "Copied…" push, `copy_orders` row
+  `executed`, trade in B's history, Recent copies shows it. Then: cap-update button
+  (sign, verify on-chain), disable (role revoked on-chain). Ping the other chat's
+  Claude or this one to watch copy_orders + worker logs live.
+- [ ] **Autopause path** — drain B's Swig USDC to ~$0, A buys 3 times → 3 failed
+  copy_orders → config auto-pauses + B gets the pause notification.
+- [ ] **Sub-gate** — cancel B's creator sub → copy dialog reverts to subscribe prompt;
+  no pushes/executions fire on A's next buy.
+
+Cron/infra spot-checks (read-only):
+- [ ] `callout-performance`, `trade-verify`, `pnl-snapshots` return 200 in cron worker
+  logs every 10 min; `sync-assets-webhook` daily run lists `userTrades` webhook.
+
 ## 🔭 Bigger workstreams (own focus / own chat)
 - **XP / quests / callouts (gamification)** — full design in `docs/exp-callouts.md`. Phases 1–3 SHIPPED (XP ledger/levels/profile badge 07-12; callouts + `/trade/callouts` + performance cron 07-12; quests + `/quests` sidebar page 07-13). Phase 4a-1 trade recording SHIPPED 07-13; Phase 4b realized-PnL snapshots + Phase 4c social layer (shareTrades opt-in, trade notifications + push, profile PnL card, Top Traders tab) SHIPPED 07-17, plus callout web push, level-up notifications, predictions XP/quests. 07-18: unrealized PnL (mint_prices cache), 4a-2 external-trade webhook, perps XP (ER-verified fills), copy-trade tiers 1–2 all SHIPPED. 07-19: copy-trade SHIPPED (sub-gated caps + sized "Copy ready" pushes + dialog/management UI), profile Trades tab, Live trades feed, XP toasts + breakdown popover, referral XP cap tightened. Walk-away auto-copy BUILT 07-19 (chain-capped Swig executor role via FROST; inert until `COPY_EXECUTOR_SECRET` is provisioned — see doc §4d OPS). Gamification arc COMPLETE. fomo.family PnL/copy-trade layer deferred until per-user trades are tracked (design in doc §4).
 - **Realtime/PartyKit migration** — `realtime/` worker + `deploy-realtime` job exist; remaining surfaces: DMs, presence/typing, feeds, live stream chat, Spaces coordination; then delete `lib/supabase/realtime-client.ts`. (See `realtime-video-architecture-direction` memory.)
