@@ -161,14 +161,32 @@ Same batch: profile **Trades** tab + **Live trades** feed tab (`/trade/callouts`
 level-up/quest-complete toasts (XpToastListener over the notification stream),
 recent-XP breakdown popover on your own LevelBadge, referral XP cap 10→3/day.
 
-## 4d walk-away execution (NEXT — needs deliberate build)
+## 4d walk-away execution — ✅ BUILT 2026-07-19 (inert until the executor key is provisioned)
 
-The chosen endgame per owner discussion: **on-chain scoped delegation**, like the
-subscriptions allowance — enabling auto-copy adds a copy-trade authority role to the
-user's Swig wallet with chain-enforced spending caps; the server holds only that
-role's key (blast radius = the caps, not the wallet). The FROST share never leaves
-the client. Prepared-order pushes remain the fallback path. Build this as its own
-focused workstream with the Swig SDK role APIs.
+The on-chain scoped-delegation model, exactly as discussed:
+- **Enable** = one FROST-signed transaction adding an executor role to the user's Swig
+  with `Actions.set().tokenRecurringLimit({ mint: USDC, recurringAmount: dailyCap,
+  window: ~24h in slots })` — the Swig program enforces and resets the daily cap;
+  the executor key is powerless beyond it. Rides the existing 2-round FROST flow as
+  new frostCommit purposes `copyEnable`/`copyDisable` (frostSign untouched).
+- **Executor** (`server/lib/copy-executor.ts`, called from trade-fanout on leader buys):
+  sizes each copy (per-copy cap ∧ leader size ∧ rolling-24h SQL budget from
+  `copy_orders`), builds the Jupiter swap for the follower's Swig, wraps it in Swig
+  sign instructions under the capped role, signs [treasury, executor], sends, and
+  records the trade (trade-verify confirms on-chain). 3 consecutive failures →
+  autopause + notification. Copy access still requires the active creator sub.
+- **Defense in depth**: kill switch (no `COPY_EXECUTOR_SECRET` env → feature invisible
+  and inert) → chain-enforced recurring cap → SQL caps → autopause.
+- **UI**: "Hands-free copying" section in the copy dialog — enable (sign once,
+  cap shown), disable (revokes the role on-chain).
+
+**OPS TO GO LIVE**: generate a keypair, set `COPY_EXECUTOR_SECRET` (base64 64-byte
+secret) on the app worker (DOTENV_PRODUCTION), and fund nothing — it never holds
+assets; the treasury pays fees. Until then, subscribers get prepared-order pushes.
+
+Known v1 limits: the on-chain cap is per-wallet (set at first enable) while SQL caps
+are per-trader — the chain cap is the total safety net; changing the daily cap after
+enabling requires disable→enable (updateAuthority flow later).
 
 Server-executed copying for **Swig custodial wallets only** (server can sign). Ship only
 after tiers 1–2 have real usage. Proposed shape:

@@ -74,6 +74,7 @@ export async function fanOutTrade(t: FanOutTradeInput): Promise<void> {
                 .select({
                     followerId: copySubscriptions.followerId,
                     maxUsdcPerCopy: copySubscriptions.maxUsdcPerCopy,
+                    autoCopyRoleId: copySubscriptions.autoCopyRoleId,
                 })
                 .from(copySubscriptions)
                 .innerJoin(subscriptions, and(
@@ -83,13 +84,25 @@ export async function fanOutTrade(t: FanOutTradeInput): Promise<void> {
                     gt(subscriptions.currentPeriodEnd, new Date()),
                 ))
                 .where(and(eq(copySubscriptions.traderId, t.userId), eq(copySubscriptions.paused, false)));
-            for (const c of copiers) {
+            // Manual configs get the actionable push; auto configs get executed.
+            for (const c of copiers.filter((c) => c.autoCopyRoleId == null)) {
                 const size = t.usdValue != null ? Math.min(c.maxUsdcPerCopy, t.usdValue) : c.maxUsdcPerCopy;
                 await sendPushToUsers([c.followerId], {
                     title: `Copy ready: buy ${label} — $${Math.round(size).toLocaleString()}`,
                     body: `${u.name || "Your trader"} just bought. Tap to execute your copy.`,
                     url: `/${mint}`,
                     tag: `copy-${t.id}`,
+                });
+            }
+            if (copiers.some((c) => c.autoCopyRoleId != null)) {
+                const { executeAutoCopies } = await import("./copy-executor");
+                await executeAutoCopies({
+                    tradeId: t.id,
+                    traderId: t.userId,
+                    traderName: u.name || "your trader",
+                    mint,
+                    label,
+                    usdValue: t.usdValue,
                 });
             }
         }

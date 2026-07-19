@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { trpc } from "@/lib/trpc/client";
+import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { cn } from "@/lib/utils";
 
 interface CopyTradeDialogProps {
@@ -65,6 +66,45 @@ export function CopyTradeDialog({ traderId, traderName, open, onOpenChange }: Co
         upsert.mutate({ traderId, maxUsdcPerCopy: per, dailyUsdcCap: daily, paused });
     };
 
+    // ── Walk-away auto-copy: sign once, chain enforces the daily cap ─────────
+    const { data: autoAvail } = trpc.copy.autoCopyAvailable.useQuery(undefined, { enabled: open });
+    const { signManagement, isPending: signing } = useWalletSigning();
+    const confirmAuto = trpc.copy.confirmAutoCopy.useMutation();
+    const confirmAutoDisabled = trpc.copy.confirmAutoCopyDisabled.useMutation();
+    const [autoBusy, setAutoBusy] = React.useState(false);
+
+    const enableAuto = async () => {
+        const daily = Number(dailyCap);
+        if (!Number.isFinite(daily) || daily < 1) return toast.error("Set a daily cap first");
+        setAutoBusy(true);
+        try {
+            await signManagement("copyEnable", { dailyUsdcCap: daily });
+            await confirmAuto.mutateAsync({ traderId });
+            toast.success("Hands-free copying enabled — the chain enforces your daily cap");
+            utils.copy.status.invalidate({ traderId });
+            utils.copy.mine.invalidate();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Enable failed");
+        } finally {
+            setAutoBusy(false);
+        }
+    };
+
+    const disableAuto = async () => {
+        setAutoBusy(true);
+        try {
+            await signManagement("copyDisable");
+            await confirmAutoDisabled.mutateAsync();
+            toast.success("Hands-free copying disabled — executor role revoked on-chain");
+            utils.copy.status.invalidate({ traderId });
+            utils.copy.mine.invalidate();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Disable failed");
+        } finally {
+            setAutoBusy(false);
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md rounded-[25px] border-white/10 bg-[#101011]">
@@ -108,9 +148,44 @@ export function CopyTradeDialog({ traderId, traderName, open, onOpenChange }: Co
                             <span className="text-sm font-semibold text-zinc-300">Paused</span>
                             <Switch checked={paused} onCheckedChange={setPaused} />
                         </label>
+                        {autoAvail?.available && status.config && (
+                            <div className="flex flex-col gap-2 rounded-2xl bg-white/[0.03] px-4 py-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-semibold text-zinc-300">Hands-free copying</span>
+                                    <span className={cn(
+                                        "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                                        status.config.autoCopyRoleId != null ? "bg-lantern/10 text-lantern" : "bg-white/5 text-zinc-500",
+                                    )}>
+                                        {status.config.autoCopyRoleId != null ? "ON" : "OFF"}
+                                    </span>
+                                </div>
+                                <p className="text-xs font-medium leading-relaxed text-zinc-500">
+                                    Sign once and walk away: copies execute automatically, and your daily USDC cap is
+                                    enforced <span className="text-zinc-300">by the chain itself</span> — the executor
+                                    key can never spend past it.
+                                </p>
+                                {status.config.autoCopyRoleId != null ? (
+                                    <button
+                                        onClick={disableAuto}
+                                        disabled={autoBusy || signing}
+                                        className="h-10 rounded-full border border-flexborder/50 bg-black/25 text-xs font-bold text-pastelred transition-colors hover:bg-white2/10"
+                                    >
+                                        {autoBusy ? "Revoking…" : "Disable & revoke on-chain"}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={enableAuto}
+                                        disabled={autoBusy || signing}
+                                        className="h-10 rounded-full bg-lantern/90 text-xs font-bold text-zinc-950 transition-colors hover:bg-lantern"
+                                    >
+                                        {autoBusy ? "Signing…" : `Enable — sign once, cap $${dailyCap}/day on-chain`}
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         <p className="text-xs font-medium leading-relaxed text-zinc-500">
-                            You&apos;ll get a push sized to your caps every time {traderName} buys — one tap to
-                            execute. Hands-free execution ships with on-chain spending caps later.
+                            Without hands-free, you&apos;ll get a push sized to your caps every time {traderName} buys —
+                            one tap to execute.
                         </p>
                         <div className="flex items-center gap-2">
                             <button

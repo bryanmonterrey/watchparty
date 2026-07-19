@@ -204,9 +204,11 @@ export const walletRouter = router({
     frostCommit: protectedProcedure
         .input(z.object({
             signingSessionId: z.string().uuid(),
-            purpose: z.enum(["session", "tx"]),
+            purpose: z.enum(["session", "tx", "copyEnable", "copyDisable"]),
             // For purpose='tx': the raw transaction to wrap in Swig execute instructions
             rawTransaction: z.string().optional(),
+            // For purpose='copyEnable': the on-chain daily USDC cap (whole dollars)
+            dailyUsdcCap: z.number().min(1).max(5_000).optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             const { data: walletData } = await supabase
@@ -247,6 +249,26 @@ export const walletRouter = router({
                     walletData.frost_public_key,
                 );
                 await redis.set(redisKey, { nonces, serverCommitment, txBase64, sessionKeypairBase64, slot, purpose: 'session' }, { ex: 300 });
+                return { serverCommitment, txBase64 };
+            } else if (input.purpose === "copyEnable") {
+                // Root-signed add-authority granting the copy executor its
+                // chain-capped role. Relayed by frostSign's generic tx branch.
+                if (!input.dailyUsdcCap) throw new TRPCError({ code: "BAD_REQUEST", message: "dailyUsdcCap required" });
+                const { prepareAddCopyAuthorityTransaction } = await import("@/lib/swig/swig-server");
+                const { txBase64 } = await prepareAddCopyAuthorityTransaction(
+                    walletData.swig_address,
+                    walletData.frost_public_key,
+                    BigInt(Math.round(input.dailyUsdcCap * 1e6)),
+                );
+                await redis.set(redisKey, { nonces, serverCommitment, txBase64, purpose: 'tx' }, { ex: 300 });
+                return { serverCommitment, txBase64 };
+            } else if (input.purpose === "copyDisable") {
+                const { prepareRemoveCopyAuthorityTransaction } = await import("@/lib/swig/swig-server");
+                const { txBase64 } = await prepareRemoveCopyAuthorityTransaction(
+                    walletData.swig_address,
+                    walletData.frost_public_key,
+                );
+                await redis.set(redisKey, { nonces, serverCommitment, txBase64, purpose: 'tx' }, { ex: 300 });
                 return { serverCommitment, txBase64 };
             } else {
                 if (!input.rawTransaction) {

@@ -1,4 +1,4 @@
-import { boolean, doublePrecision, index, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core"
+import { boolean, doublePrecision, index, integer, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { user } from "../auth/user"
 
@@ -17,6 +17,7 @@ export const copySubscriptions = pgTable("copy_subscriptions", {
     maxUsdcPerCopy: doublePrecision("maxUsdcPerCopy").notNull(),
     dailyUsdcCap: doublePrecision("dailyUsdcCap").notNull(),
     paused: boolean("paused").default(false).notNull(),
+    autoCopyRoleId: integer("autoCopyRoleId"), // on-chain executor role id; null = prepared-order pushes only
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
 }, (table) => [

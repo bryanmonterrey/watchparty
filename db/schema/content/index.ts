@@ -28,3 +28,4 @@ export * from "./trade";
 export * from "./pnl";
 export * from "./mint-price";
 export * from "./copy";
+export * from "./copy-order";

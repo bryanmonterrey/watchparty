@@ -106,6 +106,47 @@ export const copyRouter = router({
             return { ok: true };
         }),
 
+    /** Is walk-away auto-copy available on this deployment (executor key set)? */
+    autoCopyAvailable: protectedProcedure.query(async () => {
+        const { copyExecutorAvailable } = await import("@/lib/swig/swig-server");
+        return { available: copyExecutorAvailable() };
+    }),
+
+    /**
+     * After the client FROST-signs the add-authority tx: read the executor
+     * role off-chain state and persist its id. The chain is the source of
+     * truth — no client-claimed role ids.
+     */
+    confirmAutoCopy: protectedProcedure
+        .input(z.object({ traderId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const { data: walletData } = await (await import("@supabase/supabase-js")).createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            ).from("encrypted_wallets").select("swig_address").eq("user_id", ctx.user.id).single();
+            if (!walletData?.swig_address) throw new TRPCError({ code: "NOT_FOUND", message: "No Swig wallet" });
+
+            const { findCopyExecutorRoleId } = await import("@/lib/swig/swig-server");
+            const roleId = await findCopyExecutorRoleId(walletData.swig_address);
+            if (roleId == null) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Executor role not found on-chain yet — wait a moment and retry" });
+            }
+            await db
+                .update(copySubscriptions)
+                .set({ autoCopyRoleId: roleId })
+                .where(and(eq(copySubscriptions.followerId, ctx.user.id), eq(copySubscriptions.traderId, input.traderId)));
+            return { roleId };
+        }),
+
+    /** After the client FROST-signs the remove-authority tx: clear role ids. */
+    confirmAutoCopyDisabled: protectedProcedure.mutation(async ({ ctx }) => {
+        await db
+            .update(copySubscriptions)
+            .set({ autoCopyRoleId: null })
+            .where(eq(copySubscriptions.followerId, ctx.user.id));
+        return { ok: true };
+    }),
+
     /** My copy configs, with trader identity for the settings list. */
     mine: protectedProcedure.query(async ({ ctx }) => {
         const rows = await db

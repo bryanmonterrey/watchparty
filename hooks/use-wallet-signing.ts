@@ -15,6 +15,12 @@ interface SignAndSubmitOptions {
 
 interface UseWalletSigningReturn {
   signAndSubmit: (opts: SignAndSubmitOptions) => Promise<{ signature: string }>;
+  /**
+   * Sign a server-prepared Swig management tx (add/remove the auto-copy
+   * executor role) with the FROST root authority. Root-only — sessions can't
+   * change wallet authorities, so there's no tier-1 path here.
+   */
+  signManagement: (purpose: 'copyEnable' | 'copyDisable', opts?: { dailyUsdcCap?: number }) => Promise<{ signature: string }>;
   isPending: boolean;
   error: Error | null;
   reset: () => void;
@@ -97,7 +103,42 @@ export function useWalletSigning(): UseWalletSigningReturn {
         }
     }, [session, ensureSession, connection, relaySwigTx, frostCommit, frostSign, serverSign]);
 
+    const signManagement = useCallback(async (purpose: 'copyEnable' | 'copyDisable', opts?: { dailyUsdcCap?: number }) => {
+        setIsPending(true);
+        setError(null);
+        try {
+            const s = await authClient.getSession();
+            const userId = s.data?.user?.id;
+            if (!userId) throw new Error('Not signed in');
+            const frostData = await getFrostClientData(userId);
+            if (!frostData) throw new Error('This wallet does not support FROST signing on this device');
+
+            const signingSessionId = crypto.randomUUID();
+            const { nonces, clientCommitment } = await clientCommit(frostData.clientShare);
+            const round1 = await frostCommit.mutateAsync({ signingSessionId, purpose, dailyUsdcCap: opts?.dailyUsdcCap });
+            const { serverCommitment, txBase64 } = round1 as { serverCommitment: any; txBase64: string };
+            const msgBytes = await extractClientMessageBytes(txBase64);
+            const clientSigShare = await clientSignShare(
+                frostData.clientShare,
+                frostData.publicInfo,
+                nonces,
+                clientCommitment,
+                serverCommitment,
+                msgBytes,
+            );
+            const result = await frostSign.mutateAsync({ signingSessionId, clientCommitment, clientSigShare });
+            if (result.type !== 'tx') throw new Error('Unexpected signing result');
+            return { signature: result.signature };
+        } catch (err) {
+            const e = err instanceof Error ? err : new Error(String(err));
+            setError(e);
+            throw e;
+        } finally {
+            setIsPending(false);
+        }
+    }, [frostCommit, frostSign]);
+
     const reset = useCallback(() => setError(null), []);
 
-    return { signAndSubmit, isPending, error, reset };
+    return { signAndSubmit, signManagement, isPending, error, reset };
 }
