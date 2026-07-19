@@ -33,6 +33,7 @@ import { questRouter } from "./quest";
 import { predictionsRouter } from "./predictions";
 import { pnlRouter } from "./pnl";
 import { perpsRouter } from "./perps";
+import { copyRouter } from "./copy";
 
 /**
  * Root application router
@@ -71,6 +72,7 @@ export const appRouter = router({
     predictions: predictionsRouter,
     pnl: pnlRouter,
     perps: perpsRouter,
+    copy: copyRouter,
 });
 
 /**

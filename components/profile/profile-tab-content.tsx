@@ -10,10 +10,41 @@ import { trpc } from "@/lib/trpc/client";
 import { PostCard } from "@/components/browse/post-card";
 import { PollProvider } from "@/components/browse/poll-context";
 import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
+import { TradeRow } from "@/components/trades/trade-row";
 
 interface ProfileTabContentProps {
     activeTab: string;
     user: UserType;
+}
+
+function ProfileTradesFeed({ userId }: { userId: string }) {
+    const { data, isLoading } = trpc.pnl.tradesForUser.useQuery({ userId, limit: 30 }, { refetchInterval: 60_000 });
+    if (isLoading) {
+        return (
+            <div className="flex flex-col gap-2 max-w-3xl">
+                {Array.from({ length: 5 }, (_, i) => <div key={i} className="shimmer-skeleton h-[64px] rounded-[20px]" />)}
+            </div>
+        );
+    }
+    if (!data?.visible) {
+        return (
+            <div className="py-24 text-center">
+                <p className="text-sm font-semibold text-zinc-400">This user keeps their trades private.</p>
+            </div>
+        );
+    }
+    if (data.items.length === 0) {
+        return (
+            <div className="py-24 text-center">
+                <p className="text-sm font-semibold text-zinc-400">No trades yet.</p>
+            </div>
+        );
+    }
+    return (
+        <div className="flex flex-col gap-2 max-w-3xl">
+            {data.items.map((t) => <TradeRow key={t.id} t={t} />)}
+        </div>
+    );
 }
 
 function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolean }) {
@@ -108,6 +139,8 @@ export function ProfileTabContent({ activeTab, user }: ProfileTabContentProps) {
                         />
                     ) : activeTab === "Posts" ? (
                         <ProfilePostsFeed userId={user.id} isOwner={isOwner} />
+                    ) : activeTab === "Trades" ? (
+                        <ProfileTradesFeed userId={user.id} />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-center py-24">
                             <div className="size-24 rounded-[32px] bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center mb-8 shadow-2xl relative group overflow-hidden">

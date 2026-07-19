@@ -8,6 +8,8 @@ import { Megaphone } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatMarketCap } from "@/components/tokens/market-cap-chip";
 import { trpc } from "@/lib/trpc/client";
+import { TradeRow } from "@/components/trades/trade-row";
+import { MyCopies } from "@/components/copy/my-copies";
 import { cn } from "@/lib/utils";
 
 // Callouts surface (docs/exp-callouts.md, Phase 2): live global feed of calls
@@ -194,14 +196,42 @@ function TradersLeaderboard() {
     );
 }
 
+function LiveTradesFeed() {
+    const { data, isLoading } = trpc.pnl.tradesFeed.useQuery({ limit: 30 }, { refetchInterval: 30_000 });
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col gap-2">
+                {Array.from({ length: 6 }, (_, i) => <div key={i} className="shimmer-skeleton h-[64px] rounded-[20px]" />)}
+            </div>
+        );
+    }
+    if (!data || data.items.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-3 py-20 text-center">
+                <Megaphone className="size-8 text-zinc-600" />
+                <p className="text-sm font-semibold text-zinc-400">
+                    No public trades yet — sharing traders&apos; buys and sells land here live.
+                </p>
+            </div>
+        );
+    }
+    return (
+        <div className="flex flex-col gap-2">
+            <MyCopies />
+            {data.items.map((t) => <TradeRow key={t.id} t={t} />)}
+        </div>
+    );
+}
+
 export function CalloutsView() {
-    const [tab, setTab] = React.useState<"feed" | "leaderboard" | "traders">("feed");
+    const [tab, setTab] = React.useState<"feed" | "leaderboard" | "traders" | "trades">("feed");
 
     return (
         <div className="mx-auto w-full max-w-3xl px-4 pt-header pb-10 flex flex-col gap-4 text-zinc-100">
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="relative inline-flex rounded-full bg-[#16181c] p-1 text-sm font-semibold shadow-inner self-start">
-                    {(["feed", "leaderboard", "traders"] as const).map((t) => {
+                    {(["feed", "leaderboard", "traders", "trades"] as const).map((t) => {
                         const active = tab === t;
                         return (
                             <button
@@ -212,7 +242,7 @@ export function CalloutsView() {
                                     active ? "text-black" : "text-zinc-400 hover:text-white",
                                 )}
                             >
-                                {t === "feed" ? "Live feed" : t === "leaderboard" ? "Top callers" : "Top traders"}
+                                {t === "feed" ? "Callouts" : t === "leaderboard" ? "Top callers" : t === "traders" ? "Top traders" : "Live trades"}
                                 {active && (
                                     <motion.div
                                         layoutId="callouts-toggle-bg"
@@ -235,7 +265,7 @@ export function CalloutsView() {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.15, ease: "easeInOut" }}
                 >
-                    {tab === "feed" ? <CalloutsFeed /> : tab === "leaderboard" ? <CalloutsLeaderboard /> : <TradersLeaderboard />}
+                    {tab === "feed" ? <CalloutsFeed /> : tab === "leaderboard" ? <CalloutsLeaderboard /> : tab === "traders" ? <TradersLeaderboard /> : <LiveTradesFeed />}
                 </motion.div>
             </AnimatePresence>
         </div>

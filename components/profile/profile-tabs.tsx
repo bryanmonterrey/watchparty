@@ -9,6 +9,7 @@ export const TABS = [
     "Shorts",
     "Streams",
     "Tokens",
+    "Trades",
     "Media",
     "Replies",
     "Highlights",

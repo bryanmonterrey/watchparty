@@ -117,7 +117,7 @@ export function UserProfile({ user }: UserProfileProps) {
                             isMinimized={false}
                             onToggleSize={handleToggle}
                         />
-                        <ProfilePnlCard userId={user.id} />
+                        <ProfilePnlCard userId={user.id} name={user.name} />
                     </div>
                     <ProfileTabs
                         activeTab={activeTab}

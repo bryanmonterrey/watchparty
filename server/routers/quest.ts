@@ -1,8 +1,9 @@
+import { z } from "zod";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
-import { questProgress } from "@/db/schema/content";
+import { questProgress, xpEvents } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { QUESTS, periodKeyFor, periodResetAt } from "@/lib/quests";
 
 /**
@@ -52,4 +53,17 @@ export const questRouter = router({
             resetAt: { daily: periodResetAt("daily", now), weekly: periodResetAt("weekly", now) },
         };
     }),
+
+    /** Recent XP awards — the "where did my XP come from" breakdown. */
+    recentXp: protectedProcedure
+        .input(z.object({ limit: z.number().min(1).max(30).default(15) }).optional())
+        .query(async ({ ctx, input }) => {
+            const rows = await db
+                .select({ kind: xpEvents.kind, amount: xpEvents.amount, createdAt: xpEvents.createdAt })
+                .from(xpEvents)
+                .where(eq(xpEvents.userId, ctx.user.id))
+                .orderBy(desc(xpEvents.createdAt))
+                .limit(input?.limit ?? 15);
+            return { events: rows };
+        }),
 });

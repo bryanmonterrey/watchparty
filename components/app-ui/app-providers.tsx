@@ -8,6 +8,7 @@ import { EvmProvider } from "@/lib/chains/evm/evm-provider";
 import { ReactQueryProvider } from "@/components/react-query-provider";
 import { TrayProvider } from "@/components/providers/tray-provider";
 import { HeartbeatProvider } from "@/components/app-ui/heartbeat-provider";
+import { XpToastListener } from "@/components/app-ui/xp-toast-listener";
 import { ReferralApply } from "@/components/app-ui/referral-apply";
 
 // Global multi-chain provider stack. Solana (cluster + wallet-adapter) and EVM
@@ -26,6 +27,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
             <EvmProvider>
               <TrayProvider>
                 <HeartbeatProvider />
+                <XpToastListener />
                 <ReferralApply />
                 {children}
                 <Toaster position="top-center" />

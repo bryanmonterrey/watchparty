@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { tokens, follows, notifications } from "@/db/schema/content";
+import { tokens, follows, notifications, copySubscriptions, subscriptions } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { sendPushToUsers } from "@/lib/push/send";
 import { CASH_MINTS } from "./pnl";
@@ -65,5 +65,33 @@ export async function fanOutTrade(t: FanOutTradeInput): Promise<void> {
             url: `/${mint}`,
             tag: `trade-${t.id}`,
         });
+
+        // Prepared copy orders (§4d, sub-gated): followers with an unpaused
+        // copy config AND an active creator subscription get a sized,
+        // actionable push. Only buys — you can't copy a sell you never entered.
+        if (side === "bought") {
+            const copiers = await db
+                .select({
+                    followerId: copySubscriptions.followerId,
+                    maxUsdcPerCopy: copySubscriptions.maxUsdcPerCopy,
+                })
+                .from(copySubscriptions)
+                .innerJoin(subscriptions, and(
+                    eq(subscriptions.subscriberId, copySubscriptions.followerId),
+                    eq(subscriptions.creatorId, copySubscriptions.traderId),
+                    eq(subscriptions.status, "active"),
+                    gt(subscriptions.currentPeriodEnd, new Date()),
+                ))
+                .where(and(eq(copySubscriptions.traderId, t.userId), eq(copySubscriptions.paused, false)));
+            for (const c of copiers) {
+                const size = t.usdValue != null ? Math.min(c.maxUsdcPerCopy, t.usdValue) : c.maxUsdcPerCopy;
+                await sendPushToUsers([c.followerId], {
+                    title: `Copy ready: buy ${label} — $${Math.round(size).toLocaleString()}`,
+                    body: `${u.name || "Your trader"} just bought. Tap to execute your copy.`,
+                    url: `/${mint}`,
+                    tag: `copy-${t.id}`,
+                });
+            }
+        }
     } catch { /* fan-out must never fail the caller */ }
 }

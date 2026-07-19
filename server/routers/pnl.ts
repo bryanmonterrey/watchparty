@@ -1,9 +1,47 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
-import { pnlSnapshots } from "@/db/schema/content";
+import { pnlSnapshots, trades, tokens } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
+import { CASH_MINTS } from "@/server/lib/pnl";
+
+// Shape confirmed trades into readable rows: which non-cash mint moved, which
+// direction, and the token identity when the mint is a launchpad token.
+async function shapeTrades(rows: {
+    id: string;
+    userId: string;
+    inputMint: string;
+    outputMint: string;
+    usdValue: number | null;
+    confirmedAt: Date | null;
+    source: string;
+}[]) {
+    const shaped = rows.flatMap((t) => {
+        const inCash = CASH_MINTS.has(t.inputMint);
+        const outCash = CASH_MINTS.has(t.outputMint);
+        if (inCash === outCash) return [];
+        const mint = inCash ? t.outputMint : t.inputMint;
+        return [{
+            id: t.id,
+            userId: t.userId,
+            side: inCash ? ("buy" as const) : ("sell" as const),
+            mint,
+            usdValue: t.usdValue,
+            confirmedAt: t.confirmedAt,
+            source: t.source,
+        }];
+    });
+    const mints = [...new Set(shaped.map((s) => s.mint))];
+    const toks = mints.length
+        ? await db
+              .select({ tokenAddress: tokens.tokenAddress, ticker: tokens.ticker, name: tokens.name, imageUrl: tokens.imageUrl })
+              .from(tokens)
+              .where(inArray(tokens.tokenAddress, mints))
+        : [];
+    const tokByMint = new Map(toks.map((t) => [t.tokenAddress!, t]));
+    return shaped.map((s) => ({ ...s, token: tokByMint.get(s.mint) ?? null }));
+}
 
 /**
  * PnL read surface + trade-sharing opt-in (docs/exp-callouts.md §4b–4c).
@@ -64,6 +102,56 @@ export const pnlRouter = router({
                     winRate: r.winRate,
                 })),
             };
+        }),
+
+    /** One user's confirmed trade history. Owner always; others when shared. */
+    tradesForUser: publicProcedure
+        .input(z.object({ userId: z.string(), limit: z.number().min(1).max(50).default(30), cursor: z.string().optional() }))
+        .query(async ({ ctx, input }) => {
+            const [u] = await db.select({ shareTrades: user.shareTrades }).from(user).where(eq(user.id, input.userId));
+            const isOwner = ctx.user?.id === input.userId;
+            if (!u || (!u.shareTrades && !isOwner)) return { visible: false as const, items: [], nextCursor: undefined };
+
+            const rows = await db
+                .select({
+                    id: trades.id, userId: trades.userId, inputMint: trades.inputMint, outputMint: trades.outputMint,
+                    usdValue: trades.usdValue, confirmedAt: trades.confirmedAt, source: trades.source,
+                })
+                .from(trades)
+                .where(and(
+                    eq(trades.userId, input.userId),
+                    eq(trades.status, "confirmed"),
+                    input.cursor ? lt(trades.confirmedAt, new Date(input.cursor)) : undefined,
+                ))
+                .orderBy(desc(trades.confirmedAt))
+                .limit(input.limit + 1);
+            const hasMore = rows.length > input.limit;
+            const page = hasMore ? rows.slice(0, input.limit) : rows;
+            return {
+                visible: true as const,
+                items: await shapeTrades(page),
+                nextCursor: hasMore ? page[page.length - 1].confirmedAt?.toISOString() : undefined,
+            };
+        }),
+
+    /** Global firehose of sharing users' confirmed trades (the fomo feed). */
+    tradesFeed: publicProcedure
+        .input(z.object({ limit: z.number().min(1).max(50).default(30) }).optional())
+        .query(async ({ input }) => {
+            const rows = await db
+                .select({
+                    id: trades.id, userId: trades.userId, inputMint: trades.inputMint, outputMint: trades.outputMint,
+                    usdValue: trades.usdValue, confirmedAt: trades.confirmedAt, source: trades.source,
+                    trader: { name: user.name, username: user.username, avatar_url: user.avatar_url, level: user.level },
+                })
+                .from(trades)
+                .innerJoin(user, eq(trades.userId, user.id))
+                .where(and(eq(trades.status, "confirmed"), eq(user.shareTrades, true)))
+                .orderBy(desc(trades.confirmedAt))
+                .limit(input?.limit ?? 30);
+            const shaped = await shapeTrades(rows);
+            const traderById = new Map(rows.map((r) => [r.id, r.trader]));
+            return { items: shaped.map((s) => ({ ...s, trader: traderById.get(s.id)! })) };
         }),
 
     /** Opt in/out of public trades (notifications + card + leaderboard). */

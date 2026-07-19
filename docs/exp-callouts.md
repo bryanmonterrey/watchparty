@@ -150,7 +150,25 @@ are then a single indexed query, same shape as the callout leaderboard.
    - **4d tiers 1–2**: alerts (4c) + one-tap copy — trade/callout notifications carry the
      token slug in `postId` and render a Copy/View chip → token page swap card.
 
-## 4d tier 3 — auto-copy (DESIGNED, NOT BUILT — needs owner sign-off)
+## 4d — SHIPPED 2026-07-19 (prepared-order model, sub-gated)
+
+Copy access is the **paid perk of a creator subscription** to the trader (owner
+decision 07-19). `copy_subscriptions` (per-copy + daily USDC caps, pause) behind the
+active-sub gate; on every leader BUY, configured subscribers get a sized "Copy ready"
+push → one tap to the token page. UI: Copy-trades dialog on sharing traders' PnL cards
+(subscribe prompt when unsubbed), "Copying" management list on the Live-trades tab.
+Same batch: profile **Trades** tab + **Live trades** feed tab (`/trade/callouts`),
+level-up/quest-complete toasts (XpToastListener over the notification stream),
+recent-XP breakdown popover on your own LevelBadge, referral XP cap 10→3/day.
+
+## 4d walk-away execution (NEXT — needs deliberate build)
+
+The chosen endgame per owner discussion: **on-chain scoped delegation**, like the
+subscriptions allowance — enabling auto-copy adds a copy-trade authority role to the
+user's Swig wallet with chain-enforced spending caps; the server holds only that
+role's key (blast radius = the caps, not the wallet). The FROST share never leaves
+the client. Prepared-order pushes remain the fallback path. Build this as its own
+focused workstream with the Swig SDK role APIs.
 
 Server-executed copying for **Swig custodial wallets only** (server can sign). Ship only
 after tiers 1–2 have real usage. Proposed shape:

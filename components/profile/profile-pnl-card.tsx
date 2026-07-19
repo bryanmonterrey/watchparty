@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Copy as CopyIcon } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { CopyTradeDialog } from "@/components/copy/copy-trade-dialog";
 import { cn } from "@/lib/utils";
 
 // Trading PnL card (docs/exp-callouts.md §4c). Hidden unless the user shares
@@ -18,10 +19,11 @@ function fmtUsd(v: number): string {
     return `${sign}$${s}`;
 }
 
-export function ProfilePnlCard({ userId }: { userId: string }) {
+export function ProfilePnlCard({ userId, name }: { userId: string; name: string }) {
     const { data: session } = useAuthSession();
     const isOwner = session?.user?.id === userId;
     const utils = trpc.useUtils();
+    const [copyOpen, setCopyOpen] = React.useState(false);
     const { data } = trpc.pnl.forUser.useQuery({ userId });
     const setSharing = trpc.pnl.setSharing.useMutation({
         onSuccess: ({ shareTrades }) => {
@@ -52,7 +54,7 @@ export function ProfilePnlCard({ userId }: { userId: string }) {
                 <span>{w7?.winRate != null ? `${Math.round(w7.winRate * 100)}% wins` : "— wins"}</span>
                 <span>${Math.round(w7?.volumeUsd ?? 0).toLocaleString()} vol</span>
             </div>
-            {isOwner && (
+            {isOwner ? (
                 <button
                     onClick={() => setSharing.mutate({ share: !data.shareTrades })}
                     disabled={setSharing.isPending}
@@ -65,6 +67,16 @@ export function ProfilePnlCard({ userId }: { userId: string }) {
                 >
                     {data.shareTrades ? "Trades public" : "Share trades"}
                 </button>
+            ) : (
+                <button
+                    onClick={() => setCopyOpen(true)}
+                    className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full bg-lantern/10 px-3.5 py-1.5 text-xs font-bold text-lantern transition-colors hover:bg-lantern/20"
+                >
+                    <CopyIcon className="size-3.5" /> Copy trades
+                </button>
+            )}
+            {!isOwner && (
+                <CopyTradeDialog traderId={userId} traderName={name} open={copyOpen} onOpenChange={setCopyOpen} />
             )}
         </div>
     );

@@ -170,7 +170,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                     {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-6" />}
                     {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-6" />}
                     {user.verifiedTier === "government" && <GovBadgeIcon className="size-6" />}
-                    <LevelBadge xp={user.xp} />
+                    <LevelBadge xp={user.xp} userId={user.id} />
                     
                     {isMinimized && (
                         <span className="text-zinc-400 tracking-wide font-semibold text-sm ml-1">

@@ -14,7 +14,7 @@ export const XP_AWARDS = {
     like_received: { amount: 2, maxPerDay: 50 },
     follow_received: { amount: 15, maxPerDay: 20 },
     token_launched: { amount: 100, maxPerDay: 2 },
-    referral_converted: { amount: 200, maxPerDay: 10 },
+    referral_converted: { amount: 200, maxPerDay: 3 }, // was 10 — the one farmable channel; 2k XP/day was too fat a tail
     // Callout success bonuses — awarded by the callout-performance cron when a
     // called token crosses the multiplier; refId = calloutId so each pays once.
     callout_2x: { amount: 100, maxPerDay: 10 },

@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { QUESTS, periodKeyFor, type QuestEvent } from "@/lib/quests";
 import { awardXP } from "./xp";
+import { createNotification } from "./notify";
 
 /**
  * Advance every quest tracking this event for the user's current windows.
@@ -35,6 +36,11 @@ export async function recordQuestEvent(userId: string, event: QuestEvent, count 
                     .returning({ id: questProgress.id });
                 if (claimed) {
                     await awardXP(userId, "quest_completed", `${quest.id}:${periodKey}`, { amount: quest.xpReward });
+                    await createNotification({
+                        userId,
+                        type: "system",
+                        body: `Quest complete: ${quest.title} — +${quest.xpReward} XP`,
+                    });
                 }
             }
         }
