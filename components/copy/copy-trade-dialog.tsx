@@ -90,6 +90,20 @@ export function CopyTradeDialog({ traderId, traderName, open, onOpenChange }: Co
         }
     };
 
+    const updateAutoCap = async () => {
+        const daily = Number(dailyCap);
+        if (!Number.isFinite(daily) || daily < 1) return toast.error("Set a daily cap first");
+        setAutoBusy(true);
+        try {
+            await signManagement("copyUpdateCap", { dailyUsdcCap: daily });
+            toast.success(`On-chain cap updated to $${daily}/day`);
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Update failed");
+        } finally {
+            setAutoBusy(false);
+        }
+    };
+
     const disableAuto = async () => {
         setAutoBusy(true);
         try {
@@ -165,13 +179,22 @@ export function CopyTradeDialog({ traderId, traderName, open, onOpenChange }: Co
                                     key can never spend past it.
                                 </p>
                                 {status.config.autoCopyRoleId != null ? (
-                                    <button
-                                        onClick={disableAuto}
-                                        disabled={autoBusy || signing}
-                                        className="h-10 rounded-full border border-flexborder/50 bg-black/25 text-xs font-bold text-pastelred transition-colors hover:bg-white2/10"
-                                    >
-                                        {autoBusy ? "Revoking…" : "Disable & revoke on-chain"}
-                                    </button>
+                                    <div className="flex flex-col gap-2">
+                                        <button
+                                            onClick={updateAutoCap}
+                                            disabled={autoBusy || signing}
+                                            className="h-10 rounded-full bg-lantern/10 text-xs font-bold text-lantern transition-colors hover:bg-lantern/20"
+                                        >
+                                            {autoBusy ? "Signing…" : `Update on-chain cap to $${dailyCap}/day`}
+                                        </button>
+                                        <button
+                                            onClick={disableAuto}
+                                            disabled={autoBusy || signing}
+                                            className="h-10 rounded-full border border-flexborder/50 bg-black/25 text-xs font-bold text-pastelred transition-colors hover:bg-white2/10"
+                                        >
+                                            {autoBusy ? "Revoking…" : "Disable & revoke on-chain"}
+                                        </button>
+                                    </div>
                                 ) : (
                                     <button
                                         onClick={enableAuto}

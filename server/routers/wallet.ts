@@ -204,7 +204,7 @@ export const walletRouter = router({
     frostCommit: protectedProcedure
         .input(z.object({
             signingSessionId: z.string().uuid(),
-            purpose: z.enum(["session", "tx", "copyEnable", "copyDisable"]),
+            purpose: z.enum(["session", "tx", "copyEnable", "copyDisable", "copyUpdateCap"]),
             // For purpose='tx': the raw transaction to wrap in Swig execute instructions
             rawTransaction: z.string().optional(),
             // For purpose='copyEnable': the on-chain daily USDC cap (whole dollars)
@@ -256,6 +256,16 @@ export const walletRouter = router({
                 if (!input.dailyUsdcCap) throw new TRPCError({ code: "BAD_REQUEST", message: "dailyUsdcCap required" });
                 const { prepareAddCopyAuthorityTransaction } = await import("@/lib/swig/swig-server");
                 const { txBase64 } = await prepareAddCopyAuthorityTransaction(
+                    walletData.swig_address,
+                    walletData.frost_public_key,
+                    BigInt(Math.round(input.dailyUsdcCap * 1e6)),
+                );
+                await redis.set(redisKey, { nonces, serverCommitment, txBase64, purpose: 'tx' }, { ex: 300 });
+                return { serverCommitment, txBase64 };
+            } else if (input.purpose === "copyUpdateCap") {
+                if (!input.dailyUsdcCap) throw new TRPCError({ code: "BAD_REQUEST", message: "dailyUsdcCap required" });
+                const { prepareUpdateCopyAuthorityTransaction } = await import("@/lib/swig/swig-server");
+                const { txBase64 } = await prepareUpdateCopyAuthorityTransaction(
                     walletData.swig_address,
                     walletData.frost_public_key,
                     BigInt(Math.round(input.dailyUsdcCap * 1e6)),

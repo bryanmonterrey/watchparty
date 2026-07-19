@@ -2,9 +2,9 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
-import { copySubscriptions, subscriptions } from "@/db/schema/content";
+import { copySubscriptions, copyOrders, subscriptions } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { and, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 /**
@@ -146,6 +146,29 @@ export const copyRouter = router({
             .where(eq(copySubscriptions.followerId, ctx.user.id));
         return { ok: true };
     }),
+
+    /** My recent copy attempts — executed / failed / skipped, newest first. */
+    orders: protectedProcedure
+        .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
+        .query(async ({ ctx, input }) => {
+            const rows = await db
+                .select({
+                    id: copyOrders.id,
+                    traderId: copyOrders.traderId,
+                    usdSize: copyOrders.usdSize,
+                    status: copyOrders.status,
+                    reason: copyOrders.reason,
+                    txSignature: copyOrders.txSignature,
+                    createdAt: copyOrders.createdAt,
+                    trader: { name: user.name, username: user.username, avatar_url: user.avatar_url },
+                })
+                .from(copyOrders)
+                .innerJoin(user, eq(copyOrders.traderId, user.id))
+                .where(eq(copyOrders.followerId, ctx.user.id))
+                .orderBy(desc(copyOrders.createdAt))
+                .limit(input?.limit ?? 20);
+            return { orders: rows };
+        }),
 
     /** My copy configs, with trader identity for the settings list. */
     mine: protectedProcedure.query(async ({ ctx }) => {

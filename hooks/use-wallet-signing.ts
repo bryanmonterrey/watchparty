@@ -20,7 +20,7 @@ interface UseWalletSigningReturn {
    * executor role) with the FROST root authority. Root-only — sessions can't
    * change wallet authorities, so there's no tier-1 path here.
    */
-  signManagement: (purpose: 'copyEnable' | 'copyDisable', opts?: { dailyUsdcCap?: number }) => Promise<{ signature: string }>;
+  signManagement: (purpose: 'copyEnable' | 'copyDisable' | 'copyUpdateCap', opts?: { dailyUsdcCap?: number }) => Promise<{ signature: string }>;
   isPending: boolean;
   error: Error | null;
   reset: () => void;
@@ -103,7 +103,7 @@ export function useWalletSigning(): UseWalletSigningReturn {
         }
     }, [session, ensureSession, connection, relaySwigTx, frostCommit, frostSign, serverSign]);
 
-    const signManagement = useCallback(async (purpose: 'copyEnable' | 'copyDisable', opts?: { dailyUsdcCap?: number }) => {
+    const signManagement = useCallback(async (purpose: 'copyEnable' | 'copyDisable' | 'copyUpdateCap', opts?: { dailyUsdcCap?: number }) => {
         setIsPending(true);
         setError(null);
         try {

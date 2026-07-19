@@ -335,6 +335,43 @@ export async function prepareAddCopyAuthorityTransaction(
     return { txBase64: tx.serialize({ requireAllSignatures: false }).toString('base64') };
 }
 
+/**
+ * Build the update-authority tx replacing the executor role's actions with a
+ * new recurring cap (root-signed) — cap changes without disable→enable.
+ */
+export async function prepareUpdateCopyAuthorityTransaction(
+    swigAddress: string,
+    frostGroupPubkeyBase64: string,
+    dailyUsdcBaseUnits: bigint,
+): Promise<{ txBase64: string }> {
+    const treasury = getTreasury();
+    const executor = getCopyExecutorKeypair();
+    if (!executor) throw new Error('COPY_EXECUTOR_SECRET not set — auto-copy is disabled');
+    const { getUpdateAuthorityInstructions } = await import('@swig-wallet/classic');
+    const { updateAuthorityReplaceAllActions } = await import('@swig-wallet/lib');
+    const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
+    const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
+    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey)[0];
+    if (!rootRole) throw new Error('FROST root role not found on Swig wallet');
+    const executorRole = swig.findRolesByEd25519SignerPk(executor.publicKey)[0];
+    if (!executorRole) throw new Error('Auto-copy is not enabled on this wallet');
+
+    const actions = Actions.set()
+        .tokenRecurringLimit({ mint: USDC_MINT_PK, recurringAmount: dailyUsdcBaseUnits, window: COPY_WINDOW_SLOTS })
+        .get();
+    const ixs = await getUpdateAuthorityInstructions(
+        swig,
+        rootRole.id,
+        executorRole.id,
+        updateAuthorityReplaceAllActions(actions),
+        { payer: treasury.publicKey },
+    );
+    const { blockhash } = await getRpc().getLatestBlockhash('confirmed');
+    const tx = new Transaction({ recentBlockhash: blockhash, feePayer: treasury.publicKey }).add(...ixs);
+    tx.partialSign(treasury);
+    return { txBase64: tx.serialize({ requireAllSignatures: false }).toString('base64') };
+}
+
 /** Build the remove-authority tx revoking the executor role (root-signed). */
 export async function prepareRemoveCopyAuthorityTransaction(
     swigAddress: string,

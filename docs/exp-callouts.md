@@ -185,8 +185,14 @@ secret) on the app worker (DOTENV_PRODUCTION), and fund nothing — it never hol
 assets; the treasury pays fees. Until then, subscribers get prepared-order pushes.
 
 Known v1 limits: the on-chain cap is per-wallet (set at first enable) while SQL caps
-are per-trader — the chain cap is the total safety net; changing the daily cap after
-enabling requires disable→enable (updateAuthority flow later).
+are per-trader — the chain cap is the total safety net. Cap changes: ✅ one-signature
+on-chain update shipped 07-19 (`copyUpdateCap` purpose → updateAuthority replace-all).
+
+PROVISIONED 2026-07-19: `COPY_EXECUTOR_SECRET` set in `.env.local` + DOTENV_PRODUCTION
+(executor pubkey `tCnD3nBMxcwzG3NhESA1Y47ijFjDv95TUxt6W1qs4nA`); deployed — hands-free
+is ARMED in prod. ⚠️ Before promoting to real users: one supervised e2e test (enable
+with a $2 cap, leader buys, watch `copy_orders`). "Recent copies" audit list ships on
+the Live-trades tab.
 
 Server-executed copying for **Swig custodial wallets only** (server can sign). Ship only
 after tiers 1–2 have real usage. Proposed shape:
