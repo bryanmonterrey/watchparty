@@ -43,8 +43,7 @@ const SMA_LEN = 20;
 
 type Candle = { time: UTCTimestamp; open: number; high: number; low: number; close: number };
 
-async function fetchCandles(pythTicker: string, tf: Timeframe): Promise<Candle[]> {
-    const { resolution, secondsBack } = RANGE[tf];
+async function fetchWindow(pythTicker: string, resolution: string, secondsBack: number): Promise<Candle[]> {
     const to = Math.floor(Date.now() / 1000);
     const from = to - secondsBack;
     const url =
@@ -61,6 +60,16 @@ async function fetchCandles(pythTicker: string, tf: Timeframe): Promise<Candle[]
         low: d.l[i],
         close: d.c[i],
     }));
+}
+
+async function fetchCandles(pythTicker: string, tf: Timeframe): Promise<Candle[]> {
+    const { resolution, secondsBack } = RANGE[tf];
+    const candles = await fetchWindow(pythTicker, resolution, secondsBack);
+    if (candles.length > 0) return candles;
+    // Session markets (equities, FX, metals) print nothing on weekends, so a
+    // short lookback comes back legitimately empty — widen once to reach the
+    // last trading session instead of claiming there's no data.
+    return fetchWindow(pythTicker, resolution, secondsBack * 7);
 }
 
 function sma(candles: Candle[], length: number) {
