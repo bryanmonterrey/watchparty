@@ -86,13 +86,17 @@ consistency, role-chip colors aligned with the badge palette from §1.
 
 ---
 
-## Open questions for the owner (answer in the design chat)
+## Open questions — ANSWERED by owner (design chat, 2026-07-19)
 
-1. Badge glyph direction: pixel-art (recommended, on-brand) or illustrated/emoji?
-2. Popout v1 scope: hover-cards everywhere, or profile-page-only strip first?
-3. Video comments: right rail (Twitch-like) or below player (YouTube-like)?
-4. Chat badges on live: LV only, or LV + one earned badge?
-5. Early-member cutoff date for the badge?
+1. Badge glyph direction: **illustrated/flat** (owner overrode the pixel-art
+   recommendation; keep brand accent families — lantern = trading, sunset =
+   caller, pastels = social — just in flat/illustrated form).
+2. Popout v1 scope: **hover-cards everywhere** (leaderboards, feed, chat,
+   callouts — the full distribution layer).
+3. Video comments: **right rail** (Twitch-like, consistent with live chat).
+4. Chat badges on live: **LV + one top earned badge** (single glyph).
+5. Early-member badge: **first 1,000 users** (signup-order count, not a date
+   cutoff — needs a rank-by-createdAt query rather than a createdAt comparison).
 
 ## Handoff note
 

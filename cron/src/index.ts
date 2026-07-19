@@ -48,6 +48,9 @@ export default {
             ctx.waitUntil(call(env, "/api/cron/trade-verify"));
             // Rebuild realized-PnL snapshots from confirmed trades (Phase 4b).
             ctx.waitUntil(call(env, "/api/cron/pnl-snapshots"));
+            // Weekly finish snapshots — route no-ops outside Monday 00:00–01:00
+            // UTC, then writes the just-ended ISO week's board finishes once.
+            ctx.waitUntil(call(env, "/api/cron/weekly-finishes"));
         } else if (event.cron === "* * * * *") {
             // Every minute — the CF cron floor. Both are cheap single-digit
             // API-call passes; in-app swaps additionally trigger instant

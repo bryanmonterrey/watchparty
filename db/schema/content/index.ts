@@ -25,7 +25,8 @@ export * from "./xp";
 export * from "./callout";
 export * from "./quest";
 export * from "./trade";
-export * from "./pnl";
+export * from "./pnl"
+export * from "./weekly-finish";
 export * from "./mint-price";
 export * from "./copy";
 export * from "./copy-order";

@@ -8,8 +8,9 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon } from "@/components/icons";
+import { CommentSection } from "@/components/browse/comment-section";
 
-type TabId = "all" | "creator" | "related" | "watched";
+type TabId = "comments" | "all" | "creator" | "related" | "watched";
 
 interface UpNextVideo {
     id: string;
@@ -32,6 +33,8 @@ interface UpNextSidebarProps {
     creatorId: string;
     creatorName: string | null;
     category: string | null;
+    /** Enables the Comments tab (default tab — owner decision 2026-07-19: right rail). */
+    commentsCount?: number;
     isLoading?: boolean;
 }
 
@@ -111,15 +114,16 @@ function VideoList({ videos }: { videos: UpNextVideo[] }) {
     );
 }
 
-export function UpNextSidebar({ postId, creatorId, creatorName, category, isLoading }: UpNextSidebarProps) {
-    const [activeTab, setActiveTab] = useState<TabId>("all");
+export function UpNextSidebar({ postId, creatorId, creatorName, category, commentsCount, isLoading }: UpNextSidebarProps) {
+    const [activeTab, setActiveTab] = useState<TabId>("comments");
 
     const tabs = useMemo<{ id: TabId; name: string }[]>(() => [
+        { id: "comments", name: commentsCount ? `Comments · ${formatViews(commentsCount)}` : "Comments" },
         { id: "all", name: "All" },
         { id: "creator", name: creatorName ? `From ${creatorName.split(" ")[0]}` : "Creator" },
         { id: "related", name: "Related" },
         { id: "watched", name: "Watched" },
-    ], [creatorName]);
+    ], [creatorName, commentsCount]);
 
     // ─── Queries ──────────────────────────────────────────────────────────
     const { data: allVideos } = trpc.content.getPublicVideos.useQuery(
@@ -193,14 +197,20 @@ export function UpNextSidebar({ postId, creatorId, creatorName, category, isLoad
                 )}
             </div>
 
-            {/* Video List */}
-            <div className="flex-1 py-2 space-y-0.5">
-                {isLoading || !currentVideos ? (
-                    <VideoSkeleton />
-                ) : (
-                    <VideoList videos={currentVideos} />
-                )}
-            </div>
+            {/* Comments tab (default) or video lists */}
+            {activeTab === "comments" ? (
+                <div className="flex-1 py-2 pr-1">
+                    <CommentSection postId={postId} />
+                </div>
+            ) : (
+                <div className="flex-1 py-2 space-y-0.5">
+                    {isLoading || !currentVideos ? (
+                        <VideoSkeleton />
+                    ) : (
+                        <VideoList videos={currentVideos} />
+                    )}
+                </div>
+            )}
         </div>
     );
 }

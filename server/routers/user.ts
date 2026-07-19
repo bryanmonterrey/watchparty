@@ -109,6 +109,7 @@ export const userRouter = router({
                 .set({ avatar_url: input.avatar_url })
                 .where(eq(user.id, ctx.user.id));
             invalidateCache(`user:profile:${ctx.user.id}`);
+            invalidateCache(`profile:card:${ctx.user.id}`);
             upsertUser({ id: ctx.user.id, name: ctx.user.name, username: ctx.user.username ?? "", avatar_url: input.avatar_url, createdAt: new Date() });
             return { success: true };
         }),
@@ -399,6 +400,7 @@ export const userRouter = router({
                 .where(eq(user.id, ctx.user.id));
             
             invalidateCache(`user:profile:${ctx.user.id}`);
+            invalidateCache(`profile:card:${ctx.user.id}`);
             upsertUser({ id: ctx.user.id, name: input.name, username: ctx.user.username ?? "", avatar_url: input.avatar_url, createdAt: new Date() });
             return { success: true };
         }),

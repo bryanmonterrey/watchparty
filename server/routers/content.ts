@@ -1267,13 +1267,29 @@ export const contentRouter = router({
                         wallet_address: user.wallet_address,
                         followerCount: sql<number>`(SELECT COUNT(*) FROM follows WHERE follows."followingId" = ${user.id})`,
                     },
+                    // Attached token for the under-player chip (design brief §2) —
+                    // null id means no token; shaped to null below.
+                    token: {
+                        id: tokens.id,
+                        ticker: tokens.ticker,
+                        name: tokens.name,
+                        imageUrl: tokens.imageUrl,
+                        priceUsd: tokens.priceUsd,
+                        marketCapUsd: tokens.marketCapUsd,
+                        bondingProgress: tokens.bondingProgress,
+                        phase: tokens.phase,
+                        status: tokens.status,
+                    },
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(tokens, eq(posts.tokenId, tokens.id))
                 .where(and(eq(posts.id, input.postId), isNotNull(posts.videoUrl)))
                 .limit(1);
 
-            return result[0] ?? null;
+            const row = result[0];
+            if (!row) return null;
+            return { ...row, token: row.token?.id && row.token.status === "live" ? row.token : null };
         }),
 
     // ─── Get public videos for "Up Next" sidebar ─────────────────────────────

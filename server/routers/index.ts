@@ -34,6 +34,7 @@ import { predictionsRouter } from "./predictions";
 import { pnlRouter } from "./pnl";
 import { perpsRouter } from "./perps";
 import { copyRouter } from "./copy";
+import { profileRouter } from "./profile";
 
 /**
  * Root application router
@@ -73,6 +74,7 @@ export const appRouter = router({
     pnl: pnlRouter,
     perps: perpsRouter,
     copy: copyRouter,
+    profile: profileRouter,
 });
 
 /**

@@ -10,6 +10,7 @@ import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileAvatar } from "@/components/video/profile-avatar";
 import { UserType } from "@/db/schema/auth/user";
 import { CommentSection } from "@/components/browse/comment-section";
+import { TokenInlineChip, type InlineChipToken } from "@/components/tokens/token-inline-chip";
 
 interface VideoAuthor {
     id: string;
@@ -31,6 +32,8 @@ interface VideoMetadataProps {
     category: string | null;
     isLiked: boolean;
     author: VideoAuthor;
+    /** Attached live token, when the video has one (design brief §2). */
+    token?: InlineChipToken | null;
     isLoading?: boolean;
 }
 
@@ -51,6 +54,7 @@ export function VideoMetadata({
     category,
     isLiked: initialLiked,
     author,
+    token,
     isLoading,
 }: VideoMetadataProps) {
     const { data: session } = useAuthSession();
@@ -111,10 +115,11 @@ export function VideoMetadata({
 
             {/* Creator + Actions Row */}
             <div className="flex flex-wrap items-center justify-between gap-4 py-1">
-                {/* Left: Compact Profile Header */}
+                {/* Left: Compact Profile Header + token chip */}
                 <div className="flex flex-row items-center gap-4">
                     <ProfileAvatar user={author as unknown as UserType} isMinimized={true} />
                     <ProfileHeader user={author as unknown as UserType} isMinimized={true} />
+                    {token && <TokenInlineChip token={token} />}
                 </div>
 
                 {/* Right: Actions */}
@@ -178,8 +183,9 @@ export function VideoMetadata({
                 )}
             </div>
 
-            {/* Comments */}
-            <div className="pt-4">
+            {/* Comments — mobile only; on lg+ they live in the right rail
+                (owner decision 2026-07-19: Twitch-like, mirrors live chat). */}
+            <div className="pt-4 lg:hidden">
                 <p className="text-lg font-bold text-white mb-4">
                     {formatViewers(comments)} Comments
                 </p>

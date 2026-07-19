@@ -83,6 +83,33 @@ function toTradeToken({ token: t, creatorIsLive, liveViewerCount, creatorUsernam
 }
 
 export const tradeRouter = router({
+    /**
+     * The creator's most recent live token — the pin above live chat
+     * (design brief §2). Cached 60s; null when the creator has no live token.
+     */
+    tokenByCreator: publicProcedure
+        .input(z.object({ creatorId: z.string() }))
+        .query(({ input }) =>
+            withCache(`token:by-creator:${input.creatorId}`, 60, async () => {
+                const [t] = await db
+                    .select({
+                        id: tokens.id,
+                        ticker: tokens.ticker,
+                        name: tokens.name,
+                        imageUrl: tokens.imageUrl,
+                        priceUsd: tokens.priceUsd,
+                        marketCapUsd: tokens.marketCapUsd,
+                        bondingProgress: tokens.bondingProgress,
+                        phase: tokens.phase,
+                    })
+                    .from(tokens)
+                    .where(and(eq(tokens.creatorId, input.creatorId), eq(tokens.status, "live")))
+                    .orderBy(desc(tokens.createdAt))
+                    .limit(1);
+                return t ?? null;
+            })
+        ),
+
     getFeed: publicProcedure.query(async () => {
         // Live + has an on-chain pool (tradeable). Drafts and pool-less rows never show.
         const live = and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress));

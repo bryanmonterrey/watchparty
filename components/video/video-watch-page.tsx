@@ -100,16 +100,18 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
                     category={video?.category ?? null}
                     isLiked={video?.isLiked ?? false}
                     author={video?.author ?? { id: "", name: null, username: null, avatar_url: null, verifiedTier: null, followerCount: 0 }}
+                    token={video?.token ?? null}
                     isLoading={isLoading}
                 />
             </div>
 
-            {/* ── Up Next sidebar ──────────────────────────────────────────── */}
+            {/* ── Right rail: Comments (default) + Up Next ─────────────────── */}
             <UpNextSidebar
                 postId={postId}
                 creatorId={video?.author?.id ?? ""}
                 creatorName={video?.author?.name ?? null}
                 category={video?.category ?? null}
+                commentsCount={video?.comments ?? 0}
                 isLoading={isLoading}
             />
         </div>

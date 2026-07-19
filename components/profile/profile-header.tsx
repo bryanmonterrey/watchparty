@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import * as React from "react";
 import { EditProfileDialog } from "./edit-profile-dialog";
 import { LevelBadge } from "./level-badge";
+import { BadgeStrip } from "./badge-strip";
 import { FollowersFollowingDialog } from "./followers-following-dialog";
 import { TipModal } from "@/components/browse/tip-modal";
 import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
@@ -118,6 +119,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
     React.useEffect(() => { setMounted(true); }, []);
     const isOwner = mounted && !sessionPending && session?.user?.id === user.id;
     const { data: counts, refetch: refetchCounts } = trpc.user.followCounts.useQuery({ userId: user.id });
+    const { data: card } = trpc.profile.card.useQuery({ userId: user.id });
     const { data: followData, refetch: refetchFollow } = trpc.user.isFollowing.useQuery({ followingId: user.id }, { enabled: !isOwner });
     const [optimisticFollowing, setOptimisticFollowing] = React.useState<boolean | null>(null);
 
@@ -173,8 +175,11 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                     <LevelBadge xp={user.xp} userId={user.id} />
                     
                     {isMinimized && (
-                        <span className="text-zinc-400 tracking-wide font-semibold text-sm ml-1">
-                            @{user.username}
+                        <span className="flex items-center gap-2 ml-1">
+                            <span className="text-zinc-400 tracking-wide font-semibold text-sm">
+                                @{user.username}
+                            </span>
+                            <BadgeStrip badges={card?.badges ?? []} size="sm" />
                         </span>
                     )}
 
@@ -247,9 +252,12 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
             </div>
 
             {!isMinimized && (
-                <span className="text-zinc-400 tracking-wide font-semibold text-sm transition-all duration-300">
-                    @{user.username}
-                </span>
+                <div className="flex items-center gap-2.5">
+                    <span className="text-zinc-400 tracking-wide font-semibold text-sm transition-all duration-300">
+                        @{user.username}
+                    </span>
+                    <BadgeStrip badges={card?.badges ?? []} />
+                </div>
             )}
 
             {user.bio && !isMinimized && (

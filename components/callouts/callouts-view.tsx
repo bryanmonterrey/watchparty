@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatMarketCap } from "@/components/tokens/market-cap-chip";
 import { trpc } from "@/lib/trpc/client";
 import { TradeRow } from "@/components/trades/trade-row";
+import { MiniProfile } from "@/components/profile/mini-profile-card";
 import { MyCopies } from "@/components/copy/my-copies";
 import { cn } from "@/lib/utils";
 
@@ -32,22 +33,24 @@ function GainBadge({ gain, className }: { gain: number; className?: string }) {
     );
 }
 
-function CallerIdentity({ caller }: { caller: { name: string; username: string | null; avatar_url: string | null; level: number } }) {
+function CallerIdentity({ caller }: { caller: { id?: string; userId?: string; name: string; username: string | null; avatar_url: string | null; level: number } }) {
     return (
-        <Link href={`/${caller.username ?? ""}`} className="flex items-center gap-2.5 min-w-0 group">
-            <Avatar className="size-9 border border-zinc-700/50 shrink-0">
-                <AvatarImage src={caller.avatar_url || undefined} />
-                <AvatarFallback className="bg-zinc-800 text-zinc-400 text-xs font-bold">
-                </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-bold text-white group-hover:underline">{caller.name}</span>
-                    <span className="font-pixel text-[10px] leading-none text-lantern shrink-0">LV {caller.level}</span>
+        <MiniProfile userId={caller.id ?? caller.userId} triggerClassName="min-w-0">
+            <Link href={`/${caller.username ?? ""}`} className="flex items-center gap-2.5 min-w-0 group">
+                <Avatar className="size-9 border border-zinc-700/50 shrink-0">
+                    <AvatarImage src={caller.avatar_url || undefined} />
+                    <AvatarFallback className="bg-zinc-800 text-zinc-400 text-xs font-bold">
+                    </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-bold text-white group-hover:underline">{caller.name}</span>
+                        <span className="font-pixel text-[10px] leading-none text-lantern shrink-0">LV {caller.level}</span>
+                    </div>
+                    {caller.username && <span className="text-xs text-zinc-500 font-medium">@{caller.username}</span>}
                 </div>
-                {caller.username && <span className="text-xs text-zinc-500 font-medium">@{caller.username}</span>}
-            </div>
-        </Link>
+            </Link>
+        </MiniProfile>
     );
 }
 
