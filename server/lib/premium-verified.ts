@@ -1,45 +1,50 @@
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { verificationRequests } from "@/db/schema/content";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import type { TierGroup } from "@/lib/premium/tiers";
 
-// Premium subscribers get the verified checkmark automatically (owner
-// decision 2026-07-20: the manual verification_requests admin-approval flow
-// is effectively redundant now for the base "verified" tier — signing up for
-// premium is the path). Business/government stay admin-only: grant never
-// overwrites an existing tier, and revoke never touches anything but exactly
-// "verified". Both are idempotent, safe to call on every relevant status
-// transition, and never throw (callers fire-and-forget).
+// Premium subscribers get a checkmark automatically (owner decision
+// 2026-07-20): individual tiers (basic/premium) → "verified", business
+// tiers (biz_basic/biz_pro/biz_custom) → "business" — both are already
+// sold as a listed feature on those plan cards (lib/premium/tiers.ts). No
+// admin review for either; "government" has no paid tier and is never
+// touched by this — stays fully manual, since anyone could otherwise pay
+// their way into an impersonation-risk badge.
+//
+// Call this at every subscription transition (new subscribe success, tier
+// upgrade/downgrade, cancel, final expiration after failed USDC pulls) —
+// NOT on every successful renewal, so a badge an admin cleared by hand
+// stays cleared instead of quietly reappearing next period.
 
-/** Called once, when a subscription first charges successfully. */
-export async function grantPremiumVerified(userId: string): Promise<void> {
-    try {
-        await db.update(user)
-            .set({ verifiedTier: "verified" })
-            .where(and(eq(user.id, userId), isNull(user.verifiedTier)));
-    } catch { /* never block the subscription flow on this */ }
+async function hasApprovedRequest(userId: string): Promise<boolean> {
+    const [row] = await db.select({ id: verificationRequests.id })
+        .from(verificationRequests)
+        .where(and(eq(verificationRequests.userId, userId), eq(verificationRequests.status, "approved")))
+        .limit(1);
+    return !!row;
 }
 
 /**
- * Called when a subscription terminally lapses (cancelled or expired after
- * retries) — NOT on a deferred cancel-at-period-end, which still owns the
- * badge until the period actually ends.
+ * Reconciles the auto-managed badge to match the subscriber's current
+ * premium tier. `group` is the subscription's tier group, or `null` when
+ * the subscription has ended (cancelled or expired after retries).
  *
- * Skips users who were separately admin-approved via verification_requests
- * (status "approved") — that's a real identity-verification grant and must
- * outlive an unrelated premium cancellation, even though it landed on the
- * same enum value as the auto-granted one.
+ * Never touches:
+ * - Anyone with an admin-approved verification_requests row — that's a
+ *   real identity check and must outlive an unrelated billing event.
+ * - Anyone currently on "government" — not sold, always manual.
  */
-export async function revokePremiumVerified(userId: string): Promise<void> {
+export async function syncPremiumBadge(userId: string, group: TierGroup | null): Promise<void> {
     try {
-        const [approved] = await db.select({ id: verificationRequests.id })
-            .from(verificationRequests)
-            .where(and(eq(verificationRequests.userId, userId), eq(verificationRequests.status, "approved")))
-            .limit(1);
-        if (approved) return;
+        if (await hasApprovedRequest(userId)) return;
 
-        await db.update(user)
-            .set({ verifiedTier: null })
-            .where(and(eq(user.id, userId), eq(user.verifiedTier, "verified")));
+        const [row] = await db.select({ verifiedTier: user.verifiedTier }).from(user).where(eq(user.id, userId)).limit(1);
+        if (!row || row.verifiedTier === "government") return;
+
+        const desired = group === "individual" ? "verified" : group === "business" ? "business" : null;
+        if (row.verifiedTier === desired) return; // already correct, no-op
+
+        await db.update(user).set({ verifiedTier: desired }).where(eq(user.id, userId));
     } catch { /* never block the subscription flow on this */ }
 }
