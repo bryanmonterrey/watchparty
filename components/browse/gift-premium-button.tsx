@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { PremiumIcon } from "@/components/icons";
+import { GiftBoxIcon } from "@/components/icons";
 import { GiftPremiumDialog } from "./gift-premium-dialog";
 
 interface GiftPremiumButtonProps {
@@ -22,10 +22,9 @@ export function GiftPremiumButton({ recipientId, recipientName }: GiftPremiumBut
             <button
                 onClick={() => setOpen(true)}
                 title="Gift Premium"
-                className="flex h-11 items-center gap-1.5 rounded-full border border-flexborder/50 bg-black/25 px-4 text-base font-bold text-white2 transition-colors hover:bg-white2/10"
+                className="flex size-11 items-center justify-center rounded-full border border-flexborder/50 bg-black/25 text-white2 transition-colors hover:bg-white2/10"
             >
-                <PremiumIcon className="size-4" />
-                Gift Premium
+                <GiftBoxIcon className="size-5" />
             </button>
             <GiftPremiumDialog recipientId={recipientId} recipientName={recipientName} open={open} onOpenChange={setOpen} />
         </>

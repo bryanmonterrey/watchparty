@@ -174,9 +174,9 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                     <div className="flex items-center gap-2">
                         {!isOwner ? (
                             // Left to right (owner order, 2026-07-20): dots,
-                            // message, send, follow, [subscribe/gift subs/
-                            // gift premium — no live tiers to test placement
-                            // against yet], resize.
+                            // gift premium (icon-only), message, send,
+                            // follow, [subscribe/gift subs — no live tiers
+                            // to test placement against yet], resize.
                             <>
                                 <MoreMenu
                                     userId={user.id}
@@ -185,6 +185,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                     onOpenChange={setShowMoreMenu}
                                     onClose={() => setShowMoreMenu(false)}
                                 />
+                                <GiftPremiumButton recipientId={user.id} recipientName={user.name} />
                                 <MessageButton userId={user.id} />
                                 {user.wallet_address && (
                                     <Button
@@ -208,7 +209,6 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                 </Button>
                                 <SubscribeButton creatorId={user.id} creatorName={user.name} />
                                 <GiftSubsButton creatorId={user.id} creatorName={user.name} />
-                                <GiftPremiumButton recipientId={user.id} recipientName={user.name} />
                                 {onToggleSize && (
                                     <Button
                                         onClick={onToggleSize}
