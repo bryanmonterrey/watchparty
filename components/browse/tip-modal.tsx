@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { trpc } from "@/lib/trpc/client";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
 
 const TIP_PRESETS = [
@@ -31,7 +30,7 @@ interface TipModalProps {
     postId?: string;
 }
 
-export function TipModal({ open, onOpenChange, recipient, postId }: TipModalProps) {
+export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
     const [selectedSol, setSelectedSol] = useState<number | null>(null);
     const [customSol, setCustomSol] = useState("");
     const [sending, setSending] = useState(false);
@@ -94,28 +93,28 @@ export function TipModal({ open, onOpenChange, recipient, postId }: TipModalProp
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-sm border border-white/10">
-                <DialogHeader className="text-center items-center">
-                    <div className="relative mb-3">
-                        <div className="w-16 h-16 rounded-full bg-zinc-800 overflow-hidden ring-4 ring-lantern/20">
+            <DialogContent className="w-full max-w-sm border-none ring-1 ring-white/10">
+                <DialogHeader className="items-center text-center">
+                    <div className="relative mb-2">
+                        <div className="size-16 overflow-hidden rounded-full bg-zinc-800 ring-4 ring-lantern/15">
                             {recipient.avatar_url ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={recipient.avatar_url} alt={recipient.name ?? ""} className="object-cover w-full h-full" />
+                                <img src={recipient.avatar_url} alt={recipient.name ?? ""} className="size-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xl font-bold">
+                                <div className="flex size-full items-center justify-center text-xl font-bold text-zinc-400">
                                     {(recipient.name ?? recipient.username ?? "?")[0]?.toUpperCase()}
                                 </div>
                             )}
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-lantern flex items-center justify-center">
-                            <Zap className="w-3.5 h-3.5 text-black" />
+                        <div className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-lantern">
+                            <Zap className="size-3.5 text-black" />
                         </div>
                     </div>
-                    <DialogTitle className="text-zinc-100">Tip {recipient.name || recipient.username}</DialogTitle>
-                    <DialogDescription className="text-zinc-500">Send SOL directly to their wallet</DialogDescription>
+                    <DialogTitle className="text-white">Tip {recipient.name || recipient.username}</DialogTitle>
+                    <DialogDescription className="text-zinc-500">Sends SOL directly to their wallet — a one-off thank-you, not a subscription.</DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-2">
+                <div className="flex flex-col gap-4">
                     {/* Presets */}
                     <div className="grid grid-cols-4 gap-2">
                         {TIP_PRESETS.map((p) => (
@@ -123,44 +122,44 @@ export function TipModal({ open, onOpenChange, recipient, postId }: TipModalProp
                                 key={p.sol}
                                 onClick={() => { setSelectedSol(p.sol); setCustomSol(""); }}
                                 className={cn(
-                                    "flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all text-sm font-bold",
+                                    "flex h-14 flex-col items-center justify-center rounded-2xl border text-sm font-bold transition-colors",
                                     selectedSol === p.sol
-                                        ? "border-lantern bg-lantern/10 text-lantern"
-                                        : "border-white/10 text-zinc-300 hover:border-white/25"
+                                        ? "border-lantern/50 bg-lantern/10 text-lantern"
+                                        : "border-white/10 text-zinc-300 hover:border-white/25",
                                 )}
                             >
                                 {p.label}
-                                <span className="text-[10px] font-normal text-zinc-500 mt-0.5">SOL</span>
+                                <span className="mt-0.5 text-[10px] font-semibold text-zinc-500">SOL</span>
                             </button>
                         ))}
                     </div>
 
                     {/* Custom amount */}
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-bold">◎</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500">◎</span>
                         <input
                             type="text"
                             inputMode="decimal"
                             placeholder="Custom amount"
                             value={customSol}
                             onChange={(e) => handleCustomChange(e.target.value)}
-                            className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-100 text-sm text-center placeholder:text-zinc-600 focus:outline-none focus:border-lantern/50 transition-colors"
+                            className="h-11 w-full rounded-full border border-white/10 bg-zinc-900 pl-9 pr-4 text-center text-sm text-zinc-100 placeholder:text-zinc-600 transition-colors focus:border-lantern/50 focus:outline-none"
                         />
                     </div>
 
                     {finalSol > 100 && (
-                        <p className="text-xs text-red-400 text-center">Maximum tip is 100 SOL</p>
+                        <p className="text-center text-xs font-semibold text-red-400">Maximum tip is 100 SOL</p>
                     )}
 
                     <button
                         onClick={handleSend}
                         disabled={!isValid || sending}
-                        className="w-full py-2.5 rounded-full bg-lantern text-black text-sm font-bold flex items-center justify-center gap-2 hover:bg-lantern/90 disabled:opacity-50 transition-colors"
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-lantern text-sm font-bold text-black transition-colors hover:bg-lantern/90 disabled:opacity-50"
                     >
                         {sending ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                            <><Loader2 className="size-4 animate-spin" /> Sending…</>
                         ) : (
-                            <><Zap className="w-4 h-4" /> Send {finalSol > 0 ? `${finalSol} SOL` : ""}</>
+                            <><Zap className="size-4" /> Send {finalSol > 0 ? `${finalSol} SOL` : ""}</>
                         )}
                     </button>
                 </div>
