@@ -16,13 +16,15 @@ export function PrivacySettings() {
 
     const [showOnlineStatus, setShowOnlineStatus] = useState(true);
     const [dmRequireFollow, setDmRequireFollow] = useState(false);
+    const [hideVerifiedBadge, setHideVerifiedBadge] = useState(false);
     const [dmPriceSol, setDmPriceSol] = useState("");  // "" means free
 
     useEffect(() => {
-        const u = session?.user as { showOnlineStatus?: boolean; dmRequireFollow?: boolean; dmPrice?: number | null } | undefined;
+        const u = session?.user as { showOnlineStatus?: boolean; dmRequireFollow?: boolean; dmPrice?: number | null; hideVerifiedBadge?: boolean } | undefined;
         if (u) {
             setShowOnlineStatus(u.showOnlineStatus ?? true);
             setDmRequireFollow(u.dmRequireFollow ?? false);
+            setHideVerifiedBadge(u.hideVerifiedBadge ?? false);
             setDmPriceSol(u.dmPrice ? (u.dmPrice / SOL).toFixed(3) : "");
         }
     }, [session]);
@@ -46,6 +48,13 @@ export function PrivacySettings() {
             description: "Only people you follow back can send you messages",
             value: dmRequireFollow,
             set: setDmRequireFollow,
+        },
+        {
+            key: "hideVerifiedBadge" as const,
+            label: "Hide checkmark",
+            description: "Don't show your verified/premium badge to others, even if you have one",
+            value: hideVerifiedBadge,
+            set: setHideVerifiedBadge,
         },
     ];
 
@@ -91,6 +100,7 @@ export function PrivacySettings() {
                 onClick={() => update.mutate({
                     showOnlineStatus,
                     dmRequireFollow,
+                    hideVerifiedBadge,
                     dmPrice: dmPriceSol ? Math.round(parseFloat(dmPriceSol) * SOL) : 0,
                 })}
                 disabled={update.isPending}

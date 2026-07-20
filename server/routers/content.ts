@@ -14,6 +14,7 @@ import { recordQuestEvent } from "@/server/lib/quests";
 import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, upsertToken, deletePost, upsertUser } from "@/lib/typesense/sync";
+import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
 // Normalize a user-entered social link to a full URL (bare domains get https://).
 // Returns null for empty input so the column stays null rather than "".
@@ -1143,11 +1144,11 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
                     },
-                    origUserVerifiedTier: origUser.verifiedTier,
+                    origUserVerifiedTier: effectiveVerifiedTier(origUser.verifiedTier, origUser.hideVerifiedBadge),
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
@@ -1261,7 +1262,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
                         wallet_address: user.wallet_address,
@@ -1315,7 +1316,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
                     },
@@ -1364,7 +1365,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
                     },
@@ -1407,7 +1408,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
                     },

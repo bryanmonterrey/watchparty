@@ -60,6 +60,7 @@ const config = {
       username: { type: "string" as const, required: false },
       gender: { type: "boolean" as const, required: false },
       last_signed_in: { type: "date" as const, input: false },
+      hideVerifiedBadge: { type: "boolean" as const, defaultValue: false, input: false },
     },
   },
   // Force OAuth state into DB — Redis secondaryStorage loses verification on callback.

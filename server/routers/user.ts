@@ -10,6 +10,7 @@ import { createNotification } from '@/server/lib/notify';
 import { awardXP } from '@/server/lib/xp';
 import { recordQuestEvent } from '@/server/lib/quests';
 import { upsertUser } from '@/lib/typesense/sync';
+import { effectiveVerifiedTier } from '@/lib/verified-tier';
 
 export const userRouter = router({
     // Live availability check for onboarding — same uniqueness source of
@@ -47,7 +48,7 @@ export const userRouter = router({
                             email: user.email,
                             avatar_url: user.avatar_url,
                             wallet_address: user.wallet_address,
-                            verifiedTier: user.verifiedTier,
+                            verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         })
                         .from(user)
                         .limit(input.limit);
@@ -63,7 +64,7 @@ export const userRouter = router({
                         email: user.email,
                         avatar_url: user.avatar_url,
                         wallet_address: user.wallet_address,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         bio: user.bio,
                     })
                     .from(user)
@@ -182,7 +183,7 @@ export const userRouter = router({
                     username: user.username,
                     avatar_url: user.avatar_url,
                     bio: user.bio,
-                    verifiedTier: user.verifiedTier,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                     followedAt: follows.createdAt,
                 })
                 .from(follows)
@@ -228,7 +229,7 @@ export const userRouter = router({
                     username: user.username,
                     avatar_url: user.avatar_url,
                     bio: user.bio,
-                    verifiedTier: user.verifiedTier,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                     followedAt: follows.createdAt,
                 })
                 .from(follows)
@@ -268,14 +269,17 @@ export const userRouter = router({
             showOnlineStatus: z.boolean().optional(),
             dmRequireFollow: z.boolean().optional(),
             dmPrice: z.number().int().min(0).nullable().optional(), // lamports; null = free
+            hideVerifiedBadge: z.boolean().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             const update: Record<string, unknown> = {};
             if (input.showOnlineStatus !== undefined) update.showOnlineStatus = input.showOnlineStatus;
             if (input.dmRequireFollow !== undefined) update.dmRequireFollow = input.dmRequireFollow;
             if (input.dmPrice !== undefined) update.dmPrice = input.dmPrice === 0 ? null : input.dmPrice;
+            if (input.hideVerifiedBadge !== undefined) update.hideVerifiedBadge = input.hideVerifiedBadge;
             await db.update(user).set(update).where(eq(user.id, ctx.user.id));
             invalidateCache(`user:profile:${ctx.user.id}`);
+            invalidateCache(`profile:card:v2:${ctx.user.id}`);
             return { success: true };
         }),
 
@@ -448,7 +452,7 @@ export const userRouter = router({
                 avatar_url: targetUser.avatar_url,
                 banner_url: targetUser.banner_url,
                 bio: targetUser.bio,
-                verifiedTier: targetUser.verifiedTier,
+                verifiedTier: targetUser.hideVerifiedBadge ? null : targetUser.verifiedTier,
                 followersCount: followerCount[0]?.count ?? 0,
                 followingCount: followingCount[0]?.count ?? 0,
                 isFollowing: isFollowingResult.length > 0,

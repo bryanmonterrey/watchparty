@@ -69,7 +69,7 @@ async function buildCardCore(target: typeof user.$inferSelect): Promise<CardCore
         avatar_url: target.avatar_url,
         banner_url: target.banner_url,
         bio: target.bio,
-        verifiedTier: target.verifiedTier,
+        verifiedTier: target.hideVerifiedBadge ? null : target.verifiedTier,
         affiliateUsername: target.affiliateUsername,
         affiliateIconUrl: target.affiliateIconUrl,
         createdAt: target.createdAt ? target.createdAt.toISOString() : null,

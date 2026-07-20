@@ -9,6 +9,7 @@ import { recordSignal, accumulateDwell, ACTION } from "@/lib/feed-ranker/signals
 import { rankFeedRows } from "@/lib/feed-ranker/rank-feed";
 import { retrieveOutOfNetwork } from "@/lib/feed-ranker/retrieval";
 import { FEED_RANKER_ENABLED } from "@/lib/feed-ranker/config";
+import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
 // Candidate pool size sourced for ranking (then re-ranked + paginated client-side).
 const FEED_POOL_SIZE = 200;
@@ -62,7 +63,7 @@ export const feedRouter = router({
                     name: user.name,
                     username: user.username,
                     avatar_url: user.avatar_url,
-                    verifiedTier: user.verifiedTier,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                     affiliateUsername: user.affiliateUsername,
                     affiliateIconUrl: user.affiliateIconUrl,
                 },
@@ -90,7 +91,7 @@ export const feedRouter = router({
                 origUserName: origUser.name,
                 origUserUsername: origUser.username,
                 origUserAvatarUrl: origUser.avatar_url,
-                origUserVerifiedTier: origUser.verifiedTier,
+                origUserVerifiedTier: effectiveVerifiedTier(origUser.verifiedTier, origUser.hideVerifiedBadge),
                 origUserAffiliateUsername: origUser.affiliateUsername,
                 origUserAffiliateIconUrl: origUser.affiliateIconUrl,
                 origVideoUrl: origPosts.videoUrl,
@@ -110,7 +111,7 @@ export const feedRouter = router({
                 parentCreatedAt: parentPosts.createdAt,
                 parentUserAvatar: parentUser.avatar_url,
                 parentUserName: parentUser.name,
-                parentUserVerifiedTier: parentUser.verifiedTier,
+                parentUserVerifiedTier: effectiveVerifiedTier(parentUser.verifiedTier, parentUser.hideVerifiedBadge),
             };
 
             const baseJoins = (qb: any) =>
@@ -413,7 +414,7 @@ export const feedRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
                     },
@@ -430,7 +431,7 @@ export const feedRouter = router({
                         name: origUser.name,
                         username: origUser.username,
                         avatar_url: origUser.avatar_url,
-                        verifiedTier: origUser.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(origUser.verifiedTier, origUser.hideVerifiedBadge),
                     }
                 })
                 .from(posts)
@@ -560,7 +561,7 @@ export const feedRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
                     },
@@ -574,7 +575,7 @@ export const feedRouter = router({
                         name: origUser.name,
                         username: origUser.username,
                         avatar_url: origUser.avatar_url,
-                        verifiedTier: origUser.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(origUser.verifiedTier, origUser.hideVerifiedBadge),
                     },
                     parentUsername: parentUser.username,
                     parentUserId: parentUser.id,

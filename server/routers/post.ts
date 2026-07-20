@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { posts, user, bookmarks } from "@/db/schema";
 import { eq, and, desc, lt, sql, ilike, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
 export const postRouter = router({
     getPost: publicProcedure
@@ -50,7 +51,7 @@ export const postRouter = router({
                     parentUserId: parentUser.id,
                     parentUserAvatar: parentUser.avatar_url,
                     parentUserName: parentUser.name,
-                    parentUserVerifiedTier: parentUser.verifiedTier,
+                    parentUserVerifiedTier: effectiveVerifiedTier(parentUser.verifiedTier, parentUser.hideVerifiedBadge),
                     origId: origPosts.id,
                     origUserId: origPosts.userId,
                     origContent: origPosts.content,
@@ -69,7 +70,7 @@ export const postRouter = router({
                     origUserName: origUser.name,
                     origUserUsername: origUser.username,
                     origUserAvatar: origUser.avatar_url,
-                    origUserVerifiedTier: origUser.verifiedTier,
+                    origUserVerifiedTier: effectiveVerifiedTier(origUser.verifiedTier, origUser.hideVerifiedBadge),
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
                     isBookmarked: sql<boolean>`EXISTS (SELECT 1 FROM bookmarks WHERE bookmarks."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND bookmarks."userId" = ${ctx.user?.id ?? ""} AND bookmarks."contentType" = 'post')`,
                     isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts rp WHERE rp."repostOfId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND rp."userId" = ${ctx.user?.id ?? ""} AND rp."status" = 'published')`,
@@ -78,7 +79,7 @@ export const postRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                     },
                 })
                 .from(posts)
@@ -241,8 +242,8 @@ export const postRouter = router({
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
                     isBookmarked: sql<boolean>`EXISTS (SELECT 1 FROM bookmarks WHERE bookmarks."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND bookmarks."userId" = ${ctx.user?.id ?? ""} AND bookmarks."contentType" = 'post')`,
                     isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts rp WHERE rp."repostOfId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND rp."userId" = ${ctx.user?.id ?? ""} AND rp."status" = 'published')`,
-                    user: { id: user.id, name: user.name, username: user.username, avatar_url: user.avatar_url, verifiedTier: user.verifiedTier },
-                    origUserVerifiedTier: origUser.verifiedTier,
+                    user: { id: user.id, name: user.name, username: user.username, avatar_url: user.avatar_url, verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge) },
+                    origUserVerifiedTier: effectiveVerifiedTier(origUser.verifiedTier, origUser.hideVerifiedBadge),
                     origVideoUrl: origPosts.videoUrl,
                     origHasContentWarning: origPosts.hasContentWarning,
                     origContentWarningText: origPosts.contentWarningText,
@@ -376,7 +377,7 @@ export const postRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
-                        verifiedTier: user.verifiedTier,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                     },
                     bookmarkId: bookmarks.id,
                     bookmarkCreatedAt: bookmarks.createdAt,

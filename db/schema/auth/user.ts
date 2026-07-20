@@ -26,6 +26,7 @@ export const user = pgTable("user", {
   lastSeenAt: timestamp("lastSeenAt"),
   showOnlineStatus: boolean("showOnlineStatus").default(true).notNull(),
   dmRequireFollow: boolean("dmRequireFollow").default(false).notNull(),
+  hideVerifiedBadge: boolean("hideVerifiedBadge").default(false).notNull(), // opt-out: suppress own checkmark everywhere it renders
   twoFactorEnabled: boolean("twoFactorEnabled").default(false),
   dmPrice: integer("dmPrice"),                         // lamports to unlock DMs (null = free)
   xp: integer("xp").default(0).notNull(),              // lifetime XP; rollup of xp_events (server/lib/xp.ts)
