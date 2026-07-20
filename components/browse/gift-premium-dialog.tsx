@@ -11,7 +11,8 @@ import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { PremiumIcon } from "@/components/icons";
+import { GiftBoxIcon } from "@/components/icons";
+import { Squircle } from "@/components/ui/squircle";
 
 // Discord-Nitro-style gift: pick a person (this dialog is always opened from
 // their profile, so the recipient is already fixed), pick an individual tier
@@ -79,9 +80,6 @@ export function GiftPremiumDialog({ recipientId, recipientName, open, onOpenChan
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="w-full max-w-sm border-none ring-1 ring-white/10">
                 <DialogHeader className="items-center text-center">
-                    <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-lantern/10">
-                        <PremiumIcon className="size-6 text-lantern" />
-                    </div>
                     <DialogTitle className="text-white">Gift Premium to {recipientName}</DialogTitle>
                     <DialogDescription className="text-zinc-500">
                         Applies straight to their account — no follow or subscription needed on their end.
@@ -92,20 +90,21 @@ export function GiftPremiumDialog({ recipientId, recipientName, open, onOpenChan
                     <div className="flex flex-col gap-2">
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Tier</p>
                         {INDIVIDUAL_TIERS.map((key) => (
-                            <button
-                                key={key}
-                                onClick={() => setTierKey(key)}
-                                className={cn(
-                                    "flex items-center justify-between rounded-2xl border px-3.5 py-3 text-left transition-all",
-                                    tierKey === key ? "border-white bg-white/10" : "border-zinc-800/50 bg-zinc-900/40 hover:border-zinc-700",
-                                )}
-                            >
-                                <div>
-                                    <p className="text-sm font-semibold text-white">{TIERS[key].name}</p>
-                                    <p className="text-xs text-zinc-500">{TIERS[key].tagline}</p>
-                                </div>
-                                <span className="text-xs font-bold text-zinc-400">{formatUsd(priceUsd(key, "monthly"))}/mo</span>
-                            </button>
+                            <Squircle asChild radius={16} key={key}>
+                                <button
+                                    onClick={() => setTierKey(key)}
+                                    className={cn(
+                                        "flex items-center justify-between border px-3.5 py-3 text-left transition-all",
+                                        tierKey === key ? "border-white bg-white/10" : "border-zinc-800/50 bg-zinc-900/40 hover:border-zinc-700",
+                                    )}
+                                >
+                                    <div>
+                                        <p className="text-sm font-semibold text-white">{TIERS[key].name}</p>
+                                        <p className="text-xs text-zinc-500">{TIERS[key].tagline}</p>
+                                    </div>
+                                    <span className="text-xs font-bold text-zinc-400">{formatUsd(priceUsd(key, "monthly"))}/mo</span>
+                                </button>
+                            </Squircle>
                         ))}
                     </div>
 
@@ -113,18 +112,19 @@ export function GiftPremiumDialog({ recipientId, recipientName, open, onOpenChan
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Billing</p>
                         <div className="flex gap-2">
                             {(["monthly", "annual"] as const).map((cycle) => (
-                                <button
-                                    key={cycle}
-                                    onClick={() => setBillingCycle(cycle)}
-                                    className={cn(
-                                        "flex-1 rounded-2xl border py-2.5 text-sm font-semibold capitalize transition-all",
-                                        billingCycle === cycle
-                                            ? "border-white bg-white text-black"
-                                            : "border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:text-white",
-                                    )}
-                                >
-                                    {cycle}
-                                </button>
+                                <Squircle asChild radius={16} key={cycle}>
+                                    <button
+                                        onClick={() => setBillingCycle(cycle)}
+                                        className={cn(
+                                            "flex-1 border py-2.5 text-sm font-semibold capitalize transition-all",
+                                            billingCycle === cycle
+                                                ? "border-white bg-white text-black"
+                                                : "border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:text-white",
+                                        )}
+                                    >
+                                        {cycle}
+                                    </button>
+                                </Squircle>
                             ))}
                         </div>
                     </div>
@@ -136,12 +136,12 @@ export function GiftPremiumDialog({ recipientId, recipientName, open, onOpenChan
                     <button
                         onClick={handleGift}
                         disabled={paying}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
+                        className="flex h-16 w-full items-center justify-center gap-2 rounded-full bg-white text-base font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
                     >
                         {paying ? (
                             <><Loader2 className="size-4 animate-spin" /> Gifting…</>
                         ) : (
-                            <><PremiumIcon className="size-4" /> Gift {TIERS[tierKey].name}</>
+                            <><GiftBoxIcon className="size-5" /> Gift {TIERS[tierKey].name}</>
                         )}
                     </button>
                 </div>

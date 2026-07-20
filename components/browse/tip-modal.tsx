@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Zap } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
+import { SendPaperIcon } from "@/components/icons";
+import { Squircle } from "@/components/ui/squircle";
 
 const TIP_PRESETS = [
     { sol: 0.01, label: "0.01" },
@@ -107,7 +109,7 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
                             )}
                         </div>
                         <div className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-lantern">
-                            <Zap className="size-3.5 text-black" />
+                            <SendPaperIcon className="size-3.5 text-black" />
                         </div>
                     </div>
                     <DialogTitle className="text-white">Send SOL to {recipient.name || recipient.username}</DialogTitle>
@@ -116,37 +118,40 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
 
                 <div className="flex flex-col gap-4">
                     {/* Amount panel — same dark card + giant numeral as the wallet drawer's Send flow */}
-                    <div className="rounded-[24px] border border-zinc-800/60 bg-[#1b1b1c] px-5 py-5 text-center">
-                        <p className="mb-3 text-[13px] font-medium text-zinc-500">You&apos;re sending</p>
-                        <div className="flex min-h-[56px] items-center justify-center gap-1">
-                            <input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder="0"
-                                value={customSol}
-                                onChange={(e) => handleCustomChange(e.target.value)}
-                                className="max-w-[180px] min-w-[24px] bg-transparent text-center text-[44px] font-semibold leading-none text-white outline-none placeholder-zinc-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                style={{ width: `${Math.max(24, (customSol.length || 1) * 26)}px` }}
-                            />
-                            <span className="text-[20px] font-semibold text-zinc-500">SOL</span>
+                    <Squircle asChild radius={24}>
+                        <div className="border border-zinc-800/60 bg-[#1b1b1c] px-5 py-5 text-center">
+                            <p className="mb-3 text-[13px] font-medium text-zinc-500">You&apos;re sending</p>
+                            <div className="flex min-h-[56px] items-center justify-center gap-1">
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="0"
+                                    value={customSol}
+                                    onChange={(e) => handleCustomChange(e.target.value)}
+                                    className="max-w-[180px] min-w-[24px] bg-transparent text-center text-[44px] font-semibold leading-none text-white outline-none placeholder-zinc-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    style={{ width: `${Math.max(24, (customSol.length || 1) * 26)}px` }}
+                                />
+                                <span className="text-[20px] font-semibold text-zinc-500">SOL</span>
+                            </div>
                         </div>
-                    </div>
+                    </Squircle>
 
                     {/* Presets */}
                     <div className="flex justify-between gap-2">
                         {TIP_PRESETS.map((p) => (
-                            <button
-                                key={p.sol}
-                                onClick={() => { setSelectedSol(p.sol); setCustomSol(String(p.sol)); }}
-                                className={cn(
-                                    "flex-1 cursor-pointer rounded-2xl border py-2.5 text-[13px] font-semibold transition-all",
-                                    selectedSol === p.sol
-                                        ? "border-white bg-white text-black"
-                                        : "border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:text-white",
-                                )}
-                            >
-                                {p.label}
-                            </button>
+                            <Squircle asChild radius={16} key={p.sol}>
+                                <button
+                                    onClick={() => { setSelectedSol(p.sol); setCustomSol(String(p.sol)); }}
+                                    className={cn(
+                                        "flex-1 cursor-pointer border py-2.5 text-[13px] font-semibold transition-all",
+                                        selectedSol === p.sol
+                                            ? "border-white bg-white text-black"
+                                            : "border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:text-white",
+                                    )}
+                                >
+                                    {p.label}
+                                </button>
+                            </Squircle>
                         ))}
                     </div>
 
@@ -162,7 +167,7 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
                         {sending ? (
                             <><Loader2 className="size-4 animate-spin" /> Sending…</>
                         ) : (
-                            <><Zap className="size-4" /> Send {finalSol > 0 ? `${finalSol} SOL` : ""}</>
+                            <><SendPaperIcon className="size-4" /> Send {finalSol > 0 ? `${finalSol} SOL` : ""}</>
                         )}
                     </button>
                 </div>
