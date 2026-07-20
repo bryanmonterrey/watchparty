@@ -13,6 +13,7 @@ import {
     formatUsd,
 } from "@/lib/premium/tiers";
 import { chargeSubscriber } from "@/lib/chains/solana/subscriptions/collector";
+import { grantPremiumVerified, revokePremiumVerified } from "@/server/lib/premium-verified";
 
 const TIER_KEYS = Object.keys(TIERS) as [TierKey, ...TierKey[]];
 
@@ -188,6 +189,11 @@ export const premiumRouter = router({
                 .values({ id: nanoid(), userId: ctx.user.id, ...shared })
                 .onConflictDoUpdate({ target: premiumSubscriptions.userId, set: shared });
 
+            // Premium subscribers get the verified checkmark (owner decision
+            // 2026-07-20) — only on an actual successful charge, not a
+            // past_due row awaiting retry.
+            if (charged) await grantPremiumVerified(ctx.user.id);
+
             return { success: true, charged };
         }),
 
@@ -200,6 +206,7 @@ export const premiumRouter = router({
                     .update(premiumSubscriptions)
                     .set({ status: "cancelled", cancelAtPeriodEnd: true, cancelledAt: new Date() })
                     .where(eq(premiumSubscriptions.userId, ctx.user.id));
+                await revokePremiumVerified(ctx.user.id);
             } else {
                 await db
                     .update(premiumSubscriptions)

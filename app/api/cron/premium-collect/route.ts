@@ -11,6 +11,7 @@ import { chargeSubscriber } from "@/lib/chains/solana/subscriptions/collector";
 import { getMerchantAddress } from "@/lib/chains/solana/subscriptions/constants";
 import { PERIOD_HOURS, TIERS } from "@/lib/premium/tiers";
 import { grantCreditsToUser } from "@/lib/ads/grant-credits";
+import { revokePremiumVerified } from "@/server/lib/premium-verified";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -53,6 +54,7 @@ export async function GET(req: NextRequest) {
                 .update(premiumSubscriptions)
                 .set({ status: "cancelled", cancelledAt: now })
                 .where(eq(premiumSubscriptions.id, sub.id));
+            await revokePremiumVerified(sub.userId);
             expired++;
             continue;
         }
@@ -123,8 +125,12 @@ export async function GET(req: NextRequest) {
                     failedAttempts: attempts,
                 })
                 .where(eq(premiumSubscriptions.id, sub.id));
-            if (giveUp) expired++;
-            else failed++;
+            if (giveUp) {
+                await revokePremiumVerified(sub.userId);
+                expired++;
+            } else {
+                failed++;
+            }
             errors.push({ id: sub.id, error: e instanceof Error ? e.message : String(e) });
         }
     }
