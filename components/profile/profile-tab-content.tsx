@@ -11,37 +11,51 @@ import { PostCard } from "@/components/browse/post-card";
 import { PollProvider } from "@/components/browse/poll-context";
 import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
 import { TradeRow } from "@/components/trades/trade-row";
+import { ProfilePnlCard } from "./profile-pnl-card";
 
 interface ProfileTabContentProps {
     activeTab: string;
     user: UserType;
 }
 
-function ProfileTradesFeed({ userId }: { userId: string }) {
+function ProfileTradesFeed({ userId, name }: { userId: string; name: string }) {
     const { data, isLoading } = trpc.pnl.tradesForUser.useQuery({ userId, limit: 30 }, { refetchInterval: 60_000 });
+
+    // Top-left, above the trade rows (moved off the profile header — owner
+    // call 2026-07-19: the stat strip belongs with the trades it summarizes).
+    const statsCard = <ProfilePnlCard userId={userId} name={name} />;
+
     if (isLoading) {
         return (
             <div className="flex flex-col gap-2 max-w-3xl">
+                {statsCard}
                 {Array.from({ length: 5 }, (_, i) => <div key={i} className="shimmer-skeleton h-[64px] rounded-[20px]" />)}
             </div>
         );
     }
     if (!data?.visible) {
         return (
-            <div className="py-24 text-center">
-                <p className="text-sm font-semibold text-zinc-400">This user keeps their trades private.</p>
+            <div className="flex flex-col gap-2 max-w-3xl">
+                {statsCard}
+                <div className="py-24 text-center">
+                    <p className="text-sm font-semibold text-zinc-400">This user keeps their trades private.</p>
+                </div>
             </div>
         );
     }
     if (data.items.length === 0) {
         return (
-            <div className="py-24 text-center">
-                <p className="text-sm font-semibold text-zinc-400">No trades yet.</p>
+            <div className="flex flex-col gap-2 max-w-3xl">
+                {statsCard}
+                <div className="py-24 text-center">
+                    <p className="text-sm font-semibold text-zinc-400">No trades yet.</p>
+                </div>
             </div>
         );
     }
     return (
         <div className="flex flex-col gap-2 max-w-3xl">
+            {statsCard}
             {data.items.map((t) => <TradeRow key={t.id} t={t} />)}
         </div>
     );
@@ -140,7 +154,7 @@ export function ProfileTabContent({ activeTab, user }: ProfileTabContentProps) {
                     ) : activeTab === "Posts" ? (
                         <ProfilePostsFeed userId={user.id} isOwner={isOwner} />
                     ) : activeTab === "Trades" ? (
-                        <ProfileTradesFeed userId={user.id} />
+                        <ProfileTradesFeed userId={user.id} name={user.name} />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-center py-24">
                             <div className="size-24 rounded-[32px] bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center mb-8 shadow-2xl relative group overflow-hidden">

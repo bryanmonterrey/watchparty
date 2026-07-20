@@ -7,7 +7,6 @@ import { ProfileAvatar } from "./profile-avatar";
 import { ProfileHeader } from "./profile-header";
 import { ProfileTabs, TABS } from "./profile-tabs";
 import { ProfileTabContent } from "./profile-tab-content";
-import { ProfilePnlCard } from "./profile-pnl-card";
 import { cn } from "@/lib/utils";
 
 interface UserProfileProps {
@@ -117,7 +116,6 @@ export function UserProfile({ user }: UserProfileProps) {
                             isMinimized={false}
                             onToggleSize={handleToggle}
                         />
-                        <ProfilePnlCard userId={user.id} name={user.name} />
                     </div>
                     <ProfileTabs
                         activeTab={activeTab}
