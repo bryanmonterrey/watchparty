@@ -18,6 +18,7 @@ import {
 import { getMerchantAddress } from "@/lib/chains/solana/subscriptions/constants";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
+import { verifySolPayment } from "@/lib/chains/solana/verify-sol-payment";
 import { createNotification } from "@/server/lib/notify";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
@@ -127,66 +128,12 @@ export const subscriptionRouter = router({
         }),
 
     // ─── Subscriptions ────────────────────────────────────────────────────────
-
-    subscribe: protectedProcedure
-        .input(z.object({
-            tierId: z.string(),
-            billingCycle: z.enum(["monthly", "annual"]).default("monthly"),
-            txSignature: z.string().optional(),
-        }))
-        .mutation(async ({ ctx, input }) => {
-            const tier = await db.query.subscriptionTiers.findFirst({
-                where: eq(subscriptionTiers.id, input.tierId),
-            });
-            if (!tier || !tier.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "Tier not found" });
-            if (tier.creatorId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot subscribe to yourself" });
-
-            const now = new Date();
-            const periodEnd = new Date(now);
-            if (input.billingCycle === "annual") {
-                periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-            } else {
-                periodEnd.setMonth(periodEnd.getMonth() + 1);
-            }
-
-            const price = input.billingCycle === "annual" && tier.priceAnnual ? tier.priceAnnual : tier.priceMonthly;
-
-            // Upsert subscription
-            await db.insert(subscriptions).values({
-                id: nanoid(),
-                subscriberId: ctx.user.id,
-                creatorId: tier.creatorId,
-                tierId: input.tierId,
-                status: "active",
-                billingCycle: input.billingCycle,
-                currentPeriodStart: now,
-                currentPeriodEnd: periodEnd,
-                txSignature: input.txSignature,
-            }).onConflictDoUpdate({
-                target: [subscriptions.subscriberId, subscriptions.creatorId],
-                set: {
-                    tierId: input.tierId,
-                    status: "active",
-                    billingCycle: input.billingCycle,
-                    currentPeriodStart: now,
-                    currentPeriodEnd: periodEnd,
-                    cancelAtPeriodEnd: false,
-                    cancelledAt: null,
-                    txSignature: input.txSignature,
-                },
-            });
-
-            // Record earnings for creator
-            await db.insert(creatorEarnings).values({
-                id: nanoid(),
-                creatorId: tier.creatorId,
-                type: "subscription",
-                amountLamports: price,
-                referenceId: ctx.user.id,
-            });
-
-            return { success: true };
-        }),
+    // (The legacy `subscribe` mutation that lived here — lamports-priced,
+    // granted "active" on an unverified optional txSignature, no client
+    // caller anywhere in the app — was deleted 2026-07-20. It predated and
+    // was fully superseded by recordCreatorSubscription below, which
+    // independently pulls the USDC charge server-side via chargeSubscriber
+    // instead of trusting anything the client claims.)
 
     cancelSubscription: protectedProcedure
         .input(z.object({ creatorId: z.string(), immediately: z.boolean().default(false) }))
@@ -700,13 +647,19 @@ export const subscriptionRouter = router({
     // ─── DM Unlock ────────────────────────────────────────────────────────────
 
     unlockDMs: protectedProcedure
-        .input(z.object({ creatorId: z.string(), txSignature: z.string().optional() }))
+        .input(z.object({ creatorId: z.string(), txSignature: z.string().min(64).max(120) }))
         .mutation(async ({ ctx, input }) => {
-            const [creator] = await db.select({ dmPrice: user.dmPrice })
+            const [creator] = await db.select({ dmPrice: user.dmPrice, wallet: user.wallet_address })
                 .from(user)
                 .where(eq(user.id, input.creatorId))
                 .limit(1);
             if (!creator?.dmPrice) throw new TRPCError({ code: "BAD_REQUEST", message: "DMs are free for this user" });
+            if (!creator.wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "This creator has no wallet on file to receive payment" });
+
+            const already = await db.query.dmUnlocks.findFirst({ where: eq(dmUnlocks.txSignature, input.txSignature) });
+            if (already) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
+
+            await verifySolPayment(input.txSignature, creator.dmPrice, creator.wallet);
 
             await db.insert(dmUnlocks).values({
                 id: nanoid(),

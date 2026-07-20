@@ -13,11 +13,11 @@ import { useWalletSigning } from "@/hooks/use-wallet-signing";
 interface PaywallGateProps {
     postId: string;
     paywallPrice: number; // lamports
-    postOwnerId: string;
+    authorWalletAddress: string | null;
     onUnlocked: () => void;
 }
 
-export function PaywallGate({ postId, paywallPrice, postOwnerId, onUnlocked }: PaywallGateProps) {
+export function PaywallGate({ postId, paywallPrice, authorWalletAddress, onUnlocked }: PaywallGateProps) {
     const [unlocking, setUnlocking] = useState(false);
     const { data: session } = useAuthSession();
     const { connection } = useConnection();
@@ -29,6 +29,7 @@ export function PaywallGate({ postId, paywallPrice, postOwnerId, onUnlocked }: P
 
     const handleUnlock = async () => {
         if (!session?.user) { toast.error("Sign in to unlock"); return; }
+        if (!authorWalletAddress) { toast.error("This creator has no wallet on file to receive payment"); return; }
         setUnlocking(true);
         try {
             const custodialAddress = session.user.wallet_address;
@@ -41,7 +42,7 @@ export function PaywallGate({ postId, paywallPrice, postOwnerId, onUnlocked }: P
             tx.feePayer = fromPubkey;
             tx.add(SystemProgram.transfer({
                 fromPubkey,
-                toPubkey: new PublicKey(postOwnerId.length === 44 ? postOwnerId : fromPubkey.toBase58()), // fallback to self if owner isn't a pubkey
+                toPubkey: new PublicKey(authorWalletAddress),
                 lamports: paywallPrice,
             }));
 

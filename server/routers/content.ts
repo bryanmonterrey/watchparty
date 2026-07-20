@@ -15,6 +15,7 @@ import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, upsertToken, deletePost, upsertUser } from "@/lib/typesense/sync";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
+import { verifySolPayment } from "@/lib/chains/solana/verify-sol-payment";
 
 // Normalize a user-entered social link to a full URL (bare domains get https://).
 // Returns null for empty input so the column stays null rather than "".
@@ -924,15 +925,28 @@ export const contentRouter = router({
         }),
 
     unlockPost: protectedProcedure
-        .input(z.object({ postId: z.string(), txSignature: z.string() }))
+        .input(z.object({ postId: z.string(), txSignature: z.string().min(64).max(120) }))
         .mutation(async ({ ctx, input }) => {
             const post = await db.query.posts.findFirst({ where: eq(posts.id, input.postId) });
-            if (!post || !post.isPaywalled || !post.paywallPrice) throw new Error("Post not paywalled");
+            if (!post || !post.isPaywalled || !post.paywallPrice) throw new TRPCError({ code: "BAD_REQUEST", message: "Post not paywalled" });
 
             const existing = await db.query.postUnlocks.findFirst({
                 where: and(eq(postUnlocks.postId, input.postId), eq(postUnlocks.userId, ctx.user.id)),
             });
             if (existing) return { success: true, alreadyUnlocked: true };
+
+            // Replay guard, then verify a real SOL transfer actually landed —
+            // to the AUTHOR'S wallet looked up server-side, never a
+            // client-supplied destination (the previous client build passed
+            // the author's userId as if it were a pubkey, which silently
+            // fell back to paying the buyer's own wallet on every real post).
+            const already = await db.query.postUnlocks.findFirst({ where: eq(postUnlocks.txSignature, input.txSignature) });
+            if (already) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
+
+            const [author] = await db.select({ wallet: user.wallet_address }).from(user).where(eq(user.id, post.userId)).limit(1);
+            if (!author?.wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "This creator has no wallet on file to receive payment" });
+
+            await verifySolPayment(input.txSignature, post.paywallPrice, author.wallet);
 
             await db.insert(postUnlocks).values({
                 id: nanoid(),
@@ -1144,6 +1158,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
+                        wallet_address: user.wallet_address,
                         verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
@@ -1262,10 +1277,10 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
+                        wallet_address: user.wallet_address,
                         verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
-                        wallet_address: user.wallet_address,
                         followerCount: sql<number>`(SELECT COUNT(*) FROM follows WHERE follows."followingId" = ${user.id})`,
                     },
                     // Attached token for the under-player chip (design brief §2) —
@@ -1316,6 +1331,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
+                        wallet_address: user.wallet_address,
                         verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
@@ -1365,6 +1381,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
+                        wallet_address: user.wallet_address,
                         verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,
@@ -1408,6 +1425,7 @@ export const contentRouter = router({
                         name: user.name,
                         username: user.username,
                         avatar_url: user.avatar_url,
+                        wallet_address: user.wallet_address,
                         verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
                         affiliateUsername: user.affiliateUsername,
                         affiliateIconUrl: user.affiliateIconUrl,

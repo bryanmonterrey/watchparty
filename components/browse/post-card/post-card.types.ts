@@ -5,6 +5,7 @@ export interface PostCardUser {
     verifiedTier?: string | null;
     affiliateUsername?: string | null;
     affiliateIconUrl?: string | null;
+    wallet_address?: string | null;
 }
 
 export interface PostCardPost {

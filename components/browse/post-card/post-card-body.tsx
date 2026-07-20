@@ -73,7 +73,7 @@ export function PostCardBody({
                 <PaywallGate
                     postId={post.id}
                     paywallPrice={post.paywallPrice ?? 0}
-                    postOwnerId={post.userId ?? ""}
+                    authorWalletAddress={post.user.wallet_address ?? null}
                     onUnlocked={() => setIsUnlocked(true)}
                 />
             )}
