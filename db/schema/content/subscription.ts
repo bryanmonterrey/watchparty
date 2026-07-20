@@ -72,7 +72,10 @@ export const subscriptions = pgTable("subscriptions", {
 export const giftSubscriptions = pgTable("gift_subscriptions", {
     id: text("id").primaryKey(),
     senderId: text("senderId").notNull().references(() => user.id, { onDelete: "cascade" }),
-    recipientId: text("recipientId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    // Null = a queued credit, paid for but no eligible follower existed yet
+    // at purchase time (owner decision 2026-07-20: queue for the next new
+    // follower instead of refunding). Claimed atomically by user.follow.
+    recipientId: text("recipientId").references(() => user.id, { onDelete: "cascade" }),
     creatorId: text("creatorId").notNull().references(() => user.id, { onDelete: "cascade" }),
     tierId: text("tierId").notNull().references(() => subscriptionTiers.id, { onDelete: "cascade" }),
     durationMonths: integer("durationMonths").default(1).notNull(),
@@ -80,11 +83,12 @@ export const giftSubscriptions = pgTable("gift_subscriptions", {
     status: text("status", { enum: ["pending", "redeemed", "expired"] }).default("pending").notNull(),
     txSignature: text("txSignature"),
     redeemedAt: timestamp("redeemedAt"),
-    expiresAt: timestamp("expiresAt").notNull(),      // gift expires if not redeemed
+    expiresAt: timestamp("expiresAt").notNull(),      // queued credit expires if never claimed
     createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
     index("idx_gift_sender").on(table.senderId),
     index("idx_gift_recipient").on(table.recipientId),
+    index("idx_gift_queued").on(table.creatorId, table.recipientId, table.status),
     pgPolicy("gift_sub_owner_select", { for: "select", to: "authenticated", using: sql`"senderId" = (SELECT auth.uid()::text) OR "recipientId" = (SELECT auth.uid()::text)` }),
     pgPolicy("gift_sub_insert", { for: "insert", to: "authenticated", withCheck: sql`"senderId" = (SELECT auth.uid()::text)` }),
     pgPolicy("gift_sub_update", { for: "update", to: "authenticated", using: sql`"recipientId" = (SELECT auth.uid()::text)` }),

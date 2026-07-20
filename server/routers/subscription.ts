@@ -389,24 +389,19 @@ export const subscriptionRouter = router({
             const treasuryAta = await getTreasuryUsdcAta(getBoostTreasuryOwner());
             await verifyUsdcPaymentToTreasury(input.txSignature, expected, treasuryAta);
 
-            if (eligible.length < input.quantity) {
-                // Never grant fewer gifts than were paid for — refund in full.
-                // (Client clamps quantity to getGiftEligibleCount first, so
-                // this only fires on a genuine race: someone else gifted the
-                // last slot between the client's check and this charge.)
-                const [gifter] = await db.select({ wallet: user.wallet_address }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
-                if (gifter?.wallet) {
-                    await transferUsdcFromTreasury(gifter.wallet, expected).catch(() => {});
-                }
-                throw new TRPCError({
-                    code: "CONFLICT",
-                    message: `Only ${eligible.length} eligible follower${eligible.length === 1 ? "" : "s"} left — someone else may have just gifted. Payment refunded, try a smaller quantity.`,
-                });
-            }
+            // Every paid-for gift is granted, immediately or later — never
+            // refunded. (Client clamps quantity to getGiftEligibleCount
+            // first, so a shortfall here only means someone else claimed a
+            // slot in the race between that check and this charge landing.)
+            // Any gift beyond the currently-eligible pool becomes a queued
+            // credit (owner decision 2026-07-20), claimed atomically by the
+            // next new follower via claimQueuedGiftForNewFollower.
+            const shortfall = input.quantity - eligible.length;
 
             const now = new Date();
             const periodEnd = new Date(now);
             periodEnd.setMonth(periodEnd.getMonth() + 1);
+            const queueExpiresAt = new Date(now.getTime() + 180 * 24 * 3600 * 1000); // 180-day backstop, not a real business deadline
 
             // Payment is already verified on-chain above — everything from here
             // is bookkeeping that must land together. One transaction so a
@@ -448,6 +443,23 @@ export const subscriptionRouter = router({
                     });
                 }
 
+                if (shortfall > 0) {
+                    await tx.insert(giftSubscriptions).values(
+                        Array.from({ length: shortfall }, () => ({
+                            id: nanoid(),
+                            senderId: ctx.user.id,
+                            recipientId: null,
+                            creatorId: input.creatorId,
+                            tierId: input.tierId,
+                            durationMonths: 1,
+                            message: input.message,
+                            status: "pending" as const,
+                            txSignature: input.txSignature,
+                            expiresAt: queueExpiresAt,
+                        })),
+                    );
+                }
+
                 await tx.insert(creatorEarnings).values({
                     id: nanoid(),
                     creatorId: input.creatorId,
@@ -469,7 +481,7 @@ export const subscriptionRouter = router({
                 });
             }
 
-            return { success: true, gifted: eligible.length };
+            return { success: true, gifted: eligible.length, queued: shortfall };
         }),
 
     redeemGift: protectedProcedure

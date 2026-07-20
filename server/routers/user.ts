@@ -11,6 +11,7 @@ import { awardXP } from '@/server/lib/xp';
 import { recordQuestEvent } from '@/server/lib/quests';
 import { upsertUser } from '@/lib/typesense/sync';
 import { effectiveVerifiedTier } from '@/lib/verified-tier';
+import { claimQueuedGiftForNewFollower } from '@/server/lib/gift-credits';
 
 export const userRouter = router({
     // Live availability check for onboarding — same uniqueness source of
@@ -141,6 +142,7 @@ export const userRouter = router({
             await createNotification({ userId: input.followingId, actorId: ctx.user.id, type: "follow" });
             await awardXP(input.followingId, "follow_received", ctx.user.id);
             await recordQuestEvent(input.followingId, "follow_received");
+            await claimQueuedGiftForNewFollower(ctx.user.id, input.followingId);
             return { success: true };
         }),
 
