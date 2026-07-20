@@ -119,7 +119,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
     React.useEffect(() => { setMounted(true); }, []);
     const isOwner = mounted && !sessionPending && session?.user?.id === user.id;
     const { data: counts, refetch: refetchCounts } = trpc.user.followCounts.useQuery({ userId: user.id });
-    const { data: card } = trpc.profile.card.useQuery({ userId: user.id });
+    const { data: card } = trpc.profile.card.useQuery({ userId: user.id }, { enabled: !isMinimized });
     const { data: followData, refetch: refetchFollow } = trpc.user.isFollowing.useQuery({ followingId: user.id }, { enabled: !isOwner });
     const [optimisticFollowing, setOptimisticFollowing] = React.useState<boolean | null>(null);
 
@@ -172,14 +172,12 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                     {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-6" />}
                     {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-6" />}
                     {user.verifiedTier === "government" && <GovBadgeIcon className="size-6" />}
-                    <LevelBadge xp={user.xp} userId={user.id} />
-                    
+
+                    {/* Minimized (video/live creator rows) stays clean — LV bar +
+                        badge strip are profile-page identity only (owner call). */}
                     {isMinimized && (
-                        <span className="flex items-center gap-2 ml-1">
-                            <span className="text-zinc-400 tracking-wide font-semibold text-sm">
-                                @{user.username}
-                            </span>
-                            <BadgeStrip badges={card?.badges ?? []} size="sm" />
+                        <span className="text-zinc-400 tracking-wide font-semibold text-sm ml-1">
+                            @{user.username}
                         </span>
                     )}
 
@@ -252,10 +250,11 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
             </div>
 
             {!isMinimized && (
-                <div className="flex items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2.5">
                     <span className="text-zinc-400 tracking-wide font-semibold text-sm transition-all duration-300">
                         @{user.username}
                     </span>
+                    <LevelBadge xp={user.xp} userId={user.id} />
                     <BadgeStrip badges={card?.badges ?? []} />
                 </div>
             )}

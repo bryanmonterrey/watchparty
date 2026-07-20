@@ -2,8 +2,9 @@ import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
 import { db } from "@/db";
 import { follows, pnlSnapshots, subscriptions, subscriptionTiers } from "@/db/schema/content";
+import { communityMemberRoles, communityMembers, communityRoles, communityServers } from "@/db/schema/community";
 import { user } from "@/db/schema/auth/user";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
 import { computeBadges } from "@/server/lib/badges";
 import type { EarnedBadge } from "@/lib/badges";
@@ -36,10 +37,12 @@ interface CardCore {
     pnl: { realizedUsd: number; winRate: number | null } | null;
     /** The user has at least one active creator sub tier → show Subscribe. */
     subscribable: boolean;
+    /** Top community roles (Discord-style chips): highest-positioned first. */
+    roles: { name: string; color: string; server: string }[];
 }
 
 async function buildCardCore(target: typeof user.$inferSelect): Promise<CardCore> {
-    const [followers, following, pnl, tiers, badges] = await Promise.all([
+    const [followers, following, pnl, tiers, badges, roles] = await Promise.all([
         db.select({ count: count() }).from(follows).where(eq(follows.followingId, target.id)),
         db.select({ count: count() }).from(follows).where(eq(follows.followerId, target.id)),
         target.shareTrades
@@ -50,6 +53,14 @@ async function buildCardCore(target: typeof user.$inferSelect): Promise<CardCore
         db.select({ id: subscriptionTiers.id }).from(subscriptionTiers)
             .where(and(eq(subscriptionTiers.creatorId, target.id), eq(subscriptionTiers.isActive, true))).limit(1),
         computeBadges(target),
+        db.select({ name: communityRoles.name, color: communityRoles.color, server: communityServers.name })
+            .from(communityMemberRoles)
+            .innerJoin(communityMembers, eq(communityMemberRoles.memberId, communityMembers.id))
+            .innerJoin(communityRoles, eq(communityMemberRoles.roleId, communityRoles.id))
+            .innerJoin(communityServers, eq(communityRoles.serverId, communityServers.id))
+            .where(eq(communityMembers.userId, target.id))
+            .orderBy(sql`${communityRoles.position} ASC NULLS LAST`)
+            .limit(4),
     ]);
     return {
         id: target.id,
@@ -69,6 +80,7 @@ async function buildCardCore(target: typeof user.$inferSelect): Promise<CardCore
         followingCount: following[0]?.count ?? 0,
         pnl: pnl.length ? { realizedUsd: pnl[0].realizedUsd, winRate: pnl[0].winRate } : null,
         subscribable: tiers.length > 0,
+        roles,
     };
 }
 
@@ -85,7 +97,9 @@ export const profileRouter = router({
             });
             if (!target) throw new Error("User not found");
 
-            const core = await withCache(`profile:card:${target.id}`, CARD_TTL_SECONDS, () => buildCardCore(target));
+            // v2: shape gained `roles` — versioned key so stale v1 entries can't
+            // serve a card missing the field.
+            const core = await withCache(`profile:card:v2:${target.id}`, CARD_TTL_SECONDS, () => buildCardCore(target));
 
             const viewer = ctx.user;
             const [isFollowing, isSubscribed] = viewer && viewer.id !== target.id

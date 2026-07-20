@@ -105,13 +105,12 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
                 />
             </div>
 
-            {/* ── Right rail: Comments (default) + Up Next ─────────────────── */}
+            {/* ── Up Next sidebar ──────────────────────────────────────────── */}
             <UpNextSidebar
                 postId={postId}
                 creatorId={video?.author?.id ?? ""}
                 creatorName={video?.author?.name ?? null}
                 category={video?.category ?? null}
-                commentsCount={video?.comments ?? 0}
                 isLoading={isLoading}
             />
         </div>

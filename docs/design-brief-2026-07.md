@@ -93,10 +93,16 @@ consistency, role-chip colors aligned with the badge palette from §1.
    caller, pastels = social — just in flat/illustrated form).
 2. Popout v1 scope: **hover-cards everywhere** (leaderboards, feed, chat,
    callouts — the full distribution layer).
-3. Video comments: **right rail** (Twitch-like, consistent with live chat).
+3. Video comments: **below player** (owner reversed the right-rail call after
+   seeing it in prod, 2026-07-19 evening — YouTube-like it is).
 4. Chat badges on live: **LV + one top earned badge** (single glyph).
 5. Early-member badge: **first 1,000 users** (signup-order count, not a date
    cutoff — needs a rank-by-createdAt query rather than a createdAt comparison).
+
+Post-review addenda (owner, 2026-07-19 evening): LV bar + badge strip live on
+the **profile page identity row only** (@username · exp bar · badges) — not on
+the video/live creator rows. Badge glyphs are vendored Fluent Emoji (Flat) in
+`public/badges/`, not hand-drawn SVGs.
 
 ## Handoff note
 

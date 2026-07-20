@@ -112,12 +112,12 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
                                 </div>
                                 <div className="flex min-w-0 items-center gap-2">
                                     <span className="shrink-0 text-sm font-semibold text-zinc-500">@{card.username}</span>
-                                    <BadgeStrip badges={card.badges} size="sm" />
+                                    <LevelBadge xp={card.xp} />
                                 </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
-                                <LevelBadge xp={card.xp} />
+                                <BadgeStrip badges={card.badges} size="md" />
                                 {card.pnl && pnlChip(card.pnl)}
                             </div>
 
@@ -142,6 +142,22 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
                                     {card.followersCount} <span className="font-semibold text-zinc-500">Followers</span>
                                 </span>
                             </div>
+
+                            {/* Community role chips (Discord roles-wall move) */}
+                            {card.roles.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {card.roles.map((r) => (
+                                        <span
+                                            key={`${r.server}:${r.name}`}
+                                            title={r.server}
+                                            className="flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-bold text-zinc-200 ring-1 ring-white/10"
+                                        >
+                                            <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: r.color }} />
+                                            {r.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
 
                             {!card.isSelf && (
                                 <div className="mt-1 flex items-center gap-2">
