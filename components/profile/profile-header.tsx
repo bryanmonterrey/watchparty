@@ -172,21 +172,18 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
 
                     <div className="flex items-center gap-2">
                         {!isOwner ? (
+                            // Left to right (owner order, 2026-07-20): dots,
+                            // message, send, follow, [subscribe/gift — not
+                            // yet placed, no live tiers to test against],
+                            // resize.
                             <>
-                                <Button
-                                    
-                                    onClick={handleFollowToggle}
-                                    className={cn(
-                                        "h-11 rounded-full font-bold backdrop-blur-lg text-base px-5",
-                                        isFollowing
-                                            ? "bg-black/25 border border-flexborder/50 text-white hover:bg-white2/10"
-                                            : "bg-twitter2/90 text-white2 hover:bg-twitter2"
-                                    )}
-                                >
-                                    {isFollowing ? "Following" : "Follow"}
-                                </Button>
-                                <SubscribeButton creatorId={user.id} creatorName={user.name} />
-                                <GiftSubsButton creatorId={user.id} creatorName={user.name} />
+                                <MoreMenu
+                                    userId={user.id}
+                                    username={user.username}
+                                    open={showMoreMenu}
+                                    onOpenChange={setShowMoreMenu}
+                                    onClose={() => setShowMoreMenu(false)}
+                                />
                                 <MessageButton userId={user.id} />
                                 {user.wallet_address && (
                                     <Button
@@ -197,13 +194,19 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                         Send
                                     </Button>
                                 )}
-                                <MoreMenu
-                                    userId={user.id}
-                                    username={user.username}
-                                    open={showMoreMenu}
-                                    onOpenChange={setShowMoreMenu}
-                                    onClose={() => setShowMoreMenu(false)}
-                                />
+                                <Button
+                                    onClick={handleFollowToggle}
+                                    className={cn(
+                                        "h-11 rounded-full font-bold backdrop-blur-lg text-base px-5",
+                                        isFollowing
+                                            ? "bg-black/25 border border-flexborder/50 text-white hover:bg-white2/10"
+                                            : "bg-white text-black hover:bg-zinc-100"
+                                    )}
+                                >
+                                    {isFollowing ? "Following" : "Follow"}
+                                </Button>
+                                <SubscribeButton creatorId={user.id} creatorName={user.name} />
+                                <GiftSubsButton creatorId={user.id} creatorName={user.name} />
                                 {onToggleSize && (
                                     <Button
                                         onClick={onToggleSize}

@@ -1,4 +1,4 @@
-import { SwapIcon, CartIcon, ArrowUpRightIcon, ArrowDownLeftIcon } from "@/components/icons";
+import { SendPaperIcon, ReceiveQrIcon, SwapArrowsIcon, BuyCartIcon } from "@/components/icons";
 import { DrawerView } from "../types";
 
 interface WalletActionsProps {
@@ -7,10 +7,10 @@ interface WalletActionsProps {
 
 export function WalletActions({ onNavigate }: WalletActionsProps) {
     const ACTIONS = [
-        { id: "receive" as const, label: "Receive", icon: ArrowDownLeftIcon },
-        { id: "send" as const, label: "Send", icon: ArrowUpRightIcon },
-        { id: "swap" as const, label: "Swap", icon: SwapIcon },
-        { id: "buy" as const, label: "Buy", icon: CartIcon },
+        { id: "receive" as const, label: "Receive", icon: ReceiveQrIcon },
+        { id: "send" as const, label: "Send", icon: SendPaperIcon },
+        { id: "swap" as const, label: "Swap", icon: SwapArrowsIcon },
+        { id: "buy" as const, label: "Buy", icon: BuyCartIcon },
     ];
 
     return (

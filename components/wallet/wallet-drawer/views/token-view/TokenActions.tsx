@@ -15,7 +15,7 @@ interface TokenActionsProps {
 
 export function TokenActions({ mint, onSend, onReceive, onSwap, onBuy }: TokenActionsProps) {
     const isSol = mint === SOL_MINT;
-    const buttonClass = "cursor-pointer h-16 flex flex-col items-center justify-center gap-1.5 rounded-xl bg-gray1 hover:bg-zinc-800/70 transition-all duration-200 ease-in-out active:scale-95";
+    const buttonClass = "cursor-pointer flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gray1 hover:bg-zinc-800/70 transition-all duration-200 ease-in-out active:scale-95";
     const circleClass = "w-10 h-10 rounded-full bg-zinc-700/30 flex items-center justify-center";
     const labelClass = "text-xs font-medium text-zinc-300";
 

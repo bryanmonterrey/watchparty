@@ -87,6 +87,18 @@ Cron/infra spot-checks (read-only):
   logs every 10 min; `sync-assets-webhook` daily run lists `userTrades` webhook.
 
 ## 🔭 Bigger workstreams (own focus / own chat)
+- **Kill lucide-react, standardize on hugeicons** — owner wants lucide gone entirely
+  (2026-07-20: "almost uninstall lucide... dislike that library a lot"). Currently
+  three icon systems coexist: `components/icons.tsx` (custom, by far the largest
+  footprint — profile/moderation/badges/wallet-actions), `lucide-react` (still
+  broad — most non-profile UI), and `@hugeicons/react` (barely started: just
+  `predictions/market-detail.tsx` + `messages/new-conversation-dialog.tsx`). Needs
+  a real pass: audit every `from "lucide-react"` import, replace with the hugeicons
+  equivalent (or a custom `icons.tsx` entry where none exists), then `bun remove
+  lucide-react`. Not started — this session only matched local file conventions
+  (custom icons.tsx) when touching profile/moderation/wallet-drawer files, which
+  moved a few files further from hugeicons, not toward it.
+
 - **Design pass across surfaces (NEXT — own chat)** — owner-led, reference-driven.
   Order: (1) profile pages: Discord-style earned-badge strip + roles/identity stacking
   + avatar-anchored mini-profile popout — reference distilled in

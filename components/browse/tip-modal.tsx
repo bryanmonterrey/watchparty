@@ -157,7 +157,7 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
                     <button
                         onClick={handleSend}
                         disabled={!isValid || sending}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
+                        className="flex h-16 w-full items-center justify-center gap-2 rounded-full bg-white text-base font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
                     >
                         {sending ? (
                             <><Loader2 className="size-4 animate-spin" /> Sending…</>
