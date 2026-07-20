@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { pnlSnapshots, predictionBets, premiumSubscriptions, questProgress, tokens, weeklyFinishes, xpEvents } from "@/db/schema/content";
+import { pnlSnapshots, predictionBets, questProgress, tokens, weeklyFinishes, xpEvents } from "@/db/schema/content";
 import { user } from "@/db/schema/auth/user";
 import { and, asc, desc, eq, gt, isNotNull, like, lt, lte, sql } from "drizzle-orm";
 import { BADGE_CATALOG, EARLY_MEMBER_CUTOFF, levelBadgeId, type BadgeId, type EarnedBadge } from "@/lib/badges";
@@ -17,7 +17,7 @@ export async function computeBadges(u: {
     createdAt: Date | null;
     shareTrades: boolean;
 }): Promise<EarnedBadge[]> {
-    const [finishes, sniper, wonBet, pnl30, launched, premium, streakDays, signupsBefore] = await Promise.all([
+    const [finishes, sniper, wonBet, pnl30, launched, streakDays, signupsBefore] = await Promise.all([
         // Top-3 weekly finishes, both boards, earliest first for earnedAt.
         // Tolerates the table not existing yet (db/weekly-finishes-setup.sql is
         // applied by hand) — a missing table must not 500 every profile card.
@@ -39,8 +39,6 @@ export async function computeBadges(u: {
         db.select({ createdAt: tokens.createdAt }).from(tokens)
             .where(and(eq(tokens.creatorId, u.id), eq(tokens.status, "live")))
             .orderBy(asc(tokens.createdAt)).limit(1),
-        db.select({ tierKey: premiumSubscriptions.tierKey, createdAt: premiumSubscriptions.createdAt }).from(premiumSubscriptions)
-            .where(and(eq(premiumSubscriptions.userId, u.id), eq(premiumSubscriptions.status, "active"))).limit(1),
         // Distinct completed daily periodKeys ("2026-07-13"), recent window only.
         db.selectDistinct({ key: questProgress.periodKey }).from(questProgress)
             .where(and(
@@ -73,7 +71,6 @@ export async function computeBadges(u: {
         earned.set("profitable", { id: "profitable", earnedAt: iso(pnl30[0].computedAt) });
     }
     if (launched.length) earned.set("token_launcher", { id: "token_launcher", earnedAt: iso(launched[0].createdAt) });
-    if (premium.length) earned.set("premium", { id: "premium", earnedAt: iso(premium[0].createdAt), detail: premium[0].tierKey });
 
     const lvl = levelBadgeId(u.level);
     if (lvl) earned.set(lvl, { id: lvl, earnedAt: null });

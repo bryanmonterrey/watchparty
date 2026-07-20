@@ -1,21 +1,22 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { BadgeFamily, BadgeId } from "@/lib/badges";
+import { RibbonWhiteBadge } from "@/components/badges";
 
 // Badge glyphs from Microsoft Fluent Emoji (github.com/microsoft/fluentui-emoji,
 // MIT), Flat style, vendored into public/badges/ — real emoji-grade art instead
 // of hand-drawn shapes. Mapping: trophy = top caller, money bag = top trader,
 // bullseye = sniper, crystal ball = prophet, chart = profitable, rocket =
-// launcher, crown = premium, fire = streak, seedling = early member. Level
-// tiers share the shield with the tier number composited on top (SVG text so
-// it scales with the glyph).
+// launcher, fire = streak. Level tiers share the shield with the tier number
+// composited on top (SVG text so it scales with the glyph). Early member is
+// the one purchased asset in the set — components/badges.tsx — since it's
+// the rarest/most coveted badge and earns the nicer art.
 
 /** Hover-glow tint per family (brand-tinted glow, never a gray shadow). */
 export const FAMILY_GLOW: Record<BadgeFamily, string> = {
     caller: "rgba(255,204,0,0.55)",
     trading: "rgba(0,237,137,0.55)",
     social: "rgba(142,201,255,0.55)",
-    premium: "rgba(255,116,108,0.55)",
 };
 
 const LEVEL_TIER: Partial<Record<BadgeId, number>> = {
@@ -30,6 +31,10 @@ export function BadgeGlyph({ id, className, style }: {
     className?: string;
     style?: React.CSSProperties;
 }) {
+    if (id === "early_member") {
+        return <RibbonWhiteBadge aria-hidden className={cn("select-none", className)} style={style} />;
+    }
+
     const tier = LEVEL_TIER[id];
     if (tier == null) {
         return (
