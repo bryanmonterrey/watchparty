@@ -110,51 +110,54 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
                             <Zap className="size-3.5 text-black" />
                         </div>
                     </div>
-                    <DialogTitle className="text-white">Tip {recipient.name || recipient.username}</DialogTitle>
-                    <DialogDescription className="text-zinc-500">Sends SOL directly to their wallet — a one-off thank-you, not a subscription.</DialogDescription>
+                    <DialogTitle className="text-white">Send SOL to {recipient.name || recipient.username}</DialogTitle>
+                    <DialogDescription className="text-zinc-500">Goes straight to their wallet — a one-off, not a subscription.</DialogDescription>
                 </DialogHeader>
 
                 <div className="flex flex-col gap-4">
+                    {/* Amount panel — same dark card + giant numeral as the wallet drawer's Send flow */}
+                    <div className="rounded-[24px] border border-zinc-800/60 bg-[#1b1b1c] px-5 py-5 text-center">
+                        <p className="mb-3 text-[13px] font-medium text-zinc-500">You&apos;re sending</p>
+                        <div className="flex min-h-[56px] items-center justify-center gap-1">
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="0"
+                                value={customSol}
+                                onChange={(e) => handleCustomChange(e.target.value)}
+                                className="max-w-[180px] min-w-[24px] bg-transparent text-center text-[44px] font-semibold leading-none text-white outline-none placeholder-zinc-700 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                style={{ width: `${Math.max(24, (customSol.length || 1) * 26)}px` }}
+                            />
+                            <span className="text-[20px] font-semibold text-zinc-500">SOL</span>
+                        </div>
+                    </div>
+
                     {/* Presets */}
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="flex justify-between gap-2">
                         {TIP_PRESETS.map((p) => (
                             <button
                                 key={p.sol}
-                                onClick={() => { setSelectedSol(p.sol); setCustomSol(""); }}
+                                onClick={() => { setSelectedSol(p.sol); setCustomSol(String(p.sol)); }}
                                 className={cn(
-                                    "flex h-14 flex-col items-center justify-center rounded-2xl border text-sm font-bold transition-colors",
+                                    "flex-1 cursor-pointer rounded-2xl border py-2.5 text-[13px] font-semibold transition-all",
                                     selectedSol === p.sol
-                                        ? "border-lantern/50 bg-lantern/10 text-lantern"
-                                        : "border-white/10 text-zinc-300 hover:border-white/25",
+                                        ? "border-white bg-white text-black"
+                                        : "border-zinc-800/50 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:text-white",
                                 )}
                             >
                                 {p.label}
-                                <span className="mt-0.5 text-[10px] font-semibold text-zinc-500">SOL</span>
                             </button>
                         ))}
                     </div>
 
-                    {/* Custom amount */}
-                    <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500">◎</span>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="Custom amount"
-                            value={customSol}
-                            onChange={(e) => handleCustomChange(e.target.value)}
-                            className="h-11 w-full rounded-full border border-white/10 bg-zinc-900 pl-9 pr-4 text-center text-sm text-zinc-100 placeholder:text-zinc-600 transition-colors focus:border-lantern/50 focus:outline-none"
-                        />
-                    </div>
-
                     {finalSol > 100 && (
-                        <p className="text-center text-xs font-semibold text-red-400">Maximum tip is 100 SOL</p>
+                        <p className="text-center text-xs font-semibold text-red-400">Maximum is 100 SOL</p>
                     )}
 
                     <button
                         onClick={handleSend}
                         disabled={!isValid || sending}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-lantern text-sm font-bold text-black transition-colors hover:bg-lantern/90 disabled:opacity-50"
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
                     >
                         {sending ? (
                             <><Loader2 className="size-4 animate-spin" /> Sending…</>

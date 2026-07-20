@@ -187,9 +187,9 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                     <Button
                                         onClick={() => setShowTip(true)}
                                         className="h-11 px-5 rounded-full text-base bg-black/25 font-bold border border-flexborder/50 text-white2 hover:bg-white2/10"
-                                        title="Send tip"
+                                        title="Send SOL"
                                     >
-                                        Tip
+                                        Send
                                     </Button>
                                 )}
                                 <MoreMenu
