@@ -372,6 +372,17 @@ export const subscriptionRouter = router({
             txSignature: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
+            // DISABLED 2026-07-20 — this mutation never verified payment (no
+            // on-chain charge; txSignature was optional and unchecked): any
+            // signed-in user could grant themselves/anyone a real, redeemable
+            // subscription and credit the creator's earnings ledger for free.
+            // Body commented out rather than left live-but-unreachable so
+            // it's a clean restore once this collects real USDC first,
+            // mirroring premium.ts recordSubscription (chargeSubscriber +
+            // a verified signature) instead of trusting an unchecked field.
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Gift subscriptions are temporarily unavailable." });
+
+            /*
             const tier = await db.query.subscriptionTiers.findFirst({ where: eq(subscriptionTiers.id, input.tierId) });
             if (!tier || !tier.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "Tier not found" });
 
@@ -401,6 +412,7 @@ export const subscriptionRouter = router({
             });
 
             return { success: true };
+            */
         }),
 
     redeemGift: protectedProcedure

@@ -1,8 +1,7 @@
 "use client";
 
-import { Edit2, Zap, MoreHorizontal, ShieldBan, Gift } from "lucide-react";
+import { Edit2, Zap, MoreHorizontal, ShieldBan } from "lucide-react";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
-import { GiftSubscriptionDialog } from "@/components/browse/gift-subscription-dialog";
 import { UserType } from "@/db/schema/auth/user";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GlobeIcon, PinpointIcon, CalendarIcon, MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -25,13 +24,12 @@ interface ProfileHeaderProps {
     onToggleSize?: () => void;
 }
 
-function MoreMenu({ userId, username, open, onOpenChange, onClose, onGift }: {
+function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
     userId: string;
     username: string | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onClose: () => void;
-    onGift: () => void;
 }) {
     const utils = trpc.useUtils();
     const banUser = trpc.moderation.banUser.useMutation({
@@ -57,17 +55,6 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose, onGift }: {
             triggerClassName="flex size-11 items-center justify-center rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10 transition-colors"
             trigger={<VerticalDotsIcon className="size-6" />}
             items={[
-                {
-                    key: "gift",
-                    onClick: onGift,
-                    className: "gap-2 px-4 text-sm text-zinc-300 hover:bg-white/5 rounded-lg cursor-pointer",
-                    label: (
-                        <>
-                            <Gift className="w-4 h-4 text-lantern" />
-                            Gift subscription
-                        </>
-                    ),
-                },
                 {
                     key: "mute",
                     type: "custom",
@@ -113,7 +100,6 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
     const [followersDialog, setFollowersDialog] = React.useState<"followers" | "following" | null>(null);
     const [showTip, setShowTip] = React.useState(false);
     const [showMoreMenu, setShowMoreMenu] = React.useState(false);
-    const [showGiftDialog, setShowGiftDialog] = React.useState(false);
     const { data: session, isPending: sessionPending } = useAuthSession();
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => { setMounted(true); }, []);
@@ -203,7 +189,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                         className="h-11 px-5 rounded-full text-base bg-black/25 font-bold border border-flexborder/50 text-white2 hover:bg-white2/10"
                                         title="Send tip"
                                     >
-                                        Gift Subs
+                                        Tip
                                     </Button>
                                 )}
                                 <MoreMenu
@@ -212,7 +198,6 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                     open={showMoreMenu}
                                     onOpenChange={setShowMoreMenu}
                                     onClose={() => setShowMoreMenu(false)}
-                                    onGift={() => setShowGiftDialog(true)}
                                 />
                                 {onToggleSize && (
                                     <Button
@@ -345,16 +330,6 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                         avatar_url: user.avatar_url,
                         wallet_address: user.wallet_address,
                     }}
-                />
-            )}
-
-            {!isOwner && (
-                <GiftSubscriptionDialog
-                    open={showGiftDialog}
-                    onOpenChange={setShowGiftDialog}
-                    recipientId={user.id}
-                    recipientName={user.name}
-                    creatorId={user.id}
                 />
             )}
         </div>
