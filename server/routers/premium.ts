@@ -1,19 +1,25 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
-import { premiumPlans, premiumSubscriptions, premiumLeads } from "@/db/schema/content";
+import { premiumPlans, premiumSubscriptions, premiumLeads, premiumGifts } from "@/db/schema/content";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import {
     TIERS,
+    INDIVIDUAL_TIERS,
+    PERIOD_HOURS,
     type TierKey,
     type BillingCycle,
     priceUsd,
+    priceBaseUnits,
     formatUsd,
 } from "@/lib/premium/tiers";
 import { chargeSubscriber } from "@/lib/chains/solana/subscriptions/collector";
 import { syncPremiumBadge } from "@/server/lib/premium-verified";
+import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
+import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
+import { createNotification } from "@/server/lib/notify";
 
 const TIER_KEYS = Object.keys(TIERS) as [TierKey, ...TierKey[]];
 
@@ -237,5 +243,95 @@ export const premiumRouter = router({
                 status: "new",
             });
             return { success: true };
+        }),
+
+    // ─── Gift Premium (individual tiers only) ────────────────────────────────
+    // Discord-Nitro-style (owner decision 2026-07-20): gift a specific person
+    // a platform tier directly, not tied to any creator/follower pool. One
+    // lump-sum USDC transfer to the treasury, verified on-chain — same trust
+    // model as gift-subs, just applied to premiumSubscriptions instead of a
+    // random-eligible-follower pool.
+    giftPremium: protectedProcedure
+        .input(z.object({
+            recipientId: z.string(),
+            tierKey: z.enum(INDIVIDUAL_TIERS as [TierKey, ...TierKey[]]),
+            billingCycle: z.enum(["monthly", "annual"]),
+            txSignature: z.string().min(64).max(120),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            if (input.recipientId === ctx.user.id) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot gift premium to yourself" });
+            }
+            const tier = TIERS[input.tierKey];
+            if (!tier.selfServe) throw new TRPCError({ code: "BAD_REQUEST", message: "Tier is not giftable" });
+
+            const already = await db.select({ id: premiumGifts.id }).from(premiumGifts)
+                .where(eq(premiumGifts.txSignature, input.txSignature)).limit(1);
+            if (already.length) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
+
+            const expected = priceBaseUnits(input.tierKey, input.billingCycle);
+            const treasuryAta = await getTreasuryUsdcAta(getBoostTreasuryOwner());
+            await verifyUsdcPaymentToTreasury(input.txSignature, expected, treasuryAta);
+
+            const periodHours = input.billingCycle === "annual" ? PERIOD_HOURS.annual : PERIOD_HOURS.monthly;
+            const now = new Date();
+
+            const [existing] = await db.select().from(premiumSubscriptions)
+                .where(eq(premiumSubscriptions.userId, input.recipientId)).limit(1);
+
+            // Stack, never shorten or downgrade: extend from whichever is
+            // later (now, or their current unexpired period), and only
+            // switch tierKey if the gift is the same tier or an upgrade.
+            const stillActive = existing && existing.status !== "cancelled" && existing.status !== "expired" && existing.currentPeriodEnd > now;
+            const base = stillActive ? existing.currentPeriodEnd : now;
+            const periodEnd = new Date(base.getTime() + periodHours * 3600 * 1000);
+            const tierRank: Record<string, number> = { basic: 1, premium: 2 };
+            const resolvedTierKey = stillActive && (tierRank[existing.tierKey] ?? 0) > (tierRank[input.tierKey] ?? 0)
+                ? existing.tierKey
+                : input.tierKey;
+
+            await db.insert(premiumSubscriptions).values({
+                id: nanoid(),
+                userId: input.recipientId,
+                tierKey: resolvedTierKey,
+                billingCycle: input.billingCycle,
+                status: "active",
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                cancelAtPeriodEnd: false,
+                cancelledAt: null,
+            }).onConflictDoUpdate({
+                target: premiumSubscriptions.userId,
+                set: {
+                    tierKey: resolvedTierKey,
+                    billingCycle: input.billingCycle,
+                    status: "active",
+                    currentPeriodEnd: periodEnd,
+                    cancelAtPeriodEnd: false,
+                    cancelledAt: null,
+                    failedAttempts: 0,
+                },
+            });
+
+            await db.insert(premiumGifts).values({
+                id: nanoid(),
+                senderId: ctx.user.id,
+                recipientId: input.recipientId,
+                tierKey: input.tierKey,
+                billingCycle: input.billingCycle,
+                amountUsdc: Number(expected),
+                txSignature: input.txSignature,
+            });
+
+            await syncPremiumBadge(input.recipientId, "individual");
+
+            await createNotification({
+                userId: input.recipientId,
+                actorId: ctx.user.id,
+                type: "system",
+                body: `gifted you ${tier.name}!`,
+            });
+
+            return { success: true, tierKey: resolvedTierKey, periodEnd };
         }),
 });

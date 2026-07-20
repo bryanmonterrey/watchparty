@@ -59,6 +59,19 @@ export async function GET(req: NextRequest) {
             continue;
         }
 
+        // Gifted grant (design 2026-07-20): nothing was delegated by the
+        // recipient, so there's no wallet to pull from — it just expires
+        // instead of attempting (and always failing) a renewal charge.
+        if (!sub.subscriberWallet) {
+            await db
+                .update(premiumSubscriptions)
+                .set({ status: "expired" })
+                .where(eq(premiumSubscriptions.id, sub.id));
+            await syncPremiumBadge(sub.userId, null);
+            expired++;
+            continue;
+        }
+
         const plan = planBy.get(`${sub.tierKey}:${sub.billingCycle}`);
         if (!plan) {
             errors.push({ id: sub.id, error: "plan not provisioned" });

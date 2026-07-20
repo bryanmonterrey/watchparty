@@ -4,6 +4,7 @@ import { Edit2, Zap, MoreHorizontal } from "lucide-react";
 import { NoEntryIcon } from "@/components/icons";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { GiftSubsButton } from "@/components/browse/gift-subs-button";
+import { GiftPremiumButton } from "@/components/browse/gift-premium-button";
 import { MessageButton } from "@/components/browse/message-button";
 import { UserType } from "@/db/schema/auth/user";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GlobeIcon, PinpointIcon, CalendarIcon, MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
@@ -173,9 +174,9 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                     <div className="flex items-center gap-2">
                         {!isOwner ? (
                             // Left to right (owner order, 2026-07-20): dots,
-                            // message, send, follow, [subscribe/gift — not
-                            // yet placed, no live tiers to test against],
-                            // resize.
+                            // message, send, follow, [subscribe/gift subs/
+                            // gift premium — no live tiers to test placement
+                            // against yet], resize.
                             <>
                                 <MoreMenu
                                     userId={user.id}
@@ -207,6 +208,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                 </Button>
                                 <SubscribeButton creatorId={user.id} creatorName={user.name} />
                                 <GiftSubsButton creatorId={user.id} creatorName={user.name} />
+                                <GiftPremiumButton recipientId={user.id} recipientName={user.name} />
                                 {onToggleSize && (
                                     <Button
                                         onClick={onToggleSize}

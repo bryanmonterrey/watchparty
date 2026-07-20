@@ -41,12 +41,16 @@ export const premiumSubscriptions = pgTable("premium_subscriptions", {
     currentPeriodEnd: timestamp("currentPeriodEnd").notNull(),
     cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
     cancelledAt: timestamp("cancelledAt"),
-    // On-chain references
-    subscriberWallet: text("subscriberWallet").notNull(),   // delegator wallet (pull source owner)
-    planPda: text("planPda").notNull(),
-    subscriptionPda: text("subscriptionPda").notNull(),
-    subscriptionAuthorityPda: text("subscriptionAuthorityPda").notNull(),
-    delegatorAta: text("delegatorAta").notNull(),
+    // On-chain references — null for a gifted grant (design 2026-07-20):
+    // nothing was delegated by the recipient, so there's no plan/authority to
+    // record. The renewal cron's chargeSubscriber call fails gracefully on a
+    // null subscriberWallet (caught, counts as a failed attempt, eventually
+    // expires) — a gift just lapses at period end instead of auto-renewing.
+    subscriberWallet: text("subscriberWallet"),   // delegator wallet (pull source owner)
+    planPda: text("planPda"),
+    subscriptionPda: text("subscriptionPda"),
+    subscriptionAuthorityPda: text("subscriptionAuthorityPda"),
+    delegatorAta: text("delegatorAta"),
     subscribeTxSignature: text("subscribeTxSignature"),
     lastChargeSig: text("lastChargeSig"),
     lastChargeAt: timestamp("lastChargeAt"),
@@ -78,6 +82,29 @@ export const premiumLeads = pgTable("premium_leads", {
     pgPolicy("premium_leads_owner_select", { for: "select", to: "authenticated", using: sql`"userId" = (SELECT auth.uid()::text)` }),
 ]).enableRLS();
 
+// ─── Gift Premium (individual tiers only) ──────────────────────────────────────
+// Discord-Nitro-style: gifter pays a lump-sum USDC transfer to the treasury,
+// server verifies it on-chain, and the period is applied straight to the
+// recipient's premiumSubscriptions row. txSignature is UNIQUE so one payment
+// only ever redeems once. Design doc: none — this is the whole spec.
+
+export const premiumGifts = pgTable("premium_gifts", {
+    id: text("id").primaryKey(),
+    senderId: text("senderId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    recipientId: text("recipientId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    tierKey: text("tierKey").notNull(),
+    billingCycle: text("billingCycle", { enum: ["monthly", "annual"] }).notNull(),
+    amountUsdc: bigint("amountUsdc", { mode: "number" }).notNull(),
+    txSignature: text("txSignature").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex("idx_premium_gifts_tx").on(table.txSignature),
+    index("idx_premium_gifts_sender").on(table.senderId),
+    index("idx_premium_gifts_recipient").on(table.recipientId),
+    pgPolicy("premium_gifts_select", { for: "select", to: "authenticated", using: sql`"senderId" = (SELECT auth.uid()::text) OR "recipientId" = (SELECT auth.uid()::text)` }),
+]).enableRLS();
+
 export type PremiumPlan = typeof premiumPlans.$inferSelect;
 export type PremiumSubscription = typeof premiumSubscriptions.$inferSelect;
 export type PremiumLead = typeof premiumLeads.$inferSelect;
+export type PremiumGift = typeof premiumGifts.$inferSelect;
