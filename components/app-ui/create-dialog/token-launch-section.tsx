@@ -62,7 +62,7 @@ export function TokenLaunchSection({ state, setState, onOpenDialog }: TokenLaunc
                     <Label className="text-base font-medium text-zinc-200">Token Launch</Label>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-lantern/10 text-lantern border border-lantern/20">New</span>
                 </div>
-                <p className="text-xs text-zinc-500">Launch a token for this content to earn from trading volume.</p>
+                <p className="text-xs text-zinc-500">Launch a coin for this content to earn from trading volume.</p>
             </div>
 
             <div className="pt-2">

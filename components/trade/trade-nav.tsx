@@ -27,7 +27,7 @@ const SECTIONS: {
     {
         href: "/trade",
         label: "Discover",
-        description: "Trending and new tokens",
+        description: "Trending and new coins",
         icon: Compass01Icon,
     },
     {

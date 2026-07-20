@@ -24,7 +24,7 @@ const KIND_LABELS: Record<string, string> = {
     comment_created: "Commented",
     like_received: "Got a like",
     follow_received: "New follower",
-    token_launched: "Launched a token",
+    token_launched: "Launched a coin",
     referral_converted: "Referral joined",
     prediction_bet: "Backed a prediction",
     perps_trade: "Perps trade",

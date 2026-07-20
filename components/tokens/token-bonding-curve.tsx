@@ -25,7 +25,7 @@ export function TokenBondingCurve({ token }: { token: Token }) {
                     ? "Graduated — trading on the open market"
                     : progress >= 80
                         ? "Almost there — migration is close"
-                        : "Fills as people buy on the curve; at 100% the token graduates"}
+                        : "Fills as people buy on the curve; at 100% the coin graduates"}
             </p>
         </div>
     )

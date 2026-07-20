@@ -66,7 +66,7 @@ export function TokenHoldersTable({ token }: TokenHoldersTableProps) {
                     <p className="text-sm font-bold text-zinc-400">
                         {token.tokenAddress ? "No holders indexed yet" : "Holders appear once trading goes live"}
                     </p>
-                    <p className="mt-0.5 text-xs text-zinc-600">Top wallets show here as the token trades</p>
+                    <p className="mt-0.5 text-xs text-zinc-600">Top wallets show here as the coin trades</p>
                 </div>
             )}
 

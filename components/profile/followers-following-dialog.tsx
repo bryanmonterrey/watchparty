@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { UserPlus, UserMinus, Users, Loader2 } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -42,7 +42,7 @@ export function FollowersFollowingDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="flex max-h-[80vh] w-full max-w-md flex-col gap-0 overflow-hidden border-none p-0 ring-1 ring-white/10">
+            <DialogContent className="flex h-[70vh] w-full max-w-md flex-col gap-0 overflow-hidden border-none p-0 ring-1 ring-white/10">
                 <DialogHeader className="shrink-0 px-5 pt-5 pb-3">
                     <DialogTitle className="text-center text-base font-bold text-white">@{username || "user"}</DialogTitle>
                 </DialogHeader>
@@ -63,7 +63,7 @@ export function FollowersFollowingDialog({
                                 {tab === "followers" ? followersCount : followingCount}
                             </span>
                             {activeTab === tab && (
-                                <span className="absolute inset-x-0 bottom-0 h-[2.5px] rounded-full bg-lantern shadow-[0_0_10px_rgba(0,237,137,0.5)]" />
+                                <span className="absolute inset-x-0 bottom-0 h-[2.5px] rounded-full bg-twitter2 shadow-[0_0_10px_rgba(53,142,252,0.5)]" />
                             )}
                         </button>
                     ))}
@@ -213,19 +213,13 @@ function UserRow({ item, onClose }: UserRowProps) {
                     onClick={handleToggle}
                     disabled={isPending}
                     className={cn(
-                        "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-bold transition-colors",
+                        "flex h-11 shrink-0 items-center justify-center rounded-full px-4 text-sm font-bold transition-colors",
                         isFollowing
                             ? "border border-white/15 text-zinc-300 hover:border-red-500/40 hover:text-red-400"
-                            : "bg-twitter2/90 text-white2 hover:bg-twitter2",
+                            : "bg-white text-black hover:bg-zinc-100",
                     )}
                 >
-                    {isPending ? (
-                        <Loader2 className="size-3 animate-spin" />
-                    ) : isFollowing ? (
-                        <><UserMinus className="size-3" /> Following</>
-                    ) : (
-                        <><UserPlus className="size-3" /> Follow</>
-                    )}
+                    {isPending ? <Loader2 className="size-4 animate-spin" /> : isFollowing ? "Following" : "Follow"}
                 </button>
             )}
         </div>
@@ -240,7 +234,7 @@ function RowSkeleton() {
                 <div className="shimmer-skeleton h-3.5 w-28 rounded-full" />
                 <div className="shimmer-skeleton h-3 w-20 rounded-full opacity-60" />
             </div>
-            <div className="shimmer-skeleton h-9 w-20 shrink-0 rounded-full" />
+            <div className="shimmer-skeleton h-11 w-20 shrink-0 rounded-full" />
         </div>
     );
 }

@@ -53,11 +53,11 @@ const TAB_SORT: Record<Tab, SortKey> = {
 };
 
 const EMPTY_COPY: Record<Tab, { title: string; hint: string }> = {
-    trending: { title: "No tokens here yet", hint: "New launches show up the moment they go live." },
-    surge: { title: "Nothing surging right now", hint: "Tokens with sudden 5-minute momentum land here." },
-    live: { title: "No creators live right now", hint: "Tokens appear here while their creator is streaming." },
-    top: { title: "No tokens here yet", hint: "New launches show up the moment they go live." },
-    new: { title: "No fresh launches yet", hint: "Brand-new tokens land here first." },
+    trending: { title: "No coins here yet", hint: "New launches show up the moment they go live." },
+    surge: { title: "Nothing surging right now", hint: "Coins with sudden 5-minute momentum land here." },
+    live: { title: "No creators live right now", hint: "Coins appear here while their creator is streaming." },
+    top: { title: "No coins here yet", hint: "New launches show up the moment they go live." },
+    new: { title: "No fresh launches yet", hint: "Brand-new coins land here first." },
 };
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -481,7 +481,7 @@ export function TradeDiscover() {
                         fill="#101011"
                         panelRadius={20}
                         itemHeight={40}
-                        triggerAriaLabel="Sort tokens"
+                        triggerAriaLabel="Sort coins"
                         triggerClassName="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                         trigger={
                             <>
@@ -512,7 +512,7 @@ export function TradeDiscover() {
                     <div className="bg-panel">
                         {/* Column headers */}
                         <div className={cn(GRID, "px-4 pb-2 pt-4 text-[14px] font-semibold text-zinc-500")}>
-                            <span>Token</span>
+                            <span>Coin</span>
                             <span>Market cap</span>
                             <span className="max-md:hidden">Volume</span>
                             <span className="max-lg:hidden">Price</span>

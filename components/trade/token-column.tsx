@@ -16,9 +16,9 @@ interface TokenColumnProps {
 }
 
 const EMPTY_COPY: Record<TokenStatus, { title: string; hint: string }> = {
-  new: { title: "No fresh launches yet", hint: "Brand-new tokens land here first." },
-  migrating: { title: "Nothing bonding right now", hint: "Tokens close to migration show up here." },
-  migrated: { title: "No graduates yet", hint: "Tokens that complete their curve appear here." },
+  new: { title: "No fresh launches yet", hint: "Brand-new coins land here first." },
+  migrating: { title: "Nothing bonding right now", hint: "Coins close to migration show up here." },
+  migrated: { title: "No graduates yet", hint: "Coins that complete their curve appear here." },
 };
 
 export function TokenColumn({ status, tokens, loading, className, quickBuy, buyingId, amountSol }: TokenColumnProps) {

@@ -160,7 +160,7 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
 
             {!isLoading && hasTokens && (
                 <section>
-                    <p className="px-4 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Tokens</p>
+                    <p className="px-4 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Coins</p>
                     {data!.tokens.map(token => {
                         const isUp = (token.change24h ?? 0) >= 0;
                         return (

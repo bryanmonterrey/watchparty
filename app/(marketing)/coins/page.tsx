@@ -35,7 +35,7 @@ export default function CoinsPage() {
                 <MarketingHero
                     eyebrow="Coins"
                     title={<>Launch a coin<br />in a single tap</>}
-                    sub="Give your community a token, trade it right in the feed, and earn on every swap. No contracts, no setup."
+                    sub="Give your community a coin, trade it right in the feed, and earn on every swap. No contracts, no setup."
                     ctaLabel="Launch a coin"
                     secondaryLabel="For creators"
                     secondaryHref="/creators"
@@ -62,7 +62,7 @@ export default function CoinsPage() {
             <BgZone bg="#0e0f13">
                 <CardCarousel
                     dark
-                    title="One token, everything it does"
+                    title="One coin, everything it does"
                     sub="Launch it, trade it in the feed, and earn on every swap. A whole loop your people rally around."
                     cards={[
                         {
