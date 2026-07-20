@@ -1,8 +1,10 @@
 "use client";
 
-import { Edit2, Zap, MoreHorizontal, ShieldBan } from "lucide-react";
+import { Edit2, Zap, MoreHorizontal } from "lucide-react";
+import { NoEntryIcon } from "@/components/icons";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { GiftSubsButton } from "@/components/browse/gift-subs-button";
+import { MessageButton } from "@/components/browse/message-button";
 import { UserType } from "@/db/schema/auth/user";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GlobeIcon, PinpointIcon, CalendarIcon, MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -73,7 +75,7 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
                     className: "gap-2 px-4 text-sm text-red-400 hover:bg-white/5 rounded-lg cursor-pointer",
                     label: (
                         <>
-                            <ShieldBan className="w-4 h-4" />
+                            <NoEntryIcon className="w-4 h-4" />
                             {isBanned ? "Unban from channel" : "Ban from channel"}
                         </>
                     ),
@@ -185,6 +187,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                 </Button>
                                 <SubscribeButton creatorId={user.id} creatorName={user.name} />
                                 <GiftSubsButton creatorId={user.id} creatorName={user.name} />
+                                <MessageButton userId={user.id} />
                                 {user.wallet_address && (
                                     <Button
                                         onClick={() => setShowTip(true)}

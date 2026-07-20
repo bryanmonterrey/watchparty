@@ -4,7 +4,8 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { toast } from "sonner";
-import { Ban, ShieldOff, VolumeX, Volume2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { NoEntryIcon, ShieldOffIcon, VolumeOffIcon, VolumeOnIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -60,7 +61,7 @@ export function BlockButton({ userId, username, className, onDone }: BlockButton
                 disabled={unblock.isPending}
                 className={cn("flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors", className)}
             >
-                {unblock.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldOff className="w-4 h-4" />}
+                {unblock.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldOffIcon className="w-4 h-4" />}
                 Unblock @{username}
             </button>
         );
@@ -72,7 +73,7 @@ export function BlockButton({ userId, username, className, onDone }: BlockButton
                 onClick={() => setShowConfirm(true)}
                 className={cn("flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors", className)}
             >
-                <Ban className="w-4 h-4" />
+                <NoEntryIcon className="w-4 h-4" />
                 Block @{username}
             </button>
 
@@ -80,7 +81,7 @@ export function BlockButton({ userId, username, className, onDone }: BlockButton
                 <DialogContent className="sm:max-w-sm border border-white/10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-zinc-100">
-                            <Ban className="w-4 h-4 text-red-400" /> Block @{username}?
+                            <NoEntryIcon className="w-4 h-4 text-red-400" /> Block @{username}?
                         </DialogTitle>
                     </DialogHeader>
                     <ul className="text-sm text-zinc-400 space-y-1.5 py-2">
@@ -98,7 +99,7 @@ export function BlockButton({ userId, username, className, onDone }: BlockButton
                             disabled={block.isPending}
                             className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600 disabled:opacity-60 flex items-center gap-1"
                         >
-                            {block.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                            {block.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <NoEntryIcon className="w-3.5 h-3.5" />}
                             Block
                         </button>
                     </DialogFooter>
@@ -156,7 +157,7 @@ export function MuteButton({ userId, username, className, onDone }: MuteButtonPr
                 disabled={unmute.isPending}
                 className={cn("flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors", className)}
             >
-                {unmute.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4" />}
+                {unmute.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <VolumeOnIcon className="w-4 h-4" />}
                 Unmute @{username}
             </button>
         );
@@ -168,7 +169,7 @@ export function MuteButton({ userId, username, className, onDone }: MuteButtonPr
                 onClick={() => setShowOptions(true)}
                 className={cn("flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors", className)}
             >
-                <VolumeX className="w-4 h-4" />
+                <VolumeOffIcon className="w-4 h-4" />
                 Mute @{username}
             </button>
 
@@ -176,7 +177,7 @@ export function MuteButton({ userId, username, className, onDone }: MuteButtonPr
                 <DialogContent className="sm:max-w-sm border border-white/10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-zinc-100">
-                            <VolumeX className="w-4 h-4" /> Mute @{username}
+                            <VolumeOffIcon className="w-4 h-4" /> Mute @{username}
                         </DialogTitle>
                     </DialogHeader>
                     <p className="text-sm text-zinc-500 pb-2">

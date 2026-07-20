@@ -2624,3 +2624,72 @@ export function AudioWavesIcon(props: React.SVGProps<SVGSVGElement>) {
         </svg>
     );
 }
+
+// Wallet action icons (Send/Receive/Swap/Buy). Migrated verbatim from
+// public/send5.svg, qr1.svg, swap10.svg, cart2.svg.
+export function SendPaperIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" color="currentColor" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+            <path d="M8.87038 6.13264L14.7327 4.19538C18.033 3.10476 19.6831 2.55945 20.5579 3.43426C21.4327 4.30907 20.8874 5.95922 19.7968 9.25953L17.8595 15.1218C16.6236 18.8619 16.0056 20.7319 14.8796 20.9603C14.6411 21.0087 14.3955 21.0129 14.1549 20.9727C13.019 20.7832 12.3132 18.9359 10.9016 15.2413C10.6328 14.5376 10.4983 14.1858 10.2574 13.9127C10.2018 13.8497 10.1424 13.7903 10.0795 13.7348C9.80638 13.4938 9.45455 13.3594 8.75089 13.0906C5.05627 11.679 3.20896 10.9732 3.01945 9.83727C2.97931 9.59669 2.98353 9.35108 3.03189 9.11259C3.26025 7.98657 5.13029 7.36859 8.87038 6.13264Z" />
+            <path d="M12.8008 11.1865L15.498 8.48926" />
+        </svg>
+    );
+}
+
+export function ReceiveQrIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" color="currentColor" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+            <path d="M2.5 8.18677C2.60406 6.08705 2.91537 4.77792 3.84664 3.84664C4.77792 2.91537 6.08705 2.60406 8.18677 2.5M21.5 8.18677C21.3959 6.08705 21.0846 4.77792 20.1534 3.84664C19.2221 2.91537 17.9129 2.60406 15.8132 2.5M15.8132 21.5C17.9129 21.3959 19.2221 21.0846 20.1534 20.1534C21.0846 19.2221 21.3959 17.9129 21.5 15.8132M8.18676 21.5C6.08705 21.3959 4.77792 21.0846 3.84664 20.1534C2.91537 19.2221 2.60406 17.9129 2.5 15.8132" />
+            <path d="M8.23463 12.8478C8.60218 13 9.06812 13 10 13C10.9319 13 11.3978 13 11.7654 12.8478C12.2554 12.6448 12.6448 12.2554 12.8478 11.7654C13 11.3978 13 10.9319 13 10C13 9.06812 13 8.60218 12.8478 8.23463C12.6448 7.74458 12.2554 7.35523 11.7654 7.15224C11.3978 7 10.9319 7 10 7C9.06812 7 8.60218 7 8.23463 7.15224C7.74458 7.35523 7.35523 7.74458 7.15224 8.23463C7 8.60218 7 9.06812 7 10C7 10.9319 7 11.3978 7.15224 11.7654C7.35523 12.2554 7.74458 12.6448 8.23463 12.8478Z" />
+            <path d="M17 7V7.01" />
+            <path d="M17 11V13C17 14.8856 17 15.8284 16.4142 16.4142C15.8284 17 14.8856 17 13 17" />
+            <path d="M9 17H7" />
+        </svg>
+    );
+}
+
+export function SwapArrowsIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" color="currentColor" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+            <path d="M7 14.5V17C7 18.6569 8.34315 20 10 20" />
+            <path d="M9 16L8.41421 15.2612C7.74755 14.4204 7.41421 14 7 14C6.58579 14 6.25245 14.4204 5.58579 15.2612L5 16" />
+            <path d="M4.72746 9.87764C5.10404 10 5.56936 10 6.5 10C7.43064 10 7.89596 10 8.27254 9.87764C9.03364 9.63035 9.63035 9.03364 9.87764 8.27254C10 7.89596 10 7.43064 10 6.5C10 5.56936 10 5.10404 9.87764 4.72746C9.63035 3.96636 9.03364 3.36965 8.27254 3.12236C7.89596 3 7.43064 3 6.5 3C5.56936 3 5.10404 3 4.72746 3.12236C3.96636 3.36965 3.36965 3.96636 3.12236 4.72746C3 5.10404 3 5.56936 3 6.5C3 7.43064 3 7.89596 3.12236 8.27254C3.36965 9.03364 3.96636 9.63035 4.72746 9.87764Z" />
+            <path d="M15.7275 20.8776C16.104 21 16.5694 21 17.5 21C18.4306 21 18.896 21 19.2725 20.8776C20.0336 20.6303 20.6303 20.0336 20.8776 19.2725C21 18.896 21 18.4306 21 17.5C21 16.5694 21 16.104 20.8776 15.7275C20.6303 14.9664 20.0336 14.3697 19.2725 14.1224C18.896 14 18.4306 14 17.5 14C16.5694 14 16.104 14 15.7275 14.1224C14.9664 14.3697 14.3697 14.9664 14.1224 15.7275C14 16.104 14 16.5694 14 17.5C14 18.4306 14 18.896 14.1224 19.2725C14.3697 20.0336 14.9664 20.6303 15.7275 20.8776Z" />
+            <path d="M17.5 4.625V6.5M17.5 6.5V8.375M17.5 6.5H16M17.5 6.5H19M20.5 6.5L19.1987 6.06623C18.6015 5.86716 18.1328 5.39853 17.9338 4.80132L17.5 3.5L17.0662 4.80132C16.8672 5.39853 16.3985 5.86716 15.8013 6.06623L14.5 6.5L15.8013 6.93377C16.3985 7.13284 16.8672 7.60147 17.0662 8.19868L17.5 9.5L17.9338 8.19868C18.1328 7.60147 18.6015 7.13284 19.1987 6.93377L20.5 6.5Z" />
+        </svg>
+    );
+}
+
+// Moderation icons (Block/Ban, Unblock). Match the app's stroke convention
+// instead of lucide-react (used in the profile "..." menu, MuteButton,
+// BlockButton — those imported lucide directly before this).
+export function NoEntryIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" color="currentColor" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M5.5 5.5L18.5 18.5" />
+        </svg>
+    );
+}
+
+export function ShieldOffIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" color="currentColor" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+            <path d="M12 3L4.5 6v6c0 4.42 3.2 8.28 7.5 9 4.3-.72 7.5-4.58 7.5-9V6L12 3Z" />
+            <path d="M3 3l18 18" />
+        </svg>
+    );
+}
+
+export function BuyCartIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" color="currentColor" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true" {...props}>
+            <path d="M8 16L16.7201 15.2733C19.4486 15.046 20.0611 14.45 20.3635 11.7289L21 6" strokeLinecap="round" />
+            <path d="M6 6H22" strokeLinecap="round" />
+            <circle cx="6" cy="20" r="2" />
+            <circle cx="17" cy="20" r="2" />
+            <path d="M8 20L15 20" strokeLinecap="round" />
+            <path d="M2 2H2.966C3.91068 2 4.73414 2.62459 4.96326 3.51493L7.93852 15.0765C8.08887 15.6608 7.9602 16.2797 7.58824 16.7616L6.63213 18" strokeLinecap="round" />
+        </svg>
+    );
+}
