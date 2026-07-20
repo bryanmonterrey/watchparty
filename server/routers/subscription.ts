@@ -3,10 +3,10 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import {
     subscriptionTiers, subscriptions, giftSubscriptions,
-    creatorEarnings, dmUnlocks, payouts,
+    creatorEarnings, dmUnlocks, payouts, follows,
 } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq, and, desc, count, sum, gte, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, count, sum, gte, sql, inArray, ne } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { PERIOD_HOURS } from "@/lib/premium/tiers";
@@ -16,6 +16,9 @@ import {
     transferUsdcFromTreasury,
 } from "@/lib/chains/solana/subscriptions/collector";
 import { getMerchantAddress } from "@/lib/chains/solana/subscriptions/constants";
+import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
+import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
+import { createNotification } from "@/server/lib/notify";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
 const PLATFORM_FEE_BPS = 500; // 5% platform fee, taken at claim time
@@ -362,57 +365,164 @@ export const subscriptionRouter = router({
         }),
 
     // ─── Gift Subscriptions ───────────────────────────────────────────────────
+    // Twitch-style community gifting (owner decision 2026-07-20): the gifter
+    // picks a quantity, not a specific person — subs land on random eligible
+    // followers who don't already have one, distributed immediately (no
+    // pending/claim step). Real payment required: one lump-sum USDC transfer
+    // to the treasury, verified on-chain the same way predictions.ts verifies
+    // bets — this replaces the original mutation, which never checked payment
+    // at all (see the disabled version this replaced, in git history).
+
+    /** How many of the creator's followers could receive a gift right now. Client clamps its quantity picker to this before building the payment. */
+    getGiftEligibleCount: publicProcedure
+        .input(z.object({ creatorId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            if (!ctx.user) return { count: 0 };
+            const [row] = await db
+                .select({ count: sql<number>`count(*)::int` })
+                .from(follows)
+                .leftJoin(subscriptions, and(
+                    eq(subscriptions.subscriberId, follows.followerId),
+                    eq(subscriptions.creatorId, input.creatorId),
+                    inArray(subscriptions.status, ["active", "past_due"]),
+                ))
+                .where(and(
+                    eq(follows.followingId, input.creatorId),
+                    sql`${subscriptions.id} IS NULL`,
+                    ne(follows.followerId, ctx.user.id),
+                ));
+            return { count: row?.count ?? 0 };
+        }),
 
     giftSubscription: protectedProcedure
         .input(z.object({
-            recipientId: z.string(),
+            creatorId: z.string(),
             tierId: z.string(),
-            durationMonths: z.number().int().min(1).max(12).default(1),
+            quantity: z.number().int().min(1).max(50),
             message: z.string().max(200).optional(),
-            txSignature: z.string().optional(),
+            txSignature: z.string().min(64).max(120),
         }))
         .mutation(async ({ ctx, input }) => {
-            // DISABLED 2026-07-20 — this mutation never verified payment (no
-            // on-chain charge; txSignature was optional and unchecked): any
-            // signed-in user could grant themselves/anyone a real, redeemable
-            // subscription and credit the creator's earnings ledger for free.
-            // Body commented out rather than left live-but-unreachable so
-            // it's a clean restore once this collects real USDC first,
-            // mirroring premium.ts recordSubscription (chargeSubscriber +
-            // a verified signature) instead of trusting an unchecked field.
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Gift subscriptions are temporarily unavailable." });
-
-            /*
             const tier = await db.query.subscriptionTiers.findFirst({ where: eq(subscriptionTiers.id, input.tierId) });
-            if (!tier || !tier.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "Tier not found" });
+            if (!tier || !tier.isActive || tier.creatorId !== input.creatorId) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Tier not found" });
+            }
+            if (tier.creatorId === ctx.user.id) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot gift subscriptions to your own community" });
+            }
+            if (!tier.priceUsdcMonthly) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "This tier has no USDC plan configured" });
+            }
 
-            const expiresAt = new Date();
-            expiresAt.setDate(expiresAt.getDate() + 7); // gift expires in 7 days if unredeemed
+            // Replay guard — a bulk gift's one signature covers every row it
+            // creates, so this can't be a DB-level unique constraint; check first.
+            const already = await db.select({ id: giftSubscriptions.id })
+                .from(giftSubscriptions)
+                .where(eq(giftSubscriptions.txSignature, input.txSignature))
+                .limit(1);
+            if (already.length) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
 
-            await db.insert(giftSubscriptions).values({
-                id: nanoid(),
-                senderId: ctx.user.id,
-                recipientId: input.recipientId,
-                creatorId: tier.creatorId,
-                tierId: input.tierId,
-                durationMonths: input.durationMonths,
-                message: input.message,
-                txSignature: input.txSignature,
-                expiresAt,
+            const eligible = await db
+                .select({ id: follows.followerId })
+                .from(follows)
+                .leftJoin(subscriptions, and(
+                    eq(subscriptions.subscriberId, follows.followerId),
+                    eq(subscriptions.creatorId, input.creatorId),
+                    inArray(subscriptions.status, ["active", "past_due"]),
+                ))
+                .where(and(
+                    eq(follows.followingId, input.creatorId),
+                    sql`${subscriptions.id} IS NULL`,
+                    ne(follows.followerId, ctx.user.id),
+                ))
+                .orderBy(sql`random()`)
+                .limit(input.quantity);
+
+            const expected = BigInt(tier.priceUsdcMonthly) * BigInt(input.quantity);
+            const treasuryAta = await getTreasuryUsdcAta(getBoostTreasuryOwner());
+            await verifyUsdcPaymentToTreasury(input.txSignature, expected, treasuryAta);
+
+            if (eligible.length < input.quantity) {
+                // Never grant fewer gifts than were paid for — refund in full.
+                // (Client clamps quantity to getGiftEligibleCount first, so
+                // this only fires on a genuine race: someone else gifted the
+                // last slot between the client's check and this charge.)
+                const [gifter] = await db.select({ wallet: user.wallet_address }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
+                if (gifter?.wallet) {
+                    await transferUsdcFromTreasury(gifter.wallet, expected).catch(() => {});
+                }
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: `Only ${eligible.length} eligible follower${eligible.length === 1 ? "" : "s"} left — someone else may have just gifted. Payment refunded, try a smaller quantity.`,
+                });
+            }
+
+            const now = new Date();
+            const periodEnd = new Date(now);
+            periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+            // Payment is already verified on-chain above — everything from here
+            // is bookkeeping that must land together. One transaction so a
+            // mid-loop crash can't leave some recipients subscribed while the
+            // creator never gets credited for gifts that already went out.
+            await db.transaction(async (tx) => {
+                for (const recipient of eligible) {
+                    await tx.insert(subscriptions).values({
+                        id: nanoid(),
+                        subscriberId: recipient.id,
+                        creatorId: input.creatorId,
+                        tierId: input.tierId,
+                        status: "active",
+                        billingCycle: "monthly",
+                        currentPeriodStart: now,
+                        currentPeriodEnd: periodEnd,
+                        // No planId/wallet on file for the recipient — this is a
+                        // one-off grant, not a delegated recurring plan, so the
+                        // renewal cron's isNotNull(planId) filter naturally skips
+                        // it and it just lapses at periodEnd instead of retrying
+                        // a charge nobody authorized.
+                    }).onConflictDoUpdate({
+                        target: [subscriptions.subscriberId, subscriptions.creatorId],
+                        set: { status: "active", tierId: input.tierId, currentPeriodStart: now, currentPeriodEnd: periodEnd, cancelAtPeriodEnd: false },
+                    });
+
+                    await tx.insert(giftSubscriptions).values({
+                        id: nanoid(),
+                        senderId: ctx.user.id,
+                        recipientId: recipient.id,
+                        creatorId: input.creatorId,
+                        tierId: input.tierId,
+                        durationMonths: 1,
+                        message: input.message,
+                        status: "redeemed",
+                        txSignature: input.txSignature,
+                        redeemedAt: now,
+                        expiresAt: periodEnd,
+                    });
+                }
+
+                await tx.insert(creatorEarnings).values({
+                    id: nanoid(),
+                    creatorId: input.creatorId,
+                    type: "gift",
+                    amountLamports: 0,
+                    amountUsdc: Number(expected),
+                    referenceId: ctx.user.id,
+                });
             });
 
-            // Record earnings for creator
-            const price = tier.priceMonthly * input.durationMonths;
-            await db.insert(creatorEarnings).values({
-                id: nanoid(),
-                creatorId: tier.creatorId,
-                type: "gift",
-                amountLamports: price,
-                referenceId: ctx.user.id,
-            });
+            // Best-effort, outside the transaction — a notification hiccup
+            // must never roll back subscriptions that already landed.
+            for (const recipient of eligible) {
+                await createNotification({
+                    userId: recipient.id,
+                    actorId: ctx.user.id,
+                    type: "system",
+                    body: `gifted you a month of ${tier.name}!`,
+                });
+            }
 
-            return { success: true };
-            */
+            return { success: true, gifted: eligible.length };
         }),
 
     redeemGift: protectedProcedure

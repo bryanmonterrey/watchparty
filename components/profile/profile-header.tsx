@@ -2,6 +2,7 @@
 
 import { Edit2, Zap, MoreHorizontal, ShieldBan } from "lucide-react";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
+import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 import { UserType } from "@/db/schema/auth/user";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GlobeIcon, PinpointIcon, CalendarIcon, MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -183,6 +184,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                                     {isFollowing ? "Following" : "Follow"}
                                 </Button>
                                 <SubscribeButton creatorId={user.id} creatorName={user.name} />
+                                <GiftSubsButton creatorId={user.id} creatorName={user.name} />
                                 {user.wallet_address && (
                                     <Button
                                         onClick={() => setShowTip(true)}
