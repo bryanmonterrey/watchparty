@@ -10,6 +10,7 @@ import {
     UserGroup02Icon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { useHoverPrefetch } from "@/hooks/use-hover-prefetch";
 import type { TradeToken } from "./types";
 import { SolanaIcon } from "../icons";
 
@@ -90,6 +91,9 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
 
     // Token page resolves by tokenAddress (live) or id — either works via /[slug].
     const slug = token.tokenAddress || token.id;
+    // Token page is server-rendered, so warm the route's RSC payload on hover
+    // intent (120ms rest, once per row — cheap even on a dense board).
+    const rowPrefetch = useHoverPrefetch(() => router.prefetch(`/${slug}`));
 
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -117,6 +121,7 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
 
     return (
         <div
+            {...rowPrefetch}
             onClick={() => router.push(`/${slug}`)}
             className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
         >

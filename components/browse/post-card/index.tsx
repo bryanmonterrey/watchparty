@@ -14,6 +14,7 @@ import { PostCardBody } from "./post-card-body";
 import { PostCardActions } from "./post-card-actions";
 import { BookmarkToast } from "./bookmark-toast";
 import { UserHoverCard } from "../user-hover-card";
+import { useHoverPrefetch } from "@/hooks/use-hover-prefetch";
 import type { PostCardProps } from "./post-card.types";
 
 export type { PostCardProps } from "./post-card.types";
@@ -66,6 +67,20 @@ export function PostCard({
     const viewedRef = useRef(false);
     const utils = trpc.useUtils();
     const { data: session } = useAuthSession();
+
+    // Hover-intent prefetch (120ms rest, once per card): warm the post detail's
+    // queries + route flight so clicking through paints with data instead of a
+    // skeleton (staleTime 5m serves it on mount). Avatar hover warms the
+    // profile route's RSC payload — the [slug] page is server-rendered, so
+    // router.prefetch is the lever there, not a tRPC query.
+    const detailPrefetch = useHoverPrefetch(() => {
+        utils.content.getPost.prefetch({ postId: id });
+        utils.comment.getComments.prefetch({ postId: id, limit: 20 });
+        router.prefetch(`/discover/post/${id}`);
+    });
+    const profilePrefetch = useHoverPrefetch(() => {
+        if (user.username) router.prefetch(`/${user.username}`);
+    });
 
     const incrementView = trpc.content.incrementView.useMutation({
         onSuccess: () => {
@@ -275,6 +290,7 @@ export function PostCard({
         <>
             <article
                 ref={cardRef}
+                {...detailPrefetch}
                 onClick={() => router.push(`/discover/post/${post.id}`)}
                 className={cn(
                     "group cursor-pointer px-4 pt-2.5 pb-1.5 transition-colors relative bg-background flex flex-col",
@@ -294,11 +310,12 @@ export function PostCard({
                 {!connectTop && <StatusBanners post={post} />}
 
                 <div className="flex flex-row items-start space-x-2.5 w-full h-full">
-                    <div 
+                    <div
+                        {...profilePrefetch}
                         onClick={(e) => {
                             e.stopPropagation();
                             if (user.username) router.push(`/${user.username}`);
-                        }} 
+                        }}
                         className="cursor-pointer self-stretch relative flex flex-col items-center"
                     >
                         {/* Thread line bottom — from just below the avatar to the card's
