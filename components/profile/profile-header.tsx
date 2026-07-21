@@ -27,6 +27,9 @@ interface ProfileHeaderProps {
     user: UserType;
     isMinimized?: boolean;
     onToggleSize?: () => void;
+    /** Server-fetched seed — kills the counts-only second skeleton phase on the
+        profile page. Video/stream headers omit it and keep the shimmer. */
+    initialFollowCounts?: { followers: number; following: number };
 }
 
 function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
@@ -122,7 +125,7 @@ const formatJoinedDate = (date: Date | null) => {
     }
 };
 
-export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCounts }: ProfileHeaderProps) {
     const [isEditing, setIsEditing] = React.useState(false);
     const [followersDialog, setFollowersDialog] = React.useState<"followers" | "following" | null>(null);
     const [showTip, setShowTip] = React.useState(false);
@@ -131,7 +134,10 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
     const [mounted, setMounted] = React.useState(false);
     React.useEffect(() => { setMounted(true); }, []);
     const isOwner = mounted && !sessionPending && session?.user?.id === user.id;
-    const { data: counts, refetch: refetchCounts } = trpc.user.followCounts.useQuery({ userId: user.id });
+    const { data: counts, refetch: refetchCounts } = trpc.user.followCounts.useQuery(
+        { userId: user.id },
+        { initialData: initialFollowCounts },
+    );
     const { data: card } = trpc.profile.card.useQuery({ userId: user.id }, { enabled: !isMinimized });
     const { data: followData, refetch: refetchFollow } = trpc.user.isFollowing.useQuery({ followingId: user.id }, { enabled: !isOwner });
     const [optimisticFollowing, setOptimisticFollowing] = React.useState<boolean | null>(null);

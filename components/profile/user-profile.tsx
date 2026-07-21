@@ -11,9 +11,11 @@ import { cn } from "@/lib/utils";
 
 interface UserProfileProps {
     user: UserType;
+    /** Server-fetched so the counts row renders with the rest of the header. */
+    initialFollowCounts?: { followers: number; following: number };
 }
 
-export function UserProfile({ user }: UserProfileProps) {
+export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
     const [activeTab, setActiveTab] = useState(TABS[0]);
     const [isMinimized, setIsMinimized] = useState(false);
     const minimizedRef     = useRef(false);
@@ -89,6 +91,7 @@ export function UserProfile({ user }: UserProfileProps) {
                                 user={user}
                                 isMinimized={true}
                                 onToggleSize={handleToggle}
+                                initialFollowCounts={initialFollowCounts}
                             />
                         </div>
                         <ProfileTabs
@@ -115,6 +118,7 @@ export function UserProfile({ user }: UserProfileProps) {
                             user={user}
                             isMinimized={false}
                             onToggleSize={handleToggle}
+                            initialFollowCounts={initialFollowCounts}
                         />
                     </div>
                     <ProfileTabs
