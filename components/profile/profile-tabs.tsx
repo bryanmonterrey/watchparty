@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 
 export const TABS = [
     "About",
+    "Streams",
     "Posts",
     "Replies",
     "Media",
     "Videos",
-    "Streams",
     "Coins",
     "Trades",
     "Highlights",

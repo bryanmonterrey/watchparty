@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit2, Zap, MoreHorizontal } from "lucide-react";
+import { Edit2, Loader2, Zap, MoreHorizontal } from "lucide-react";
 import { NoEntryIcon } from "@/components/icons";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { GiftSubsButton } from "@/components/browse/gift-subs-button";
@@ -18,6 +18,7 @@ import { FollowersFollowingDialog } from "./followers-following-dialog";
 import { TipModal } from "@/components/browse/tip-modal";
 import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { toast } from "sonner";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -45,38 +46,60 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
     const { data: banStatus } = trpc.moderation.isUserBannedByMe.useQuery({ userId });
     const isBanned = banStatus?.banned ?? false;
 
+    const copyProfileLink = () => {
+        navigator.clipboard.writeText(`${window.location.origin}/${username ?? userId}`);
+        toast.success("Profile link copied");
+    };
+
+    const rowClass = "px-3 h-full w-full rounded-[14px] text-left font-semibold text-zinc-200 hover:bg-white/5";
+
     return (
         <GooDropdown
             open={open}
             onOpenChange={onOpenChange}
             align="end"
-            width={208}
+            width={236}
             gap={8}
-            fill="#18181b"
-            panelRadius={12}
-            itemHeight={40}
+            fill="#131316"
+            panelRadius={18}
+            itemHeight={44}
             triggerAriaLabel="More options"
             triggerClassName="flex size-11 items-center justify-center rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10 transition-colors"
             trigger={<VerticalDotsIcon className="size-6" />}
             items={[
                 {
+                    key: "copy",
+                    onClick: copyProfileLink,
+                    className: "gap-2.5 font-semibold text-zinc-200 cursor-pointer",
+                    label: (
+                        <>
+                            <Link2Icon className="w-4 h-4 text-zinc-400" />
+                            Copy profile link
+                        </>
+                    ),
+                },
+                { key: "sep-1", type: "separator" },
+                {
                     key: "mute",
                     type: "custom",
-                    label: <MuteButton userId={userId} username={username} className="px-4 h-full hover:bg-white/5 rounded-lg w-full text-left" onDone={onClose} />,
+                    label: <MuteButton userId={userId} username={username} className={cn(rowClass, "gap-2.5")} onDone={onClose} />,
                 },
                 {
                     key: "block",
                     type: "custom",
-                    label: <BlockButton userId={userId} username={username} className="px-4 h-full hover:bg-white/5 rounded-lg w-full text-left" onDone={onClose} />,
+                    label: <BlockButton userId={userId} username={username} className={cn(rowClass, "gap-2.5")} onDone={onClose} />,
                 },
+                { key: "sep-2", type: "separator" },
                 {
                     key: "ban",
                     onClick: () => isBanned ? unbanUser.mutate({ userId }) : banUser.mutate({ userId }),
                     closeOnSelect: false,
-                    className: "gap-2 px-4 text-sm text-red-400 hover:bg-white/5 rounded-lg cursor-pointer",
+                    className: "gap-2.5 font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 cursor-pointer",
                     label: (
                         <>
-                            <NoEntryIcon className="w-4 h-4" />
+                            {(banUser.isPending || unbanUser.isPending)
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <NoEntryIcon className="w-4 h-4" />}
                             {isBanned ? "Unban from channel" : "Ban from channel"}
                         </>
                     ),
@@ -250,7 +273,15 @@ export function ProfileHeader({ user, isMinimized, onToggleSize }: ProfileHeader
                         @{user.username}
                     </span>
                     <LevelBadge xp={user.xp} userId={user.id} />
-                    <BadgeStrip badges={card?.badges ?? []} />
+                    {!card ? (
+                        <div className="flex items-center gap-1.5">
+                            <div className="shimmer-skeleton size-[22px] rounded-full" />
+                            <div className="shimmer-skeleton size-[22px] rounded-full" />
+                            <div className="shimmer-skeleton size-[22px] rounded-full" />
+                        </div>
+                    ) : (
+                        <BadgeStrip badges={card.badges ?? []} />
+                    )}
                 </div>
             )}
 
