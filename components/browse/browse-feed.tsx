@@ -653,7 +653,14 @@ export function BrowseFeed() {
                 </button>
             )}
 
-            {/* Feed */}
+            {/* Feed — keyed by tab so the incoming tab's list fades in on switch
+                (the list itself already remounts per switch via listKey). */}
+            <motion.div
+                key={activeTab}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+            >
             {isError ? (
                 <div className="py-20 text-center text-zinc-500">
                     Failed to load feed. Please try again.
@@ -720,6 +727,7 @@ export function BrowseFeed() {
                     />
                 );
             })()}
+            </motion.div>
         </div>
         </PollProvider>
     );

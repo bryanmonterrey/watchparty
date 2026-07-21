@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 interface FeedTabProps {
@@ -32,10 +33,15 @@ export function FeedTab({ label, isActive, onClick, suffix, className }: FeedTab
                     {label}
                 </span>
                 {suffix && <span className="ml-1 flex items-center">{suffix}</span>}
-                <div className={cn(
-                    "absolute bottom-0 inset-x-0 h-[4px] bg-twitter2 rounded-full transition-opacity duration-200",
-                    isActive ? "opacity-100" : "opacity-0"
-                )} />
+                {isActive && (
+                    <motion.div
+                        // Shared across the bar's FeedTab instances so the underline
+                        // slides from the old tab to the new one on switch.
+                        layoutId="feed-tab-underline"
+                        transition={{ type: "spring", stiffness: 550, damping: 45 }}
+                        className="absolute bottom-0 inset-x-0 h-[4px] bg-twitter2 rounded-full"
+                    />
+                )}
             </div>
         </button>
     );

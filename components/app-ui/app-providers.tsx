@@ -10,6 +10,7 @@ import { TrayProvider } from "@/components/providers/tray-provider";
 import { HeartbeatProvider } from "@/components/app-ui/heartbeat-provider";
 import { XpToastListener } from "@/components/app-ui/xp-toast-listener";
 import { ReferralApply } from "@/components/app-ui/referral-apply";
+import { OfflineIndicator } from "@/components/app-ui/offline-indicator";
 
 // Global multi-chain provider stack. Solana (cluster + wallet-adapter) and EVM
 // (lean EIP-6963/EIP-1193) sit side by side, so the whole app can use both
@@ -29,6 +30,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
                 <HeartbeatProvider />
                 <XpToastListener />
                 <ReferralApply />
+                <OfflineIndicator />
                 {children}
                 <Toaster position="top-center" />
               </TrayProvider>

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
+import { useLinkStatus } from "next/link"
 import { AnimatePresence, motion } from "motion/react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,21 @@ import { CreateDialog } from "./create-dialog"
 import { NotificationsPanel } from "@/components/notifications/notifications-panel"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { GooDropdown } from "@/components/ui/goo-dropdown"
+
+// Dims the row while its route loads (useLinkStatus must render inside the
+// <Link>). The 150ms transition delay keeps fast navigations flash-free —
+// on an instant nav the pending state clears before the dim becomes visible.
+function NavLinkPending({ children }: { children: React.ReactNode }) {
+    const { pending } = useLinkStatus()
+    return (
+        <span
+            data-pending={pending || undefined}
+            className="flex w-full items-center transition-opacity delay-150 duration-200 data-[pending]:opacity-60"
+        >
+            {children}
+        </span>
+    )
+}
 
 const items = [
     {
@@ -310,7 +326,7 @@ export function AppSidebar() {
                                                     </div>
                                                 ) : (
                                                     <Link href={itemUrl} transitionTypes={["page-nav"]} className="flex w-full items-center">
-                                                        {commonContent}
+                                                        <NavLinkPending>{commonContent}</NavLinkPending>
                                                     </Link>
                                                 )}
                                             </SidebarMenuButton>

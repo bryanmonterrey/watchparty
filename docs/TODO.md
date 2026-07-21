@@ -86,6 +86,27 @@ Cron/infra spot-checks (read-only):
 - [ ] `callout-performance`, `trade-verify`, `pnl-snapshots` return 200 in cron worker
   logs every 10 min; `sync-assets-webhook` daily run lists `userTrades` webhook.
 
+## ⏳ When Next 16.3 is stable (Instant Navigations — from aurorascharff/next16-social-media review, 2026-07-21)
+Gate: 16.3 out of preview AND `@opennextjs/cloudflare` supports it (cacheComponents
+support there is the likely laggard — verify before starting). Reference clone was
+reviewed 2026-07-21; patterns worth adopting then:
+- **Partial prefetching** (`partialPrefetching: true`) — prefetch the shared app
+  shell as links enter the viewport. Directly serves the speed rule; users browse
+  prod, so perceived nav speed is the win.
+- **Runtime prefetching** (`export const prefetch = 'allow-runtime'` per page) +
+  **hover-gated prefetch** for low-intent link lists (trending/tag-style rails) so
+  render doesn't wake the server per link.
+- **`useOffline` from `next/offline`** (`experimental.useOffline`) — replace the
+  hand-rolled `navigator.onLine` listener in `components/app-ui/offline-indicator.tsx`.
+- **`@next/playwright` `instant()` assertions** — perceived-speed regression tests
+  (assert navigations stay instant + loading states appear). Could seed the first
+  real test suite.
+- **`'use cache'`/`cacheTag`/`updateTag`** — only if/when any read path moves out of
+  tRPC into RSC; not a goal by itself (data layer stays tRPC per CLAUDE.md).
+- **Who-to-follow row morph** — when discover's right rail gets real follow
+  suggestions (still mock data today), animate the followed row out
+  (motion layoutId or ViewTransition share="morph").
+
 ## 🔭 Bigger workstreams (own focus / own chat)
 - **Multi-wallet: up to 25 wallets linked/created per user** (owner, 2026-07-21).
   Today the model is one `user.wallet_address` (+ Swig). Needs: a `user_wallets`

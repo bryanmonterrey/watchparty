@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export const TABS = [
@@ -32,14 +33,21 @@ export function ProfileTabs({ activeTab, onTabChange, isMinimized }: ProfileTabs
                             onClick={() => onTabChange(tab)}
                             className={cn(
                                 "pb-3 text-xl cursor-pointer font-semibold transition-all relative",
-                                activeTab === tab 
-                                    ? "text-white" 
+                                activeTab === tab
+                                    ? "text-white"
                                     : "text-zinc-400 hover:text-zinc-300"
                             )}
                         >
                             {tab}
                             {activeTab === tab && (
-                                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-twitter2 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+                                <motion.div
+                                    // Both the full and minimized bars stay mounted at once,
+                                    // so each needs its own layoutId or the underline would
+                                    // morph between bars instead of between tabs.
+                                    layoutId={isMinimized ? "profile-tab-underline-min" : "profile-tab-underline"}
+                                    transition={{ type: "spring", stiffness: 550, damping: 45 }}
+                                    className="absolute bottom-0 left-0 right-0 h-[3px] bg-twitter2 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                                />
                             )}
                         </button>
                     ))}

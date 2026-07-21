@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { motion } from "motion/react";
 import { UserType } from "@/db/schema/auth/user";
 import { ProfileBanner } from "./profile-banner";
 import { ProfileAvatar } from "./profile-avatar";
@@ -131,7 +132,15 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
 
             {/* ── Content ───────────────────────────────────────────────────── */}
             <div className="max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen">
-                <ProfileTabContent activeTab={activeTab} user={user} onTabChange={setActiveTab} />
+                {/* Keyed by tab so the incoming panel fades in on switch. */}
+                <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                >
+                    <ProfileTabContent activeTab={activeTab} user={user} onTabChange={setActiveTab} />
+                </motion.div>
             </div>
 
         </div>
