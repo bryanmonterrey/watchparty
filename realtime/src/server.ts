@@ -6,7 +6,7 @@ import {
   type WSMessage,
 } from "partyserver";
 import { verifyRealtimeToken } from "./auth";
-import { CHAT_MAX_LEN, type ClientMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
+import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, type ChatLine, type ClientMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
 
 // Per-connection chat rate limit: max N lines per window.
 const CHAT_RATE_MAX = 5;
@@ -46,6 +46,26 @@ export class Chat extends Server<Env> {
     return this.name.startsWith("stream-chat:");
   }
 
+  /**
+   * Stream-chat rooms double as the channel's persistent hangout (the profile
+   * page joins the same room), so the last CHAT_HISTORY_MAX lines live in DO
+   * storage and get replayed to each joiner — Kick-style, the room doesn't
+   * feel empty on arrival. In-memory cache avoids a storage read per line.
+   */
+  private historyCache: ChatLine[] | null = null;
+
+  private async getHistory(): Promise<ChatLine[]> {
+    if (this.historyCache) return this.historyCache;
+    this.historyCache = (await this.ctx.storage.get<ChatLine[]>("chat-history")) ?? [];
+    return this.historyCache;
+  }
+
+  private async appendHistory(line: ChatLine) {
+    const history = [...(await this.getHistory()), line].slice(-CHAT_HISTORY_MAX);
+    this.historyCache = history;
+    await this.ctx.storage.put("chat-history", history);
+  }
+
   async onConnect(connection: Connection<ConnState>, ctx: ConnectionContext) {
     const token = new URL(ctx.request.url).searchParams.get("token");
     const claims = token ? await verifyRealtimeToken(token, this.env.REALTIME_SECRET) : null;
@@ -54,6 +74,12 @@ export class Chat extends Server<Env> {
       return;
     }
     connection.setState({ userId: claims.sub, name: claims.name });
+    if (this.isHighFanout) {
+      const lines = await this.getHistory();
+      if (lines.length) {
+        connection.send(JSON.stringify({ t: "chat-history", lines } satisfies ServerEvent));
+      }
+    }
     this.broadcastPresence();
   }
 
@@ -86,16 +112,15 @@ export class Chat extends Server<Env> {
       if (!text) return;
       // Identity is stamped from verified connection state — clients can't spoof it.
       // Broadcast to everyone incl. sender so all clients share one authoritative order.
-      this.broadcast(
-        JSON.stringify({
-          t: "chat",
-          id: crypto.randomUUID(),
-          userId: state.userId,
-          name: state.name,
-          text,
-          ts: Date.now(),
-        } satisfies ServerEvent),
-      );
+      const line: ChatLine = {
+        id: crypto.randomUUID(),
+        userId: state.userId,
+        name: state.name,
+        text,
+        ts: Date.now(),
+      };
+      this.broadcast(JSON.stringify({ t: "chat", ...line } satisfies ServerEvent));
+      if (this.isHighFanout) void this.appendHistory(line);
     }
   }
 

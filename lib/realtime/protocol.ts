@@ -17,14 +17,20 @@ export type PresenceUser = { userId: string; userName: string };
  * `message` / `event` are opaque relays — the DO never inspects the payload,
  * so persistence + E2E encryption stay in tRPC, unchanged.
  */
+/** One stream/channel chat line as stamped by the DO. */
+export type ChatLine = { id: string; userId: string; name: string; text: string; ts: number };
+
 export type ServerEvent =
   | { t: "presence"; users: PresenceUser[] }
   | { t: "typing"; userId: string; userName: string; channelId?: string }
   | { t: "stop-typing"; userId: string; channelId?: string }
   | { t: "message"; payload: unknown }
   | { t: "event"; name: string; payload: unknown }
-  // Live stream chat: ephemeral, identity stamped by the DO (not spoofable).
-  | { t: "chat"; id: string; userId: string; name: string; text: string; ts: number };
+  // Live stream chat: identity stamped by the DO (not spoofable).
+  | ({ t: "chat" } & ChatLine)
+  // One-shot replay of recent lines, sent only to a just-joined connection
+  // (stream-chat rooms keep the last CHAT_HISTORY_MAX in DO storage).
+  | { t: "chat-history"; lines: ChatLine[] };
 
 /** Messages a client sends UP to the room. Relayed to peers; never persisted. */
 export type ClientMessage =
@@ -36,6 +42,9 @@ export type ClientMessage =
 
 /** Max length the DO enforces on a stream chat line. */
 export const CHAT_MAX_LEN = 500;
+
+/** How many chat lines a stream-chat room replays to joiners. */
+export const CHAT_HISTORY_MAX = 50;
 
 /** Short-lived auth token claims minted by the Next app, verified by the DO. */
 export type RealtimeClaims = {

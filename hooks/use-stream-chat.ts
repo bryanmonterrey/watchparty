@@ -17,8 +17,9 @@ export type StreamChatMessage = {
  *
  * Ephemeral and high fan-out: messages go client → DO → all viewers with no DB
  * round trip. The DO stamps sender identity (anti-spoof), rate-limits, and skips
- * per-viewer presence. Like IVS, there's no history — joiners start empty and
- * keep the last 200 lines in memory.
+ * per-viewer presence. Joiners get a one-shot replay of the room's recent lines
+ * (last CHAT_HISTORY_MAX, kept in DO storage) then live messages, capped at 200
+ * in memory.
  */
 export function useStreamChat(streamId: string | null | undefined, enabled: boolean) {
     const [messages, setMessages] = useState<StreamChatMessage[]>([]);
@@ -39,6 +40,10 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
                     ...prev.slice(-199),
                     { id: e.id, userId: e.userId, sender: e.name, content: e.text },
                 ]);
+            } else if (e?.t === 'chat-history') {
+                // One-shot replay on join (and on reconnect): the room's recent
+                // lines replace anything local so order stays authoritative.
+                setMessages(e.lines.map((l) => ({ id: l.id, userId: l.userId, sender: l.name, content: l.text })));
             }
         };
         const onOpen = () => setConnected(true);
