@@ -73,11 +73,16 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
 
             {/* Channel accent: Twitch-style vertical brand bar on the right
                 edge, in the user's chosen color (edit-profile). Starts where
-                the banner ends (h-[320px]) and runs to the page bottom. */}
+                the banner ends and runs to the page bottom. Button-minimize
+                hides the full header, so the compact banner (200px) sets the
+                top; scroll-minimize keeps the full banner in flow (320px). */}
             {user.accentColor && (
                 <div
                     aria-hidden
-                    className="pointer-events-none absolute bottom-0 right-0 top-[320px] z-20 w-10"
+                    className={cn(
+                        "pointer-events-none absolute bottom-0 right-0 z-20 w-20",
+                        buttonMinRef.current ? "top-[200px]" : "top-[320px]",
+                    )}
                     style={{ background: user.accentColor }}
                 />
             )}
