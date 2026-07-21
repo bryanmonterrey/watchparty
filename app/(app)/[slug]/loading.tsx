@@ -3,7 +3,8 @@
 // page swaps in without any layout jump.
 export default function SlugLoading() {
     return (
-        <div className="min-h-screen">
+        <div className="flex min-h-screen">
+        <div className="min-w-0 flex-1">
             {/* Banner */}
             <div className="shimmer-skeleton h-[320px] w-full" />
 
@@ -58,6 +59,13 @@ export default function SlugLoading() {
                     ))}
                 </div>
             </div>
+        </div>
+
+        {/* Chat rail placeholder (matches UserProfile's aside) */}
+        <div className="sticky top-0 hidden h-screen w-[360px] shrink-0 pb-4 pr-4 pt-16 xl:block">
+            <div className="shimmer-skeleton h-full rounded-2xl" />
+        </div>
+
         </div>
     );
 }

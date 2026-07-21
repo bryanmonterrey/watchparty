@@ -17,6 +17,7 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { useRouter } from "next/navigation";
 import type { Area } from "react-easy-crop";
 import { AvatarCropper, getCroppedDataUrl } from "@/components/file-upload/avatar-cropper";
+import { SOCIAL_PLATFORMS, SOCIAL_META, type SocialLinks } from "@/lib/profile/socials";
 
 interface EditProfileDialogProps {
     user: UserType;
@@ -29,7 +30,8 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
     const [bio, setBio] = React.useState(user.bio || "");
     const [location, setLocation] = React.useState(user.location || "");
     const [website, setWebsite] = React.useState(user.website || "");
-    
+    const [socials, setSocials] = React.useState<SocialLinks>(user.socials ?? {});
+
     // Image states
     const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
     const [bannerFile, setBannerFile] = React.useState<File | null>(null);
@@ -50,6 +52,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
             setBio(user.bio || "");
             setLocation(user.location || "");
             setWebsite(user.website || "");
+            setSocials(user.socials ?? {});
             setAvatarFile(null);
             setBannerFile(null);
             setAvatarPreview(user.avatar_url || user.image || null);
@@ -134,6 +137,11 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                 finalBannerUrl = await uploadImage(bannerFile, "banners");
             }
 
+            // Drop empty values so the stored jsonb only holds real links.
+            const cleanedSocials = Object.fromEntries(
+                Object.entries(socials).filter(([, v]) => v && v.trim()),
+            ) as SocialLinks;
+
             await updateProfile.mutateAsync({
                 name,
                 bio: bio || null,
@@ -141,6 +149,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                 website: website || null,
                 avatar_url: finalAvatarUrl,
                 banner_url: finalBannerUrl,
+                socials: cleanedSocials,
             });
 
             appToast.success("Profile updated!");
@@ -304,13 +313,38 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                             <Label className="text-xs uppercase tracking-[0.2em] text-zinc-500 font-black ml-1 group-focus-within:text-white transition-colors">
                                 Website
                             </Label>
-                            <Input 
+                            <Input
                                 value={website}
                                 onChange={(e) => setWebsite(e.target.value)}
                                 className="h-14"
                                 placeholder="https://yourwebsite.com"
                                 maxLength={100}
                             />
+                        </div>
+
+                        <div className="space-y-3">
+                            <Label className="text-xs uppercase tracking-[0.2em] text-zinc-500 font-black ml-1">
+                                Social links
+                            </Label>
+                            <p className="ml-1 text-xs text-zinc-600">
+                                Shown on your About tab. Handles or full URLs both work.
+                            </p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                {SOCIAL_PLATFORMS.map((platform) => (
+                                    <div key={platform} className="space-y-1">
+                                        <span className="ml-1 text-[11px] font-bold text-zinc-500">
+                                            {SOCIAL_META[platform].label}
+                                        </span>
+                                        <Input
+                                            value={socials[platform] ?? ""}
+                                            onChange={(e) => setSocials((s) => ({ ...s, [platform]: e.target.value }))}
+                                            placeholder={SOCIAL_META[platform].placeholder}
+                                            className="h-11"
+                                            maxLength={200}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

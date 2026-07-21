@@ -3,6 +3,7 @@ export * from "./playlist";
 export * from "./escrow";
 export * from "./token";
 export * from "./follow";
+export * from "./profile-panel";
 export * from "./engagement";
 export * from "./feed_signals";
 export * from "./poll";

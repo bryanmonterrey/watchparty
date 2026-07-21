@@ -1,5 +1,6 @@
-import { boolean, index, integer, pgEnum, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgEnum, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { SocialLinks } from "@/lib/profile/socials";
 
 export const verifiedTierEnum = pgEnum("verified_tier", ["verified", "business", "government"]);
 
@@ -17,6 +18,7 @@ export const user = pgTable("user", {
   bio: text("bio"),
   location: text("location"),
   website: text("website"),
+  socials: jsonb("socials").$type<SocialLinks>(),          // platform key -> handle/url (lib/profile/socials.ts)
   role: text("role").default("user").notNull(),
   verifiedTier: verifiedTierEnum("verified_tier"),
   affiliateUsername: text("affiliate_username"),       // org this user is affiliated to (links + drives badge)

@@ -12,6 +12,7 @@ import { recordQuestEvent } from '@/server/lib/quests';
 import { upsertUser } from '@/lib/typesense/sync';
 import { effectiveVerifiedTier } from '@/lib/verified-tier';
 import { claimQueuedGiftForNewFollower } from '@/server/lib/gift-credits';
+import { socialLinksSchema } from '@/lib/profile/socials';
 
 export const userRouter = router({
     // Live availability check for onboarding — same uniqueness source of
@@ -390,6 +391,7 @@ export const userRouter = router({
                 website: z.string().max(100).nullable().optional(),
                 banner_url: z.string().url().nullable().optional(),
                 avatar_url: z.string().url().nullable().optional(),
+                socials: socialLinksSchema.nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -402,6 +404,7 @@ export const userRouter = router({
                     website: input.website,
                     banner_url: input.banner_url,
                     avatar_url: input.avatar_url,
+                    ...(input.socials !== undefined ? { socials: input.socials } : {}),
                 })
                 .where(eq(user.id, ctx.user.id));
             

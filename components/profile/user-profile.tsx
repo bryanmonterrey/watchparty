@@ -7,6 +7,7 @@ import { ProfileAvatar } from "./profile-avatar";
 import { ProfileHeader } from "./profile-header";
 import { ProfileTabs, TABS } from "./profile-tabs";
 import { ProfileTabContent } from "./profile-tab-content";
+import { ChannelChat } from "./channel-chat";
 import { cn } from "@/lib/utils";
 
 interface UserProfileProps {
@@ -67,7 +68,8 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
     };
 
     return (
-        <div className="min-h-screen">
+        <div className="flex min-h-screen">
+        <div className="min-w-0 flex-1">
 
             {/* ── Compact header ────────────────────────────────────────────────
                 Zero-height sticky anchor at top-0. The inner content overflows
@@ -133,6 +135,15 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             <div className="max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen">
                 <ProfileTabContent activeTab={activeTab} user={user} />
             </div>
+
+        </div>
+
+        {/* ── Channel chat rail (Kick model: the room is the channel's, live
+            or not — same DO room as stream chat). Sticky with its own scroll;
+            top padding clears the overlaid header / wallet cluster. */}
+        <aside className="sticky top-0 hidden h-screen w-[360px] shrink-0 pb-4 pr-4 pt-16 xl:block">
+            <ChannelChat hostUserId={user.id} hostName={user.name} className="h-full" />
+        </aside>
 
         </div>
     );
