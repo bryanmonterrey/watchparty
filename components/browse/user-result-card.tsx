@@ -51,7 +51,7 @@ export function UserResultCard({ user, initialIsFollowing = false, className }: 
 
     return (
         <Link 
-            href={`/user/${user.username}`}
+            href={`/${user.username}`}
             className={cn("flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer w-full", className)}
         >
             <PostCardAvatar user={user} />

@@ -50,6 +50,16 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
         { enabled: enabled && open, staleTime: CARD_STALE_MS },
     );
 
+    // The card opening (150ms hover) is the strongest profile-visit intent
+    // signal in the app — warm the profile route's RSC payload so clicking
+    // through is near-instant. Covers every MiniProfile trigger (post header
+    // names, avatars, comment rows). username may only be known once the card
+    // query resolves, hence the effect instead of an onOpenChange hook.
+    const slug = username ?? card?.username;
+    React.useEffect(() => {
+        if (open && slug) router.prefetch(`/${slug}`);
+    }, [open, slug, router]);
+
     const utils = trpc.useUtils();
     const [optimisticFollowing, setOptimisticFollowing] = React.useState<boolean | null>(null);
     const settle = () => {
