@@ -152,6 +152,29 @@ export function AppSidebar() {
     }, [])
     const [notificationsOpen, setNotificationsOpen] = React.useState(false)
     const [moreOpen, setMoreOpen] = React.useState(false)
+    const utils = trpc.useUtils()
+
+    // Hover-intent data prefetch: warm the destination's initial queries so the
+    // page mounts with data already in the React Query cache (staleTime is 5m,
+    // so it actually serves). prefetch* respects staleTime — repeat hovers are
+    // free, and a fresh cache entry is never refetched.
+    const prefetchForItem = (title: string) => {
+        switch (title) {
+            case "Home":
+                utils.content.getVideoFeed.prefetchInfinite({ limit: 36 })
+                utils.content.getVideoFeed.prefetchInfinite({ limit: 4, category: "IRL" })
+                break
+            case "Discover":
+                utils.content.getFeed.prefetchInfinite({ type: "for-you", limit: 20 })
+                break
+            case "Trade":
+                utils.trade.getFeed.prefetch()
+                break
+            case "Notifications":
+                if (session?.user) utils.notification.getNotifications.prefetchInfinite({ limit: 30 })
+                break
+        }
+    }
     const { data: unreadNotifs } = trpc.notification.getUnreadCount.useQuery(undefined, { enabled: !!session?.user })
     const { data: unreadMessages } = trpc.conversation.getUnreadCount.useQuery(undefined, { enabled: !!session?.user, refetchInterval: 30_000 })
     // Cmd/Ctrl+K jumps to the dedicated /search page (the old command-palette
@@ -270,6 +293,8 @@ export function AppSidebar() {
                                             <SidebarMenuButton
                                                 asChild={itemUrl !== "#"}
                                                 size="lg"
+                                                onMouseEnter={() => prefetchForItem(item.title)}
+                                                onFocus={() => prefetchForItem(item.title)}
                                                 className={cn(
                                                     "text-lg !w-auto !justify-start !p-0 transition-all duration-150 ease-in-out font-medium h-12 relative isolate hover:bg-transparent active:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-900 modal-trigger gap-0",
                                                     isActive ? "text-flexwhite font-bold" : "text-flexwhite/85 hover:text-white/85"
