@@ -31,7 +31,7 @@ export function ProfileTabs({ activeTab, onTabChange, isMinimized }: ProfileTabs
                             key={tab}
                             onClick={() => onTabChange(tab)}
                             className={cn(
-                                "pb-3 text-2xl cursor-pointer font-semibold transition-all relative",
+                                "pb-3 text-xl cursor-pointer font-semibold transition-all relative",
                                 activeTab === tab 
                                     ? "text-white" 
                                     : "text-zinc-400 hover:text-zinc-300"
