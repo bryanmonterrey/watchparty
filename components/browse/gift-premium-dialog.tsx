@@ -141,7 +141,7 @@ export function GiftPremiumDialog({ recipientId, recipientName, open, onOpenChan
                                         key={cycle}
                                         onClick={() => setBillingCycle(cycle)}
                                         className={cn(
-                                            "relative z-10 flex-1 cursor-pointer rounded-full py-2 text-sm font-bold capitalize transition-colors duration-200",
+                                            "relative z-10 h-11 flex-1 cursor-pointer rounded-full text-sm font-bold capitalize transition-colors duration-200",
                                             active ? "text-black" : "text-zinc-400 hover:text-white",
                                         )}
                                     >
@@ -172,12 +172,12 @@ export function GiftPremiumDialog({ recipientId, recipientName, open, onOpenChan
                     <button
                         onClick={handleGift}
                         disabled={paying}
-                        className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
+                        className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-base font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
                     >
                         {paying ? (
                             <><Loader2 className="size-4 animate-spin" /> Gifting…</>
                         ) : (
-                            <><GiftBoxIcon className="size-5" /> Gift {TIERS[tierKey].name}</>
+                            <>Gift {TIERS[tierKey].name}</>
                         )}
                     </button>
                 </div>

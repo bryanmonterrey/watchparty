@@ -1,7 +1,8 @@
 "use client";
 
 import { Edit2, Loader2, Zap, MoreHorizontal } from "lucide-react";
-import { NoEntryIcon } from "@/components/icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { HammerIcon } from "@hugeicons/core-free-icons";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 import { GiftPremiumButton } from "@/components/browse/gift-premium-button";
@@ -102,7 +103,7 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
                         <>
                             {(banUser.isPending || unbanUser.isPending)
                                 ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <NoEntryIcon className="w-4 h-4" />}
+                                : <HugeiconsIcon icon={HammerIcon} className="w-4 h-4" />}
                             {isBanned ? "Unban from channel" : "Ban from channel"}
                         </>
                     ),

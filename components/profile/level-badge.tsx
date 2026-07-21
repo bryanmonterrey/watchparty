@@ -50,7 +50,7 @@ export function LevelBadge({ xp, userId, className }: LevelBadgeProps) {
 
     const bar = (
         <>
-            <span className="font-pixel text-xs leading-none text-zinc-400">exp lv{level}</span>
+            <span className="font-pixel text-xs leading-none text-zinc-400">exp lv.{level}</span>
             <div className="flex items-center gap-[3px]">
                 {Array.from({ length: TICKS }, (_, i) => (
                     <span
