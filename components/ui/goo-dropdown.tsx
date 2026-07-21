@@ -45,6 +45,8 @@ export type GooDropdownProps = {
   /** Panel width in px. */
   width?: number
   align?: 'start' | 'end'
+  /** Horizontal offset of the open panel from its aligned position (px, positive = right). */
+  shift?: number
   side?: 'top' | 'bottom'
   /** Distance between trigger and panel — the goo bridges this. */
   gap?: number
@@ -95,6 +97,7 @@ export function GooDropdown({
   headerHeight = 48,
   width = 240,
   align = 'end',
+  shift = 0,
   side = 'bottom',
   gap = 14,
   itemHeight = 40,
@@ -150,9 +153,13 @@ export function GooDropdown({
   const geo = useMemo(() => {
     const contentH = PANEL_PAD * 2 + (header ? headerHeight : 0) + items.reduce((s, it) => s + rowHeight(it), 0)
     const panelH = maxPanelHeight ? Math.min(contentH, maxPanelHeight) : contentH
-    const layerW = Math.max(width, btn.w)
-    const btnX = align === 'end' ? layerW - btn.w : 0
-    const panelX = align === 'end' ? layerW - width : 0
+    // Place both rects on a shared axis (trigger at 0, panel at its aligned
+    // position + shift), then normalize so the layer starts at the leftmost.
+    const panelX0 = (align === 'end' ? btn.w - width : 0) + shift
+    const minX = Math.min(0, panelX0)
+    const btnX = -minX
+    const panelX = panelX0 - minX
+    const layerW = Math.max(btnX + btn.w, panelX + width)
     const btnY = side === 'top' ? panelH + gap : 0
     const panelY = side === 'top' ? 0 : btn.h + gap
     const layerH = panelH + gap + btn.h
@@ -169,7 +176,7 @@ export function GooDropdown({
       openRect: { x: panelX, y: panelY, w: width, h: panelH, r: panelRadius },
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, header, headerHeight, width, align, side, gap, itemHeight, maxPanelHeight, buttonRadius, panelRadius, btn.w, btn.h])
+  }, [items, header, headerHeight, width, align, shift, side, gap, itemHeight, maxPanelHeight, buttonRadius, panelRadius, btn.w, btn.h])
 
   const shapeAt = useMemo(() => {
     const { closedRect, openRect, layerW, layerH } = geo

@@ -60,7 +60,7 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
         <GooDropdown
             open={open}
             onOpenChange={onOpenChange}
-            align="end"
+            align="start"
             width={236}
             gap={8}
             fill="#131316"

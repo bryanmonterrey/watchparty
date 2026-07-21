@@ -341,6 +341,9 @@ export function AppSidebar() {
                                 onOpenChange={setMoreOpen}
                                 side="top"
                                 align="start"
+                                // Panel starts at the "More" label (right of the
+                                // icon column) instead of hugging the viewport edge.
+                                shift={68}
                                 width={320}
                                 gap={8}
                                 fill="#101011"
