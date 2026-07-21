@@ -100,8 +100,8 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                 )}>
                     <ProfileBanner user={user} isMinimized={true} />
                     <div className={cn(
-                        "",
-                        "max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30"
+                        "max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30",
+                        user.accentColor && "pr-28",
                     )}>
                         <div className="flex flex-row items-end gap-6">
                             <ProfileAvatar user={user} isMinimized={true} />
@@ -127,8 +127,8 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             <div ref={fullRef} className={buttonMinRef.current ? "hidden" : "block"}>
                 <ProfileBanner user={user} isMinimized={false} />
                 <div className={cn(
-                    "",
-                    "max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30"
+                    "max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30",
+                    user.accentColor && "pr-28",
                 )}>
                     <div className="flex flex-col justify-start items-start space-y-1.5">
                         <ProfileAvatar user={user} isMinimized={false} />
@@ -148,7 +148,10 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             </div>
 
             {/* ── Content ───────────────────────────────────────────────────── */}
-            <div className="max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen">
+            <div className={cn(
+                "max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen",
+                user.accentColor && "pr-28",
+            )}>
                 <ProfileTabContent activeTab={activeTab} user={user} onTabChange={setActiveTab} />
             </div>
 
