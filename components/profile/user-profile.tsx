@@ -84,12 +84,17 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                     className="pointer-events-none absolute inset-y-0 right-0 z-20 w-12"
                     style={{
                         background: user.accentColor,
+                        // Mirrors the banner overlay's alpha ramp exactly
+                        // (via-transparent at 50% height → from-background at
+                        // the bottom edge): the bar becomes visible at the
+                        // same rate the image fades out — under the image,
+                        // over the gradient.
                         maskImage: buttonMinRef.current
-                            ? "linear-gradient(to bottom, transparent 120px, black 152px)"
-                            : "linear-gradient(to bottom, transparent 200px, black 248px)",
+                            ? "linear-gradient(to bottom, transparent 100px, black 200px)"
+                            : "linear-gradient(to bottom, transparent 160px, black 320px)",
                         WebkitMaskImage: buttonMinRef.current
-                            ? "linear-gradient(to bottom, transparent 120px, black 152px)"
-                            : "linear-gradient(to bottom, transparent 200px, black 248px)",
+                            ? "linear-gradient(to bottom, transparent 100px, black 200px)"
+                            : "linear-gradient(to bottom, transparent 160px, black 320px)",
                     }}
                 />
             )}
