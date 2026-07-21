@@ -72,15 +72,20 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
         <div className="relative min-h-screen">
 
             {/* Channel accent: Twitch-style vertical brand bar on the right
-                edge, in the user's chosen color (edit-profile). Full page
-                height, layered UNDER the banner (banner is z-15, bar z-10) —
-                so it visually starts where the banner ends in either header
-                mode without tracking banner heights. */}
+                edge, in the user's chosen color (edit-profile). Sits ABOVE the
+                banner (z-20 vs z-15) but its top is masked out over the solid
+                image and fades in through the banner's bottom gradient band
+                (200→320px) — so it reads as sliding out from under the banner.
+                The compact sticky header (z-40) still covers it when pinned. */}
             {user.accentColor && (
                 <div
                     aria-hidden
-                    className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12"
-                    style={{ background: user.accentColor }}
+                    className="pointer-events-none absolute inset-y-0 right-0 z-20 w-12"
+                    style={{
+                        background: user.accentColor,
+                        maskImage: "linear-gradient(to bottom, transparent 200px, black 320px)",
+                        WebkitMaskImage: "linear-gradient(to bottom, transparent 200px, black 320px)",
+                    }}
                 />
             )}
 
