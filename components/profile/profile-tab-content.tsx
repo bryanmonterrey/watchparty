@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus } from "lucide-react";
 import { UserType } from "@/db/schema/auth/user";
 import { ProfileAbout } from "./profile-about";
+import { ProfileHome } from "./home/profile-home";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { StreamViewer } from "@/components/streaming/stream-viewer";
 import { trpc } from "@/lib/trpc/client";
@@ -16,6 +17,8 @@ import { ProfilePnlCard } from "./profile-pnl-card";
 interface ProfileTabContentProps {
     activeTab: string;
     user: UserType;
+    /** Lets tab content deep-link into another tab (Home hero → Streams). */
+    onTabChange?: (tab: string) => void;
 }
 
 function ProfileTradesFeed({ userId, name }: { userId: string; name: string }) {
@@ -129,7 +132,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
     );
 }
 
-export function ProfileTabContent({ activeTab, user }: ProfileTabContentProps) {
+export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabContentProps) {
     const { data: session } = useAuthSession();
     const viewerUsername = session?.user?.username ?? session?.user?.name ?? "Guest";
     const isOwner = session?.user?.id === user.id;
@@ -143,7 +146,9 @@ export function ProfileTabContent({ activeTab, user }: ProfileTabContentProps) {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 1, y: 0 }}
                 >
-                    {activeTab === "About" ? (
+                    {activeTab === "Home" ? (
+                        <ProfileHome user={user} onTabChange={onTabChange} />
+                    ) : activeTab === "About" ? (
                         <ProfileAbout user={user} />
                     ) : activeTab === "Streams" ? (
                         <StreamViewer

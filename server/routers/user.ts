@@ -392,6 +392,7 @@ export const userRouter = router({
                 banner_url: z.string().url().nullable().optional(),
                 avatar_url: z.string().url().nullable().optional(),
                 socials: socialLinksSchema.nullable().optional(),
+                accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -405,6 +406,7 @@ export const userRouter = router({
                     banner_url: input.banner_url,
                     avatar_url: input.avatar_url,
                     ...(input.socials !== undefined ? { socials: input.socials } : {}),
+                    ...(input.accentColor !== undefined ? { accentColor: input.accentColor } : {}),
                 })
                 .where(eq(user.id, ctx.user.id));
             

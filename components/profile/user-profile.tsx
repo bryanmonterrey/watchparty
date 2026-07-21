@@ -71,6 +71,16 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
     return (
         <div className="min-h-screen">
 
+            {/* Channel accent: Twitch-style vertical brand bar on the right
+                viewport edge, in the user's chosen color (edit-profile). */}
+            {user.accentColor && (
+                <div
+                    aria-hidden
+                    className="pointer-events-none fixed inset-y-0 right-0 z-40 w-1.5"
+                    style={{ background: user.accentColor }}
+                />
+            )}
+
             {/* ── Compact header ────────────────────────────────────────────────
                 Zero-height sticky anchor at top-0. The inner content overflows
                 visually and is invisible until the full header scrolls away.
@@ -133,7 +143,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
 
             {/* ── Content ───────────────────────────────────────────────────── */}
             <div className="max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen">
-                <ProfileTabContent activeTab={activeTab} user={user} />
+                <ProfileTabContent activeTab={activeTab} user={user} onTabChange={setActiveTab} />
             </div>
 
         </div>

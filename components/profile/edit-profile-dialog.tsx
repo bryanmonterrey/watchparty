@@ -25,12 +25,16 @@ interface EditProfileDialogProps {
     onOpenChange: (open: boolean) => void;
 }
 
+// Preset accents for the profile's vertical brand bar (brand pastels first).
+const ACCENT_SWATCHES = ["#FF746C", "#00ED89", "#FFCC00", "#7DD3FC", "#C4B5FD", "#F9A8D4", "#FFFFFF"];
+
 export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialogProps) {
     const [name, setName] = React.useState(user.name || "");
     const [bio, setBio] = React.useState(user.bio || "");
     const [location, setLocation] = React.useState(user.location || "");
     const [website, setWebsite] = React.useState(user.website || "");
     const [socials, setSocials] = React.useState<SocialLinks>(user.socials ?? {});
+    const [accentColor, setAccentColor] = React.useState<string | null>(user.accentColor ?? null);
 
     // Image states
     const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
@@ -53,6 +57,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
             setLocation(user.location || "");
             setWebsite(user.website || "");
             setSocials(user.socials ?? {});
+            setAccentColor(user.accentColor ?? null);
             setAvatarFile(null);
             setBannerFile(null);
             setAvatarPreview(user.avatar_url || user.image || null);
@@ -150,6 +155,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                 avatar_url: finalAvatarUrl,
                 banner_url: finalBannerUrl,
                 socials: cleanedSocials,
+                accentColor,
             });
 
             appToast.success("Profile updated!");
@@ -320,6 +326,64 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                                 placeholder="https://yourwebsite.com"
                                 maxLength={100}
                             />
+                        </div>
+
+                        <div className="space-y-3">
+                            <Label className="text-xs uppercase tracking-[0.2em] text-zinc-500 font-black ml-1">
+                                Accent color
+                            </Label>
+                            <p className="ml-1 text-xs text-zinc-600">
+                                A vertical bar in your color on the right edge of your profile.
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2.5 ml-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setAccentColor(null)}
+                                    className={cn(
+                                        "h-9 cursor-pointer rounded-full px-3.5 text-xs font-bold transition-all",
+                                        accentColor === null
+                                            ? "bg-white text-black"
+                                            : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                    )}
+                                >
+                                    None
+                                </button>
+                                {ACCENT_SWATCHES.map((hex) => (
+                                    <button
+                                        key={hex}
+                                        type="button"
+                                        aria-label={`Accent ${hex}`}
+                                        onClick={() => setAccentColor(hex)}
+                                        className={cn(
+                                            "size-9 cursor-pointer rounded-full transition-all hover:scale-110 active:scale-95",
+                                            accentColor === hex && "ring-2 ring-white ring-offset-2 ring-offset-black",
+                                        )}
+                                        style={{ background: hex }}
+                                    />
+                                ))}
+                                <label
+                                    className={cn(
+                                        "relative flex h-9 cursor-pointer items-center rounded-full px-3.5 text-xs font-bold transition-all",
+                                        accentColor && !ACCENT_SWATCHES.includes(accentColor)
+                                            ? "text-black ring-2 ring-white ring-offset-2 ring-offset-black"
+                                            : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                    )}
+                                    title="Custom color"
+                                    style={
+                                        accentColor && !ACCENT_SWATCHES.includes(accentColor)
+                                            ? { background: accentColor }
+                                            : undefined
+                                    }
+                                >
+                                    Custom
+                                    <input
+                                        type="color"
+                                        value={accentColor ?? "#00ED89"}
+                                        onChange={(e) => setAccentColor(e.target.value)}
+                                        className="absolute inset-0 cursor-pointer opacity-0"
+                                    />
+                                </label>
+                            </div>
                         </div>
 
                         <div className="space-y-3">
