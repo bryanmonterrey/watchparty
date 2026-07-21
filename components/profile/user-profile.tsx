@@ -71,33 +71,9 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
     return (
         <div className="relative min-h-screen">
 
-            {/* Channel accent: Twitch-style vertical brand bar on the right
-                edge, in the user's chosen color (edit-profile). Sits ABOVE the
-                banner (z-20 vs z-15): masked out where the image is solid,
-                fully solid across the banner's bottom fade strip (the
-                from-background gradient band) — under the image, over the
-                fade. Stops shift with the compact banner (200px) when
-                button-minimized; the pinned sticky header (z-40) covers it. */}
-            {user.accentColor && (
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-0 right-0 z-20 w-12"
-                    style={{
-                        background: user.accentColor,
-                        // Mirrors the banner overlay's alpha ramp exactly
-                        // (via-transparent at 50% height → from-background at
-                        // the bottom edge): the bar becomes visible at the
-                        // same rate the image fades out — under the image,
-                        // over the gradient.
-                        maskImage: buttonMinRef.current
-                            ? "linear-gradient(to bottom, transparent 100px, black 200px)"
-                            : "linear-gradient(to bottom, transparent 160px, black 320px)",
-                        WebkitMaskImage: buttonMinRef.current
-                            ? "linear-gradient(to bottom, transparent 100px, black 200px)"
-                            : "linear-gradient(to bottom, transparent 160px, black 320px)",
-                    }}
-                />
-            )}
+            {/* Channel accent bar (user.accentColor) removed 2026-07-21 —
+                shelved for a later pass; the column + edit-dialog picker were
+                cut but the DB column and updateProfile support remain. */}
 
             {/* ── Compact header ────────────────────────────────────────────────
                 Zero-height sticky anchor at top-0. The inner content overflows
@@ -111,10 +87,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                         : "opacity-0 pointer-events-none"
                 )}>
                     <ProfileBanner user={user} isMinimized={true} />
-                    <div className={cn(
-                        "max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30",
-                        user.accentColor && "pr-20",
-                    )}>
+                    <div className="max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30">
                         <div className="flex flex-row items-end gap-6">
                             <ProfileAvatar user={user} isMinimized={true} />
                             <ProfileHeader
@@ -138,10 +111,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                 edge crosses the viewport top, the compact header fades in.     */}
             <div ref={fullRef} className={buttonMinRef.current ? "hidden" : "block"}>
                 <ProfileBanner user={user} isMinimized={false} />
-                <div className={cn(
-                    "max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30",
-                    user.accentColor && "pr-20",
-                )}>
+                <div className="max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30">
                     <div className="flex flex-col justify-start items-start space-y-1.5">
                         <ProfileAvatar user={user} isMinimized={false} />
                         <ProfileHeader
@@ -160,10 +130,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             </div>
 
             {/* ── Content ───────────────────────────────────────────────────── */}
-            <div className={cn(
-                "max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen",
-                user.accentColor && "pr-20",
-            )}>
+            <div className="max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen">
                 <ProfileTabContent activeTab={activeTab} user={user} onTabChange={setActiveTab} />
             </div>
 
