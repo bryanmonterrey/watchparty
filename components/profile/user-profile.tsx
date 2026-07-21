@@ -69,14 +69,15 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
     };
 
     return (
-        <div className="min-h-screen">
+        <div className="relative min-h-screen">
 
             {/* Channel accent: Twitch-style vertical brand bar on the right
-                viewport edge, in the user's chosen color (edit-profile). */}
+                edge, in the user's chosen color (edit-profile). Starts where
+                the banner ends (h-[320px]) and runs to the page bottom. */}
             {user.accentColor && (
                 <div
                     aria-hidden
-                    className="pointer-events-none fixed inset-y-0 right-0 z-40 w-1.5"
+                    className="pointer-events-none absolute bottom-0 right-0 top-[320px] z-20 w-10"
                     style={{ background: user.accentColor }}
                 />
             )}
