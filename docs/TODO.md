@@ -87,6 +87,14 @@ Cron/infra spot-checks (read-only):
   logs every 10 min; `sync-assets-webhook` daily run lists `userTrades` webhook.
 
 ## 🔭 Bigger workstreams (own focus / own chat)
+- **Multi-wallet: up to 25 wallets linked/created per user** (owner, 2026-07-21).
+  Today the model is one `user.wallet_address` (+ Swig). Needs: a `user_wallets`
+  table (address, chain, label, kind: linked|created, primary flag), link/create
+  flows in settings, and every "the user's wallet" read (tips, subs, trades,
+  premium) resolving through a primary/selected wallet instead of the single
+  column. Related owner rule: wallet addresses are never DISPLAYED in UI
+  (about-card display removed 2026-07-21; only settings account-linking still
+  shows the owner their own truncated address).
 - **Kill lucide-react, standardize on hugeicons** — owner wants lucide gone entirely
   (2026-07-20: "almost uninstall lucide... dislike that library a lot"). Currently
   three icon systems coexist: `components/icons.tsx` (custom, by far the largest

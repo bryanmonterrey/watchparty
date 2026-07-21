@@ -3,11 +3,11 @@
 import { UserType } from "@/db/schema/auth/user";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { SocialLinksRow } from "./social-links";
-import { WalletCards } from "lucide-react";
 
 // The structured "About {name}" card at the top of the About tab. Kept lean
 // on purpose: bio/joined/location/website/followers all live in the profile
-// header — this card is the socials + wallet surface the header doesn't show.
+// header. No wallet address — addresses are never displayed in the UI
+// (owner rule, 2026-07-21).
 
 export function AboutCard({ user }: { user: UserType }) {
     return (
@@ -20,13 +20,6 @@ export function AboutCard({ user }: { user: UserType }) {
             </h2>
 
             <SocialLinksRow socials={user.socials} />
-
-            {user.wallet_address && (
-                <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-zinc-400">
-                    <WalletCards size={15} className="shrink-0 text-zinc-500" />
-                    <span className="truncate text-xs">{user.wallet_address}</span>
-                </span>
-            )}
         </div>
     );
 }
