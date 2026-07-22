@@ -73,7 +73,7 @@ export function SendTokenSelector({
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             autoFocus
-                            className="w-full bg-transparent pl-11 pr-4 py-3.5 text-[17px] font-medium placeholder:text-zinc-500 focus:outline-none"
+                            className="h-[52px] w-full bg-transparent pl-11 pr-4 text-[17px] font-medium placeholder:text-zinc-500 focus:outline-none"
                         />
                     </div>
                 </div>

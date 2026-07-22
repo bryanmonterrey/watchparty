@@ -59,10 +59,10 @@ export function GifPicker({ onGifSelect, className, iconClassName, children }: G
             >
                 <div className="p-3 border-b border-white/5">
                     <div className="relative">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-postgray" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-postgray" />
                         <Input
                             placeholder="Search GIPHY..."
-                            className="pl-9 bg-white/5 border-white/5 h-9 text-sm rounded-full focus:bg-white/10 transition-all placeholder:text-zinc-500"
+                            className="pl-9 bg-white/5 border-white/5 h-[52px] text-[16px] rounded-full focus:bg-white/10 transition-all placeholder:text-zinc-500"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />

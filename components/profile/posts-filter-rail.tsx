@@ -4,8 +4,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon, Cancel01Icon, ArrowDown01Icon, Sorting01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { Search01Icon, Cancel01Icon, ArrowDown01Icon, MenuTwoLineIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 
 // The profile Posts-tab control surface, modeled on OpenSea's items page
 // (user ref 2026-07-22) in watchparty's language: a toolbar (result count +
@@ -55,53 +55,50 @@ export function PostsToolbar({ total, search, onSearchChange, sort, onSortChange
     const sortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? "Newest";
     return (
         <div className="mb-5 flex items-center gap-3">
+            {/* h-[52px] matches the global search bar (owner rule: ALL search
+                bars share its height). */}
             <div className="relative min-w-0 flex-1">
                 <HugeiconsIcon
                     icon={Search01Icon}
-                    className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-500"
+                    className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-zinc-400"
                     strokeWidth={2}
                 />
                 <input
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
                     placeholder="Search posts"
-                    className="h-11 w-full rounded-full bg-white/5 pl-11 pr-10 text-sm font-semibold text-white placeholder:text-zinc-500 ring-1 ring-white/10 outline-none transition-shadow focus:ring-white/25"
+                    className="h-[52px] w-full rounded-full bg-white/5 pl-12 pr-12 text-[16px] font-medium text-white placeholder:text-zinc-400 ring-1 ring-white/10 outline-none transition-shadow focus:ring-2 focus:ring-white/25"
                 />
                 {search && (
                     <button
                         onClick={() => onSearchChange("")}
                         aria-label="Clear search"
-                        className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
+                        className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
                     >
-                        <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" strokeWidth={2.5} />
+                        <HugeiconsIcon icon={Cancel01Icon} className="size-4" strokeWidth={2.5} />
                     </button>
                 )}
             </div>
             <GooDropdown
-                width={200}
+                width={220}
                 align="end"
+                fill={GOO_PANEL_FILL}
                 triggerAriaLabel="Sort posts"
-                triggerClassName="flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white"
+                triggerClassName={cn(GOO_TRIGGER_PILL, "shrink-0")}
                 trigger={
                     <>
-                        <HugeiconsIcon icon={Sorting01Icon} className="size-4" strokeWidth={2} />
+                        <HugeiconsIcon icon={MenuTwoLineIcon} className="size-4" strokeWidth={2} />
                         <span>{sortLabel}</span>
                         <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-zinc-500" strokeWidth={2.5} />
                     </>
                 }
-                items={SORT_OPTIONS.map((o) => ({
+                items={SORT_OPTIONS.map((o) => gooMenuItem({
                     key: o.value,
+                    label: o.label,
                     onClick: () => onSortChange(o.value),
-                    className: cn(
-                        "gap-3 px-4 rounded-full cursor-pointer text-sm font-bold",
-                        o.value === sort ? "text-white" : "text-zinc-400 hover:text-white",
-                    ),
-                    label: (
-                        <span className="flex w-full items-center justify-between">
-                            {o.label}
-                            {o.value === sort && <HugeiconsIcon icon={Tick02Icon} className="size-4" strokeWidth={3} />}
-                        </span>
-                    ),
+                    right: o.value === sort
+                        ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={3} />
+                        : undefined,
                 }))}
             />
             {typeof total === "number" && (
@@ -157,7 +154,7 @@ function FilterOption({ label, count, active, onClick }: {
         <button
             onClick={onClick}
             className={cn(
-                "flex h-10 w-full cursor-pointer items-center justify-between rounded-full px-4 text-sm font-bold transition-colors",
+                "flex h-11 w-full cursor-pointer items-center justify-between rounded-full px-4 text-sm font-bold transition-colors",
                 active ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white",
             )}
         >
@@ -253,7 +250,7 @@ export function PostsFilterRow({ userId, type, onTypeChange }: {
                         key={o.value}
                         onClick={() => onTypeChange(o.value)}
                         className={cn(
-                            "flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors",
+                            "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors",
                             active ? "bg-white text-black" : "bg-white/5 text-zinc-400 ring-1 ring-white/10 hover:text-white",
                         )}
                     >

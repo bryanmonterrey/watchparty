@@ -10,7 +10,7 @@ import { UserType } from "@/db/schema/auth/user";
 import { trpc } from "@/lib/trpc/client";
 import { Squircle } from "@/components/ui/squircle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { formatRelativeTime } from "@/lib/date-utils";
 
@@ -162,19 +162,20 @@ export function HomeVideosRow({ user, onViewAll }: {
                                 </div>
                                 <GooDropdown
                                     stopPropagation
-                                    width={180}
+                                    width={200}
                                     align="end"
+                                    fill={GOO_PANEL_FILL}
                                     triggerAriaLabel="Video options"
                                     triggerClassName="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
                                     trigger={<HugeiconsIcon icon={MoreVerticalIcon} className="size-6" strokeWidth={3} />}
                                     items={[
-                                        { label: "Watch video", href },
-                                        {
+                                        gooMenuItem({ label: "Watch video", href }),
+                                        gooMenuItem({
                                             label: "Copy link",
                                             onClick: () => {
                                                 void navigator.clipboard.writeText(`${window.location.origin}${href}`);
                                             },
-                                        },
+                                        }),
                                     ]}
                                 />
                             </div>

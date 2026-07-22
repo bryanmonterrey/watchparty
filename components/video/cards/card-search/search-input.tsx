@@ -18,7 +18,7 @@ export function SearchInput({
     className = "",
 }: SearchInputProps) {
     return (
-        <div className={`flex items-center gap-2.5 px-4 py-2.5 border-b border-flexborder/60 ${className}`}>
+        <div className={`flex h-[52px] items-center gap-2.5 px-4 border-b border-flexborder/60 ${className}`}>
             <Search className="size-4 text-zinc-500 flex-shrink-0" strokeWidth={1.5} />
             <input
                 value={value}

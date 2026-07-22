@@ -17,7 +17,7 @@ export function TokenSearch({ value, onChange }: TokenSearchProps) {
                     placeholder="Search..."
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-full bg-[#1C1C1E] border-none rounded-2xl py-4 pl-12 pr-4 text-[17px] text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/10 transition-all font-medium"
+                    className="h-[52px] w-full bg-[#1C1C1E] border-none rounded-2xl pl-12 pr-4 text-[17px] text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/10 transition-all font-medium"
                 />
             </div>
         </div>

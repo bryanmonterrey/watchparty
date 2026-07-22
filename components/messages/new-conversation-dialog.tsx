@@ -66,7 +66,7 @@ export function NewConversationDialog({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         autoFocus
-                        className="h-12 pl-11 text-[14px]"
+                        className="h-[52px] pl-11 text-[16px]"
                     />
                 </div>
 

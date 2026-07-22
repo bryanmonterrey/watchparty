@@ -48,14 +48,14 @@ export function ConversationList({
 
                 {/* Search + new message */}
                 <div className="px-4 py-2 flex-shrink-0 flex items-center justify-between gap-4">
-                    <div className="relative flex-1 flex items-center bg-zinc-500/30 hover:bg-zinc-500/60 rounded-full focus-within:border-zinc-700 transition-colors">
+                    <div className="relative flex h-[52px] flex-1 items-center bg-zinc-500/30 hover:bg-zinc-500/60 rounded-full focus-within:border-zinc-700 transition-colors">
                         <SearchIcon className="absolute left-4 w-[20px] h-[20px] text-zinc-400 pointer-events-none" />
                         <input
                             type="text"
                             placeholder="Search"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-transparent pl-11 pr-4 py-3 text-[18px] font-medium text-white placeholder:text-zinc-500 focus:outline-none"
+                            className="w-full bg-transparent pl-11 pr-4 text-[16px] font-medium text-white placeholder:text-zinc-500 focus:outline-none"
                         />
                     </div>
                     <div className="flex flex-col items-center justify-center flex-shrink-0">

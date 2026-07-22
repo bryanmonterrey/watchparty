@@ -65,6 +65,59 @@ export type GooDropdownProps = {
 const PANEL_PAD = 6
 const SEPARATOR_ROW_H = 9
 
+// ── THE dropdown standard (design-principles §Dropdowns) ────────────────────
+// Every menu in the app is a GooDropdown built from these, so they can't
+// drift: 44px (h-11) rounded-full rows, text-base font-bold, #0a0a0a panel,
+// radius 24 (the component defaults), and an h-11 pill trigger. Pass a
+// pre-rendered icon node (lucide or HugeiconsIcon — builder is icon-system
+// agnostic) and an optional `right` slot for checkmarks/badges.
+
+/** Standard pill trigger for dropdowns (h-11, matches the button standard). */
+export const GOO_TRIGGER_PILL =
+  'flex h-11 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white'
+
+/** Standard panel fill — pair with the default panelRadius/itemHeight. */
+export const GOO_PANEL_FILL = '#0a0a0a'
+
+export function gooMenuItem({ icon, label, onClick, href, right, variant = 'default', closeOnSelect = true, key }: {
+  icon?: React.ReactNode
+  label: React.ReactNode
+  onClick?: () => void
+  href?: string
+  /** Right-aligned slot (active checkmark, count, badge). */
+  right?: React.ReactNode
+  variant?: 'default' | 'danger'
+  closeOnSelect?: boolean
+  key?: string | number
+}): GooDropdownItem {
+  return {
+    key: key ?? (typeof label === 'string' ? label : undefined),
+    onClick,
+    href,
+    closeOnSelect,
+    className: cn(
+      'gap-3 px-4 rounded-full cursor-pointer text-base font-bold group',
+      variant === 'danger'
+        ? 'text-red-500 hover:bg-red-500/10 hover:text-red-500'
+        : 'text-zinc-200 hover:bg-white/5 hover:text-white',
+    ),
+    label: (
+      <>
+        {icon && (
+          <span className={cn(
+            'shrink-0 transition-colors [&_svg]:size-[18px]',
+            variant === 'danger' ? 'text-red-500' : 'text-white',
+          )}>
+            {icon}
+          </span>
+        )}
+        <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+        {right && <span className="shrink-0">{right}</span>}
+      </>
+    ),
+  }
+}
+
 const DEFAULT_SPRING: SpringConfig = {
   type: 'spring',
   visualDuration: 0.22,
@@ -100,11 +153,11 @@ export function GooDropdown({
   shift = 0,
   side = 'bottom',
   gap = 14,
-  itemHeight = 40,
+  itemHeight = 44,
   maxPanelHeight,
   disabled = false,
   buttonRadius,
-  panelRadius = 20,
+  panelRadius = 24,
   fill = 'var(--color-card)',
   gooStrength = 8,
   spring = DEFAULT_SPRING,

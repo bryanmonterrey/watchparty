@@ -10,7 +10,7 @@ import {
     BarChart3, Code, Megaphone, Trash2, Sparkles, ListPlus, X,
     Info, MessageCircle, Globe, Users, BadgeCheck, Coins, Check,
 } from "lucide-react";
-import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem, GOO_PANEL_FILL, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -29,6 +29,8 @@ const REPORT_REASON_MAP: Record<string, ReportReason> = {
 const REPORT_REASONS = Object.keys(REPORT_REASON_MAP);
 
 // ── Item builder ───────────────────────────────────────────────────────────────
+// Thin adapter over the app-standard gooMenuItem (goo-dropdown.tsx) — this
+// menu's look IS the standard; the shared builder keeps every menu on it.
 
 function menuItem(
     Icon: React.ElementType,
@@ -37,26 +39,7 @@ function menuItem(
     variant: "default" | "danger" = "default",
     closeOnSelect = true,
 ): GooDropdownItem {
-    return {
-        key: label,
-        onClick,
-        closeOnSelect,
-        className: cn(
-            "gap-3 px-4 rounded-full cursor-pointer text-base font-bold group",
-            variant === "danger"
-                ? "text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                : "text-zinc-200 hover:bg-white/5 hover:text-white"
-        ),
-        label: (
-            <>
-                <Icon className={cn(
-                    "w-[18px] h-[18px] shrink-0 transition-colors",
-                    variant === "danger" ? "text-red-500" : "text-white group-hover:text-white"
-                )} />
-                <span className="truncate">{label}</span>
-            </>
-        ),
-    };
+    return gooMenuItem({ icon: <Icon />, label, onClick, variant, closeOnSelect });
 }
 
 // ── PostOptionsMenu ────────────────────────────────────────────────────────────
@@ -278,9 +261,7 @@ export function PostOptionsMenu({
             align="end"
             width={288}
             gap={8}
-            fill="#0a0a0a"
-            panelRadius={24}
-            itemHeight={44}
+            fill={GOO_PANEL_FILL}
             stopPropagation
             triggerAriaLabel="Post options"
             triggerClassName={triggerClassName}

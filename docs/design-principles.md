@@ -52,6 +52,25 @@ References (in `docs/references/`, named by what they exemplify):
   *chips* (py-1.5 text-12 actions inside rows) are chips, not buttons, and
   stay small.
 
+## 1.2 Controls (dropdowns, search bars) — encoded, don't restyle per surface
+
+Owner call 2026-07-22 ("the dropdowns all over my app all have different
+styles"): control styling is ENCODED in the primitives — never hand-roll a
+variant on a new surface.
+
+- **Dropdowns**: always `GooDropdown`. Build every row with **`gooMenuItem()`**
+  (exported from `components/ui/goo-dropdown.tsx`) — 44px (h-11) rounded-full
+  rows, `text-base font-bold`, zinc-200→white, danger = red-500/red-500/10,
+  optional `icon` node + `right` slot (checkmark/count). Panel: component
+  defaults (radius 24, itemHeight 44) + `fill={GOO_PANEL_FILL}`. Pill triggers
+  use **`GOO_TRIGGER_PILL`** (h-11). Sort-style triggers use the
+  **`MenuTwoLineIcon`** glyph (owner call — never `Sorting01Icon`).
+- **Search bars**: every search input is **`h-[52px]`** (the global search
+  bar's height, `components/app-ui/global-search.tsx`) — rounded-full,
+  icon left-4, `text-[16px] font-medium`, placeholder zinc-400.
+- **Buttons**: §1 heights (h-11 default / h-12 wide / h-18 hero) apply to
+  filter-rail rows, pill options, and menu rows too — not just `<Button>`.
+
 ## 1.5 Learnings from real reference sites (screenshotted 2026-06-28)
 
 Captured Cash App (cash.app) + Phantom (phantom.com) live and studied them:

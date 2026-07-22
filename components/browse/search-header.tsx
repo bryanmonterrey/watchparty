@@ -25,7 +25,7 @@ export function SearchHeader({ value, onChange, onBack, onClear, placeholder = "
 
             <div className="flex-1 mt-2">
                 <div className={cn(
-                    "relative flex items-center backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 bg-zinc-500/35 rounded-full transition-colors",
+                    "relative flex h-[52px] items-center backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 bg-zinc-500/35 rounded-full transition-colors",
                     "focus-within:ring-2 focus-within:ring-paramount"
                 )}>
                     <SearchIcon className="absolute left-4 w-[20px] h-[20px] text-zinc-400 pointer-events-none" />

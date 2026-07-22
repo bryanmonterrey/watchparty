@@ -7,14 +7,14 @@ import {
     ArrowDown01Icon,
     Copy01Icon,
     Globe02Icon,
-    Sorting01Icon,
+    MenuTwoLineIcon,
     Tick02Icon,
     UserGroup02Icon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { Squircle } from "@/components/ui/squircle";
 import { SolanaIcon } from "@/components/icons";
 import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
@@ -447,13 +447,11 @@ export function TradeDiscover() {
                     {/* Quick-buy amount */}
                     <GooDropdown
                         align="end"
-                        width={148}
+                        width={160}
                         gap={8}
-                        fill="#101011"
-                        panelRadius={20}
-                        itemHeight={40}
+                        fill={GOO_PANEL_FILL}
                         triggerAriaLabel="Quick-buy amount"
-                        triggerClassName="flex h-10 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                        triggerClassName={GOO_TRIGGER_PILL}
                         trigger={
                             <>
                                 <SolanaIcon className="size-3.5" />
@@ -461,45 +459,37 @@ export function TradeDiscover() {
                                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
                             </>
                         }
-                        items={QUICK_BUY_PRESETS.map((v) => ({
+                        items={QUICK_BUY_PRESETS.map((v) => gooMenuItem({
                             key: String(v),
+                            label: `${v} SOL`,
                             onClick: () => setAmountSol(v),
-                            className: "justify-between px-3 rounded-full cursor-pointer text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-white",
-                            label: (
-                                <>
-                                    {v} SOL
-                                    {amountSol === v && <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />}
-                                </>
-                            ),
+                            right: amountSol === v
+                                ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
+                                : undefined,
                         }))}
                     />
 
                     <GooDropdown
                         align="end"
-                        width={192}
+                        width={220}
                         gap={8}
-                        fill="#101011"
-                        panelRadius={20}
-                        itemHeight={40}
+                        fill={GOO_PANEL_FILL}
                         triggerAriaLabel="Sort coins"
-                        triggerClassName="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+                        triggerClassName={GOO_TRIGGER_PILL}
                         trigger={
                             <>
-                                <HugeiconsIcon icon={Sorting01Icon} className="size-3.5" strokeWidth={2} />
+                                <HugeiconsIcon icon={MenuTwoLineIcon} className="size-4" strokeWidth={2} />
                                 {SORTS.find((s) => s.key === sort)?.label}
                                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
                             </>
                         }
-                        items={SORTS.map((s) => ({
+                        items={SORTS.map((s) => gooMenuItem({
                             key: s.key,
+                            label: s.label,
                             onClick: () => setSort(s.key),
-                            className: "justify-between px-3 rounded-full cursor-pointer text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-white",
-                            label: (
-                                <>
-                                    {s.label}
-                                    {sort === s.key && <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />}
-                                </>
-                            ),
+                            right: sort === s.key
+                                ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
+                                : undefined,
                         }))}
                     />
                     </div>

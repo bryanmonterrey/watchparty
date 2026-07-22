@@ -175,7 +175,7 @@ function UsersTab() {
                     value={query}
                     onChange={e => { setQuery(e.target.value); setTimeout(() => setDebouncedQ(e.target.value), 400); }}
                     placeholder="Search users by name or @username…"
-                    className="w-full pl-9 pr-3 py-2 bg-zinc-800 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
+                    className="h-[52px] w-full rounded-full bg-zinc-800 pl-9 pr-3 text-[16px] font-medium text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
                 />
             </div>
             {data && (

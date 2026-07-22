@@ -131,7 +131,7 @@ export function TokenSelectorModal({
                             placeholder="Search tokens"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-transparent pl-11 pr-[80px] py-3.5 text-[17px] font-medium placeholder:text-zinc-500 focus:outline-none"
+                            className="h-[52px] w-full bg-transparent pl-11 pr-[80px] text-[17px] font-medium placeholder:text-zinc-500 focus:outline-none"
                         />
                     </div>
                 </div>
