@@ -1,12 +1,12 @@
 "use client";
 
 import { UserType } from "@/db/schema/auth/user";
-import { HomeHero } from "./home-hero";
 import { HomeVideosRow } from "./home-videos-row";
 
-// The channel Home tab (Twitch/Kick model): a recap surface — live-now /
-// latest-upload hero, then content rows. Each row is a self-contained module;
-// add future rows (clips, coins, categories) as siblings here.
+// The channel Home tab (Twitch/Kick model): a recap surface — content rows,
+// each a self-contained module; add future rows (clips, coins, categories)
+// as siblings here. The live/offline HomeHero is hidden for now — re-add
+// <HomeHero user={user} onWatch={...} /> above the rail to bring it back.
 
 export function ProfileHome({ user, onTabChange }: {
     user: UserType;
@@ -14,7 +14,6 @@ export function ProfileHome({ user, onTabChange }: {
 }) {
     return (
         <div className="flex max-w-6xl flex-col gap-10">
-            <HomeHero user={user} onWatch={() => onTabChange?.("Streams")} />
             <HomeVideosRow user={user} onViewAll={() => onTabChange?.("Videos")} />
         </div>
     );
