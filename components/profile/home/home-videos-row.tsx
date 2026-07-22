@@ -94,7 +94,7 @@ export function HomeVideosRow({ user, onViewAll }: {
                 className="flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 <Squircle asChild radius={20}>
-                    <div className="flex w-[200px] shrink-0 flex-col items-start justify-between gap-8 bg-pastelred p-6 sm:w-[220px]">
+                    <div className="flex min-h-[280px] w-[200px] shrink-0 flex-col items-start justify-between gap-8 bg-pastelred p-6 sm:min-h-[300px] sm:w-[220px]">
                         <h3 className="font-pixel text-3xl leading-[1.1] text-white">
                             Recent videos
                         </h3>
@@ -160,8 +160,8 @@ export function HomeVideosRow({ user, onViewAll }: {
                                     width={180}
                                     align="end"
                                     triggerAriaLabel="Video options"
-                                    triggerClassName="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
-                                    trigger={<HugeiconsIcon icon={MoreVerticalIcon} className="size-5" strokeWidth={2.5} />}
+                                    triggerClassName="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                                    trigger={<HugeiconsIcon icon={MoreVerticalIcon} className="size-6" strokeWidth={3} />}
                                     items={[
                                         { label: "Watch video", href },
                                         {

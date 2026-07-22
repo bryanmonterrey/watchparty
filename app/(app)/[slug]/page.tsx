@@ -50,20 +50,23 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     const userProfile = await getUserBySlug(slug);
     if (userProfile) {
         // Follow counts ride in server-side so the header never shows a
-        // second skeleton phase after the route skeleton swaps out.
-        const [followerResult, followingResult] = await Promise.all([
-            db.select({ count: count() }).from(follows).where(eq(follows.followingId, userProfile.id)),
-            db.select({ count: count() }).from(follows).where(eq(follows.followerId, userProfile.id)),
-        ]);
-        return (
-            <UserProfile
-                user={userProfile}
-                initialFollowCounts={{
-                    followers: followerResult[0]?.count ?? 0,
-                    following: followingResult[0]?.count ?? 0,
-                }}
-            />
-        );
+        // second skeleton phase after the route skeleton swaps out. They're
+        // a non-critical stat: on a transient DB failure, render without
+        // them and let the client query fetch (undefined = no initialData).
+        let initialFollowCounts: { followers: number; following: number } | undefined;
+        try {
+            const [followerResult, followingResult] = await Promise.all([
+                db.select({ count: count() }).from(follows).where(eq(follows.followingId, userProfile.id)),
+                db.select({ count: count() }).from(follows).where(eq(follows.followerId, userProfile.id)),
+            ]);
+            initialFollowCounts = {
+                followers: followerResult[0]?.count ?? 0,
+                following: followingResult[0]?.count ?? 0,
+            };
+        } catch (err) {
+            console.error("[slug] follow-count SSR failed, deferring to client:", err);
+        }
+        return <UserProfile user={userProfile} initialFollowCounts={initialFollowCounts} />;
     }
 
     // 2. Token (by ID for drafts, or by address for live)
