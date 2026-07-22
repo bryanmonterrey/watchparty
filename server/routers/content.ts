@@ -1145,9 +1145,15 @@ export const contentRouter = router({
             // Profile Posts-tab filter rail
             type: z.enum(["all", "text", "media", "polls", "articles"]).default("all"),
             show: z.enum(["all", "posts", "replies"]).default("all"),
+            search: z.string().trim().max(200).optional(),
+            sort: z.enum(["newest", "oldest", "top", "views"]).default("newest"),
         }))
         .query(async ({ ctx, input }) => {
-            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            // Cursor semantics per sort: date sorts page on createdAt; the
+            // rank sorts (top/views) page on a plain row offset.
+            const dateSort = input.sort === "newest" || input.sort === "oldest";
+            const cursorDate = dateSort && input.cursor ? new Date(input.cursor) : undefined;
+            const offset = !dateSort && input.cursor ? parseInt(input.cursor, 10) || 0 : 0;
 
             const hasMedia = or(
                 isNotNull(posts.imageUrl),
@@ -1169,6 +1175,16 @@ export const contentRouter = router({
                 input.show === "posts" ? sql`${posts.replyToId} IS NULL`
                 : input.show === "replies" ? isNotNull(posts.replyToId)
                 : undefined;
+            const searchFilter = input.search
+                ? or(ilike(posts.content, `%${input.search}%`), ilike(posts.title, `%${input.search}%`))
+                : undefined;
+
+            const orderBy =
+                input.sort === "oldest" ? [asc(posts.createdAt)]
+                : input.sort === "top" ? [desc(posts.likes), desc(posts.createdAt)]
+                : input.sort === "views" ? [desc(posts.views), desc(posts.createdAt)]
+                // Pinned-first only makes sense on the default newest view.
+                : [desc(posts.isPinned), desc(posts.createdAt)];
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
 
@@ -1232,18 +1248,39 @@ export const contentRouter = router({
                     and(
                         eq(posts.userId, input.userId),
                         eq(posts.status, "published"),
-                        cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
+                        cursorDate
+                            ? (input.sort === "oldest" ? gt(posts.createdAt, cursorDate) : lt(posts.createdAt, cursorDate))
+                            : undefined,
                         typeFilter,
                         showFilter,
+                        searchFilter,
                     )
                 )
-                .orderBy(desc(posts.isPinned), desc(posts.createdAt))
+                .orderBy(...orderBy)
+                .offset(offset)
                 .limit(input.limit + 1);
 
             let nextCursor: string | undefined;
             if (results.length > input.limit) {
                 const nextItem = results.pop();
-                nextCursor = nextItem?.createdAt.toISOString();
+                nextCursor = dateSort
+                    ? nextItem?.createdAt.toISOString()
+                    : String(offset + input.limit);
+            }
+
+            // Total for the toolbar count — first page only (no cursor).
+            let total: number | undefined;
+            if (!input.cursor) {
+                const [t] = await db.select({ n: count() }).from(posts).where(
+                    and(
+                        eq(posts.userId, input.userId),
+                        eq(posts.status, "published"),
+                        typeFilter,
+                        showFilter,
+                        searchFilter,
+                    )
+                );
+                total = t?.n ?? 0;
             }
 
             const mappedResults = results.map(row => {
@@ -1308,7 +1345,26 @@ export const contentRouter = router({
                 return { ...row, feedKey: null, repostedBy: null, quotedPost: null };
             });
 
-            return { posts: mappedResults, nextCursor };
+            return { posts: mappedResults, nextCursor, total };
+        }),
+
+    // ─── Per-filter counts for the profile Posts-tab rail ────────────────────
+    getPostFilterCounts: publicProcedure
+        .input(z.object({ userId: z.string() }))
+        .query(async ({ input }) => {
+            const [row] = await db
+                .select({
+                    all: count(),
+                    text: sql<number>`count(*) filter (where ${posts.imageUrl} is null and ${posts.videoUrl} is null and coalesce(jsonb_array_length(${posts.media}), 0) = 0 and ${posts.isArticle} = false)`,
+                    media: sql<number>`count(*) filter (where ${posts.imageUrl} is not null or ${posts.videoUrl} is not null or coalesce(jsonb_array_length(${posts.media}), 0) > 0)`,
+                    polls: sql<number>`count(*) filter (where exists (select 1 from polls where polls."postId" = ${posts.id}))`,
+                    articles: sql<number>`count(*) filter (where ${posts.isArticle})`,
+                    posts: sql<number>`count(*) filter (where ${posts.replyToId} is null)`,
+                    replies: sql<number>`count(*) filter (where ${posts.replyToId} is not null)`,
+                })
+                .from(posts)
+                .where(and(eq(posts.userId, input.userId), eq(posts.status, "published")));
+            return row ?? { all: 0, text: 0, media: 0, polls: 0, articles: 0, posts: 0, replies: 0 };
         }),
 
     // ─── Get a single video post by ID ───────────────────────────────────────

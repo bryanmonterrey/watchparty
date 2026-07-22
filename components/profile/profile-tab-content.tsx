@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus } from "lucide-react";
 import { UserType } from "@/db/schema/auth/user";
@@ -15,7 +15,7 @@ import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
 import { TradeRow } from "@/components/trades/trade-row";
 import { ProfilePnlCard } from "./profile-pnl-card";
 import { ProfileMediaGrid } from "./profile-media-grid";
-import { PostsFilterRail, PostsFilterRow, type PostTypeFilter, type PostShowFilter } from "./posts-filter-rail";
+import { PostsFilterRail, PostsFilterRow, PostsToolbar, type PostTypeFilter, type PostShowFilter, type PostSort } from "./posts-filter-rail";
 
 interface ProfileTabContentProps {
     activeTab: string;
@@ -70,9 +70,19 @@ function ProfileTradesFeed({ userId, name }: { userId: string; name: string }) {
 function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolean }) {
     const [type, setType] = useState<PostTypeFilter>("all");
     const [show, setShow] = useState<PostShowFilter>("all");
+    const [sort, setSort] = useState<PostSort>("newest");
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
+
+    // Debounce the search box so we don't refetch per keystroke.
+    useEffect(() => {
+        const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+        return () => clearTimeout(t);
+    }, [searchInput]);
+
     const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
         trpc.content.getPostsByUser.useInfiniteQuery(
-            { userId, limit: 20, type, show },
+            { userId, limit: 20, type, show, sort, search: search || undefined },
             { getNextPageParam: (last) => last.nextCursor }
         );
 
@@ -83,7 +93,9 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
         return true;
     });
 
-    const filtersActive = type !== "all" || show !== "all";
+    const total = data?.pages[0]?.total;
+    const filtersActive = type !== "all" || show !== "all" || search !== "";
+    const resetFilters = () => { setType("all"); setShow("all"); setSearchInput(""); setSearch(""); };
 
     let feed: React.ReactNode;
     if (isLoading) {
@@ -102,6 +114,14 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
                         ? "No posts match these filters."
                         : isOwner ? "Share something with your followers." : "This user hasn't posted yet."}
                 </p>
+                {filtersActive && (
+                    <button
+                        onClick={resetFilters}
+                        className="mt-6 h-11 cursor-pointer rounded-full bg-white px-6 text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98]"
+                    >
+                        Reset filters
+                    </button>
+                )}
             </div>
         );
     } else {
@@ -138,10 +158,24 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
     return (
         <div className="flex items-start gap-10">
             <div className="min-w-0 max-w-2xl flex-1">
-                <PostsFilterRow type={type} onTypeChange={setType} />
+                <PostsToolbar
+                    total={total}
+                    search={searchInput}
+                    onSearchChange={setSearchInput}
+                    sort={sort}
+                    onSortChange={setSort}
+                />
+                <PostsFilterRow userId={userId} type={type} onTypeChange={setType} />
                 {feed}
             </div>
-            <PostsFilterRail type={type} show={show} onTypeChange={setType} onShowChange={setShow} />
+            <PostsFilterRail
+                userId={userId}
+                type={type}
+                show={show}
+                onTypeChange={setType}
+                onShowChange={setShow}
+                onReset={resetFilters}
+            />
         </div>
     );
 }
