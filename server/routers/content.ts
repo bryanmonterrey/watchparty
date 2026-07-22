@@ -15,6 +15,7 @@ import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, upsertToken, deletePost, upsertUser } from "@/lib/typesense/sync";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
+import { postSelectFields, mapPostRow } from "@/server/lib/post-shape";
 import { verifySolPayment } from "@/lib/chains/solana/verify-sol-payment";
 
 // Normalize a user-entered social link to a full URL (bare domains get https://).
@@ -1209,63 +1210,17 @@ export const contentRouter = router({
                 : [desc(posts.isPinned), desc(posts.createdAt)];
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
+            const parentPosts = alias(posts, "parent_posts");
+            const parentUser = alias(user, "parent_user");
 
             const results = await db
-                .select({
-                    id: posts.id,
-                    userId: posts.userId,
-                    content: posts.content,
-                    imageUrl: posts.imageUrl,
-                    likes: posts.likes,
-                    reposts: posts.reposts,
-                    comments: posts.comments,
-                    views: posts.views,
-                    createdAt: posts.createdAt,
-                    ticker: posts.ticker,
-                    tokenStatus: posts.tokenStatus,
-                    isPaywalled: posts.isPaywalled,
-                    paywallPrice: posts.paywallPrice,
-                    hasContentWarning: posts.hasContentWarning,
-                    contentWarningText: posts.contentWarningText,
-                    linkPreview: posts.linkPreview,
-                    isPinned: posts.isPinned,
-                    token_image: posts.token_image,
-                    media: posts.media,
-                    repostOfId: posts.repostOfId,
-                    origId: origPosts.id,
-                    origUserId: origPosts.userId,
-                    origContent: origPosts.content,
-                    origImageUrl: origPosts.imageUrl,
-                    origMedia: origPosts.media,
-                    origLikes: origPosts.likes,
-                    origReposts: origPosts.reposts,
-                    origComments: origPosts.comments,
-                    origCreatedAt: origPosts.createdAt,
-                    origTicker: origPosts.ticker,
-                    origTokenImage: origPosts.token_image,
-                    origLinkPreview: origPosts.linkPreview,
-                    origUserName: origUser.name,
-                    origUserUsername: origUser.username,
-                    origUserAvatar: origUser.avatar_url,
-                    isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
-                    isBookmarked: sql<boolean>`EXISTS (SELECT 1 FROM bookmarks WHERE bookmarks."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND bookmarks."userId" = ${ctx.user?.id ?? ""} AND bookmarks."contentType" = 'post')`,
-                    isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts rp WHERE rp."repostOfId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND rp."userId" = ${ctx.user?.id ?? ""} AND rp."status" = 'published')`,
-                    user: {
-                        id: user.id,
-                        name: user.name,
-                        username: user.username,
-                        avatar_url: user.avatar_url,
-                        wallet_address: user.wallet_address,
-                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-                        affiliateUsername: user.affiliateUsername,
-                        affiliateIconUrl: user.affiliateIconUrl,
-                    },
-                    origUserVerifiedTier: effectiveVerifiedTier(origUser.verifiedTier, origUser.hideVerifiedBadge),
-                })
+                .select(postSelectFields({ origPosts, origUser, parentPosts, parentUser, viewerId: ctx.user?.id ?? "" }))
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
                 .leftJoin(origPosts, eq(posts.repostOfId, origPosts.id))
                 .leftJoin(origUser, eq(origPosts.userId, origUser.id))
+                .leftJoin(parentPosts, eq(posts.replyToId, parentPosts.id))
+                .leftJoin(parentUser, eq(parentPosts.userId, parentUser.id))
                 .where(
                     and(
                         eq(posts.userId, input.userId),
@@ -1305,67 +1260,7 @@ export const contentRouter = router({
                 total = t?.n ?? 0;
             }
 
-            const mappedResults = results.map(row => {
-                if (row.repostOfId && row.origId) {
-                    const isQuote = (row.content && row.content.trim().length > 0) || (row.media && row.media.length > 0) || row.imageUrl;
-
-                    if (isQuote) {
-                        return {
-                            ...row,
-                            feedKey: null,
-                            repostedBy: null,
-                            quotedPost: {
-                                id: row.origId,
-                                userId: row.origUserId,
-                                content: row.origContent,
-                                imageUrl: row.origImageUrl,
-                                media: row.origMedia,
-                                createdAt: row.origCreatedAt,
-                                ticker: row.origTicker,
-                                user: {
-                                    name: row.origUserName,
-                                    username: row.origUserUsername,
-                                    avatar_url: row.origUserAvatar,
-                                }
-                            }
-                        };
-                    }
-
-                    return {
-                        id: row.origId,
-                        feedKey: row.id,
-                        userId: row.origUserId ?? row.userId,
-                        content: row.origContent,
-                        imageUrl: row.origImageUrl || null,
-                        token_image: row.origTokenImage || null,
-                        media: row.origMedia || [],
-                        likes: row.origLikes ?? 0,
-                        reposts: row.origReposts ?? 0,
-                        comments: row.origComments ?? 0,
-                        views: row.views ?? 0,
-                        createdAt: row.createdAt,
-                        originalCreatedAt: row.origCreatedAt,
-                        ticker: row.origTicker ?? null,
-                        tokenStatus: row.tokenStatus,
-                        repostOfId: null,
-                        isPaywalled: row.isPaywalled,
-                        isLiked: row.isLiked,
-                        isBookmarked: row.isBookmarked,
-                        isReposted: row.isReposted,
-                        isPinned: row.isPinned,
-                        linkPreview: row.origLinkPreview || null,
-                        user: {
-                            id: row.origUserId!,
-                            name: row.origUserName!,
-                            username: row.origUserUsername ?? null,
-                            avatar_url: row.origUserAvatar ?? null,
-                            verifiedTier: (row as any).origUserVerifiedTier ?? null,
-                        },
-                        repostedBy: { name: row.user.name, username: row.user.username },
-                    };
-                }
-                return { ...row, feedKey: null, repostedBy: null, quotedPost: null };
-            });
+            const mappedResults = results.map(mapPostRow);
 
             return { posts: mappedResults, nextCursor, total };
         }),
