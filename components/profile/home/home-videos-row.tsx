@@ -122,15 +122,15 @@ export function HomeVideosRow({ user, onViewAll }: {
                                             />
                                         )}
                                         {duration && (
-                                            <span className="absolute left-2.5 top-2.5 rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">
+                                            <span className="absolute left-2.5 top-2.5 rounded-full bg-black/40 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
                                                 {duration}
                                             </span>
                                         )}
-                                        <span className="absolute bottom-2.5 left-2.5 rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">
+                                        <span className="absolute bottom-2.5 left-2.5 rounded-full bg-black/40 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
                                             {formatViews(v.views ?? 0)} views
                                         </span>
                                         {v.createdAt && (
-                                            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">
+                                            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/40 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
                                                 {formatRelativeTime(String(v.createdAt))}
                                             </span>
                                         )}
@@ -148,7 +148,7 @@ export function HomeVideosRow({ user, onViewAll }: {
                                             {v.title}
                                         </p>
                                     </Link>
-                                    <span className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-zinc-400">
+                                    <span className="mt-1 flex items-center gap-1.5 text-[15px] font-semibold text-zinc-400">
                                         <span className="truncate">{v.author.name ?? v.author.username}</span>
                                         {v.author.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-4 shrink-0" />}
                                         {v.author.verifiedTier === "business" && <BusinessBadgeIcon className="size-4 shrink-0" />}
@@ -160,8 +160,8 @@ export function HomeVideosRow({ user, onViewAll }: {
                                     width={180}
                                     align="end"
                                     triggerAriaLabel="Video options"
-                                    triggerClassName="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
-                                    trigger={<HugeiconsIcon icon={MoreVerticalIcon} className="size-4" />}
+                                    triggerClassName="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                                    trigger={<HugeiconsIcon icon={MoreVerticalIcon} className="size-5" strokeWidth={2.5} />}
                                     items={[
                                         { label: "Watch video", href },
                                         {
