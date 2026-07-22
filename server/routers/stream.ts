@@ -5,28 +5,24 @@ import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import {
-    IvsClient,
-    CreateChannelCommand,
-    DeleteChannelCommand,
-    ListChannelsCommand,
-    GetChannelCommand,
-    ListStreamKeysCommand,
-    GetStreamKeyCommand,
-    GetStreamCommand,
-    CreateRecordingConfigurationCommand,
-    ListRecordingConfigurationsCommand,
-} from "@aws-sdk/client-ivs";
-import {
-    IvschatClient,
-    CreateRoomCommand,
-    CreateChatTokenCommand,
-} from "@aws-sdk/client-ivschat";
+import type { IvsClient } from "@aws-sdk/client-ivs";
 import { nanoid } from "nanoid";
 
 const region = process.env.AWS_REGION ?? "us-east-1";
 
-function ivsClient() {
+// The AWS SDKs are heavy, and this router rides into every tRPC isolate via
+// the appRouter graph — load them only when an IVS procedure actually runs
+// (Workers OOM headroom; eager imports here cost every request the SDK heap).
+function ivsSdk() {
+    return import("@aws-sdk/client-ivs");
+}
+
+function ivsChatSdk() {
+    return import("@aws-sdk/client-ivschat");
+}
+
+async function ivsClient() {
+    const { IvsClient } = await ivsSdk();
     return new IvsClient({
         region,
         credentials: {
@@ -36,7 +32,8 @@ function ivsClient() {
     });
 }
 
-function ivsChatClient() {
+async function ivsChatClient() {
+    const { IvschatClient } = await ivsChatSdk();
     return new IvschatClient({
         region,
         credentials: {
@@ -50,6 +47,7 @@ async function getOrCreateRecordingConfig(ivs: IvsClient) {
     const bucket = process.env.AWS_IVS_RECORDINGS_BUCKET;
     if (!bucket) return undefined;
     try {
+        const { ListRecordingConfigurationsCommand, CreateRecordingConfigurationCommand } = await ivsSdk();
         const list = await ivs.send(new ListRecordingConfigurationsCommand({}));
         const existing = list.recordingConfigurations?.find(
             c => c.destinationConfiguration?.s3?.bucketName === bucket
@@ -77,7 +75,8 @@ async function fetchLiveViewers(channelArn: string): Promise<{ isLive: boolean; 
 
     let data: { isLive: boolean; viewerCount: number };
     try {
-        const res = await ivsClient().send(new GetStreamCommand({ channelArn }));
+        const { GetStreamCommand } = await ivsSdk();
+        const res = await (await ivsClient()).send(new GetStreamCommand({ channelArn }));
         data = { isLive: true, viewerCount: res.stream?.viewerCount ?? 0 };
     } catch (err) {
         // ChannelNotBroadcasting = definitively offline; anything else, don't guess
@@ -144,8 +143,10 @@ export const streamRouter = router({
     generateConnection: protectedProcedure
         .input(z.object({ ingressType: z.enum(["RTMP", "WHIP"]).default("RTMP") }))
         .mutation(async ({ ctx, input }) => {
-            const ivs = ivsClient();
-            const chat = ivsChatClient();
+            const { ListChannelsCommand, GetChannelCommand, ListStreamKeysCommand, GetStreamKeyCommand, CreateChannelCommand } = await ivsSdk();
+            const { CreateRoomCommand } = await ivsChatSdk();
+            const ivs = await ivsClient();
+            const chat = await ivsChatClient();
 
             // Check for existing channel
             const listRes = await ivs.send(new ListChannelsCommand({ maxResults: 50 }));
@@ -253,7 +254,8 @@ export const streamRouter = router({
             const viewer = (ctx as { user?: { id: string; username?: string } }).user;
             const viewerId = viewer?.id ?? `guest-${nanoid(8)}`;
             const viewerName = viewer?.username ?? `Guest${Math.floor(Math.random() * 9999)}`;
-            const chat = ivsChatClient();
+            const { CreateChatTokenCommand } = await ivsChatSdk();
+            const chat = await ivsChatClient();
             const res = await chat.send(new CreateChatTokenCommand({
                 roomIdentifier: streamRow.chatRoomArn,
                 userId: viewerId,

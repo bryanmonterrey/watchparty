@@ -15,7 +15,6 @@ import {
     priceBaseUnits,
     formatUsd,
 } from "@/lib/premium/tiers";
-import { chargeSubscriber } from "@/lib/chains/solana/subscriptions/collector";
 import { syncPremiumBadge } from "@/server/lib/premium-verified";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
@@ -148,6 +147,9 @@ export const premiumRouter = router({
             // collector retries.
             let chargeSig: string | null = null;
             try {
+                // Lazy — the collector pulls in @solana/kit + the subscriptions
+                // program client; keep it out of the eager appRouter graph.
+                const { chargeSubscriber } = await import("@/lib/chains/solana/subscriptions/collector");
                 chargeSig = await chargeSubscriber({
                     subscriber: input.subscriberWallet,
                     merchant: plan.collector,

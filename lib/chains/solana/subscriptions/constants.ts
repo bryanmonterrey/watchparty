@@ -1,17 +1,19 @@
 // Shared constants/config for the platform-premium subscriptions integration
 // (Solana Subscriptions & Allowances program). Charged in USDC.
-import { address, type Address } from "@solana/kit";
-import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
+import type { Address } from "@solana/kit";
 import { USDC_MINT } from "@/lib/premium/tiers";
 
-// solana-program/subscriptions, mainnet. See ../solana-subscriptions.
-export const SUBSCRIPTIONS_PROGRAM_ID = address(
-    "De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44",
-);
+// Address is just a branded string — cast instead of calling kit's address()
+// so this constants module (imported by several always-loaded routers) keeps
+// @solana/kit and @solana-program/token OUT of the eager appRouter graph.
+// The values are static/env-provided and validated on-chain by every consumer.
 
-export const USDC_MINT_ADDRESS: Address = address(USDC_MINT);
-// USDC is a classic SPL Token mint (not Token-2022).
-export const PREMIUM_TOKEN_PROGRAM: Address = TOKEN_PROGRAM_ADDRESS;
+// solana-program/subscriptions, mainnet. See ../solana-subscriptions.
+export const SUBSCRIPTIONS_PROGRAM_ID = "De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44" as Address;
+
+export const USDC_MINT_ADDRESS: Address = USDC_MINT as Address;
+// USDC is a classic SPL Token mint (not Token-2022) — the canonical Tokenkeg program.
+export const PREMIUM_TOKEN_PROGRAM: Address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address;
 
 /** HTTP RPC endpoint. Server may override with SOLANA_RPC_URL. */
 export function getRpcUrl(): string {
@@ -41,7 +43,7 @@ export function getMerchantAddress(): Address {
         process.env.NEXT_PUBLIC_PREMIUM_MERCHANT_PUBKEY ??
         process.env.NEXT_PUBLIC_TREASURY_PUBKEY;
     if (!pk) throw new Error("Collector/merchant pubkey not configured");
-    return address(pk);
+    return pk as Address;
 }
 
 /**
@@ -51,5 +53,5 @@ export function getMerchantAddress(): Address {
  */
 export function getCollectionDestinationOwner(): Address {
     const d = process.env.NEXT_PUBLIC_COLLECTION_DESTINATION;
-    return d ? address(d) : getMerchantAddress();
+    return d ? (d as Address) : getMerchantAddress();
 }

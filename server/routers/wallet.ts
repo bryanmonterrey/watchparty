@@ -8,8 +8,14 @@ import {
 } from "@/lib/security/audit-logger";
 import { headers } from "next/headers";
 import { TRPCError } from "@trpc/server";
-import { Keypair, Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
-import { createServerConnection } from "@/lib/solana/server-connection";
+// web3.js and the Connection helper load lazily — this router rides into
+// every tRPC isolate via the appRouter graph, and the eager SDK import was
+// part of the Workers OOM headroom problem.
+const web3 = () => import("@solana/web3.js");
+async function serverConnection() {
+    const { createServerConnection } = await import("@/lib/solana/server-connection");
+    return createServerConnection();
+}
 import { withCache, withSwrCache, invalidateCache, TTL } from "@/lib/cache";
 import { db } from "@/db";
 import { trades } from "@/db/schema/content";
@@ -385,7 +391,7 @@ export const walletRouter = router({
                     const treasury = KP.fromSecretKey(Buffer.from(treasuryKey, "base64"));
                     const tx = Tx.from(txBytes);
                     tx.partialSign(treasury);
-                    const conn = createServerConnection();
+                    const conn = await serverConnection();
                     sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 });
                 }
                 // Balances changed — drop the SWR'd assets snapshot.
@@ -424,7 +430,7 @@ export const walletRouter = router({
             const txBytes = Buffer.from(input.transaction, "base64");
 
             try {
-                const connection = createServerConnection();
+                const connection = await serverConnection();
                 let signature: string;
 
                 const paymasterApiKey = process.env.SWIG_API_KEY;
@@ -445,6 +451,7 @@ export const walletRouter = router({
                     const treasuryKey = process.env.SWIG_TREASURY_PRIVATE_KEY;
                     if (!treasuryKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fee payer configured" });
 
+                    const { Keypair, Transaction } = await web3();
                     const treasury = Keypair.fromSecretKey(Buffer.from(treasuryKey, "base64"));
                     const tx = Transaction.from(txBytes);
                     tx.partialSign(treasury);
@@ -707,7 +714,7 @@ export const walletRouter = router({
             }
 
             try {
-                const connection = createServerConnection();
+                const connection = await serverConnection();
                 const signature = await connection.sendRawTransaction(
                     Buffer.from(input.transaction, "base64"),
                     { skipPreflight: true, maxRetries: 0 }
@@ -766,6 +773,7 @@ export const walletRouter = router({
                     });
                 }
 
+                const { Keypair, Transaction, VersionedTransaction } = await web3();
                 const privateKeyBytes = await decryptWalletKey(walletData, ctx.user.id);
                 const keypair = Keypair.fromSecretKey(privateKeyBytes);
 
@@ -773,7 +781,7 @@ export const walletRouter = router({
                 const txBuffer = Buffer.from(input.transaction, "base64");
                 let rawTransaction: Uint8Array;
 
-                const connection = createServerConnection();
+                const connection = await serverConnection();
 
                 // Tier 3 only handles v1 custodial wallets where the custodial keypair IS
                 // the fee payer / from-pubkey. For Swig wallets (v2) the first signer is

@@ -2,7 +2,6 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
 import { createClient } from "@supabase/supabase-js";
-import { DeepgramClient } from "@deepgram/sdk";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
@@ -87,6 +86,8 @@ export const uploadRouter = router({
             callbackUrl.searchParams.set("language", input.language ?? "auto");
             callbackUrl.searchParams.set("secret", process.env.CAPTIONS_WEBHOOK_SECRET.trim());
 
+            // Lazy — keeps the Deepgram SDK out of the eager appRouter graph
+            const { DeepgramClient } = await import("@deepgram/sdk");
             const deepgram = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY });
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -10,11 +10,10 @@ import { eq, and, desc, count, sum, gte, sql, inArray, ne } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { PERIOD_HOURS } from "@/lib/premium/tiers";
-import {
-    chargeSubscriber,
-    createTreasuryPlan,
-    transferUsdcFromTreasury,
-} from "@/lib/chains/solana/subscriptions/collector";
+// Collector fns (chargeSubscriber/createTreasuryPlan/transferUsdcFromTreasury)
+// are lazy-imported at their call sites — the collector pulls in @solana/kit +
+// the subscriptions program client, which must stay out of the eager appRouter
+// graph (Workers OOM headroom).
 import { getMerchantAddress } from "@/lib/chains/solana/subscriptions/constants";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
@@ -61,6 +60,7 @@ export const subscriptionRouter = router({
             if (existing.length >= 3) throw new TRPCError({ code: "BAD_REQUEST", message: "Maximum 3 active tiers allowed" });
 
             // Provision the on-chain plan(s) under the treasury (it owns all plans).
+            const { createTreasuryPlan } = await import("@/lib/chains/solana/subscriptions/collector");
             const planIdMonthly = await nextPlanId();
             const monthly = await createTreasuryPlan({
                 planId: planIdMonthly,
@@ -182,6 +182,7 @@ export const subscriptionRouter = router({
             // Charge the first period now (treasury pulls). Access only if it lands.
             let chargeSig: string | null = null;
             try {
+                const { chargeSubscriber } = await import("@/lib/chains/solana/subscriptions/collector");
                 chargeSig = await chargeSubscriber({
                     subscriber: input.subscriberWallet,
                     merchant: getMerchantAddress(),
@@ -615,6 +616,7 @@ export const subscriptionRouter = router({
         const fee = Math.floor((gross * PLATFORM_FEE_BPS) / 10000);
         const net = gross - fee;
 
+        const { transferUsdcFromTreasury } = await import("@/lib/chains/solana/subscriptions/collector");
         const sig = await transferUsdcFromTreasury(u.wallet, BigInt(net));
 
         const payoutId = nanoid();

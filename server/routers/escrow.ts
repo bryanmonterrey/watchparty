@@ -4,13 +4,11 @@ import { db } from "@/db";
 import { escrows, tokens } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
 import { eq, and } from "drizzle-orm";
-import { Keypair, Connection, PublicKey } from "@solana/web3.js";
-import { createServerConnection } from "@/lib/solana/server-connection";
 import bs58 from "bs58";
 import { nanoid } from "nanoid";
-import { DynamicFeeSharingClient, deriveFeeVaultPdaAddress } from "@meteora-ag/dynamic-fee-sharing-sdk";
-// import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-// import bs58 from "bs58";
+
+// web3.js + the Meteora fee-sharing SDK (anchor-based, heavy) load lazily —
+// eager imports here ride into every tRPC isolate via the appRouter graph.
 
 export const escrowRouter = router({
     getMyPendingEscrows: protectedProcedure.query(async ({ ctx }) => {
@@ -53,6 +51,7 @@ export const escrowRouter = router({
                 }
 
                 // If not found or user has no wallet, generate a unique Proxy Keypair for this escrow claim
+                const { Keypair } = await import("@solana/web3.js");
                 const proxyKeypair = Keypair.generate();
                 const proxyPublicKey = proxyKeypair.publicKey.toBase58();
                 const proxyPrivateKey = bs58.encode(proxyKeypair.secretKey);
@@ -106,6 +105,11 @@ export const escrowRouter = router({
             const treasuryKey = process.env.TREASURY_PRIVATE_KEY;
             if (!treasuryKey) throw new Error("Treasury not configured");
 
+            const [{ Keypair, PublicKey }, { createServerConnection }, { DynamicFeeSharingClient, deriveFeeVaultPdaAddress }] = await Promise.all([
+                import("@solana/web3.js"),
+                import("@/lib/solana/server-connection"),
+                import("@meteora-ag/dynamic-fee-sharing-sdk"),
+            ]);
             const treasuryKeypair = Keypair.fromSecretKey(bs58.decode(treasuryKey));
             const proxyKeypair = Keypair.fromSecretKey(bs58.decode(escrowRecord.claimerPrivateKey));
 
