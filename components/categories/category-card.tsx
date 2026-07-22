@@ -37,7 +37,7 @@ export function CategoryCard({
                     loading="lazy"
                     onLoad={() => setLoaded(true)}
                     className={cn(
-                        "absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105",
+                        "absolute inset-0 size-full object-cover",
                         loaded ? "opacity-100" : "opacity-0"
                     )}
                 />

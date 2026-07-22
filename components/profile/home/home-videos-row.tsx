@@ -118,7 +118,7 @@ export function HomeVideosRow({ user, onViewAll }: {
                                             <img
                                                 src={v.thumbnailUrl}
                                                 alt={v.title ?? "Video"}
-                                                className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                                className="size-full object-cover"
                                             />
                                         )}
                                         {duration && (

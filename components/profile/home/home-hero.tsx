@@ -67,7 +67,7 @@ export function HomeHero({ user, onWatch }: { user: UserType; onWatch?: () => vo
                             <img
                                 src={video.thumbnailUrl}
                                 alt={video.title ?? "Latest upload"}
-                                className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                className="size-full object-cover"
                             />
                         )}
                     </div>

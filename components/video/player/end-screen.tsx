@@ -62,7 +62,7 @@ export function EndScreen({ isEnded, postId }: EndScreenProps) {
                                             <img
                                                 src={v.thumbnailUrl}
                                                 alt={v.title ?? ""}
-                                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                className="absolute inset-0 w-full h-full object-cover"
                                             />
                                         )}
                                         {v.duration != null && (

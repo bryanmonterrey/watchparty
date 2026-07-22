@@ -29,7 +29,7 @@ function VideoTile({ v }: { v: FeedVideo }) {
                         src={v.thumbnailUrl}
                         alt={v.title}
                         loading="lazy"
-                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="size-full object-cover"
                     />
                 )}
                 {v.isLive && (
