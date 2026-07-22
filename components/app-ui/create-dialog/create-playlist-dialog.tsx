@@ -81,9 +81,7 @@ export function CreatePlaylistDialog({ open, onOpenChange, onCreate }: CreatePla
                                 align="start"
                                 width={240}
                                 gap={8}
-                                fill="#282828"
                                 buttonRadius={8}
-                                panelRadius={12}
                                 triggerClassName="flex h-12 w-full items-center justify-between rounded-md border border-zinc-600 bg-transparent px-3 text-sm text-zinc-200"
                                 trigger={
                                     <>
@@ -117,9 +115,7 @@ export function CreatePlaylistDialog({ open, onOpenChange, onCreate }: CreatePla
                                 align="start"
                                 width={260}
                                 gap={8}
-                                fill="#282828"
                                 buttonRadius={8}
-                                panelRadius={12}
                                 triggerClassName="flex h-12 w-full items-center justify-between rounded-md border border-zinc-600 bg-transparent px-3 text-sm text-zinc-200"
                                 trigger={
                                     <>

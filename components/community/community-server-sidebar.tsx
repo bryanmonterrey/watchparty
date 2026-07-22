@@ -253,8 +253,6 @@ function CategoryHeader({
                     <GooDropdown
                         align="end"
                         width={200}
-                        itemHeight={36}
-                        fill="#18181b"
                         triggerAriaLabel="Category options"
                         triggerClassName="grid size-5 cursor-pointer place-items-center text-zinc-400 transition-colors hover:text-zinc-200"
                         trigger={<HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" strokeWidth={2} />}

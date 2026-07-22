@@ -627,8 +627,6 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                 align="start"
                                                 width={300}
                                                 gap={8}
-                                                fill="#18181b"
-                                                panelRadius={12}
                                                 itemHeight={64}
                                                 headerHeight={56}
                                                 header={
@@ -656,7 +654,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                     ] as const).map((opt) => ({
                                                         key: opt.value,
                                                         onClick: () => setAudience(opt.value),
-                                                        className: "justify-between px-3 rounded-lg cursor-pointer hover:bg-white/5",
+                                                        className: "rounded-full justify-between px-3 cursor-pointer hover:bg-white/5",
                                                         label: (
                                                             <>
                                                                 <span className="flex items-center gap-3">
@@ -682,7 +680,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                               ...userCommunities.map((community, i) => ({
                                                                   key: `community-${i}`,
                                                                   onClick: () => setAudience("community"),
-                                                                  className: "justify-between px-3 rounded-lg cursor-pointer hover:bg-white/5",
+                                                                  className: "rounded-full justify-between px-3 cursor-pointer hover:bg-white/5",
                                                                   label: (
                                                                       <>
                                                                           <span className="flex items-center gap-3">
@@ -840,8 +838,6 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                     align="start"
                                                     width={300}
                                                     gap={8}
-                                                    fill="#18181b"
-                                                    panelRadius={12}
                                                     itemHeight={64}
                                                     headerHeight={84}
                                                     header={
@@ -867,7 +863,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                     ] as const).map((opt) => ({
                                                         key: opt.value,
                                                         onClick: () => setReplyPrivacy(opt.value),
-                                                        className: "justify-between px-3 rounded-lg cursor-pointer hover:bg-white/5",
+                                                        className: "rounded-full justify-between px-3 cursor-pointer hover:bg-white/5",
                                                         label: (
                                                             <>
                                                                 <span className="flex items-center gap-3">

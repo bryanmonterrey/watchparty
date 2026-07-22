@@ -64,9 +64,6 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
             align="start"
             width={236}
             gap={8}
-            fill="#131316"
-            panelRadius={18}
-            itemHeight={44}
             triggerAriaLabel="More options"
             triggerClassName="flex size-11 items-center justify-center rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10 transition-colors"
             trigger={<VerticalDotsIcon className="size-6" />}

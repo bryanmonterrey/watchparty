@@ -94,9 +94,7 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
                             align="start"
                             width={280}
                             gap={8}
-                            fill="#27272a"
                             buttonRadius={20}
-                            panelRadius={16}
                             triggerClassName="flex h-10 w-full items-center justify-between rounded-full bg-white/5 px-4 text-[13px] font-semibold text-white"
                             trigger={
                                 <>

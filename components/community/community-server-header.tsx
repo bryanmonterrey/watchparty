@@ -238,9 +238,7 @@ export function CommunityServerHeader({ server, role, boostCount = 0, boostedByM
             className="w-full"
             align="start"
             width={232}
-            itemHeight={36}
             buttonRadius={0}
-            fill="#18181b"
             triggerClassName="w-full text-md cursor-pointer font-semibold px-3 py-4.5 flex items-center hover:bg-zinc-900 transition text-white"
             trigger={
                 <>

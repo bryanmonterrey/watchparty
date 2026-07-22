@@ -102,9 +102,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                     align="start"
                     width={210}
                     gap={6}
-                    fill="#101011"
                     buttonRadius={16}
-                    panelRadius={16}
                     triggerAriaLabel="Switch settings section"
                     triggerClassName="flex min-w-0 cursor-pointer items-center gap-1.5 md:hidden"
                     trigger={
@@ -744,9 +742,7 @@ function EngagementSection({
                                 align="end"
                                 width={220}
                                 gap={6}
-                                fill="#101011"
                                 buttonRadius={16}
-                                panelRadius={16}
                                 triggerAriaLabel="Announcements channel"
                                 triggerClassName={cn(
                                     "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[14px] font-bold text-zinc-200 transition-colors hover:bg-white/10 hover:text-white",
@@ -827,9 +823,7 @@ function EngagementSection({
                                 align="start"
                                 width={190}
                                 gap={6}
-                                fill="#101011"
                                 buttonRadius={16}
-                                panelRadius={16}
                                 triggerAriaLabel="Inactive timeout"
                                 triggerClassName={cn(
                                     "flex h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
@@ -1143,9 +1137,7 @@ function MemberRow({
                     align="end"
                     width={190}
                     gap={6}
-                    fill="#101011"
                     buttonRadius={16}
-                    panelRadius={16}
                     triggerAriaLabel={`Manage ${m.userName}`}
                     triggerClassName={cn(
                         "flex h-9 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3.5 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
@@ -1251,9 +1243,7 @@ function MembersSection({
                     align="end"
                     width={150}
                     gap={6}
-                    fill="#101011"
                     buttonRadius={16}
-                    panelRadius={16}
                     triggerAriaLabel="Sort members"
                     triggerClassName="flex h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[14px] font-bold text-zinc-200 transition-colors hover:bg-white/10 hover:text-white"
                     trigger={
@@ -1403,9 +1393,7 @@ function CustomRoleRow({
                 align="start"
                 width={168}
                 gap={6}
-                fill="#101011"
                 buttonRadius={16}
-                panelRadius={16}
                 triggerAriaLabel={`Change ${role.name} color`}
                 triggerClassName="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full bg-white/5 transition-colors hover:bg-white/10"
                 trigger={<span className="size-4 rounded-full" style={{ backgroundColor: role.color }} />}
@@ -1737,9 +1725,7 @@ function ExtraInvites({ serverId }: { serverId: string }) {
                     align="start"
                     width={150}
                     gap={6}
-                    fill="#101011"
                     buttonRadius={16}
-                    panelRadius={16}
                     triggerAriaLabel="Invite expiry"
                     triggerClassName="flex h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                     trigger={<>Expires: {expiry.label}<HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} /></>}
@@ -1755,9 +1741,7 @@ function ExtraInvites({ serverId }: { serverId: string }) {
                     align="start"
                     width={150}
                     gap={6}
-                    fill="#101011"
                     buttonRadius={16}
-                    panelRadius={16}
                     triggerAriaLabel="Invite max uses"
                     triggerClassName="flex h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                     trigger={<>{uses.label}<HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} /></>}
@@ -3180,9 +3164,7 @@ function AuditSection({ serverId }: { serverId: string }) {
                         align="end"
                         width={190}
                         gap={6}
-                        fill="#101011"
                         buttonRadius={16}
-                        panelRadius={16}
                         triggerAriaLabel="Filter by user"
                         triggerClassName="ml-auto flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                         trigger={

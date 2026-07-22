@@ -199,8 +199,6 @@ export function ShowMoreSection({
                                         align="start"
                                         width={300}
                                         gap={8}
-                                        fill="#18181b"
-                                        panelRadius={12}
                                         triggerClassName="flex w-full text-md h-12 items-center justify-between rounded-full border border-zinc-700 bg-transparent px-4 text-zinc-300"
                                         trigger={
                                             <>
@@ -321,8 +319,6 @@ export function ShowMoreSection({
                                     align="start"
                                     width={300}
                                     gap={8}
-                                    fill="#18181b"
-                                    panelRadius={12}
                                     maxPanelHeight={240}
                                     triggerClassName="flex w-full h-12 items-center justify-between rounded-full border border-zinc-700 bg-transparent px-4 text-zinc-300"
                                     trigger={
@@ -357,8 +353,6 @@ export function ShowMoreSection({
                                             align="start"
                                             width={180}
                                             gap={8}
-                                            fill="#18181b"
-                                            panelRadius={12}
                                             triggerClassName="flex w-full h-12 items-center justify-between rounded-full border border-zinc-700 bg-transparent px-4 text-zinc-300"
                                             trigger={
                                                 <>
@@ -384,8 +378,6 @@ export function ShowMoreSection({
                                             align="start"
                                             width={180}
                                             gap={8}
-                                            fill="#18181b"
-                                            panelRadius={12}
                                             disabled={comments === "off"}
                                             triggerClassName="flex w-full h-12 items-center justify-between rounded-full border border-zinc-700 bg-transparent px-4 text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                             trigger={
@@ -428,8 +420,6 @@ export function ShowMoreSection({
                                             align="start"
                                             width={180}
                                             gap={8}
-                                            fill="#18181b"
-                                            panelRadius={12}
                                             disabled={comments === "off"}
                                             triggerClassName="flex w-full h-12 items-center justify-between rounded-full border border-zinc-700 bg-transparent px-4 text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                             trigger={

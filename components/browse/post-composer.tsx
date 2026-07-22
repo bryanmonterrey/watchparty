@@ -385,8 +385,6 @@ export function PostComposer() {
                             align="start"
                             width={320}
                             gap={8}
-                            fill="#0a0a0a"
-                            panelRadius={24}
                             itemHeight={60}
                             headerHeight={52}
                             header={
@@ -610,8 +608,6 @@ export function PostComposer() {
                             align="start"
                             width={320}
                             gap={8}
-                            fill="#0a0a0a"
-                            panelRadius={24}
                             itemHeight={60}
                             headerHeight={72}
                             header={

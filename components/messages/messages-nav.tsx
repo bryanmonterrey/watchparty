@@ -30,8 +30,6 @@ export function MessagesNav() {
             side="bottom"
             width={288}
             gap={10}
-            fill="#101011"
-            panelRadius={24}
             itemHeight={56}
             maxPanelHeight={480}
             triggerAriaLabel="Switch conversation"
@@ -48,7 +46,7 @@ export function MessagesNav() {
                 return {
                     key: c.id,
                     onClick: () => setActiveId(c.id),
-                    className: "gap-3 px-3 rounded-2xl cursor-pointer hover:bg-white/5 group",
+                    className: "rounded-full gap-3 px-3 cursor-pointer hover:bg-white/5 group",
                     label: (
                         <>
                             <Avatar className="size-9 shrink-0">

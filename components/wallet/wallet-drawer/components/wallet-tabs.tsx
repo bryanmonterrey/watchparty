@@ -97,9 +97,6 @@ export function WalletTabs({
                 <GooDropdown
                     align="end"
                     width={224}
-                    fill="#0a0a0a"
-                    panelRadius={24}
-                    itemHeight={48}
                     triggerAriaLabel="Wallet options"
                     triggerClassName="p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
                     trigger={<RestingDotsIcon className="w-6 h-6" />}

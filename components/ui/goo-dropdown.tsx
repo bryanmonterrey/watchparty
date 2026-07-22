@@ -158,7 +158,7 @@ export function GooDropdown({
   disabled = false,
   buttonRadius,
   panelRadius = 24,
-  fill = 'var(--color-card)',
+  fill = GOO_PANEL_FILL,
   gooStrength = 8,
   spring = DEFAULT_SPRING,
   className,
@@ -495,8 +495,12 @@ export function GooDropdown({
                 </div>
               )
             }
+            // The BASE row IS the app standard (design-principles §1.2): pill
+            // rows, px-4, text-base font-bold, zinc-200 → white on hover. A
+            // call site can still override via item.className (cn/twMerge lets
+            // later classes win), but it no longer has to style rows at all.
             const rowClass = cn(
-              'flex w-full shrink-0 items-center rounded-[14px] px-3 text-left text-sm transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:bg-accent focus-visible:text-accent-foreground',
+              'flex w-full shrink-0 items-center rounded-full px-4 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
               item.className,
             )
             if (item.href) {

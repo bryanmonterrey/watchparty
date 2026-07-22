@@ -71,8 +71,6 @@ export function TradeNav() {
             side="bottom"
             width={272}
             gap={10}
-            fill="#101011"
-            panelRadius={24}
             itemHeight={56}
             triggerAriaLabel="Trade sections"
             triggerClassName="flex h-10 cursor-pointer items-center gap-1.5 rounded-full px-3 text-lg font-bold tracking-tight text-white transition-colors hover:bg-white/10"
@@ -88,7 +86,7 @@ export function TradeNav() {
                     return {
                         key: s.href,
                         onClick: () => router.push(s.href),
-                        className: "gap-3 px-3 rounded-2xl cursor-pointer hover:bg-white/5 group",
+                        className: "rounded-full gap-3 px-3 cursor-pointer hover:bg-white/5 group",
                         label: (
                             <>
                                 <span
@@ -114,7 +112,7 @@ export function TradeNav() {
                 {
                     key: "portfolio",
                     onClick: () => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT)),
-                    className: "gap-3 px-3 rounded-2xl cursor-pointer hover:bg-white/5 group",
+                    className: "rounded-full gap-3 px-3 cursor-pointer hover:bg-white/5 group",
                     label: (
                         <>
                             <span className="flex size-9 shrink-0 items-center justify-center text-zinc-400 transition-colors group-hover:text-white">

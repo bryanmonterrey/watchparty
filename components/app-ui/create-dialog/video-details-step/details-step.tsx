@@ -175,8 +175,6 @@ export function DetailsStep({
                     align="start"
                     width={260}
                     gap={8}
-                    fill="#18181b"
-                    panelRadius={12}
                     itemHeight={52}
                     headerHeight={44}
                     header={
@@ -202,7 +200,7 @@ export function DetailsStep({
                     ] as const).map((opt) => ({
                         key: opt.value,
                         onClick: () => setVideoAudience(opt.value),
-                        className: "justify-between px-2.5 rounded-lg cursor-pointer hover:bg-white/5",
+                        className: "rounded-full justify-between px-2.5 cursor-pointer hover:bg-white/5",
                         label: (
                             <>
                                 <span className="flex items-center gap-2.5">

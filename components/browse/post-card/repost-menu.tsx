@@ -43,9 +43,6 @@ export function RepostMenu({
             align="start"
             width={192}
             gap={8}
-            fill="#0a0a0a"
-            panelRadius={24}
-            itemHeight={48}
             stopPropagation
             triggerAriaLabel="Repost"
             triggerClassName={cn(

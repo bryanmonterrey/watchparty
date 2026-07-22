@@ -100,9 +100,6 @@ export function PredictionsView() {
                             side="bottom"
                             width={176}
                             gap={8}
-                            fill="#101011"
-                            panelRadius={20}
-                            itemHeight={40}
                             triggerAriaLabel="Sort markets"
                             triggerClassName="flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-white/[0.06] px-3.5 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
                             trigger={

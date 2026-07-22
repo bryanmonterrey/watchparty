@@ -387,9 +387,6 @@ export function AppSidebar() {
                                 shift={68}
                                 width={320}
                                 gap={8}
-                                fill="#101011"
-                                panelRadius={24}
-                                itemHeight={48}
                                 triggerClassName={cn(
                                     "text-md w-full flex items-center justify-start p-0 transition-all duration-150 ease-in-out text-flexwhite/85 hover:text-white/85 font-medium h-12 relative isolate hover:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-800/50 gap-0 cursor-pointer",
                                     moreOpen && "before:bg-zinc-800/50"

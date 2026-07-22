@@ -85,9 +85,7 @@ export function MembersModal() {
                                         align="end"
                                         width={180}
                                         gap={6}
-                                        fill="#101011"
                                         buttonRadius={16}
-                                        panelRadius={16}
                                         triggerAriaLabel={`Manage ${m.userName}`}
                                         triggerClassName={cn(
                                             "flex h-8 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3 text-[12px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",

@@ -195,10 +195,7 @@ function UsersTab() {
                                     align="end"
                                     width={140}
                                     gap={8}
-                                    fill="#27272a"
                                     buttonRadius={8}
-                                    panelRadius={12}
-                                    itemHeight={32}
                                     triggerClassName="flex items-center gap-1 bg-zinc-800 text-xs text-zinc-300 rounded-lg px-2 py-1 border border-white/10"
                                     trigger={
                                         <>

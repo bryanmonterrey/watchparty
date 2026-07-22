@@ -173,9 +173,6 @@ export function PerpsTape({
                                     side="bottom"
                                     width={140}
                                     gap={8}
-                                    fill="#101011"
-                                    panelRadius={16}
-                                    itemHeight={40}
                                     triggerAriaLabel="Group prices by"
                                     triggerClassName="flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-sm font-bold tabular-nums text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
                                     trigger={

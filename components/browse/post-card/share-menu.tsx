@@ -99,9 +99,6 @@ export function ShareMenu({ post, bookmarked, handleBookmark }: ShareMenuProps) 
             align="start"
             width={256}
             gap={8}
-            fill="#0a0a0a"
-            panelRadius={24}
-            itemHeight={46}
             stopPropagation
             triggerAriaLabel="Share"
             triggerClassName="text-postgray hover:bg-twitter2/[12%] cursor-pointer hover:text-white p-1.5 rounded-full transition-colors aria-expanded:text-white aria-expanded:bg-twitter2/[12%]"

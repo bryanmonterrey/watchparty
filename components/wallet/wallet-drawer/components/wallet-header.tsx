@@ -77,9 +77,6 @@ export function WalletHeader({
                     align="end"
                     width={208}
                     gap={8}
-                    fill="#0a0a0a"
-                    panelRadius={24}
-                    itemHeight={48}
                     triggerAriaLabel="Wallet session"
                     triggerClassName={`flex size-9 items-center justify-center glass-ring rounded-full transition-colors ${isOpen ? "bg-zinc-700/70 text-white" : "bg-black hover:bg-black/50 text-zinc-400"}`}
                     trigger={<PowerIcon className="w-5 h-5" />}

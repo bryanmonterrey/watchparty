@@ -208,8 +208,6 @@ export function SettingsNav() {
             side="bottom"
             width={272}
             gap={10}
-            fill="#101011"
-            panelRadius={24}
             itemHeight={56}
             maxPanelHeight={560}
             triggerAriaLabel="Settings sections"
@@ -227,7 +225,7 @@ export function SettingsNav() {
                     return {
                         key: item.id,
                         onClick: () => setTab(item.id),
-                        className: "gap-3 px-3 rounded-2xl cursor-pointer hover:bg-white/5 group",
+                        className: "rounded-full gap-3 px-3 cursor-pointer hover:bg-white/5 group",
                         label: (
                             <>
                                 <span

@@ -211,9 +211,7 @@ export function PollComposer({
                         align="end"
                         width={180}
                         gap={8}
-                        fill="#101011"
                         buttonRadius={20}
-                        panelRadius={16}
                         triggerAriaLabel="Poll length"
                         triggerClassName="flex h-10 cursor-pointer items-center gap-1.5 rounded-full bg-white/5 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-white/10"
                         trigger={

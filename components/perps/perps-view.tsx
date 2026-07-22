@@ -992,9 +992,6 @@ function OrderPanel({
                         side="bottom"
                         width={260}
                         gap={10}
-                        fill="#101011"
-                        panelRadius={20}
-                        itemHeight={48}
                         triggerAriaLabel="Pay with"
                         triggerClassName="flex h-8 cursor-pointer items-center gap-1.5 rounded-full bg-white/[0.08] pl-1.5 pr-2 text-sm font-bold text-white transition-colors hover:bg-white/[0.12]"
                         trigger={
