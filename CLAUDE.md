@@ -35,11 +35,23 @@ scheduled collector that auto-pulls each period. Built, tsc/build-clean, and
 
 Package manager is **bun** (`bun.lock`). Runtime is Next.js 16 (App Router, Turbopack) + React 19.
 
-- `bun install` — install deps
-- `bun dev` — dev server (Turbopack), defaults to port 3000
-- `bun run build` — production build
-- `bun run lint` — ESLint (`eslint-config-next`)
-- `npx tsc --noEmit` — type-check (run this to verify; there is no separate typecheck script)
+- **Type-check (the only verify step; there is no typecheck script):**
+  ```bash
+  rm -rf .next/dev/types && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit
+  ```
+  Both parts are load-bearing — a plain `npx tsc --noEmit` **reports success on
+  broken code**:
+  - **Stale `.next/dev/types`** (left by a previous `next dev`) contains *syntax*
+    errors, and while they're present tsc reports ONLY them and skips semantic
+    checking of the real source. This shipped three red deploys on 2026-07-22
+    (two bad tRPC router keys, one drizzle `alias()` type); each was invisible
+    locally and caught by CI. Deleting the directory reproduced all of them
+    instantly.
+  - **Default heap OOMs mid-run** and can exit 0 with a stack trace on stdout —
+    which also looks like a pass (shipped a broken deploy 2026-07-17).
+
+  A real pass is **empty output**. Treat crash frames (`node::Start`, `dyld`) as
+  a failure regardless of exit code.
 
 No test framework is configured yet — do not assume one exists.
 
@@ -59,17 +71,10 @@ File organization mirrors `../sidebar` (deliberately — keep the shape the auth
 
 The one intentional structural change is **`lib/chains/`**: a `ChainAdapter` interface (`types.ts`, `registry.ts`) with `solana/` and `evm/` implementations, so wallet UI is chain-agnostic and adding EVM (viem/wagmi + SIWE, paralleling the old Solana `better-auth-siws`) is "add a folder," not threading `if (evm)` through every wallet component.
 
-The full sidebar frontend (components/hooks/lib/server/db) was bulk-migrated in-tree, and all of sidebar's `(browse)` routes now exist under `app/(app)/` — home (`/home`), `[slug]`, `[slug]/[videoId]`, discover, communities, messages, search, settings, shorts, trade.
+The full sidebar frontend (components/hooks/lib/server/db) was bulk-migrated in-tree, and all of sidebar's `(browse)` routes now exist under `app/(app)/`.
 
 ### Migrating/adding a page from sidebar
-Porting a page = creating the route under `app/(app)/` and wiring it to the already-migrated components:
-
-1. Copy sidebar's `app/(browse)/<path>` page/layout near-verbatim into `app/(app)/<path>` (same URLs — both are route groups). Staying close to the source keeps diffing against sidebar easy.
-2. **Drop client-side auth guards** (`redirect`/`router.push` on missing session) — `(app)/layout.tsx` already guards server-side. Keep `useAuthSession` only where the user id is actually used.
-3. **Lazy-load panel-style UIs**: tab/section-switched content (see `app/(app)/settings/page.tsx`) goes behind `next/dynamic` + `ssr: false` so the route ships only the visible panel. Caveat: `dynamic()` options must be **inline object literals** — Turbopack statically analyzes them and the build fails on a shared `const options` reference.
-4. Verify with `npx tsc --noEmit` + `bun run build`. If tsc errors inside `.next/` generated types right after adding routes, they're stale — re-run `bun run build` to regenerate.
-
-Note: everything under `(app)` is login-gated, including `/[slug]` profiles and `/discover/post/[id]`, which were public share links in sidebar. Public share pages would need a separate non-guarded route group.
+Use the `port-sidebar-page` skill — it has the full copy/auth-guard/lazy-load/verify workflow and the login-gating caveat.
 
 ### Responsive: mobile-first, all breakpoints
 Unlike the old app (desktop-focused), every component here must work mobile + tablet + desktop. Build **mobile-first**: unprefixed classes are the mobile layout; `sm:`+ holds the desktop values from the Figma frame. Example from `components/auth/login-card.tsx`: `h-14 sm:h-[61px]`, `max-w-[442px]` column collapsing to full-width below it.
@@ -86,7 +91,6 @@ hairlines). Model in-app UI on the upgrade-overlay aesthetic, not settings.
 
 ## Conventions
 
-- **Path alias:** `@/*` maps to repo root (e.g. `@/components/auth/login-card`).
 - **Font:** Geist project-wide (via `next/font/google` in `app/layout.tsx`), replacing the old app's SF Pro Rounded. Note `globals.css` must not re-declare `font-family` to anything else or it overrides Geist.
 - **Per AGENTS.md**, this is Next.js 16 with breaking changes from training data — read `node_modules/next/dist/docs/` before using an API you're unsure about.
 
@@ -98,12 +102,7 @@ Provider marks in `components/auth/provider-icons.tsx` were extracted verbatim f
 
 ## Mobile app (`mobile/`)
 
-React Native iOS app — Expo SDK 56, expo-router, React Compiler. Self-contained package (own `package.json`/lockfile, **excluded from the root tsconfig**); see `mobile/README.md`. Key invariants:
-
-- It's a client of this Next.js app: tRPC via `import type { AppRouter } from "@/server/routers"` (`mobile/tsconfig.json` maps `@/*` to `./src/*` then `../*`). **Type-only imports across the boundary, never value imports** — Metro would bundle server code.
-- Auth reuses `/api/auth` through `@better-auth/expo`: server plugin `expo()` registered in `lib/auth/server.ts`, `watchparty://` + `exp://` in trustedOrigins, session cookie in SecureStore, forwarded as a `Cookie` header on tRPC requests.
-- Mobile tsc typechecks the whole server graph and is **stricter than root tsc** (it resolves better-auth types the root config silently drops to `any`) — trust mobile tsc when they disagree.
-- Verify with `cd mobile && npx tsc --noEmit` and `bunx expo export --platform ios` (Metro bundle check without Xcode).
+iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads when working under `mobile/`. Headline rule: type-only tRPC imports across the boundary, never value imports.
 
 ## Deploy target & dev setup
 
