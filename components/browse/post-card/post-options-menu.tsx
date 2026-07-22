@@ -100,8 +100,9 @@ export function PostOptionsMenu({
     });
     const toggleHighlight = trpc.content.toggleHighlight.useMutation({ onSuccess: onClose });
     const updateSettings = trpc.content.updatePostSettings.useMutation({ onSuccess: onClose });
-    // Stats load only when the analytics view opens.
-    const { data: analytics } = trpc.post.getPost.useQuery(
+    // Stats load only when the analytics view opens. (getPost lives under
+    // content — postRouter is merged into it, there is no `post` key.)
+    const { data: analytics } = trpc.content.getPost.useQuery(
         { postId },
         { enabled: open && view === "analytics" },
     );
