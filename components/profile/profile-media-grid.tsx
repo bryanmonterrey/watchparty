@@ -13,9 +13,9 @@ export function ProfileMediaGrid({ userId, isOwner }: { userId: string; isOwner:
 
     if (isLoading) {
         return (
-            <div className="grid max-w-4xl grid-cols-3 gap-1 sm:gap-1.5">
-                {Array.from({ length: 9 }).map((_, i) => (
-                    <div key={i} className="shimmer-skeleton aspect-square rounded-[12px]" />
+            <div className="grid grid-cols-3 gap-1 sm:gap-1.5 lg:grid-cols-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="shimmer-skeleton aspect-square" />
                 ))}
             </div>
         );
@@ -34,12 +34,12 @@ export function ProfileMediaGrid({ userId, isOwner }: { userId: string; isOwner:
     }
 
     return (
-        <div className="grid max-w-4xl grid-cols-3 gap-1 sm:gap-1.5">
+        <div className="grid grid-cols-3 gap-1 sm:gap-1.5 lg:grid-cols-4">
             {items.map((item) => (
                 <Link
                     key={item.id}
                     href={`/discover/post/${item.id}`}
-                    className="group relative aspect-square overflow-hidden rounded-[12px] bg-zinc-900"
+                    className="group relative aspect-square overflow-hidden bg-zinc-900"
                 >
                     <img
                         src={item.images[0]}

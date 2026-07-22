@@ -70,7 +70,9 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
     };
 
     return (
-        <div className="relative min-h-screen">
+        // container-type lets the Home rail bleed to the true content-area
+        // edges with cqw units (the app has a sidebar, so 100vw is wrong).
+        <div className="relative min-h-screen [container-type:inline-size]">
 
             {/* Channel accent bar (user.accentColor) removed 2026-07-21 —
                 shelved for a later pass; the column + edit-dialog picker were

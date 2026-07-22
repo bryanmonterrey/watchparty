@@ -1107,9 +1107,33 @@ export const contentRouter = router({
             userId: z.string(),
             cursor: z.string().optional(),
             limit: z.number().min(1).max(50).default(20),
+            // Profile Posts-tab filter rail
+            type: z.enum(["all", "text", "media", "polls", "articles"]).default("all"),
+            show: z.enum(["all", "posts", "replies"]).default("all"),
         }))
         .query(async ({ ctx, input }) => {
             const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+
+            const hasMedia = or(
+                isNotNull(posts.imageUrl),
+                isNotNull(posts.videoUrl),
+                sql`coalesce(jsonb_array_length(${posts.media}), 0) > 0`,
+            );
+            const typeFilter =
+                input.type === "media" ? hasMedia
+                : input.type === "text" ? and(
+                    sql`${posts.imageUrl} IS NULL`,
+                    sql`${posts.videoUrl} IS NULL`,
+                    sql`coalesce(jsonb_array_length(${posts.media}), 0) = 0`,
+                    eq(posts.isArticle, false),
+                )
+                : input.type === "polls" ? sql`EXISTS (SELECT 1 FROM polls WHERE polls."postId" = ${posts.id})`
+                : input.type === "articles" ? eq(posts.isArticle, true)
+                : undefined;
+            const showFilter =
+                input.show === "posts" ? sql`${posts.replyToId} IS NULL`
+                : input.show === "replies" ? isNotNull(posts.replyToId)
+                : undefined;
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
 
@@ -1174,6 +1198,8 @@ export const contentRouter = router({
                         eq(posts.userId, input.userId),
                         eq(posts.status, "published"),
                         cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
+                        typeFilter,
+                        showFilter,
                     )
                 )
                 .orderBy(desc(posts.isPinned), desc(posts.createdAt))

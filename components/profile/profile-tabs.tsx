@@ -3,17 +3,17 @@
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
+// Replies + Articles were folded into the Posts tab's filter rail
+// (Show: Replies / Type: Articles) — 2026-07-22.
 export const TABS = [
     "Home",
     "About",
     "Streams",
     "Posts",
-    "Replies",
     "Media",
     "Videos",
     "Coins",
     "Trades",
-    "Articles",
 ];
 
 interface ProfileTabsProps {

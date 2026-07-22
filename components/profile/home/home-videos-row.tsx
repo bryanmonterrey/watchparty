@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useReducedMotion } from "motion/react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon, MoreVerticalIcon } from "@hugeicons/core-free-icons";
+import { MoreVerticalIcon } from "@hugeicons/core-free-icons";
 import { UserType } from "@/db/schema/auth/user";
 import { trpc } from "@/lib/trpc/client";
 import { Squircle } from "@/components/ui/squircle";
@@ -67,9 +68,13 @@ export function HomeVideosRow({ user, onViewAll }: {
         });
     };
 
+    // Bleed to the true content-area edges: the profile root is a size
+    // container, so 100cqw is the full width beside the sidebar. Gutter =
+    // the centered 1400px container's auto margin + its 2rem padding.
+
     if (isLoading) {
         return (
-            <div className="-mx-8 flex gap-5 overflow-hidden px-8">
+            <div className="mx-[calc((max((100cqw_-_1400px)/2,0px)_+_2rem)*-1)] flex gap-5 overflow-hidden px-[calc(max((100cqw_-_1400px)/2,0px)_+_2rem)]">
                 <div className="shimmer-skeleton w-[150px] shrink-0 rounded-[20px]" />
                 {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="w-[300px] shrink-0 sm:w-[360px]">
@@ -87,11 +92,11 @@ export function HomeVideosRow({ user, onViewAll }: {
     if (!videos.length) return null;
 
     return (
-        <div className="relative -mx-8">
+        <div className="group/vrail relative mx-[calc((max((100cqw_-_1400px)/2,0px)_+_2rem)*-1)]">
             <div
                 ref={railRef}
                 onScroll={updateScroll}
-                className="flex gap-5 overflow-x-auto px-8 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex gap-5 overflow-x-auto px-[calc(max((100cqw_-_1400px)/2,0px)_+_2rem)] pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 <Squircle asChild radius={20}>
                     <div className="flex min-h-[280px] w-[135px] shrink-0 flex-col items-start justify-between gap-8 bg-pastelred p-5 sm:min-h-[300px] sm:w-[150px]">
@@ -177,22 +182,26 @@ export function HomeVideosRow({ user, onViewAll }: {
                     );
                 })}
             </div>
+            {/* Edge arrows matching the homepage trending carousel: full-height
+                flat blurred bars that fade in on rail hover. */}
             {canScroll.left && (
                 <button
+                    type="button"
                     onClick={() => page(-1)}
-                    aria-label="Scroll back"
-                    className="absolute left-4 top-1/2 z-10 hidden size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all hover:bg-zinc-100 active:scale-[0.95] sm:flex"
+                    aria-label="Scroll left"
+                    className="group/arrow absolute inset-y-0 left-0 z-20 hidden w-16 cursor-pointer items-center justify-start bg-black/50 pl-2 opacity-0 backdrop-blur-xs transition-opacity duration-300 group-hover/vrail:opacity-100 sm:flex"
                 >
-                    <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
+                    <ChevronLeft className="size-8 text-white drop-shadow-lg transition-transform duration-200 group-hover/arrow:scale-110" strokeWidth={2.5} />
                 </button>
             )}
             {canScroll.right && (
                 <button
+                    type="button"
                     onClick={() => page(1)}
-                    aria-label="Scroll forward"
-                    className="absolute right-4 top-1/2 z-10 hidden size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all hover:bg-zinc-100 active:scale-[0.95] sm:flex"
+                    aria-label="Scroll right"
+                    className="group/arrow absolute inset-y-0 right-0 z-20 hidden w-16 cursor-pointer items-center justify-end bg-black/50 pr-2 opacity-0 backdrop-blur-xs transition-opacity duration-300 group-hover/vrail:opacity-100 sm:flex"
                 >
-                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
+                    <ChevronRight className="size-8 text-white drop-shadow-lg transition-transform duration-200 group-hover/arrow:scale-110" strokeWidth={2.5} />
                 </button>
             )}
         </div>
