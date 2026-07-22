@@ -92,10 +92,10 @@ export function PostOptionsMenu({
     const notInterested = trpc.content.notInterested.useMutation();
     const deletePost = trpc.content.deletePost.useMutation({
         onSuccess: () => {
-            // The card is already optimistically hidden; refresh the lists so
-            // it stays gone after refetches.
-            utils.content.getPostsByUser.invalidate();
-            utils.feed.invalidate();
+            // The card is already optimistically hidden; refresh everything
+            // under content (profile lists + the merged feed router) so it
+            // stays gone after refetches.
+            utils.content.invalidate();
         },
     });
     const toggleHighlight = trpc.content.toggleHighlight.useMutation({ onSuccess: onClose });

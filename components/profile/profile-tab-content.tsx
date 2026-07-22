@@ -158,7 +158,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
 
     return (
         <div className="flex items-start gap-10">
-            <div className="min-w-0 max-w-2xl flex-1">
+            <div className="min-w-0 flex-1">
                 <PostsToolbar
                     total={total}
                     search={searchInput}
@@ -187,14 +187,14 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
     const isOwner = session?.user?.id === user.id;
 
     // Video-first tabs (Home rail, Videos, Streams) use the full width; the
-    // reading tabs get a right inset matching the sidebar rail so the column
-    // doesn't hug the far edge (owner call 2026-07-22, "for now").
+    // reading tabs get a right inset the size of the EXPANDED sidebar so the
+    // column doesn't hug the far edge (owner call 2026-07-22, "for now").
     const fullBleedTab = ["Home", "Videos", "Streams"].includes(activeTab);
 
     return (
         <div className={cn(
             "py-4 min-h-[500px] z-10",
-            !fullBleedTab && "lg:pr-[var(--sidebar-width-icon,4.25rem)]",
+            !fullBleedTab && "lg:pr-[var(--sidebar-width,14rem)]",
         )}>
             <AnimatePresence mode="wait">
                 <motion.div
