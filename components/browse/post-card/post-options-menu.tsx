@@ -7,7 +7,7 @@ import {
     Flag, Pin, PinOff,
     UserMinus, UserPlus,
     VolumeX, Ban, EyeOff,
-    BarChart3, Code, Megaphone, Trash2, Sparkles, Info, MessageCircle, ListPlus, X
+    BarChart3, Code, Megaphone, Trash2, Sparkles, ListPlus, X
 } from "lucide-react";
 import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 
@@ -81,18 +81,43 @@ export function PostOptionsMenu({
 }: PostOptionsMenuProps) {
     const [view, setView] = useState<"main" | "report">("main");
     const [reportSubmitted, setReportSubmitted] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
+    const utils = trpc.useUtils();
     const submitReport = trpc.moderation.submitReport.useMutation();
     const pinPost = trpc.content.pinPost.useMutation({ onSuccess: onClose });
     const unpinPost = trpc.content.unpinPost.useMutation({ onSuccess: onClose });
     const notInterested = trpc.content.notInterested.useMutation();
+    const deletePost = trpc.content.deletePost.useMutation({
+        onSuccess: () => {
+            // The card is already optimistically hidden; refresh the lists so
+            // it stays gone after refetches.
+            utils.content.getPostsByUser.invalidate();
+            utils.feed.invalidate();
+        },
+    });
+    const toggleHighlight = trpc.content.toggleHighlight.useMutation({ onSuccess: onClose });
 
     const handleOpenChange = (next: boolean) => {
         onOpenChange(next);
         if (!next) {
             setView("main");
             setReportSubmitted(false);
+            setConfirmDelete(false);
         }
+    };
+
+    // Two-tap delete: first tap arms the row (menu stays open), second tap
+    // deletes and removes the card instantly. Easier than a confirm dialog,
+    // still one deliberate step away from an accident.
+    const handleDelete = () => {
+        if (!confirmDelete) {
+            setConfirmDelete(true);
+            return;
+        }
+        deletePost.mutate({ postId });
+        onHide?.();
+        onClose();
     };
 
     const handleNotInterested = () => {
@@ -143,20 +168,19 @@ export function PostOptionsMenu({
         );
     } else if (isOwnPost) {
         items = [
-            menuItem(Trash2, "Delete", () => { }, "danger"),
+            menuItem(
+                Trash2,
+                confirmDelete ? "Tap again to confirm" : "Delete",
+                handleDelete,
+                "danger",
+                false, // stays open so the armed state is visible
+            ),
             menuItem(
                 isPinned ? PinOff : Pin,
                 isPinned ? "Unpin from profile" : "Pin to your profile",
                 () => isPinned ? unpinPost.mutate({ postId }) : pinPost.mutate({ postId })
             ),
-            menuItem(Sparkles, "Add/remove from Highlights"),
-            menuItem(ListPlus, "Add/remove from Lists"),
-            menuItem(Info, "Add/remove content disclosure"),
-            menuItem(MessageCircle, "Change who can reply"),
-            menuItem(BarChart3, "View post activity"),
-            menuItem(Code, "Embed post"),
-            menuItem(BarChart3, "View post analytics"),
-            menuItem(Megaphone, "Request Community Note"),
+            menuItem(Sparkles, "Add/remove from Highlights", () => toggleHighlight.mutate({ postId })),
         ];
     } else {
         items = [

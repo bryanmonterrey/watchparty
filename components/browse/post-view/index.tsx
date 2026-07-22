@@ -339,7 +339,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                         userId={post.user.id}
                                         username={post.user.username}
                                         onClose={() => setShowReportDialog(false)}
-                                        onHide={() => { }}
+                                        onHide={() => router.push("/home")}
                                         isOwnPost={session?.user?.id === post.user.id}
                                         isPinned={post.isPinned}
                                         open={showReportDialog}

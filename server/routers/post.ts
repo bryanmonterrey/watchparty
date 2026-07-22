@@ -89,7 +89,7 @@ export const postRouter = router({
                 .leftJoin(origUser, eq(origPosts.userId, origUser.id))
                 .leftJoin(parentPosts, eq(sql`COALESCE(${posts.replyToId}, ${origPosts.replyToId})`, parentPosts.id))
                 .leftJoin(parentUser, eq(parentPosts.userId, parentUser.id))
-                .where(eq(posts.id, input.postId))
+                .where(and(eq(posts.id, input.postId), sql`${posts.status} != 'deleted'`))
                 .limit(1);
             
             const row = result[0];

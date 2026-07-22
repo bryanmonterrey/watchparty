@@ -1089,6 +1089,41 @@ export const contentRouter = router({
             return { success: true };
         }),
 
+    // ─── Delete own post (soft delete — status flip keeps token/reply refs) ──
+    deletePost: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const [row] = await db.update(posts)
+                .set({ status: "deleted", isPinned: false })
+                .where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id)))
+                .returning({ id: posts.id });
+            if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+
+            // Drop from search + the hot feed caches (same set createPost busts).
+            deletePost(row.id).catch(() => {});
+            await Promise.all([
+                invalidateCache("db:feed:v2:for-you:initial:20"),
+                invalidateCache("db:feed:v2:following:initial:20"),
+                invalidateCache("db:feed:v2:news:initial:20"),
+            ]);
+            return { success: true };
+        }),
+
+    // ─── Toggle a post in/out of profile Highlights ──────────────────────────
+    toggleHighlight: protectedProcedure
+        .input(z.object({ postId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const [row] = await db.select({ isHighlight: posts.isHighlight })
+                .from(posts)
+                .where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id)))
+                .limit(1);
+            if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+            await db.update(posts)
+                .set({ isHighlight: !row.isHighlight })
+                .where(and(eq(posts.id, input.postId), eq(posts.userId, ctx.user.id)));
+            return { isHighlight: !row.isHighlight };
+        }),
+
     // ─── New posts count (for "Show X posts" polling) ────────────────────────
     getNewPostsCount: publicProcedure
         .input(z.object({ since: z.string() }))
