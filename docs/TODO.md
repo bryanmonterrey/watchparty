@@ -36,6 +36,32 @@ DOTENV_PRODUCTION < .env.production` — that file lacks ALERT_WEBHOOK_URL.)
   browser) so cross-user updates are instant, not 5s-polled. Affects all realtime
   surfaces (channels/DMs), not just spaces.
 
+## ⚡ Instant-nav session follow-ups (2026-07-21, all shipped 018142e..96b0a4b — deployed green)
+Shipped: sliding tab underlines (profile + discover), tab-content fade-in, sidebar
+pending dim (useLinkStatus), offline toast, hover-intent prefetch (sidebar nav data,
+post detail + comments, profile route + Home-tab data via MiniProfile, token rows),
+pointerdown navigation (post cards + token rows), and a bug fix: search user results
+linked to nonexistent `/user/<name>` — every profile click from search 404'd.
+
+Manual prod verify (minutes, in one browsing session):
+- [ ] Profile + discover tab underline slides between tabs; content fades in.
+- [ ] Hover a post ~1s then click → detail + comments paint with no skeleton.
+- [ ] Hover a username until the mini-card opens, click through → profile lands
+      with Home-tab hero/videos already populated.
+- [ ] Click a user result on /search → profile loads (was a 404 before).
+- [ ] Post cards/token rows navigate on mouse DOWN; like/media/quoted-post/avatar
+      clicks inside a card still do their own thing (the guard heuristic).
+- [ ] DevTools offline toggle → sticky "You're offline" toast, gone on reconnect.
+
+Follow-ups (small, whenever):
+- Extend `useHoverPrefetch` to remaining surfaces: notifications rows, home video
+  cards, communities list, search result data (post results).
+- Pointerdown-nav trade-off to watch: drag-to-select on plain post text navigates
+  instead of selecting (guards documented in `hooks/use-instant-nav.ts`; removing
+  it from post cards is a 2-line revert if it annoys).
+- `.next/dev/types` is corrupted locally (tsc noise, `.next`-only errors) —
+  `rm -rf .next/dev` regenerates; filter with `grep -v '^\.next/'` meanwhile.
+
 ## 🔜 Loose ends (small)
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
@@ -88,8 +114,13 @@ Cron/infra spot-checks (read-only):
 
 ## ⏳ When Next 16.3 is stable (Instant Navigations — from aurorascharff/next16-social-media review, 2026-07-21)
 Gate: 16.3 out of preview AND `@opennextjs/cloudflare` supports it (cacheComponents
-support there is the likely laggard — verify before starting). Reference clone was
-reviewed 2026-07-21; patterns worth adopting then:
+support there is the likely laggard — verify before starting). Watch these OpenNext
+issues as the signal: [#1300](https://github.com/opennextjs/opennextjs-cloudflare/issues/1300)
+(16.3 compat question), [#1225](https://github.com/opennextjs/opennextjs-cloudflare/issues/1225)
++ [#1130](https://github.com/opennextjs/opennextjs-cloudflare/issues/1130) (cacheComponents
+broken in prod on Workers). When upgrading, bump Next AND the adapter in the same
+commit — adapter lag has 500'd every dynamic route before (their closed #1258).
+Reference clone was reviewed 2026-07-21; patterns worth adopting then:
 - **Partial prefetching** (`partialPrefetching: true`) — prefetch the shared app
   shell as links enter the viewport. Directly serves the speed rule; users browse
   prod, so perceived nav speed is the win.
