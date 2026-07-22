@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { VersionedTransaction } from "@solana/web3.js";
-import { toPublicKey } from "@/lib/utils";
+import { toPublicKey } from "@/lib/solana/pubkey";
 import { ArrowDown, ArrowLeft } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";

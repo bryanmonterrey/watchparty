@@ -12,13 +12,6 @@ export function ellipsify(str = '', len = 4) {
   return str
 }
 
-import { PublicKey } from "@solana/web3.js";
-
-export const shortAddress = (address: PublicKey | string) => {
-  const key = typeof address === "string" ? address : address.toBase58();
-  return `${key.slice(0, 4)}...${key.slice(-4)}`;
-};
-
 export const shortenWalletAddress = (walletAddress: string | null | undefined, len = 5) => {
   if (!walletAddress) return "";
   return walletAddress.slice(0, len) + "...." + walletAddress.slice(-len);
@@ -75,31 +68,5 @@ export const formatNumberGrouped = (
   }).format(value);
 };
 
-export const validatePublicKey = (address: PublicKey | string) => {
-  try {
-    if (typeof address == "string") {
-      new PublicKey(address);
-    } else {
-      address.toBase58();
-    }
-    return true;
-  } catch (error) {
-    return false;
-
-  }
-};
-
-// Build a PublicKey WITHOUT throwing on bad input — returns null for
-// null/empty/non-base58 strings. Use this anywhere a PublicKey is constructed
-// during render (a thrown `new PublicKey()` in render is uncaught and takes the
-// whole page down — e.g. a user signed in without a wallet whose stored address
-// isn't valid base58).
-export function toPublicKey(value: PublicKey | string | null | undefined): PublicKey | null {
-  if (!value) return null;
-  if (typeof value !== "string") return value;
-  try {
-    return new PublicKey(value);
-  } catch {
-    return null;
-  }
-}
+// PublicKey helpers (toPublicKey) moved to lib/solana/pubkey.ts so this
+// universally-imported module never pulls in @solana/web3.js.

@@ -24,7 +24,7 @@ import { getRecommendedMicrolamports } from "@/lib/solana/priority-fees";
 
 const RECENTS_KEY = "send_recents_v1";
 const MAX_RECENTS = 10;
-import { toPublicKey } from "@/lib/utils";
+import { toPublicKey } from "@/lib/solana/pubkey";
 
 const TREASURY = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_PUBKEY!);
 const PLATFORM_FEE_BPS = 50; // 0.5%

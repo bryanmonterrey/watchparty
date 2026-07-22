@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, Keypair, Transaction, SystemProgram, TransactionInstruction } from '@solana/web3.js';
-import { toPublicKey } from '@/lib/utils';
+import { toPublicKey } from '@/lib/solana/pubkey';
 import { trpc } from '@/lib/trpc/client';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { SplitShare } from '@/components/app-ui/create-dialog/token-launch-section';
