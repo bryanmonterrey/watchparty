@@ -69,14 +69,14 @@ export function HomeVideosRow({ user, onViewAll }: {
 
     if (isLoading) {
         return (
-            <div className="flex gap-4 overflow-hidden">
-                <div className="shimmer-skeleton w-[180px] shrink-0 rounded-[20px]" />
+            <div className="flex gap-5 overflow-hidden">
+                <div className="shimmer-skeleton w-[220px] shrink-0 rounded-[20px]" />
                 {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="w-[280px] shrink-0">
-                        <div className="shimmer-skeleton aspect-video rounded-[16px]" />
-                        <div className="mt-3 flex items-center gap-2.5">
-                            <div className="shimmer-skeleton size-9 shrink-0 rounded-full" />
-                            <div className="shimmer-skeleton h-3.5 w-3/4 rounded-full" />
+                    <div key={i} className="w-[300px] shrink-0 sm:w-[360px]">
+                        <div className="shimmer-skeleton aspect-video rounded-[20px]" />
+                        <div className="mt-3.5 flex items-center gap-3">
+                            <div className="shimmer-skeleton size-10 shrink-0 rounded-full" />
+                            <div className="shimmer-skeleton h-4 w-3/4 rounded-full" />
                         </div>
                     </div>
                 ))}
@@ -91,16 +91,16 @@ export function HomeVideosRow({ user, onViewAll }: {
             <div
                 ref={railRef}
                 onScroll={updateScroll}
-                className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 <Squircle asChild radius={20}>
-                    <div className="flex w-[180px] shrink-0 flex-col items-start justify-between gap-6 bg-pastelred p-5">
-                        <h3 className="font-pixel text-2xl leading-tight text-white">
+                    <div className="flex w-[200px] shrink-0 flex-col items-start justify-between gap-8 bg-pastelred p-6 sm:w-[220px]">
+                        <h3 className="font-pixel text-3xl leading-[1.1] text-white">
                             Recent videos
                         </h3>
                         <button
                             onClick={onViewAll}
-                            className="h-11 shrink-0 cursor-pointer rounded-full bg-white px-5 text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98]"
+                            className="h-11 shrink-0 cursor-pointer rounded-full bg-white px-6 text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98]"
                         >
                             Show all
                         </button>
@@ -110,9 +110,9 @@ export function HomeVideosRow({ user, onViewAll }: {
                     const duration = formatDuration(v.duration);
                     const href = `/${user.username ?? user.id}/${v.id}`;
                     return (
-                        <div key={v.id} className="group w-[280px] shrink-0">
+                        <div key={v.id} className="group w-[300px] shrink-0 sm:w-[360px]">
                             <Link href={href} className="block">
-                                <Squircle asChild radius={16}>
+                                <Squircle asChild radius={20}>
                                     <div className="relative aspect-video overflow-hidden bg-zinc-900">
                                         {v.thumbnailUrl && (
                                             <img
@@ -122,37 +122,37 @@ export function HomeVideosRow({ user, onViewAll }: {
                                             />
                                         )}
                                         {duration && (
-                                            <span className="absolute left-2 top-2 rounded-full bg-black/80 px-2 py-0.5 text-[11px] font-bold text-white">
+                                            <span className="absolute left-2.5 top-2.5 rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">
                                                 {duration}
                                             </span>
                                         )}
-                                        <span className="absolute bottom-2 left-2 rounded-full bg-black/80 px-2 py-0.5 text-[11px] font-bold text-white">
+                                        <span className="absolute bottom-2.5 left-2.5 rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">
                                             {formatViews(v.views ?? 0)} views
                                         </span>
                                         {v.createdAt && (
-                                            <span className="absolute bottom-2 right-2 rounded-full bg-black/80 px-2 py-0.5 text-[11px] font-bold text-white">
+                                            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">
                                                 {formatRelativeTime(String(v.createdAt))}
                                             </span>
                                         )}
                                     </div>
                                 </Squircle>
                             </Link>
-                            <div className="mt-3 flex items-start gap-2.5">
-                                <Avatar className="size-9 shrink-0">
+                            <div className="mt-3.5 flex items-start gap-3">
+                                <Avatar className="size-10 shrink-0">
                                     <AvatarImage src={v.author.avatar_url ?? undefined} />
                                     <AvatarFallback className="bg-zinc-800" />
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
                                     <Link href={href}>
-                                        <p className="line-clamp-1 text-sm font-bold leading-snug text-zinc-200 transition-colors group-hover:text-white">
+                                        <p className="line-clamp-1 text-base font-bold leading-snug tracking-tight text-white transition-colors group-hover:text-zinc-300">
                                             {v.title}
                                         </p>
                                     </Link>
-                                    <span className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-zinc-500">
+                                    <span className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-zinc-400">
                                         <span className="truncate">{v.author.name ?? v.author.username}</span>
-                                        {v.author.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-3.5 shrink-0" />}
-                                        {v.author.verifiedTier === "business" && <BusinessBadgeIcon className="size-3.5 shrink-0" />}
-                                        {v.author.verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}
+                                        {v.author.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-4 shrink-0" />}
+                                        {v.author.verifiedTier === "business" && <BusinessBadgeIcon className="size-4 shrink-0" />}
+                                        {v.author.verifiedTier === "government" && <GovBadgeIcon className="size-4 shrink-0" />}
                                     </span>
                                 </div>
                                 <GooDropdown
