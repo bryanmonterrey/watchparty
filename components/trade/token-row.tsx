@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useHoverPrefetch } from "@/hooks/use-hover-prefetch";
+import { useInstantNav } from "@/hooks/use-instant-nav";
 import type { TradeToken } from "./types";
 import { SolanaIcon } from "../icons";
 
@@ -94,6 +95,8 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
     // Token page is server-rendered, so warm the route's RSC payload on hover
     // intent (120ms rest, once per row — cheap even on a dense board).
     const rowPrefetch = useHoverPrefetch(() => router.prefetch(`/${slug}`));
+    // Mouse-only pointerdown navigation — commits the nav on press.
+    const instantNav = useInstantNav(() => `/${slug}`);
 
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -122,7 +125,11 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
     return (
         <div
             {...rowPrefetch}
-            onClick={() => router.push(`/${slug}`)}
+            onPointerDown={instantNav.onPointerDown}
+            onClick={() => {
+                if (instantNav.consumedClick()) return;
+                router.push(`/${slug}`);
+            }}
             className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
         >
             <TokenAvatar token={token} />

@@ -15,6 +15,7 @@ import { PostCardActions } from "./post-card-actions";
 import { BookmarkToast } from "./bookmark-toast";
 import { UserHoverCard } from "../user-hover-card";
 import { useHoverPrefetch } from "@/hooks/use-hover-prefetch";
+import { useInstantNav } from "@/hooks/use-instant-nav";
 import type { PostCardProps } from "./post-card.types";
 
 export type { PostCardProps } from "./post-card.types";
@@ -81,6 +82,10 @@ export function PostCard({
     const profilePrefetch = useHoverPrefetch(() => {
         if (user.username) router.prefetch(`/${user.username}`);
     });
+
+    // Mouse-only pointerdown navigation — the click commits on press instead
+    // of release (see the hook for the guard rails).
+    const instantNav = useInstantNav(() => `/discover/post/${post.id}`);
 
     const incrementView = trpc.content.incrementView.useMutation({
         onSuccess: () => {
@@ -291,7 +296,11 @@ export function PostCard({
             <article
                 ref={cardRef}
                 {...detailPrefetch}
-                onClick={() => router.push(`/discover/post/${post.id}`)}
+                onPointerDown={instantNav.onPointerDown}
+                onClick={() => {
+                    if (instantNav.consumedClick()) return;
+                    router.push(`/discover/post/${post.id}`);
+                }}
                 className={cn(
                     "group cursor-pointer px-4 pt-2.5 pb-1.5 transition-colors relative bg-background flex flex-col",
                     connectBottom ? "border-none pb-0" : "border-b border-soft-gray/[0.12]",

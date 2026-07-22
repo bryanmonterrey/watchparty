@@ -50,17 +50,26 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
         { enabled: enabled && open, staleTime: CARD_STALE_MS },
     );
 
-    // The card opening (150ms hover) is the strongest profile-visit intent
-    // signal in the app — warm the profile route's RSC payload so clicking
-    // through is near-instant. Covers every MiniProfile trigger (post header
-    // names, avatars, comment rows). username may only be known once the card
-    // query resolves, hence the effect instead of an onOpenChange hook.
-    const slug = username ?? card?.username;
-    React.useEffect(() => {
-        if (open && slug) router.prefetch(`/${slug}`);
-    }, [open, slug, router]);
-
     const utils = trpc.useUtils();
+
+    // The card opening (150ms hover) is the strongest profile-visit intent
+    // signal in the app — warm the profile route's RSC payload AND the Home
+    // tab's queries (stream + video rows) so clicking through lands fully
+    // populated, not shell-first. Covers every MiniProfile trigger (post
+    // header names, avatars, comment rows). username/id may only be known
+    // once the card query resolves, hence the effect instead of an
+    // onOpenChange hook. Inputs must mirror home-hero/home-videos-row.
+    const slug = username ?? card?.username;
+    const targetUserId = userId ?? card?.id;
+    React.useEffect(() => {
+        if (!open) return;
+        if (slug) router.prefetch(`/${slug}`);
+        if (targetUserId) {
+            utils.stream.getByUserId.prefetch({ userId: targetUserId });
+            utils.content.getVideosByUser.prefetch({ userId: targetUserId, limit: 1 });
+            utils.content.getVideosByUser.prefetch({ userId: targetUserId, limit: 12 });
+        }
+    }, [open, slug, targetUserId, router, utils]);
     const [optimisticFollowing, setOptimisticFollowing] = React.useState<boolean | null>(null);
     const settle = () => {
         utils.profile.card.invalidate();
