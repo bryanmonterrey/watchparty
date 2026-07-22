@@ -681,7 +681,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                     ] as const).map((opt) => ({
                                                         key: opt.value,
                                                         onClick: () => setAudience(opt.value),
-                                                        className: "rounded-full justify-between px-3 cursor-pointer hover:bg-white/5",
+                                                        className: "justify-between px-3 cursor-pointer hover:bg-white/5",
                                                         label: (
                                                             <>
                                                                 <span className="flex items-center gap-3">
@@ -707,7 +707,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                               ...userCommunities.map((community, i) => ({
                                                                   key: `community-${i}`,
                                                                   onClick: () => setAudience("community"),
-                                                                  className: "rounded-full justify-between px-3 cursor-pointer hover:bg-white/5",
+                                                                  className: "justify-between px-3 cursor-pointer hover:bg-white/5",
                                                                   label: (
                                                                       <>
                                                                           <span className="flex items-center gap-3">
@@ -890,7 +890,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                     ] as const).map((opt) => ({
                                                         key: opt.value,
                                                         onClick: () => setReplyPrivacy(opt.value),
-                                                        className: "rounded-full justify-between px-3 cursor-pointer hover:bg-white/5",
+                                                        className: "justify-between px-3 cursor-pointer hover:bg-white/5",
                                                         label: (
                                                             <>
                                                                 <span className="flex items-center gap-3">

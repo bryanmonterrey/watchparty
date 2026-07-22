@@ -59,8 +59,10 @@ styles"): control styling is ENCODED in the primitives — never hand-roll a
 variant on a new surface.
 
 - **Dropdowns**: always `GooDropdown`. Build every row with **`gooMenuItem()`**
-  (exported from `components/ui/goo-dropdown.tsx`) — 44px (h-11) rounded-full
-  rows, `text-base font-bold`, zinc-200→white, danger = red-500/red-500/10,
+  (exported from `components/ui/goo-dropdown.tsx`) — 44px (h-11) **squircled**
+  rows (Lisse clip-path, radius 16, applied by the component itself; NEVER add
+  `rounded-*` to a row — owner call 2026-07-22: menu options are squircled, not
+  pills), `text-base font-bold`, zinc-200→white, danger = red-500/red-500/10,
   optional `icon` node + `right` slot (checkmark/count). Panel: component
   defaults (radius 24, itemHeight 44) + `fill={GOO_PANEL_FILL}`. Pill triggers
   use **`GOO_TRIGGER_PILL`** (h-11). Sort-style triggers use the

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
+import { Squircle } from '@/components/ui/squircle'
 
 export type GooDropdownItem = {
   key?: string | number
@@ -65,9 +66,14 @@ export type GooDropdownProps = {
 const PANEL_PAD = 6
 const SEPARATOR_ROW_H = 9
 
+// Row corner radius. Rows are SQUIRCLED (Lisse clip-path), not rounded-* —
+// owner call 2026-07-22: "i didn't want everything rounded full, i wanted all
+// corners squircled".
+const ROW_RADIUS = 16
+
 // ── THE dropdown standard (design-principles §Dropdowns) ────────────────────
 // Every menu in the app is a GooDropdown built from these, so they can't
-// drift: 44px (h-11) rounded-full rows, text-base font-bold, #0a0a0a panel,
+// drift: 44px (h-11) SQUIRCLED rows, text-base font-bold, #0a0a0a panel,
 // radius 24 (the component defaults), and an h-11 pill trigger. Pass a
 // pre-rendered icon node (lucide or HugeiconsIcon — builder is icon-system
 // agnostic) and an optional `right` slot for checkmarks/badges.
@@ -96,7 +102,8 @@ export function gooMenuItem({ icon, label, onClick, href, right, variant = 'defa
     href,
     closeOnSelect,
     className: cn(
-      'gap-3 px-4 rounded-full cursor-pointer text-base font-bold group',
+      // No rounded-* — the row is squircled by the component (clip-path).
+      'gap-3 px-4 cursor-pointer text-base font-bold group',
       variant === 'danger'
         ? 'text-red-500 hover:bg-red-500/10 hover:text-red-500'
         : 'text-zinc-200 hover:bg-white/5 hover:text-white',
@@ -475,10 +482,15 @@ export function GooDropdown({
               )
             }
             if (item.type === 'custom') {
+              // Squircled like every other row. Safe for rows whose component
+              // opens a dialog — Radix portals to <body>, so clip-path here
+              // never clips it.
               return (
-                <div key={k} className={cn('shrink-0', item.className)} style={{ height: h }}>
-                  {item.label}
-                </div>
+                <Squircle key={k} asChild radius={ROW_RADIUS}>
+                  <div className={cn('shrink-0 overflow-hidden', item.className)} style={{ height: h }}>
+                    {item.label}
+                  </div>
+                </Squircle>
               )
             }
             if (item.type === 'label') {
@@ -495,41 +507,41 @@ export function GooDropdown({
                 </div>
               )
             }
-            // The BASE row IS the app standard (design-principles §1.2): pill
-            // rows, px-4, text-base font-bold, zinc-200 → white on hover. A
-            // call site can still override via item.className (cn/twMerge lets
-            // later classes win), but it no longer has to style rows at all.
+            // The BASE row IS the app standard (design-principles §1.2):
+            // SQUIRCLED rows (never rounded-*, which is redundant under Lisse's
+            // clip-path), px-4, text-base font-bold, zinc-200 → white on hover.
+            // A call site can still override via item.className, but it no
+            // longer has to style rows at all.
             const rowClass = cn(
-              'flex w-full shrink-0 items-center rounded-full px-4 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
+              'flex w-full shrink-0 items-center px-4 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
               item.className,
             )
-            if (item.href) {
-              return (
-                <Link
-                  key={k}
-                  role="menuitem"
-                  tabIndex={open ? 0 : -1}
-                  href={item.href}
-                  onClick={() => select(item)}
-                  className={rowClass}
-                  style={{ height: h }}
-                >
-                  {item.label}
-                </Link>
-              )
-            }
             return (
-              <button
-                key={k}
-                role="menuitem"
-                type="button"
-                tabIndex={open ? 0 : -1}
-                onClick={() => select(item)}
-                className={rowClass}
-                style={{ height: h }}
-              >
-                {item.label}
-              </button>
+              <Squircle key={k} asChild radius={ROW_RADIUS}>
+                {item.href ? (
+                  <Link
+                    role="menuitem"
+                    tabIndex={open ? 0 : -1}
+                    href={item.href}
+                    onClick={() => select(item)}
+                    className={rowClass}
+                    style={{ height: h }}
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button
+                    role="menuitem"
+                    type="button"
+                    tabIndex={open ? 0 : -1}
+                    onClick={() => select(item)}
+                    className={rowClass}
+                    style={{ height: h }}
+                  >
+                    {item.label}
+                  </button>
+                )}
+              </Squircle>
             )
           })}
           </div>

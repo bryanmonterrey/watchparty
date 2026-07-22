@@ -412,7 +412,7 @@ export function PostComposer() {
                             ] as const).map((opt) => ({
                                 key: opt.value,
                                 onClick: () => setAudience(opt.value),
-                                className: "justify-between px-4 rounded-full cursor-pointer hover:bg-white/5",
+                                className: "justify-between px-4 cursor-pointer hover:bg-white/5",
                                 label: (
                                     <>
                                         <span className="flex items-center gap-3">
@@ -633,7 +633,7 @@ export function PostComposer() {
                             ] as const).map((opt) => ({
                                 key: opt.value,
                                 onClick: () => setReplyPrivacy(opt.value),
-                                className: "justify-between px-4 rounded-full cursor-pointer hover:bg-white/5",
+                                className: "justify-between px-4 cursor-pointer hover:bg-white/5",
                                 label: (
                                     <>
                                         <span className="flex items-center gap-3">

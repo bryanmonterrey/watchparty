@@ -84,7 +84,7 @@ export function WalletHeader({
                         {
                             key: "copy",
                             onClick: handleCopyAddress,
-                            className: "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                            className: "gap-3 px-4 cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
                             label: (
                                 <>
                                     <CopyIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
@@ -95,7 +95,7 @@ export function WalletHeader({
                         {
                             key: "change-wallet",
                             onClick: () => onChangeWallet?.(),
-                            className: "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                            className: "gap-3 px-4 cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
                             label: (
                                 <>
                                     <WalletIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
@@ -106,7 +106,7 @@ export function WalletHeader({
                         {
                             key: "disconnect",
                             onClick: onSignOut,
-                            className: "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-red-400/90 hover:bg-red-500/10 hover:text-red-400",
+                            className: "gap-3 px-4 cursor-pointer text-lg font-medium text-red-400/90 hover:bg-red-500/10 hover:text-red-400",
                             label: (
                                 <>
                                     <LogoutIcon className="w-5 h-5 shrink-0" />

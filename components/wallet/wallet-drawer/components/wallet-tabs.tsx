@@ -109,7 +109,7 @@ export function WalletTabs({
                                           if (activeTab === "tokens") onManageTokens?.();
                                           else if (activeTab === "nfts") onManageCollectibles?.();
                                       },
-                                      className: "gap-3 px-4 rounded-full cursor-pointer hover:bg-white/5 group",
+                                      className: "gap-3 px-4 cursor-pointer hover:bg-white/5 group",
                                       label: (
                                           <>
                                               <ToggleIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
@@ -124,7 +124,7 @@ export function WalletTabs({
                         {
                             key: "hide-balances",
                             onClick: onHideBalances,
-                            className: "gap-3 px-4 rounded-full cursor-pointer hover:bg-white/5 group",
+                            className: "gap-3 px-4 cursor-pointer hover:bg-white/5 group",
                             label: (
                                 <>
                                     <ViewOffIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
@@ -137,7 +137,7 @@ export function WalletTabs({
                         {
                             key: "refresh",
                             onClick: onRefresh,
-                            className: "gap-3 px-4 rounded-full cursor-pointer hover:bg-white/5 group",
+                            className: "gap-3 px-4 cursor-pointer hover:bg-white/5 group",
                             label: (
                                 <>
                                     <RefreshIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />

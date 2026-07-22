@@ -1010,7 +1010,7 @@ function OrderPanel({
                             {
                                 key: "usdc-ledger",
                                 onClick: () => setPayAsset({ kind: "ledger" }),
-                                className: "justify-between gap-3 rounded-full px-3 cursor-pointer hover:bg-white/5",
+                                className: "justify-between gap-3 px-3 cursor-pointer hover:bg-white/5",
                                 label: (
                                     <>
                                         <span className="flex items-center gap-2.5">
@@ -1025,7 +1025,7 @@ function OrderPanel({
                             ...walletAssets.map((t) => ({
                                 key: t.mint,
                                 onClick: () => setPayAsset({ kind: "wallet", ...t }),
-                                className: "justify-between gap-3 rounded-full px-3 cursor-pointer hover:bg-white/5",
+                                className: "justify-between gap-3 px-3 cursor-pointer hover:bg-white/5",
                                 label: (
                                     <>
                                         <span className="flex min-w-0 items-center gap-2.5">

@@ -225,7 +225,7 @@ export function SettingsNav() {
                     return {
                         key: item.id,
                         onClick: () => setTab(item.id),
-                        className: "rounded-full gap-3 px-3 cursor-pointer hover:bg-white/5 group",
+                        className: "gap-3 px-3 cursor-pointer hover:bg-white/5 group",
                         label: (
                             <>
                                 <span

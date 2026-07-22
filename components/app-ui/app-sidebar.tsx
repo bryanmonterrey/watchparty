@@ -421,7 +421,7 @@ export function AppSidebar() {
                                     {
                                         key: "quests",
                                         href: "/quests",
-                                        className: "gap-3 px-4 rounded-full text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                                        className: "gap-3 px-4 text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
                                         label: (
                                             <>
                                                 <QuestsIcon className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />
@@ -432,7 +432,7 @@ export function AppSidebar() {
                                     {
                                         key: "settings",
                                         href: "/settings",
-                                        className: "gap-3 px-4 rounded-full text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
+                                        className: "gap-3 px-4 text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
                                         label: (
                                             <>
                                                 <SettingsIcon className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />

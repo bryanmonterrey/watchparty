@@ -18,7 +18,7 @@ import { BadgeStrip } from "./badge-strip";
 import { FollowersFollowingDialog } from "./followers-following-dialog";
 import { TipModal } from "@/components/browse/tip-modal";
 import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem } from "@/components/ui/goo-dropdown";
 import { toast } from "sonner";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
@@ -55,7 +55,11 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
         toast.success("Profile link copied");
     };
 
-    const rowClass = "px-3 h-full w-full rounded-[14px] text-left font-semibold text-zinc-200 hover:bg-white/5";
+    // Matches the standard menu row (goo-dropdown's base): same text size and
+    // weight as the built rows, and [&_svg]:size-[18px] overrides the icon
+    // sizes MuteButton/BlockButton hardcode, so every row lines up. No
+    // rounded-* — the component squircles rows.
+    const rowClass = "gap-3 px-4 h-full w-full text-left text-base font-bold text-zinc-200 hover:bg-white/5 hover:text-white [&_svg]:size-[18px]";
 
     return (
         <GooDropdown
@@ -68,17 +72,12 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
             triggerClassName="flex size-11 items-center justify-center rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10 transition-colors"
             trigger={<VerticalDotsIcon className="size-6" />}
             items={[
-                {
+                gooMenuItem({
                     key: "copy",
                     onClick: copyProfileLink,
-                    className: "gap-2.5 font-semibold text-zinc-200 cursor-pointer",
-                    label: (
-                        <>
-                            <Link2Icon className="w-4 h-4 text-zinc-400" />
-                            Copy profile link
-                        </>
-                    ),
-                },
+                    icon: <Link2Icon />,
+                    label: "Copy profile link",
+                }),
                 { key: "sep-1", type: "separator" },
                 {
                     key: "mute",
@@ -91,20 +90,16 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
                     label: <BlockButton userId={userId} username={username} className={cn(rowClass, "gap-2.5")} onDone={onClose} />,
                 },
                 { key: "sep-2", type: "separator" },
-                {
+                gooMenuItem({
                     key: "ban",
                     onClick: () => isBanned ? unbanUser.mutate({ userId }) : banUser.mutate({ userId }),
                     closeOnSelect: false,
-                    className: "gap-2.5 font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 cursor-pointer",
-                    label: (
-                        <>
-                            {(banUser.isPending || unbanUser.isPending)
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <HugeiconsIcon icon={HammerIcon} className="w-4 h-4" />}
-                            {isBanned ? "Unban from channel" : "Ban from channel"}
-                        </>
-                    ),
-                },
+                    variant: "danger",
+                    icon: (banUser.isPending || unbanUser.isPending)
+                        ? <Loader2 className="animate-spin" />
+                        : <HugeiconsIcon icon={HammerIcon} />,
+                    label: isBanned ? "Unban from channel" : "Ban from channel",
+                }),
             ]}
         />
     );

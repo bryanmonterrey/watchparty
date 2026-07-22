@@ -200,7 +200,7 @@ export function DetailsStep({
                     ] as const).map((opt) => ({
                         key: opt.value,
                         onClick: () => setVideoAudience(opt.value),
-                        className: "rounded-full justify-between px-2.5 cursor-pointer hover:bg-white/5",
+                        className: "justify-between px-2.5 cursor-pointer hover:bg-white/5",
                         label: (
                             <>
                                 <span className="flex items-center gap-2.5">

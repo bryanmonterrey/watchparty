@@ -111,7 +111,7 @@ export function PredictionsView() {
                             items={(Object.keys(SORT_LABEL) as SortKey[]).map((k) => ({
                                 key: k,
                                 onClick: () => setSort(k),
-                                className: "justify-between px-3 rounded-full cursor-pointer text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-white",
+                                className: "justify-between px-3 cursor-pointer text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-white",
                                 label: (
                                     <>
                                         {SORT_LABEL[k]}
