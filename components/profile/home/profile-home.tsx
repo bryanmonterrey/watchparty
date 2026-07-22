@@ -13,7 +13,7 @@ export function ProfileHome({ user, onTabChange }: {
     onTabChange?: (tab: string) => void;
 }) {
     return (
-        <div className="flex max-w-6xl flex-col gap-10">
+        <div className="flex flex-col gap-10">
             <HomeVideosRow user={user} onViewAll={() => onTabChange?.("Videos")} />
         </div>
     );

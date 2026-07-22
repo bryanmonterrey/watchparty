@@ -69,8 +69,8 @@ export function HomeVideosRow({ user, onViewAll }: {
 
     if (isLoading) {
         return (
-            <div className="flex gap-5 overflow-hidden">
-                <div className="shimmer-skeleton w-[220px] shrink-0 rounded-[20px]" />
+            <div className="-mx-8 flex gap-5 overflow-hidden px-8">
+                <div className="shimmer-skeleton w-[150px] shrink-0 rounded-[20px]" />
                 {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="w-[300px] shrink-0 sm:w-[360px]">
                         <div className="shimmer-skeleton aspect-video rounded-[20px]" />
@@ -87,20 +87,20 @@ export function HomeVideosRow({ user, onViewAll }: {
     if (!videos.length) return null;
 
     return (
-        <div className="relative">
+        <div className="relative -mx-8">
             <div
                 ref={railRef}
                 onScroll={updateScroll}
-                className="flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex gap-5 overflow-x-auto px-8 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 <Squircle asChild radius={20}>
-                    <div className="flex min-h-[280px] w-[200px] shrink-0 flex-col items-start justify-between gap-8 bg-pastelred p-6 sm:min-h-[300px] sm:w-[220px]">
-                        <h3 className="font-pixel text-3xl leading-[1.1] text-white">
+                    <div className="flex min-h-[280px] w-[135px] shrink-0 flex-col items-start justify-between gap-8 bg-pastelred p-5 sm:min-h-[300px] sm:w-[150px]">
+                        <h3 className="font-pixel text-2xl leading-[1.15] text-white">
                             Recent videos
                         </h3>
                         <button
                             onClick={onViewAll}
-                            className="h-11 shrink-0 cursor-pointer rounded-full bg-white px-6 text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98]"
+                            className="h-11 shrink-0 cursor-pointer rounded-full bg-white px-4 text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98]"
                         >
                             Show all
                         </button>
@@ -181,7 +181,7 @@ export function HomeVideosRow({ user, onViewAll }: {
                 <button
                     onClick={() => page(-1)}
                     aria-label="Scroll back"
-                    className="absolute -left-3 top-1/2 z-10 hidden size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all hover:bg-zinc-100 active:scale-[0.95] sm:flex"
+                    className="absolute left-4 top-1/2 z-10 hidden size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all hover:bg-zinc-100 active:scale-[0.95] sm:flex"
                 >
                     <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
                 </button>
@@ -190,7 +190,7 @@ export function HomeVideosRow({ user, onViewAll }: {
                 <button
                     onClick={() => page(1)}
                     aria-label="Scroll forward"
-                    className="absolute -right-3 top-1/2 z-10 hidden size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all hover:bg-zinc-100 active:scale-[0.95] sm:flex"
+                    className="absolute right-4 top-1/2 z-10 hidden size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all hover:bg-zinc-100 active:scale-[0.95] sm:flex"
                 >
                     <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
                 </button>

@@ -13,6 +13,7 @@ import { PollProvider } from "@/components/browse/poll-context";
 import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
 import { TradeRow } from "@/components/trades/trade-row";
 import { ProfilePnlCard } from "./profile-pnl-card";
+import { ProfileMediaGrid } from "./profile-media-grid";
 
 interface ProfileTabContentProps {
     activeTab: string;
@@ -80,7 +81,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
 
     if (isLoading) {
         return (
-            <div>
+            <div className="max-w-2xl">
                 {Array.from({ length: 5 }).map((_, i) => (
                     <PostCardSkeleton key={i} />
                 ))}
@@ -90,7 +91,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
 
     if (allPosts.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center text-center py-24">
+            <div className="flex max-w-2xl flex-col items-center justify-center text-center py-24">
                 <div className="size-24 rounded-[32px] bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center mb-8 shadow-2xl">
                     <Plus size={40} className="text-zinc-600" />
                 </div>
@@ -103,7 +104,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
     }
 
     return (
-        <div>
+        <div className="max-w-2xl">
             <PollProvider postIds={allPosts.map((p) => p.id)}>
                 {allPosts.map((post, i) => (
                     <PostCard
@@ -158,6 +159,8 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
                         />
                     ) : activeTab === "Posts" ? (
                         <ProfilePostsFeed userId={user.id} isOwner={isOwner} />
+                    ) : activeTab === "Media" ? (
+                        <ProfileMediaGrid userId={user.id} isOwner={isOwner} />
                     ) : activeTab === "Trades" ? (
                         <ProfileTradesFeed userId={user.id} name={user.name} />
                     ) : (

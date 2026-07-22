@@ -1404,6 +1404,47 @@ export const contentRouter = router({
             return { videos: results };
         }),
 
+    // ─── Get image posts for a user's Media tab (Instagram-style grid) ───────
+    getMediaByUser: publicProcedure
+        .input(z.object({
+            userId: z.string(),
+            limit: z.number().min(1).max(60).default(60),
+        }))
+        .query(async ({ input }) => {
+            const rows = await db
+                .select({
+                    id: posts.id,
+                    imageUrl: posts.imageUrl,
+                    media: posts.media,
+                })
+                .from(posts)
+                .where(
+                    and(
+                        eq(posts.userId, input.userId),
+                        eq(posts.status, "published"),
+                        eq(posts.visibility, "public"),
+                        or(
+                            isNotNull(posts.imageUrl),
+                            sql`coalesce(jsonb_array_length(${posts.media}), 0) > 0`,
+                        ),
+                    )
+                )
+                .orderBy(desc(posts.createdAt))
+                .limit(input.limit);
+
+            const items = rows
+                .map((r) => ({
+                    id: r.id,
+                    images: [
+                        ...(r.imageUrl ? [r.imageUrl] : []),
+                        ...(r.media ?? []).filter((m) => m.type === "image").map((m) => m.url),
+                    ],
+                }))
+                .filter((r) => r.images.length > 0);
+
+            return { items };
+        }),
+
     // ─── Get related videos by category ──────────────────────────────────────
     getRelatedVideos: publicProcedure
         .input(z.object({
