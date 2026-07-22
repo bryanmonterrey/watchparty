@@ -48,6 +48,50 @@ export const uploadRouter = router({
             };
         }),
 
+    // ── Resumable (TUS) upload target — for video-sized files ────────────────
+    // A signed-URL PUT is ONE request: a dropped connection restarts the whole
+    // file, and Supabase recommends resumable uploads above ~6MB. TUS needs a
+    // real Supabase JWT on every chunk (signed upload URLs don't work there),
+    // so we mint a short-lived `authenticated` token scoped to this user — the
+    // existing "Authenticated Upload" storage policy (bucket in videos/posts
+    // AND auth.role() = 'authenticated') is what admits it.
+    createResumableUpload: protectedProcedure
+        .input(z.object({
+            bucket: z.enum(["videos", "posts"]),
+            filename: z.string().min(1),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const secret = process.env.SUPABASE_JWT_SECRET;
+            const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            if (!secret || !projectUrl) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Resumable uploads are not configured",
+                });
+            }
+
+            const userId = ctx.session.user.id;
+            const path = `${userId}/${nanoid()}-${input.filename}`;
+
+            // jose (not jsonwebtoken) — Workers-compatible Web Crypto signing.
+            const { SignJWT } = await import("jose");
+            const token = await new SignJWT({ role: "authenticated" })
+                .setProtectedHeader({ alg: "HS256" })
+                .setSubject(userId)
+                .setAudience("authenticated")
+                .setIssuedAt()
+                // Long enough for a big upload on a slow connection, short
+                // enough that a leaked token isn't a standing credential.
+                .setExpirationTime("2h")
+                .sign(new TextEncoder().encode(secret));
+
+            return {
+                path,
+                token,
+                endpoint: `${projectUrl}/storage/v1/upload/resumable`,
+            };
+        }),
+
     // ── Transcribe a video using Deepgram Nova-3 (async callback mode) ────────
     // Fires a job at Deepgram and returns immediately. Deepgram POSTs the result
     // to /api/captions/webhook when processing is done (minutes later for long videos).

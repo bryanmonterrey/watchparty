@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, formatFileSize } from "@/lib/upload-limits"
 import { motion, AnimatePresence } from "framer-motion"
 import { Upload, X, Smile, Calendar, MapPin, Globe, ChevronDown, BarChart2, FileVideo, Coins, Users, Medal, Check, BadgeCheck, Lock, Crown } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -210,6 +211,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
     })
 
     const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation()
+    const createResumableUpload = trpc.upload.createResumableUpload.useMutation()
 
     const handlePostSubmit = async () => {
         if (!postContent.trim() && postImages.length === 0 && !postGif) return
@@ -409,10 +411,12 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
         if (acceptedFiles.length > 0) {
             const file = acceptedFiles[0]
 
-            // Check file size (e.g., 100GB limit)
-            const MAX_SIZE = 100 * 1024 * 1024 * 1024 // 100GB
-            if (file.size > MAX_SIZE) {
-                appToast.error("File is too large. Max size is 100GB.")
+            // Must match the Supabase project's storage fileSizeLimit (5GB).
+            // Storage rejects anything above it mid-upload, so catching it here
+            // is the difference between an instant message and a 20-second
+            // wait for an opaque 400.
+            if (file.size > MAX_UPLOAD_BYTES) {
+                appToast.error(`That video is ${formatFileSize(file.size)}. Max size is ${MAX_UPLOAD_LABEL}.`)
                 return
             }
 
@@ -424,34 +428,49 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
             setUploadProgress(0)
 
             try {
-                // 1. Get Presigned URL
+                // Resumable (TUS) upload: the file goes up in 6MB chunks, so a
+                // dropped connection resumes instead of restarting, and the tab
+                // never holds the whole file in memory. tus-js-client is
+                // dynamically imported — it's only needed once someone actually
+                // drops a video.
                 const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-                const { path, signedUrl } = await getPresignedUrl.mutateAsync({
+                const { path, token, endpoint } = await createResumableUpload.mutateAsync({
                     bucket: 'videos',
                     filename: sanitizedFileName,
-                    contentType: file.type
                 });
 
-                // 2. Upload via XHR — gives real progress and avoids FormData wrapping
-                //    which can OOM the browser tab on large video files.
-                //    The signedUrl already embeds the auth token so no extra auth header needed.
+                // Aliased: `Upload` is already the lucide icon in this file.
+                const { Upload: TusUpload } = await import('tus-js-client')
                 await new Promise<void>((resolve, reject) => {
-                    const xhr = new XMLHttpRequest()
-                    xhr.upload.addEventListener('progress', (e) => {
-                        if (e.lengthComputable) {
-                            setUploadProgress(Math.round((e.loaded / e.total) * 100))
-                        }
+                    const upload = new TusUpload(file, {
+                        endpoint,
+                        // Supabase requires exactly 6MB chunks.
+                        chunkSize: 6 * 1024 * 1024,
+                        retryDelays: [0, 3000, 5000, 10000, 20000],
+                        headers: {
+                            authorization: `Bearer ${token}`,
+                            'x-upsert': 'false',
+                        },
+                        uploadDataDuringCreation: true,
+                        removeFingerprintOnSuccess: true,
+                        metadata: {
+                            bucketName: 'videos',
+                            objectName: path,
+                            contentType: file.type || 'video/mp4',
+                            cacheControl: '3600',
+                        },
+                        onProgress: (sent, total) => {
+                            setUploadProgress(Math.round((sent / total) * 100))
+                        },
+                        onSuccess: () => resolve(),
+                        onError: (err) => reject(err),
                     })
-                    xhr.addEventListener('load', () => {
-                        xhr.status >= 200 && xhr.status < 300
-                            ? resolve()
-                            : reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`))
-                    })
-                    xhr.addEventListener('error', () => reject(new Error('Network error during upload')))
-                    xhr.open('PUT', signedUrl)
-                    xhr.setRequestHeader('content-type', file.type)
-                    xhr.setRequestHeader('cache-control', 'max-age=3600')
-                    xhr.send(file)
+
+                    // Resume this exact file if a previous attempt was interrupted.
+                    upload.findPreviousUploads().then((previous) => {
+                        if (previous.length > 0) upload.resumeFromPreviousUpload(previous[0])
+                        upload.start()
+                    }).catch(() => upload.start())
                 })
 
                 const { supabase } = await import('@/lib/supabase/client')
@@ -461,12 +480,20 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                 setUploading(false)
                 appToast.success("Upload complete")
             } catch (error: any) {
-                console.error("Upload error:", error)
-                appToast.error(`Upload failed: ${error.message}`)
+                // tus errors carry the server's response — surface it instead of
+                // a bare status code (the old handler showed "400" and nothing
+                // about why, which cost a debugging session).
+                const detail = error?.originalResponse?.getBody?.() || error?.message || "Unknown error"
+                console.error("Upload error:", error, detail)
+                appToast.error(
+                    /exceeded the maximum allowed size|Payload too large/i.test(String(detail))
+                        ? `That video is too large. Max size is ${MAX_UPLOAD_LABEL}.`
+                        : `Upload failed: ${String(detail).slice(0, 160)}`
+                )
                 setUploading(false)
             }
         }
-    }, [getPresignedUrl])
+    }, [createResumableUpload])
 
     const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
         onDrop,
