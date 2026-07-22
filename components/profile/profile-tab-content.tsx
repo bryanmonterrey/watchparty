@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus } from "lucide-react";
 import { UserType } from "@/db/schema/auth/user";
@@ -185,8 +186,16 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
     const viewerUsername = session?.user?.username ?? session?.user?.name ?? "Guest";
     const isOwner = session?.user?.id === user.id;
 
+    // Video-first tabs (Home rail, Videos, Streams) use the full width; the
+    // reading tabs get a right inset matching the sidebar rail so the column
+    // doesn't hug the far edge (owner call 2026-07-22, "for now").
+    const fullBleedTab = ["Home", "Videos", "Streams"].includes(activeTab);
+
     return (
-        <div className="py-4 min-h-[500px] z-10">
+        <div className={cn(
+            "py-4 min-h-[500px] z-10",
+            !fullBleedTab && "lg:pr-[var(--sidebar-width-icon,4.25rem)]",
+        )}>
             <AnimatePresence mode="wait">
                 <motion.div
                     key={activeTab}

@@ -1109,6 +1109,28 @@ export const contentRouter = router({
             return { success: true };
         }),
 
+    // ─── Own-post settings (reply privacy / content disclosure) ─────────────
+    updatePostSettings: protectedProcedure
+        .input(z.object({
+            postId: z.string(),
+            replyPrivacy: z.enum(["everyone", "followers", "verified", "token_holders"]).optional(),
+            hasContentWarning: z.boolean().optional(),
+            contentWarningText: z.string().max(200).nullable().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { postId, ...settings } = input;
+            const patch = Object.fromEntries(
+                Object.entries(settings).filter(([, v]) => v !== undefined)
+            );
+            if (Object.keys(patch).length === 0) return { success: true };
+            const [row] = await db.update(posts)
+                .set(patch)
+                .where(and(eq(posts.id, postId), eq(posts.userId, ctx.user.id)))
+                .returning({ id: posts.id });
+            if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+            return { success: true };
+        }),
+
     // ─── Toggle a post in/out of profile Highlights ──────────────────────────
     toggleHighlight: protectedProcedure
         .input(z.object({ postId: z.string() }))

@@ -14,8 +14,9 @@ export const publicRoutes: string[] = [
   "/about",
 ];
 
-// Public PREFIXES (dynamic public pages, e.g. the embeddable server widget).
-export const publicPrefixes: string[] = ["/widget/"];
+// Public PREFIXES (dynamic public pages, e.g. the embeddable server widget
+// and the post-embed iframes).
+export const publicPrefixes: string[] = ["/widget/", "/embed/"];
 
 // Auth routes — a signed-in user hitting these is sent to the app instead.
 export const authRoutes: string[] = ["/login"];

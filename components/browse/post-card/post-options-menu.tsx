@@ -7,7 +7,8 @@ import {
     Flag, Pin, PinOff,
     UserMinus, UserPlus,
     VolumeX, Ban, EyeOff,
-    BarChart3, Code, Megaphone, Trash2, Sparkles, ListPlus, X
+    BarChart3, Code, Megaphone, Trash2, Sparkles, ListPlus, X,
+    Info, MessageCircle, Globe, Users, BadgeCheck, Coins, Check,
 } from "lucide-react";
 import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 
@@ -79,9 +80,10 @@ export function PostOptionsMenu({
     postId, userId, username, onClose, onHide, isOwnPost, isPinned,
     open, onOpenChange, trigger, triggerClassName
 }: PostOptionsMenuProps) {
-    const [view, setView] = useState<"main" | "report">("main");
+    const [view, setView] = useState<"main" | "report" | "reply" | "disclosure" | "analytics">("main");
     const [reportSubmitted, setReportSubmitted] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [embedCopied, setEmbedCopied] = useState(false);
 
     const utils = trpc.useUtils();
     const submitReport = trpc.moderation.submitReport.useMutation();
@@ -97,6 +99,12 @@ export function PostOptionsMenu({
         },
     });
     const toggleHighlight = trpc.content.toggleHighlight.useMutation({ onSuccess: onClose });
+    const updateSettings = trpc.content.updatePostSettings.useMutation({ onSuccess: onClose });
+    // Stats load only when the analytics view opens.
+    const { data: analytics } = trpc.post.getPost.useQuery(
+        { postId },
+        { enabled: open && view === "analytics" },
+    );
 
     const handleOpenChange = (next: boolean) => {
         onOpenChange(next);
@@ -104,7 +112,18 @@ export function PostOptionsMenu({
             setView("main");
             setReportSubmitted(false);
             setConfirmDelete(false);
+            setEmbedCopied(false);
         }
+    };
+
+    const handleEmbedCopy = () => {
+        const snippet = `<iframe src="${window.location.origin}/embed/post/${postId}" width="500" height="420" style="border:none;border-radius:20px;overflow:hidden" title="watchparty post"></iframe>`;
+        void navigator.clipboard.writeText(snippet);
+        setEmbedCopied(true);
+        setTimeout(() => {
+            onClose();
+            setEmbedCopied(false);
+        }, 900);
     };
 
     // Two-tap delete: first tap arms the row (menu stays open), second tap
@@ -141,6 +160,20 @@ export function PostOptionsMenu({
     let headerHeight = 0;
     let items: GooDropdownItem[];
 
+    // Shared back-header for the sub-views (report / reply / disclosure / analytics).
+    const subHeader = (title: string) => (
+        <div className="flex h-full items-center px-4 gap-3 border-b border-white/5">
+            <button
+                onClick={() => setView("main")}
+                className="p-1 -ml-1 text-zinc-400 hover:text-white transition-colors"
+                aria-label="Back"
+            >
+                <X className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-bold text-white">{title}</span>
+        </div>
+    );
+
     if (reportSubmitted) {
         items = [{
             key: "thanks",
@@ -151,21 +184,57 @@ export function PostOptionsMenu({
         }];
     } else if (view === "report") {
         headerHeight = 40;
-        header = (
-            <div className="flex h-full items-center px-4 gap-3 border-b border-white/5">
-                <button
-                    onClick={() => setView("main")}
-                    className="p-1 -ml-1 text-zinc-400 hover:text-white transition-colors"
-                    aria-label="Back"
-                >
-                    <X className="w-4 h-4" />
-                </button>
-                <span className="text-sm font-bold text-white">Report post</span>
-            </div>
-        );
+        header = subHeader("Report post");
         items = REPORT_REASONS.map(reason =>
             menuItem(Flag, reason, () => handleReport(reason), "default", false)
         );
+    } else if (view === "reply") {
+        headerHeight = 40;
+        header = subHeader("Who can reply");
+        items = [
+            menuItem(Globe, "Everyone", () => updateSettings.mutate({ postId, replyPrivacy: "everyone" })),
+            menuItem(Users, "Followers", () => updateSettings.mutate({ postId, replyPrivacy: "followers" })),
+            menuItem(BadgeCheck, "Verified users", () => updateSettings.mutate({ postId, replyPrivacy: "verified" })),
+            menuItem(Coins, "Token holders", () => updateSettings.mutate({ postId, replyPrivacy: "token_holders" })),
+        ];
+    } else if (view === "disclosure") {
+        headerHeight = 40;
+        header = subHeader("Content disclosure");
+        items = [
+            menuItem(X, "Remove disclosure", () => updateSettings.mutate({ postId, hasContentWarning: false, contentWarningText: null })),
+            ...["Sensitive content", "Graphic content", "Spoiler"].map((t) =>
+                menuItem(Info, t, () => updateSettings.mutate({ postId, hasContentWarning: true, contentWarningText: t }))
+            ),
+        ];
+    } else if (view === "analytics") {
+        headerHeight = 40;
+        header = subHeader("Post analytics");
+        const stats: [string, number][] | null = analytics ? [
+            ["Views", analytics.views ?? 0],
+            ["Likes", analytics.likes ?? 0],
+            ["Reposts", analytics.reposts ?? 0],
+            ["Replies", analytics.comments ?? 0],
+            ["Bookmarks", Number(analytics.bookmarks ?? 0)],
+            ["Quotes", Number(analytics.quoteCount ?? 0)],
+        ] : null;
+        items = stats
+            ? stats.map(([label, value]) => ({
+                key: label,
+                type: "label" as const,
+                className: "justify-between px-4",
+                label: (
+                    <>
+                        <span className="text-sm font-bold text-zinc-400">{label}</span>
+                        <span className="text-sm font-black tabular-nums text-white">{value.toLocaleString()}</span>
+                    </>
+                ),
+            }))
+            : [{
+                key: "loading",
+                type: "label" as const,
+                className: "justify-center px-4 text-sm font-medium text-zinc-400",
+                label: "Loading…",
+            }];
     } else if (isOwnPost) {
         items = [
             menuItem(
@@ -181,6 +250,10 @@ export function PostOptionsMenu({
                 () => isPinned ? unpinPost.mutate({ postId }) : pinPost.mutate({ postId })
             ),
             menuItem(Sparkles, "Add/remove from Highlights", () => toggleHighlight.mutate({ postId })),
+            menuItem(Info, "Content disclosure", () => setView("disclosure"), "default", false),
+            menuItem(MessageCircle, "Change who can reply", () => setView("reply"), "default", false),
+            menuItem(BarChart3, "View post analytics", () => setView("analytics"), "default", false),
+            menuItem(embedCopied ? Check : Code, embedCopied ? "Copied embed code" : "Embed post", handleEmbedCopy, "default", false),
         ];
     } else {
         items = [
@@ -190,8 +263,7 @@ export function PostOptionsMenu({
             menuItem(ListPlus, "Add/remove from Lists"),
             menuItem(VolumeX, "Mute"),
             menuItem(Ban, `Block @${username || "user"}`),
-            menuItem(BarChart3, "View post activity"),
-            menuItem(Code, "Embed post"),
+            menuItem(embedCopied ? Check : Code, embedCopied ? "Copied embed code" : "Embed post", handleEmbedCopy, "default", false),
             menuItem(Flag, "Report post", () => setView("report"), "default", false),
             menuItem(Megaphone, "Request Community Note"),
         ];
