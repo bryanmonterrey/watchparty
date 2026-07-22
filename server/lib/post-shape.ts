@@ -1,5 +1,6 @@
 import { posts, user } from "@/db/schema";
 import { sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
 // THE shape a PostCard needs — selected and mapped in ONE place.
@@ -11,11 +12,17 @@ import { effectiveVerifiedTier } from "@/lib/verified-tier";
 // discover (owner report 2026-07-22). Any new post feature belongs here, not
 // in a single procedure.
 
+// drizzle's alias() returns a table whose columns carry the ALIAS name in their
+// `tableName` type, so an aliased table is NOT assignable to `typeof posts`.
+// Derive the alias types from the function itself.
+type PostsAlias = ReturnType<typeof alias<typeof posts, string>>;
+type UserAlias = ReturnType<typeof alias<typeof user, string>>;
+
 type PostAliases = {
-    origPosts: typeof posts;
-    origUser: typeof user;
-    parentPosts: typeof posts;
-    parentUser: typeof user;
+    origPosts: PostsAlias;
+    origUser: UserAlias;
+    parentPosts: PostsAlias;
+    parentUser: UserAlias;
     /** Viewer id for the isLiked/isBookmarked/isReposted subqueries ("" when logged out). */
     viewerId: string;
 };
