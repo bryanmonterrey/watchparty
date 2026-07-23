@@ -15,7 +15,7 @@ import { PostCardAvatar } from "./post-card/post-card-avatar";
 
 function RailCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <section className="overflow-hidden rounded-[25px] bg-card">
+        <section className="overflow-hidden rounded-[25px] bg-panel2">
             <h2 className="px-6 pb-2 pt-5 text-[24px] font-extrabold tracking-tight">{title}</h2>
             <div className="hidden-scrollbar pb-4">{children}</div>
         </section>
