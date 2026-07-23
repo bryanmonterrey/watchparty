@@ -156,15 +156,14 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
         );
     }
 
-    // Layout: feed | gap | rail | sidebar-width padding. The gap is a fixed
-    // 130px (half the former ~260px elastic gap); the feed absorbed that other
-    // 130px, so its body fills the widened left region (~758px at the 1400px
-    // content width) instead of the 628px discover cap. Rail is shrink-0
-    // against the lg:pr-[14rem] inset applied by ProfileTabContent.
+    // Layout: the left region is flex-1 and the TOOLBAR (search + sort + count)
+    // spans it fully — extending to ~40px (gap-10) before the rail. The feed
+    // BODY is capped narrower (758px) so it sits with a gap to the rail while
+    // the toolbar reaches it. (If the feed were w-full it would equal the
+    // toolbar width and the toolbar would no longer extend past it.) Rail is
+    // shrink-0 against the lg:pr-[14rem] inset from ProfileTabContent.
     return (
-        <div className="flex items-start gap-0 lg:gap-[130px]">
-            {/* Left region fills up to the rail; the toolbar (search + sort +
-                count) and the feed body both span it. */}
+        <div className="flex items-start gap-0 lg:gap-10">
             <div className="min-w-0 flex-1">
                 <PostsToolbar
                     total={total}
@@ -174,7 +173,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
                     onSortChange={setSort}
                 />
                 <PostsFilterRow userId={userId} type={type} onTypeChange={setType} />
-                <div className="w-full">
+                <div className="w-full max-w-[758px]">
                     {feed}
                 </div>
             </div>
