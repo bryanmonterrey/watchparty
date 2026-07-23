@@ -157,10 +157,12 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
     }
 
     return (
+        {/* Mirrors the discover 3-col frame (discover/layout.tsx): a fixed
+            628px feed, then a flex-1 column that pushes the sidebar-width
+            filter rail flush to the right edge — so there's ONE gap between
+            them, not a trailing dead strip after the rail. */}
         <div className="flex items-start gap-10">
-            {/* Feed matches the discover column width (628px); the rail matches
-                the sidebar/right-inset width. */}
-            <div className="min-w-0 w-full max-w-[628px]">
+            <div className="min-w-0 w-full max-w-[628px] shrink-0">
                 <PostsToolbar
                     total={total}
                     search={searchInput}
@@ -171,14 +173,16 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
                 <PostsFilterRow userId={userId} type={type} onTypeChange={setType} />
                 {feed}
             </div>
-            <PostsFilterRail
-                userId={userId}
-                type={type}
-                show={show}
-                onTypeChange={setType}
-                onShowChange={setShow}
-                onReset={resetFilters}
-            />
+            <div className="hidden flex-1 justify-end lg:flex">
+                <PostsFilterRail
+                    userId={userId}
+                    type={type}
+                    show={show}
+                    onTypeChange={setType}
+                    onShowChange={setShow}
+                    onReset={resetFilters}
+                />
+            </div>
         </div>
     );
 }
