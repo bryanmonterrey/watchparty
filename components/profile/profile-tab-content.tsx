@@ -156,11 +156,11 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
         );
     }
 
+    // Mirrors the discover 3-col frame (discover/layout.tsx): a fixed 628px
+    // feed, then a flex-1 column that pushes the sidebar-width filter rail
+    // flush to the right edge — so there's ONE gap between them, not a
+    // trailing dead strip after the rail.
     return (
-        {/* Mirrors the discover 3-col frame (discover/layout.tsx): a fixed
-            628px feed, then a flex-1 column that pushes the sidebar-width
-            filter rail flush to the right edge — so there's ONE gap between
-            them, not a trailing dead strip after the rail. */}
         <div className="flex items-start gap-10">
             <div className="min-w-0 w-full max-w-[628px] shrink-0">
                 <PostsToolbar
