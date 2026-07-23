@@ -46,7 +46,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.898 0 0);
+  --border: var(--wp-border);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -68,6 +68,10 @@
   --flexborder: #e3e6e8;
   --input1: #eff1f3;
   --postgray: #536471;
+  /* Unified hairline border color. Every neutral border across the app resolves
+     to this slate tint (see the remap block at the end of this file). Mode-
+     independent, so it's defined once here and inherited into .dark. */
+  --wp-border: rgba(138, 145, 158, 0.2);
 }
 
 .dark {
@@ -86,7 +90,7 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  --border: var(--wp-border);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -791,4 +795,42 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 /* Ensure view-transition overlay doesn't cover the progress bar */
 ::view-transition {
   z-index: 1 !important;
+}
+
+/* ── Unified border color ──────────────────────────────────────────────────
+   Every neutral border in the app (white/zinc/neutral/flexborder/flexwhite/
+   soft-gray + the semantic border/input tokens) resolves to one slate hairline,
+   so dividers and card edges read consistently — especially the discover feed
+   (border-soft-gray/[0.12] column edges + post separators).
+
+   Attribute selectors catch all opacity variants of a family at once
+   (border-white/5, /10, /15, …) without enumerating each. Kept non-!important
+   and last in source order: it wins the resting state over Tailwind's generated
+   utilities (equal specificity, later), while hover:/focus:/responsive variants
+   (higher specificity) still change the border for interaction feedback.
+
+   Intentionally excluded: brand colors (border-twitter2, etc.) and pure black
+   borders — recoloring those would kill accents or draw lines where a black
+   border was meant to be invisible on the dark background. */
+@layer utilities {
+  [class*="border-white/"],
+  .border-white,
+  [class*="border-zinc-"],
+  [class*="border-neutral-"],
+  [class*="border-flexborder"],
+  [class*="border-flexwhite"],
+  [class*="border-soft-gray"],
+  [class*="border-border"],
+  [class*="border-input"] {
+    border-color: var(--wp-border);
+  }
+
+  /* Directional neutral borders set a single side's color. */
+  .border-t-white {
+    border-top-color: var(--wp-border);
+  }
+
+  .border-l-white {
+    border-left-color: var(--wp-border);
+  }
 }
