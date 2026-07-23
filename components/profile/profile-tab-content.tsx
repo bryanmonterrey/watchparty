@@ -192,17 +192,17 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
     const viewerUsername = session?.user?.username ?? session?.user?.name ?? "Guest";
     const isOwner = session?.user?.id === user.id;
 
-    // Video-first tabs (Home rail, Videos, Streams) use the full width; the
-    // reading tabs get a right inset the size of the EXPANDED sidebar so the
-    // column doesn't hug the far edge (owner call 2026-07-22, "for now").
-    // Posts is exempt: its own filter rail already occupies that right column.
+    // Video-first tabs (Home rail, Videos, Streams) use the full width; every
+    // reading tab — INCLUDING Posts — gets a right inset the size of the
+    // EXPANDED sidebar (owner call 2026-07-22). On Posts the filter rail
+    // (flex-1 justify-end) sits flush against this padding, so there's a
+    // sidebar-width gap between the rail and the screen edge.
     const fullBleedTab = ["Home", "Videos", "Streams"].includes(activeTab);
-    const hasOwnRightRail = activeTab === "Posts";
 
     return (
         <div className={cn(
             "py-4 min-h-[500px] z-10",
-            !fullBleedTab && !hasOwnRightRail && "lg:pr-[var(--sidebar-width,14rem)]",
+            !fullBleedTab && "lg:pr-[var(--sidebar-width,14rem)]",
         )}>
             <AnimatePresence mode="wait">
                 <motion.div
