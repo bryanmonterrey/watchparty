@@ -11,9 +11,9 @@ const SHIMMER_CYCLE_MS = 1500;
 // the card reads as a single object.
 export function staggerPulse(index: number, count: number): CSSProperties {
     return {
-        backgroundColor: "rgba(255,255,255,0.05)",
+        backgroundColor: "rgba(255,255,255,0.08)",
         backgroundImage:
-            "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.07) 30%, rgba(255,255,255,0.13) 50%, rgba(255,255,255,0.07) 70%, rgba(255,255,255,0) 100%)",
+            "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0.12) 70%, rgba(255,255,255,0) 100%)",
         backgroundSize: "200% 100%",
         backgroundRepeat: "no-repeat",
         animation: `skeleton-wave ${SHIMMER_CYCLE_MS}ms ease-in-out infinite`,
