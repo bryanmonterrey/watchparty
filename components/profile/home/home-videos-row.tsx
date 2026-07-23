@@ -99,7 +99,7 @@ export function HomeVideosRow({ user, onViewAll }: {
                 className="flex gap-5 overflow-x-auto px-[calc(max((100cqw_-_1400px)/2,0px)_+_2rem)] pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 <Squircle asChild radius={20}>
-                    <div className="flex min-h-[280px] w-[135px] shrink-0 flex-col items-start justify-between gap-8 bg-pastelred p-5 sm:min-h-[300px] sm:w-[150px]">
+                    <div className="flex min-h-[280px] w-[135px] shrink-0 flex-col items-start justify-between gap-8 bg-panel1 p-5 sm:min-h-[300px] sm:w-[150px]">
                         <h3 className="font-pixel text-2xl leading-[1.15] text-white">
                             Recent videos
                         </h3>
