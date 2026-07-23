@@ -262,7 +262,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                     <div className="flex-1 min-w-0 pt-0.5">
                                         <div className="flex items-center gap-1.5 mb-0.5">
                                             <span className="font-bold text-white text-[15px] hover:underline truncate">
-                                                {(post as any).parentUserName || "Unknown"}
+                                                {(post as any).parentUserName || ""}
                                             </span>
                                             {(post as any).parentUserVerifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                                             <span className="text-zinc-500 text-[15px]">@{(post as any).parentUsername}</span>
@@ -316,7 +316,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                 <div className="flex flex-col text-left">
                                     <div className="flex items-center gap-1">
                                         <span className="font-bold text-white text-[16px] hover:underline cursor-pointer truncate max-w-[200px]">
-                                            {post.user.name || "Unknown"}
+                                            {post.user.name || ""}
                                         </span>
                                         {post.user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                                         {post.user.verifiedTier === "business" && <BusinessBadgeIcon className="w-4 h-4 shrink-0" />}
@@ -535,7 +535,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                         </div>
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-1">
-                                                <span className="font-bold text-zinc-100">{post.user.name || "Unknown"}</span>
+                                                <span className="font-bold text-zinc-100">{post.user.name || ""}</span>
                                                 {post.user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                                                 <GeminiIcon className="w-4 h-4 text-zinc-500 shrink-0" />
                                             </div>

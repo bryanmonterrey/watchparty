@@ -147,7 +147,7 @@ export function ShortVideoCard({ video, isActive }: ShortVideoCardProps) {
                                     )}
                                 </div>
                                 <span className="text-xs text-white/80 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-                                    original sound - {video.user.name || "Unknown"}
+                                    original sound - {video.user.name || ""}
                                 </span>
                             </div>
                         </div>

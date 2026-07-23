@@ -199,7 +199,7 @@ function UserRow({ item, onClose }: UserRowProps) {
 
             <Link href={`/${item.username ?? ""}`} onClick={onClose} className="min-w-0 flex-1">
                 <div className="flex items-center gap-1">
-                    <p className="truncate text-sm font-bold text-white">{item.name || item.username || "Unknown"}</p>
+                    <p className="truncate text-sm font-bold text-white">{item.name || item.username || ""}</p>
                     {item.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-3.5 shrink-0" />}
                     {item.verifiedTier === "business" && <BusinessBadgeIcon className="size-3.5 shrink-0" />}
                     {item.verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}

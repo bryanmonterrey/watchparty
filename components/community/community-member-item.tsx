@@ -43,7 +43,7 @@ export function CommunityMemberItem({ member }: Props) {
                 className="font-medium text-sm text-zinc-400 group-hover:text-zinc-300 transition line-clamp-1"
                 style={member.roleColor ? { color: member.roleColor } : undefined}
             >
-                {member.userName ?? member.userUsername ?? "Unknown"}
+                {member.userName ?? member.userUsername ?? ""}
             </p>
             {roleIconMap[member.role]}
         </button>

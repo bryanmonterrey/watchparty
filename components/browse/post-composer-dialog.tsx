@@ -314,7 +314,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                             </Avatar>
                                             <div className="flex-1 min-w-0 pt-0.5">
                                                 <div className="flex items-center gap-1.5 mb-1">
-                                                    <span className="font-extrabold text-white text-[15px]">{post.user.name || "Unknown"}</span>
+                                                    <span className="font-extrabold text-white text-[15px]">{post.user.name || ""}</span>
                                                     {post.user.username && <span className="text-zinc-500 text-[15px]">@{post.user.username}</span>}
                                                     <span className="text-zinc-500 text-[15px]">·</span>
                                                     <span className="text-zinc-500 text-[15px]">{post.createdAt ? formatRelativeTime(new Date(post.createdAt).toISOString()) : "Just now"}</span>
@@ -480,7 +480,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                             <AvatarImage src={post.user.avatar_url || ""} />
                                                             <AvatarFallback>{(post.user.name?.[0] || "U")}</AvatarFallback>
                                                         </Avatar>
-                                                        <span className="font-extrabold text-white text-[14px]">{post.user.name || "Unknown"}</span>
+                                                        <span className="font-extrabold text-white text-[14px]">{post.user.name || ""}</span>
                                                         <span className="text-zinc-500 text-[14px]">@{post.user.username}</span>
                                                         <span className="text-zinc-500 text-[14px]">·</span>
                                                         <span className="text-zinc-500 text-[14px]">{post.createdAt ? formatRelativeTime(new Date(post.createdAt).toISOString()) : "Just now"}</span>

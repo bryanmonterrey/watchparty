@@ -215,7 +215,7 @@ function FriendRow({
             </div>
             <div className="min-w-0">
                 <p className="text-sm font-semibold text-flexwhite truncate">
-                    {user.name ?? user.username ?? "Unknown"}
+                    {user.name ?? user.username ?? ""}
                 </p>
                 {subtitle && <p className="text-xs text-flexwhite/40 truncate">{subtitle}</p>}
             </div>

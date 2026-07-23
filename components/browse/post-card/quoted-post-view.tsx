@@ -43,7 +43,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
                         </div>
                     )}
                 </div>
-                <span className="font-bold text-[14px] text-zinc-100 truncate">{user.name || "Unknown"}</span>
+                <span className="font-bold text-[14px] text-zinc-100 truncate">{user.name || ""}</span>
                 {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-3.5 h-3.5 shrink-0" />}
                 {user.verifiedTier === "business" && <BusinessBadgeIcon className="w-3.5 h-3.5 shrink-0" />}
                 {user.verifiedTier === "government" && <GovBadgeIcon className="w-3.5 h-3.5 shrink-0" />}
@@ -128,7 +128,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
                                     </div>
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1">
-                                            <span className="font-bold text-zinc-100">{user.name || "Unknown"}</span>
+                                            <span className="font-bold text-zinc-100">{user.name || ""}</span>
                                             {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                                         </div>
                                         <span className="text-zinc-500 text-[15px]">@{user.username || "user"}</span>

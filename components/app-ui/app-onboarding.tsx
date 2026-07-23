@@ -27,6 +27,7 @@ import AvatarUpload from "@/components/file-upload/avatar-upload";
 // product actually needs.
 
 type OnboardingStep =
+    | "name_setup"
     | "username_setup"
     | "avatar_setup"
     | "complete";
@@ -56,6 +57,7 @@ export default function OnboardingDialog() {
     const [isOpen, setIsOpen] = useState(false);
     const [step, setStep] = useState<OnboardingStep>("username_setup");
     const [username, setUsername] = useState("");
+    const [name, setName] = useState("");
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -110,8 +112,12 @@ export default function OnboardingDialog() {
                     return;
                 }
 
+                // Pre-fill name from the session (OAuth provides one, email-OTP
+                // doesn't). Name is mandatory — collect it first when missing,
+                // otherwise jump straight to the handle.
+                setName(session.user.name ?? "");
                 setIsOpen(true);
-                setStep("username_setup");
+                setStep(session.user.name ? "username_setup" : "name_setup");
             } catch (error) {
                 console.error("Error checking onboarding status:", error);
             }
@@ -119,6 +125,21 @@ export default function OnboardingDialog() {
 
         checkOnboardingStatus();
     }, [searchParams]);
+
+    const handleNameSubmit = () => {
+        const trimmed = name.trim();
+        if (!trimmed) {
+            setError("Name is required");
+            return;
+        }
+        if (trimmed.length > 50) {
+            setError("Name must be 50 characters or less");
+            return;
+        }
+        setName(trimmed);
+        setError("");
+        setStep("username_setup");
+    };
 
     const handleUsernameSubmit = async () => {
         if (!username.trim()) {
@@ -142,11 +163,12 @@ export default function OnboardingDialog() {
             setLoading(true);
             setError("");
 
-            // Save username first
+            // Save username + display name together (name is mandatory and was
+            // collected in the name step, or pre-filled from an OAuth session).
             const response = await fetch("/api/update-profile", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username }),
+                body: JSON.stringify({ username, displayName: name.trim() }),
             });
 
             if (!response.ok) {
@@ -264,6 +286,59 @@ export default function OnboardingDialog() {
                 {/* Fixed-size stage: steps swap inside, the dialog never resizes. */}
                 <div className="flex h-[620px] max-h-[85svh] flex-col px-8 pb-8 pt-10 sm:px-12">
                     <AnimatePresence mode="wait" initial={false}>
+                        {step === "name_setup" && (
+                            <StepShell key="name" reduceMotion={reduceMotion}>
+                                <div className="text-center">
+                                    <p className="font-pixel text-[13px] tracking-[0.2em] text-zinc-500">WELCOME TO WATCHPARTY</p>
+                                    <DialogTitle className="mt-3 text-[26px] font-bold tracking-tight text-white">What&apos;s your name?</DialogTitle>
+                                    <p className="mt-1.5 text-[14px] font-medium text-zinc-500">This is the name people see across watchparty. You can change it later.</p>
+                                </div>
+
+                                {/* Live preview — mirrors the handle step's hero */}
+                                <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-4">
+                                    <p
+                                        className={cn(
+                                            "max-w-full truncate px-2 text-[clamp(28px,7vw,44px)] font-bold leading-none tracking-tight transition-colors duration-200",
+                                            name ? "text-white" : "text-zinc-800",
+                                        )}
+                                    >
+                                        {name || "Your name"}
+                                    </p>
+                                </div>
+
+                                <form
+                                    className="space-y-3"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handleNameSubmit();
+                                    }}
+                                >
+                                    <Input
+                                        radius={18}
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => {
+                                            setName(e.target.value);
+                                            setError("");
+                                        }}
+                                        placeholder="Your name"
+                                        autoFocus
+                                        maxLength={50}
+                                        className="h-14 text-center text-[16px] font-semibold tracking-tight"
+                                    />
+                                    {error && <p className="text-center text-[12px] font-medium text-pastelred">{error}</p>}
+                                    <Button
+                                        type="submit"
+                                        size="hero"
+                                        className="bg-white text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
+                                        disabled={!name.trim()}
+                                    >
+                                        Continue
+                                    </Button>
+                                </form>
+                            </StepShell>
+                        )}
+
                         {step === "username_setup" && (
                             <StepShell key="username" reduceMotion={reduceMotion}>
                                 <div className="text-center">

@@ -147,7 +147,7 @@ export function PostCardBody({
                                         </div>
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-1">
-                                                <span className="font-bold text-zinc-100">{user.name || "Unknown"}</span>
+                                                <span className="font-bold text-zinc-100">{user.name || ""}</span>
                                                 {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                                                 {user.verifiedTier === "business" && <BusinessBadgeIcon className="w-4 h-4 shrink-0" />}
                                                 {user.verifiedTier === "government" && <GovBadgeIcon className="w-4 h-4 shrink-0" />}

@@ -82,7 +82,7 @@ export function CommunityChannelInfo({
                             </div>
                             <div className={cn("flex items-center gap-x-1 min-w-0", !isOnline && "opacity-50")}>
                                 <span className="text-sm font-medium text-flexwhite/80 truncate">
-                                    {member.userName ?? member.userUsername ?? "Unknown"}
+                                    {member.userName ?? member.userUsername ?? ""}
                                 </span>
                                 {member.userId === ownerId && <Crown className="h-3.5 w-3.5 text-twitter2 shrink-0" />}
                                 {member.role === "ADMIN" && member.userId !== ownerId && (

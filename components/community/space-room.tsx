@@ -275,7 +275,7 @@ function Participant({
                 )}
             </div>
             <span className="text-xs font-medium text-flexwhite/80 truncate max-w-full">
-                {p.name ?? p.username ?? "Unknown"}
+                {p.name ?? p.username ?? ""}
             </span>
             {canManage && isListener && onInvite && (
                 <button

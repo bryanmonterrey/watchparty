@@ -61,7 +61,7 @@ export function UserResultCard({ user, initialIsFollowing = false, className }: 
                     <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-1 min-w-0">
                             <span className="font-bold text-[15px] text-zinc-100 truncate">
-                                {user.name || "Unknown"}
+                                {user.name || ""}
                             </span>
                             {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                             {user.verifiedTier === "business" && <BusinessBadgeIcon className="w-4 h-4 shrink-0" />}

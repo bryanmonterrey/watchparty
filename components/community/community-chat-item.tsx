@@ -202,7 +202,7 @@ export function CommunityChatItem({
                     {replyTo && (
                         <div className="mb-0.5 flex items-center gap-1.5 text-[12px] font-medium text-zinc-500">
                             <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3 shrink-0 scale-y-[-1]" strokeWidth={2} />
-                            <span className="shrink-0 font-semibold text-zinc-400">{replyTo.userName ?? "Unknown"}</span>
+                            <span className="shrink-0 font-semibold text-zinc-400">{replyTo.userName ?? ""}</span>
                             <span className="truncate">{replyTo.deleted ? "message deleted" : replyTo.content}</span>
                         </div>
                     )}
@@ -217,7 +217,7 @@ export function CommunityChatItem({
                                 className={cn("font-semibold text-sm", roleColorMap[memberRole] ?? "text-zinc-300")}
                                 style={roleColor ? { color: roleColor } : undefined}
                             >
-                                {userName ?? "Unknown"}
+                                {userName ?? ""}
                             </span>
                             {isWebhook ? (
                                 <span className="ml-1.5 rounded-md bg-twitter/15 px-1.5 py-px text-[10px] font-bold tracking-wide text-twitter">
@@ -314,7 +314,7 @@ export function CommunityChatItem({
                     <TooltipProvider delayDuration={50}>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <button onClick={() => setReplyTo({ id, userName: userName ?? "Unknown", content })} className="cursor-pointer">
+                                <button onClick={() => setReplyTo({ id, userName: userName ?? "", content })} className="cursor-pointer">
                                     <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="w-4 h-4 text-zinc-400 hover:text-zinc-300 transition scale-y-[-1]" strokeWidth={2} />
                                 </button>
                             </TooltipTrigger>
