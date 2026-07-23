@@ -34,19 +34,24 @@ function AvatarImage({
   )
 }
 
+// Never render a letter fallback — always the default avatar image
+// (/public/avatar.png). Any children callers pass (initials) are intentionally
+// ignored so no avatar ever falls back to a letter.
 function AvatarFallback({
   className,
+  children: _ignored,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
-      className={cn(
-        "bg-muted flex size-full items-center justify-center rounded-full",
-        className
-      )}
+      delayMs={0}
+      className={cn("flex size-full items-center justify-center overflow-hidden rounded-full", className)}
       {...props}
-    />
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/avatar.png" alt="" className="size-full object-cover" />
+    </AvatarPrimitive.Fallback>
   )
 }
 

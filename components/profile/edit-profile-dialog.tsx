@@ -234,17 +234,11 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                     <div className="relative px-4 -mt-[48px] mb-12">
                         <div className="relative size-[112px] group">
                             <div className="size-full rounded-full border-4 border-black bg-zinc-900 overflow-hidden ring-1 ring-white/10">
-                                {avatarPreview ? (
-                                    <img 
-                                        src={avatarPreview} 
-                                        alt="Avatar" 
-                                        className="w-full h-full object-cover opacity-70"
-                                    />
-                                ) : (
-                                    <div className="size-full flex items-center justify-center text-zinc-700 font-bold text-3xl uppercase">
-                                        {user.username?.[0]}
-                                    </div>
-                                )}
+                                <img
+                                    src={avatarPreview || "/avatar.png"}
+                                    alt="Avatar"
+                                    className="w-full h-full object-cover opacity-70"
+                                />
                             </div>
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <label className="size-10 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center cursor-pointer hover:bg-black/70 transition-colors">

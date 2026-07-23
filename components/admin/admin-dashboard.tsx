@@ -184,7 +184,7 @@ function UsersTab() {
                         <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900/60 border border-white/10">
                             {u.avatar_url
                                 ? <img src={u.avatar_url} className="w-9 h-9 rounded-full" />
-                                : <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-sm">{u.name?.[0]}</div>
+                                : <img src="/avatar.png" alt="" className="w-9 h-9 rounded-full object-cover" />
                             }
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-zinc-200">{u.name}</p>

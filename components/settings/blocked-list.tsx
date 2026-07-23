@@ -26,7 +26,7 @@ export function BlockedList() {
                     <Link href={`/${u.username}`}>
                         {u.avatar_url
                             ? <img src={u.avatar_url} className="size-10 rounded-full object-cover" />
-                            : <div className="flex size-10 items-center justify-center rounded-full bg-white/10 font-bold text-zinc-400">{u.name?.[0]}</div>
+                            : <img src="/avatar.png" alt="" className="size-10 rounded-full object-cover" />
                         }
                     </Link>
                     <div className="min-w-0 flex-1">

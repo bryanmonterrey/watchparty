@@ -123,7 +123,7 @@ export function ReferralSettings() {
                             <Link href={`/${r.referredUser.username}`}>
                                 {r.referredUser.avatar_url
                                     ? <img src={r.referredUser.avatar_url} className="size-8 rounded-full object-cover" alt={r.referredUser.name} />
-                                    : <div className="flex size-8 items-center justify-center rounded-full bg-white/10 text-[12px] font-bold text-zinc-400">{r.referredUser.name?.[0]}</div>
+                                    : <img src="/avatar.png" alt="" className="size-8 rounded-full object-cover" />
                                 }
                             </Link>
                             <div className="min-w-0 flex-1">

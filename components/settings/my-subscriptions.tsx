@@ -33,7 +33,7 @@ export function MySubscriptions() {
                     <Link href={`/${sub.creator.username}`}>
                         {sub.creator.avatar_url
                             ? <img src={sub.creator.avatar_url} className="size-10 rounded-full object-cover" alt={sub.creator.name} />
-                            : <div className="flex size-10 items-center justify-center rounded-full bg-white/10 font-bold text-zinc-400">{sub.creator.name?.[0]}</div>
+                            : <img src="/avatar.png" alt="" className="size-10 rounded-full object-cover" />
                         }
                     </Link>
                     <div className="min-w-0 flex-1">

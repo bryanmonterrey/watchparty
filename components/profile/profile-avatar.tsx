@@ -26,19 +26,11 @@ export function ProfileAvatar({ user, isMinimized }: ProfileAvatarProps) {
                     isMinimized ? "size-24 border-[6px]" : "size-40 border-[6px]"
                 )}
             >
-                {user.avatar_url || user.image ? (
-                    <img
-                        src={user.avatar_url || user.image || ""}
-                        alt={user.username || "Avatar"}
-                        className="object-cover size-full"
-                    />
-                ) : (
-                    <div className="size-full flex items-center justify-center text-zinc-700 bg-zinc-900">
-                        <span className="text-5xl font-bold uppercase select-none">
-                            {user.username?.[0] || user.name?.[0]}
-                        </span>
-                    </div>
-                )}
+                <img
+                    src={user.avatar_url || user.image || "/avatar.png"}
+                    alt={user.username || ""}
+                    className="object-cover size-full"
+                />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
                     <Edit2 className="text-white" size={32} />
                 </div>

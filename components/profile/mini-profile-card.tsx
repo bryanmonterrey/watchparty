@@ -110,13 +110,7 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
 
                         <div className="flex flex-col gap-2.5 p-4 pt-0">
                             <button onClick={goToProfile} className="-mt-8 size-16 shrink-0 cursor-pointer self-start overflow-hidden rounded-full bg-zinc-800 ring-4 ring-[#101011] transition-transform hover:scale-105">
-                                {card.avatar_url ? (
-                                    <img src={card.avatar_url} alt={card.name} className="h-full w-full object-cover" />
-                                ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-xl font-bold text-white">
-                                        {card.name[0]}
-                                    </div>
-                                )}
+                                <img src={card.avatar_url || "/avatar.png"} alt={card.name} className="h-full w-full object-cover" />
                             </button>
 
                             {/* Identity stack: name → username + badge strip on one line */}

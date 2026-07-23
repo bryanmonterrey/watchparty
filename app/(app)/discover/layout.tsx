@@ -28,23 +28,24 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
             <div className="flex min-h-dvh w-full items-start px-4 gap-6">
                 {/* Left rail: sticky directly on the flex item (items-start keeps
                     it from stretching), pinned to the top of the scroller. */}
-                <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 lg:block">
+                {/* Left rail is a touch narrower than the right gutter at xl
+                    (flex-[0.75] vs the right aside's flex-1), which nudges the
+                    feed left of dead-center AND widens the right gutter so the
+                    rail cards have room to sit centered in it. */}
+                <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 lg:block xl:flex-[0.75]">
                     <DiscoverRail />
                 </aside>
 
-                {/* Feed column. At xl (right rail visible) it's nudged left of
-                    dead-center via a right margin — the extra margin shrinks the
-                    flex-1 rails symmetrically, so the feed shifts left by
-                    margin/2 (mr-24 → ~48px) and opens more room before the right
-                    rail. Bump the mr-* to move it further. */}
-                <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-100 lg:border-x border-soft-gray/[0.12] xl:mr-24">
+                <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-100 lg:border-x border-soft-gray/[0.12]">
                     {children}
                 </div>
 
                 {/* Right rail: `sticky bottom-0` — scrolls up with the page,
                     then pins once its bottom edge reaches the viewport bottom
                     (so a rail taller than the viewport reveals its full height
-                    as you scroll, instead of being frozen at the top). */}
+                    as you scroll, instead of being frozen at the top). The
+                    fixed-width card column (see DiscoverRightRail) is centered
+                    in this gutter via justify-center. */}
                 <aside className="sticky bottom-0 hidden min-w-0 flex-1 self-end xl:block">
                     <div className="flex justify-center pt-[82px]">
                         <DiscoverRightRail />

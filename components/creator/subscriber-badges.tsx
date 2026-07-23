@@ -70,7 +70,7 @@ export function SubscriberBadgesManager() {
                             <Link href={`/${b.username}`}>
                                 {b.avatar_url
                                     ? <img src={b.avatar_url} className="w-9 h-9 rounded-full object-cover" />
-                                    : <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-sm">{b.name?.[0]}</div>
+                                    : <img src="/avatar.png" alt="" className="w-9 h-9 rounded-full object-cover" />
                                 }
                             </Link>
                             <div className="flex-1 min-w-0">

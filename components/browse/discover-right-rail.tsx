@@ -199,7 +199,7 @@ function NewsCard() {
 
 export function DiscoverRightRail() {
     return (
-        <div className="flex w-full flex-col gap-[18px] pb-8">
+        <div className="flex w-[368px] max-w-full flex-col gap-[18px] pb-8">
             <RelevantPeopleCard />
             <RunnersCard />
             <LiveCard />
