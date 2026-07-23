@@ -162,7 +162,10 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
     // trailing dead strip after the rail.
     return (
         <div className="flex items-start gap-10">
-            <div className="min-w-0 w-full max-w-[628px] shrink-0">
+            {/* Left region fills up to the rail: the toolbar (search + sort +
+                count) spans this full width, while the feed BODY stays capped
+                at the discover width (628px). */}
+            <div className="min-w-0 flex-1">
                 <PostsToolbar
                     total={total}
                     search={searchInput}
@@ -171,9 +174,11 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
                     onSortChange={setSort}
                 />
                 <PostsFilterRow userId={userId} type={type} onTypeChange={setType} />
-                {feed}
+                <div className="w-full max-w-[628px]">
+                    {feed}
+                </div>
             </div>
-            <div className="hidden flex-1 justify-end lg:flex">
+            <div className="hidden shrink-0 lg:block">
                 <PostsFilterRail
                     userId={userId}
                     type={type}
