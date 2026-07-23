@@ -32,7 +32,12 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
                     <DiscoverRail />
                 </aside>
 
-                <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-100 lg:border-x border-soft-gray/[0.12]">
+                {/* Feed column. At xl (right rail visible) it's nudged left of
+                    dead-center via a right margin — the extra margin shrinks the
+                    flex-1 rails symmetrically, so the feed shifts left by
+                    margin/2 (mr-24 → ~48px) and opens more room before the right
+                    rail. Bump the mr-* to move it further. */}
+                <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-100 lg:border-x border-soft-gray/[0.12] xl:mr-24">
                     {children}
                 </div>
 
