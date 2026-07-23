@@ -158,7 +158,9 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
 
     return (
         <div className="flex items-start gap-10">
-            <div className="min-w-0 flex-1">
+            {/* Feed matches the discover column width (628px); the rail matches
+                the sidebar/right-inset width. */}
+            <div className="min-w-0 w-full max-w-[628px]">
                 <PostsToolbar
                     total={total}
                     search={searchInput}
@@ -189,12 +191,14 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
     // Video-first tabs (Home rail, Videos, Streams) use the full width; the
     // reading tabs get a right inset the size of the EXPANDED sidebar so the
     // column doesn't hug the far edge (owner call 2026-07-22, "for now").
+    // Posts is exempt: its own filter rail already occupies that right column.
     const fullBleedTab = ["Home", "Videos", "Streams"].includes(activeTab);
+    const hasOwnRightRail = activeTab === "Posts";
 
     return (
         <div className={cn(
             "py-4 min-h-[500px] z-10",
-            !fullBleedTab && "lg:pr-[var(--sidebar-width,14rem)]",
+            !fullBleedTab && !hasOwnRightRail && "lg:pr-[var(--sidebar-width,14rem)]",
         )}>
             <AnimatePresence mode="wait">
                 <motion.div

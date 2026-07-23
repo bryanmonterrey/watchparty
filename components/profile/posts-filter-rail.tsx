@@ -190,7 +190,7 @@ export function PostsFilterRail({ userId, type, show, onTypeChange, onShowChange
         counts ? (v === "all" ? counts.all : counts[v]) : undefined;
 
     return (
-        <aside className="sticky top-24 hidden w-[260px] shrink-0 self-start lg:block">
+        <aside className="sticky top-24 hidden w-[var(--sidebar-width,14rem)] shrink-0 self-start lg:block">
             <div className="flex flex-col gap-2 rounded-[20px] bg-panel p-4 ring-1 ring-panel">
                 <FilterSection title="Type">
                     {TYPE_OPTIONS.map((o) => (
