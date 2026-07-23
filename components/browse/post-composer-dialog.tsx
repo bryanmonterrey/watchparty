@@ -635,11 +635,11 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                             {charCount}/150
                                         </span>
                                     )}
-                                    <TokenLaunchTrigger state={tokenLaunch} onClick={() => setIsEditingTicker(true)} className="h-9 px-2" />
+                                    <TokenLaunchTrigger state={tokenLaunch} onClick={() => setIsEditingTicker(true)} className="h-11 px-2" />
                                     <button
                                         onClick={handleSubmit}
                                         disabled={!canPost || isSubmitting}
-                                        className="bg-white h-9 text-base text-black hover:bg-zinc-200 rounded-full px-5 font-extrabold disabled:opacity-50 transition-colors"
+                                        className="bg-white h-11 text-base text-black hover:bg-zinc-200 rounded-full px-5 font-extrabold disabled:opacity-50 transition-colors"
                                     >
                                         {isSubmitting ? "Posting…" : scheduledFor ? "Schedule" : mode === "comment" ? "Reply" : "Post"}
                                     </button>

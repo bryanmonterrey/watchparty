@@ -748,12 +748,12 @@ export function PostComposer() {
                         <TokenLaunchTrigger
                             state={tokenLaunch}
                             onClick={() => setIsEditingTicker(true)}
-                            className="h-9 px-2"
+                            className="h-11 px-2"
                         />
                         <Button
                             onClick={handlePost}
                             disabled={(!content.trim() && images.length === 0 && !gif) || isPosting || content.length > 150}
-                            className="bg-white h-9 text-base text-black hover:bg-zinc-200 rounded-full px-5 font-extrabold disabled:opacity-50"
+                            className="bg-white h-11 text-base text-black hover:bg-zinc-200 rounded-full px-5 font-extrabold disabled:opacity-50"
                         >
                             {isPosting ? "Posting..." : scheduledFor ? "Schedule" : "Post"}
                         </Button>
