@@ -189,8 +189,11 @@ export function PostsFilterRail({ userId, type, show, onTypeChange, onShowChange
     const showCount = (v: PostShowFilter): number | undefined =>
         counts ? (v === "all" ? counts.all : counts[v]) : undefined;
 
+    // Rail width is its own value now (was tied to --sidebar-width/14rem and
+    // read too narrow). The bg-panel card fills this aside, so w-[18rem] IS the
+    // bg width — tune it here.
     return (
-        <aside className="sticky top-24 hidden w-[var(--sidebar-width,14rem)] shrink-0 self-start lg:block">
+        <aside className="sticky top-24 hidden w-[18rem] shrink-0 self-start lg:block">
             <div className="flex flex-col gap-2 rounded-[20px] bg-panel p-4 ring-1 ring-panel">
                 <FilterSection title="Type">
                     {TYPE_OPTIONS.map((o) => (
