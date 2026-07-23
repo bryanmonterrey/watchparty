@@ -2,7 +2,8 @@ import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { db } from "@/db";
 import { posts, user, bookmarks } from "@/db/schema";
-import { eq, and, desc, lt, sql, ilike, or } from "drizzle-orm";
+import { follows } from "@/db/schema/content/follow";
+import { eq, and, desc, lt, sql, ilike, or, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
@@ -439,5 +440,98 @@ export const postRouter = router({
                 posts: items,
                 nextCursor: hasMore ? rawItems[rawItems.length - 1].bookmarkCreatedAt.toISOString() : undefined,
             };
+        }),
+
+    /**
+     * "Relevant people" for a post-detail view — the author, anyone @mentioned
+     * in the post body, and the people who most recently replied (replies are
+     * posts with replyToId = this post). Deduped, author first, viewer excluded,
+     * each carrying the viewer's follow state so the card can render a Follow
+     * button. Powers the right-rail card on /discover/post/[id].
+     */
+    relevantPeople: publicProcedure
+        .input(z.object({ postId: z.string(), limit: z.number().min(1).max(8).default(4) }))
+        .query(async ({ ctx, input }) => {
+            const authorRows = await db
+                .select({
+                    id: user.id,
+                    name: user.name,
+                    username: user.username,
+                    avatar_url: user.avatar_url,
+                    bio: user.bio,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
+                    content: posts.content,
+                })
+                .from(posts)
+                .innerJoin(user, eq(posts.userId, user.id))
+                .where(eq(posts.id, input.postId))
+                .limit(1);
+
+            const authorRow = authorRows[0];
+            if (!authorRow) return [];
+            const { content, ...author } = authorRow;
+            type Person = typeof author;
+
+            // @mentions in the post body → matching accounts.
+            const mentionUsernames = Array.from(
+                new Set((content?.match(/@([a-zA-Z0-9_]{1,30})/g) ?? []).map((m) => m.slice(1).toLowerCase())),
+            )
+                .filter((u) => u !== (author.username?.toLowerCase() ?? ""))
+                .slice(0, 6);
+
+            const mentioned: Person[] = mentionUsernames.length
+                ? await db
+                    .select({
+                        id: user.id,
+                        name: user.name,
+                        username: user.username,
+                        avatar_url: user.avatar_url,
+                        bio: user.bio,
+                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
+                    })
+                    .from(user)
+                    .where(inArray(sql`lower(${user.username})`, mentionUsernames))
+                    .limit(6)
+                : [];
+
+            // Most-recent repliers, one row per user.
+            const replierRows = await db
+                .select({
+                    id: user.id,
+                    name: user.name,
+                    username: user.username,
+                    avatar_url: user.avatar_url,
+                    bio: user.bio,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
+                    latest: sql<string>`max(${posts.createdAt})`,
+                })
+                .from(posts)
+                .innerJoin(user, eq(posts.userId, user.id))
+                .where(and(eq(posts.replyToId, input.postId), eq(posts.status, "published"), sql`${posts.userId} <> ${author.id}`))
+                .groupBy(user.id)
+                .orderBy(desc(sql`max(${posts.createdAt})`))
+                .limit(input.limit);
+            const repliers: Person[] = replierRows.map(({ latest, ...r }) => r);
+
+            // Merge author → mentioned → repliers, deduped, viewer dropped.
+            const merged: Person[] = [];
+            const seen = new Set<string>();
+            for (const p of [author, ...mentioned, ...repliers]) {
+                if (!p.id || seen.has(p.id) || (ctx.user?.id && p.id === ctx.user.id)) continue;
+                seen.add(p.id);
+                merged.push(p);
+            }
+            const people = merged.slice(0, input.limit + 1);
+
+            let followingSet = new Set<string>();
+            if (ctx.user && people.length) {
+                const myFollows = await db
+                    .select({ followingId: follows.followingId })
+                    .from(follows)
+                    .where(and(eq(follows.followerId, ctx.user.id), inArray(follows.followingId, people.map((p) => p.id))));
+                followingSet = new Set(myFollows.map((f) => f.followingId));
+            }
+
+            return people.map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
         }),
 });

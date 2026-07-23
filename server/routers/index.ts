@@ -36,6 +36,7 @@ import { perpsRouter } from "./perps";
 import { copyRouter } from "./copy";
 import { profileRouter } from "./profile";
 import { panelsRouter } from "./panels";
+import { discoverRouter } from "./discover";
 
 /**
  * Root application router
@@ -77,6 +78,7 @@ export const appRouter = router({
     copy: copyRouter,
     profile: profileRouter,
     panels: panelsRouter,
+    discover: discoverRouter,
 });
 
 /**

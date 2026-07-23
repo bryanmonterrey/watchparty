@@ -174,6 +174,40 @@ export const userRouter = router({
         }),
 
     /**
+     * "Who to follow" — accounts the viewer doesn't already follow, ranked by
+     * follower count. Logged-out viewers get the most-followed accounts. Powers
+     * the discover right-rail card.
+     */
+    suggestedFollows: publicProcedure
+        .input(z.object({ limit: z.number().min(1).max(10).default(3) }).optional())
+        .query(async ({ ctx, input }) => {
+            const limit = input?.limit ?? 3;
+            const myId = ctx.user?.id;
+            const followerCount = sql<number>`(SELECT count(*) FROM ${follows} WHERE ${follows.followingId} = ${user.id})`;
+            const rows = await db
+                .select({
+                    id: user.id,
+                    name: user.name,
+                    username: user.username,
+                    avatar_url: user.avatar_url,
+                    bio: user.bio,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
+                    followers: followerCount,
+                })
+                .from(user)
+                .where(
+                    and(
+                        sql`${user.username} IS NOT NULL`,
+                        myId ? sql`${user.id} <> ${myId}` : undefined,
+                        myId ? sql`NOT EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followerId} = ${myId} AND ${follows.followingId} = ${user.id})` : undefined,
+                    ),
+                )
+                .orderBy(desc(followerCount))
+                .limit(limit);
+            return rows.map((r) => ({ ...r, isFollowing: false }));
+        }),
+
+    /**
      * Get followers of a user (paginated)
      */
     getFollowers: publicProcedure

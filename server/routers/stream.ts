@@ -3,7 +3,8 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { TRPCError } from "@trpc/server";
 import type { IvsClient } from "@aws-sdk/client-ivs";
 import { nanoid } from "nanoid";
@@ -131,6 +132,30 @@ export const streamRouter = router({
                 // AWS hiccup — fall back to the last known DB state
                 return { isLive: row.isLive, viewerCount: row.viewerCount };
             }
+        }),
+
+    // Currently-live streams with their host, most-watched first. Powers the
+    // "Live on watchparty" discover right-rail card.
+    listLive: publicProcedure
+        .input(z.object({ limit: z.number().min(1).max(12).default(6) }).optional())
+        .query(async ({ input }) => {
+            const rows = await db
+                .select({
+                    userId: streams.userId,
+                    title: streams.title,
+                    category: streams.category,
+                    viewerCount: streams.viewerCount,
+                    name: user.name,
+                    username: user.username,
+                    avatar_url: user.avatar_url,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
+                })
+                .from(streams)
+                .innerJoin(user, eq(streams.userId, user.id))
+                .where(eq(streams.isLive, true))
+                .orderBy(desc(streams.viewerCount))
+                .limit(input?.limit ?? 6);
+            return rows;
         }),
 
     // Get current user's stream config

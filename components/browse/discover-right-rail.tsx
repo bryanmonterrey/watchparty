@@ -1,147 +1,213 @@
 "use client";
 
-import { MoreHorizontal, BadgeCheck } from "lucide-react";
-import { NEWS } from "./trending-sidebar";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { trpc } from "@/lib/trpc/client";
+import { UserResultCard } from "./user-result-card";
+import { PostCardAvatar } from "./post-card/post-card-avatar";
 
-// Right column per desktopdesigns/discoverupdate.svg (1512 frame):
-// three white cards, x1112 w350, heights 229/360/360, radius 25, no internal
-// borders. Mock data mirrors the design's content shape until the live/news
-// procedures get wired (same approach as the NEWS list itself).
+// Discover right rail — real data. Cards self-hide when empty so the rail is
+// never a wall of placeholders on a young platform:
+//   • Relevant people — post-detail pages only (author + mentioned + repliers)
+//   • Live on watchparty — currently-live streams
+//   • Who to follow — suggested accounts
+//   • Today's News — GLM-generated trends (falls back to on-platform hashtags)
 
-function RailCard({
-    title,
-    children,
-    className,
-}: {
-    title: string;
-    children: React.ReactNode;
-    className?: string;
-}) {
+function RailCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <section className={`overflow-hidden rounded-[25px] bg-card ${className ?? ""}`}>
+        <section className="overflow-hidden rounded-[25px] bg-card">
             <h2 className="px-6 pb-2 pt-5 text-[24px] font-extrabold tracking-tight">{title}</h2>
-            <div className="hidden-scrollbar h-[calc(100%-4.25rem)] pb-4">
-                {children}
-            </div>
+            <div className="hidden-scrollbar pb-4">{children}</div>
         </section>
     );
 }
 
-// ── Live on watchparty ───────────────────────────────────────────────────────
-const LIVE_NOW = [
-    {
-        host: "TMX",
-        verb: "is hosting",
-        title: "TMX Live - Streaming From The Newsroom!",
-        count: "+3.4K",
-        kind: "stream" as const,
-    },
-    {
-        host: "inferno",
-        verb: "is listening",
-        title: "Most insane conversation EVER. (crypto [gone …",
-        count: "+75",
-        kind: "space" as const,
-    },
-];
+// ── Relevant people (post detail only) ──────────────────────────────────────
+function RelevantPeopleCard() {
+    const pathname = usePathname();
+    const postId = pathname?.match(/^\/discover\/post\/([^/]+)/)?.[1];
 
-function LiveRow({ host, verb, title, count, kind }: (typeof LIVE_NOW)[number]) {
+    const { data } = trpc.content.relevantPeople.useQuery(
+        { postId: postId ?? "" },
+        { enabled: !!postId, staleTime: 60_000 },
+    );
+
+    if (!postId || !data || data.length === 0) return null;
+
     return (
-        <button className="flex w-full items-start gap-3 px-6 py-2 text-left transition-colors hover:bg-foreground/[0.03]">
+        <RailCard title="Relevant people">
+            {data.map((person) => (
+                <UserResultCard key={person.id} user={person} initialIsFollowing={person.isFollowing} />
+            ))}
+        </RailCard>
+    );
+}
+
+// ── Runners (trending coins) ────────────────────────────────────────────────
+type Runner = {
+    id: string;
+    tokenAddress: string | null;
+    ticker: string | null;
+    name: string | null;
+    imageUrl: string | null;
+    priceUsd: number | null;
+    priceChange24h: number | null;
+    marketCapUsd: number | null;
+    volume24hUsd: number | null;
+};
+
+function formatUsd(n: number) {
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
+    return `$${n.toFixed(0)}`;
+}
+
+function RunnerRow({ runner, rank }: { runner: Runner; rank: number }) {
+    const change = runner.priceChange24h ?? 0;
+    return (
+        <Link
+            href={`/${runner.tokenAddress ?? runner.id}`}
+            className="flex w-full items-center gap-3 px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]"
+        >
+            <span className="w-4 shrink-0 text-[15px] font-bold text-muted-foreground tabular-nums">{rank}</span>
+            {runner.imageUrl ? (
+                <img src={runner.imageUrl} alt="" className="size-9 shrink-0 rounded-full object-cover" />
+            ) : (
+                <span className="size-9 shrink-0 rounded-full bg-muted" />
+            )}
+            <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 text-[15px]">
+                    <span className="truncate font-extrabold">${runner.ticker || "COIN"}</span>
+                    {runner.marketCapUsd ? (
+                        <span className="shrink-0 text-[13px] text-muted-foreground">{formatUsd(runner.marketCapUsd)}</span>
+                    ) : null}
+                </p>
+                {runner.name && <p className="truncate text-[13px] text-muted-foreground">{runner.name}</p>}
+            </div>
+            <span className="shrink-0 text-[15px] font-bold tabular-nums text-green-500">
+                +{change.toFixed(change >= 100 ? 0 : 1)}%
+            </span>
+        </Link>
+    );
+}
+
+function RunnersCard() {
+    const { data } = trpc.trade.runners.useQuery({ limit: 5 }, { staleTime: 60_000, refetchInterval: 60_000 });
+    if (!data || data.length === 0) return null;
+    return (
+        <RailCard title="Runners">
+            {data.map((runner, i) => (
+                <RunnerRow key={runner.id} runner={runner} rank={i + 1} />
+            ))}
+        </RailCard>
+    );
+}
+
+// ── Live on watchparty ──────────────────────────────────────────────────────
+type LiveStream = {
+    userId: string;
+    title: string | null;
+    category: string | null;
+    viewerCount: number;
+    name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    verifiedTier: string | null;
+};
+
+function formatCount(n: number) {
+    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+    return `${n}`;
+}
+
+function LiveRow({ stream }: { stream: LiveStream }) {
+    const person = { id: stream.userId, name: stream.name, username: stream.username, avatar_url: stream.avatar_url, verifiedTier: stream.verifiedTier };
+    return (
+        <Link
+            href={`/${stream.username ?? ""}`}
+            className="flex w-full items-start gap-3 px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]"
+        >
+            <div className="mt-0.5 shrink-0">
+                <PostCardAvatar user={person} />
+            </div>
             <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1 text-[15px]">
-                    <span className="size-[17px] shrink-0 rounded-[2px] bg-muted" />
-                    <span className="ml-1 font-extrabold">{host}</span>
-                    <BadgeCheck className="size-4 shrink-0 fill-amber-400 text-card" />
-                    <span className="font-medium">{verb}</span>
+                    <span className="truncate font-extrabold">{stream.name || stream.username || "Streamer"}</span>
+                    <span className="shrink-0 font-medium text-muted-foreground">is live</span>
                 </p>
-                <p className="mt-1 line-clamp-2 text-[17px] font-extrabold leading-snug">{title}</p>
+                <p className="mt-0.5 line-clamp-2 text-[16px] font-extrabold leading-snug">
+                    {stream.title || "Live now"}
+                </p>
+                {stream.category && <p className="mt-0.5 text-[14px] text-muted-foreground">{stream.category}</p>}
             </div>
-            {kind === "stream" ? (
-                <span className="mt-5 flex shrink-0 items-center gap-1 rounded-[2px] border border-red1 px-1 py-0.5 text-[14px] font-bold">
-                    <span className="size-[26px] rounded-[2px] bg-muted" />
-                    {count}
-                </span>
-            ) : (
-                <span className="mt-5 flex shrink-0 items-center rounded-full border-2 border-[#7856FF] py-0.5 pl-1.5 pr-2 text-[14px] font-bold">
-                    <span className="flex -space-x-2">
-                        {[0, 1, 2].map((i) => (
-                            <span key={i} className="size-6 rounded-full bg-muted ring-2 ring-card" />
-                        ))}
-                    </span>
-                    <span className="ml-1">{count}</span>
-                </span>
+            <span className="mt-1 flex shrink-0 items-center gap-1.5 rounded-full border border-red1 px-2 py-0.5 text-[13px] font-bold text-red1">
+                <span className="size-1.5 animate-pulse rounded-full bg-red1" />
+                {formatCount(stream.viewerCount)}
+            </span>
+        </Link>
+    );
+}
+
+function LiveCard() {
+    const { data } = trpc.stream.listLive.useQuery({ limit: 4 }, { staleTime: 30_000, refetchInterval: 60_000 });
+    if (!data || data.length === 0) return null;
+    return (
+        <RailCard title="Live on watchparty">
+            {data.map((s) => (
+                <LiveRow key={s.userId} stream={s} />
+            ))}
+        </RailCard>
+    );
+}
+
+// ── Who to follow ───────────────────────────────────────────────────────────
+function WhoToFollowCard() {
+    const { data } = trpc.user.suggestedFollows.useQuery({ limit: 3 }, { staleTime: 120_000 });
+    if (!data || data.length === 0) return null;
+    return (
+        <RailCard title="Who to follow">
+            {data.map((person) => (
+                <UserResultCard key={person.id} user={person} initialIsFollowing={person.isFollowing} />
+            ))}
+        </RailCard>
+    );
+}
+
+// ── Today's News / What's happening ─────────────────────────────────────────
+function TrendRow({ title, meta, count }: { title: string; meta: string; count?: number }) {
+    const isTag = title.startsWith("#");
+    const href = isTag ? `/discover/search?q=${encodeURIComponent(title)}` : `/discover/search?q=${encodeURIComponent(title)}`;
+    return (
+        <Link href={href} className="block w-full px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]">
+            <p className="text-[14px] text-muted-foreground">{meta}</p>
+            <p className="line-clamp-2 text-[16px] font-bold leading-snug">{title}</p>
+            {typeof count === "number" && (
+                <p className="mt-0.5 text-[14px] text-muted-foreground">{count.toLocaleString()} posts</p>
             )}
-        </button>
+        </Link>
     );
 }
 
-// ── Today's News ─────────────────────────────────────────────────────────────
-function NewsRow({ headline, category, posts }: { headline: string; category: string; posts: string }) {
+function NewsCard() {
+    const { data } = trpc.discover.trending.useQuery({ limit: 5 }, { staleTime: 300_000 });
+    if (!data || data.items.length === 0) return null;
     return (
-        <button className="block w-full px-6 py-3 text-left transition-colors hover:bg-foreground/[0.03]">
-            <p className="line-clamp-2 text-[17px] font-extrabold leading-snug">{headline}</p>
-            <div className="mt-1.5 flex items-center gap-2">
-                <span className="flex -space-x-1.5">
-                    {[0, 1, 2].map((i) => (
-                        <span key={i} className="size-5 rounded-full bg-muted ring-2 ring-card" />
-                    ))}
-                </span>
-                <span className="text-[15px] text-muted-foreground">
-                    Trending now · {category} · {posts} posts
-                </span>
-            </div>
-        </button>
-    );
-}
-
-// ── What's happening ─────────────────────────────────────────────────────────
-const HAPPENING = [
-    { meta: null, topic: "The Furious", sub: "Only In Theaters Friday.", promoted: "lionsgate" },
-    { meta: "Entertainment · Trending", topic: "Glenn Close", sub: null, promoted: null },
-    { meta: "Trending in United States", topic: "University of Michigan", sub: null, promoted: null },
-    { meta: "Sports · Trending", topic: "Champions League", sub: null, promoted: null },
-];
-
-function HappeningRow({ meta, topic, sub, promoted }: (typeof HAPPENING)[number]) {
-    return (
-        <button className="flex w-full items-start justify-between gap-3 px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]">
-            <div className="min-w-0">
-                {meta && <p className="text-[14px] text-muted-foreground">{meta}</p>}
-                <p className="text-[16px] font-bold leading-snug">{topic}</p>
-                {sub && <p className="text-[15px] text-muted-foreground">{sub}</p>}
-                {promoted && (
-                    <p className="mt-0.5 flex items-center gap-1.5 text-[14px] text-muted-foreground">
-                        <span className="size-2.5 bg-[#60707B]" /> Promoted by {promoted}
-                    </p>
-                )}
-            </div>
-            <MoreHorizontal className="mt-1 size-5 shrink-0 text-muted-foreground" />
-        </button>
+        <RailCard title={data.source === "glm" ? "Today's News" : "What's happening"}>
+            {data.items.map((item, i) => (
+                <TrendRow key={i} {...item} />
+            ))}
+        </RailCard>
     );
 }
 
 export function DiscoverRightRail() {
     return (
         <div className="flex w-full flex-col gap-[18px] pb-8">
-            <RailCard title="Live on watchparty" className="h-fit">
-                {LIVE_NOW.map((item) => (
-                    <LiveRow key={item.host} {...item} />
-                ))}
-            </RailCard>
-
-            <RailCard title="Today's News" className="h-fit">
-                {NEWS.slice(0, 3).map((item, i) => (
-                    <NewsRow key={i} {...item} />
-                ))}
-            </RailCard>
-
-            <RailCard title="What's happening" className="h-fit">
-                {HAPPENING.map((item) => (
-                    <HappeningRow key={item.topic} {...item} />
-                ))}
-            </RailCard>
-
+            <RelevantPeopleCard />
+            <RunnersCard />
+            <LiveCard />
+            <WhoToFollowCard />
+            <NewsCard />
             <div className="h-[50svh] w-full shrink-0 bg-transparent" />
         </div>
     );

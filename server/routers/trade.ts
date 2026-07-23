@@ -134,6 +134,41 @@ export const tradeRouter = router({
     }),
 
     /**
+     * "Runners" — live coins pumping right now (biggest 24h gainers with real
+     * volume). Powers the discover right-rail card. Cached 60s.
+     */
+    runners: publicProcedure
+        .input(z.object({ limit: z.number().min(1).max(10).default(5) }).optional())
+        .query(({ input }) => {
+            const limit = input?.limit ?? 5;
+            return withCache(`trade:runners:v1:${limit}`, 60, async () =>
+                db
+                    .select({
+                        id: tokens.id,
+                        tokenAddress: tokens.tokenAddress,
+                        ticker: tokens.ticker,
+                        name: tokens.name,
+                        imageUrl: tokens.imageUrl,
+                        priceUsd: tokens.priceUsd,
+                        priceChange24h: tokens.priceChange24h,
+                        marketCapUsd: tokens.marketCapUsd,
+                        volume24hUsd: tokens.volume24hUsd,
+                    })
+                    .from(tokens)
+                    .where(
+                        and(
+                            eq(tokens.status, "live"),
+                            isNotNull(tokens.poolAddress),
+                            sql`${tokens.priceChange24h} > 0`,
+                            sql`${tokens.volume24hUsd} > 0`,
+                        ),
+                    )
+                    .orderBy(sql`${tokens.priceChange24h} desc nulls last`)
+                    .limit(limit),
+            );
+        }),
+
+    /**
      * 24h-ago reference prices for the perps rail, one shared server-side
      * sweep instead of a per-ticker request from every browser (72 parallel
      * client fetches tripped Pyth benchmarks' rate limit and 429'd the
