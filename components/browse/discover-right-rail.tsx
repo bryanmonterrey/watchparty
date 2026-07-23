@@ -11,7 +11,7 @@ import { PostCardAvatar } from "./post-card/post-card-avatar";
 //   • Relevant people — post-detail pages only (author + mentioned + repliers)
 //   • Live on watchparty — currently-live streams
 //   • Who to follow — suggested accounts
-//   • Today's News — GLM-generated trends (falls back to on-platform hashtags)
+//   • What's happening — GLM coin news (falls back to plain coin movers)
 
 function RailCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
@@ -173,17 +173,14 @@ function WhoToFollowCard() {
     );
 }
 
-// ── Today's News / What's happening ─────────────────────────────────────────
-function TrendRow({ title, meta, count }: { title: string; meta: string; count?: number }) {
-    const isTag = title.startsWith("#");
-    const href = isTag ? `/discover/search?q=${encodeURIComponent(title)}` : `/discover/search?q=${encodeURIComponent(title)}`;
+// ── What's happening (GLM coin news) ────────────────────────────────────────
+function TrendRow({ title, meta, ticker, tokenAddress }: { title: string; meta: string; ticker?: string; tokenAddress?: string | null }) {
+    // Deep-link to the coin when we know it, else search for the ticker.
+    const href = tokenAddress ? `/${tokenAddress}` : ticker ? `/discover/search?q=${encodeURIComponent("$" + ticker)}` : "/trade";
     return (
         <Link href={href} className="block w-full px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]">
             <p className="text-[14px] text-muted-foreground">{meta}</p>
             <p className="line-clamp-2 text-[16px] font-bold leading-snug">{title}</p>
-            {typeof count === "number" && (
-                <p className="mt-0.5 text-[14px] text-muted-foreground">{count.toLocaleString()} posts</p>
-            )}
         </Link>
     );
 }
@@ -192,7 +189,7 @@ function NewsCard() {
     const { data } = trpc.discover.trending.useQuery({ limit: 5 }, { staleTime: 300_000 });
     if (!data || data.items.length === 0) return null;
     return (
-        <RailCard title={data.source === "glm" ? "Today's News" : "What's happening"}>
+        <RailCard title="What's happening">
             {data.items.map((item, i) => (
                 <TrendRow key={i} {...item} />
             ))}
