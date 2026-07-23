@@ -403,7 +403,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                             onChange={e => setContent(e.target.value)}
                                             onInput={handleTextareaInput}
                                             rows={mode === "post" ? 3 : 2}
-                                            className="w-full bg-transparent text-[18px] sm:text-[20px] placeholder:text-zinc-500 outline-none resize-none text-white leading-normal pt-1"
+                                            className="w-full bg-transparent text-[16px] sm:text-[18px] placeholder:text-zinc-500 outline-none resize-none text-white leading-normal pt-1"
                                         />
 
                                         {/* Image previews */}

@@ -732,7 +732,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
 
                                             <textarea
                                                 placeholder="What's happening?"
-                                                className="w-full bg-transparent text-xl placeholder:text-zinc-600 outline-none resize-none h-32"
+                                                className="w-full bg-transparent text-lg placeholder:text-zinc-600 outline-none resize-none h-32"
                                                 autoFocus
                                                 value={postContent}
                                                 onChange={(e) => setPostContent(e.target.value)}

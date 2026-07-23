@@ -454,7 +454,7 @@ export function PostComposer() {
                     onInput={handleTextareaInput}
                     onFocus={() => setFocused(true)}
                     rows={1}
-                    className="w-full bg-transparent text-2xl placeholder:text-zinc-400/85 outline-none resize-none mb-5"
+                    className="w-full bg-transparent text-xl placeholder:text-zinc-400/85 outline-none resize-none mb-5"
                 />
 
                 {images.length > 0 && (
