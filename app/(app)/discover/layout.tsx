@@ -46,7 +46,7 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
                     (so a rail taller than the viewport reveals its full height
                     as you scroll, instead of being frozen at the top). */}
                 <aside className="sticky bottom-0 hidden min-w-0 flex-1 self-end xl:block">
-                    <div className="flex justify-end pt-[82px]">
+                    <div className="flex justify-center pt-[82px]">
                         <DiscoverRightRail />
                     </div>
                 </aside>

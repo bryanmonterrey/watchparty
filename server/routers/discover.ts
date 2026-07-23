@@ -23,8 +23,9 @@ type HotCoin = {
     description: string | null;
 };
 
-// The platform's most-active live coins — the raw material the "What's
-// happening" card is written from (no hashtags, ever; this app is coins-first).
+type Major = { label: string; price: number; change: number };
+
+// The platform's most-active live coins — real material for the card.
 async function hotCoins(limit: number): Promise<HotCoin[]> {
     return db
         .select({
@@ -43,16 +44,52 @@ async function hotCoins(limit: number): Promise<HotCoin[]> {
         .limit(limit);
 }
 
-// GLM (Cloudflare Workers AI) writes short "what's happening" headlines from the
-// live coin metadata — same access path as the predictions factory
-// (lib/predictions/factory.ts): the account's OpenAI-compatible endpoint using
-// CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN. Model is env-swappable via
-// DISCOVER_NEWS_MODEL (defaults to GLM-5.2, same as predictions). Returns null
-// on any miss so the caller falls back to plain coin movers.
-async function glmCoinNews(coins: HotCoin[], count: number): Promise<TrendingItem[] | null> {
+// 24h move for one major from the Pyth benchmarks TradingView shim — same
+// source lib/predictions/factory.ts uses. Hourly candles over ~26h; current =
+// last close, reference = the close nearest 24h ago.
+async function majorMove(symbol: string, label: string): Promise<Major | null> {
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - 26 * 3600;
+    try {
+        const res = await fetch(
+            `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
+            `?symbol=${encodeURIComponent(symbol)}&resolution=60&from=${from}&to=${now}`,
+        );
+        const d = (await res.json()) as { s: string; c: number[]; t: number[] };
+        if (d.s !== "ok" || d.c.length < 2) return null;
+        const price = d.c[d.c.length - 1];
+        const target = now - 24 * 3600;
+        let refIdx = 0;
+        for (let i = 0; i < d.t.length; i++) {
+            if (d.t[i] <= target) refIdx = i;
+            else break;
+        }
+        const ref = d.c[refIdx];
+        const change = ref ? ((price - ref) / ref) * 100 : 0;
+        return { label, price, change };
+    } catch {
+        return null;
+    }
+}
+
+async function getMajors(): Promise<Major[]> {
+    const results = await Promise.all([
+        majorMove("Crypto.BTC/USD", "BTC"),
+        majorMove("Crypto.ETH/USD", "ETH"),
+        majorMove("Crypto.SOL/USD", "SOL"),
+    ]);
+    return results.filter((m): m is Major => m !== null);
+}
+
+// GLM (Cloudflare Workers AI) writes short crypto-news headlines GROUNDED in the
+// real numbers we pass (majors from Pyth + live platform coins) — same account
+// API path as the predictions factory (lib/predictions/factory.ts), no separate
+// worker URL. Model env-swappable via DISCOVER_NEWS_MODEL. Returns null on any
+// miss so the caller falls back to formatting the same numbers directly.
+async function glmCryptoNews(coins: HotCoin[], majors: Major[], count: number): Promise<TrendingItem[] | null> {
     const account = process.env.CLOUDFLARE_ACCOUNT_ID;
     const token = process.env.CLOUDFLARE_API_TOKEN;
-    if (!account || !token || coins.length === 0) return null;
+    if (!account || !token) return null;
 
     try {
         const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/v1/chat/completions`, {
@@ -64,15 +101,17 @@ async function glmCoinNews(coins: HotCoin[], count: number): Promise<TrendingIte
                     {
                         role: "system",
                         content:
-                            `You write the "What's happening" card for a coins-first social trading app. ` +
-                            `Given live coin metadata, write exactly ${count} punchy, factual one-line headlines about ` +
-                            `what is moving and why it matters. Each headline references one coin by its ticker (with a $). ` +
-                            `No hype, no emojis, no financial advice, max 90 characters. ` +
+                            `You write the "What's happening" crypto-news card for a coins-first social trading app. ` +
+                            `Using ONLY the numbers provided (majors = BTC/ETH/SOL 24h moves; coins = live platform coins), ` +
+                            `write exactly ${count} punchy, factual one-line headlines about what is moving over the last 24h. ` +
+                            `Each headline references one asset by ticker (with a $). Do NOT invent events, causes, prices, ` +
+                            `or news not implied by the numbers. No hype, no emojis, no financial advice, max 90 chars. ` +
+                            `Prefer platform coins when they are notable; otherwise use the majors. ` +
                             `Reply with ONLY a JSON object, no prose: ` +
-                            `{"items":[{"title":string,"meta":string,"ticker":string}]} where meta is a short tag such as ` +
-                            `"Runner", "New launch", "High volume", or "Cooling off".`,
+                            `{"items":[{"title":string,"meta":string,"ticker":string}]} where meta is a short tag like ` +
+                            `"Majors", "Runner", "New launch", "High volume", or "Cooling off".`,
                     },
-                    { role: "user", content: JSON.stringify({ now: new Date().toISOString(), coins }) },
+                    { role: "user", content: JSON.stringify({ now: new Date().toISOString(), majors, coins }) },
                 ],
                 response_format: { type: "json_object" },
                 max_tokens: 1200,
@@ -98,7 +137,7 @@ async function glmCoinNews(coins: HotCoin[], count: number): Promise<TrendingIte
                 const coin = byTicker.get(ticker);
                 return {
                     title: String(it?.title ?? "").slice(0, 120),
-                    meta: String(it?.meta ?? "Trending"),
+                    meta: String(it?.meta ?? "Crypto"),
                     ticker: ticker || undefined,
                     tokenAddress: coin?.tokenAddress ?? null,
                 };
@@ -110,13 +149,20 @@ async function glmCoinNews(coins: HotCoin[], count: number): Promise<TrendingIte
     }
 }
 
-// Fallback when GLM is unavailable — biggest movers stated plainly from the same
-// coin data. Still coins, still no hashtags, so the card degrades gracefully.
-function coinMovers(coins: HotCoin[], count: number): TrendingItem[] {
-    return coins
+// Deterministic fallback from the same real numbers — majors first (always
+// available from Pyth), then the biggest platform movers. Keeps the card
+// populated when GLM is unavailable.
+function marketMovers(coins: HotCoin[], majors: Major[], count: number): TrendingItem[] {
+    const majorItems: TrendingItem[] = majors.map((m) => ({
+        title: `$${m.label} ${m.change >= 0 ? "up" : "down"} ${Math.abs(m.change).toFixed(1)}% over 24h`,
+        meta: "Majors",
+        ticker: m.label,
+        tokenAddress: null,
+    }));
+
+    const coinItems: TrendingItem[] = coins
         .filter((c) => (c.priceChange24h ?? 0) !== 0 && c.ticker)
         .sort((a, b) => Math.abs(b.priceChange24h ?? 0) - Math.abs(a.priceChange24h ?? 0))
-        .slice(0, count)
         .map((c) => {
             const ch = c.priceChange24h ?? 0;
             return {
@@ -126,22 +172,29 @@ function coinMovers(coins: HotCoin[], count: number): TrendingItem[] {
                 tokenAddress: c.tokenAddress ?? null,
             };
         });
+
+    // Interleave a couple of platform movers between the majors so the card
+    // isn't all BTC/ETH/SOL when there are notable coins.
+    return [...coinItems.slice(0, 2), ...majorItems, ...coinItems.slice(2)].slice(0, count);
 }
 
 export const discoverRouter = router({
-    // "What's happening" — GLM-written coin news from live platform coins, with
-    // a plain-movers fallback. Coins-first, never hashtags. Cached 5min so the
-    // rail is cheap and the model runs at most once per window.
+    // "What's happening" — GLM-written crypto news grounded in real majors (Pyth)
+    // + live platform coins, with a deterministic movers fallback. Always
+    // populated (majors are near-always available), coins-first, never hashtags.
+    // Cached 5min so the model runs at most once per window.
     trending: publicProcedure
         .input(z.object({ limit: z.number().min(1).max(10).default(5) }).optional())
         .query(async ({ input }) => {
             const count = input?.limit ?? 5;
-            return withCache(`discover:coin-news:v1:${count}`, 300, async () => {
-                const coins = await hotCoins(12);
-                if (coins.length === 0) return { source: "empty" as const, items: [] as TrendingItem[] };
-                const glm = await glmCoinNews(coins, count);
+            return withCache(`discover:crypto-news:v2:${count}`, 300, async () => {
+                const [coins, majors] = await Promise.all([hotCoins(12), getMajors()]);
+                if (coins.length === 0 && majors.length === 0) {
+                    return { source: "empty" as const, items: [] as TrendingItem[] };
+                }
+                const glm = await glmCryptoNews(coins, majors, count);
                 if (glm && glm.length) return { source: "glm" as const, items: glm };
-                return { source: "coins" as const, items: coinMovers(coins, count) };
+                return { source: "market" as const, items: marketMovers(coins, majors, count) };
             });
         }),
 });

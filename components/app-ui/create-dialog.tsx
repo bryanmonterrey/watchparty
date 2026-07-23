@@ -1013,10 +1013,10 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                     <TokenLaunchTrigger
                                                         state={tokenLaunch}
                                                         onClick={() => setIsEditingTicker(true)}
-                                                        className="h-9 px-2"
+                                                        className="h-11 px-2"
                                                     />
                                                     <Button
-                                                        className="bg-white h-9 text-base text-black rounded-full px-5 font-extrabold disabled:opacity-50 transition-colors"
+                                                        className="bg-white h-11 text-base text-black rounded-full px-5 font-extrabold disabled:opacity-50 transition-colors"
                                                         disabled={(!postContent.trim() && postImages.length === 0 && !postGif) || isPosting || postContent.length > 150}
                                                         onClick={handlePostSubmit}
                                                     >
