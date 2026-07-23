@@ -572,7 +572,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                     {step === "upload" && (
                         <div className="flex items-center justify-between px-6 pt-6 pb-2">
                             <div className="flex items-center gap-6 relative">
-                                {(["video", "post", "coin", "stream"] as Tab[]).map((tab) => (
+                                {(["video", "post", "stream", "coin"] as Tab[]).map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
@@ -592,7 +592,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                     {/* Content Area */}
                     {/* min-w-0: DialogContent is a grid — without it, unbreakable
                         content (long stream URLs) inflates the track past max-w. */}
-                    <div className={cn("min-w-0 p-0", step === "upload" && "p-6 pt-2", step === "upload" && activeTab !== "post" && "min-h-[500px]")}>
+                    <div className={cn("min-w-0 p-0", step === "upload" && "p-6 pt-2", step === "upload" && activeTab !== "post" && activeTab !== "coin" && "min-h-[500px]")}>
                         <AnimatePresence mode="wait">
                             {activeTab === "video" ? (
                                 <motion.div
@@ -860,7 +860,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                                 </div>
                                             )}
 
-                                            <div className="flex items-center pb-4 border-b border-zinc-800">
+                                            <div className="flex items-center pb-4">
                                                 <GooDropdown
                                                     side="top"
                                                     align="start"
@@ -1033,7 +1033,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                     initial={{ opacity: 1, y: 0 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.125 }}
-                                    className="max-h-[70vh] min-h-[350px] overflow-y-auto custom-scrollbar"
+                                    className="max-h-[70vh] overflow-y-auto custom-scrollbar"
                                 >
                                     <CoinComposer onClose={() => setOpen(false)} />
                                 </motion.div>

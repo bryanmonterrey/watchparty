@@ -134,7 +134,7 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
     }
 
     return (
-        <div className="mx-auto w-full max-w-[520px] space-y-7 pb-2">
+        <div className="mx-auto w-full max-w-[520px] space-y-7 pb-6">
             {/* Image + ticker hero */}
             <div className="flex flex-col items-center gap-4">
                 <div {...getRootProps()} className="w-full">
@@ -254,7 +254,7 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
                         type="number"
                         value={buyAmount === undefined ? "" : buyAmount}
                         onChange={(e) => setBuyAmount(e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="h-12 pl-11 text-[15px] [&::-webkit-inner-spin-button]:appearance-none"
+                        className="h-14 pl-11 text-[15px] [&::-webkit-inner-spin-button]:appearance-none"
                         placeholder="0.00"
                         step="0.01"
                         min="0"
