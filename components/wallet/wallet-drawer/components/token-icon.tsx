@@ -66,7 +66,7 @@ export function TokenIcon({
             {src && !imageError ? (
                 <>
                     {!imageLoaded && (
-                        <div className={cn("absolute inset-0 w-full h-full bg-white/5 animate-pulse", type === "token" ? "rounded-full" : "rounded-none", innerClassName)} />
+                        <div className={cn("absolute inset-0 w-full h-full shimmer-skeleton", type === "token" ? "rounded-full" : "rounded-none", innerClassName)} />
                     )}
                     <img
                         ref={imgRef}

@@ -282,6 +282,20 @@
   }
 }
 
+/* Canonical skeleton shimmer (next-beats style): a soft highlight band sweeps
+   left-to-right across a flat translucent fill. Top-level so it's always
+   emitted — it's referenced both by the `.shimmer-skeleton` utility and by the
+   inline style from lib/skeleton-stagger.ts, never via an --animate-* token. */
+@keyframes skeleton-wave {
+  0% {
+    background-position: 150% 0;
+  }
+
+  100% {
+    background-position: -50% 0;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -595,25 +609,29 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     }
   }
 
-  @keyframes skeleton-pulse {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.45;
-    }
+  /* Canonical loading skeleton. A translucent highlight band sweeps across a
+     flat fill (see the `skeleton-wave` keyframe). This is the ONE skeleton look
+     across the app — the <Skeleton> primitive and lib/skeleton-stagger.ts both
+     render it. Siblings offset the sweep so a group ripples left-to-right. */
+  .shimmer-skeleton {
+    background-color: rgba(255, 255, 255, 0.05);
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.07) 30%,
+      rgba(255, 255, 255, 0.13) 50%,
+      rgba(255, 255, 255, 0.07) 70%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: skeleton-wave 1.5s ease-in-out infinite;
   }
 
-  /* Staggered pulse skeleton (replaces the old shimmer sweep). Every
-     .shimmer-skeleton pulses on a flat fill; siblings start on a small
-     offset so a group ripples instead of flashing in unison. */
-  .shimmer-skeleton {
-    background-image: none;
-    background-color: rgba(255, 255, 255, 0.06);
-    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  /* Default rounding when the caller didn't set a rounded-* utility (matches
+     next-beats: bare skeletons get a soft radius, explicit rounding wins). */
+  .shimmer-skeleton:not([class*="rounded-"]) {
+    border-radius: 8px;
   }
 
   .shimmer-skeleton:nth-child(5n + 2) {
@@ -630,6 +648,13 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 
   .shimmer-skeleton:nth-child(5n + 5) {
     animation-delay: 0.48s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer-skeleton {
+      animation: none;
+      background-image: none;
+    }
   }
 
   /* Ambient glow video container.

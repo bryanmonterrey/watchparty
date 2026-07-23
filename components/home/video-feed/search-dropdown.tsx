@@ -112,13 +112,13 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
             {isLoading && (
                 <div className="px-4 py-3 space-y-3">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="flex items-center gap-3 animate-pulse">
-                            <div className="w-8 h-8 rounded-full bg-white/5 shrink-0" />
+                        <div key={i} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full shimmer-skeleton shrink-0" />
                             <div className="flex-1 space-y-1.5">
-                                <div className="h-3 w-1/3 rounded-full bg-white/5" />
-                                <div className="h-2.5 w-1/4 rounded-full bg-white/5" />
+                                <div className="h-3 w-1/3 rounded-full shimmer-skeleton" />
+                                <div className="h-2.5 w-1/4 rounded-full shimmer-skeleton" />
                             </div>
-                            <div className="h-3 w-14 rounded-full bg-white/5" />
+                            <div className="h-3 w-14 rounded-full shimmer-skeleton" />
                         </div>
                     ))}
                 </div>

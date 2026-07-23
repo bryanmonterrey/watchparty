@@ -38,8 +38,8 @@ export function StoriesRow() {
             <div className="flex gap-3 px-4 py-3 border-b border-white/10 overflow-x-auto scrollbar-hide">
                 {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="flex flex-col items-center gap-1 shrink-0">
-                        <div className="w-14 h-14 rounded-full bg-zinc-800 animate-pulse" />
-                        <div className="w-10 h-2 bg-zinc-800 rounded animate-pulse" />
+                        <div className="w-14 h-14 rounded-full shimmer-skeleton" />
+                        <div className="w-10 h-2 rounded shimmer-skeleton" />
                     </div>
                 ))}
             </div>

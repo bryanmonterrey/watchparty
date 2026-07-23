@@ -89,7 +89,7 @@ function EditorShell({
                 <div className="absolute inset-y-0 left-0 w-[360px] flex flex-col overflow-hidden bg-black">
                     {isLoading ? (
                         <div className="space-y-2 px-6">
-                            {[1, 2].map(i => <div key={i} className="h-14 bg-zinc-800/50 rounded-lg animate-pulse" />)}
+                            {[1, 2].map(i => <div key={i} className="h-14 rounded-lg shimmer-skeleton" />)}
                         </div>
                     ) : cardListSlot}
                 </div>

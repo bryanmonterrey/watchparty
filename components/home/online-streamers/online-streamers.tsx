@@ -18,12 +18,12 @@ export function OnlineStreamers() {
                     {Array.from({ length: 12 }).map((_, i) => (
                         <div
                             key={i}
-                            className="flex items-center gap-3 bg-zinc-800/25 rounded-2xl p-1.5 pr-4 min-w-[140px] animate-pulse"
+                            className="flex items-center gap-3 bg-zinc-800/25 rounded-2xl p-1.5 pr-4 min-w-[140px]"
                         >
-                            <div className="h-9 w-9 rounded-full bg-zinc-700/40 shrink-0" />
+                            <div className="h-9 w-9 rounded-full shimmer-skeleton shrink-0" />
                             <div className="flex flex-col gap-1.5">
-                                <div className="h-2.5 w-16 rounded-full bg-zinc-700/40" />
-                                <div className="h-2 w-10 rounded-full bg-zinc-700/40" />
+                                <div className="h-2.5 w-16 rounded-full shimmer-skeleton" />
+                                <div className="h-2 w-10 rounded-full shimmer-skeleton" />
                             </div>
                         </div>
                     ))}

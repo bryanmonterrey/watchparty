@@ -1,17 +1,22 @@
 import type { CSSProperties } from "react";
 
-// Total time for the brightness spike to travel across the whole row once.
-const STAGGER_CYCLE_MS = 2000;
+// One full sweep of the shimmer highlight band.
+const SHIMMER_CYCLE_MS = 1500;
 
-// Inline style for a skeleton element so the row pulses one item at a time
-// (left to right). Spacing each item's delay by cycle/count means only one
-// item's narrow spike (see the `stagger-pulse` keyframe in globals.css) is lit
-// at any moment. Apply the SAME index to every skeleton within one card so the
-// whole card pulses as a single object. Overrides the Skeleton's `animate-pulse`
-// (inline animation beats the class).
+// Self-contained inline style that renders the same shimmer as the
+// `.shimmer-skeleton` utility (see globals.css) on ANY element — even a plain
+// `bg-*` div — so callers don't need the class. A per-item negative delay
+// offsets each sibling's phase, so a row ripples left-to-right instead of
+// sweeping in unison. Apply the SAME index to every skeleton within one card so
+// the card reads as a single object.
 export function staggerPulse(index: number, count: number): CSSProperties {
     return {
-        animation: `stagger-pulse ${STAGGER_CYCLE_MS}ms linear infinite`,
-        animationDelay: `${count > 0 ? (index * STAGGER_CYCLE_MS) / count : 0}ms`,
+        backgroundColor: "rgba(255,255,255,0.05)",
+        backgroundImage:
+            "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.07) 30%, rgba(255,255,255,0.13) 50%, rgba(255,255,255,0.07) 70%, rgba(255,255,255,0) 100%)",
+        backgroundSize: "200% 100%",
+        backgroundRepeat: "no-repeat",
+        animation: `skeleton-wave ${SHIMMER_CYCLE_MS}ms ease-in-out infinite`,
+        animationDelay: `-${count > 0 ? (index * SHIMMER_CYCLE_MS) / count : 0}ms`,
     };
 }

@@ -178,7 +178,7 @@ export function CommunitiesLanding() {
                 {!mounted && (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="aspect-square rounded-[32px] bg-white/5 border border-flexwhite/10 animate-pulse" />
+                            <div key={i} className="aspect-square rounded-[32px] border border-flexwhite/10 shimmer-skeleton" />
                         ))}
                     </div>
                 )}
@@ -233,7 +233,7 @@ export function CommunitiesLanding() {
                 {mounted && session?.user && isLoading && (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="aspect-square rounded-[32px] bg-white/5 border border-flexwhite/10 animate-pulse" />
+                            <div key={i} className="aspect-square rounded-[32px] border border-flexwhite/10 shimmer-skeleton" />
                         ))}
                     </div>
                 )}
