@@ -83,8 +83,13 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                 visually and is invisible until the full header scrolls away.
                 No flow height = content below never jumps when it appears.     */}
             <div className={cn("sticky top-0 z-40", buttonMinRef.current ? "" : "h-0 overflow-visible")}>
+                {/* bg-background spans the full compact-header box (banner +
+                    pulled-up content), so it reaches PAST the 200px banner to
+                    the tabs' underline (~y208). Without it the underline's ~8px
+                    overhang floats over the scrolling page instead of sitting
+                    at bottom-0 of a background. */}
                 <div ref={compactRef} className={cn(
-                    "",
+                    "bg-background",
                     isMinimized
                         ? "opacity-100 pointer-events-auto"
                         : "opacity-0 pointer-events-none"
