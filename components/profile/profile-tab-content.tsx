@@ -156,15 +156,15 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
         );
     }
 
-    // Mirrors the discover 3-col frame (discover/layout.tsx): a fixed 628px
-    // feed, then a flex-1 column that pushes the sidebar-width filter rail
-    // flush to the right edge — so there's ONE gap between them, not a
-    // trailing dead strip after the rail.
+    // Layout: feed | gap | rail | sidebar-width padding. The gap is a fixed
+    // 130px (half the former ~260px elastic gap); the feed absorbed that other
+    // 130px, so its body fills the widened left region (~758px at the 1400px
+    // content width) instead of the 628px discover cap. Rail is shrink-0
+    // against the lg:pr-[14rem] inset applied by ProfileTabContent.
     return (
-        <div className="flex items-start gap-10">
-            {/* Left region fills up to the rail: the toolbar (search + sort +
-                count) spans this full width, while the feed BODY stays capped
-                at the discover width (628px). */}
+        <div className="flex items-start gap-0 lg:gap-[130px]">
+            {/* Left region fills up to the rail; the toolbar (search + sort +
+                count) and the feed body both span it. */}
             <div className="min-w-0 flex-1">
                 <PostsToolbar
                     total={total}
@@ -174,7 +174,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
                     onSortChange={setSort}
                 />
                 <PostsFilterRow userId={userId} type={type} onTypeChange={setType} />
-                <div className="w-full max-w-[628px]">
+                <div className="w-full">
                     {feed}
                 </div>
             </div>
