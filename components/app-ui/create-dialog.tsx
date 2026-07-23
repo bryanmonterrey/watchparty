@@ -19,6 +19,7 @@ import { trpc } from "@/lib/trpc/client"
 import { GifIcon, ImageIcon, MicIcon, CalendarIcon, LockIcon, EmojiIcon, AlertIcon } from "@/components/icons"
 import { Switch } from "@/components/ui/switch"
 import { VideoDetailsStep } from "./create-dialog/video-details-step"
+import { CoinComposer } from "./create-dialog/coin-composer"
 import { TokenLaunchState, TokenLaunchTrigger, DEFAULT_TOKEN_LAUNCH } from "./create-dialog/token-launch-section"
 import { TickerEditDialog } from "./create-dialog/ticker-edit-dialog"
 import { useTokenLaunch } from "@/hooks/use-token-launch"
@@ -37,7 +38,7 @@ interface CreateDialogProps extends React.HTMLAttributes<HTMLElement> {
     children: React.ReactNode
 }
 
-type Tab = "video" | "post" | "stream"
+type Tab = "video" | "post" | "coin" | "stream"
 
 // Full stream setup (generate connection, keys, info, OBS steps), designed for
 // this dialog — paid for only when the tab opens.
@@ -571,7 +572,7 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                     {step === "upload" && (
                         <div className="flex items-center justify-between px-6 pt-6 pb-2">
                             <div className="flex items-center gap-6 relative">
-                                {(["video", "post", "stream"] as Tab[]).map((tab) => (
+                                {(["video", "post", "coin", "stream"] as Tab[]).map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
@@ -1025,6 +1026,16 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                                             </div>
                                         </div>
                                     </div>
+                                </motion.div>
+                            ) : activeTab === "coin" && step === "upload" ? (
+                                <motion.div
+                                    key="coin"
+                                    initial={{ opacity: 1, y: 0 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.125 }}
+                                    className="max-h-[70vh] min-h-[350px] overflow-y-auto custom-scrollbar"
+                                >
+                                    <CoinComposer onClose={() => setOpen(false)} />
                                 </motion.div>
                             ) : activeTab === "stream" && step === "upload" ? (
                                 <motion.div
