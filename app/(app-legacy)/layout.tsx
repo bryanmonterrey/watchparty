@@ -12,29 +12,29 @@ import { UpgradeOverlay } from "@/components/premium/upgrade-overlay";
 import OnboardingDialog from "@/components/app-ui/app-onboarding";
 import { DesktopOnlyGate } from "@/components/app-ui/desktop-only-gate";
 
-// ─── NEW APP SHELL (fresh UI build) ─────────────────────────────────────────
-// This is the clean (app) group for the ground-up UI rewrite. It's a verbatim
-// copy of the working shell that now lives in app/(app-legacy)/layout.tsx, kept
-// as the *template*: the provider stack, session guard, and design system are
-// already wired so a new UI can be built on top without re-scaffolding.
+// Authenticated app shell. Guards every (app) route (no session -> /login) and
+// hosts the app's provider stack + sidebar frame.
 //
-// Build the new UI by editing this layout and adding routes under this group.
-// The old app stays fully live in (app-legacy) (route groups don't change URLs,
-// so it still serves /home, /trade, /discover, … unchanged) — port routes over
-// here one at a time, deleting the legacy page as each new one lands.
-//
-// Provider notes (same as legacy): AppProviders (Query/tRPC/cluster/Solana)
-// lives HERE, not the root layout, so login/landing never load the wallet SDK.
-// ThemeProvider is the exception — it's in the root layout so next-themes'
-// pre-paint script runs before this async session check (no theme flash).
+// Consolidation vs sidebar's layout:
+// - AppProviders (Query/tRPC/cluster/Solana) lives HERE, not the root
+//   layout — so login/landing never load the wallet SDK (the speed rewrite).
+//   ThemeProvider is the exception: it sits in the root layout so next-themes'
+//   pre-paint script runs before this async session check (no theme flash).
+// - MiniPlayerShell mounts here so an opened mini player persists across
+//   every (app) route; the player chunk itself stays lazy inside the shell.
 
-// Reads the session cookie, so it's always rendered per request.
+// This section reads the session cookie, so it's always rendered per request.
+// Declaring it explicitly stops `next build` from trying to prerender it — that
+// probe was what logged "Dynamic server usage … used headers" (harmless; it was
+// surfaced only by an old diagnostic try/catch here, now removed).
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
   if (!session) redirect("/login");
 
+  // Sidebar always starts fully collapsed (hover the rail to peek, trigger to
+  // pin) — deliberately NOT restored from the cookie anymore.
   return (
     <AppProviders>
       {/* Below md every signed-in route shows the desktop-only notice.
