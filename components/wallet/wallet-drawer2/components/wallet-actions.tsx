@@ -1,4 +1,5 @@
 import { SendPaperIcon, ReceiveQrIcon, SwapArrowsIcon, BuyCartIcon } from "@/components/icons";
+import { Squircle } from "@/components/ui/squircle";
 import { DrawerView } from "../types";
 
 interface WalletActionsProps {
@@ -19,14 +20,20 @@ export function WalletActions({ onNavigate }: WalletActionsProps) {
                 {ACTIONS.map((action) => {
                     const Icon = action.icon;
                     return (
-                        <button
-                            key={action.id}
-                            className="cursor-pointer ease-in-out flex duration-150 flex-col items-center gap-1.5 p-3 rounded-2xl bg-zinc-900 border-zinc-500/5 border hover:bg-zinc-800/70 transition-all"
-                            onClick={() => onNavigate(action.id)}
-                        >
-                            <Icon className="size-7 text-white/80" />
-                            <span className="text-xs font-medium text-zinc-300">{action.label}</span>
-                        </button>
+                        // radius 16 matches the rounded-2xl this replaced. No rounded-*
+                        // here (redundant under the clip-path), and autoEffects is left
+                        // ON (default) so Lisse re-renders the CSS border as an SVG
+                        // effect tracing the squircle — passing autoEffects={false}
+                        // would clip the border away.
+                        <Squircle key={action.id} asChild radius={16}>
+                            <button
+                                className="cursor-pointer ease-in-out flex duration-150 flex-col items-center gap-1.5 p-3 py-5 bg-panel border border-baseborder hover:bg-baseborder/45 transition-all"
+                                onClick={() => onNavigate(action.id)}
+                            >
+                                <Icon className="size-7 text-white/80" />
+                                <span className="text-xs font-medium text-zinc-300">{action.label}</span>
+                            </button>
+                        </Squircle>
                     );
                 })}
             </div>
