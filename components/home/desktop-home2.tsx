@@ -536,21 +536,25 @@ function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
     return (
         <div className="flex flex-col gap-4">
             {expanded ? (
-                <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-5 px-10 xl:grid-cols-4">
                     {videos.map((v) => (
                         <VideoCard key={v.id} v={v} />
                     ))}
                 </div>
             ) : (
-                // py-3 gives the cards' hover backdrop room before the embla
-                // viewport clips it vertically.
-                <ArrowCarousel contentClassName="-ml-5 py-3" arrowInset="inset-y-3">
-                    {videos.map((v) => (
-                        <CarouselItem key={v.id} className="basis-1/2 pl-5 xl:basis-1/4">
-                            <VideoCard v={v} />
-                        </CarouselItem>
-                    ))}
-                </ArrowCarousel>
+                // Left-inset to px-10 (aligns with the header); the embla viewport
+                // runs to the right page edge, so cards peek/bleed off the right
+                // instead of hard-cutting at a gutter. py-3 gives the cards' hover
+                // backdrop room before the viewport clips it vertically.
+                <div className="pl-10">
+                    <ArrowCarousel contentClassName="-ml-5 py-3" arrowInset="inset-y-3">
+                        {videos.map((v) => (
+                            <CarouselItem key={v.id} className="basis-1/2 pl-5 xl:basis-1/5">
+                                <VideoCard v={v} />
+                            </CarouselItem>
+                        ))}
+                    </ArrowCarousel>
+                </div>
             )}
             <div className="flex justify-center">
                 <Button
@@ -602,16 +606,23 @@ export function DesktopHome() {
                 {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
             </div>
 
-            <div className="flex flex-col gap-7 px-6">
-                <section>
+            {/* Trending — full-bleed section: header inset to px-10, and the
+                carousel viewport runs to the right page edge so cards peek/bleed
+                off the right instead of hard-cutting at a gutter. */}
+            <section>
+                <div className="px-10">
                     <SectionHeader title="Trending" href="/search" />
-                    {feed.isLoading ? (
+                </div>
+                {feed.isLoading ? (
+                    <div className="pl-10">
                         <CardRowSkeleton />
-                    ) : (
-                        <TrendingCarousel videos={trendingVideos} />
-                    )}
-                </section>
+                    </div>
+                ) : (
+                    <TrendingCarousel videos={trendingVideos} />
+                )}
+            </section>
 
+            <div className="flex flex-col gap-7 px-6">
                 <section>
                     <SectionHeader title="Categories" href="/category" />
                     <ArrowCarousel contentClassName="items-start">
