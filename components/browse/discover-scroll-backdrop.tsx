@@ -14,13 +14,11 @@ export function DiscoverScrollBackdrop() {
         if (!container || !el) return;
 
         const onScroll = () => {
-            const t = Math.min(container.scrollTop / 32, 1);
-            // Fully transparent — no canvas fill at all, like the regular header.
-            // Just a light scroll-in blur so content reading under the strip is
-            // softened without any brightening scrim.
+            // Fully invisible — no fill, no blur. Isolating whether the blur was
+            // the visible artifact on the discover header.
             el.style.backgroundColor = "transparent";
-            el.style.backdropFilter = `blur(${t * 10}px)`;
-            (el.style as CSSStyleDeclaration & { webkitBackdropFilter: string }).webkitBackdropFilter = `blur(${t * 10}px)`;
+            el.style.backdropFilter = "none";
+            (el.style as CSSStyleDeclaration & { webkitBackdropFilter: string }).webkitBackdropFilter = "none";
         };
 
         onScroll();
