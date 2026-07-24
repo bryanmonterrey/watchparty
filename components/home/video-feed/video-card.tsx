@@ -54,7 +54,7 @@ export function VideoCard({ video, loading }: VideoCardProps) {
             }}
             transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
             onClick={() => router.push(videoUrl)}
-            className="group relative rounded-none md:rounded-3xl cursor-pointer isolate z-0"
+            className="group relative rounded-none md:rounded-none cursor-pointer isolate z-0"
         >
             <div className="absolute inset-0 bg-black rounded-none md:rounded-3xl -z-20" />
             <motion.div
@@ -63,11 +63,11 @@ export function VideoCard({ video, loading }: VideoCardProps) {
                     hover: { scale: 1, opacity: 1, backgroundColor: "rgba(74, 74, 74, 0.3)" }
                 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
-                className="absolute inset-[-12px] -z-10 rounded-none md:rounded-[35px] pointer-events-none"
+                className="absolute inset-[-12px] -z-10 rounded-none md:rounded-none pointer-events-none"
             />
 
             {/* Thumbnail */}
-            <div className="relative aspect-video border border-flexborder/1 rounded-none md:rounded-2xl bg-zinc-800/25 overflow-hidden">
+            <div className="relative aspect-video border border-flexborder/1 rounded-none md:rounded-none bg-zinc-800/25 overflow-hidden">
                 {video.thumbnailUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />

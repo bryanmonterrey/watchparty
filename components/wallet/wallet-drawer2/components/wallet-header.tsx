@@ -57,8 +57,8 @@ export function WalletHeader({
                         </div>
                     ) : (
                         <>
-                            <p className="text-lg font-semibold text-white">{username}</p>
-                            <p className="text-sm font-medium text-zinc-400">{shortenWalletAddress(walletAddress || "")}</p>
+                            <p className="text-base font-bold text-white">{username}</p>
+                            <p className="text-xs font-medium text-zinc-400">{shortenWalletAddress(walletAddress || "")}</p>
                         </>
                     )}
                 </div>
@@ -76,7 +76,7 @@ export function WalletHeader({
                     {/* group-hover (not hover): the icon fills transparent gaps, so
                         hovering the Button — marked `group` above — recolors it, not
                         only a direct hover on the gear itself. */}
-                    <SettingsIcon filled className="size-7 text-flexwhite/50 group-hover:text-white transition-colors" />
+                    <SettingsIcon filled className="size-6 text-flexwhite/50 group-hover:text-white transition-colors" />
                 </Button>
 
                 <GooDropdown
@@ -87,7 +87,7 @@ export function WalletHeader({
                     gap={8}
                     triggerAriaLabel="Wallet session"
                     triggerClassName={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${isOpen ? "bg-input1 text-white" : "bg-black text-flexwhite/50 hover:text-white"}`}
-                    trigger={<PowerIcon className="w-7 h-7" strokeWidth={2} />}
+                    trigger={<PowerIcon className="w-6 h-6" strokeWidth={2} />}
                     items={[
                         {
                             key: "copy",

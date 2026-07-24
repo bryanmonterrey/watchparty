@@ -29,7 +29,7 @@ export function TokenListItem({
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center justify-between p-3.5 rounded-3xl bg-zinc-900 border-zinc-500/5 border hover:bg-zinc-800/70 transition-all group cursor-pointer"
+            className="w-full flex items-center justify-between p-3.5 rounded-3xl bg-panel2 border-baseborder/35 border hover:bg-panel2 transition-all group cursor-pointer"
         >
             <div className="flex items-center gap-3">
                 <TokenIcon

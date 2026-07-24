@@ -271,7 +271,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
                 transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
                 className="pointer-events-none absolute inset-[-12px] -z-10 rounded-3xl"
             />
-            <div className="relative overflow-hidden rounded-2xl bg-muted">
+            <div className="relative overflow-hidden rounded-none bg-muted">
                 <Link href={watchHref(v)} className="block aspect-[382/243]">
                     {v.thumbnailUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -440,8 +440,8 @@ function VideoCardSkeleton({ index, count }: { index: number; count: number }) {
     const pulse = staggerPulse(index, count);
     return (
         <div className="flex flex-col gap-3">
-            <div className="relative overflow-hidden rounded-[19px]">
-                <Skeleton style={pulse} className="aspect-[382/243] w-full rounded-[19px]" />
+            <div className="relative overflow-hidden rounded-none">
+                <Skeleton style={pulse} className="aspect-[382/243] w-full rounded-none" />
             </div>
             <div className="flex items-start gap-3">
                 <Skeleton style={pulse} className="size-16 shrink-0 rounded-full" />

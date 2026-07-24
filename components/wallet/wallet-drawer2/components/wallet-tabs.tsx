@@ -68,7 +68,7 @@ export function WalletTabs({
 }: WalletTabsProps) {
     return (
         <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex items-center justify-between px-5 pt-2">
+            <div className="flex items-center justify-between px-5 pt-2 pb-2">
                 <div className="flex gap-1 flex-wrap relative">
                     {TABS.map((tab) => (
                         <button
