@@ -79,14 +79,14 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                 banner's bottom edge down to the bottom of the page — a hard top
                 edge at the banner bottom so it never shows ON the banner. The
                 top offsets MUST match ProfileBanner's heights (full 320 /
-                compact 200). z-20 sits under the headers (z-30) and the pinned
+                compact 222). z-20 sits under the headers (z-30) and the pinned
                 compact header (z-40); content clears it via pr-20. */}
             {user.accentColor && (
                 <div
                     aria-hidden
                     className="pointer-events-none absolute right-0 bottom-0 z-20 w-12"
                     style={{
-                        top: buttonMinRef.current ? 200 : 320,
+                        top: buttonMinRef.current ? 222 : 320,
                         background: user.accentColor,
                     }}
                 />
