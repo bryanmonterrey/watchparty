@@ -198,6 +198,8 @@
   --color-sunset: #FFCC00;
   --color-pastelred: #FF746C;
   --color-pastelgray: #7F878E;
+  --color-borders: rgb(47, 51, 54);
+  --color-baseborder: rgba(138, 145, 158, 0.2);
   /* Translucent card wash used by the /trade grid + token page cards. */
   --color-panel: rgba(255, 255, 255, 0.03);
   --blur-xs: 4px;
@@ -809,12 +811,17 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
    utilities (equal specificity, later), while hover:/focus:/responsive variants
    (higher specificity) still change the border for interaction feedback.
 
-   Intentionally excluded: brand colors (border-twitter2, etc.) and pure black
-   borders — recoloring those would kill accents or draw lines where a black
-   border was meant to be invisible on the dark background. */
+   Intentionally excluded:
+   - brand colors (border-twitter2, etc.) and pure black borders — recoloring
+     those would kill accents or draw lines meant to be invisible on dark.
+   - SOLID white borders (border-white, border-t/l-white with no /opacity).
+     A full-opacity white border is almost always an intentional bright accent
+     (selection rings, focus states, the wallet avatar ring), not a muted
+     divider — so it stays white and remains freely overridable per element.
+     Only the TRANSLUCENT white hairlines (border-white/5, /10, /15, …) are
+     unified, via the [class*="border-white/"] selector below. */
 @layer utilities {
   [class*="border-white/"],
-  .border-white,
   [class*="border-zinc-"],
   [class*="border-neutral-"],
   [class*="border-flexborder"],
@@ -823,14 +830,5 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
   [class*="border-border"],
   [class*="border-input"] {
     border-color: var(--wp-border);
-  }
-
-  /* Directional neutral borders set a single side's color. */
-  .border-t-white {
-    border-top-color: var(--wp-border);
-  }
-
-  .border-l-white {
-    border-left-color: var(--wp-border);
   }
 }
