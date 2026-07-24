@@ -8,7 +8,7 @@ import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 import { GiftPremiumButton } from "@/components/browse/gift-premium-button";
 import { MessageButton } from "@/components/browse/message-button";
 import { UserType } from "@/db/schema/auth/user";
-import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GlobeIcon, PinpointIcon, CalendarIcon, MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
+import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import * as React from "react";
@@ -104,19 +104,6 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
         />
     );
 }
-
-const formatJoinedDate = (date: Date | null) => {
-    if (!date) return "Joined Recently";
-    try {
-        const d = typeof date === "string" ? new Date(date) : date;
-        return new Intl.DateTimeFormat("en-US", {
-            month: "long",
-            year: "numeric"
-        }).format(d);
-    } catch (e) {
-        return "Joined Recently";
-    }
-};
 
 export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCounts }: ProfileHeaderProps) {
     const [isEditing, setIsEditing] = React.useState(false);
@@ -284,39 +271,8 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
                 </div>
             )}
 
-            {user.bio && !isMinimized && (
-                <p className="text-sm leading-relaxed text-white2 max-w-xl">
-                    {user.bio}
-                </p>
-            )}
-
-            {!isMinimized && (
-                <div className="flex flex-wrap items-center gap-x-5 text-sm text-zinc-400 font-medium transition-all duration-300">
-                    {user.location && (
-                        <div className="flex items-center gap-1 tracking font-bold">
-                            <PinpointIcon width={16} height={16} className="text-zinc-400" />
-                            {user.location}
-                        </div>
-                    )}
-                    
-                    <div className="flex items-center gap-1 tracking font-bold">
-                        <CalendarIcon width={16} height={16} className="text-zinc-400" />
-                        Joined {formatJoinedDate(user.createdAt)}
-                    </div>
-
-                    {user.website && (
-                        <a 
-                            href={user.website.startsWith('http') ? user.website : `https://${user.website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 font-bold cursor-pointer hover:text-white transition-colors group"
-                        >
-                            <Link2Icon className="w-4 h-4 text-zinc-400 group-hover:text-twitter2 transition-colors" />
-                            {user.website.replace(/^https?:\/\//, "")}
-                        </a>
-                    )}
-                </div>
-            )}
+            {/* bio + details (location / joined / website) moved to the About
+                tab's AboutCard (2026-07-24) */}
 
             {!counts ? (
                 <div className="flex items-center gap-5">
