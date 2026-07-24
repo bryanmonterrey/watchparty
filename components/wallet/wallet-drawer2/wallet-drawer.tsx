@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -75,6 +76,9 @@ export function WalletDrawer({
 }: WalletDrawerProps) {
     const isMobile = useIsMobile();
     const [isOpen, setIsOpen] = React.useState(false);
+    // Portal target guard — createPortal needs document (client only).
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => setMounted(true), []);
     const [activeTab, setActiveTab] = React.useState<TabId>("tokens");
     const [currentView, setCurrentView] = React.useState<DrawerView>("main");
     const [selectedToken, setSelectedToken] = React.useState<Token | null>(null);
@@ -594,6 +598,14 @@ export function WalletDrawer({
         <>
             {trigger}
 
+            {/* Portal the overlay to <body> so the backdrop/panel's `fixed`
+                positioning is relative to the VIEWPORT, not an ancestor. The app
+                header sets `backdrop-blur-xl`, and backdrop-filter (like
+                transform/filter) makes an element the containing block for fixed
+                descendants — which otherwise shrank this backdrop to the 68px
+                header strip, so outside-clicks below the header never hit it and
+                the drawer wouldn't close. */}
+            {mounted && createPortal(
             <AnimatePresence>
                 {resolvedOpen && (
                     <>
@@ -625,14 +637,16 @@ export function WalletDrawer({
                                 animate={{ x: 0, opacity: 1 }}
                                 exit={{ x: 16, opacity: 0 }}
                                 transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
-                                className="fixed right-0 top-0 h-screen w-[440px] z-[60] flex flex-col bg-black border-l border-flexborder/50 overflow-hidden"
+                                className="fixed right-0 top-0 h-screen w-[515px] z-[60] flex flex-col bg-black border-l border-baseborder/45 overflow-hidden"
                             >
                                 {panelContent}
                             </motion.div>
                         )}
                     </>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>,
+            document.body
+            )}
         </>
     );
 }

@@ -37,7 +37,7 @@ export function WalletHeader({
     };
 
     return (
-        <div className="flex items-center justify-between px-5 pt-5 bg-gray1 relative">
+        <div className="flex items-center justify-between px-5 pt-5 bg-black relative">
             <div className="flex items-center gap-3 rounded-xl">
                 <div className="rounded-full overflow-hidden h-10 w-10 shrink-0">
                     {loading ? (
@@ -65,10 +65,15 @@ export function WalletHeader({
             </div>
             <div className="flex items-center gap-2 relative">
                 <Button
-                    className="size-9 p-0 glass-ring rounded-full bg-black hover:bg-black/50 transition-colors"
+                    variant="ghost"
+                    className="bg-black hover:bg-input1 text-flexwhite transition-colors rounded-full"
                     onClick={onSettingsClick}
                 >
-                    <SettingsIcon className="w-5 h-5 text-zinc-400" />
+                    {/* size-* (NOT w-/h-): the Button clamps any svg without a
+                        `size-` class to size-4 via [&_svg:not([class*='size-'])]:size-4,
+                        which is why w-7 h-7 wasn't taking. Change this number to resize.
+                        Add `filled` to <SettingsIcon> for the solid gear variant. */}
+                    <SettingsIcon className="size-7" strokeWidth={2} />
                 </Button>
 
                 <GooDropdown
@@ -78,8 +83,8 @@ export function WalletHeader({
                     width={208}
                     gap={8}
                     triggerAriaLabel="Wallet session"
-                    triggerClassName={`flex size-9 items-center justify-center glass-ring rounded-full transition-colors ${isOpen ? "bg-zinc-700/70 text-white" : "bg-black hover:bg-black/50 text-zinc-400"}`}
-                    trigger={<PowerIcon className="w-5 h-5" />}
+                    triggerClassName={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${isOpen ? "bg-input1 text-white" : "bg-black hover:bg-input1 text-flexwhite"}`}
+                    trigger={<PowerIcon className="w-7 h-7" strokeWidth={2} />}
                     items={[
                         {
                             key: "copy",
