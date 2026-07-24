@@ -15,10 +15,10 @@ export function DiscoverScrollBackdrop() {
 
         const onScroll = () => {
             const t = Math.min(container.scrollTop / 32, 1);
-            // Near-transparent: just a whisper of canvas tint (8%) so the strip
-            // reads as light glass, not a bright bar. Blur is the main effect,
-            // kept light (max 10px).
-            el.style.backgroundColor = `color-mix(in oklab, var(--background) ${t * 8}%, transparent)`;
+            // Fully transparent — no canvas fill at all, like the regular header.
+            // Just a light scroll-in blur so content reading under the strip is
+            // softened without any brightening scrim.
+            el.style.backgroundColor = "transparent";
             el.style.backdropFilter = `blur(${t * 10}px)`;
             (el.style as CSSStyleDeclaration & { webkitBackdropFilter: string }).webkitBackdropFilter = `blur(${t * 10}px)`;
         };
