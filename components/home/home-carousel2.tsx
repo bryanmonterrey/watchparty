@@ -126,35 +126,41 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
 }
 
 // One picker button: blurred thumbnail background + centered creator avatar
-// (the original closed-peek look). Selected cell gets a solid white ring.
+// (the original closed-peek look), squircle-clipped.
+//
+// The selected cue lives INSIDE the clip (a lighter wash + a white avatar ring)
+// rather than an outer ring/border — the Squircle clip-path would clip those
+// off. autoEffects={false} so no wrapper div is injected (no border to lose).
 function GridCell({ v, isActive, onClick }: { v: CarouselVideo; isActive: boolean; onClick: () => void }) {
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-label={`Play ${v.title}`}
-            className={`group/cell relative cursor-pointer overflow-hidden rounded-2xl bg-muted outline-none transition ${
-                isActive ? "ring-2 ring-white" : "ring-1 ring-white/10 hover:ring-white/30"
-            }`}
-        >
-            {v.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full scale-125 object-cover blur-lg" />
-            )}
-            <div className="absolute inset-0 bg-black/40" />
-            <div className="absolute inset-0 flex items-center justify-center">
-                <div className="size-9 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/25">
-                    {v.user.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={v.user.avatar_url} alt={v.user.username ?? ""} className="size-full object-cover" />
-                    ) : (
-                        <div className="flex size-full items-center justify-center text-sm font-bold text-white/80">
-                            {(v.user.username ?? "?")[0]?.toUpperCase()}
-                        </div>
-                    )}
+        <Squircle asChild radius={22} autoEffects={false}>
+            <button
+                type="button"
+                onClick={onClick}
+                aria-label={`Play ${v.title}`}
+                aria-pressed={isActive}
+                className="group/cell relative cursor-pointer rounded-3xl overflow-hidden bg-muted outline-none"
+            >
+                {v.thumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full scale-125 object-cover blur-lg" />
+                )}
+                {/* Dark wash — lighter on the selected cell, and eases up on hover. */}
+                <div className={`absolute inset-0 transition-colors ${isActive ? "bg-black/15" : "bg-black/50 group-hover/cell:bg-black/35"}`} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className={`size-9 overflow-hidden rounded-full bg-zinc-800 ring-2 transition ${isActive ? "ring-white" : "ring-white/25"}`}>
+                        {v.user.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={v.user.avatar_url} alt={v.user.username ?? ""} className="size-full object-cover" />
+                        ) : (
+                            <div className="flex size-full items-center justify-center text-sm font-bold text-white/80">
+                                {(v.user.username ?? "?")[0]?.toUpperCase()}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
+        </Squircle>
     );
 }
 
@@ -179,9 +185,9 @@ function HeroArrow({ dir, onClick }: { dir: "up" | "down"; onClick: () => void }
                 type="button"
                 onClick={onClick}
                 aria-label={dir === "up" ? "Previous videos" : "Next videos"}
-                className="flex size-24 rounded-3xl items-center justify-center bg-panel2 text-white/80 backdrop-blur-sm transition-colors hover:bg-baseborder/45 hover:text-white"
+                className="flex size-22 rounded-3xl items-center justify-center bg-panel2 text-white/80 backdrop-blur-sm transition-colors hover:bg-baseborder/45 hover:text-white"
             >
-                <Icon className="size-14" strokeWidth={2.5} />
+                <Icon className="size-13" strokeWidth={2} />
             </button>
         </Squircle>
     );
@@ -229,7 +235,7 @@ function ActivePanel({ v }: { v: CarouselVideo }) {
         const el = videoRef.current;
         if (el) {
             el.muted = true;
-            void el.play().catch(() => {});
+            void el.play().catch(() => { });
         }
         claim();
         return () => release();
