@@ -63,17 +63,20 @@ export function WalletHeader({
                     )}
                 </div>
             </div>
-            <div className="flex items-center gap-2 relative">
+            <div className="flex items-center gap-1 relative">
                 <Button
                     variant="ghost"
-                    className="bg-black hover:bg-input1 text-flexwhite transition-colors rounded-full"
+                    className="group bg-black hover:bg-input1 text-flexwhite transition-colors rounded-full"
                     onClick={onSettingsClick}
                 >
                     {/* size-* (NOT w-/h-): the Button clamps any svg without a
                         `size-` class to size-4 via [&_svg:not([class*='size-'])]:size-4,
                         which is why w-7 h-7 wasn't taking. Change this number to resize.
                         Add `filled` to <SettingsIcon> for the solid gear variant. */}
-                    <SettingsIcon filled className="size-7 text-white" />
+                    {/* group-hover (not hover): the icon fills transparent gaps, so
+                        hovering the Button — marked `group` above — recolors it, not
+                        only a direct hover on the gear itself. */}
+                    <SettingsIcon filled className="size-7 text-flexwhite/50 group-hover:text-white transition-colors" />
                 </Button>
 
                 <GooDropdown
@@ -83,7 +86,7 @@ export function WalletHeader({
                     width={208}
                     gap={8}
                     triggerAriaLabel="Wallet session"
-                    triggerClassName={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${isOpen ? "bg-input1 text-white" : "bg-black hover:bg-input1 text-flexwhite"}`}
+                    triggerClassName={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${isOpen ? "bg-input1 text-white" : "bg-black text-flexwhite/50 hover:text-white"}`}
                     trigger={<PowerIcon className="w-7 h-7" strokeWidth={2} />}
                     items={[
                         {
