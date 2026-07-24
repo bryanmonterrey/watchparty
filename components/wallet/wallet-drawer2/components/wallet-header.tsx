@@ -73,7 +73,7 @@ export function WalletHeader({
                         `size-` class to size-4 via [&_svg:not([class*='size-'])]:size-4,
                         which is why w-7 h-7 wasn't taking. Change this number to resize.
                         Add `filled` to <SettingsIcon> for the solid gear variant. */}
-                    <SettingsIcon className="size-7" strokeWidth={2} />
+                    <SettingsIcon filled className="size-7 text-white" />
                 </Button>
 
                 <GooDropdown
