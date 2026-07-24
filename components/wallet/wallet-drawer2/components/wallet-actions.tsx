@@ -25,9 +25,14 @@ export function WalletActions({ onNavigate }: WalletActionsProps) {
                         // ON (default) so Lisse re-renders the CSS border as an SVG
                         // effect tracing the squircle — passing autoEffects={false}
                         // would clip the border away.
+                        //
+                        // w-full/h-full are load-bearing: with autoEffects on, Lisse
+                        // wraps the child in a relative <div> (needsWrapper), so the
+                        // button is no longer the grid item and stops stretching to
+                        // the cell. Filling the wrapper restores the tile shape.
                         <Squircle key={action.id} asChild radius={16}>
                             <button
-                                className="cursor-pointer ease-in-out flex duration-150 flex-col items-center gap-1.5 p-3 py-5 bg-panel border border-baseborder hover:bg-baseborder/45 transition-all"
+                                className="cursor-pointer ease-in-out flex duration-150 w-full h-full flex-col items-center gap-1.5 p-3 py-5 bg-panel border border-baseborder hover:bg-baseborder/45 transition-all"
                                 onClick={() => onNavigate(action.id)}
                             >
                                 <Icon className="size-7 text-white/80" />
