@@ -74,9 +74,23 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
         // edges with cqw units (the app has a sidebar, so 100vw is wrong).
         <div className="relative min-h-screen [container-type:inline-size]">
 
-            {/* Channel accent bar (user.accentColor) removed 2026-07-21 —
-                shelved for a later pass; the column + edit-dialog picker were
-                cut but the DB column and updateProfile support remain. */}
+            {/* Channel accent: Twitch-style vertical brand bar on the right
+                edge, in the user's chosen color (edit-profile). Runs from the
+                banner's bottom edge down to the bottom of the page — a hard top
+                edge at the banner bottom so it never shows ON the banner. The
+                top offsets MUST match ProfileBanner's heights (full 320 /
+                compact 200). z-20 sits under the headers (z-30) and the pinned
+                compact header (z-40); content clears it via pr-20. */}
+            {user.accentColor && (
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute right-0 bottom-0 z-20 w-12"
+                    style={{
+                        top: buttonMinRef.current ? 200 : 320,
+                        background: user.accentColor,
+                    }}
+                />
+            )}
 
             {/* ── Compact header ────────────────────────────────────────────────
                 Zero-height sticky anchor at top-0. The inner content overflows
@@ -95,7 +109,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                         : "opacity-0 pointer-events-none"
                 )}>
                     <ProfileBanner user={user} isMinimized={true} />
-                    <div className="max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30">
+                    <div className={cn("max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30", user.accentColor && "pr-20")}>
                         <div className="flex flex-row items-end gap-6">
                             <ProfileAvatar user={user} isMinimized={true} />
                             <ProfileHeader
@@ -119,7 +133,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                 edge crosses the viewport top, the compact header fades in.     */}
             <div ref={fullRef} className={buttonMinRef.current ? "hidden" : "block"}>
                 <ProfileBanner user={user} isMinimized={false} />
-                <div className="max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30">
+                <div className={cn("max-w-[1400px] w-full mx-auto px-8 -mt-20 relative z-30", user.accentColor && "pr-20")}>
                     <div className="flex flex-col justify-start items-start space-y-1.5">
                         <ProfileAvatar user={user} isMinimized={false} />
                         <ProfileHeader
@@ -138,7 +152,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             </div>
 
             {/* ── Content ───────────────────────────────────────────────────── */}
-            <div className="max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen">
+            <div className={cn("max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen", user.accentColor && "pr-20")}>
                 {/* Keyed by tab so the incoming panel fades in on switch. */}
                 <motion.div
                     key={activeTab}
