@@ -14,8 +14,10 @@ export function DiscoverScrollBackdrop() {
         if (!container || !el) return;
 
         const onScroll = () => {
-            // Fully invisible — no fill, no blur. Isolating whether the blur was
-            // the visible artifact on the discover header.
+            // Intentionally inert — the discover header stays fully transparent
+            // (like the regular header). The feed's own sticky tab bar in
+            // browse-feed.tsx carries the light backdrop blur; this backdrop adds
+            // no fill or blur of its own so nothing brightens the top strip.
             el.style.backgroundColor = "transparent";
             el.style.backdropFilter = "none";
             (el.style as CSSStyleDeclaration & { webkitBackdropFilter: string }).webkitBackdropFilter = "none";

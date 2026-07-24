@@ -603,7 +603,7 @@ export function BrowseFeed() {
             {/* Tabs — flush at the top of the feed column, which sits ABOVE the
                 app header (see the layout's z-index), so the header never covers
                 them. */}
-            <div className="flex items-center w-full sticky bg-background backdrop-blur-xl top-0 z-100 border-b border-soft-gray/[0.12]">
+            <div className="flex items-center w-full sticky backdrop-blur-md top-0 z-100 border-b border-soft-gray/[0.12]">
                 <FeedTab
                     label="For you"
                     isActive={activeTab === "for-you"}
