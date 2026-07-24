@@ -15,9 +15,12 @@ export function DiscoverScrollBackdrop() {
 
         const onScroll = () => {
             const t = Math.min(container.scrollTop / 32, 1);
-            el.style.backgroundColor = `color-mix(in oklab, var(--background) ${t * 20}%, transparent)`;
-            el.style.backdropFilter = `blur(${t * 24}px)`;
-            (el.style as CSSStyleDeclaration & { webkitBackdropFilter: string }).webkitBackdropFilter = `blur(${t * 24}px)`;
+            // Near-transparent: just a whisper of canvas tint (8%) so the strip
+            // reads as light glass, not a bright bar. Blur is the main effect,
+            // kept light (max 10px).
+            el.style.backgroundColor = `color-mix(in oklab, var(--background) ${t * 8}%, transparent)`;
+            el.style.backdropFilter = `blur(${t * 10}px)`;
+            (el.style as CSSStyleDeclaration & { webkitBackdropFilter: string }).webkitBackdropFilter = `blur(${t * 10}px)`;
         };
 
         onScroll();
