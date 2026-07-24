@@ -4,7 +4,7 @@ import { getServerSession } from "@/lib/auth/get-session";
 import AppProviders from "@/components/app-ui/app-providers";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-ui/app-sidebar";
-import { AppHeader } from "@/components/app-ui/app-header";
+import { AppHeader2 } from "@/components/app-ui/app-header2";
 import { AppContainer } from "@/components/app-ui/app-container";
 import { MobileChrome } from "@/components/app-ui/mobile/mobile-chrome";
 import { MiniPlayerShell } from "@/components/app-ui/mini-player-shell";
@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <SidebarProvider defaultOpen={false}>
           <AppSidebar />
           <SidebarInset>
-            <AppHeader />
+            <AppHeader2 />
             <MobileChrome />
             <AppContainer>{children}</AppContainer>
           </SidebarInset>
