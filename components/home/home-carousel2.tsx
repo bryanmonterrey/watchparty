@@ -18,7 +18,10 @@ import { Squircle } from "@/components/ui/squircle";
 // LIVE badge); the screen is a <Link> to its watch page. Prev/next remount the
 // <video> (keyed on the active id).
 
-const SCREEN_H = "h-[clamp(300px,28vw,480px)]";
+// 16:9 player, width-capped and centered so it reads as a real video player
+// rather than an ultra-wide edge-to-edge strip.
+const SCREEN_ASPECT = "aspect-video";
+const HERO_WRAP = "mx-auto w-full max-w-[1100px] px-4";
 
 interface CarouselVideo {
     id: string;
@@ -49,13 +52,13 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
     const v = videos[active];
 
     return (
-        <div className="group/carousel relative w-full px-[3%]">
+        <div className={`group/carousel relative ${HERO_WRAP}`}>
             <div className="flex items-stretch gap-3">
-                {/* The screen: single full-bleed, sharp-cornered video player. */}
+                {/* The screen: 16:9 sharp-cornered video player. */}
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className={`group/active relative block flex-1 overflow-hidden rounded-none bg-muted outline-none ${SCREEN_H}`}
+                    className={`group/active relative block flex-1 overflow-hidden rounded-none bg-muted outline-none ${SCREEN_ASPECT}`}
                 >
                     {v.videoUrl ? (
                         <ActivePanel key={v.id} v={v} />
@@ -282,9 +285,9 @@ function ActivePanel({ v }: { v: CarouselVideo }) {
 
 export function HomeCarouselSkeleton() {
     return (
-        <div className="w-full px-[3%]">
+        <div className={HERO_WRAP}>
             <div className="flex items-stretch gap-3">
-                <div className={`relative flex-1 overflow-hidden rounded-none bg-muted ${SCREEN_H}`}>
+                <div className={`relative flex-1 overflow-hidden rounded-none bg-muted ${SCREEN_ASPECT}`}>
                     <div className="absolute inset-0 shimmer-skeleton rounded-none" />
                     <div className="absolute inset-x-4 bottom-4 flex items-center gap-3">
                         <div className="size-11 shrink-0 rounded-full shimmer-skeleton" />
