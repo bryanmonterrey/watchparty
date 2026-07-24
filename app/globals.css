@@ -620,7 +620,7 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
      across the app — the <Skeleton> primitive and lib/skeleton-stagger.ts both
      render it. Siblings offset the sweep so a group ripples left-to-right. */
   .shimmer-skeleton {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: color-mix(in oklab, var(--color-soft-gray) 5%, transparent);
     background-image: linear-gradient(
       90deg,
       rgba(255, 255, 255, 0) 0%,
