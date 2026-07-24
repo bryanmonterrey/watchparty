@@ -49,17 +49,24 @@ export function loadScript(src: string): Promise<void> {
 interface TokenTradingViewChartProps {
     /** Solana mint address; null/undefined for pre-launch drafts. */
     mint?: string | null;
-    name?: string;
+    /** Ticker — used to label a draft's flat-baseline chart when there's no mint. */
+    ticker?: string;
     className?: string;
 }
 
-export function TokenTradingViewChart({ mint, name, className }: TokenTradingViewChartProps) {
+export function TokenTradingViewChart({ mint, ticker, className }: TokenTradingViewChartProps) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const widgetRef = React.useRef<TradingViewWidgetInstance | null>(null);
     const [state, setState] = React.useState<LoadState>("loading");
 
+    // Live token → the mint drives GeckoTerminal OHLCV. Pre-launch draft → a
+    // `draft-<ticker>` symbol the UDF server answers with a flat baseline at the
+    // bonding curve's starting price (pump.fun-style flat line until first buy).
+    const isDraft = !mint;
+    const symbol = mint || (ticker ? `draft-${ticker.replace(/[^a-zA-Z0-9]/g, "") || "TOKEN"}` : null);
+
     React.useEffect(() => {
-        if (!mint) return; // draft token — handled by the no-mint branch below
+        if (!symbol) return; // no mint and no ticker — nothing to chart
         let cancelled = false;
 
         (async () => {
@@ -76,7 +83,7 @@ export function TokenTradingViewChart({ mint, name, className }: TokenTradingVie
             }
 
             const widget = new window.TradingView.widget({
-                symbol: mint,
+                symbol,
                 interval: "60",
                 container: containerRef.current,
                 datafeed: new window.Datafeeds.UDFCompatibleDatafeed("/api/udf", 30_000),
@@ -114,9 +121,9 @@ export function TokenTradingViewChart({ mint, name, className }: TokenTradingVie
             }
             widgetRef.current = null;
         };
-    }, [mint, name]);
+    }, [symbol]);
 
-    if (!mint) {
+    if (!symbol) {
         return (
             <div className={`flex items-center justify-center text-center ${className ?? ""}`}>
                 <div className="text-zinc-600 text-sm font-medium px-6">
@@ -126,10 +133,19 @@ export function TokenTradingViewChart({ mint, name, className }: TokenTradingVie
         );
     }
 
-    // Library failed to load (network/deploy hiccup) — keep a chart on screen
-    // via the lightweight-charts renderer rather than an error state.
+    // Library failed to load (network/deploy hiccup) — keep a chart on screen.
+    // Live tokens fall back to the lightweight-charts renderer; a draft has no
+    // real series to fall back to, so it shows the pre-launch note instead.
     if (state === "missing") {
-        return <TokenCandlestickChart mint={mint} className={className} />;
+        return isDraft ? (
+            <div className={`flex items-center justify-center text-center ${className ?? ""}`}>
+                <div className="text-zinc-600 text-sm font-medium px-6">
+                    Chart available once trading goes live
+                </div>
+            </div>
+        ) : (
+            <TokenCandlestickChart mint={mint} className={className} />
+        );
     }
 
     return (

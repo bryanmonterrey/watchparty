@@ -1,12 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getUdfBars, SUPPORTED_RESOLUTIONS } from "@/lib/tokens/udf-datafeed";
+import {
+    getUdfBars,
+    getFlatBaselineBars,
+    getSolUsd,
+    CURVE_START_PRICE_SOL,
+    SUPPORTED_RESOLUTIONS,
+} from "@/lib/tokens/udf-datafeed";
 
 // UDF (Universal Data Feed) REST server for the TradingView Charting Library.
 // `Datafeeds.UDFCompatibleDatafeed("/api/udf")` calls:
 //   GET /api/udf/config   GET /api/udf/symbols?symbol=<mint>
 //   GET /api/udf/history?symbol=<mint>&resolution=&from=&to=&countback=
 //   GET /api/udf/time
-// The symbol IS the Solana mint address; OHLCV comes from GeckoTerminal.
+// For a LIVE token the symbol is the Solana mint (OHLCV from GeckoTerminal).
+// For a PRE-LAUNCH draft the symbol is `draft-<ticker>` — there's no pool yet,
+// so we serve a flat baseline at the bonding curve's starting price.
+
+const DRAFT_PREFIX = "draft-";
+const isDraftSymbol = (s: string) => s.toLowerCase().startsWith(DRAFT_PREFIX);
 
 const json = (data: unknown, init?: ResponseInit) =>
     NextResponse.json(data, { headers: { "Cache-Control": "no-store" }, ...init });
@@ -38,7 +49,9 @@ export async function GET(
         case "symbols": {
             const symbol = q.get("symbol") ?? "";
             const ticker = symbol;
-            const name = symbol.length > 10 ? `${symbol.slice(0, 4)}…${symbol.slice(-4)}` : symbol;
+            // Drafts show their ticker as-is; live mints get the truncated form.
+            const display = isDraftSymbol(symbol) ? symbol.slice(DRAFT_PREFIX.length) : symbol;
+            const name = display.length > 10 ? `${display.slice(0, 4)}…${display.slice(-4)}` : display;
             return json({
                 name,
                 ticker,
@@ -68,6 +81,13 @@ export async function GET(
             const countback = q.get("countback") ? Number(q.get("countback")) : undefined;
             if (!symbol || !Number.isFinite(from) || !Number.isFinite(to)) {
                 return json({ s: "error", errmsg: "bad params" });
+            }
+            // Pre-launch draft: no pool exists yet — hold a flat line at the
+            // bonding curve's starting price (converted to USD via live SOL).
+            if (isDraftSymbol(symbol)) {
+                const solUsd = await getSolUsd();
+                const bars = getFlatBaselineBars(resolution, from, to, CURVE_START_PRICE_SOL * solUsd, countback);
+                return json(bars);
             }
             const bars = await getUdfBars(symbol, resolution, from, to, countback);
             return json(bars);

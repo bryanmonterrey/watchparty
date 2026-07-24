@@ -47,8 +47,20 @@ source is never type-checked (it would otherwise fail `tsc --noEmit`).
 - **UDF server**: `app/api/udf/[[...path]]/route.ts` implements `/config`,
   `/symbols`, `/history`, `/time`.
 - **OHLCV source**: `lib/tokens/udf-datafeed.ts` → GeckoTerminal pool OHLCV
-  (Redis-cached), resolving the mint's best pool and base/quote side. The symbol
-  passed to the widget IS the Solana mint address.
+  (Redis-cached), resolving the mint's best pool and base/quote side. For a LIVE
+  token the symbol passed to the widget IS the Solana mint address.
+
+### Pre-launch drafts (flat baseline)
+
+A draft token has no mint / pool / price until the first buy creates its Meteora
+bonding-curve pool (the "first-buy = launch" model), so there's no real OHLCV to
+plot. To match pump.fun's "there's always a chart" feel, drafts render the widget
+with the symbol `draft-<ticker>`; the UDF `/history` handler detects that prefix
+and returns a **flat baseline** at the curve's starting price — `CURVE_START_PRICE_SOL`
+(`1e-9` SOL/token, from `use-token-launch.ts` `customPrices[0]`) × live SOL/USD
+(`getSolUsd`, GeckoTerminal, cached 90s). The line is anchored to the last ~3 days
+so scrolling back stops cleanly. Once the token launches and `tokenAddress` is set,
+the chart automatically switches to real mint-based OHLCV.
 
 ## Notes / follow-ups
 
