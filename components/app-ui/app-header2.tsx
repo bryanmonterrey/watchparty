@@ -95,7 +95,17 @@ export function AppHeader2() {
           and /search get a whisper of theme canvas; /settings goes near-solid
           (85%) so the header reads as a real bar over the scrolled panels.
           Other pages have no scroll backdrop at all. */}
-      
+      {showScrollBackdrop && (
+        <div
+          className="absolute inset-0 transition-colors"
+          style={{
+            backgroundColor: isMediaPage
+              ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
+              : `color-mix(in oklab, var(--background) ${Math.min(scrollY / 32, 1) * (isHubPage ? 85 : 20)}%, transparent)`,
+            backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
+          }}
+        />
+      )}
       {/* Mobile Menu & Logo */}
       <div className="relative z-10 flex-1 flex items-center justify-start">
         {/* Trigger + logo, desktop too (per desktopdesigns/*.svg): pressing
