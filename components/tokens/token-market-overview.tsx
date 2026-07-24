@@ -44,8 +44,8 @@ export function TokenMarketOverview({ token }: TokenMarketOverviewProps) {
             </div>
 
             {/* Chart Area — TradingView Advanced Charts. Live tokens draw real
-                GeckoTerminal OHLCV; pre-launch drafts show a flat baseline at
-                the bonding curve's starting price (pump.fun-style). */}
+                GeckoTerminal OHLCV; pre-launch drafts show the widget's native
+                "No data here" empty state (pump.fun) until the first trade. */}
             <TokenTradingViewChart
                 mint={token.tokenAddress}
                 ticker={token.ticker}

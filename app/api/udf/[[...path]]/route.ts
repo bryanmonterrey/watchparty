@@ -1,11 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import {
-    getUdfBars,
-    getFlatBaselineBars,
-    getSolUsd,
-    CURVE_START_PRICE_SOL,
-    SUPPORTED_RESOLUTIONS,
-} from "@/lib/tokens/udf-datafeed";
+import { getUdfBars, SUPPORTED_RESOLUTIONS } from "@/lib/tokens/udf-datafeed";
 
 // UDF (Universal Data Feed) REST server for the TradingView Charting Library.
 // `Datafeeds.UDFCompatibleDatafeed("/api/udf")` calls:
@@ -14,7 +8,10 @@ import {
 //   GET /api/udf/time
 // For a LIVE token the symbol is the Solana mint (OHLCV from GeckoTerminal).
 // For a PRE-LAUNCH draft the symbol is `draft-<ticker>` — there's no pool yet,
-// so we serve a flat baseline at the bonding curve's starting price.
+// so /history returns no_data and the widget shows its native "No data here"
+// empty state (the pump.fun behaviour). We do NOT synthesise a flat baseline:
+// a zero-range series (every bar o=h=l=c) can stall the chart's price-scale
+// init so onChartReady never fires and the loading screen spins forever.
 
 const DRAFT_PREFIX = "draft-";
 const isDraftSymbol = (s: string) => s.toLowerCase().startsWith(DRAFT_PREFIX);
@@ -82,12 +79,10 @@ export async function GET(
             if (!symbol || !Number.isFinite(from) || !Number.isFinite(to)) {
                 return json({ s: "error", errmsg: "bad params" });
             }
-            // Pre-launch draft: no pool exists yet — hold a flat line at the
-            // bonding curve's starting price (converted to USD via live SOL).
+            // Pre-launch draft: no pool/trades yet — empty series so the widget
+            // shows "No data here" (pump.fun) rather than a synthetic flat line.
             if (isDraftSymbol(symbol)) {
-                const solUsd = await getSolUsd();
-                const bars = getFlatBaselineBars(resolution, from, to, CURVE_START_PRICE_SOL * solUsd, countback);
-                return json(bars);
+                return json({ s: "no_data" });
             }
             const bars = await getUdfBars(symbol, resolution, from, to, countback);
             return json(bars);

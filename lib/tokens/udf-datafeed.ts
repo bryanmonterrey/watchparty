@@ -30,12 +30,6 @@ export const SUPPORTED_RESOLUTIONS = ["1", "5", "15", "60", "240", "720", "1D"];
 
 const WSOL = "So11111111111111111111111111111111111111112";
 
-// The Meteora bonding curve's first checkpoint price (SOL per token), taken
-// from hooks/use-token-launch.ts `customPrices[0]`. × 1e9 total supply ≈ 1 SOL
-// initial market cap — this is the "starting price" a pre-launch draft's flat
-// baseline chart sits at (pump.fun-style flat line until the first trade).
-export const CURVE_START_PRICE_SOL = 1e-9;
-
 interface PoolInfo {
     address: string;
     tokenSide: "base" | "quote";
@@ -141,59 +135,4 @@ export async function getUdfBars(
     } catch (err) {
         return { s: "error", errmsg: err instanceof Error ? err.message : "fetch failed" };
     }
-}
-
-/** Live SOL price in USD (GeckoTerminal, cached ~90s). Falls back to a sane
- *  constant if GT is unreachable so a draft baseline never renders NaN. */
-export async function getSolUsd(): Promise<number> {
-    try {
-        return await withCache("gt:solusd", TTL.SOL_PRICE, async () => {
-            const res = await fetch(`${GT}/tokens/${WSOL}`, {
-                headers: GT_HEADERS,
-                signal: AbortSignal.timeout(6000),
-            });
-            if (!res.ok) throw new Error(`solusd ${res.status}`);
-            const j = await res.json();
-            const p = Number(j.data?.attributes?.price_usd);
-            if (!Number.isFinite(p) || p <= 0) throw new Error("bad price");
-            return p;
-        });
-    } catch {
-        return 200;
-    }
-}
-
-/**
- * Flat baseline bars for a pre-launch draft token — a single price held
- * constant (open=high=low=close, volume 0), the pump.fun "flat line until the
- * first trade" look. `priceUsd` is the bonding curve's starting price. The
- * series is anchored to the last few days up to now (not all of history), so
- * scrolling back stops cleanly instead of streaming an infinite flat line.
- */
-export function getFlatBaselineBars(
-    resolution: string,
-    from: number,
-    to: number,
-    priceUsd: number,
-    countBack?: number,
-): UdfBars {
-    const barSeconds = (RESOLUTION_MAP[resolution] ?? RESOLUTION_MAP["60"])[2];
-    const now = Math.floor(Date.now() / 1000);
-    const LOOKBACK = 3 * 86400; // 3 days of flat bars behind "now"
-    const windowStart = now - LOOKBACK;
-
-    const end = Math.min(to, now);
-    const start = Math.max(from, windowStart);
-    // Requested range is entirely outside the flat window → no (more) data.
-    if (end <= windowStart || start > end) return { s: "no_data" };
-
-    const lastBar = Math.floor(end / barSeconds) * barSeconds;
-    const firstBar = Math.ceil(start / barSeconds) * barSeconds;
-    let t: number[] = [];
-    for (let bt = firstBar; bt <= lastBar; bt += barSeconds) if (bt > 0) t.push(bt);
-    if (countBack && countBack > 0 && t.length > countBack) t = t.slice(t.length - countBack);
-    if (t.length === 0) return { s: "no_data" };
-
-    const flat = t.map(() => priceUsd);
-    return { s: "ok", t, o: flat, h: [...flat], l: [...flat], c: [...flat], v: t.map(() => 0) };
 }

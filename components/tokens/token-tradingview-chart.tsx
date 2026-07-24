@@ -49,7 +49,7 @@ export function loadScript(src: string): Promise<void> {
 interface TokenTradingViewChartProps {
     /** Solana mint address; null/undefined for pre-launch drafts. */
     mint?: string | null;
-    /** Ticker — used to label a draft's flat-baseline chart when there's no mint. */
+    /** Ticker — labels a draft's empty ("No data here") chart when there's no mint. */
     ticker?: string;
     className?: string;
 }
@@ -60,14 +60,20 @@ export function TokenTradingViewChart({ mint, ticker, className }: TokenTradingV
     const [state, setState] = React.useState<LoadState>("loading");
 
     // Live token → the mint drives GeckoTerminal OHLCV. Pre-launch draft → a
-    // `draft-<ticker>` symbol the UDF server answers with a flat baseline at the
-    // bonding curve's starting price (pump.fun-style flat line until first buy).
+    // `draft-<ticker>` symbol the UDF server answers with no_data, so the widget
+    // shows its native "No data here" state (like pump.fun) until first buy.
     const isDraft = !mint;
     const symbol = mint || (ticker ? `draft-${ticker.replace(/[^a-zA-Z0-9]/g, "") || "TOKEN"}` : null);
 
     React.useEffect(() => {
         if (!symbol) return; // no mint and no ticker — nothing to chart
         let cancelled = false;
+        // Safety net: if onChartReady never fires (widget stalls on its loading
+        // screen), clear the overlay anyway so the user sees the chart's own
+        // state ("No data here" / candles) instead of an endless shimmer.
+        const readyTimer = window.setTimeout(() => {
+            if (!cancelled) setState("ready");
+        }, 8000);
 
         (async () => {
             try {
@@ -108,12 +114,15 @@ export function TokenTradingViewChart({ mint, ticker, className }: TokenTradingV
             });
             widgetRef.current = widget;
             widget.onChartReady(() => {
-                if (!cancelled) setState("ready");
+                if (cancelled) return;
+                window.clearTimeout(readyTimer);
+                setState("ready");
             });
         })();
 
         return () => {
             cancelled = true;
+            window.clearTimeout(readyTimer);
             try {
                 widgetRef.current?.remove();
             } catch {

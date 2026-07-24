@@ -50,17 +50,20 @@ source is never type-checked (it would otherwise fail `tsc --noEmit`).
   (Redis-cached), resolving the mint's best pool and base/quote side. For a LIVE
   token the symbol passed to the widget IS the Solana mint address.
 
-### Pre-launch drafts (flat baseline)
+### Pre-launch drafts ("No data here")
 
 A draft token has no mint / pool / price until the first buy creates its Meteora
 bonding-curve pool (the "first-buy = launch" model), so there's no real OHLCV to
-plot. To match pump.fun's "there's always a chart" feel, drafts render the widget
-with the symbol `draft-<ticker>`; the UDF `/history` handler detects that prefix
-and returns a **flat baseline** at the curve's starting price — `CURVE_START_PRICE_SOL`
-(`1e-9` SOL/token, from `use-token-launch.ts` `customPrices[0]`) × live SOL/USD
-(`getSolUsd`, GeckoTerminal, cached 90s). The line is anchored to the last ~3 days
-so scrolling back stops cleanly. Once the token launches and `tokenAddress` is set,
+plot. Drafts still render the widget (symbol `draft-<ticker>`, so the full chart
+chrome shows) but the UDF `/history` handler returns `{ s: "no_data" }`, so the
+widget shows its native **"No data here"** empty state — exactly what pump.fun
+does for an un-traded coin. Once the token launches and `tokenAddress` is set,
 the chart automatically switches to real mint-based OHLCV.
+
+> An earlier version synthesised a **flat baseline** (every bar `o=h=l=c` at the
+> curve's start price) instead. Don't do that: a zero-range series can stall the
+> chart's price-scale init so `onChartReady` never fires and the loading screen
+> spins forever. Empty (`no_data`) is both safer and matches pump.fun.
 
 ## Notes / follow-ups
 
