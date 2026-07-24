@@ -1,17 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { TokenCandlestickChart } from "./token-candlestick-chart";
 
 // TradingView Charting Library wrapper — the pump.fun-style candlestick chart.
 //
-// The library is self-hosted (gated, not on npm): drop the files in
+// The library is self-hosted (gated, not on npm): the files live in
 //   public/charting_library/   and   public/datafeeds/udf/
-// per docs/tradingview-charting-library.md. Until they're present this renders
-// a graceful placeholder instead of crashing. Bars come from our UDF endpoint
-// (/api/udf), which is backed by GeckoTerminal OHLCV.
+// per docs/tradingview-charting-library.md. If they ever fail to load this
+// falls back to the lightweight-charts TokenCandlestickChart instead of
+// crashing. Bars come from our UDF endpoint (/api/udf), backed by
+// GeckoTerminal OHLCV.
 
 const LIBRARY_SCRIPT = "/charting_library/charting_library.standalone.js";
 const DATAFEED_SCRIPT = "/datafeeds/udf/dist/bundle.js";
+
+const UP = "#00ED89"; // lantern
+const DOWN = "#FF746C"; // pastelred
 
 type LoadState = "loading" | "ready" | "missing";
 
@@ -86,12 +91,12 @@ export function TokenTradingViewChart({ mint, name, className }: TokenTradingVie
                 overrides: {
                     "paneProperties.background": "#0a0a0a",
                     "paneProperties.backgroundType": "solid",
-                    "mainSeriesProperties.candleStyle.upColor": "#26a69a",
-                    "mainSeriesProperties.candleStyle.downColor": "#ef5350",
-                    "mainSeriesProperties.candleStyle.wickUpColor": "#26a69a",
-                    "mainSeriesProperties.candleStyle.wickDownColor": "#ef5350",
-                    "mainSeriesProperties.candleStyle.borderUpColor": "#26a69a",
-                    "mainSeriesProperties.candleStyle.borderDownColor": "#ef5350",
+                    "mainSeriesProperties.candleStyle.upColor": UP,
+                    "mainSeriesProperties.candleStyle.downColor": DOWN,
+                    "mainSeriesProperties.candleStyle.wickUpColor": UP,
+                    "mainSeriesProperties.candleStyle.wickDownColor": DOWN,
+                    "mainSeriesProperties.candleStyle.borderUpColor": UP,
+                    "mainSeriesProperties.candleStyle.borderDownColor": DOWN,
                 },
             });
             widgetRef.current = widget;
@@ -121,20 +126,18 @@ export function TokenTradingViewChart({ mint, name, className }: TokenTradingVie
         );
     }
 
+    // Library failed to load (network/deploy hiccup) — keep a chart on screen
+    // via the lightweight-charts renderer rather than an error state.
+    if (state === "missing") {
+        return <TokenCandlestickChart mint={mint} className={className} />;
+    }
+
     return (
         <div className={`relative ${className ?? ""}`}>
             <div ref={containerRef} className="absolute inset-0" />
             {state !== "ready" && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                    {state === "missing" ? (
-                        <div className="text-zinc-600 text-xs font-medium text-center px-6 max-w-sm">
-                            Charting library not installed. Add it to{" "}
-                            <code className="text-zinc-500">public/charting_library/</code> — see
-                            docs/tradingview-charting-library.md
-                        </div>
-                    ) : (
-                        <div className="h-full w-full rounded-2xl shimmer-skeleton" />
-                    )}
+                    <div className="h-full w-full rounded-2xl shimmer-skeleton" />
                 </div>
             )}
         </div>

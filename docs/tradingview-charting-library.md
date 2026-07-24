@@ -1,30 +1,45 @@
-# TradingView Charting Library (token chart)
+# TradingView Charting Library (token + perps charts)
 
-The token page chart (`components/tokens/token-tradingview-chart.tsx`) uses
-TradingView's **Advanced Charts / Charting Library** — the same product pump.fun
-uses. It is **free but gated**: not on npm, you self-host the files.
+Both the token page chart (`components/tokens/token-tradingview-chart.tsx`) and
+the perps terminal chart (`components/perps/perps-tv-chart.tsx`) use TradingView's
+**Advanced Charts / Charting Library** — the same product pump.fun uses. It is
+**free but gated**: not on npm, you self-host the files.
 
-Until the files are present, the chart shows a "library not installed"
-placeholder. Everything else (the data backend) is already built and works.
+**Status: installed.** The library files live under `public/charting_library/`
+and `public/datafeeds/` and are **committed to this (private) repo**. If a script
+ever fails to load, both charts fall back to their lightweight-charts renderer
+(`TokenCandlestickChart` / `PerpsChart`) so a chart is always on screen.
 
-## One-time setup
+## Where the files come from (and how to update)
 
-1. **Apply for access** at https://www.tradingview.com/charting-library/ — accept
-   the license and request access to the private GitHub repo
-   `tradingview/charting_library` (approval is usually quick but can take a day or two).
-2. Once you have repo access, copy these two folders out of it into `public/`:
-   - `charting_library/` → `public/charting_library/`
-   - `datafeeds/udf/`     → `public/datafeeds/udf/`
-   So these resolve at runtime:
-   - `/charting_library/charting_library.standalone.js`
-   - `/datafeeds/udf/dist/bundle.js`
-3. They're large/licensed — keep them out of git. Add to `.gitignore`:
-   ```
-   /public/charting_library/
-   /public/datafeeds/
-   ```
-   For deploy (Cloudflare), commit them to a private build step or vendor them in
-   CI from a private source; do not commit the licensed files to a public repo.
+Access was granted to the private GitHub repo `tradingview/charting_library`
+(apply at https://www.tradingview.com/charting-library/). To install or update:
+
+```bash
+gh repo clone tradingview/charting_library -- --depth 1 /tmp/tvcl
+rm -rf public/charting_library public/datafeeds
+cp -R /tmp/tvcl/charting_library public/charting_library
+cp -R /tmp/tvcl/datafeeds        public/datafeeds
+```
+
+These must resolve at runtime (the components load them by absolute path):
+- `/charting_library/charting_library.standalone.js`
+- `/datafeeds/udf/dist/bundle.js`
+
+## Why the files are committed (not gitignored)
+
+The TradingView license only forbids *public* redistribution; **this repo is
+private**, so committing is permitted and is the simplest path for the
+Cloudflare CI deploy (the build just needs the files present — no separate
+vendoring step, no license token in CI). They add ~31 MB (2.3k lazy-loaded
+locale/theme/feature chunks; largest single file ~2 MB, well under Cloudflare's
+25 MiB/file and 20k-file asset limits).
+
+> **Do not gitignore these or move the repo public.** Gitignoring them breaks the
+> deploy (CI would ship without the chart); a public repo would violate the license.
+
+`public/` is excluded from `tsconfig.json` so the datafeed's bundled `.ts`/`.d.ts`
+source is never type-checked (it would otherwise fail `tsc --noEmit`).
 
 ## How it's wired
 
