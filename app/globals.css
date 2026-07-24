@@ -199,11 +199,7 @@
   --color-pastelred: #FF746C;
   --color-pastelgray: #7F878E;
   --color-borders: rgb(47, 51, 54);
-  /* Solid slate base for hairline borders. Defined WITHOUT alpha so opacity
-     modifiers behave as written: border-baseborder/15 = 15%, /20 = the unified
-     hairline strength. (Baking alpha into the token here would double up with
-     the /modifier — /15 on an 0.2 token renders ~3%, i.e. invisible.) */
-  --color-baseborder: rgb(138, 145, 158);
+  --color-baseborder: rgba(138, 145, 158, 0.2);
   /* Translucent card wash used by the /trade grid + token page cards. */
   --color-panel: rgba(255, 255, 255, 0.03);
   --blur-xs: 4px;

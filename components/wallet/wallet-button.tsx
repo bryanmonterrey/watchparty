@@ -14,7 +14,6 @@ import { signInWithSolana } from "@/lib/solana/sign-in";
 import { appToast } from "@/components/app-ui/app-toast";
 import { Loader2 } from "lucide-react";
 import { WalletButtonSkeleton } from "./wallet-button-skeleton";
-import { Squircle } from "@/components/ui/squircle";
 import { OPEN_WALLET_DRAWER_EVENT, useHeaderWalletLoading } from "./sol-balance-chip";
 import "@/lib/types";
 
@@ -223,25 +222,27 @@ function WalletButtonInner() {
         return (
             <>
                 {/* Avatar-only trigger — the avatar IS the button (no address
-                    text). Squircle clip defines the shape, so the avatar's own
-                    rounding is disabled and it fills the tile edge-to-edge. */}
-                <Squircle asChild radius={16} autoEffects={false}>
-                    <Button
-                        variant="outline"
-                        aria-label="Open wallet"
-                        className="rounded-none border-none size-11 p-0 overflow-hidden bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs"
-                        disabled={isProcessing}
-                        onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
-                        onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
-                    >
-                        <Avatar className="size-full rounded-none">
-                            <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
-                            <AvatarFallback className="bg-transparent text-white/90 font-semibold rounded-none">
-                                {(session?.user?.username ?? "?")[0]?.toUpperCase()}
-                            </AvatarFallback>
-                        </Avatar>
-                    </Button>
-                </Squircle>
+                    text). Plain rounded-full circle (matches the Create button /
+                    balance chip); overflow-hidden clips the avatar to the circle.
+                    NOTE: intentionally NOT wrapped in <Squircle> — its clip-path
+                    would clip the border off, which is why border-baseborder
+                    wouldn't render here (it works fine on the non-squircled
+                    siblings). */}
+                <Button
+                    variant="outline"
+                    aria-label="Open wallet"
+                    className="rounded-full size-[52px] border border-baseborder/5 p-0 overflow-hidden bg-soft-gray/10 hover:bg-soft-gray/20 backdrop-blur-xs"
+                    disabled={isProcessing}
+                    onMouseEnter={() => { handlePrefetch(); setDrawerReady(true); }}
+                    onClick={() => { setDrawerReady(true); setDrawerOpen(true); }}
+                >
+                    <Avatar className="size-full rounded-none">
+                        <AvatarImage src={session?.user?.avatar_url || undefined} alt={session?.user?.username || "User"} />
+                        <AvatarFallback className="bg-transparent text-white/90 font-semibold rounded-none">
+                            {(session?.user?.username ?? "?")[0]?.toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                </Button>
 
                 {drawerReady && (
                     <WalletDrawer
@@ -272,7 +273,7 @@ function WalletButtonInner() {
                 onClick={handleButtonClick}
                 disabled={isProcessing}
                 variant="default"
-                className="bg-twitter2 text-white2 h-11 text-[18px] backdrop-blur-xs font-medium hover:bg-twitter cursor-pointer px-6 gap-3"
+                className="bg-white text-black h-[52px] text-[18px] backdrop-blur-xs font-medium hover:bg-white/80 cursor-pointer px-6 gap-3"
             >
                 <span>{buttonText}</span>
             </Button>
