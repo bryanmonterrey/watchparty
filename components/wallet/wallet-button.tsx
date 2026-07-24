@@ -21,8 +21,11 @@ import "@/lib/types";
 // pulls swap/send/settings/NFT views + @solana/web3.js + spl-token). Lazy-load
 // them so they stay OUT of the initial authenticated bundle — mobile Safari was
 // killing the tab on the eager load. They fetch on first hover/click.
+// Points at wallet-drawer2 — the redesign copy. The original wallet-drawer/ is
+// kept untouched as a reference (same "2" convention as app-header2 /
+// global-search2 / sol-balance-chip2).
 const WalletDrawer = dynamic(
-  () => import("./wallet-drawer").then((m) => ({ default: m.WalletDrawer })),
+  () => import("./wallet-drawer2").then((m) => ({ default: m.WalletDrawer })),
   { ssr: false },
 );
 const WalletConnectModal = dynamic(
@@ -229,7 +232,6 @@ function WalletButtonInner() {
                     wouldn't render here (it works fine on the non-squircled
                     siblings). */}
                 <Button
-                    variant="outline"
                     aria-label="Open wallet"
                     className="rounded-full size-[52px] border border-baseborder/5 p-0 overflow-hidden bg-soft-gray/10 hover:bg-soft-gray/20 backdrop-blur-xs"
                     disabled={isProcessing}

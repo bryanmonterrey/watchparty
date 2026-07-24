@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function AppHome() {
   return (
     <div className="hidden-scrollbar flex h-full max-w-full flex-col overflow-y-auto">
-      <HomeView />
+      
     </div>
   );
 }

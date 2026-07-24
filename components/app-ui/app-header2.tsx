@@ -10,12 +10,12 @@ import { CreateIcon, MenuIcon, SearchIcon, PinkStarLogo } from '../icons'
 import { CreateDialog } from './create-dialog'
 import { WithAuth } from '@/components/auth/with-auth'
 import { Squircle } from '@/components/ui/squircle'
-import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip'
+import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useQueryState } from 'nuqs'
 import { searchParams } from '@/lib/searchParams'
-import { GlobalSearch } from './global-search'
+import { GlobalSearch } from './global-search2'
 import { TradeNav } from '@/components/trade/trade-nav'
 import { MessagesNav } from '@/components/messages/messages-nav'
 import Link from 'next/link'
@@ -89,23 +89,13 @@ export function AppHeader2() {
 
   return (
     <header
-      className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-between px-[var(--header-px)] py-3 pointer-events-none"
+      className="fixed top-0 left-0 w-full h-[var(--header-height)] backdrop-blur-xl z-50 max-md:hidden flex items-center justify-between px-[var(--header-px)] py-3 pointer-events-none"
     >
       {/* Scroll backdrop: media pages keep the black scrim over video; /home
           and /search get a whisper of theme canvas; /settings goes near-solid
           (85%) so the header reads as a real bar over the scrolled panels.
           Other pages have no scroll backdrop at all. */}
-      {showScrollBackdrop && (
-        <div
-          className="absolute inset-0 transition-colors"
-          style={{
-            backgroundColor: isMediaPage
-              ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
-              : `color-mix(in oklab, var(--background) ${Math.min(scrollY / 32, 1) * (isHubPage ? 85 : 20)}%, transparent)`,
-            backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
-          }}
-        />
-      )}
+      
       {/* Mobile Menu & Logo */}
       <div className="relative z-10 flex-1 flex items-center justify-start">
         {/* Trigger + logo, desktop too (per desktopdesigns/*.svg): pressing
@@ -124,7 +114,7 @@ export function AppHeader2() {
           </Button>
           <Link href="/home" aria-label="Home">
             {/* Pink star logo, sized to match the menu icon (size-8). */}
-            <PinkStarLogo className="size-8" />
+            <PinkStarLogo className="size-6.5" />
           </Link>
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
@@ -199,7 +189,7 @@ export function AppHeader2() {
                     <Button
                       variant="outline"
                       aria-label="Create"
-                      className="rounded-none border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
+                      className="rounded-full border-baseborder/5 border flex h-[52px] w-[52px] p-0 text-flexwhite/80 bg-soft-gray/5 hover:bg-soft-gray/10 transition-colors ease-out"
                     >
                       <CreateIcon className="size-6" strokeWidth={2}/>
                     </Button>
