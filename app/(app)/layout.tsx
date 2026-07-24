@@ -14,16 +14,15 @@ import { DesktopOnlyGate } from "@/components/app-ui/desktop-only-gate";
 
 // ─── NEW APP SHELL (fresh UI build) ─────────────────────────────────────────
 // This is the clean (app) group for the ground-up UI rewrite. It's a verbatim
-// copy of the working shell that now lives in app/(app-legacy)/layout.tsx, kept
-// as the *template*: the provider stack, session guard, and design system are
-// already wired so a new UI can be built on top without re-scaffolding.
+// copy of the working shell that the old app used, kept as the *template*: the
+// provider stack, session guard, and design system are already wired so a new
+// UI can be built on top without re-scaffolding.
 //
-// Build the new UI by editing this layout and adding routes under this group.
-// The old app stays fully live in (app-legacy) (route groups don't change URLs,
-// so it still serves /home, /trade, /discover, … unchanged) — port routes over
-// here one at a time, deleting the legacy page as each new one lands.
+// The old app is RETIRED — archived (not routed) in app/_legacy/ for reference.
+// Build the new UI by editing this layout and adding routes under this group;
+// port screens over from _legacy one at a time as you rebuild them.
 //
-// Provider notes (same as legacy): AppProviders (Query/tRPC/cluster/Solana)
+// Provider notes (same as before): AppProviders (Query/tRPC/cluster/Solana)
 // lives HERE, not the root layout, so login/landing never load the wallet SDK.
 // ThemeProvider is the exception — it's in the root layout so next-themes'
 // pre-paint script runs before this async session check (no theme flash).
