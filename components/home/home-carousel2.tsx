@@ -179,9 +179,9 @@ function HeroArrow({ dir, onClick }: { dir: "up" | "down"; onClick: () => void }
                 type="button"
                 onClick={onClick}
                 aria-label={dir === "up" ? "Previous videos" : "Next videos"}
-                className="flex size-16 items-center justify-center bg-panel2 text-white/80 backdrop-blur-sm transition-colors hover:bg-baseborder/45 hover:text-white"
+                className="flex size-24 rounded-3xl items-center justify-center bg-panel2 text-white/80 backdrop-blur-sm transition-colors hover:bg-baseborder/45 hover:text-white"
             >
-                <Icon className="size-10" strokeWidth={2.5} />
+                <Icon className="size-14" strokeWidth={2.5} />
             </button>
         </Squircle>
     );
@@ -354,10 +354,10 @@ export function HomeCarouselSkeleton() {
                 </div>
                 <div className="flex shrink-0 flex-col justify-center gap-3">
                     <Squircle asChild radius={18} autoEffects={false}>
-                        <div className="size-16 shimmer-skeleton" />
+                        <div className="size-24 shimmer-skeleton" />
                     </Squircle>
                     <Squircle asChild radius={18} autoEffects={false}>
-                        <div className="size-16 shimmer-skeleton" />
+                        <div className="size-24 shimmer-skeleton" />
                     </Squircle>
                 </div>
             </div>
