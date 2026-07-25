@@ -309,7 +309,11 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-panel1 flex h-full w-full flex-col justify-between group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm"
+          // Solid #080808 = the profile/app page background (bg-panel, white 3%,
+          // composited over the black shell). Solid, not bg-panel itself, because
+          // the sidebar overlays content when it peeks on hover — translucent
+          // would bleed.
+          className="bg-[#080808] flex h-full w-full flex-col justify-between group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm"
         >
           {children}
         </div>
