@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus } from "lucide-react";
 import { UserType } from "@/db/schema/auth/user";
@@ -161,7 +160,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
     // BODY is capped narrower (758px) so it sits with a gap to the rail while
     // the toolbar reaches it. (If the feed were w-full it would equal the
     // toolbar width and the toolbar would no longer extend past it.) Rail is
-    // shrink-0 against the lg:pr-[14rem] inset from ProfileTabContent.
+    // shrink-0 and sits at the content area's right edge.
     return (
         <div className="flex items-start gap-0 lg:gap-10">
             <div className="min-w-0 flex-1">
@@ -196,18 +195,8 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
     const viewerUsername = session?.user?.username ?? session?.user?.name ?? "Guest";
     const isOwner = session?.user?.id === user.id;
 
-    // Video-first tabs (Home rail, Videos, Streams) use the full width; every
-    // reading tab — INCLUDING Posts — gets a right inset the size of the
-    // EXPANDED sidebar (owner call 2026-07-22). On Posts the filter rail
-    // (flex-1 justify-end) sits flush against this padding, so there's a
-    // sidebar-width gap between the rail and the screen edge.
-    const fullBleedTab = ["Home", "Videos", "Streams"].includes(activeTab);
-
     return (
-        <div className={cn(
-            "py-4 min-h-[500px] z-10",
-            !fullBleedTab && "lg:pr-[var(--sidebar-width,14rem)]",
-        )}>
+        <div className="py-4 min-h-[500px] z-10">
             <AnimatePresence mode="wait">
                 <motion.div
                     key={activeTab}
