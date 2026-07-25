@@ -13,7 +13,7 @@ interface ProfileAboutProps {
 
 export function ProfileAbout({ user }: ProfileAboutProps) {
     return (
-        <div className="flex max-w-5xl flex-col gap-8">
+        <div className="flex px-4 flex-col gap-8">
             <AboutCard user={user} />
             <PanelGrid userId={user.id} />
         </div>

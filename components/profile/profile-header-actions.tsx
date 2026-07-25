@@ -9,7 +9,7 @@ import { UserType } from "@/db/schema/auth/user";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
-import { MaximizeIcon, MinimizeIcon, Link2Icon, VerticalDotsIcon } from "@/components/icons";
+import { Link2Icon, VerticalDotsIcon } from "@/components/icons";
 import { GooDropdown, gooMenuItem } from "@/components/ui/goo-dropdown";
 import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
@@ -100,14 +100,12 @@ interface ProfileHeaderActionsProps {
     user: UserType;
     /** Computed by ProfileHeader from the session (mount-gated to avoid a hydration flash). */
     isOwner: boolean;
-    isMinimized?: boolean;
-    onToggleSize?: () => void;
 }
 
 /** The action cluster on the right of the profile header — follow/subscribe/gift/
     message/tip/edit + the more menu, with their own state and modals. Extracted
     from ProfileHeader so the header itself is just identity + stats. */
-export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize }: ProfileHeaderActionsProps) {
+export function ProfileHeaderActions({ user, isOwner }: ProfileHeaderActionsProps) {
     const [isEditing, setIsEditing] = React.useState(false);
     const [showTip, setShowTip] = React.useState(false);
     const [showMoreMenu, setShowMoreMenu] = React.useState(false);
@@ -148,7 +146,8 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
             {!isOwner ? (
                 // Left to right (owner order, 2026-07-20): dots, gift premium
                 // (icon-only), message, send, follow, [subscribe/gift subs — no
-                // live tiers to test placement against yet], resize.
+                // live tiers to test placement against yet]. Resize moved to the
+                // banner (top-right full / bottom-right compact) in user-profile.
                 <>
                     <MoreMenu
                         userId={user.id}
@@ -180,36 +179,15 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
                         creatorName={user.name}
                         className="flex h-11 items-center gap-1.5 rounded-full border border-baseborder/5 bg-soft-gray-10 px-4 text-base font-bold text-white2 transition-colors hover:bg-soft-gray-15"
                     />
-                    {onToggleSize && (
-                        <Button
-                            onClick={onToggleSize}
-                            className="size-11 rounded-full border border-baseborder/5 bg-soft-gray-10 hover:bg-soft-gray-15 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
-                            title={isMinimized ? "Maximum size" : "Minimum size"}
-                        >
-                            {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
-                        </Button>
-                    )}
                 </>
             ) : (
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => setIsEditing(true)}
-                        className="font-bold rounded-full bg-soft-gray-10 hover:bg-soft-gray-15 border border-baseborder/5 h-11 px-4"
-                    >
-                        Edit profile
-                    </Button>
-                    {onToggleSize && (
-                        <Button
-                            variant="outline"
-                            onClick={onToggleSize}
-                            className="size-11 bg-soft-gray-10 hover:bg-soft-gray-15 rounded-full border border-baseborder/5 flex items-center justify-center p-0"
-                            title={isMinimized ? "Maximum size" : "Minimum size"}
-                        >
-                            {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
-                        </Button>
-                    )}
-                </div>
+                <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                    className="font-bold rounded-full bg-soft-gray-10 hover:bg-soft-gray-15 border border-baseborder/5 h-11 px-4"
+                >
+                    Edit profile
+                </Button>
             )}
 
             {isOwner && (

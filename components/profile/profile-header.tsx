@@ -15,13 +15,12 @@ import { getRealtimeClient } from "@/lib/supabase/realtime-client";
 interface ProfileHeaderProps {
     user: UserType;
     isMinimized?: boolean;
-    onToggleSize?: () => void;
     /** Server-fetched seed — kills the counts-only second skeleton phase on the
         profile page. Video/stream headers omit it and keep the shimmer. */
     initialFollowCounts?: { followers: number; following: number };
 }
 
-export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCounts }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isMinimized, initialFollowCounts }: ProfileHeaderProps) {
     const [followersDialog, setFollowersDialog] = React.useState<"followers" | "following" | null>(null);
     const { data: session, isPending: sessionPending } = useAuthSession();
     const [mounted, setMounted] = React.useState(false);
@@ -123,8 +122,6 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
             <ProfileHeaderActions
                 user={user}
                 isOwner={isOwner}
-                isMinimized={isMinimized}
-                onToggleSize={onToggleSize}
             />
         </div>
     );
