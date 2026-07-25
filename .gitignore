@@ -75,3 +75,6 @@ cron/.cf-secrets.json
 skills-lock.json
 .claude/skills/
 .claude/scheduled_tasks.lock
+
+# Wallet ciphertext backups from master-key rotation — never commit
+.wallet-backups/
