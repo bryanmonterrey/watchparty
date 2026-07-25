@@ -25,6 +25,12 @@ import { resolvePool } from "@/lib/tokens/udf-datafeed";
 import { deriveWalletKey } from "@/lib/wallet/key-derivation";
 import { getSeedForUser } from "@/lib/wallet/seed";
 import {
+    executeSwap,
+    getSwapQuote,
+    swapSupport,
+    type SwapQuote,
+} from "@/lib/chains/swap";
+import {
     estimateFee,
     hasSendProvider,
     sendOnChain as sendOnChainTx,
@@ -32,6 +38,11 @@ import {
 } from "@/lib/chains/send";
 import { getChain, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
+import {
+    getActivityForChain,
+    hasActivityProvider,
+    type ChainActivity,
+} from "@/lib/chains/activity";
 import { seedFromMnemonic } from "@/lib/chains/derive";
 import {
     LEGACY_SOLANA_PATH,
@@ -155,6 +166,95 @@ export const walletRouter = router({
             return stored;
         }
     }),
+
+    /** Whether the active chain can swap, and through what. */
+    getSwapSupport: protectedProcedure
+        .input(z.object({ chain: z.string() }))
+        .query(({ input }) => swapSupport(input.chain)),
+
+    /** Swap quote on an EVM chain (LI.FI). Read-only — nothing is signed here. */
+    getChainSwapQuote: protectedProcedure
+        .input(z.object({
+            chain: z.string(),
+            fromToken: z.string(),
+            toToken: z.string(),
+            fromAmount: z.string().regex(/^\d+$/, "amount must be base units"),
+            slippage: z.number().min(0).max(0.5).optional(),
+        }))
+        .query(async ({ ctx, input }) => {
+            const chain = getChain(input.chain);
+            if (!chain) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown chain" });
+
+            const addresses = await getAddressesByKind(ctx.user.id);
+            const from = addresses[chain.kind];
+            if (!from) throw new TRPCError({ code: "BAD_REQUEST", message: "No address for chain" });
+
+            try {
+                return await getSwapQuote({ ...input, chain: chain.id }, from);
+            } catch (err: any) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: err?.message ?? "Quote failed" });
+            }
+        }),
+
+    /** Execute a previously fetched swap quote. Signs from the seed-derived key. */
+    executeChainSwap: protectedProcedure
+        .input(z.object({ quote: z.any() }))
+        .mutation(async ({ ctx, input }) => {
+            const headersList = await headers();
+            const ipAddress = headersList.get("x-forwarded-for") || "unknown";
+            const userAgent = headersList.get("user-agent") || "unknown";
+
+            const quote = input.quote as SwapQuote;
+            const chain = getChain(quote?.chain);
+            if (!chain) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown chain" });
+
+            if (!checkRateLimit(ctx.user.id, "sign_transaction")) {
+                throw new TRPCError({
+                    code: "TOO_MANY_REQUESTS",
+                    message: `Too many transactions. Try again after ${getResetTime(ctx.user.id, "sign_transaction")}`,
+                });
+            }
+
+            try {
+                const seed = await getSeedForUser(ctx.user.id);
+                const result = await executeSwap(seed, quote);
+                await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
+
+                const addresses = await getAddressesByKind(ctx.user.id);
+                await invalidateCache(`assets:${chain.id}:${addresses[chain.kind]}`);
+                return result;
+            } catch (err: any) {
+                await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: false });
+                throw new TRPCError({ code: "BAD_REQUEST", message: err?.message ?? "Swap failed" });
+            }
+        }),
+
+    /** Transaction history for one non-Solana chain. */
+    getChainActivity: protectedProcedure
+        .input(z.object({ chain: z.string(), limit: z.number().min(1).max(100).default(25) }))
+        .query(async ({ ctx, input }) => {
+            const chain = getChain(input.chain);
+            if (!chain || !hasActivityProvider(chain.id)) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Unsupported chain" });
+            }
+
+            const addresses = await getAddressesByKind(ctx.user.id);
+            const address = addresses[chain.kind];
+            if (!address) return [] as ChainActivity[];
+
+            return withCache(
+                `activity:${chain.id}:${address}:${input.limit}`,
+                60,
+                async () => {
+                    try {
+                        return await getActivityForChain(chain.id, address, input.limit);
+                    } catch (err) {
+                        console.error(`getChainActivity(${chain.id}) failed`, err);
+                        return [] as ChainActivity[];
+                    }
+                }
+            );
+        }),
 
     /** Fee quote for a non-Solana transfer, before the user commits. */
     estimateChainFee: protectedProcedure

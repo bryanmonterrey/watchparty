@@ -32,6 +32,19 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
         gcTime: 30 * 60 * 1000,
     });
 
+    const { data: chainActivity, isLoading: isLoadingChainActivity } =
+        trpc.wallet.getChainActivity.useQuery(
+            { chain: activeChain, limit: 25 },
+            {
+                enabled: !!open && !isSolana && activeTab === "activity",
+                refetchInterval: 60000,
+                staleTime: 60000,
+                gcTime: 5 * 60 * 1000,
+                placeholderData: keepPreviousData,
+                retry: 1,
+            }
+        );
+
     const { data: chainAssets, isLoading: isLoadingChainAssets, refetch: refetchChainAssets } =
         trpc.wallet.getChainAssets.useQuery(
             { chain: activeChain },
@@ -241,12 +254,26 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
             tokens: chainTokens,
             allTokens: chainTokens,
             isLoadingTokens: isLoadingChainAssets,
-            // NFTs and activity are Solana-only for now — see tasks 8/9.
+            // NFTs stay Solana-only; activity comes from lib/chains/activity.
             nfts: [] as NFT[],
             collections: [] as NFTCollection[],
             isLoadingNfts: false,
-            transactions: [] as typeof transactions,
-            isLoadingActivity: false,
+            transactions: (chainActivity ?? []).map((a) => ({
+                signature: a.txId,
+                timestamp: a.timestamp,
+                type: a.type,
+                status: a.status,
+                isOutgoing: a.isOutgoing,
+                amount: a.amount,
+                description: `${a.isOutgoing ? "Sent" : "Received"} ${a.amount} ${a.symbol}`,
+                source: getChainOrDefault(a.chain).name,
+                tokenSymbol: a.symbol,
+                tokenMint: a.contract ?? undefined,
+                counterpartyAddress: a.counterparty,
+                networkFee: a.fee,
+                isSpam: false,
+            })) as unknown as typeof transactions,
+            isLoadingActivity: isLoadingChainActivity,
             refresh: () => { refetchChainAssets(); },
             togglePin,
             toggleHideCollection,
