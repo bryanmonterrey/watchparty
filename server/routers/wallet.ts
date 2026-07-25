@@ -22,6 +22,14 @@ import { trades } from "@/db/schema/content";
 import { nanoid } from "nanoid";
 import { and, eq, isNull } from "drizzle-orm";
 import { resolvePool } from "@/lib/tokens/udf-datafeed";
+import { deriveWalletKey } from "@/lib/wallet/key-derivation";
+import { getSeedForUser } from "@/lib/wallet/seed";
+import {
+    estimateFee,
+    hasSendProvider,
+    sendOnChain as sendOnChainTx,
+    validateAddress,
+} from "@/lib/chains/send";
 import { getChain, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
 import { seedFromMnemonic } from "@/lib/chains/derive";
@@ -33,38 +41,6 @@ import {
 
 const subtle = globalThis.crypto?.subtle;
 
-/**
- * Derives the AES-256-GCM decryption key for a wallet.
- * v2 wallets prepend WALLET_MASTER_KEY to the credential so a DB breach alone
- * cannot decrypt keys. v1 wallets use the credential ID only (legacy).
- */
-async function deriveWalletKey(
-  credentialId: string,
-  salt: Buffer,
-  keyVersion: number,
-  usage: KeyUsage[]
-): Promise<CryptoKey> {
-  if (!subtle) throw new Error("Web Crypto API not available");
-
-  const masterKey = keyVersion >= 2 ? (process.env.WALLET_MASTER_KEY ?? "") : "";
-  const keyMaterial = masterKey + credentialId;
-
-  const baseKey = await subtle.importKey(
-    "raw",
-    Buffer.from(keyMaterial, "utf-8") as any,
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-
-  return subtle.deriveKey(
-    { name: "PBKDF2", salt: salt as any, iterations: 100000, hash: "SHA-256" },
-    baseKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    usage
-  );
-}
 
 /**
  * Decrypts a wallet's private key bytes. If the wallet is v1 (no master key),
@@ -179,6 +155,78 @@ export const walletRouter = router({
             return stored;
         }
     }),
+
+    /** Fee quote for a non-Solana transfer, before the user commits. */
+    estimateChainFee: protectedProcedure
+        .input(z.object({
+            chain: z.string(),
+            to: z.string(),
+            amount: z.string(),
+            contract: z.string().optional(),
+        }))
+        .query(async ({ ctx, input }) => {
+            const chain = getChain(input.chain);
+            if (!chain || !hasSendProvider(chain.id)) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Unsupported chain" });
+            }
+            const addresses = await getAddressesByKind(ctx.user.id);
+            const from = addresses[chain.kind];
+            if (!from) throw new TRPCError({ code: "BAD_REQUEST", message: "No address for chain" });
+
+            try {
+                return await estimateFee(chain.id, { ...input, chain: chain.id }, from);
+            } catch (err: any) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: err?.message ?? "Fee estimate failed" });
+            }
+        }),
+
+    /**
+     * Transfer on a non-Solana chain.
+     *
+     * Signs from the seed-derived key, because FROST is ed25519-only and cannot
+     * produce secp256k1 signatures. Rate-limited and audit-logged like the
+     * other key-touching routes.
+     */
+    sendOnChain: protectedProcedure
+        .input(z.object({
+            chain: z.string(),
+            to: z.string().min(1),
+            amount: z.string().regex(/^\d+$/, "amount must be base units"),
+            contract: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const headersList = await headers();
+            const ipAddress = headersList.get("x-forwarded-for") || "unknown";
+            const userAgent = headersList.get("user-agent") || "unknown";
+
+            const chain = getChain(input.chain);
+            if (!chain || !hasSendProvider(chain.id)) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Unsupported chain" });
+            }
+
+            if (!checkRateLimit(ctx.user.id, "sign_transaction")) {
+                throw new TRPCError({
+                    code: "TOO_MANY_REQUESTS",
+                    message: `Too many transactions. Try again after ${getResetTime(ctx.user.id, "sign_transaction")}`,
+                });
+            }
+
+            if (!validateAddress(chain.id, input.to)) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: `Not a valid ${chain.name} address` });
+            }
+
+            try {
+                const seed = await getSeedForUser(ctx.user.id);
+                const result = await sendOnChainTx(seed, { ...input, chain: chain.id });
+
+                await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
+                await invalidateCache(`assets:${chain.id}:${(await getAddressesByKind(ctx.user.id))[chain.kind]}`);
+                return result;
+            } catch (err: any) {
+                await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: false });
+                throw new TRPCError({ code: "BAD_REQUEST", message: err?.message ?? "Send failed" });
+            }
+        }),
 
     /**
      * Balances for one non-Solana chain. Solana keeps using getWalletAssets —

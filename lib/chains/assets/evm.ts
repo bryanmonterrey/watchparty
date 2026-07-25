@@ -57,14 +57,24 @@ interface RawToken {
   raw: bigint;
 }
 
-/** Full discovery through Alchemy. Returns null when unavailable. */
+interface DiscoveryOutcome {
+  tokens: RawToken[] | null;
+  /** Why discovery was unavailable — surfaced so the UI states the real reason. */
+  reason?: string;
+}
+
+/** Full discovery through Alchemy. `tokens: null` means fall back to curated. */
 async function discoverViaAlchemy(
   address: string,
   chain: ChainConfig
-): Promise<RawToken[] | null> {
+): Promise<DiscoveryOutcome> {
   const apiKey = process.env.ALCHEMY_API_KEY;
   const network = ALCHEMY_NETWORKS[chain.id];
-  if (!apiKey || !network) return null;
+
+  if (!apiKey) return { tokens: null, reason: "set ALCHEMY_API_KEY to see all tokens" };
+  if (!network) {
+    return { tokens: null, reason: `Alchemy does not support ${chain.name}` };
+  }
 
   try {
     const res = await fetch(`https://${network}.g.alchemy.com/v2/${apiKey}`, {
@@ -77,18 +87,28 @@ async function discoverViaAlchemy(
         params: [address, "erc20"],
       }),
     });
-    if (!res.ok) return null;
-
-    const body = (await res.json()) as {
+    // Parse the body even on a non-2xx: a network that isn't enabled for the
+    // app answers 403 with a JSON-RPC error naming the exact fix. Reporting
+    // that verbatim is the difference between "your wallet is empty" and
+    // "enable Base on your Alchemy app".
+    const body = (await res.json().catch(() => null)) as {
       result?: { tokenBalances?: { contractAddress: string; tokenBalance: string }[] };
-    };
-    const balances = body.result?.tokenBalances ?? [];
+      error?: { message?: string };
+    } | null;
 
-    return balances
-      .map((b) => ({ contract: b.contractAddress as Address, raw: BigInt(b.tokenBalance || "0") }))
-      .filter((t) => t.raw > BigInt(0));
-  } catch {
-    return null;
+    if (body?.error?.message) {
+      return { tokens: null, reason: body.error.message.split(" Visit this page")[0] };
+    }
+    if (!res.ok || !body) return { tokens: null, reason: `Alchemy returned ${res.status}` };
+
+    const balances = body.result?.tokenBalances ?? [];
+    return {
+      tokens: balances
+        .map((b) => ({ contract: b.contractAddress as Address, raw: BigInt(b.tokenBalance || "0") }))
+        .filter((t) => t.raw > BigInt(0)),
+    };
+  } catch (err: any) {
+    return { tokens: null, reason: `Alchemy unreachable: ${err?.message ?? err}` };
   }
 }
 
@@ -133,14 +153,10 @@ export const evmAssetProvider: AssetProvider = {
       discoverViaAlchemy(address, chain),
     ]);
 
-    const tokens = discovered ?? (await probeCurated(address, chain));
-    const partial = discovered
+    const tokens = discovered.tokens ?? (await probeCurated(address, chain));
+    const partial = discovered.tokens
       ? undefined
-      : {
-          reason: ALCHEMY_NETWORKS[chain.id]
-            ? "set ALCHEMY_API_KEY to see all tokens; showing well-known tokens only"
-            : `no indexer available for ${chain.name}; showing the native balance only`,
-        };
+      : { reason: `${discovered.reason} — showing well-known tokens only` };
 
     // Symbol/name/decimals per discovered token.
     const metadata = await Promise.all(

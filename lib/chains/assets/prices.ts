@@ -3,7 +3,7 @@
 // Both sources are free and keyless, matching what the Solana wallet already
 // uses: CoinGecko for native coins, DexScreener for contract-addressed tokens.
 
-import { TTL, withCache } from "@/lib/cache";
+import { TTL, redis } from "@/lib/cache";
 import type { ChainId } from "../types";
 
 /** CoinGecko ids for each chain's native coin. */
@@ -33,31 +33,89 @@ export interface PriceQuote {
   priceChange24h?: number;
 }
 
-/** USD price of a chain's native coin. Cached — many chains share a coin id. */
+/** CoinGecko: price + 24h change, but the keyless tier rate-limits hard. */
+async function coingeckoNativePrice(coinId: string): Promise<PriceQuote | null> {
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}` +
+        `&vs_currencies=usd&include_24hr_change=true`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as Record<string, { usd?: number; usd_24h_change?: number }>;
+    const entry = data[coinId];
+    if (!entry?.usd) return null;
+    return { price: entry.usd, priceChange24h: entry.usd_24h_change };
+  } catch {
+    return null;
+  }
+}
+
+/** Alchemy Prices: no 24h change, but keyed and reliable. Fallback only. */
+async function alchemyNativePrice(symbol: string): Promise<PriceQuote | null> {
+  const apiKey = process.env.ALCHEMY_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch(
+      `https://api.g.alchemy.com/prices/v1/${apiKey}/tokens/by-symbol?symbols=${symbol}`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as {
+      data?: { symbol: string; prices?: { currency: string; value: string }[] }[];
+    };
+    const usd = body.data?.[0]?.prices?.find((p) => p.currency === "usd")?.value;
+    const price = Number(usd);
+    return Number.isFinite(price) && price > 0 ? { price } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * USD price of a chain's native coin.
+ *
+ * CoinGecko first because it carries the 24h change the wallet displays;
+ * Alchemy as fallback so a rate-limit can't blank every balance's USD value.
+ * Failures are deliberately NOT cached — caching a null would extend one
+ * upstream hiccup across the whole TTL.
+ */
 export async function getNativePrice(chain: ChainId): Promise<PriceQuote | null> {
   const coinId = NATIVE_COIN_IDS[chain];
   if (!coinId) return null;
 
-  return withCache(`price:native:${coinId}`, TTL.SOL_PRICE, async () => {
-    try {
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}` +
-          `&vs_currencies=usd&include_24hr_change=true`,
-        { headers: { accept: "application/json" } }
-      );
-      if (!res.ok) return null;
-      const data = (await res.json()) as Record<
-        string,
-        { usd?: number; usd_24h_change?: number }
-      >;
-      const entry = data[coinId];
-      if (!entry?.usd) return null;
-      return { price: entry.usd, priceChange24h: entry.usd_24h_change };
-    } catch {
-      return null;
-    }
-  });
+  const key = `price:native:${coinId}`;
+  try {
+    const cached = await redis.get<PriceQuote>(key);
+    if (cached) return cached;
+  } catch {
+    // Redis unavailable — fall through to a live fetch.
+  }
+
+  const quote =
+    (await coingeckoNativePrice(coinId)) ?? (await alchemyNativePrice(NATIVE_SYMBOLS[chain]));
+  if (!quote) return null;
+
+  try {
+    await redis.set(key, quote, { ex: TTL.SOL_PRICE });
+  } catch {
+    // Redis unavailable — serve the value anyway.
+  }
+  return quote;
 }
+
+/** Ticker per chain, for the Alchemy by-symbol fallback. */
+const NATIVE_SYMBOLS: Record<ChainId, string> = {
+  solana: "SOL",
+  ethereum: "ETH",
+  bitcoin: "BTC",
+  base: "ETH",
+  sui: "SUI",
+  polygon: "POL",
+  hyperevm: "HYPE",
+  robinhood: "ETH",
+};
 
 /**
  * USD prices for token contracts on one chain, keyed by lowercased address.
