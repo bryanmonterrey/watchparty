@@ -218,12 +218,14 @@
   --color-sharp-gray: oklch(0.8853 0 0);
   --color-soft-gray: oklch(0.9614 0.0045 214.33);
   /* Solid (no-alpha) button fills — soft-gray flattened onto the app
-     background at 5% / 10%. Alpha compositing over an opaque backdrop equals
-     color-mix(in srgb, fg X%, bg), so these render identically to
-     bg-soft-gray/5 and /10 but never composite with whatever sits behind the
-     element. Theme-aware via --background. Utilities: bg-soft-gray-5 / -10. */
+     background at 5% / 10% / 15%. Alpha compositing over an opaque backdrop
+     equals color-mix(in srgb, fg X%, bg), so these render identically to
+     bg-soft-gray/5, /10 and /15 but never composite with whatever sits behind
+     the element. Theme-aware via --background. Utilities: bg-soft-gray-5 / -10
+     / -15. */
   --color-soft-gray-5: color-mix(in srgb, oklch(0.9614 0.0045 214.33) 5%, var(--background));
   --color-soft-gray-10: color-mix(in srgb, oklch(0.9614 0.0045 214.33) 10%, var(--background));
+  --color-soft-gray-15: color-mix(in srgb, oklch(0.9614 0.0045 214.33) 15%, var(--background));
   --color-vice-purple: oklch(0.862065 0.092364 310.7446);
   --color-notification: oklch(0.648371 0.237552 23.7857);
   --animate-marquee: marquee var(--duration) infinite linear;

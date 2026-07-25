@@ -22,7 +22,7 @@ import { EditProfileDialog } from "./edit-profile-dialog";
 // Shared header button skin: soft-gray fill, hairline border, pill. Icon
 // buttons are size-11; pill buttons are h-11.
 const iconBtnClass =
-    "flex size-11 items-center justify-center rounded-full border border-baseborder/5 bg-soft-gray-5 text-white2 transition-colors hover:bg-soft-gray-10";
+    "flex size-11 items-center justify-center rounded-full border border-baseborder/5 bg-soft-gray-5 text-white2 transition-colors hover:bg-soft-gray-15";
 
 function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
     userId: string;
@@ -162,7 +162,7 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
                     {user.wallet_address && (
                         <Button
                             onClick={() => setShowTip(true)}
-                            className="h-11 px-5 rounded-full text-base bg-soft-gray-5 font-bold border border-baseborder/5 text-white2 hover:bg-soft-gray-10"
+                            className="h-11 px-5 rounded-full text-base bg-soft-gray-5 font-bold border border-baseborder/5 text-white2 hover:bg-soft-gray-15"
                             title="Send SOL"
                         >
                             Send
@@ -170,7 +170,7 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
                     )}
                     <Button
                         onClick={handleFollowToggle}
-                        className="h-11 rounded-full font-bold backdrop-blur-lg text-base px-5 bg-soft-gray-5 border border-baseborder/5 text-white hover:bg-soft-gray-10"
+                        className="h-11 rounded-full font-bold backdrop-blur-lg text-base px-5 bg-soft-gray-5 border border-baseborder/5 text-white hover:bg-soft-gray-15"
                     >
                         {isFollowing ? "Following" : "Follow"}
                     </Button>
@@ -178,12 +178,12 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
                     <GiftSubsButton
                         creatorId={user.id}
                         creatorName={user.name}
-                        className="flex h-11 items-center gap-1.5 rounded-full border border-baseborder/5 bg-soft-gray-5 px-4 text-base font-bold text-white2 transition-colors hover:bg-soft-gray-10"
+                        className="flex h-11 items-center gap-1.5 rounded-full border border-baseborder/5 bg-soft-gray-5 px-4 text-base font-bold text-white2 transition-colors hover:bg-soft-gray-15"
                     />
                     {onToggleSize && (
                         <Button
                             onClick={onToggleSize}
-                            className="size-11 rounded-full border border-baseborder/5 bg-soft-gray-5 hover:bg-soft-gray-10 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
+                            className="size-11 rounded-full border border-baseborder/5 bg-soft-gray-5 hover:bg-soft-gray-15 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
                             title={isMinimized ? "Maximum size" : "Minimum size"}
                         >
                             {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
@@ -195,7 +195,7 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
                     <Button
                         variant="outline"
                         onClick={() => setIsEditing(true)}
-                        className="font-bold rounded-full bg-soft-gray-5 hover:bg-soft-gray-10 border border-baseborder/5 h-11 px-4"
+                        className="font-bold rounded-full bg-soft-gray-5 hover:bg-soft-gray-15 border border-baseborder/5 h-11 px-4"
                     >
                         Edit profile
                     </Button>
@@ -203,7 +203,7 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
                         <Button
                             variant="outline"
                             onClick={onToggleSize}
-                            className="size-11 bg-soft-gray-5 hover:bg-soft-gray-10 rounded-full border border-baseborder/5 flex items-center justify-center p-0"
+                            className="size-11 bg-soft-gray-5 hover:bg-soft-gray-15 rounded-full border border-baseborder/5 flex items-center justify-center p-0"
                             title={isMinimized ? "Maximum size" : "Minimum size"}
                         >
                             {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
