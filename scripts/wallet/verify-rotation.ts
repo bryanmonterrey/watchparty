@@ -16,6 +16,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSeedForUser } from "@/lib/wallet/seed";
 import { buildAddressRows } from "@/lib/wallet/multichain";
 import { deriveWalletKey } from "@/lib/wallet/key-derivation";
+import { computeSwigPdaFromSeed } from "@/lib/swig/swig-server";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,6 +44,12 @@ for (const wallet of wallets ?? []) {
 
     const mismatches = derived.filter((d) => storedByKind[d.kind] !== d.address);
 
+    // The whole point of seeded FROST: the phrase alone must reproduce the
+    // Solana smart-wallet address, with nothing read from the database.
+    const fromPhrase = computeSwigPdaFromSeed(seed);
+    const solanaRecoverable = fromPhrase.swigAddress === storedByKind.solana;
+    if (!solanaRecoverable) failures++;
+
     // 2. The other rotated fields still open under the same key.
     const key = await deriveWalletKey(
       wallet.passkey_credential_id || `social-${wallet.user_id}`,
@@ -68,7 +75,11 @@ for (const wallet of wallets ?? []) {
       failures++;
       console.log(`✗ ${short} address mismatch: ${mismatches.map((m) => m.kind).join(", ")}`);
     } else {
-      console.log(`✓ ${short} mnemonic decrypts, ${derived.length} addresses match, ${others.length} other field(s) open`);
+      console.log(
+        `✓ ${short} mnemonic decrypts, ${derived.length} addresses match, ` +
+          `${others.length} other field(s) open, ` +
+          `solana ${solanaRecoverable ? "recoverable from phrase" : "NOT PHRASE-RECOVERABLE"}`
+      );
     }
   } catch (err: any) {
     failures++;
