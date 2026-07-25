@@ -56,6 +56,10 @@ export const BASE: ChainConfig = {
 
 export const SUI: ChainConfig = {
   id: "sui",
+  // Hidden until sending works. Balances and activity are fine, but offering a
+  // network you can't send from is worse than not offering it — see
+  // lib/chains/send/sui.ts for why the SDK had to go.
+  hidden: true,
   kind: "sui",
   name: "Sui",
   coinType: 784,
@@ -116,8 +120,11 @@ export const ROBINHOOD: ChainConfig = {
   nativeCurrency: { symbol: "ETH", decimals: 18 },
 };
 
-/** Display order matches the network switcher, top to bottom. */
-export const CHAINS: ChainConfig[] = [
+/**
+ * Every chain we can derive an address for, including hidden ones. Use this
+ * only for id → config resolution, so already-stored rows still resolve.
+ */
+export const ALL_CHAINS: ChainConfig[] = [
   SOLANA,
   ETHEREUM,
   BITCOIN,
@@ -129,12 +136,15 @@ export const CHAINS: ChainConfig[] = [
   ROBINHOOD,
 ];
 
+/** User-facing chains. Everything that iterates for UI or fan-out uses this. */
+export const CHAINS: ChainConfig[] = ALL_CHAINS.filter((c) => !c.hidden);
+
 export const EVM_CHAINS = CHAINS.filter((c) => c.kind === "evm");
 
 export const DEFAULT_CHAIN: ChainConfig = SOLANA;
 
 export function getChain(id: string): ChainConfig | undefined {
-  return CHAINS.find((c) => c.id === id);
+  return ALL_CHAINS.find((c) => c.id === id);
 }
 
 export function getChainOrDefault(id: string | undefined): ChainConfig {
@@ -147,7 +157,7 @@ export function getChainByEvmId(chainId: number): ChainConfig | undefined {
 
 /** Every chain sharing an address kind — e.g. all five EVM chains. */
 export function chainsOfKind(kind: ChainKind): ChainConfig[] {
-  return CHAINS.filter((c) => c.kind === kind);
+  return ALL_CHAINS.filter((c) => c.kind === kind);
 }
 
 /** The distinct address kinds, in switcher order. One derived address each. */
@@ -162,5 +172,5 @@ export const KIND_PATHS: Record<ChainKind, string> = {
 };
 
 export function isChainId(value: string): value is ChainId {
-  return CHAINS.some((c) => c.id === value);
+  return ALL_CHAINS.some((c) => c.id === value);
 }

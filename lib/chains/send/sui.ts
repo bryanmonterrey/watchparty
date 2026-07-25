@@ -1,30 +1,54 @@
-// Sui transfers — native SUI and any coin type.
+// Sui transfers.
+//
+// TEMPORARILY DISABLED — and the reason matters for whoever picks this up.
+//
+// This was implemented with @mysten/sui, which is 8.2 MB and lands in the
+// server bundle through send/index.ts → the tRPC router → handler.mjs. That
+// pushed the Cloudflare Worker past its 10 MiB limit and broke every deploy
+// (code 10027) until it was removed. Do NOT re-add the SDK import here.
+//
+// The correct fix is to build the transfer without the SDK:
+//   1. suix_getCoins over plain JSON-RPC to pick a coin,
+//   2. unsafe_transferSui (or unsafe_paySui) to have the fullnode BUILD the
+//      transaction and hand back txBytes — this avoids pulling in the BCS
+//      serializer, which is the heaviest part of the SDK,
+//   3. sign blake2b256(intent ‖ txBytes) with ed25519 — @noble/curves and
+//      @noble/hashes are already bundled — formatting the signature as
+//      flag(0x00) ‖ sig(64) ‖ pubkey(32), base64,
+//   4. submit via sui_executeTransactionBlock.
+//
+// That path needs an on-chain test with real SUI before it ships; shipping
+// untested fund-moving code is worse than a clearly disabled button.
+//
+// Sui BALANCES and ACTIVITY are unaffected — both already use raw JSON-RPC
+// (lib/chains/assets/sui.ts, lib/chains/activity/sui.ts) with no SDK.
 
-// @mysten/sui v2 renamed SuiClient → SuiJsonRpcClient and moved it to
-// /jsonRpc; the method surface used here is unchanged.
-import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { Transaction } from "@mysten/sui/transactions";
-import { isValidSuiAddress } from "@mysten/sui/utils";
 import { SUI } from "../registry";
-import { deriveSui } from "../derive";
-import { SUI_NATIVE_COIN_TYPE } from "../assets/sui";
 import type { FeeEstimate, SendRequest, SendResult } from "./types";
 
-function keypairFromSeed(seed: Uint8Array): Ed25519Keypair {
-  return Ed25519Keypair.fromSecretKey(deriveSui(seed).privateKey);
-}
+export const SUI_SEND_UNAVAILABLE =
+  "Sui sending is temporarily unavailable. Receiving and balances work as normal.";
 
+/**
+ * Basic shape check: 0x followed by 64 hex chars. Kept local so the send
+ * router can still validate a Sui address without importing the SDK.
+ */
 export function validateSuiAddress(address: string): boolean {
-  return isValidSuiAddress(address);
+  return /^0x[0-9a-fA-F]{64}$/.test(address);
 }
 
 export async function estimateSuiFee(): Promise<FeeEstimate> {
-  // Sui reference gas price is stable and tiny; a dry run per keystroke would
-  // be wasteful, so quote the reference price against a typical transfer.
-  const client = new SuiJsonRpcClient({ url: SUI.rpcUrl!, network: 'mainnet' });
-  const gasPrice = BigInt(await client.getReferenceGasPrice());
-  const fee = gasPrice * BigInt(2_000_000); // typical transfer gas budget
+  // Reference gas price is a plain JSON-RPC call, so quoting still works.
+  const res = await fetch(SUI.rpcUrl!, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "suix_getReferenceGasPrice", params: [] }),
+  });
+  if (!res.ok) throw new Error(`sui rpc returned ${res.status}`);
+  const body = (await res.json()) as { result?: string };
+
+  const gasPrice = BigInt(body.result ?? "1000");
+  const fee = gasPrice * BigInt(2_000_000);
   return {
     fee: fee.toString(),
     feeFormatted: Number(fee) / 10 ** SUI.nativeCurrency.decimals,
@@ -32,40 +56,6 @@ export async function estimateSuiFee(): Promise<FeeEstimate> {
   };
 }
 
-export async function sendSui(seed: Uint8Array, request: SendRequest): Promise<SendResult> {
-  if (!isValidSuiAddress(request.to)) throw new Error("Invalid Sui address");
-
-  const amount = BigInt(request.amount);
-  if (amount <= BigInt(0)) throw new Error("Amount must be positive");
-
-  const client = new SuiJsonRpcClient({ url: SUI.rpcUrl!, network: 'mainnet' });
-  const keypair = keypairFromSeed(seed);
-  const sender = keypair.getPublicKey().toSuiAddress();
-
-  const tx = new Transaction();
-  tx.setSender(sender);
-
-  const coinType = request.contract ?? SUI_NATIVE_COIN_TYPE;
-
-  if (coinType === SUI_NATIVE_COIN_TYPE) {
-    // Native SUI pays gas from the same pool, so split off the gas coin.
-    const [coin] = tx.splitCoins(tx.gas, [amount]);
-    tx.transferObjects([coin], request.to);
-  } else {
-    // Other coins must be gathered from the owner's objects first.
-    const { data: coins } = await client.getCoins({ owner: sender, coinType });
-    if (coins.length === 0) throw new Error(`No ${coinType} coins held`);
-
-    const primary = tx.object(coins[0].coinObjectId);
-    if (coins.length > 1) {
-      tx.mergeCoins(primary, coins.slice(1).map((c: { coinObjectId: string }) => tx.object(c.coinObjectId)));
-    }
-    const [coin] = tx.splitCoins(primary, [amount]);
-    tx.transferObjects([coin], request.to);
-  }
-
-  const result = await client.signAndExecuteTransaction({ signer: keypair, transaction: tx });
-  await client.waitForTransaction({ digest: result.digest });
-
-  return { txId: result.digest, explorerUrl: `${SUI.explorer}/tx/${result.digest}` };
+export async function sendSui(_seed: Uint8Array, _request: SendRequest): Promise<SendResult> {
+  throw new Error(SUI_SEND_UNAVAILABLE);
 }

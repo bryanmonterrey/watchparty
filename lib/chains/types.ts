@@ -33,6 +33,8 @@ export interface ChainConfig {
   rpcUrl?: string;
   explorer?: string;
   nativeCurrency: { symbol: string; decimals: number };
+  /** Hidden from the UI and from balance/activity fan-out, but still derivable. */
+  hidden?: boolean;
 }
 
 export interface ConnectedWallet {
