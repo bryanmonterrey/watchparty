@@ -9,30 +9,14 @@ interface ProfileBannerProps {
     isMinimized?: boolean;
 }
 
-export function ProfileBanner({ user, isMinimized }: ProfileBannerProps) {
+export function ProfileBanner({ isMinimized }: ProfileBannerProps) {
     return (
         <div className={cn(
-            "relative w-full z-15 bg-black group overflow-hidden",
+            "relative w-full z-15 bg-panel2 group overflow-hidden",
             isMinimized ? "h-[222px]" : "h-[320px]"
         )}>
-            <div className="absolute inset-0 z-10" />
-            <div className="size-full">
-                {user.banner_url ? (
-                    <img
-                        src={user.banner_url}
-                        alt="Profile Banner"
-                        className="object-cover size-full blur-2xl opacity-60"
-                    />
-                ) : (user.avatar_url || user.image) ? (
-                    <img
-                        src={user.avatar_url || user.image || ""}
-                        alt="Default Profile Banner"
-                        className="object-cover size-full scale-110 blur-2xl opacity-60"
-                    />
-                ) : (
-                    <div className="size-full bg-gradient-to-br from-zinc-800 to-zinc-900" />
-                )}
-            </div>
+            {/* Banner image hidden for now — plain panel2 fill. Restore the
+                banner_url / avatar image block from git history to re-enable. */}
         </div>
     );
 }
