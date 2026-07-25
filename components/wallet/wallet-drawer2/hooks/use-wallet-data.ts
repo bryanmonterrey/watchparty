@@ -14,17 +14,13 @@ interface UseWalletDataProps {
     walletAddress?: string;
     open?: boolean;
     activeTab: TabId;
-    activeChain: ChainId;
 }
 
-export function useWalletData({ walletAddress, open, activeTab, activeChain }: UseWalletDataProps) {
-    // The tokens list is AGGREGATED across every chain (one list, a chain badge
-    // per row), so Solana assets load regardless of which network is active.
-    // The active chain still scopes receive/send/swap and the activity tab.
-    const isSolana = activeChain === "solana";
+export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataProps) {
+    // There is no active network. Balances and activity are aggregated across
+    // every chain, and each operation infers its chain from the asset it acts
+    // on — picking USDC-on-Base already says which network you meant.
     const enabled = !!open && !!walletAddress;
-    // Addresses are stored per KIND — all five EVM chains share one.
-    const chainKind = getChainOrDefault(activeChain).kind;
 
     // Every derived address, so receive/send can show the right one per chain.
     const { data: chainAddresses } = trpc.wallet.getChainAddresses.useQuery(undefined, {
@@ -34,10 +30,10 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
     });
 
     const { data: chainActivity, isLoading: isLoadingChainActivity } =
-        trpc.wallet.getChainActivity.useQuery(
-            { chain: activeChain, limit: 25 },
+        trpc.wallet.getAllChainActivity.useQuery(
+            { limit: 15 },
             {
-                enabled: !!open && !isSolana && activeTab === "activity",
+                enabled: !!open && activeTab === "activity",
                 refetchInterval: 60000,
                 staleTime: 60000,
                 gcTime: 5 * 60 * 1000,
@@ -263,8 +259,9 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
     const mergedTokens = [...solanaTokens, ...otherChainTokens.filter(visible)].sort(byValueDesc);
     const mergedAllTokens = [...allSolanaTokens, ...otherChainTokens].sort(byValueDesc);
 
-    // Activity stays scoped to the active chain — a single merged feed across
-    // nine networks would be noise, and each chain paginates differently.
+    // One feed across every chain, newest first — same reasoning as the tokens
+    // list. Solana entries already carry richer parsing from Helius, so they
+    // pass through untouched and only the other chains get normalized.
     const chainTransactions = (chainActivity ?? []).map((a) => ({
         signature: a.txId,
         timestamp: a.timestamp,
@@ -281,6 +278,11 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
         isSpam: false,
     })) as unknown as typeof transactions;
 
+    const mergedTransactions = [
+        ...((filteredTransactions ?? []) as any[]),
+        ...(chainTransactions as any[]),
+    ].sort((a, b) => (b?.timestamp ?? 0) - (a?.timestamp ?? 0)) as typeof transactions;
+
     return {
         solPrice,
         balance,
@@ -294,8 +296,8 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
         nfts,
         collections,
         isLoadingNfts,
-        transactions: isSolana ? filteredTransactions : chainTransactions,
-        isLoadingActivity: isSolana ? isLoadingActivity : isLoadingChainActivity,
+        transactions: mergedTransactions,
+        isLoadingActivity: isLoadingActivity || isLoadingChainActivity,
         refresh: () => { refresh(); refreshNfts(); refetchChainAssets(); },
         togglePin,
         toggleHideCollection,
@@ -304,7 +306,12 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
         reportSpamTransaction,
         hiddenCollectionIds,
         hiddenTokenMints,
-        receiveAddress: chainAddresses?.[chainKind] ?? (isSolana ? walletAddress ?? null : null),
+        // Every derived address. Receive picks from these; send/swap infer the
+        // chain from the asset being acted on.
+        chainAddresses: {
+            ...(chainAddresses ?? {}),
+            solana: chainAddresses?.solana ?? walletAddress ?? undefined,
+        } as Partial<Record<string, string>>,
         /** Chains whose holdings may be incomplete, and chains we couldn't reach. */
         partial: chainAssets?.partial ?? [],
         failedChains: chainAssets?.failed ?? [],

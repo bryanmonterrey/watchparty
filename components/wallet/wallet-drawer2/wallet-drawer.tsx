@@ -5,8 +5,7 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAtom } from "jotai";
-import { activeChainAtom } from "./store/wallet-settings";
+import type { ChainId } from "@/lib/chains/types";
 import { getChainOrDefault } from "@/lib/chains/registry";
 
 // Types
@@ -61,6 +60,11 @@ import {
     createTransferInstruction,
 } from "@solana/spl-token";
 
+/** Addresses are stored per KIND — all five EVM chains share one. */
+function chainKindOf(chain: ChainId) {
+    return getChainOrDefault(chain).kind;
+}
+
 const viewMotionProps = {
     initial: { x: 16, opacity: 0 },
     animate: { x: 0, opacity: 1 },
@@ -85,10 +89,9 @@ export function WalletDrawer({
     React.useEffect(() => setMounted(true), []);
     const [activeTab, setActiveTab] = React.useState<TabId>("tokens");
     const [currentView, setCurrentView] = React.useState<DrawerView>("main");
-    // Persisted active network. Validated through the registry on read, since a
-    // stored id may name a chain we've since removed.
-    const [storedChain, setStoredChain] = useAtom(activeChainAtom);
-    const activeChain = getChainOrDefault(storedChain).id;
+    // Which chain the receive screen is showing. Set when the user picks a
+    // network on the way in — there is no global "active network".
+    const [receiveChain, setReceiveChain] = React.useState<ChainId>("solana");
     const [selectedToken, setSelectedToken] = React.useState<Token | null>(null);
     const [selectedTransaction, setSelectedTransaction] = React.useState<TxType | null>(null);
     const [selectedCollection, setSelectedCollection] = React.useState<NFTCollection | null>(null);
@@ -142,8 +145,8 @@ export function WalletDrawer({
         reportSpamTransaction,
         hiddenCollectionIds,
         hiddenTokenMints,
-        receiveAddress,
-    } = useWalletData({ walletAddress, open: resolvedOpen, activeTab, activeChain });
+        chainAddresses,
+    } = useWalletData({ walletAddress, open: resolvedOpen, activeTab });
 
     const onOpenChangeHandler = (next: boolean) => {
         setIsOpen(next);
@@ -193,8 +196,6 @@ export function WalletDrawer({
                             onChangeWallet={onChangeWallet}
                             onSignOut={onSignOut}
                             loading={isLoadingTokens}
-                            activeChain={activeChain}
-                            onNetworkClick={() => setCurrentView("network")}
                         />
                         {!walletAddress ? (
                             <WalletSetupCta />
@@ -220,7 +221,16 @@ export function WalletDrawer({
                                         />
                                     );
                                 })()}
-                                <WalletActions onNavigate={(view) => setCurrentView(view)} />
+                                <WalletActions
+                                    onNavigate={(view) => {
+                                        // Receive defaults to Solana rather than
+                                        // gating on a picker — changing network is
+                                        // available inside the receive screen for
+                                        // the rarer case.
+                                        if (view === "receive") setReceiveChain("solana");
+                                        setCurrentView(view);
+                                    }}
+                                />
                                 <WalletTabs
                                     activeTab={activeTab}
                                     onTabChange={setActiveTab}
@@ -266,22 +276,22 @@ export function WalletDrawer({
                 {currentView === "network" && (
                     <motion.div key="network" {...viewMotionProps} className="h-full">
                         <NetworkView
-                            activeChain={activeChain}
                             onSelect={(chain) => {
-                                setStoredChain(chain);
-                                setCurrentView("main");
-                                setActiveTab("tokens");
+                                setReceiveChain(chain);
+                                setCurrentView("receive");
                             }}
-                            onClose={() => setCurrentView("main")}
+                            // Reached from receive, so dismissing returns there.
+                            onClose={() => setCurrentView("receive")}
                         />
                     </motion.div>
                 )}
 
-                {currentView === "receive" && (receiveAddress || walletAddress) && (
+                {currentView === "receive" && (chainAddresses[chainKindOf(receiveChain)] || walletAddress) && (
                     <motion.div key="receive" {...viewMotionProps}>
                         <ReceiveView
-                            chain={activeChain}
-                            walletAddress={receiveAddress ?? walletAddress!}
+                            chain={receiveChain}
+                            walletAddress={chainAddresses[chainKindOf(receiveChain)] ?? walletAddress!}
+                            onChangeNetwork={() => setCurrentView("network")}
                             onBack={() => {
                                 setCurrentView("main");
                                 setActiveTab("tokens");

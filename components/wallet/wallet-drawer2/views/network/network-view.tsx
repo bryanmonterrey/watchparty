@@ -3,26 +3,25 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { CHAINS } from "@/lib/chains/registry";
 import type { ChainId } from "@/lib/chains/types";
 import { ChainIcon } from "@/components/wallet/chain-icon";
-import { cn } from "@/lib/utils";
 
 interface NetworkViewProps {
-  activeChain: ChainId;
   onSelect: (chain: ChainId) => void;
   onClose: () => void;
 }
 
 /**
- * Network switcher.
+ * "Receive on which network?"
  *
- * One row per chain, all eight derived from the same phrase. The five EVM
- * chains share an address, so switching between them changes what you're
- * looking at, never who you are.
+ * The wallet has no network switcher — every other operation infers its chain
+ * from the asset being acted on. Receiving is the one case with no asset to
+ * infer from, so the choice lives here, at the moment it is actually needed,
+ * rather than as a global mode you have to set beforehand.
  */
-export function NetworkView({ activeChain, onSelect, onClose }: NetworkViewProps) {
+export function NetworkView({ onSelect, onClose }: NetworkViewProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -40,31 +39,23 @@ export function NetworkView({ activeChain, onSelect, onClose }: NetworkViewProps
           <HugeiconsIcon icon={Cancel01Icon} className="size-[18px]" strokeWidth={2} />
         </button>
         <span className="pointer-events-none absolute left-0 right-0 text-center text-[18px] font-semibold text-white">
-          change network
+          receive on
         </span>
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4">
         {CHAINS.map((chain) => {
-          const isActive = chain.id === activeChain;
           return (
             <button
               key={chain.id}
               onClick={() => onSelect(chain.id)}
-              className={cn(
-                "group flex w-full cursor-pointer items-center gap-3.5 rounded-2xl px-3 py-2.5 text-left transition-colors",
-                isActive ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"
-              )}
+              className="group flex w-full cursor-pointer items-center gap-3.5 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
             >
               <ChainIcon chain={chain.id} size={40} />
               <span className="flex-1 text-[17px] font-medium text-white">{chain.name}</span>
-              {isActive && (
-                <HugeiconsIcon
-                  icon={Tick02Icon}
-                  className="size-5 text-white/70"
-                  strokeWidth={2.5}
-                />
-              )}
+              <span className="text-[13px] font-medium text-zinc-500">
+                {chain.nativeCurrency.symbol}
+              </span>
             </button>
           );
         })}

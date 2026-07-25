@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, CreditCard } from "lucide-react";
+import { ArrowLeft, ChevronDown, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import { ReceiveQrCode } from "./receive-qr-code";
 import { ReceiveActions } from "./receive-actions";
 import { getChainOrDefault } from "@/lib/chains/registry";
+import { ChainIcon } from "@/components/wallet/chain-icon";
 import type { ChainId } from "@/lib/chains/types";
 
 
@@ -14,6 +15,7 @@ interface ReceiveViewProps {
     onBack: () => void;
     onBuy: () => void;
     chain?: ChainId;
+    onChangeNetwork?: () => void;
 }
 
 // Per-chain deposit warning. Getting this wrong loses funds — an address is
@@ -31,7 +33,7 @@ const DEPOSIT_WARNING: Record<ChainId, string> = {
     robinhood: "only send ETH and tokens on Robinhood Chain",
 };
 
-export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana" }: ReceiveViewProps) {
+export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana", onChangeNetwork }: ReceiveViewProps) {
     const config = getChainOrDefault(chain);
     return (
         <motion.div
@@ -55,7 +57,20 @@ export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana" }: 
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 flex flex-col pt-6">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 flex flex-col pt-2">
+                {onChangeNetwork && (
+                    <div className="flex justify-center pb-4">
+                        <button
+                            onClick={onChangeNetwork}
+                            className="flex cursor-pointer items-center gap-2 rounded-full bg-white/[0.06] py-1.5 pl-1.5 pr-3.5 transition-colors hover:bg-white/[0.1]"
+                        >
+                            <ChainIcon chain={config.id} size={24} />
+                            <span className="text-[14px] font-semibold text-white">{config.name}</span>
+                            <ChevronDown className="size-4 text-zinc-400" />
+                        </button>
+                    </div>
+                )}
+
                 <ReceiveQrCode walletAddress={walletAddress} />
 
                 <div className="flex-1 flex flex-col justify-end mt-auto space-y-3">

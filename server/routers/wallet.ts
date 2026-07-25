@@ -304,6 +304,40 @@ export const walletRouter = router({
             }
         }),
 
+    /**
+     * Activity across every non-Solana chain, merged and newest-first.
+     *
+     * There is no network switcher — the wallet shows one list of everything —
+     * so history has to aggregate the same way balances do.
+     */
+    getAllChainActivity: protectedProcedure
+        .input(z.object({ limit: z.number().min(1).max(50).default(15) }).optional())
+        .query(async ({ ctx, input }) => {
+            const limit = input?.limit ?? 15;
+            const addresses = await getAddressesByKind(ctx.user.id);
+            const targets = CHAINS.filter((c) => c.kind !== "solana" && hasActivityProvider(c.id));
+
+            const settled = await Promise.allSettled(
+                targets.map(async (chain) => {
+                    const address = addresses[chain.kind];
+                    if (!address) return [] as ChainActivity[];
+                    return withCache(
+                        `activity:${chain.id}:${address}:${limit}`,
+                        60,
+                        () => getActivityForChain(chain.id, address, limit)
+                    );
+                })
+            );
+
+            const merged: ChainActivity[] = [];
+            for (const outcome of settled) {
+                // One unreachable chain must not empty the whole feed.
+                if (outcome.status === "fulfilled") merged.push(...outcome.value);
+            }
+
+            return merged.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit * 2);
+        }),
+
     /** Transaction history for one non-Solana chain. */
     getChainActivity: protectedProcedure
         .input(z.object({ chain: z.string(), limit: z.number().min(1).max(100).default(25) }))
