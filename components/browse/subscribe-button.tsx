@@ -105,7 +105,7 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
             <div className="relative">
                 <button
                     onClick={() => setShowPicker(p => !p)}
-                    className="flex h-11 items-center gap-1.5 px-4 rounded-full bg-lantern/10 border border-lantern/30 text-lantern text-sm font-semibold hover:bg-lantern/20 transition-colors"
+                    className="flex h-11 items-center gap-1.5 px-4 rounded-full bg-hotpink/10 border border-hotpink/30 text-hotpink text-sm font-semibold hover:bg-hotpink/20 transition-colors"
                 >
                     <Crown className="w-4 h-4" />
                     {subStatus.tier?.name ?? "Subscribed"}
@@ -130,7 +130,7 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
         <div className="relative">
             <button
                 onClick={() => setShowPicker(p => !p)}
-                className="flex h-11 items-center gap-1.5 px-4 rounded-full bg-lantern text-zinc-950 text-sm font-bold hover:bg-lantern/90 transition-colors"
+                className="flex h-11 items-center gap-1.5 px-4 rounded-full bg-hotpink text-white text-sm font-bold hover:bg-hotpink/90 transition-colors"
             >
                 <Crown className="w-4 h-4" />
                 Subscribe
@@ -166,7 +166,7 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
                                         <p className="text-sm font-semibold text-zinc-100">{tier.name}</p>
                                         {tier.description && <p className="text-xs text-zinc-500 truncate max-w-[140px]">{tier.description}</p>}
                                     </div>
-                                    <span className="text-xs font-bold text-lantern shrink-0 ml-2">
+                                    <span className="text-xs font-bold text-hotpink shrink-0 ml-2">
                                         {pendingTier === tier.id ? "…" : `$${baseToUsd(price)}/${annual ? "yr" : "mo"}`}
                                     </span>
                                 </button>
