@@ -17,7 +17,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
     const changeBg = isPositive ? "bg-[#75ba80]/20 text-[#75ba80]" : isNegative ? "bg-[#e07d6f]/20 text-[#e07d6f]" : "bg-zinc-800 text-zinc-500";
 
     return (
-        <div className="px-5 pt-3 pb-3 bg-black">
+        <div className="px-5 pt-3 pb-3 bg-[#080808]">
             <div className="flex items-end gap-2">
                 {loading ? (
                     <div className="h-10 w-40 rounded-3xl shimmer-skeleton" />

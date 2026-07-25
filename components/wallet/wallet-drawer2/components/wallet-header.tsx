@@ -37,7 +37,7 @@ export function WalletHeader({
     };
 
     return (
-        <div className="flex items-center justify-between px-5 pt-5 bg-black relative">
+        <div className="flex items-center justify-between px-5 pt-5 bg-[#080808] relative">
             <div className="flex items-center gap-3 rounded-xl">
                 <div className="rounded-full overflow-hidden h-10 w-10 shrink-0">
                     {loading ? (
