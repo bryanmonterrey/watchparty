@@ -128,7 +128,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             <div ref={fullRef} className={buttonMinRef.current ? "hidden" : "block"}>
                 <ProfileBanner user={user} isMinimized={false} />
                 <div className="w-full px-4 py-4 relative z-30">
-                    <div className="flex flex-row items-end gap-6">
+                    <div className="flex flex-row items-start justify-start gap-6">
                         <ProfileAvatar user={user} isMinimized={false} />
                         <ProfileHeader
                             user={user}

@@ -53,9 +53,13 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
     }, [user.id, refetchCounts]);
 
     return (
-        <div className="flex z-30 flex-col gap-1.5 flex-1 min-w-0">
-            <div className="flex flex-row justify-between items-center w-full gap-4">
-                <div className={cn("flex items-center justify-center min-w-0", isMinimized ? "flex-row gap-2" : "flex-row gap-1")}>
+        <div className="flex z-30 flex-1 min-w-0 flex-row justify-between items-start gap-4">
+            {/* Identity + stats stack. Even gap-1.5 rhythm between the name,
+                level and followers rows — the action buttons are a separate
+                column (sibling below) so their h-11 height no longer inflates
+                this stack's first row and skews the gaps. */}
+            <div className="flex flex-col gap-0.5 min-w-0">
+                <div className={cn("flex items-center justify-start min-w-0", isMinimized ? "flex-row gap-1" : "flex-row gap-1")}>
                     <h1 className={cn("font-semibold tracking-tighter text-white", isMinimized ? "text-xl" : "text-2xl")}>
                         {user.name}
                     </h1>
@@ -67,60 +71,60 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
                     </span>
                 </div>
 
-                <ProfileHeaderActions
-                    user={user}
-                    isOwner={isOwner}
-                    isMinimized={isMinimized}
-                    onToggleSize={onToggleSize}
+                {!isMinimized && (
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        <LevelBadge xp={user.xp} userId={user.id} />
+                        {!card ? (
+                            <div className="flex items-center gap-1.5">
+                                <div className="shimmer-skeleton size-[22px] rounded-full" />
+                                <div className="shimmer-skeleton size-[22px] rounded-full" />
+                                <div className="shimmer-skeleton size-[22px] rounded-full" />
+                            </div>
+                        ) : (
+                            <BadgeStrip badges={card.badges ?? []} />
+                        )}
+                    </div>
+                )}
+
+                {!counts ? (
+                    <div className="flex items-center gap-5">
+                        <div className="shimmer-skeleton h-4 w-24 rounded-full" />
+                        <div className="shimmer-skeleton h-4 w-24 rounded-full" />
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-5 text-sm">
+                        <button
+                            onClick={() => setFollowersDialog("following")}
+                            className="text-white font-bold hover:underline"
+                        >
+                            {counts.following} <span className="text-zinc-400 font-bold">Following</span>
+                        </button>
+                        <button
+                            onClick={() => setFollowersDialog("followers")}
+                            className="text-white font-bold hover:underline"
+                        >
+                            {counts.followers} <span className="text-zinc-400 font-bold">Followers</span>
+                        </button>
+                    </div>
+                )}
+
+                <FollowersFollowingDialog
+                    userId={user.id}
+                    username={user.username ?? undefined}
+                    initialTab={followersDialog ?? "followers"}
+                    open={followersDialog !== null}
+                    onOpenChange={(o) => { if (!o) setFollowersDialog(null); }}
+                    isOwnProfile={isOwner}
+                    followersCount={counts?.followers ?? 0}
+                    followingCount={counts?.following ?? 0}
                 />
             </div>
 
-            {!isMinimized && (
-                <div className="flex flex-wrap items-center gap-2.5">
-                    <LevelBadge xp={user.xp} userId={user.id} />
-                    {!card ? (
-                        <div className="flex items-center gap-1.5">
-                            <div className="shimmer-skeleton size-[22px] rounded-full" />
-                            <div className="shimmer-skeleton size-[22px] rounded-full" />
-                            <div className="shimmer-skeleton size-[22px] rounded-full" />
-                        </div>
-                    ) : (
-                        <BadgeStrip badges={card.badges ?? []} />
-                    )}
-                </div>
-            )}
-
-            {!counts ? (
-                <div className="flex items-center gap-5">
-                    <div className="shimmer-skeleton h-4 w-24 rounded-full" />
-                    <div className="shimmer-skeleton h-4 w-24 rounded-full" />
-                </div>
-            ) : (
-                <div className="flex items-center gap-5 text-sm">
-                    <button
-                        onClick={() => setFollowersDialog("following")}
-                        className="text-white font-bold hover:underline"
-                    >
-                        {counts.following} <span className="text-zinc-400 font-bold">Following</span>
-                    </button>
-                    <button
-                        onClick={() => setFollowersDialog("followers")}
-                        className="text-white font-bold hover:underline"
-                    >
-                        {counts.followers} <span className="text-zinc-400 font-bold">Followers</span>
-                    </button>
-                </div>
-            )}
-
-            <FollowersFollowingDialog
-                userId={user.id}
-                username={user.username ?? undefined}
-                initialTab={followersDialog ?? "followers"}
-                open={followersDialog !== null}
-                onOpenChange={(o) => { if (!o) setFollowersDialog(null); }}
-                isOwnProfile={isOwner}
-                followersCount={counts?.followers ?? 0}
-                followingCount={counts?.following ?? 0}
+            <ProfileHeaderActions
+                user={user}
+                isOwner={isOwner}
+                isMinimized={isMinimized}
+                onToggleSize={onToggleSize}
             />
         </div>
     );
