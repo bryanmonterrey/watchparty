@@ -45,7 +45,7 @@ export function MarketCapChip({ tokenSlug, marketCap, className }: MarketCapChip
                 router.push(`/${tokenSlug}`);
             }}
             className={cn(
-                "flex cursor-pointer items-center rounded-full bg-black/45 px-3 py-1.5 text-[13px] font-extrabold leading-none tracking-tight backdrop-blur-sm transition-colors hover:bg-black/70",
+                "flex cursor-pointer items-center rounded-full bg-black/45 px-3 py-1.75 text-[13px] font-extrabold leading-none tracking-tight backdrop-blur-sm transition-colors hover:bg-black/70",
                 marketCap == null ? "text-zinc-400" : "text-emerald-400",
                 className,
             )}

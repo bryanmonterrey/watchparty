@@ -271,7 +271,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
                 transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
                 className="pointer-events-none absolute inset-[-12px] -z-10 rounded-3xl"
             />
-            <div className="relative overflow-hidden rounded-none bg-muted">
+            <div className="relative overflow-hidden rounded-lg bg-muted">
                 <Link href={watchHref(v)} className="block aspect-[382/243]">
                     {v.thumbnailUrl && (
                         // eslint-disable-next-line @next/next/no-img-element

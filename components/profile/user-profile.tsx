@@ -70,27 +70,25 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
     };
 
     return (
-        // container-type lets the Home rail bleed to the true content-area
-        // edges with cqw units (the app has a sidebar, so 100vw is wrong).
-        <div className="relative min-h-screen [container-type:inline-size]">
+        // 3-column channel layout: left rail (sidebar width) + center column +
+        // right rail (340px). Both rails run the full height (top → bottom); the
+        // banner/header/tabs/feed all live in the center column.
+        <div className="relative flex min-h-screen w-full">
 
-            {/* Channel accent: Twitch-style vertical brand bar on the right
-                edge, in the user's chosen color (edit-profile). Runs from the
-                banner's bottom edge down to the bottom of the page — a hard top
-                edge at the banner bottom so it never shows ON the banner. The
-                top offsets MUST match ProfileBanner's heights (full 320 /
-                compact 222). z-20 sits under the headers (z-30) and the pinned
-                compact header (z-40); content clears it via pr-20. */}
-            {user.accentColor && (
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute right-0 bottom-0 z-20 w-12"
-                    style={{
-                        top: buttonMinRef.current ? 222 : 320,
-                        background: user.accentColor,
-                    }}
-                />
-            )}
+            {/* ── Left rail — sidebar width ─────────────────────────────────────
+                Runs top → bottom alongside the center column. Content TBD. */}
+            <aside className="hidden shrink-0 lg:block w-[var(--sidebar-width)]">
+                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                        Left rail
+                    </span>
+                </div>
+            </aside>
+
+            {/* ── Center column ─────────────────────────────────────────────────
+                container-type lets the Home rail bleed to this column's edges
+                with cqw units (100vw / the full inset would be wrong). */}
+            <main className="relative min-w-0 flex-1 [container-type:inline-size]">
 
             {/* ── Compact header ────────────────────────────────────────────────
                 Zero-height sticky anchor at top-0. The inner content overflows
@@ -109,7 +107,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                         : "opacity-0 pointer-events-none"
                 )}>
                     <ProfileBanner user={user} isMinimized={true} />
-                    <div className={cn("max-w-[1400px] w-full mx-auto px-8 -mt-34 relative z-30", user.accentColor && "pr-20")}>
+                    <div className="w-full px-8 -mt-34 relative z-30">
                         <div className="flex flex-row items-end gap-6">
                             <ProfileAvatar user={user} isMinimized={true} />
                             <ProfileHeader
@@ -133,8 +131,8 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                 edge crosses the viewport top, the compact header fades in.     */}
             <div ref={fullRef} className={buttonMinRef.current ? "hidden" : "block"}>
                 <ProfileBanner user={user} isMinimized={false} />
-                <div className={cn("max-w-[1400px] w-full mx-auto px-8 -mt-20 relative z-30", user.accentColor && "pr-20")}>
-                    <div className="flex flex-col justify-start items-start space-y-1.5">
+                <div className="w-full px-4 py-4 relative z-30">
+                    <div className="flex flex-row items-end gap-6">
                         <ProfileAvatar user={user} isMinimized={false} />
                         <ProfileHeader
                             user={user}
@@ -152,7 +150,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             </div>
 
             {/* ── Content ───────────────────────────────────────────────────── */}
-            <div className={cn("max-w-[1400px] w-full mx-auto px-8 py-4 min-h-screen", user.accentColor && "pr-20")}>
+            <div className="w-full px-8 py-4 min-h-screen">
                 {/* Keyed by tab so the incoming panel fades in on switch. */}
                 <motion.div
                     key={activeTab}
@@ -163,6 +161,18 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                     <ProfileTabContent activeTab={activeTab} user={user} onTabChange={setActiveTab} />
                 </motion.div>
             </div>
+
+            </main>
+
+            {/* ── Right rail — 340px ────────────────────────────────────────────
+                Runs top → bottom alongside the center column. Content TBD. */}
+            <aside className="hidden shrink-0 xl:block w-[340px]">
+                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                        Right rail
+                    </span>
+                </div>
+            </aside>
 
         </div>
     );

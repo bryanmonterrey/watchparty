@@ -22,8 +22,8 @@ export function ProfileAvatar({ user, isMinimized }: ProfileAvatarProps) {
         <div className="relative z-30 ">
             <div
                 className={cn(
-                    "rounded-full border-black ring-1 ring-white/10 bg-zinc-900 overflow-hidden shadow-2xl group cursor-pointer relative",
-                    isMinimized ? "size-24 border-[6px]" : "size-40 border-[6px]"
+                    "rounded-full border-soft-gray/5 overflow-hidden shadow-2xl group cursor-pointer relative",
+                    isMinimized ? "size-24 border-[6px]" : "size-24 border-[6px]"
                 )}
             >
                 <img

@@ -62,7 +62,7 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className="group/active relative block flex-1 overflow-hidden rounded-none bg-muted outline-none"
+                    className="group/active relative block flex-1 overflow-hidden rounded-xl bg-muted outline-none"
                 >
                     {v.videoUrl ? (
                         <ActivePanel key={v.id} v={v} />

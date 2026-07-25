@@ -69,8 +69,8 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
             width={236}
             gap={8}
             triggerAriaLabel="More options"
-            triggerClassName="flex size-11 items-center justify-center rounded-full border bg-black/25 border-flexborder/50 text-white2 hover:bg-white2/10 transition-colors"
-            trigger={<VerticalDotsIcon className="size-6" />}
+            triggerClassName="flex size-11 items-center justify-center rounded-full border bg-soft-gray/5 border-baseborder/5 text-white2 hover:bg-soft-gray/15 transition-colors"
+            trigger={<VerticalDotsIcon className="size-5" />}
             items={[
                 gooMenuItem({
                     key: "copy",
@@ -162,25 +162,27 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
     };
 
     return (
-        <div className="flex z-30 flex-col gap-1.5 max-w-2xl">
-            <div className={cn("flex flex-row justify-start items-start", isMinimized ? "flex-row gap-4" : "gap-0.5")}>
-                <div className={cn("flex items-center", isMinimized ? "flex-row gap-2" : "flex-row gap-4")}>
-                    <h1 className={cn("font-black tracking-tighter text-white", isMinimized ? "text-xl" : "text-4xl")}>
+        <div className="flex z-30 flex-col gap-1.5 flex-1 min-w-0">
+            <div className="flex flex-row justify-between items-center w-full gap-4">
+                <div className={cn("flex items-center min-w-0", isMinimized ? "flex-row gap-2" : "flex-row gap-2")}>
+                    <h1 className={cn("font-semibold leading-none tracking-tighter text-white", isMinimized ? "text-xl" : "text-2xl")}>
                         {user.name}
                     </h1>
-                    {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-6" />}
-                    {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-6" />}
-                    {user.verifiedTier === "government" && <GovBadgeIcon className="size-6" />}
+                    {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-5" />}
+                    {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-5" />}
+                    {user.verifiedTier === "government" && <GovBadgeIcon className="size-5" />}
 
                     {/* Minimized (video/live creator rows) stays clean — LV bar +
                         badge strip are profile-page identity only (owner call). */}
                     {isMinimized && (
-                        <span className="text-zinc-400 tracking-wide font-semibold text-sm ml-1">
+                        <span className="text-zinc-400 tracking-wide font-semibold text-sm">
                             @{user.username}
                         </span>
                     )}
+                </div>
 
-                    <div className="flex items-center gap-2">
+                {/* Action buttons — pushed to the right edge of the center column. */}
+                <div className="flex items-center gap-2 shrink-0">
                         {!isOwner ? (
                             // Left to right (owner order, 2026-07-20): dots,
                             // gift premium (icon-only), message, send,
@@ -194,12 +196,19 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
                                     onOpenChange={setShowMoreMenu}
                                     onClose={() => setShowMoreMenu(false)}
                                 />
-                                <GiftPremiumButton recipientId={user.id} recipientName={user.name} />
-                                <MessageButton userId={user.id} />
+                                <GiftPremiumButton
+                                    recipientId={user.id}
+                                    recipientName={user.name}
+                                    className="flex size-11 items-center justify-center rounded-full border border-baseborder/5 bg-soft-gray/5 text-white2 transition-colors hover:bg-soft-gray/15"
+                                />
+                                <MessageButton
+                                    userId={user.id}
+                                    className="flex size-11 items-center justify-center rounded-full border border-baseborder/5 bg-soft-gray/5 text-white2 transition-colors hover:bg-soft-gray/15 disabled:opacity-50"
+                                />
                                 {user.wallet_address && (
                                     <Button
                                         onClick={() => setShowTip(true)}
-                                        className="h-11 px-5 rounded-full text-base bg-black/25 font-bold border border-flexborder/50 text-white2 hover:bg-white2/10"
+                                        className="h-11 px-5 rounded-full text-base bg-soft-gray/5 font-bold border border-baseborder/5 text-white2 hover:bg-soft-gray/15"
                                         title="Send SOL"
                                     >
                                         Send
@@ -207,21 +216,20 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
                                 )}
                                 <Button
                                     onClick={handleFollowToggle}
-                                    className={cn(
-                                        "h-11 rounded-full font-bold backdrop-blur-lg text-base px-5",
-                                        isFollowing
-                                            ? "bg-black/25 border border-flexborder/50 text-white hover:bg-white2/10"
-                                            : "bg-white text-black hover:bg-zinc-100"
-                                    )}
+                                    className="h-11 rounded-full font-bold backdrop-blur-lg text-base px-5 bg-soft-gray/5 border border-baseborder/5 text-white hover:bg-soft-gray/15"
                                 >
                                     {isFollowing ? "Following" : "Follow"}
                                 </Button>
                                 <SubscribeButton creatorId={user.id} creatorName={user.name} />
-                                <GiftSubsButton creatorId={user.id} creatorName={user.name} />
+                                <GiftSubsButton
+                                    creatorId={user.id}
+                                    creatorName={user.name}
+                                    className="flex h-11 items-center gap-1.5 rounded-full border border-baseborder/5 bg-soft-gray/5 px-4 text-base font-bold text-white2 transition-colors hover:bg-soft-gray/15"
+                                />
                                 {onToggleSize && (
                                     <Button
                                         onClick={onToggleSize}
-                                        className="size-11 rounded-full border border-flexborder/50 bg-black/25 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
+                                        className="size-11 rounded-full border border-baseborder/5 bg-soft-gray/5 hover:bg-soft-gray/15 text-zinc-400 hover:text-zinc-100 flex items-center justify-center p-0"
                                         title={isMinimized ? "Maximum size" : "Minimum size"}
                                     >
                                         {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
@@ -233,7 +241,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
                                 <Button
                                     variant="outline"
                                     onClick={() => setIsEditing(true)}
-                                    className="font-bold rounded-full bg-zinc-900/50 hover:bg-zinc-800 border border-flexborder/50 h-11 px-4"
+                                    className="font-bold rounded-full bg-soft-gray/5 hover:bg-soft-gray/15 border border-baseborder/5 h-11 px-4"
                                 >
                                     Edit profile
                                 </Button>
@@ -241,7 +249,7 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
                                     <Button
                                         variant="outline"
                                         onClick={onToggleSize}
-                                        className="size-11 bg-zinc-900/50 hover:bg-zinc-800 rounded-full border border-flexborder/50 flex items-center justify-center p-0"
+                                        className="size-11 bg-soft-gray/5 hover:bg-soft-gray/15 rounded-full border border-baseborder/5 flex items-center justify-center p-0"
                                         title={isMinimized ? "Maximum size" : "Minimum size"}
                                     >
                                         {isMinimized ? <MaximizeIcon className="size-6" /> : <MinimizeIcon className="size-6" />}
@@ -250,7 +258,6 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
                             </div>
                         )}
                     </div>
-                </div>
             </div>
 
             {!isMinimized && (
