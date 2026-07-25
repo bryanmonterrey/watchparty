@@ -15,3 +15,9 @@ export const hideReportedActivityAtom = atomWithStorage("wallet-hide-reported-ac
 
 // Analytics
 export const allowAnalyticsAtom = atomWithStorage("wallet-allow-analytics", true);
+
+// Active network for the multichain wallet. Persisted so the drawer reopens on
+// whatever chain the user last used. Stored as a ChainId string from
+// lib/chains/registry — validate on read, since localStorage can hold a chain
+// id we've since removed.
+export const activeChainAtom = atomWithStorage<string>("wallet-active-chain", "solana");

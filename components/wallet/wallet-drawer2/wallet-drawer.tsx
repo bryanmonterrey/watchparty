@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAtom } from "jotai";
+import { activeChainAtom } from "./store/wallet-settings";
+import { getChainOrDefault } from "@/lib/chains/registry";
 
 // Types
 import { WalletDrawerProps, DrawerView, TabId, Token, NFT, NFTCollection } from "./types";
@@ -24,6 +27,7 @@ import { DeviceKeyView } from "./views/settings/DeviceKeyView";
 import { LocalCurrencyView } from "./views/settings/LocalCurrencyView";
 import { LanguageView } from "./views/settings/LanguageView";
 import { ManageTokensView } from "./views/manage-tokens/manage-tokens-view";
+import { NetworkView } from "./views/network/network-view";
 import { WalletSetupCta } from "./views/setup/wallet-setup-cta";
 import { showNFTSendToast } from "./views/nft-status/nft-send-toast";
 
@@ -81,6 +85,10 @@ export function WalletDrawer({
     React.useEffect(() => setMounted(true), []);
     const [activeTab, setActiveTab] = React.useState<TabId>("tokens");
     const [currentView, setCurrentView] = React.useState<DrawerView>("main");
+    // Persisted active network. Validated through the registry on read, since a
+    // stored id may name a chain we've since removed.
+    const [storedChain, setStoredChain] = useAtom(activeChainAtom);
+    const activeChain = getChainOrDefault(storedChain).id;
     const [selectedToken, setSelectedToken] = React.useState<Token | null>(null);
     const [selectedTransaction, setSelectedTransaction] = React.useState<TxType | null>(null);
     const [selectedCollection, setSelectedCollection] = React.useState<NFTCollection | null>(null);
@@ -134,7 +142,8 @@ export function WalletDrawer({
         reportSpamTransaction,
         hiddenCollectionIds,
         hiddenTokenMints,
-    } = useWalletData({ walletAddress, open: resolvedOpen, activeTab });
+        receiveAddress,
+    } = useWalletData({ walletAddress, open: resolvedOpen, activeTab, activeChain });
 
     const onOpenChangeHandler = (next: boolean) => {
         setIsOpen(next);
@@ -184,6 +193,8 @@ export function WalletDrawer({
                             onChangeWallet={onChangeWallet}
                             onSignOut={onSignOut}
                             loading={isLoadingTokens}
+                            activeChain={activeChain}
+                            onNetworkClick={() => setCurrentView("network")}
                         />
                         {!walletAddress ? (
                             <WalletSetupCta />
@@ -252,10 +263,25 @@ export function WalletDrawer({
                     </motion.div>
                 )}
 
-                {currentView === "receive" && walletAddress && (
+                {currentView === "network" && (
+                    <motion.div key="network" {...viewMotionProps} className="h-full">
+                        <NetworkView
+                            activeChain={activeChain}
+                            onSelect={(chain) => {
+                                setStoredChain(chain);
+                                setCurrentView("main");
+                                setActiveTab("tokens");
+                            }}
+                            onClose={() => setCurrentView("main")}
+                        />
+                    </motion.div>
+                )}
+
+                {currentView === "receive" && (receiveAddress || walletAddress) && (
                     <motion.div key="receive" {...viewMotionProps}>
                         <ReceiveView
-                            walletAddress={walletAddress}
+                            chain={activeChain}
+                            walletAddress={receiveAddress ?? walletAddress!}
                             onBack={() => {
                                 setCurrentView("main");
                                 setActiveTab("tokens");

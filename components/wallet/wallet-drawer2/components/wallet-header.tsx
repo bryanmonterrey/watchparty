@@ -6,6 +6,9 @@ import { SettingsIcon, PowerIcon, WalletIcon, CopyIcon, LogoutIcon } from "@/com
 import { shortenWalletAddress } from "@/lib/utils";
 import { appToast } from "@/components/app-ui/app-toast";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { ChainIcon } from "@/components/wallet/chain-icon";
+import { getChainOrDefault } from "@/lib/chains/registry";
+import type { ChainId } from "@/lib/chains/types";
 
 interface WalletHeaderProps {
     username: string;
@@ -15,6 +18,8 @@ interface WalletHeaderProps {
     onChangeWallet?: () => void;
     onSignOut: () => void;
     loading?: boolean;
+    activeChain: ChainId;
+    onNetworkClick: () => void;
 }
 
 export function WalletHeader({
@@ -25,6 +30,8 @@ export function WalletHeader({
     onChangeWallet,
     onSignOut,
     loading,
+    activeChain,
+    onNetworkClick,
 }: WalletHeaderProps) {
     const [isOpen, setIsOpen] = React.useState(false);
 
@@ -64,6 +71,17 @@ export function WalletHeader({
                 </div>
             </div>
             <div className="flex items-center gap-1 relative">
+                {/* Network switcher. Icon-only so three controls still fit the
+                    row; the active chain reads at a glance from its brand mark. */}
+                <button
+                    onClick={onNetworkClick}
+                    aria-label={`network: ${getChainOrDefault(activeChain).name}`}
+                    title={getChainOrDefault(activeChain).name}
+                    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-black transition-colors hover:bg-input1"
+                >
+                    <ChainIcon chain={activeChain} size={26} />
+                </button>
+
                 <Button
                     variant="ghost"
                     className="group bg-black hover:bg-input1 text-flexwhite transition-colors rounded-full"

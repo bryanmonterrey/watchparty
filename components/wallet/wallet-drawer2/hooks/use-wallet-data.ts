@@ -5,6 +5,8 @@ import { useAtomValue } from "jotai";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
 import { Token, NFT, TabId, NFTCollection } from "../types";
+import type { ChainId } from "@/lib/chains/types";
+import { getChainOrDefault } from "@/lib/chains/registry";
 import { hideSmallBalancesAtom, hideUnknownTokensAtom, hideReportedActivityAtom } from "../store/wallet-settings";
 
 
@@ -12,10 +14,36 @@ interface UseWalletDataProps {
     walletAddress?: string;
     open?: boolean;
     activeTab: TabId;
+    activeChain: ChainId;
 }
 
-export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataProps) {
-    const enabled = !!open && !!walletAddress;
+export function useWalletData({ walletAddress, open, activeTab, activeChain }: UseWalletDataProps) {
+    // Solana keeps the Helius pipeline (NFTs, spam filtering, hidden tokens).
+    // Every other chain reads from lib/chains/assets via getChainAssets.
+    const isSolana = activeChain === "solana";
+    const enabled = !!open && !!walletAddress && isSolana;
+    // Addresses are stored per KIND — all five EVM chains share one.
+    const chainKind = getChainOrDefault(activeChain).kind;
+
+    // Every derived address, so receive/send can show the right one per chain.
+    const { data: chainAddresses } = trpc.wallet.getChainAddresses.useQuery(undefined, {
+        enabled: !!open,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+    });
+
+    const { data: chainAssets, isLoading: isLoadingChainAssets, refetch: refetchChainAssets } =
+        trpc.wallet.getChainAssets.useQuery(
+            { chain: activeChain },
+            {
+                enabled: !!open && !isSolana,
+                refetchInterval: !!open && !isSolana ? 30000 : false,
+                staleTime: 30000,
+                gcTime: 5 * 60 * 1000,
+                placeholderData: keepPreviousData,
+                retry: 1,
+            }
+        );
 
     const hideSmallBalances = useAtomValue(hideSmallBalancesAtom);
     const hideUnknownTokens = useAtomValue(hideUnknownTokensAtom);
@@ -187,6 +215,52 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
         return transactions.filter((tx: (typeof transactions)[number]) => !tx.isSpam);
     }, [transactions, hideReportedActivity]);
 
+    // Non-Solana chains. Placed after every hook above so hook order stays
+    // stable when the user switches networks.
+    if (!isSolana) {
+        const chainTokens: Token[] = (chainAssets?.assets ?? []).map((a) => ({
+            // Native coins have no contract — synthesize a stable key so list
+            // rendering and selection still work.
+            mint: a.contract ?? `native:${a.chain}`,
+            symbol: a.symbol,
+            name: a.name,
+            icon: a.icon,
+            balance: a.balance,
+            price: a.price,
+            usdValue: a.usdValue,
+            priceChange24h: a.priceChange24h,
+            decimals: a.decimals,
+        }));
+        const native = (chainAssets?.assets ?? []).find((a) => a.isNative);
+
+        return {
+            solPrice: native?.price ?? null,
+            balance: native?.balance ?? null,
+            totalUsdBalance: chainAssets?.totalUsd ?? 0,
+            priceData: [] as { timestamp: number; price: number }[],
+            tokens: chainTokens,
+            allTokens: chainTokens,
+            isLoadingTokens: isLoadingChainAssets,
+            // NFTs and activity are Solana-only for now — see tasks 8/9.
+            nfts: [] as NFT[],
+            collections: [] as NFTCollection[],
+            isLoadingNfts: false,
+            transactions: [] as typeof transactions,
+            isLoadingActivity: false,
+            refresh: () => { refetchChainAssets(); },
+            togglePin,
+            toggleHideCollection,
+            toggleHideToken,
+            reportSpam,
+            reportSpamTransaction,
+            hiddenCollectionIds: [] as string[],
+            hiddenTokenMints: [] as string[],
+            receiveAddress: chainAddresses?.[chainKind] ?? null,
+            /** Set when holdings may be incomplete (e.g. no indexer key). */
+            partial: chainAssets?.partial,
+        };
+    }
+
     return {
         solPrice,
         balance,
@@ -208,5 +282,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
         reportSpamTransaction,
         hiddenCollectionIds,
         hiddenTokenMints,
+        receiveAddress: chainAddresses?.solana ?? walletAddress ?? null,
+        partial: undefined as { reason: string } | undefined,
     };
 }

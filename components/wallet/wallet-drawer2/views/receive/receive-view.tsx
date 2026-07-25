@@ -5,15 +5,33 @@ import { ArrowLeft, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import { ReceiveQrCode } from "./receive-qr-code";
 import { ReceiveActions } from "./receive-actions";
+import { getChainOrDefault } from "@/lib/chains/registry";
+import type { ChainId } from "@/lib/chains/types";
 
 
 interface ReceiveViewProps {
     walletAddress: string;
     onBack: () => void;
     onBuy: () => void;
+    chain?: ChainId;
 }
 
-export function ReceiveView({ walletAddress, onBack, onBuy }: ReceiveViewProps) {
+// Per-chain deposit warning. Getting this wrong loses funds — an address is
+// only valid on the network it was derived for, and the five EVM chains share
+// an address but NOT their tokens.
+const DEPOSIT_WARNING: Record<ChainId, string> = {
+    solana: "only send SOL and SPL tokens to this address",
+    ethereum: "only send ETH and ERC-20 tokens on Ethereum mainnet",
+    bitcoin: "only send BTC on the Bitcoin network",
+    base: "only send ETH and ERC-20 tokens on Base",
+    sui: "only send SUI and Sui coins to this address",
+    polygon: "only send POL and ERC-20 tokens on Polygon",
+    hyperevm: "only send HYPE and tokens on HyperEVM",
+    robinhood: "only send ETH and tokens on Robinhood Chain",
+};
+
+export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana" }: ReceiveViewProps) {
+    const config = getChainOrDefault(chain);
     return (
         <motion.div
             initial={{ opacity: 0, y: 0 }}
@@ -45,7 +63,7 @@ export function ReceiveView({ walletAddress, onBack, onBuy }: ReceiveViewProps) 
                             Scan this QR code or copy the address below
                         </p>
                         <p className="text-[13px] text-zinc-500">
-                            Only send Solana (SOL) and SPL tokens to this address
+                            {DEPOSIT_WARNING[config.id]}
                         </p>
                     </div>
 
@@ -57,7 +75,7 @@ export function ReceiveView({ walletAddress, onBack, onBuy }: ReceiveViewProps) 
                             className="w-full cursor-pointer h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold flex items-center justify-center gap-2 transition-all"
                         >
                             <CreditCard className="w-5 h-5" />
-                            Buy SOL with Fiat
+                            Buy {config.nativeCurrency.symbol} with Fiat
                         </button>
                     </div>
                 </div>

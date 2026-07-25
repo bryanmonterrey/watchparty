@@ -82,7 +82,7 @@ export interface WalletDrawerProps {
 }
 
 export type TabId = "tokens" | "nfts" | "activity";
-export type DrawerView = "main" | "receive" | "send" | "swap" | "buy" | "settings" | "advanced" | "app-data" | "balances" | "currency" | "language" | "token-detail" | "activity" | "tx-detail" | "collection-detail" | "nft-detail" | "send-nft" | "nft-confirm-send" | "hide-collections" | "manage-tokens" | "device-key";
+export type DrawerView = "main" | "receive" | "send" | "swap" | "buy" | "settings" | "advanced" | "app-data" | "balances" | "currency" | "language" | "token-detail" | "activity" | "tx-detail" | "collection-detail" | "nft-detail" | "send-nft" | "nft-confirm-send" | "hide-collections" | "manage-tokens" | "device-key" | "network";
 
 export interface TabType {
     id: TabId;

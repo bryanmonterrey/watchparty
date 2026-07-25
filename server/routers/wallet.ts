@@ -23,7 +23,7 @@ import { nanoid } from "nanoid";
 import { and, eq, isNull } from "drizzle-orm";
 import { resolvePool } from "@/lib/tokens/udf-datafeed";
 import { getChain, CHAIN_KINDS } from "@/lib/chains/registry";
-import { getAssetsForChain, hasAssetProvider } from "@/lib/chains/assets";
+import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
 import { seedFromMnemonic } from "@/lib/chains/derive";
 import {
     LEGACY_SOLANA_PATH,
@@ -198,7 +198,14 @@ export const walletRouter = router({
 
             const addresses = await getAddressesByKind(ctx.user.id);
             const address = addresses[chain.kind];
-            if (!address) return { assets: [], totalUsd: 0, address: null };
+            if (!address) {
+                return {
+                    assets: [] as ChainAsset[],
+                    totalUsd: 0,
+                    address: null as string | null,
+                    partial: undefined as { reason: string } | undefined,
+                };
+            }
 
             return withCache(
                 `assets:${chain.id}:${address}`,
