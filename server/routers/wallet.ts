@@ -36,8 +36,9 @@ import {
     sendOnChain as sendOnChainTx,
     validateAddress,
 } from "@/lib/chains/send";
-import { getChain, CHAIN_KINDS } from "@/lib/chains/registry";
+import { getChain, CHAINS, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
+import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
 import {
     getActivityForChain,
     hasActivityProvider,
@@ -165,6 +166,80 @@ export const walletRouter = router({
             console.error("getChainAddresses: lazy derive failed", err);
             return stored;
         }
+    }),
+
+    /**
+     * Holdings across every non-Solana chain, in one round trip.
+     *
+     * The tokens list is aggregated (one list, chain badge per row), so the
+     * drawer would otherwise fire a query per chain on open. Fanned out here
+     * with allSettled: one unreachable chain must not blank the whole list.
+     */
+    getAllChainAssets: protectedProcedure.query(async ({ ctx }) => {
+        const addresses = await getAddressesByKind(ctx.user.id);
+        const allTargets = CHAINS.filter((c) => c.kind !== "solana" && hasAssetProvider(c.id));
+
+        // One batched Portfolio call covers the EVM chains Alchemy serves; the
+        // rest still go per-chain. Without this the aggregated list costs
+        // hundreds of RPC round trips on every drawer open.
+        const evmAddress = addresses.evm;
+        const batched = evmAddress
+            ? await withCache(
+                  `assets:evm-batch:${evmAddress}`,
+                  30,
+                  async () => {
+                      const map = await getEvmAssetsBatch(
+                          evmAddress,
+                          allTargets.filter((c) => c.kind === "evm")
+                      );
+                      return map ? Object.fromEntries(map) : null;
+                  }
+              )
+            : null;
+
+        const targets = allTargets.filter((c) => !batched?.[c.id]);
+
+        const settled = await Promise.allSettled(
+            targets.map(async (chain) => {
+                const address = addresses[chain.kind];
+                if (!address) return null;
+                return withCache(
+                    `assets:${chain.id}:${address}`,
+                    30,
+                    async () => ({ ...(await getAssetsForChain(chain.id, address)), address })
+                );
+            })
+        );
+
+        const assets: ChainAsset[] = [];
+        const partial: { chain: string; reason: string }[] = [];
+        const failed: { chain: string; reason: string }[] = [];
+
+        for (const result of Object.values(batched ?? {})) {
+            if (result) assets.push(...result.assets);
+        }
+
+        settled.forEach((outcome, i) => {
+            const chain = targets[i];
+            if (outcome.status === "rejected") {
+                // Surfaced, not swallowed — a chain we couldn't reach is not a
+                // chain with no funds.
+                failed.push({ chain: chain.id, reason: String(outcome.reason?.message ?? outcome.reason) });
+                return;
+            }
+            if (!outcome.value) return;
+            assets.push(...outcome.value.assets);
+            if (outcome.value.partial) {
+                partial.push({ chain: chain.id, reason: outcome.value.partial.reason });
+            }
+        });
+
+        return {
+            assets,
+            totalUsd: assets.reduce((sum, a) => sum + (a.usdValue ?? 0), 0),
+            partial,
+            failed,
+        };
     }),
 
     /** Whether the active chain can swap, and through what. */

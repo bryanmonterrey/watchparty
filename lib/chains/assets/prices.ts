@@ -14,6 +14,7 @@ const NATIVE_COIN_IDS: Record<ChainId, string> = {
   base: "ethereum", // Base gas is ETH
   sui: "sui",
   polygon: "matic-network",
+  bnb: "binancecoin",
   hyperevm: "hyperliquid",
   robinhood: "ethereum", // Robinhood Chain gas is ETH
 };
@@ -24,6 +25,7 @@ export const DEXSCREENER_SLUGS: Partial<Record<ChainId, string>> = {
   ethereum: "ethereum",
   base: "base",
   polygon: "polygon",
+  bnb: "bsc",
   hyperevm: "hyperevm",
   sui: "sui",
 };
@@ -113,6 +115,7 @@ const NATIVE_SYMBOLS: Record<ChainId, string> = {
   base: "ETH",
   sui: "SUI",
   polygon: "POL",
+  bnb: "BNB",
   hyperevm: "HYPE",
   robinhood: "ETH",
 };

@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   BaseSquareIcon,
   BitcoinIcon,
+  BnbIcon,
   EthereumIcon,
   HyperliquidIcon,
   PolygonIcon,
@@ -21,6 +22,7 @@ const MARKS: Record<ChainId, React.ComponentType<React.SVGProps<SVGSVGElement>>>
   base: BaseSquareIcon,
   sui: SuiIcon,
   polygon: PolygonIcon,
+  bnb: BnbIcon,
   hyperevm: HyperliquidIcon,
   robinhood: RobinhoodIcon,
 };

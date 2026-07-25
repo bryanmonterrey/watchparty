@@ -26,6 +26,7 @@ const DEPOSIT_WARNING: Record<ChainId, string> = {
     base: "only send ETH and ERC-20 tokens on Base",
     sui: "only send SUI and Sui coins to this address",
     polygon: "only send POL and ERC-20 tokens on Polygon",
+    bnb: "only send BNB and BEP-20 tokens on BNB Chain",
     hyperevm: "only send HYPE and tokens on HyperEVM",
     robinhood: "only send ETH and tokens on Robinhood Chain",
 };

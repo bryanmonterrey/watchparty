@@ -37,15 +37,140 @@ const CURATED_TOKENS: Partial<Record<ChainId, Address[]>> = {
     "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", // WETH
     "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", // WMATIC
   ],
+  bnb: [
+    "0x55d398326f99059fF775485246999027B3197955", // USDT (BSC-USD)
+    "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", // USDC
+    "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+    "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", // BUSD
+  ],
   hyperevm: [],
   robinhood: [],
 };
+
+/**
+ * Portfolio API network slugs. NOT the same strings as the RPC subdomains —
+ * Polygon is `matic-mainnet` here but `polygon-mainnet` for JSON-RPC.
+ */
+const PORTFOLIO_NETWORKS: Partial<Record<ChainId, string>> = {
+  ethereum: "eth-mainnet",
+  base: "base-mainnet",
+  polygon: "matic-mainnet",
+  bnb: "bnb-mainnet",
+};
+
+interface PortfolioToken {
+  network: string;
+  tokenAddress: string | null;
+  tokenBalance: string;
+  tokenMetadata?: { symbol?: string | null; decimals?: number | null; name?: string | null; logo?: string | null };
+  tokenPrices?: { currency: string; value: string }[];
+}
+
+/**
+ * Balances, metadata and prices for MANY EVM chains in one request.
+ *
+ * The per-chain path costs a getBalance, a token-balance call, then three
+ * metadata reads per token — roughly 390 RPC round trips across Ethereum and
+ * Polygon alone. Since the wallet now aggregates every chain into one list,
+ * that ran on every drawer open. This collapses it to a single call.
+ *
+ * Returns null when unavailable (no key), so the caller falls back per chain.
+ */
+export async function getEvmAssetsBatch(
+  address: string,
+  chains: ChainConfig[]
+): Promise<Map<ChainId, AssetFetchResult> | null> {
+  const apiKey = process.env.ALCHEMY_API_KEY;
+  if (!apiKey) return null;
+
+  const covered = chains.filter((c) => PORTFOLIO_NETWORKS[c.id]);
+  if (covered.length === 0) return null;
+
+  const byNetwork = new Map<string, ChainConfig>();
+  for (const c of covered) byNetwork.set(PORTFOLIO_NETWORKS[c.id]!, c);
+
+  const collected: PortfolioToken[] = [];
+  let pageKey: string | undefined;
+
+  try {
+    // Bounded: 100 entries per page, and a wallet past ~500 holdings is
+    // overwhelmingly dust. Better a capped list than an unbounded loop.
+    for (let page = 0; page < 5; page++) {
+      const res: Response = await fetch(
+        `https://api.g.alchemy.com/data/v1/${apiKey}/assets/tokens/by-address`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            addresses: [{ address, networks: [...byNetwork.keys()] }],
+            withMetadata: true,
+            withPrices: true,
+            ...(pageKey ? { pageKey } : {}),
+          }),
+        }
+      );
+      if (!res.ok) return null;
+
+      const body = (await res.json()) as { data?: { tokens?: PortfolioToken[]; pageKey?: string } };
+      collected.push(...(body.data?.tokens ?? []));
+      pageKey = body.data?.pageKey;
+      if (!pageKey) break;
+    }
+  } catch {
+    return null;
+  }
+
+  const out = new Map<ChainId, AssetFetchResult>();
+  for (const chain of covered) out.set(chain.id, { assets: [], totalUsd: 0 });
+
+  for (const token of collected) {
+    const chain = byNetwork.get(token.network);
+    if (!chain) continue;
+
+    const raw = BigInt(token.tokenBalance || "0");
+    if (raw <= BigInt(0)) continue;
+
+    const isNative = !token.tokenAddress;
+    const decimals = isNative
+      ? chain.nativeCurrency.decimals
+      : (token.tokenMetadata?.decimals ?? 18);
+    const balance = Number(formatUnits(raw, decimals));
+    const price = Number(token.tokenPrices?.find((p) => p.currency === "usd")?.value);
+    const hasPrice = Number.isFinite(price) && price > 0;
+
+    const bucket = out.get(chain.id)!;
+    bucket.assets.push({
+      chain: chain.id,
+      contract: token.tokenAddress,
+      symbol: (isNative ? chain.nativeCurrency.symbol : token.tokenMetadata?.symbol) || "UNKNOWN",
+      name: (isNative ? chain.name : token.tokenMetadata?.name) || "Unknown Token",
+      icon: token.tokenMetadata?.logo ?? undefined,
+      decimals,
+      balance,
+      rawBalance: raw.toString(),
+      price: hasPrice ? price : undefined,
+      usdValue: hasPrice ? balance * price : undefined,
+      isNative,
+    });
+  }
+
+  for (const result of out.values()) {
+    result.assets.sort((a, b) => {
+      if (a.isNative !== b.isNative) return a.isNative ? -1 : 1;
+      return (b.usdValue ?? 0) - (a.usdValue ?? 0);
+    });
+    result.totalUsd = result.assets.reduce((sum, a) => sum + (a.usdValue ?? 0), 0);
+  }
+
+  return out;
+}
 
 /** Alchemy network slugs, for the discovery path. */
 const ALCHEMY_NETWORKS: Partial<Record<ChainId, string>> = {
   ethereum: "eth-mainnet",
   base: "base-mainnet",
   polygon: "polygon-mainnet",
+  bnb: "bnb-mainnet",
 };
 
 function clientFor(chain: ChainConfig) {

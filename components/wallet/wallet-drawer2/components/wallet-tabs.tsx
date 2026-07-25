@@ -155,7 +155,11 @@ export function WalletTabs({
                         {tokens.length > 0 ? (
                             tokens.map((token) => (
                                 <TokenListItem
-                                    key={token.mint}
+                                    // Chain-qualified: the same contract address
+                                    // can exist on several EVM chains (CREATE2
+                                    // deploys land on identical addresses), so
+                                    // the mint alone is not unique here.
+                                    key={`${token.chain ?? "solana"}:${token.mint}`}
                                     icon={token.icon}
                                     symbol={token.symbol}
                                     name={token.name}
@@ -163,6 +167,7 @@ export function WalletTabs({
                                     usdValue={token.usdValue}
                                     priceChange24h={token.priceChange24h}
                                     hideBalances={hideBalances}
+                                    chain={token.chain}
                                     onClick={() => onTokenClick(token)}
                                 />
                             ))

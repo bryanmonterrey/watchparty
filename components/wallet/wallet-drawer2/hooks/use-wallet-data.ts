@@ -18,10 +18,11 @@ interface UseWalletDataProps {
 }
 
 export function useWalletData({ walletAddress, open, activeTab, activeChain }: UseWalletDataProps) {
-    // Solana keeps the Helius pipeline (NFTs, spam filtering, hidden tokens).
-    // Every other chain reads from lib/chains/assets via getChainAssets.
+    // The tokens list is AGGREGATED across every chain (one list, a chain badge
+    // per row), so Solana assets load regardless of which network is active.
+    // The active chain still scopes receive/send/swap and the activity tab.
     const isSolana = activeChain === "solana";
-    const enabled = !!open && !!walletAddress && isSolana;
+    const enabled = !!open && !!walletAddress;
     // Addresses are stored per KIND — all five EVM chains share one.
     const chainKind = getChainOrDefault(activeChain).kind;
 
@@ -45,18 +46,16 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
             }
         );
 
+    // One round trip for every non-Solana chain, rather than a query per chain.
     const { data: chainAssets, isLoading: isLoadingChainAssets, refetch: refetchChainAssets } =
-        trpc.wallet.getChainAssets.useQuery(
-            { chain: activeChain },
-            {
-                enabled: !!open && !isSolana,
-                refetchInterval: !!open && !isSolana ? 30000 : false,
-                staleTime: 30000,
-                gcTime: 5 * 60 * 1000,
-                placeholderData: keepPreviousData,
-                retry: 1,
-            }
-        );
+        trpc.wallet.getAllChainAssets.useQuery(undefined, {
+            enabled: !!open,
+            refetchInterval: open ? 30000 : false,
+            staleTime: 30000,
+            gcTime: 5 * 60 * 1000,
+            placeholderData: keepPreviousData,
+            retry: 1,
+        });
 
     const hideSmallBalances = useAtomValue(hideSmallBalancesAtom);
     const hideUnknownTokens = useAtomValue(hideUnknownTokensAtom);
@@ -228,80 +227,76 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
         return transactions.filter((tx: (typeof transactions)[number]) => !tx.isSpam);
     }, [transactions, hideReportedActivity]);
 
-    // Non-Solana chains. Placed after every hook above so hook order stays
-    // stable when the user switches networks.
-    if (!isSolana) {
-        const chainTokens: Token[] = (chainAssets?.assets ?? []).map((a) => ({
-            // Native coins have no contract — synthesize a stable key so list
-            // rendering and selection still work.
-            mint: a.contract ?? `native:${a.chain}`,
-            symbol: a.symbol,
-            name: a.name,
-            icon: a.icon,
-            balance: a.balance,
-            price: a.price,
-            usdValue: a.usdValue,
-            priceChange24h: a.priceChange24h,
-            decimals: a.decimals,
-        }));
-        const native = (chainAssets?.assets ?? []).find((a) => a.isNative);
+    // ── Aggregate every chain into one token list ────────────────────────────
+    // Sorted strictly by USD value, each row carrying its chain so the icon can
+    // badge it. Native coins have no contract, so the key is synthesized — and
+    // it must include the chain, or ETH on Base and ETH on Ethereum collide.
+    const otherChainTokens: Token[] = (chainAssets?.assets ?? []).map((a) => ({
+        mint: a.contract ?? `native:${a.chain}`,
+        chain: a.chain,
+        symbol: a.symbol,
+        name: a.name,
+        icon: a.icon,
+        balance: a.balance,
+        price: a.price,
+        usdValue: a.usdValue,
+        priceChange24h: a.priceChange24h,
+        decimals: a.decimals,
+    }));
 
-        return {
-            solPrice: native?.price ?? null,
-            balance: native?.balance ?? null,
-            totalUsdBalance: chainAssets?.totalUsd ?? 0,
-            priceData: [] as { timestamp: number; price: number }[],
-            tokens: chainTokens,
-            allTokens: chainTokens,
-            isLoadingTokens: isLoadingChainAssets,
-            // NFTs stay Solana-only; activity comes from lib/chains/activity.
-            nfts: [] as NFT[],
-            collections: [] as NFTCollection[],
-            isLoadingNfts: false,
-            transactions: (chainActivity ?? []).map((a) => ({
-                signature: a.txId,
-                timestamp: a.timestamp,
-                type: a.type,
-                status: a.status,
-                isOutgoing: a.isOutgoing,
-                amount: a.amount,
-                description: `${a.isOutgoing ? "Sent" : "Received"} ${a.amount} ${a.symbol}`,
-                source: getChainOrDefault(a.chain).name,
-                tokenSymbol: a.symbol,
-                tokenMint: a.contract ?? undefined,
-                counterpartyAddress: a.counterparty,
-                networkFee: a.fee,
-                isSpam: false,
-            })) as unknown as typeof transactions,
-            isLoadingActivity: isLoadingChainActivity,
-            refresh: () => { refetchChainAssets(); },
-            togglePin,
-            toggleHideCollection,
-            toggleHideToken,
-            reportSpam,
-            reportSpamTransaction,
-            hiddenCollectionIds: [] as string[],
-            hiddenTokenMints: [] as string[],
-            receiveAddress: chainAddresses?.[chainKind] ?? null,
-            /** Set when holdings may be incomplete (e.g. no indexer key). */
-            partial: chainAssets?.partial,
-        };
-    }
+    const solanaTokens: Token[] = tokens.map((t) => ({ ...t, chain: "solana" as const }));
+    const allSolanaTokens: Token[] = allTokens.map((t) => ({ ...t, chain: "solana" as const }));
+
+    // Indexers return every airdropped scrap an address has ever touched —
+    // hundreds of rows across nine chains. The same hide-dust settings that
+    // already governed the Solana list have to govern the merged one, or
+    // aggregation buries real holdings under spam.
+    const visible = (t: Token) => {
+        // A chain's own coin always shows, even at zero — same rule SOL gets.
+        if (t.mint.startsWith("native:")) return true;
+        if (hideSmallBalances && (t.usdValue ?? 0) < 1) return false;
+        if (hideUnknownTokens && (t.symbol === "UNKNOWN" || t.name === "Unknown Token")) return false;
+        return true;
+    };
+
+    const byValueDesc = (a: Token, b: Token) => (b.usdValue ?? 0) - (a.usdValue ?? 0);
+    const mergedTokens = [...solanaTokens, ...otherChainTokens.filter(visible)].sort(byValueDesc);
+    const mergedAllTokens = [...allSolanaTokens, ...otherChainTokens].sort(byValueDesc);
+
+    // Activity stays scoped to the active chain — a single merged feed across
+    // nine networks would be noise, and each chain paginates differently.
+    const chainTransactions = (chainActivity ?? []).map((a) => ({
+        signature: a.txId,
+        timestamp: a.timestamp,
+        type: a.type,
+        status: a.status,
+        isOutgoing: a.isOutgoing,
+        amount: a.amount,
+        description: `${a.isOutgoing ? "Sent" : "Received"} ${a.amount} ${a.symbol}`,
+        source: getChainOrDefault(a.chain).name,
+        tokenSymbol: a.symbol,
+        tokenMint: a.contract ?? undefined,
+        counterpartyAddress: a.counterparty,
+        networkFee: a.fee,
+        isSpam: false,
+    })) as unknown as typeof transactions;
 
     return {
         solPrice,
         balance,
-        totalUsdBalance,
+        // Total spans every chain, which is the point of one aggregated list.
+        totalUsdBalance: totalUsdBalance + (chainAssets?.totalUsd ?? 0),
         priceData: [] as { timestamp: number; price: number }[],
-        tokens,
-        allTokens,
-        isLoadingTokens,
+        tokens: mergedTokens,
+        allTokens: mergedAllTokens,
+        isLoadingTokens: isLoadingTokens || isLoadingChainAssets,
+        // NFTs remain Solana-only.
         nfts,
         collections,
         isLoadingNfts,
-        transactions: filteredTransactions,
-        isLoadingActivity,
-        refresh: () => { refresh(); refreshNfts(); },
+        transactions: isSolana ? filteredTransactions : chainTransactions,
+        isLoadingActivity: isSolana ? isLoadingActivity : isLoadingChainActivity,
+        refresh: () => { refresh(); refreshNfts(); refetchChainAssets(); },
         togglePin,
         toggleHideCollection,
         toggleHideToken,
@@ -309,7 +304,9 @@ export function useWalletData({ walletAddress, open, activeTab, activeChain }: U
         reportSpamTransaction,
         hiddenCollectionIds,
         hiddenTokenMints,
-        receiveAddress: chainAddresses?.solana ?? walletAddress ?? null,
-        partial: undefined as { reason: string } | undefined,
+        receiveAddress: chainAddresses?.[chainKind] ?? (isSolana ? walletAddress ?? null : null),
+        /** Chains whose holdings may be incomplete, and chains we couldn't reach. */
+        partial: chainAssets?.partial ?? [],
+        failedChains: chainAssets?.failed ?? [],
     };
 }

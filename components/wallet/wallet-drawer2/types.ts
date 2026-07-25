@@ -1,4 +1,5 @@
 import { LucideIcon } from "lucide-react";
+import type { ChainId } from "@/lib/chains/types";
 
 export interface TokenLink {
     type: string;
@@ -8,6 +9,8 @@ export interface TokenLink {
 
 export interface Token {
     mint: string;
+    /** Network this token lives on — drives the badge in the aggregated list. */
+    chain?: ChainId;
     symbol: string;
     name: string;
     icon?: string;

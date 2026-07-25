@@ -16,6 +16,7 @@ export type ChainId =
   | "base"
   | "sui"
   | "polygon"
+  | "bnb"
   | "hyperevm"
   | "robinhood";
 

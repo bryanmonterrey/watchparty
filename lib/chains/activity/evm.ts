@@ -11,6 +11,7 @@ const ALCHEMY_NETWORKS: Partial<Record<ChainId, string>> = {
   ethereum: "eth-mainnet",
   base: "base-mainnet",
   polygon: "polygon-mainnet",
+  bnb: "bnb-mainnet",
 };
 
 interface Transfer {

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Coins } from "lucide-react";
 import { TokenIcon } from "./token-icon";
 import { cn } from "@/lib/utils";
+import type { ChainId } from "@/lib/chains/types";
 
 interface TokenListItemProps {
     icon?: string;
@@ -13,6 +14,7 @@ interface TokenListItemProps {
     usdValue?: number;
     priceChange24h?: number;
     hideBalances?: boolean;
+    chain?: ChainId;
     onClick?: () => void;
 }
 
@@ -24,6 +26,7 @@ export function TokenListItem({
     usdValue,
     priceChange24h,
     hideBalances,
+    chain,
     onClick,
 }: TokenListItemProps) {
     return (
@@ -37,6 +40,7 @@ export function TokenListItem({
                     symbol={symbol}
                     size="lg"
                     type="token"
+                    chain={chain}
                 />
 
                 {/* Token Info */}

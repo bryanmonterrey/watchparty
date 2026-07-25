@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Coins, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ChainIcon } from "@/components/wallet/chain-icon";
+import type { ChainId } from "@/lib/chains/types";
 
 interface TokenIconProps {
     src?: string;
@@ -11,10 +13,13 @@ interface TokenIconProps {
     innerClassName?: string;
     size?: "sm" | "md" | "lg" | "xl";
     showChainBadge?: boolean;
+    /**
+     * Which network this token lives on. The tokens list is aggregated across
+     * chains, so the badge is what tells USDC-on-Base from USDC-on-Solana.
+     */
+    chain?: ChainId;
     type?: "token" | "nft";
 }
-
-const SOLANA_LOGO = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png";
 
 export function TokenIcon({
     src,
@@ -23,6 +28,7 @@ export function TokenIcon({
     innerClassName,
     size = "md",
     showChainBadge = false,
+    chain,
     type = "token",
 }: TokenIconProps) {
     const [imageLoaded, setImageLoaded] = React.useState(false);
@@ -60,6 +66,8 @@ export function TokenIcon({
     };
 
     const iconSize = sizeClasses[size];
+    // Badge scales with the icon: legible at sm, unobtrusive at xl.
+    const badgeSize = { sm: 9, md: 12, lg: 14, xl: 16 }[size];
 
     return (
         <div className={cn("relative flex-shrink-0 flex items-center justify-center", iconSize, className)}>
@@ -104,9 +112,9 @@ export function TokenIcon({
                 </div>
             )}
 
-            {showChainBadge && (
-                <div className="absolute -bottom-0.5 -right-0.5 bg-[#131313] rounded-full p-[1px]">
-                    <img src={SOLANA_LOGO} className="w-[10px] h-[10px] rounded-full" alt="Solana" />
+            {(chain || showChainBadge) && (
+                <div className="absolute -bottom-0.5 -right-0.5 rounded-full bg-[#131313] p-[1.5px]">
+                    <ChainIcon chain={chain ?? "solana"} size={badgeSize} />
                 </div>
             )}
         </div>

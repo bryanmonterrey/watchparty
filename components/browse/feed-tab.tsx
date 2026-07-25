@@ -17,7 +17,7 @@ export function FeedTab({ label, isActive, onClick, suffix, className }: FeedTab
         <button
             onClick={onClick}
             className={cn(
-                "flex-1 h-13 w-fit cursor-pointer flex items-center justify-center hover:bg-zinc-500/20 transition-colors group",
+                "flex-1 h-13 w-fit cursor-pointer flex items-center justify-center backdrop-blur-md bg-panel1/25 hover:bg-panel2 transition-colors group",
                 className
             )}
         >

@@ -78,6 +78,18 @@ export const POLYGON: ChainConfig = {
   nativeCurrency: { symbol: "POL", decimals: 18 },
 };
 
+export const BNB: ChainConfig = {
+  id: "bnb",
+  kind: "evm",
+  name: "BNB Chain",
+  chainId: 56,
+  coinType: 60,
+  derivationPath: "m/44'/60'/0'/0/0",
+  rpcUrl: process.env.NEXT_PUBLIC_BNB_RPC_URL ?? "https://bsc-rpc.publicnode.com",
+  explorer: "https://bscscan.com",
+  nativeCurrency: { symbol: "BNB", decimals: 18 },
+};
+
 export const HYPEREVM: ChainConfig = {
   id: "hyperevm",
   kind: "evm",
@@ -112,6 +124,7 @@ export const CHAINS: ChainConfig[] = [
   BASE,
   SUI,
   POLYGON,
+  BNB,
   HYPEREVM,
   ROBINHOOD,
 ];

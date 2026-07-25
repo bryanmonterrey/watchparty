@@ -2653,6 +2653,20 @@ export function RobinhoodIcon(props: React.SVGProps<SVGSVGElement>) {
     );
 }
 
+// BNB Chain — the stacked-diamond mark on brand yellow.
+export function BnbIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+            <circle cx="16" cy="16" r="16" fill="#F3BA2F" />
+            <path
+                fill="#fff"
+                d="M16 6.5l2.84 2.9-5.03 5.03-2.84-2.84L16 6.5Zm5.66 5.66l2.84 2.9-8.5 8.5-2.84-2.9 8.5-8.5Zm-11.32 0l2.84 2.9L10.34 18 7.5 15.06l2.84-2.9Zm11.32 5.68L24.5 20.7 16 29.2l-2.84-2.84 8.5-8.52Z"
+            />
+            <path fill="#fff" d="M16 13.16l2.9 2.9-2.9 2.9-2.9-2.9 2.9-2.9Z" />
+        </svg>
+    );
+}
+
 // Left-pointing back arrow. Size via className (e.g. size-6) or width/height.
 export function ArrowLeftIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
