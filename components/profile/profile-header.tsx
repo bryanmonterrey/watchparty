@@ -20,6 +20,10 @@ interface ProfileHeaderProps {
     initialFollowCounts?: { followers: number; following: number };
 }
 
+// Hidden for now: the XP level bar and the badge strip. Flip to true to bring
+// both back — the markup and its loading skeleton are left intact below.
+const SHOW_LEVEL_AND_BADGES = false;
+
 export function ProfileHeader({ user, isMinimized, initialFollowCounts }: ProfileHeaderProps) {
     const [followersDialog, setFollowersDialog] = React.useState<"followers" | "following" | null>(null);
     const { data: session, isPending: sessionPending } = useAuthSession();
@@ -70,7 +74,7 @@ export function ProfileHeader({ user, isMinimized, initialFollowCounts }: Profil
                     </span>
                 </div>
 
-                {!isMinimized && (
+                {!isMinimized && SHOW_LEVEL_AND_BADGES && (
                     <div className="flex flex-wrap items-center gap-2.5">
                         <LevelBadge xp={user.xp} userId={user.id} />
                         {!card ? (

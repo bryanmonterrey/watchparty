@@ -14,6 +14,7 @@ import { generateFrostKeypairFromSeed } from "@/lib/frost/frost-server";
 import { computeSwigPdaFromSeed, createSwigAccount } from "@/lib/swig/swig-server";
 import { persistDerivedAddresses } from "@/lib/wallet/multichain";
 import { registerWebhookAddresses } from "@/lib/helius/webhook";
+import { registerAlchemyAddresses } from "@/lib/alchemy/webhook";
 import { redis } from "@/lib/cache";
 
 // Use browser's Web Crypto API (works in Node.js 16+)
@@ -287,6 +288,15 @@ export async function POST(req: NextRequest) {
       registerWebhookAddresses([swigInfo.swigAddress, encryptedWallet.address]).catch(err =>
         console.warn("[create-wallet] webhook registration failed (non-fatal):", err?.message)
       );
+
+      // Same for EVM — one address covers all five EVM chains. Non-fatal:
+      // without it the wallet polls instead of updating on push.
+      const evmAddress = derivedAddresses.find(a => a.kind === "evm")?.address;
+      if (evmAddress) {
+        registerAlchemyAddresses([evmAddress]).catch(err =>
+          console.warn("[create-wallet] alchemy webhook registration failed (non-fatal):", err?.message)
+        );
+      }
     });
 
     return NextResponse.json({
