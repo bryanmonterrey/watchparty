@@ -8,5 +8,6 @@ export * from "./wallet_access_log";
 export * from "./nft_pins";
 export * from "./two-factor";
 export * from "./wallet-address";
+export * from "./wallet-addresses";
 
 

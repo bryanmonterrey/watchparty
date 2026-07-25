@@ -14,6 +14,7 @@ import {
     getSignInstructions,
     getSwigWalletAddress,
 } from '@swig-wallet/classic';
+import { sha256 } from '@noble/hashes/sha2.js';
 import {
     Connection,
     Keypair,
@@ -88,6 +89,31 @@ export function computeSwigPda(): SwigWalletInfo {
         swigId: Buffer.from(id).toString('hex'),
         swigAddress: swigAccountAddress.toBase58(),
     };
+}
+
+/**
+ * Deterministic Swig PDA from the account mnemonic seed.
+ *
+ * The swig id is one of the two things (with the FROST group key) that used to
+ * be random and therefore un-recoverable from the phrase. Deriving it here is
+ * what lets a user restore their exact Solana address from their 12 words.
+ */
+export function computeSwigPdaFromSeed(seed: Uint8Array): SwigWalletInfo {
+    const id = sha256(
+        concatBytes(new TextEncoder().encode('watchparty/swig-id/v1'), seed)
+    );
+    const swigAccountAddress = findSwigPda(id);
+    return {
+        swigId: Buffer.from(id).toString('hex'),
+        swigAddress: swigAccountAddress.toBase58(),
+    };
+}
+
+function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
+    const out = new Uint8Array(a.length + b.length);
+    out.set(a);
+    out.set(b, a.length);
+    return out;
 }
 
 /**

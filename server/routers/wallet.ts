@@ -921,32 +921,17 @@ export const walletRouter = router({
                 throw new Error("Web Crypto API not available");
             }
 
+            // Must go through deriveWalletKey: v2 wallets are encrypted with
+            // WALLET_MASTER_KEY prepended to the credential. Deriving from the
+            // credential alone (as this did) produces a different key, so the
+            // decrypt below always threw and the phrase could never be revealed.
             const encryptionKeySource =
                 walletData.passkey_credential_id || `social-${ctx.user.id}`;
-            const keyBuffer = Buffer.from(encryptionKeySource, "utf-8");
-
-            const baseKey = await subtle.importKey(
-                "raw",
-                keyBuffer as any,
-                "PBKDF2",
-                false,
-                ["deriveKey"]
-            );
-
             const salt = Buffer.from(walletData.salt, "base64");
-            const encryptionKey = await subtle.deriveKey(
-                {
-                    name: "PBKDF2",
-                    salt: salt as any,
-                    iterations: 100000,
-                    hash: "SHA-256",
-                },
-                baseKey,
-                {
-                    name: "AES-GCM",
-                    length: 256,
-                },
-                false,
+            const encryptionKey = await deriveWalletKey(
+                encryptionKeySource,
+                salt,
+                walletData.key_version ?? 1,
                 ["decrypt"]
             );
 

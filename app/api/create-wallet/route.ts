@@ -10,8 +10,9 @@ import { Keypair } from "@solana/web3.js";
 import { nanoid } from "nanoid";
 import { createClient } from "@supabase/supabase-js";
 import * as bip39 from "bip39";
-import { generateFrostKeypair } from "@/lib/frost/frost-server";
-import { computeSwigPda, createSwigAccount } from "@/lib/swig/swig-server";
+import { generateFrostKeypairFromSeed } from "@/lib/frost/frost-server";
+import { computeSwigPdaFromSeed, createSwigAccount } from "@/lib/swig/swig-server";
+import { persistDerivedAddresses } from "@/lib/wallet/multichain";
 import { registerWebhookAddresses } from "@/lib/helius/webhook";
 import { redis } from "@/lib/cache";
 
@@ -30,6 +31,8 @@ interface EncryptedWallet {
   encrypted_d1: string;
   encrypted_d1_iv: string;
   d2: string; // base64 raw d2 — client encrypts with PRF before storing
+  /** BIP39 seed — root of every chain address. Never leaves the server. */
+  seed: Uint8Array;
 }
 
 async function generateEncryptedWallet(
@@ -124,6 +127,7 @@ async function generateEncryptedWallet(
     encrypted_d1: Buffer.from(encryptedD1).toString("base64"),
     encrypted_d1_iv: Buffer.from(d1Iv).toString("base64"),
     d2: Buffer.from(d2).toString("base64"),
+    seed: new Uint8Array(seed),
   };
 }
 
@@ -168,12 +172,16 @@ export async function POST(req: NextRequest) {
     // Generate encrypted custodial wallet (backup signing key)
     const encryptedWallet = await generateEncryptedWallet(userId, encryptionKeySource);
 
-    // Generate FROST keypair — pure key generation, no RPC, free
-    const { serverShare, clientShare, publicInfo, groupPublicKey } = generateFrostKeypair();
+    // FROST keypair + Swig id, both derived from the mnemonic seed — pure key
+    // generation, no RPC, free. Seeding them (rather than using randomness) is
+    // what puts the Solana smart wallet under the same phrase as every other
+    // chain, so one backup restores the whole multichain account.
+    const { serverShare, clientShare, publicInfo, groupPublicKey } =
+      generateFrostKeypairFromSeed(encryptedWallet.seed);
 
     // Compute Swig PDA deterministically — no RPC needed.
     // The on-chain account is created lazily by frostSetup on first signing attempt.
-    const swigInfo = computeSwigPda();
+    const swigInfo = computeSwigPdaFromSeed(encryptedWallet.seed);
 
     // Encrypt FROST server share with the same AES-GCM key used for the wallet
     const salt = Buffer.from(encryptedWallet.salt, "base64");
@@ -247,6 +255,13 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(user.id, userId));
 
+    // Derive + store the rest of the multichain set (EVM, Bitcoin, Sui) from the
+    // same seed. Solana is stored as the Swig PDA, since that's the address the
+    // user actually holds funds at.
+    const derivedAddresses = await persistDerivedAddresses(userId, encryptedWallet.seed, {
+      solanaAddress: swigInfo.swigAddress,
+    });
+
     // Bust the customSession Redis cache so getSession() immediately returns
     // the new wallet_address instead of the stale cached profile (TTL = 5 min).
     await redis.del(`user:profile:${userId}`);
@@ -282,6 +297,7 @@ export async function POST(req: NextRequest) {
       d2: encryptedWallet.d2,
       clientShare,
       publicInfo,
+      addresses: derivedAddresses.map(({ kind, address }) => ({ kind, address })),
     });
   } catch (error) {
     console.error("❌ Failed to create wallet:", error);
