@@ -13,10 +13,9 @@ import { ProfileTabContent } from "./profile-tab-content";
 import { MaximizeIcon, MinimizeIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
-// Resize toggle skin — reused for the full-header (top-right of banner) and
-// compact-header (bottom-right) buttons; only the corner (top-4 / bottom-4)
-// differs. Rendered as a sibling of ProfileBanner so it clears the z-30 content.
-const resizeBtnClass = "absolute right-4 z-40 flex size-11 items-center justify-center rounded-full border border-baseborder/5 bg-soft-gray-10 text-zinc-400 transition-colors hover:bg-soft-gray-15 hover:text-zinc-100";
+// Resize toggle skin — sits right-aligned on the tabs row in both the full and
+// compact headers. No fill at rest, just a hover background.
+const resizeBtnClass = "flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-soft-gray-15 hover:text-zinc-100";
 
 interface UserProfileProps {
     user: UserType;
@@ -103,7 +102,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                     overhang floats over the scrolling page instead of sitting
                     at bottom-0 of a background. */}
                 <div ref={compactRef} className={cn(
-                    "relative bg-background",
+                    "bg-background",
                     isMinimized
                         ? "opacity-100 pointer-events-auto"
                         : "opacity-0 pointer-events-none"
@@ -122,34 +121,21 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                             activeTab={activeTab}
                             onTabChange={setActiveTab}
                             isMinimized={true}
+                            action={
+                                <button onClick={handleToggle} title="Maximum size" className={resizeBtnClass}>
+                                    <MaximizeIcon className="size-5" />
+                                </button>
+                            }
                         />
                     </div>
-                    {/* Resize toggle — bottom-right of the minimized header. */}
-                    <button
-                        onClick={handleToggle}
-                        title="Maximum size"
-                        className={cn(resizeBtnClass, "bottom-4")}
-                    >
-                        <MaximizeIcon className="size-6" />
-                    </button>
                 </div>
             </div>
 
             {/* ── Full header ───────────────────────────────────────────────────
                 Normal document flow. Scrolls away naturally. When its bottom
                 edge crosses the viewport top, the compact header fades in.     */}
-            <div ref={fullRef} className={cn("relative", buttonMinRef.current ? "hidden" : "block")}>
+            <div ref={fullRef} className={buttonMinRef.current ? "hidden" : "block"}>
                 <ProfileBanner user={user} isMinimized={false} />
-                {/* Resize toggle — top-right of the banner, offset below the
-                    fixed app header (h-header) so it clears the global search bar
-                    the banner scrolls under. */}
-                <button
-                    onClick={handleToggle}
-                    title="Minimum size"
-                    className={cn(resizeBtnClass, "top-[calc(var(--header-height)+1rem)]")}
-                >
-                    <MinimizeIcon className="size-6" />
-                </button>
                 <div className="w-full px-4 py-4 relative z-30">
                     <div className="flex flex-row items-start justify-start gap-6">
                         <ProfileAvatar user={user} isMinimized={false} />
@@ -163,6 +149,11 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                         activeTab={activeTab}
                         onTabChange={setActiveTab}
                         isMinimized={false}
+                        action={
+                            <button onClick={handleToggle} title="Minimum size" className={resizeBtnClass}>
+                                <MinimizeIcon className="size-5" />
+                            </button>
+                        }
                     />
                 </div>
             </div>

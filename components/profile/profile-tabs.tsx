@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
@@ -20,14 +21,17 @@ interface ProfileTabsProps {
     activeTab: string;
     onTabChange: (tab: string) => void;
     isMinimized?: boolean;
+    /** Optional right-aligned control on the tabs row (e.g. the resize toggle). */
+    action?: ReactNode;
 }
 
-export function ProfileTabs({ activeTab, onTabChange, isMinimized }: ProfileTabsProps) {
+export function ProfileTabs({ activeTab, onTabChange, isMinimized, action }: ProfileTabsProps) {
     return (
         <div className={cn("relative z-30 transition-all duration-300", isMinimized ? "mt-2 mb-3" : "mt-5")}>
-            <div className="w-full overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                <div className={cn("flex min-w-max transition-all duration-300", isMinimized ? "gap-6" : "gap-9")}>
-                    {TABS.map((tab) => (
+            <div className="flex items-center gap-4">
+                <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <div className={cn("flex min-w-max transition-all duration-300", isMinimized ? "gap-6" : "gap-9")}>
+                        {TABS.map((tab) => (
                         <button
                             key={tab}
                             onClick={() => onTabChange(tab)}
@@ -50,8 +54,10 @@ export function ProfileTabs({ activeTab, onTabChange, isMinimized }: ProfileTabs
                                 />
                             )}
                         </button>
-                    ))}
+                        ))}
+                    </div>
                 </div>
+                {action && <div className="shrink-0">{action}</div>}
             </div>
         </div>
     );
