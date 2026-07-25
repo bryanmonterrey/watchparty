@@ -78,11 +78,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             {/* ── Left rail — sidebar width ─────────────────────────────────────
                 Runs top → bottom alongside the center column. Content TBD. */}
             <aside className="hidden shrink-0 lg:block w-[var(--sidebar-width)]">
-                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                        Left rail
-                    </span>
-                </div>
+                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4" />
             </aside>
 
             {/* ── Center column ─────────────────────────────────────────────────
@@ -167,11 +163,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
             {/* ── Right rail — 340px ────────────────────────────────────────────
                 Runs top → bottom alongside the center column. Content TBD. */}
             <aside className="hidden shrink-0 xl:block w-[340px]">
-                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                        Right rail
-                    </span>
-                </div>
+                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4" />
             </aside>
 
         </div>
