@@ -128,9 +128,11 @@ export async function getEvmAssetsBatch(
     if (!chain) continue;
 
     const raw = BigInt(token.tokenBalance || "0");
-    if (raw <= BigInt(0)) continue;
-
     const isNative = !token.tokenAddress;
+    // A chain's own coin always belongs in the list, at zero like anything
+    // else — that's how the wallet shows you which networks you have. Only
+    // zero-balance TOKENS are noise worth dropping.
+    if (raw <= BigInt(0) && !isNative) continue;
     const decimals = isNative
       ? chain.nativeCurrency.decimals
       : (token.tokenMetadata?.decimals ?? 18);
@@ -153,6 +155,34 @@ export async function getEvmAssetsBatch(
       isNative,
     });
   }
+
+  // The Portfolio API omits a chain's native entry entirely when the balance is
+  // zero, so a chain the user holds nothing on would vanish from the wallet.
+  // Synthesize the missing ones at zero.
+  const missingNative = [...out.entries()].filter(
+    ([, result]) => !result.assets.some((a) => a.isNative)
+  );
+  const nativePrices = await Promise.all(
+    missingNative.map(([chainId]) => getNativePrice(chainId).catch(() => null))
+  );
+
+  missingNative.forEach(([chainId, result], i) => {
+    const chain = covered.find((c) => c.id === chainId)!;
+    const quote = nativePrices[i];
+    result.assets.push({
+      chain: chainId,
+      contract: null,
+      symbol: chain.nativeCurrency.symbol,
+      name: chain.name,
+      decimals: chain.nativeCurrency.decimals,
+      balance: 0,
+      rawBalance: "0",
+      price: quote?.price,
+      priceChange24h: quote?.priceChange24h,
+      usdValue: 0,
+      isNative: true,
+    });
+  });
 
   for (const result of out.values()) {
     result.assets.sort((a, b) => {
