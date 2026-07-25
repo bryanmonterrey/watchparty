@@ -16,7 +16,7 @@ async function serverConnection() {
     const { createServerConnection } = await import("@/lib/solana/server-connection");
     return createServerConnection();
 }
-import { withCache, withSwrCache, invalidateCache, TTL } from "@/lib/cache";
+import { withCache, withSwrCache, invalidateCache, redis, TTL } from "@/lib/cache";
 import { db } from "@/db";
 import { trades } from "@/db/schema/content";
 import { nanoid } from "nanoid";
@@ -24,6 +24,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { resolvePool } from "@/lib/tokens/udf-datafeed";
 import { deriveWalletKey } from "@/lib/wallet/key-derivation";
 import { getSeedForUser } from "@/lib/wallet/seed";
+import { ensureEmbeddedWallet, makeWalletPrimary } from "@/lib/wallet/ensure-embedded";
+import { linkedWallets, MAX_LINKED_WALLETS } from "@/db/schema";
+import { ed25519 } from "@noble/curves/ed25519.js";
 import {
     executeSwap,
     getSwapQuote,
@@ -127,6 +130,197 @@ function normalizeSwapToken(asset: any) {
 
 
 export const walletRouter = router({
+    /**
+     * Give this account an embedded Swig wallet if it lacks one, and make it
+     * primary. Extension sign-ins land here: the wallet they arrived with stays
+     * linked, the Swig wallet becomes the account's main address.
+     *
+     * Idempotent — returns created:false when one already exists. The mnemonic
+     * comes back ONLY on creation, so the client can prompt a backup; it is
+     * recoverable later through revealPhrase.
+     */
+    ensureEmbedded: protectedProcedure.mutation(async ({ ctx }) => {
+        const result = await ensureEmbeddedWallet(ctx.user.id, { makePrimary: true });
+        return {
+            created: result.created,
+            swigAddress: result.swigAddress,
+            mnemonic: result.mnemonic,
+            clientShare: result.clientShare,
+            publicInfo: result.publicInfo,
+            d2: result.d2,
+        };
+    }),
+
+    /** Every Solana wallet linked to this account, primary first. */
+    listLinkedWallets: protectedProcedure.query(async ({ ctx }) => {
+        const rows = await db
+            .select({
+                id: linkedWallets.id,
+                address: linkedWallets.address,
+                source: linkedWallets.source,
+                label: linkedWallets.label,
+                isPrimary: linkedWallets.is_primary,
+                createdAt: linkedWallets.created_at,
+            })
+            .from(linkedWallets)
+            .where(eq(linkedWallets.user_id, ctx.user.id));
+
+        return {
+            wallets: rows.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary)),
+            max: MAX_LINKED_WALLETS,
+        };
+    }),
+
+    /**
+     * Nonce to sign when linking a wallet. Proving control matters — addresses
+     * are globally unique, so without proof anyone could claim someone else's
+     * address and lock the real owner out of ever linking it.
+     */
+    getLinkNonce: protectedProcedure
+        .input(z.object({ address: z.string().min(32) }))
+        .mutation(async ({ ctx, input }) => {
+            const nonce = nanoid(24);
+            await redis.set(`link-nonce:${ctx.user.id}:${input.address}`, nonce, { ex: 300 });
+            return {
+                nonce,
+                message: `watchparty: link this wallet to your account\n\nnonce: ${nonce}`,
+            };
+        }),
+
+    /** Link a Solana wallet after verifying a signature over the issued nonce. */
+    linkWallet: protectedProcedure
+        .input(z.object({
+            address: z.string().min(32),
+            /** base64 ed25519 signature over the message from getLinkNonce. */
+            signature: z.string().min(1),
+            label: z.string().max(40).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const existing = await db
+                .select({ id: linkedWallets.id })
+                .from(linkedWallets)
+                .where(eq(linkedWallets.user_id, ctx.user.id));
+
+            if (existing.length >= MAX_LINKED_WALLETS) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `You can link at most ${MAX_LINKED_WALLETS} wallets`,
+                });
+            }
+
+            const key = `link-nonce:${ctx.user.id}:${input.address}`;
+            const nonce = await redis.get<string>(key);
+            if (!nonce) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Nonce expired — try again" });
+            }
+
+            const message = `watchparty: link this wallet to your account\n\nnonce: ${nonce}`;
+            // Dynamic import mirrors the rest of this router — the worker
+            // bundle has little headroom, so web3.js stays out of the top level.
+            const { PublicKey: SolPublicKey } = await import("@solana/web3.js");
+            let verified = false;
+            try {
+                verified = ed25519.verify(
+                    Buffer.from(input.signature, "base64"),
+                    new TextEncoder().encode(message),
+                    new SolPublicKey(input.address).toBytes()
+                );
+            } catch {
+                verified = false;
+            }
+            if (!verified) {
+                throw new TRPCError({ code: "UNAUTHORIZED", message: "Signature does not match" });
+            }
+
+            // Single-use: burn it whether or not the insert below succeeds.
+            await redis.del(key);
+
+            try {
+                await db.insert(linkedWallets).values({
+                    id: nanoid(),
+                    user_id: ctx.user.id,
+                    address: input.address,
+                    source: "extension",
+                    label: input.label,
+                    is_primary: false,
+                });
+            } catch {
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "That wallet is already linked to an account",
+                });
+            }
+
+            return { linked: true };
+        }),
+
+    /** Switch which linked wallet is primary. user.wallet_address follows it. */
+    setPrimaryWallet: protectedProcedure
+        .input(z.object({ address: z.string().min(32) }))
+        .mutation(async ({ ctx, input }) => {
+            const [row] = await db
+                .select({ source: linkedWallets.source, label: linkedWallets.label })
+                .from(linkedWallets)
+                .where(and(
+                    eq(linkedWallets.user_id, ctx.user.id),
+                    eq(linkedWallets.address, input.address)
+                ))
+                .limit(1);
+
+            if (!row) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Wallet is not linked to you" });
+            }
+
+            await makeWalletPrimary(ctx.user.id, input.address, row.source, row.label ?? undefined);
+            return { primary: input.address };
+        }),
+
+    /** Unlink a wallet. The Swig wallet stays — it is the account's own. */
+    unlinkWallet: protectedProcedure
+        .input(z.object({ address: z.string().min(32) }))
+        .mutation(async ({ ctx, input }) => {
+            const rows = await db
+                .select({
+                    address: linkedWallets.address,
+                    source: linkedWallets.source,
+                    isPrimary: linkedWallets.is_primary,
+                })
+                .from(linkedWallets)
+                .where(eq(linkedWallets.user_id, ctx.user.id));
+
+            const target = rows.find((r) => r.address === input.address);
+            if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Wallet is not linked to you" });
+
+            // The embedded wallet is the account's own and we custody its key
+            // material; unlinking would strand it behind an account with no
+            // way back to it.
+            if (target.source === "swig") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Your watchparty wallet can't be unlinked",
+                });
+            }
+            if (rows.length <= 1) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "You need at least one wallet" });
+            }
+
+            await db
+                .delete(linkedWallets)
+                .where(and(
+                    eq(linkedWallets.user_id, ctx.user.id),
+                    eq(linkedWallets.address, input.address)
+                ));
+
+            // Never leave the account without a primary.
+            if (target.isPrimary) {
+                const fallback = rows.find((r) => r.address !== input.address && r.source === "swig")
+                    ?? rows.find((r) => r.address !== input.address)!;
+                await makeWalletPrimary(ctx.user.id, fallback.address, fallback.source);
+            }
+
+            return { unlinked: true };
+        }),
+
     /**
      * The user's derived address for every chain, keyed by chain kind.
      * Backfilled lazily: a wallet that predates wallet_addresses gets its rows

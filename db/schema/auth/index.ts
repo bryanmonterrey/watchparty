@@ -9,5 +9,6 @@ export * from "./nft_pins";
 export * from "./two-factor";
 export * from "./wallet-address";
 export * from "./wallet-addresses";
+export * from "./linked-wallets";
 
 

@@ -18,7 +18,7 @@ import { customSession, multiSession, emailOTP, admin, twoFactor } from "better-
 import { passkey } from "@better-auth/passkey";
 import { expo } from "@better-auth/expo";
 import { db } from "@/db";
-import { user, session, account, verification, passkey as passkeyTable, walletAddress } from "@/db/schema/auth";
+import { user, session, account, verification, passkey as passkeyTable, walletAddress, linkedWallets } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 import { Resend } from "resend";
@@ -290,18 +290,32 @@ export const auth = betterAuth({
           }
 
           // Existing wallet → upsert (wallet = single user).
-          const [existingUser] = await db
-            .select()
-            .from(user)
-            .where(eq(user.wallet_address, walletAddress))
+          //
+          // Match on linked_wallets FIRST. Once a user has an embedded Swig
+          // wallet, their `user.wallet_address` is the Swig address, so an
+          // extension they signed in with lives only in linked_wallets —
+          // matching on the column alone would fail to recognise them and
+          // create a duplicate account. The column lookup remains as a
+          // fallback for rows not yet backfilled.
+          const [linked] = await db
+            .select({ userId: linkedWallets.user_id })
+            .from(linkedWallets)
+            .where(eq(linkedWallets.address, walletAddress))
             .limit(1);
+
+          const [existingUser] = linked
+            ? await db.select().from(user).where(eq(user.id, linked.userId)).limit(1)
+            : await db.select().from(user).where(eq(user.wallet_address, walletAddress)).limit(1);
 
           if (existingUser) {
             return {
               data: {
                 ...userData,
                 id: existingUser.id,
-                wallet_address: walletAddress,
+                // Keep their chosen primary. Signing in with a linked wallet
+                // should not silently promote it — switching primary is an
+                // explicit action.
+                wallet_address: existingUser.wallet_address ?? walletAddress,
                 role: existingUser.role ?? "user",
                 gender: existingUser.gender ?? false,
                 updatedAt: now,
