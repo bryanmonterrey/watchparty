@@ -39,6 +39,7 @@ import {
 import { getChain, CHAINS, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
+import { getNativePrice } from "@/lib/chains/assets/prices";
 import {
     getActivityForChain,
     hasActivityProvider,
@@ -234,11 +235,40 @@ export const walletRouter = router({
             }
         });
 
+        // Every visible chain gets a row, even with no address and no balance.
+        // Accounts that predate the embedded wallet have no mnemonic, so no
+        // derived address exists to query — but the wallet should still show
+        // which networks it supports rather than collapsing to just Solana.
+        const haveNative = new Set(assets.filter((a) => a.isNative).map((a) => a.chain));
+        const missing = allTargets.filter((c) => !haveNative.has(c.id));
+
+        const prices = await Promise.all(
+            missing.map((c) => getNativePrice(c.id).catch(() => null))
+        );
+
+        missing.forEach((chain, i) => {
+            assets.push({
+                chain: chain.id,
+                contract: null,
+                symbol: chain.nativeCurrency.symbol,
+                name: chain.name,
+                decimals: chain.nativeCurrency.decimals,
+                balance: 0,
+                rawBalance: "0",
+                price: prices[i]?.price,
+                priceChange24h: prices[i]?.priceChange24h,
+                usdValue: 0,
+                isNative: true,
+            });
+        });
+
         return {
             assets,
             totalUsd: assets.reduce((sum, a) => sum + (a.usdValue ?? 0), 0),
             partial,
             failed,
+            /** True when no derived addresses exist — the wallet needs setting up. */
+            noAddresses: Object.keys(addresses).length === 0,
         };
     }),
 
