@@ -55,14 +55,14 @@ export function ProfileHeader({ user, isMinimized, onToggleSize, initialFollowCo
     return (
         <div className="flex z-30 flex-col gap-1.5 flex-1 min-w-0">
             <div className="flex flex-row justify-between items-center w-full gap-4">
-                <div className={cn("flex items-center min-w-0", isMinimized ? "flex-row gap-2" : "flex-row gap-4")}>
-                    <h1 className={cn("font-black tracking-tighter text-white", isMinimized ? "text-xl" : "text-2xl")}>
+                <div className={cn("flex items-center justify-center min-w-0", isMinimized ? "flex-row gap-2" : "flex-row gap-1")}>
+                    <h1 className={cn("font-semibold tracking-tighter text-white", isMinimized ? "text-xl" : "text-2xl")}>
                         {user.name}
                     </h1>
-                    {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-6" />}
-                    {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-6" />}
-                    {user.verifiedTier === "government" && <GovBadgeIcon className="size-6" />}
-                    <span className="text-zinc-400 tracking-wide font-semibold text-sm">
+                    {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-5.5" />}
+                    {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-5.5" />}
+                    {user.verifiedTier === "government" && <GovBadgeIcon className="size-5.5" />}
+                    <span className="text-zinc-400 tracking-wide font-semibold text-lg">
                         @{user.username}
                     </span>
                 </div>

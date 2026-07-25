@@ -170,7 +170,7 @@ export function ProfileHeaderActions({ user, isOwner, isMinimized, onToggleSize 
                     )}
                     <Button
                         onClick={handleFollowToggle}
-                        className="h-11 rounded-full font-bold backdrop-blur-lg text-base px-5 bg-soft-gray-5 border border-baseborder/5 text-white hover:bg-soft-gray-15"
+                        className="h-11 rounded-full font-bold text-base px-5 bg-soft-gray-5 border border-baseborder/5 text-white hover:bg-soft-gray-15"
                     >
                         {isFollowing ? "Following" : "Follow"}
                     </Button>
