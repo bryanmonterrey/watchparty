@@ -107,7 +107,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                         : "opacity-0 pointer-events-none"
                 )}>
                     <ProfileBanner user={user} isMinimized={true} />
-                    <div className="w-full px-4 pb-4 -mt-34 relative z-30">
+                    <div className="w-full px-4 pb-2 -mt-34 relative z-30">
                         <div className="flex flex-row items-start gap-6">
                             <ProfileAvatar user={user} isMinimized={true} />
                             <ProfileHeader
@@ -122,7 +122,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                             isMinimized={true}
                             action={
                                 <button onClick={handleToggle} title="Maximum size" className={resizeBtnClass}>
-                                    <MaximizeIcon className="size-5" />
+                                    <MaximizeIcon className="size-6" />
                                 </button>
                             }
                         />
@@ -150,7 +150,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                         isMinimized={false}
                         action={
                             <button onClick={handleToggle} title="Minimum size" className={resizeBtnClass}>
-                                <MinimizeIcon className="size-5" />
+                                <MinimizeIcon className="size-6" />
                             </button>
                         }
                     />
