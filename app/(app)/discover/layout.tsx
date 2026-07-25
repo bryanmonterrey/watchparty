@@ -3,18 +3,18 @@ import { DiscoverScrollBackdrop } from "@/components/browse/discover-scroll-back
 import { DiscoverRail } from "@/components/browse/discover-rail";
 import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
 
-// Discover feed — retrofit to the profile page's 3-column shell: left rail =
-// sidebar width, center feed = flex-1, right rail = 340px, on a panel1
-// background. The rails keep their own content (DiscoverRail / DiscoverRightRail);
-// only the column widths changed (were flex gutters + a centered 628px feed).
+// Discover 3-col frame — single native scroll, sticky rails (the Twitter/X
+// model). The whole row scrolls via the app's scroller (#app-scroll-container);
+// there is NO per-column overflow, so hovering the feed OR a rail is the same
+// one native scroll — no wheel forwarder, identical feel everywhere.
 //
-// Single native scroll (#app-scroll-container), no per-column overflow. The row
-// uses `items-start` (NOT stretch) so each aside is only as tall as its own
-// content and `position: sticky` on the aside itself pins it against the scroller
-// while the taller feed keeps the row tall — the canonical sticky-sidebar
-// pattern, robust against the app shell's nested scroll context. Left rail sticks
-// at top-0; the right rail sticks bottom-0 so a rail taller than the viewport
-// reveals its full height as you scroll rather than freezing at the top.
+// Sticky setup: the flex row uses `items-start` (NOT stretch) so each aside is
+// only as tall as its own content; the aside itself is `position: sticky
+// top-0`, pinned against the scroller while the taller feed column keeps the
+// row tall enough to scroll. This is the canonical sticky-sidebar pattern and
+// is more robust than sticky-on-a-stretched-child, which failed against the
+// app shell's nested scroll context (SidebarInset's overflow-x-hidden makes it
+// a y-scroll container too).
 export default function DiscoverLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="relative">
@@ -25,25 +25,34 @@ export default function DiscoverLayout({ children }: { children: React.ReactNode
                 <DiscoverScrollBackdrop />
             </div>
 
-            <div className="flex min-h-dvh w-full items-start bg-panel1">
-                {/* Left rail — sidebar width (was a flex gutter). */}
-                <aside className="sticky top-0 hidden h-dvh w-[var(--sidebar-width)] shrink-0 lg:block">
+            <div className="flex min-h-dvh w-full items-start px-4 gap-6">
+                {/* Left rail: sticky directly on the flex item (items-start keeps
+                    it from stretching), pinned to the top of the scroller. */}
+                {/* Left rail is a touch narrower than the right gutter at xl
+                    (flex-[0.75] vs the right aside's flex-1), which nudges the
+                    feed left of dead-center AND widens the right gutter so the
+                    rail cards have room to sit centered in it. */}
+                <aside className="sticky top-0 hidden h-dvh min-w-0 flex-1 lg:block xl:flex-[0.75]">
                     <DiscoverRail />
                 </aside>
 
-                {/* Center feed — flex-1 (was a centered 628px column). border-x
-                    delineates it from the rails (no outer gap, mirroring profile). */}
-                <div className="relative z-100 min-h-dvh min-w-0 flex-1 lg:border-x border-soft-gray/[0.12]">
+                <div className="mx-auto min-h-dvh w-full max-w-[628px] shrink-0 relative z-100 lg:border-x border-soft-gray/[0.12]">
                     {children}
                 </div>
 
-                {/* Right rail — 340px (was a flex gutter). DiscoverRightRail's
-                    368px card column caps to it via its own max-w-full. */}
-                <aside className="sticky bottom-0 hidden w-[340px] shrink-0 self-end xl:block">
+                {/* Right rail: `sticky bottom-0` — scrolls up with the page,
+                    then pins once its bottom edge reaches the viewport bottom
+                    (so a rail taller than the viewport reveals its full height
+                    as you scroll, instead of being frozen at the top). The
+                    fixed-width card column (see DiscoverRightRail) is centered
+                    in this gutter via justify-center. */}
+                <aside className="sticky bottom-0 hidden min-w-0 flex-1 self-end xl:block">
                     <div className="flex justify-center pt-[82px]">
                         <DiscoverRightRail />
                     </div>
                 </aside>
+                {/* lg–xl: right rail hidden — balance the left flex so the feed stays centered */}
+                <div aria-hidden className="hidden flex-1 lg:block xl:hidden" />
             </div>
         </div>
     );
