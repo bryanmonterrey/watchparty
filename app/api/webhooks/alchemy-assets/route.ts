@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
+import { getAddress } from "viem";
 import { invalidateCache } from "@/lib/cache";
 import { CHAINS } from "@/lib/chains/registry";
 import type { ChainId } from "@/lib/chains/types";
@@ -119,13 +120,26 @@ export async function POST(req: NextRequest) {
 
   if (addresses.size === 0) return NextResponse.json({ ok: true });
 
-  // Addresses are stored checksummed but arrive lowercased, and cache keys are
-  // built from the stored form — so bust both spellings rather than doing a DB
-  // lookup per webhook. A miss is a harmless Redis DEL.
+  // Case matters here. Cache keys are built from the address as stored in
+  // wallet_addresses, which is EIP-55 checksummed (viem's privateKeyToAccount),
+  // but webhook payloads arrive lowercased. Deleting only the lowercased key
+  // silently misses every time — the DEL succeeds, the cache stays warm, and
+  // the balance looks stale for the full TTL. Bust both spellings; a miss is a
+  // harmless no-op, whereas a miss on the real key defeats the whole webhook.
+  const spellings = new Set<string>();
+  for (const address of addresses) {
+    spellings.add(address);
+    try {
+      spellings.add(getAddress(address));
+    } catch {
+      // Not a valid EVM address — the lowercase form is all we have.
+    }
+  }
+
   const evmChainIds = CHAINS.filter((c) => c.kind === "evm").map((c) => c.id);
 
   await Promise.all(
-    [...addresses].flatMap((address) => {
+    [...spellings].flatMap((address) => {
       const keys = [
         // The batched key is the one the aggregated tokens list actually reads.
         `assets:evm-batch:${address}`,
@@ -137,7 +151,9 @@ export async function POST(req: NextRequest) {
     })
   );
 
-  await broadcastAssetsChanged([...addresses]);
+  // Clients subscribe with the checksummed address they were served, so the
+  // broadcast has to cover both spellings for the same reason.
+  await broadcastAssetsChanged([...spellings]);
 
   return NextResponse.json({ ok: true, addresses: addresses.size, chain: chain ?? null });
 }
