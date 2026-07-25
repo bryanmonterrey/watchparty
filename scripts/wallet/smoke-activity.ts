@@ -46,7 +46,7 @@ await probe("bitcoin", async () => {
   summarize("bitcoin", await getActivityForChain("bitcoin", SATOSHI_BTC, 10));
 });
 
-for (const chain of ["ethereum", "base", "polygon"] as const) {
+for (const chain of ["ethereum", "base", "polygon", "bnb"] as const) {
   await probe(chain, async () => {
     summarize(chain, await getActivityForChain(chain, VITALIK_EVM, 10));
   });
