@@ -22,6 +22,14 @@ import { trades } from "@/db/schema/content";
 import { nanoid } from "nanoid";
 import { and, eq, isNull } from "drizzle-orm";
 import { resolvePool } from "@/lib/tokens/udf-datafeed";
+import { getChain, CHAIN_KINDS } from "@/lib/chains/registry";
+import { getAssetsForChain, hasAssetProvider } from "@/lib/chains/assets";
+import { seedFromMnemonic } from "@/lib/chains/derive";
+import {
+    LEGACY_SOLANA_PATH,
+    getAddressesByKind,
+    persistDerivedAddresses,
+} from "@/lib/wallet/multichain";
 
 const subtle = globalThis.crypto?.subtle;
 
@@ -130,6 +138,75 @@ function normalizeSwapToken(asset: any) {
 
 
 export const walletRouter = router({
+    /**
+     * The user's derived address for every chain, keyed by chain kind.
+     * Backfilled lazily: a wallet that predates wallet_addresses gets its rows
+     * written on first read, so nobody is stuck without multichain addresses.
+     */
+    getChainAddresses: protectedProcedure.query(async ({ ctx }) => {
+        const stored = await getAddressesByKind(ctx.user.id);
+        if (Object.keys(stored).length >= CHAIN_KINDS.length) return stored;
+
+        // Missing rows — derive them now from the stored phrase.
+        try {
+            const { data } = await supabase
+                .from("encrypted_wallets")
+                .select("salt, encrypted_mnemonic, mnemonic_iv, passkey_credential_id, key_version, swig_address")
+                .eq("user_id", ctx.user.id)
+                .single();
+            if (!data?.encrypted_mnemonic || !data.mnemonic_iv) return stored;
+
+            const key = await deriveWalletKey(
+                data.passkey_credential_id || `social-${ctx.user.id}`,
+                Buffer.from(data.salt, "base64"),
+                data.key_version ?? 1,
+                ["decrypt"]
+            );
+            const plain = await subtle!.decrypt(
+                { name: "AES-GCM", iv: Buffer.from(data.mnemonic_iv, "base64") as any },
+                key,
+                Buffer.from(data.encrypted_mnemonic, "base64") as any
+            );
+            const seed = seedFromMnemonic(Buffer.from(plain).toString("utf-8"));
+
+            await persistDerivedAddresses(ctx.user.id, seed, {
+                solanaAddress: data.swig_address ?? undefined,
+                solanaDerivationPath: data.swig_address ? LEGACY_SOLANA_PATH : undefined,
+            });
+            return getAddressesByKind(ctx.user.id);
+        } catch (err) {
+            console.error("getChainAddresses: lazy derive failed", err);
+            return stored;
+        }
+    }),
+
+    /**
+     * Balances for one non-Solana chain. Solana keeps using getWalletAssets —
+     * that path has Helius, NFTs, spam filtering and hidden-token handling.
+     */
+    getChainAssets: protectedProcedure
+        .input(z.object({ chain: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const chain = getChain(input.chain);
+            if (!chain) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown chain" });
+            if (!hasAssetProvider(chain.id)) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `${chain.name} assets come from getWalletAssets`,
+                });
+            }
+
+            const addresses = await getAddressesByKind(ctx.user.id);
+            const address = addresses[chain.kind];
+            if (!address) return { assets: [], totalUsd: 0, address: null };
+
+            return withCache(
+                `assets:${chain.id}:${address}`,
+                30,
+                async () => ({ ...(await getAssetsForChain(chain.id, address)), address })
+            );
+        }),
+
     /**
      * Get or create a Swig smart wallet + session key for the authenticated user.
      *

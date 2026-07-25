@@ -2601,6 +2601,58 @@ export function BitcoinIcon(props: React.SVGProps<SVGSVGElement>) {
     );
 }
 
+// Ethereum diamond, official facet colouring.
+export function EthereumIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 256 417" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+            <path fill="#343434" d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" />
+            <path fill="#8C8C8C" d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
+            <path fill="#3C3C3B" d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.601 128.038-180.32z" />
+            <path fill="#8C8C8C" d="M127.962 416.905v-104.72L0 236.585z" />
+            <path fill="#141414" d="M127.961 287.958l127.962-75.637-127.962-58.162z" />
+            <path fill="#393939" d="M0 212.321l127.96 75.637V154.159z" />
+        </svg>
+    );
+}
+
+// Polygon (POL) — the interlocking hexagon mark.
+export function PolygonIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 38 33" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+            <path
+                fill="#8247E5"
+                d="M29 10.2c-.7-.4-1.6-.4-2.4 0L21 13.5l-3.8 2.1-5.5 3.3c-.7.4-1.6.4-2.4 0L5 16.3c-.7-.4-1.2-1.2-1.2-2.1v-5c0-.8.4-1.6 1.2-2.1l4.3-2.5c.7-.4 1.6-.4 2.4 0L16 7.2c.7.4 1.2 1.2 1.2 2.1v3.3l3.8-2.2V7c0-.8-.4-1.6-1.2-2.1l-8-4.7c-.7-.4-1.6-.4-2.4 0L1.2 5C.4 5.4 0 6.2 0 7v9.4c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l5.5-3.2 3.8-2.2 5.5-3.2c.7-.4 1.6-.4 2.4 0l4.3 2.5c.7.4 1.2 1.2 1.2 2.1v5c0 .8-.4 1.6-1.2 2.1L29 28.8c-.7.4-1.6.4-2.4 0l-4.3-2.5c-.7-.4-1.2-1.2-1.2-2.1V21l-3.8 2.2v3.3c0 .8.4 1.6 1.2 2.1l8.1 4.7c.7.4 1.6.4 2.4 0l8.1-4.7c.7-.4 1.2-1.2 1.2-2.1V17c0-.8-.4-1.6-1.2-2.1L29 10.2z"
+            />
+        </svg>
+    );
+}
+
+// Sui — white droplet on the brand blue disc.
+export function SuiIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+            <circle cx="16" cy="16" r="16" fill="#4DA2FF" />
+            <path
+                fill="#fff"
+                d="M16 6.5c.35 0 .67.17.86.46 1.62 2.4 5.64 8.72 5.64 12.15a6.5 6.5 0 1 1-13 0c0-3.43 4.02-9.75 5.64-12.15.19-.29.51-.46.86-.46Zm0 3.4c-1.77 2.79-4 6.85-4 9.21a4 4 0 1 0 8 0c0-2.36-2.23-6.42-4-9.21Z"
+            />
+        </svg>
+    );
+}
+
+// Robinhood Chain — the feather mark.
+export function RobinhoodIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+            <circle cx="16" cy="16" r="16" fill="#CCFF00" />
+            <path
+                fill="#000"
+                d="M22.4 6.6c.5-.2 1 .3.85.82-1.3 4.5-3.3 8.42-5.98 11.75a.6.6 0 0 1-.62.2l-2.1-.52 3.6-5.9-5.2 5.36-1.75 3.1c-.2.36-.05.8.32.96l1.6.7-2.4 3.9a.7.7 0 0 1-1.2-.72l1.9-3.1-1.4-.62a1.9 1.9 0 0 1-.96-2.5C11.3 14.1 15.9 9.2 22.4 6.6Z"
+            />
+        </svg>
+    );
+}
+
 // Left-pointing back arrow. Size via className (e.g. size-6) or width/height.
 export function ArrowLeftIcon(props: React.SVGProps<SVGSVGElement>) {
     return (

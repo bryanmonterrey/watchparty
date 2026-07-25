@@ -23,7 +23,9 @@ export const ETHEREUM: ChainConfig = {
   chainId: 1,
   coinType: 60,
   derivationPath: "m/44'/60'/0'/0/0",
-  rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ?? "https://cloudflare-eth.com",
+  // cloudflare-eth.com is dead (returns -32603 Internal error) — publicnode is
+  // keyless and healthy. Verified 2026-07-25.
+  rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ?? "https://ethereum-rpc.publicnode.com",
   explorer: "https://etherscan.io",
   nativeCurrency: { symbol: "ETH", decimals: 18 },
 };
@@ -70,7 +72,8 @@ export const POLYGON: ChainConfig = {
   chainId: 137,
   coinType: 60,
   derivationPath: "m/44'/60'/0'/0/0",
-  rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? "https://polygon-rpc.com",
+  // polygon-rpc.com now 403s ("API key disabled"). Verified 2026-07-25.
+  rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? "https://polygon-bor-rpc.publicnode.com",
   explorer: "https://polygonscan.com",
   nativeCurrency: { symbol: "POL", decimals: 18 },
 };
