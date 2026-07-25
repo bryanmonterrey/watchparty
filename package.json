@@ -59,6 +59,7 @@
     "@radix-ui/react-tooltip": "^1.2.13",
     "@ramp-network/ramp-instant-sdk": "^6.2.0",
     "@reown/appkit": "1.8.21",
+    "@scure/btc-signer": "^2.2.0",
     "@solana-program/token": "^0.13.0",
     "@solana/compat": "^6.10.0",
     "@solana/kit": "^6.10.0",
