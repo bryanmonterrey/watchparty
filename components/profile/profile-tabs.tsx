@@ -27,7 +27,7 @@ interface ProfileTabsProps {
 
 export function ProfileTabs({ activeTab, onTabChange, isMinimized, action }: ProfileTabsProps) {
     return (
-        <div className={cn("relative z-30 transition-all duration-300", isMinimized ? "mt-2 mb-3" : "mt-5")}>
+        <div className={cn("relative z-30 transition-all duration-300", isMinimized ? "mt-2" : "mt-5")}>
             <div className="flex items-center gap-4">
                 <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <div className={cn("flex min-w-max transition-all duration-300", isMinimized ? "gap-6" : "gap-9")}>

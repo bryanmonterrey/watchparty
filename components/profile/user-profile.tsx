@@ -108,7 +108,7 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                         : "opacity-0 pointer-events-none"
                 )}>
                     <ProfileBanner user={user} isMinimized={true} />
-                    <div className="w-full px-4 -mt-34 relative z-30">
+                    <div className="w-full px-4 pb-4 -mt-34 relative z-30">
                         <div className="flex flex-row items-start gap-6">
                             <ProfileAvatar user={user} isMinimized={true} />
                             <ProfileHeader
