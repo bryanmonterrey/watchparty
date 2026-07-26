@@ -21,12 +21,13 @@ export const metadata: Metadata = {
 const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+4px)]";
 
 export default function AppHome() {
-    // Left rail from lg, right rail from xl, centre column taking the rest,
-    // gap-4 between all three.
+    // Left rail from lg, right rail from xl, centre column taking the rest.
+    // The two gutters differ (4 left, 2.5 right), so they are margins on the
+    // rails rather than one `gap` on the row.
     return (
-        <div className="relative flex min-h-screen w-full gap-4">
+        <div className="relative flex min-h-screen w-full">
             {/* Left rail. Content TBD. */}
-            <aside className="hidden w-70 shrink-0 lg:block">
+            <aside className="hidden w-70 shrink-0 lg:mr-4 lg:block">
                 <div className={RAIL_INNER} />
             </aside>
 
@@ -61,7 +62,7 @@ export default function AppHome() {
 
             {/* Right rail. Its tab row leads with the icon — the icon is the
                 first tab rather than a heading sitting above them. */}
-            <aside className="hidden w-75 shrink-0 xl:block">
+            <aside className="hidden w-75 shrink-0 xl:ml-2.5 xl:block">
                 <div className={RAIL_INNER}>
                     <HomeRailTabs />
                 </div>
