@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
+import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { Squircle } from "@/components/ui/squircle";
 import { useHomeFeed, type HomeFeedVideo } from "./home-feed-context";
 
@@ -25,7 +26,7 @@ function RailVideo({ v, isActive, onSelect }: { v: HomeFeedVideo; isActive: bool
             type="button"
             onClick={onSelect}
             aria-pressed={isActive}
-            className={cn(ROW, "cursor-pointer", isActive ? "bg-sidebar-hover-55" : "hover:bg-sidebar-hover-35/60")}
+            className={cn(ROW, "cursor-pointer", isActive ? "bg-sidebar-hover/85" : "hover:bg-sidebar-hover-35/60")}
         >
             <span className={THUMB}>
                 {v.thumbnailUrl && (
@@ -39,18 +40,28 @@ function RailVideo({ v, isActive, onSelect }: { v: HomeFeedVideo; isActive: bool
                 )}
             </span>
 
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="flex min-w-0 flex-1 flex-col gap-0.2">
+                {v.user.username && (
+                    <span className="flex min-w-0 items-center gap-1">
+                        <span className="truncate text-sm font-bold text-flexwhite/95">{v.user.username}</span>
+                        {/* The same three tiers the rest of the app shows (see
+                            video-card, up-next-sidebar). The feed hands back the
+                            EFFECTIVE tier, already null for anyone hiding their
+                            badge, so there is nothing extra to check. */}
+                        {v.user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-3.5 shrink-0" />}
+                        {v.user.verifiedTier === "business" && <BusinessBadgeIcon className="size-3.5 shrink-0" />}
+                        {v.user.verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}
+                    </span>
+                )}
                 <span
                     className={cn(
                         "line-clamp-2 text-sm font-bold leading-snug",
-                        isActive ? "text-white" : "text-white/85"
+                        isActive ? "text-white" : "text-flexwhite/75"
                     )}
                 >
                     {v.title}
                 </span>
-                {v.user.username && (
-                    <span className="truncate text-xs font-semibold text-zinc-500">@{v.user.username}</span>
-                )}
+                
             </span>
         </button>
         </Squircle>

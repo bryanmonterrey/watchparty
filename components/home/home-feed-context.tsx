@@ -27,7 +27,16 @@ export interface HomeFeedVideo {
     tokenId?: string | null;
     tokenAddress?: string | null;
     marketCapUsd?: number | null;
-    user: { username: string | null; avatar_url: string | null };
+    user: {
+        username: string | null;
+        avatar_url: string | null;
+        /**
+         * Already the EFFECTIVE tier: the feed resolves it through
+         * effectiveVerifiedTier, so it is null for anyone who has hidden their
+         * badge and needs no further checking here.
+         */
+        verifiedTier?: "verified" | "business" | "government" | null;
+    };
 }
 
 interface HomeFeedValue {
