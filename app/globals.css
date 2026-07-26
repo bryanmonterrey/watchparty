@@ -168,6 +168,13 @@
   --color-lantern2: #35FFAA;
   --color-lantern: #00ED89;
   --color-gray1: #17171B;
+  /* Sidebar menu-item hover pill (the `before:` capsule behind each item).
+     Flat and opaque on purpose. It was zinc-900 on the nav items and
+     zinc-800/50 on the More trigger — over the sidebar's #080808 that blend
+     composites to #181819, i.e. the same colour, just expressed as alpha. One
+     value now, so both read identically and neither shifts if what sits behind
+     the sidebar ever changes. */
+  --color-sidebar-hover: #18181B;
   /* Terminal surfaces (perps). NOTE: NOT named --color-panel — that name is
      taken by the legacy translucent card wash below (later declaration wins,
      which once silently turned these panels translucent).

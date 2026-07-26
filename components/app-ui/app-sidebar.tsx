@@ -293,7 +293,7 @@ export function AppSidebar() {
                                                 onMouseEnter={() => prefetchForItem(item.title)}
                                                 onFocus={() => prefetchForItem(item.title)}
                                                 className={cn(
-                                                    "text-lg !w-auto !justify-start !p-0 transition-all duration-150 ease-in-out font-medium h-12 relative isolate hover:bg-transparent active:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-900 modal-trigger gap-0",
+                                                    "text-lg !w-auto !justify-start !p-0 transition-all duration-150 ease-in-out font-medium h-12 relative isolate hover:bg-transparent active:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-sidebar-hover modal-trigger gap-0",
                                                     isActive ? "text-flexwhite font-bold" : "text-flexwhite/85 hover:text-white/85"
                                                 )}
                                                 onClick={(e) => {
@@ -385,8 +385,8 @@ export function AppSidebar() {
                                 width={320}
                                 gap={8}
                                 triggerClassName={cn(
-                                    "text-md w-full flex items-center justify-start p-0 transition-all duration-150 ease-in-out text-flexwhite/85 hover:text-white/85 font-medium h-12 relative isolate hover:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-zinc-800/50 gap-0 cursor-pointer",
-                                    moreOpen && "before:bg-zinc-800/50"
+                                    "text-md w-full flex items-center justify-start p-0 transition-all duration-150 ease-in-out text-flexwhite/85 hover:text-white/85 font-medium h-12 relative isolate hover:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-sidebar-hover gap-0 cursor-pointer",
+                                    moreOpen && "before:bg-sidebar-hover"
                                 )}
                                 trigger={
                                     <span className="flex w-full items-center">
