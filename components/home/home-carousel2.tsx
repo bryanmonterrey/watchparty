@@ -21,7 +21,11 @@ import { Squircle } from "@/components/ui/squircle";
 //   (the original peek style). Click one to make it the active player video.
 // - Arrows (right): page the grid through the video list in blocks of 9.
 
-const ROW_H = "h-[clamp(240px,24vw,380px)]";
+// cqw, not vw: the hero lives in the home page's centre column (@container/home),
+// so its height has to track that column's width — on a viewport unit it stays
+// tall while the column narrows and the square 3×3 picker eats the player.
+// Falls back to the viewport when rendered outside a container.
+const ROW_H = "h-[clamp(220px,34cqw,340px)]";
 const HERO_WRAP = "mx-auto w-full max-w-[1100px] px-4";
 const PER_PAGE = 9;
 

@@ -23,10 +23,14 @@ import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 import { HOME_CATEGORIES } from "@/lib/data/home-categories";
 import { CategoryCard } from "@/components/categories/category-card";
 
-// Desktop home per desktopdesigns/homepage.svg: full-bleed hero carousel,
-// then Trending / Categories / IRL sections. Same feed procedures as before —
-// only the presentation changed (the old endless-grid VideoFeed is retired
-// from this page).
+// Desktop home per desktopdesigns/homepage.svg: hero carousel, then Trending /
+// Categories / IRL sections. Same feed procedures as before — only the
+// presentation changed (the old endless-grid VideoFeed is retired from here).
+//
+// This renders inside the home page's centre column (@container/home), not the
+// full page width, so every responsive step below is a CONTAINER query
+// (@3xl/home:) — viewport breakpoints would count width this component no
+// longer owns. "Full-bleed" now means bleeding to the column's edges.
 
 interface FeedVideo {
     id: string;
@@ -84,8 +88,14 @@ const HOVER_PALETTE = [
     "var(--color-soft-gray)",
     "var(--color-vice-purple)",
 ];
-function randomHoverColor() {
-    return HOVER_PALETTE[Math.floor(Math.random() * HOVER_PALETTE.length)];
+// Hashed off the video id, NOT Math.random(): this page now server-renders (the
+// old ssr:false wrapper is gone), and a random pick would differ between the
+// server and client passes — a hydration mismatch on the inline style. Hashing
+// also keeps a card's tint stable across re-renders.
+function hoverColorFor(id: string) {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return HOVER_PALETTE[h % HOVER_PALETTE.length];
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -153,9 +163,9 @@ function VideoCard({ v }: { v: FeedVideo }) {
 
     const [captionsOn, setCaptionsOn] = useState(false);
     const [captionText, setCaptionText] = useState("");
-    // TRENDING HOVER COLORS (experimental — easy to remove): one random palette
-    // color chosen per card mount. See HOVER_PALETTE above.
-    const [hoverColor] = useState(randomHoverColor);
+    // TRENDING HOVER COLORS (experimental — easy to remove): one palette color
+    // per video, derived from its id. See HOVER_PALETTE above.
+    const hoverColor = hoverColorFor(v.id);
 
     const movie = isMovie(v);
     const duration = v.duration ?? 0;
@@ -258,7 +268,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
             <motion.div
                 aria-hidden
                 initial={false}
-                // TRENDING HOVER COLORS (experimental): static random palette tint
+                // TRENDING HOVER COLORS (experimental): static palette tint
                 // (style.backgroundColor) faded in by the opacity spring. To
                 // revert, drop the style prop and restore backgroundColor here to
                 // "rgba(74,74,74,0.3)" / "rgba(74,74,74,0)".
@@ -434,7 +444,9 @@ function VideoCard({ v }: { v: FeedVideo }) {
 // decreasing pill rows (two title lines + username), and the vertical-dots
 // menu. Every element shares one stagger style so the whole card pulses as a
 // single object; the row lights one card at a time (see staggerPulse).
-const TRENDING_SKELETON_COUNT = 4;
+// 6 divides evenly by both grid widths (2 up, 3 up at @3xl) — no orphan card
+// on the last row in either.
+const TRENDING_SKELETON_COUNT = 6;
 
 function VideoCardSkeleton({ index, count }: { index: number; count: number }) {
     const pulse = staggerPulse(index, count);
@@ -457,7 +469,7 @@ function VideoCardSkeleton({ index, count }: { index: number; count: number }) {
 
 function CardRowSkeleton() {
     return (
-        <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-5 @3xl/home:grid-cols-3">
             {Array.from({ length: TRENDING_SKELETON_COUNT }).map((_, i) => (
                 <VideoCardSkeleton key={i} index={i} count={TRENDING_SKELETON_COUNT} />
             ))}
@@ -536,20 +548,20 @@ function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
     return (
         <div className="flex flex-col gap-4">
             {expanded ? (
-                <div className="grid grid-cols-2 gap-5 px-10 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-5 px-6 @3xl/home:grid-cols-3">
                     {videos.map((v) => (
                         <VideoCard key={v.id} v={v} />
                     ))}
                 </div>
             ) : (
-                // Left-inset to px-10 (aligns with the header); the embla viewport
-                // runs to the right page edge, so cards peek/bleed off the right
+                // Left-inset to px-6 (aligns with the header); the embla viewport
+                // runs to the column's right edge, so cards peek/bleed off it
                 // instead of hard-cutting at a gutter. py-3 gives the cards' hover
                 // backdrop room before the viewport clips it vertically.
-                <div className="pl-10">
+                <div className="pl-6">
                     <ArrowCarousel contentClassName="-ml-5 py-3" arrowInset="inset-y-3">
                         {videos.map((v) => (
-                            <CarouselItem key={v.id} className="basis-1/2 pl-5 xl:basis-1/5">
+                            <CarouselItem key={v.id} className="basis-1/2 pl-5 @3xl/home:basis-1/3">
                                 <VideoCard v={v} />
                             </CarouselItem>
                         ))}
@@ -574,8 +586,9 @@ export function DesktopHome() {
         { limit: 36 },
         { getNextPageParam: (p) => p.nextCursor }
     );
+    // 6, not 4 — fills both the 2-up and 3-up (@3xl) grid without an orphan.
     const irl = trpc.content.getVideoFeed.useInfiniteQuery(
-        { limit: 4, category: "IRL" },
+        { limit: 6, category: "IRL" },
         { getNextPageParam: (p) => p.nextCursor }
     );
 
@@ -599,22 +612,23 @@ export function DesktopHome() {
         ).values(),
     ];
 
+    // The centre column owns the header offset; this is just its content.
     return (
-        <div className="flex flex-col gap-7 pb-16 md:pt-[var(--header-height)]">
+        <div className="flex flex-col gap-7 pb-16">
             {/* ── Hero carousel: full-bleed coverflow accordion ──────────── */}
             <div className="pt-4">
                 {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
             </div>
 
-            {/* Trending — full-bleed section: header inset to px-10, and the
-                carousel viewport runs to the right page edge so cards peek/bleed
-                off the right instead of hard-cutting at a gutter. */}
+            {/* Trending — full-bleed section: header inset to px-6, and the
+                carousel viewport runs to the column's right edge so cards
+                peek/bleed off it instead of hard-cutting at a gutter. */}
             <section>
-                <div className="px-10">
+                <div className="px-6">
                     <SectionHeader title="Trending" href="/search" />
                 </div>
                 {feed.isLoading ? (
-                    <div className="pl-10">
+                    <div className="pl-6">
                         <CardRowSkeleton />
                     </div>
                 ) : (
@@ -642,8 +656,8 @@ export function DesktopHome() {
                         {irl.isLoading ? (
                             <CardRowSkeleton />
                         ) : (
-                            <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
-                                {irlVideos.slice(0, 4).map((v) => (
+                            <div className="grid grid-cols-2 gap-5 @3xl/home:grid-cols-3">
+                                {irlVideos.slice(0, 6).map((v) => (
                                     <VideoCard key={v.id} v={v} />
                                 ))}
                             </div>
