@@ -2,7 +2,10 @@
 
 import { motion } from "framer-motion";
 import { Coins, Image, Activity } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import type { ChainId } from "@/lib/chains/types";
 import { Token, NFT, Transaction, TabId, TabType, NFTCollection } from "../types";
 import { TokenListItem } from "./token-list-item";
 import { EmptyState } from "./empty-state";
@@ -23,6 +26,21 @@ const TABS: TabType[] = [
     { id: "activity", name: "Activity", icon: Activity },
 ];
 
+// The tokens tab leads with these four coins, in this order — everything else
+// (the other five chains' natives, and every SPL/ERC-20 holding) sits behind
+// "All Tokens". A fixed set, not the top four by value: this row is meant to
+// read as "your money, at a glance" and stay in the same place every open.
+const TOP_CHAINS: ChainId[] = ["solana", "ethereum", "bitcoin", "base"];
+
+// Solana's own coin predates the `native:<chain>` key the EVM/BTC pipeline
+// synthesizes for natives — it arrives on the Helius path under the internal
+// all-ones mint (SOL_MINT_INTERNAL in server/routers/wallet.ts).
+const SOL_NATIVE_MINT = "So11111111111111111111111111111111111111111";
+
+function isNativeCoin(t: Token) {
+    return t.mint.startsWith("native:") || t.mint === SOL_NATIVE_MINT;
+}
+
 interface WalletTabsProps {
     activeTab: TabId;
     onTabChange: (tabId: TabId) => void;
@@ -40,6 +58,7 @@ interface WalletTabsProps {
     onRefresh?: () => void;
     onManageCollectibles?: () => void;
     onManageTokens?: () => void;
+    onAllTokens?: () => void;
     hideBalances?: boolean;
     onHideBalances?: () => void;
     debugMode?: boolean;
@@ -62,10 +81,21 @@ export function WalletTabs({
     onRefresh,
     onManageCollectibles,
     onManageTokens,
+    onAllTokens,
     hideBalances,
     onHideBalances,
     debugMode = false,
 }: WalletTabsProps) {
+    // One row per headline chain, in TOP_CHAINS order. If the native-coin key
+    // ever stops matching, fall back to the first four of the real list rather
+    // than rendering an empty tab.
+    const topTokens = (() => {
+        const picks = TOP_CHAINS.map((chain) =>
+            tokens.find((t) => (t.chain ?? "solana") === chain && isNativeCoin(t))
+        ).filter((t): t is Token => !!t);
+        return picks.length > 0 ? picks : tokens.slice(0, TOP_CHAINS.length);
+    })();
+
     return (
         <div className="flex flex-col flex-1 overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-2 pb-2">
@@ -153,7 +183,7 @@ export function WalletTabs({
                 {activeTab === "tokens" && (
                     <div className="space-y-1 p-5 pt-2">
                         {tokens.length > 0 ? (
-                            tokens.map((token) => (
+                            topTokens.map((token) => (
                                 <TokenListItem
                                     // Chain-qualified: the same contract address
                                     // can exist on several EVM chains (CREATE2
@@ -168,7 +198,11 @@ export function WalletTabs({
                                     priceChange24h={token.priceChange24h}
                                     hideBalances={hideBalances}
                                     chain={token.chain}
-                                    isNative={token.mint.startsWith("native:")}
+                                    // SOL counts too — it has real logo art so
+                                    // it keeps its own image, but the flag also
+                                    // drops the corner badge, which would just
+                                    // repeat the Solana mark on the Solana coin.
+                                    isNative={isNativeCoin(token)}
                                     onClick={() => onTokenClick(token)}
                                 />
                             ))
@@ -180,6 +214,20 @@ export function WalletTabs({
                             />
                         ) : (
                             <TokenListSkeleton />
+                        )}
+
+                        {/* The rest of the holdings — every other chain's coin
+                            plus every SPL/ERC-20 — one tap away. */}
+                        {onAllTokens && tokens.length > 0 && (
+                            <div className="flex justify-end pt-1">
+                                <button
+                                    onClick={onAllTokens}
+                                    className="flex items-center gap-1 px-2 py-1.5 text-md font-semibold text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                                >
+                                    All Tokens
+                                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" strokeWidth={2.5} />
+                                </button>
+                            </div>
                         )}
                     </div>
                 )}

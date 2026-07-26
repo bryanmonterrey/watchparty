@@ -39,6 +39,7 @@ const SendNFTView = dynamic(() => import("./views/send-nft/send-nft-view").then(
 const NFTConfirmSendView = dynamic(() => import("./views/nft-confirm-send/nft-confirm-send-view").then(m => m.NFTConfirmSendView), { ssr: false });
 const HideCollectionView = dynamic(() => import("./views/manage-collection/manage-collection-view").then(m => m.HideCollectionView), { ssr: false });
 const ActivityView = dynamic(() => import("./views/activity/activity-view").then(m => m.ActivityView), { ssr: false });
+const AllTokensView = dynamic(() => import("./views/all-tokens/all-tokens-view").then(m => m.AllTokensView), { ssr: false });
 
 // Local Components
 import { WalletHeader } from "./components/wallet-header";
@@ -93,6 +94,9 @@ export function WalletDrawer({
     // network on the way in — there is no global "active network".
     const [receiveChain, setReceiveChain] = React.useState<ChainId>("solana");
     const [selectedToken, setSelectedToken] = React.useState<Token | null>(null);
+    // Token detail is reachable from the main tab AND from the all-tokens list,
+    // so Back has to return to whichever one opened it.
+    const [tokenDetailOrigin, setTokenDetailOrigin] = React.useState<DrawerView>("main");
     const [selectedTransaction, setSelectedTransaction] = React.useState<TxType | null>(null);
     const [selectedCollection, setSelectedCollection] = React.useState<NFTCollection | null>(null);
     const [selectedNFT, setSelectedNFT] = React.useState<NFT | null>(null);
@@ -247,6 +251,7 @@ export function WalletDrawer({
                                     onHideBalances={() => setHideBalances(h => !h)}
                                     onTokenClick={(token) => {
                                         setSelectedToken(token);
+                                        setTokenDetailOrigin("main");
                                         setCurrentView("token-detail");
                                     }}
                                     onNFTClick={(nft) => {
@@ -267,6 +272,7 @@ export function WalletDrawer({
                                         setCurrentView("tx-detail");
                                     }}
                                     onManageTokens={() => setCurrentView("manage-tokens")}
+                                    onAllTokens={() => setCurrentView("all-tokens")}
                                 />
                             </>
                         )}
@@ -398,13 +404,28 @@ export function WalletDrawer({
                         <TokenDetailView
                             token={selectedToken}
                             tokens={allTokens}
-                            onBack={() => setCurrentView("main")}
+                            onBack={() => setCurrentView(tokenDetailOrigin)}
                             onSend={() => setCurrentView("send")}
                             onReceive={() => setCurrentView("receive")}
                             onSwap={() => setCurrentView("swap")}
                             onBuy={() => setCurrentView("buy")}
                             onSeeActivity={() => setCurrentView("activity")}
                             hideBalances={hideBalances}
+                        />
+                    </motion.div>
+                )}
+
+                {currentView === "all-tokens" && (
+                    <motion.div key="all-tokens" {...viewMotionProps} className="h-full">
+                        <AllTokensView
+                            tokens={tokens}
+                            hideBalances={hideBalances}
+                            onBack={() => setCurrentView("main")}
+                            onTokenClick={(token) => {
+                                setSelectedToken(token);
+                                setTokenDetailOrigin("all-tokens");
+                                setCurrentView("token-detail");
+                            }}
                         />
                     </motion.div>
                 )}
