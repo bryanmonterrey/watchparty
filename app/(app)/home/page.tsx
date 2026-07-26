@@ -33,13 +33,17 @@ export default function AppHome() {
 
             {/* Centre column: the content surface — bg-panel1 (#0D0D0D), the
                 same fill as the profile banner, sitting on the app scroller's
-                lighter bg-panel. The header is fixed and pointer-events-none,
-                so the fill runs from the top of the scroller and only the
-                content is padded clear of it.
+                lighter bg-panel.
+
+                The header offset is a MARGIN, not padding: padding would keep
+                the fill starting at y=0 and running behind the fixed header,
+                where a margin starts the fill below it and leaves the header
+                band on the app canvas. The column still stretches to the row's
+                full height, so the fill runs header-bottom → page-bottom.
 
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
-            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]" />
+            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:mt-[var(--header-height)]" />
 
             {/* Right rail. Content TBD. */}
             <aside className={`${RAIL} xl:block`}>
