@@ -51,8 +51,20 @@ function watchHref(v: CarouselVideo) {
  * @param fill Stretch to the parent's width instead of the fixed 45svh box —
  *   what the home page's screen slot wants, since that slot already sets its
  *   own 16:9. The standalone box is kept for any caller that isn't sized.
+ * @param chrome Everything drawn OVER the video: the info bar, the LIVE badge
+ *   and market-cap chip, and the mute/captions controls. Off for the home
+ *   screen while its design is worked out — the video plays bare. Nothing is
+ *   deleted, so turning it back on restores the lot.
  */
-export function HomeCarousel({ videos, fill = false }: { videos: CarouselVideo[]; fill?: boolean }) {
+export function HomeCarousel({
+    videos,
+    fill = false,
+    chrome = true,
+}: {
+    videos: CarouselVideo[];
+    fill?: boolean;
+    chrome?: boolean;
+}) {
     const v = videos[0];
     if (!v) return null;
 
@@ -66,21 +78,24 @@ export function HomeCarousel({ videos, fill = false }: { videos: CarouselVideo[]
                     className={`group/active relative block overflow-hidden rounded-none bg-muted outline-none ${fill ? "size-full" : `shrink-0 ${HERO_BOX}`}`}
                 >
                     {v.videoUrl ? (
-                        <ActivePanel key={v.id} v={v} />
+                        <ActivePanel key={v.id} v={v} chrome={chrome} />
                     ) : (
                         <>
                             {v.thumbnailUrl && (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
                             )}
-                            <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
-                                {v.isLive && <LiveBadge />}
-                                <MarketCapChip tokenSlug={v.tokenAddress ?? v.tokenId} marketCap={v.marketCapUsd} />
-                            </div>
+                            {chrome && (
+                                <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
+                                    {v.isLive && <LiveBadge />}
+                                    <MarketCapChip tokenSlug={v.tokenAddress ?? v.tokenId} marketCap={v.marketCapUsd} />
+                                </div>
+                            )}
                         </>
                     )}
 
                     {/* Persistent info bar — flat dark pill (no gradient). */}
+                    {chrome && (
                     <div className="absolute inset-x-3 bottom-3 z-20 flex items-center gap-3 rounded-2xl bg-black/40 p-2.5 backdrop-blur-md">
                         <div className="size-10 shrink-0 overflow-hidden rounded-full bg-zinc-800 ring-2 ring-white/15">
                             {v.user.avatar_url && (
@@ -99,6 +114,7 @@ export function HomeCarousel({ videos, fill = false }: { videos: CarouselVideo[]
                             Watch Now
                         </span>
                     </div>
+                    )}
                 </Link>
             </div>
         </div>
@@ -134,7 +150,7 @@ function PlayerButton({ label, onClick, wide, children }: { label: string; onCli
 // post has caption tracks), and a LIVE badge for streams. Captions mirror the
 // full player: the chosen track is kept "hidden" so it fires cuechange without
 // the browser's native box, and the current cue is surfaced as one line.
-function ActivePanel({ v }: { v: CarouselVideo }) {
+function ActivePanel({ v, chrome = true }: { v: CarouselVideo; chrome?: boolean }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const { isOwner, hasOwner, claim, release } = useAudioOwner();
     const [userMuted, setUserMuted] = useState(false);
@@ -146,7 +162,8 @@ function ActivePanel({ v }: { v: CarouselVideo }) {
 
     const { data: captionsData } = trpc.content.getCaptions.useQuery(
         { postId: v.id },
-        { staleTime: Infinity },
+        // No chrome means no caption toggle, so there is nothing to fetch for.
+        { staleTime: Infinity, enabled: chrome },
     );
     const captionTracks = captionsData?.captions ?? [];
     const defaultCaption = Math.max(0, captionTracks.findIndex((c) => c.isDefault));
@@ -230,27 +247,31 @@ function ActivePanel({ v }: { v: CarouselVideo }) {
             </video>
 
             {/* LIVE badge + market cap, top-left. */}
-            <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
-                {v.isLive && <LiveBadge />}
-                <MarketCapChip tokenSlug={v.tokenAddress ?? v.tokenId} marketCap={v.marketCapUsd} />
-            </div>
+            {chrome && (
+                <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
+                    {v.isLive && <LiveBadge />}
+                    <MarketCapChip tokenSlug={v.tokenAddress ?? v.tokenId} marketCap={v.marketCapUsd} />
+                </div>
+            )}
 
             {/* Mute / captions pill, top-right — revealed on hover of the player. */}
-            <div className="absolute right-3 top-3 z-30 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover/active:opacity-100">
-                <div className="flex items-center gap-0.5 rounded-full bg-black/40 p-1 backdrop-blur-sm">
-                    <PlayerButton label={effectiveMuted ? "Unmute" : "Mute"} wide onClick={(e) => { stop(e); const next = !userMuted; setUserMuted(next); if (!next) claim(); }}>
-                        <VolumeMorph level={effectiveMuted ? "muted" : "full"} className="size-5" />
-                    </PlayerButton>
-                    {captionTracks.length > 0 && (
-                        <PlayerButton label={captionsOn ? "Turn off captions" : "Turn on captions"} wide onClick={(e) => { stop(e); setCaptionsOn((c) => !c); }}>
-                            <CaptionsMorph on={captionsOn} className="size-5" />
+            {chrome && (
+                <div className="absolute right-3 top-3 z-30 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover/active:opacity-100">
+                    <div className="flex items-center gap-0.5 rounded-full bg-black/40 p-1 backdrop-blur-sm">
+                        <PlayerButton label={effectiveMuted ? "Unmute" : "Mute"} wide onClick={(e) => { stop(e); const next = !userMuted; setUserMuted(next); if (!next) claim(); }}>
+                            <VolumeMorph level={effectiveMuted ? "muted" : "full"} className="size-5" />
                         </PlayerButton>
-                    )}
+                        {captionTracks.length > 0 && (
+                            <PlayerButton label={captionsOn ? "Turn off captions" : "Turn on captions"} wide onClick={(e) => { stop(e); setCaptionsOn((c) => !c); }}>
+                                <CaptionsMorph on={captionsOn} className="size-5" />
+                            </PlayerButton>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Current caption line, above the persistent info bar. */}
-            {captionsOn && captionText && (
+            {chrome && captionsOn && captionText && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-20 z-20 flex justify-center px-4">
                     <span className="max-w-full truncate rounded bg-black/70 px-2 py-0.5 text-[15px] font-semibold text-white">
                         {captionText}

@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
+import { Squircle } from "@/components/ui/squircle";
 import { useHomeFeed, type HomeFeedVideo } from "./home-feed-context";
 
 // The rail's video list — this is the carousel's picker, relocated. Clicking a
@@ -16,6 +17,10 @@ const SKELETON_COUNT = 5;
 
 function RailVideo({ v, isActive, onSelect }: { v: HomeFeedVideo; isActive: boolean; onSelect: () => void }) {
     return (
+        // autoEffects off: the row has no border for the clip-path to eat, and
+        // it avoids the wrapper div that would otherwise sit between the list
+        // and the button. No rounded-* either — redundant under the clip.
+        <Squircle asChild radius={20} autoEffects={false}>
         <button
             type="button"
             onClick={onSelect}
@@ -48,6 +53,7 @@ function RailVideo({ v, isActive, onSelect }: { v: HomeFeedVideo; isActive: bool
                 )}
             </span>
         </button>
+        </Squircle>
     );
 }
 
