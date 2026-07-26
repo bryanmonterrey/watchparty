@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HomeCategoryTabs } from "@/components/home/home-category-tabs";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row — no per-column overflow. All three columns
@@ -42,7 +43,12 @@ export default function AppHome() {
                     fill). Aspect-driven because nothing sets its height yet. */}
                 <div className="aspect-video w-full bg-panel1" />
 
-                {/* Everything under the screen: the fill starts over here and
+                {/* Category tabs, in the gap on bare canvas. As a flex child of
+                    the gap-8 column it gets that same gap above and below, so
+                    the band around it stays even. */}
+                <HomeCategoryTabs />
+
+                {/* Everything under the tabs: the fill starts over here and
                     runs to the bottom of the column. */}
                 <div className="flex-1 bg-panel1" />
             </main>
