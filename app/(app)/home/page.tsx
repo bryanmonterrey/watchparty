@@ -18,10 +18,10 @@ export const metadata: Metadata = {
 
 // The rails pin at the scroller's top, so their own padding is what clears the
 // fixed header — the centre column's mt doesn't apply to them.
-const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+4px)]";
+const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 md:pt-[calc(var(--header-height)+4px)]";
 // The right rail sits against the window edge, so it runs tighter there than
 // the p-4 it carries everywhere else.
-const RAIL_INNER_RIGHT = `${RAIL_INNER} pr-2`;
+const RAIL_INNER_RIGHT = `${RAIL_INNER} pr-1`;
 
 export default function AppHome() {
     // Left rail from lg, right rail from xl, centre column taking the rest.

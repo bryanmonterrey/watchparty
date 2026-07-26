@@ -158,7 +158,7 @@ export function SolBalanceChip() {
             type="button"
             aria-label={balance > 0 ? `Wallet balance ${formatSol(balance)} SOL` : "Add money"}
             onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))}
-            className="flex h-[52px] border border-baseborder/5 cursor-pointer items-center gap-2 rounded-full bg-soft-gray/5 px-5 backdrop-blur-xs transition-colors ease-out hover:bg-soft-gray/10"
+            className="flex h-[52px] inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-sidebar-hover/40 hover:bg-soft-gray-10/55 rounded-full border-sidebar-hover/10 border cursor-pointer items-center gap-2 rounded-full px-5 backdrop-blur-xs transition-colors ease-out"
         >
             {balance > 0 ? (
                 <>

@@ -89,7 +89,7 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
         return (
             <div
                 ref={ref}
-                className="absolute -top-0.5 -left-0.5 -right-0.5 z-40 rounded-[27px] bg-input1 ring-1 ring-white/5 pt-[58px] pb-2 overflow-hidden"
+                className="absolute -top-0.5 -left-0.5 -right-0.5 z-40 rounded-[27px] bg-sidebar-hover/55 backdrop-blur-lg ring-1 ring-white/5 pt-[58px] pb-2 overflow-hidden"
             >
                 <p className="px-4 pt-3 pb-1.5 text-sm font-semibold tracking-wide text-zinc-500">Recent</p>
                 {history.map(item => (
@@ -107,7 +107,7 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
     return (
         <div
             ref={ref}
-            className="absolute -top-0.5 -left-0.5 -right-0.5 z-40 rounded-[27px] bg-input1 ring-1 ring-white/5 pt-[58px] pb-2 overflow-hidden"
+            className="absolute -top-0.5 -left-0.5 -right-0.5 z-40 rounded-[27px] bg-soft-gray-10 border backdrop-blur-lg border-sidebar-hover/10 pt-[58px] pb-2 overflow-hidden"
         >
             {isLoading && (
                 <div className="px-4 py-3 space-y-3">

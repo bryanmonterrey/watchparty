@@ -124,7 +124,7 @@ export function AppHeader2() {
           </Button>
           <Link href="/home" aria-label="Home">
             {/* Pink star logo, sized to match the menu icon (size-8). */}
-            <PinkStarLogo className="size-6.5" />
+            <PinkStarLogo className="size-5.5" />
           </Link>
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
@@ -199,7 +199,7 @@ export function AppHeader2() {
                     <Button
                       variant="outline"
                       aria-label="Create"
-                      className="rounded-full border-baseborder/5 border flex h-[52px] w-[52px] p-0 text-flexwhite/80 bg-soft-gray-10 hover:bg-soft-gray-15 transition-colors ease-out"
+                      className="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-sidebar-hover/40 hover:bg-soft-gray-10/55 border-sidebar-hover/10 flex h-[52px] w-[52px] p-0 text-flexwhite/80 transition-colors ease-out"
                     >
                       <CreateIcon className="size-6" strokeWidth={2}/>
                     </Button>
