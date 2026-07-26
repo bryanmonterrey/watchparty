@@ -14,39 +14,41 @@ export const metadata: Metadata = {
     title: "Home",
 };
 
-// Both rails are the sidebar's width, so the centre column sits dead centre.
-const RAIL = "hidden shrink-0 w-[var(--sidebar-width)]";
 const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4";
 
 export default function AppHome() {
-    // Geometry follows the profile page's channel layout
-    // (components/profile/user-profile.tsx): left rail from lg, right rail from
-    // xl, centre column taking the rest — no gaps, no outer padding. The one
-    // divergence is the right rail's width, which matches the left here rather
-    // than profile's 340px.
+    // Left rail from lg, right rail from xl, centre column taking the rest,
+    // gap-4 between all three.
     return (
-        <div className="relative flex min-h-screen w-full">
+        <div className="relative flex min-h-screen w-full gap-4">
             {/* Left rail. Content TBD. */}
-            <aside className={`${RAIL} lg:block`}>
+            <aside className="hidden w-70 shrink-0 lg:block">
                 <div className={RAIL_INNER} />
             </aside>
 
-            {/* Centre column: the content surface — bg-panel1 (#0D0D0D), the
-                same fill as the profile banner, sitting on the app scroller's
-                lighter bg-panel.
+            {/* Centre column. Its fill is NOT one continuous slab: the screen
+                is its own panel, then a gap-8 of bare app canvas, then the fill
+                picks up again for everything below it.
 
                 The header offset is a MARGIN, not padding: padding would keep
                 the fill starting at y=0 and running behind the fixed header,
-                where a margin starts the fill below it and leaves the header
-                band on the app canvas. The column still stretches to the row's
-                full height, so the fill runs header-bottom → page-bottom.
+                where a margin starts it below and leaves the header band on the
+                app canvas.
 
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
-            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:mt-[var(--header-height)]" />
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col gap-8 md:mt-[var(--header-height)]">
+                {/* The screen — 16:9, bg-panel1 (#0D0D0D, the profile banner's
+                    fill). Aspect-driven because nothing sets its height yet. */}
+                <div className="aspect-video w-full bg-panel1" />
+
+                {/* Everything under the screen: the fill starts over here and
+                    runs to the bottom of the column. */}
+                <div className="flex-1 bg-panel1" />
+            </main>
 
             {/* Right rail. Content TBD. */}
-            <aside className={`${RAIL} xl:block`}>
+            <aside className="hidden w-75 shrink-0 xl:block">
                 <div className={RAIL_INNER} />
             </aside>
         </div>
