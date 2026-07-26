@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row — no per-column overflow. All three columns
@@ -34,7 +36,23 @@ export default function AppHome() {
 
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
-            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]" />
+            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]">
+                {/* Feed label, at the column's left edge and level with the
+                    global search bar. Absolute rather than a flow child: the
+                    column's top padding is what clears the fixed header, and an
+                    absolute box is positioned against the padding box, so
+                    top-0 lands it INSIDE that band next to the search bar
+                    instead of below it. The header is pointer-events-none, so
+                    nothing here is blocked by it.
+
+                    Label + chevron only for now — no menu is wired up yet. */}
+                <div className="absolute inset-x-0 top-0 z-40 hidden h-[var(--header-height)] items-center pl-4 md:flex">
+                    <span className="flex items-center gap-1 text-xl font-medium tracking-tighter text-white">
+                        feed
+                        <HugeiconsIcon icon={ArrowDown01Icon} className="size-5" strokeWidth={2} />
+                    </span>
+                </div>
+            </main>
 
             {/* Right rail — 340px. The extra top padding clears the fixed
                 header, which would otherwise sit over the title. */}
