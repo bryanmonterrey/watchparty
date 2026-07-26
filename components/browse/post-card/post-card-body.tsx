@@ -91,7 +91,9 @@ export function PostCardBody({
             {/* Video */}
             {!isPaywalled && videoUrl ? (
                 <div className="my-1">
-                    <FeedVideoPlayer postId={post.id} videoUrl={videoUrl} poster={imageUrl} autoplayInView className="rounded-3xl border border-white/10" />
+                    {/* rounded-2xl, matching the image grid and quoted post —
+                        one radius across every kind of post media. */}
+                    <FeedVideoPlayer postId={post.id} videoUrl={videoUrl} poster={imageUrl} autoplayInView className="rounded-2xl border border-white/10" />
                     {/* spacer keeps the content-warning/views row below the player */}
                     {(hasContentWarning || views !== undefined) && (
                         <div className="flex items-center justify-between mt-2.5 mx-3.5">

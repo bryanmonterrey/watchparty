@@ -19,11 +19,12 @@ function formatTime(seconds: number) {
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-// Tallest the player may get. Landscape clips fill the feed column (their cap is
-// way wider than the column, so it never binds); portrait/vertical clips get
-// capped here — width shrinks to preserve the ratio, so they stay short and
-// centered instead of dominating the feed. Bump/lower this single value to taste.
-const MAX_PLAYER_HEIGHT = 509;
+// Tallest the player may get. Width shrinks with it to preserve the clip's
+// ratio, so this caps every orientation, not just portrait: at 255 a 16:9 clip
+// tops out around 453px wide, well inside the feed column, where the old 509
+// let landscape run the column's full width. Bump/lower this single value to
+// taste.
+const MAX_PLAYER_HEIGHT = 255;
 
 interface FeedVideoPlayerProps {
     postId: string;
