@@ -8,7 +8,6 @@ import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import {
     Carousel,
     CarouselContent,
@@ -541,49 +540,12 @@ function ArrowCarousel({ contentClassName, arrowInset, children }: { contentClas
     );
 }
 
-// Trending row: the draggable arrow carousel plus a ghost "Show all / Show
-// less" toggle that swaps it for a 12-video grid.
-function TrendingCarousel({ videos }: { videos: FeedVideo[] }) {
-    const [expanded, setExpanded] = useState(false);
-    return (
-        <div className="flex flex-col gap-4">
-            {expanded ? (
-                <div className="grid grid-cols-2 gap-5 px-6 @3xl/home:grid-cols-3">
-                    {videos.map((v) => (
-                        <VideoCard key={v.id} v={v} />
-                    ))}
-                </div>
-            ) : (
-                // Left-inset to px-6 (aligns with the header); the embla viewport
-                // runs to the column's right edge, so cards peek/bleed off it
-                // instead of hard-cutting at a gutter. py-3 gives the cards' hover
-                // backdrop room before the viewport clips it vertically.
-                <div className="pl-6">
-                    <ArrowCarousel contentClassName="-ml-5 py-3" arrowInset="inset-y-3">
-                        {videos.map((v) => (
-                            <CarouselItem key={v.id} className="basis-1/2 pl-5 @3xl/home:basis-1/3">
-                                <VideoCard v={v} />
-                            </CarouselItem>
-                        ))}
-                    </ArrowCarousel>
-                </div>
-            )}
-            <div className="flex justify-center">
-                <Button
-                    variant="ghost"
-                    onClick={() => setExpanded((e) => !e)}
-                    className="text-sm font-extrabold text-vice-purple/85 hover:bg-transparent hover:text-vice-purple"
-                >
-                    {expanded ? "Show less" : "Show all"}
-                </Button>
-            </div>
-        </div>
-    );
-}
-
 export function DesktopHome() {
+    // 12, not 36: the hero renders ONE video and trending — which consumed the
+    // rest — is pulled. Enough headroom to survive the repost dedupe and to
+    // bring trending back without touching this again.
     const feed = trpc.content.getVideoFeed.useInfiniteQuery(
-        { limit: 36 },
+        { limit: 12 },
         { getNextPageParam: (p) => p.nextCursor }
     );
     // 6, not 4 — fills both the 2-up and 3-up (@3xl) grid without an orphan.
@@ -593,19 +555,15 @@ export function DesktopHome() {
     );
 
     // Dedupe by video id: a repost and its original share the same `id` (they
-    // render the same video), differing only by `feedKey`. Without this, a
-    // reposted video shows up twice in the hero/trending rows and collides on
-    // the carousels' `key={v.id}`. Keep the first occurrence.
+    // render the same video), differing only by `feedKey`. Keep the first
+    // occurrence, so a reposted video can't take the hero slot twice or collide
+    // on a row's `key={v.id}`.
     const videos = [
         ...new Map(
             (feed.data?.pages.flatMap((p) => p.videos) ?? []).map((v) => [v.id, v]),
         ).values(),
     ];
-    // The hero is a single video now (its picker grid was pulled), so trending
-    // picks up at index 1 — reserving 24 for the hero would strand 23 videos
-    // nothing renders.
     const heroVideos = videos.slice(0, 1);
-    const trendingVideos = videos.slice(1, 13);
     const irlVideos = [
         ...new Map(
             (irl.data?.pages.flatMap((p) => p.videos) ?? []).map((v) => [v.id, v]),
@@ -615,26 +573,10 @@ export function DesktopHome() {
     // The centre column owns the header offset; this is just its content.
     return (
         <div className="flex flex-col gap-7 pb-16">
-            {/* ── Hero carousel: full-bleed coverflow accordion ──────────── */}
-            <div className="pt-4">
-                {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
-            </div>
-
-            {/* Trending — full-bleed section: header inset to px-6, and the
-                carousel viewport runs to the column's right edge so cards
-                peek/bleed off it instead of hard-cutting at a gutter. */}
-            <section>
-                <div className="px-6">
-                    <SectionHeader title="Trending" href="/search" />
-                </div>
-                {feed.isLoading ? (
-                    <div className="pl-6">
-                        <CardRowSkeleton />
-                    </div>
-                ) : (
-                    <TrendingCarousel videos={trendingVideos} />
-                )}
-            </section>
+            {/* Hero: flush to the column's top-left corner. The only offset it
+                gets is the centre column's header padding — no pt, no pl of
+                its own. Trending used to sit under it; pulled for now. */}
+            {feed.isLoading ? <HomeCarouselSkeleton /> : <HomeCarousel videos={heroVideos} />}
 
             <div className="flex flex-col gap-7 px-6">
                 <section>

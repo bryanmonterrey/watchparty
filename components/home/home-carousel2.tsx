@@ -23,7 +23,9 @@ import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 // the viewport — the column is ~880px inside a 1512px window, so a viewport
 // unit would badly oversize it. Falls back to the viewport with no container.
 const HERO_BOX = "w-[62cqw] min-w-[280px] max-w-[760px] aspect-video";
-const HERO_WRAP = "w-full px-6";
+// No padding at all: the hero sits flush in the column's top-left corner, and
+// the only offset above it is the column's own header clearance.
+const HERO_WRAP = "w-full";
 
 interface CarouselVideo {
     id: string;
