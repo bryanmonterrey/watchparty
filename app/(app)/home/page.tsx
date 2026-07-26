@@ -42,7 +42,7 @@ export default function AppHome() {
                 <div className="sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+1rem)]">
                     {/* String expression rather than raw JSX text so the
                         apostrophe needs no escaping. */}
-                    <h2 className="text-2xl font-semibold">{"What's happening?"}</h2>
+                    <h2 className="text-xl font-medium tracking-tighter">{"What's happening?"}</h2>
                 </div>
             </aside>
         </div>
