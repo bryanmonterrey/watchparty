@@ -47,7 +47,7 @@ export default function AppHome() {
 
                     Label + chevron only for now — no menu is wired up yet. */}
                 <div className="absolute inset-x-0 top-0 z-40 hidden h-[var(--header-height)] items-center pl-4 md:flex">
-                    <span className="flex items-center gap-1 text-xl font-medium tracking-tighter text-white">
+                    <span className="flex items-center gap-1 text-xl font-bold tracking-tighter text-white">
                         feed
                         <HugeiconsIcon icon={ArrowDown01Icon} className="size-5" strokeWidth={2} />
                     </span>
