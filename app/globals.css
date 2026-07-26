@@ -175,6 +175,20 @@
      value now, so both read identically and neither shifts if what sits behind
      the sidebar ever changes. */
   --color-sidebar-hover: #18181B;
+  /* Opaque steps of the same colour, for surfaces that were reaching for
+     bg-sidebar-hover/<n>. Each is #18181B at that alpha already composited
+     over #080808 — the app canvas, i.e. bg-panel's white 3% over the black
+     shell, which is the same value the sidebar paints flat.
+
+     Flat means they hold their colour anywhere, instead of darkening over a
+     panel and lightening over the canvas. The trade: an opaque fill has
+     nothing to see through, so pairing one with backdrop-blur-* makes the
+     blur a no-op — keep the alpha version wherever the blur is the point. */
+  --color-sidebar-hover-35: #0E0E0F;
+  --color-sidebar-hover-40: #0E0E10;
+  --color-sidebar-hover-45: #0F0F11;
+  --color-sidebar-hover-50: #101012;
+  --color-sidebar-hover-55: #111112;
   /* Terminal surfaces (perps). NOTE: NOT named --color-panel — that name is
      taken by the legacy translucent card wash below (later declaration wins,
      which once silently turned these panels translucent).
