@@ -25,32 +25,39 @@ export function HomeCategoryTabs() {
     const [active, setActive] = useState(TABS[0]);
 
     return (
-        // Scrolls rather than wraps: seven pills fit an ~830px column at the
-        // widths we have, but the column narrows well below that at lg.
-        <nav className="hidden-scrollbar flex w-full items-center gap-2 overflow-x-auto">
-            {TABS.map((tab) => (
-                <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActive(tab)}
-                    aria-pressed={active === tab}
-                    // No fill behind the active tab — colour alone carries it.
-                    // The padding stays for hit area even though nothing paints
-                    // it, and is what spaces the labels apart.
-                    className={cn(
-                        "shrink-0 cursor-pointer whitespace-nowrap px-3.5 py-1.5 text-lg font-semibold transition-colors",
-                        active === tab ? "text-white" : "text-zinc-500 hover:text-white"
-                    )}
-                >
-                    {tab}
-                </button>
-            ))}
+        <nav className="flex w-full items-center">
+            {/* The strip scrolls rather than wraps: seven labels fit an ~830px
+                column, but it narrows well below that at lg. flex-1 + min-w-0
+                so it takes the width the arrow doesn't. */}
+            <div className="hidden-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+                {TABS.map((tab) => (
+                    <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setActive(tab)}
+                        aria-pressed={active === tab}
+                        // No fill behind the active tab — colour alone carries
+                        // it. The padding stays for hit area even though nothing
+                        // paints it, and is what spaces the labels apart.
+                        className={cn(
+                            "shrink-0 cursor-pointer whitespace-nowrap px-3.5 py-1.5 text-lg font-semibold transition-colors",
+                            active === tab ? "text-white" : "text-zinc-500 hover:text-white"
+                        )}
+                    >
+                        {tab}
+                    </button>
+                ))}
+            </div>
 
-            {/* Right end of the row. Not a control yet — nothing is wired to
-                it, so it renders as a plain mark rather than a button that
-                would do nothing on click. ml-auto parks it at the right edge
-                whenever the pills don't fill the row. */}
-            <span className="ml-auto shrink-0 pl-2 pr-1 text-zinc-500">
+            {/* Pinned to the row's right edge, OUTSIDE the scroller — as a
+                sibling of the strip it can't be pushed along by the labels or
+                scrolled out of view once they overflow. Padding matches a
+                tab's, so its inset from the right mirrors the first label's
+                from the left.
+
+                Not a control yet: nothing is wired to it, so it renders as a
+                plain mark rather than a button that would do nothing. */}
+            <span className="shrink-0 px-3.5 text-zinc-500">
                 <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
             </span>
         </nav>
