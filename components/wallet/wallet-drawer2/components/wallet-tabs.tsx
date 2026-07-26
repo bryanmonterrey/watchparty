@@ -168,6 +168,7 @@ export function WalletTabs({
                                     priceChange24h={token.priceChange24h}
                                     hideBalances={hideBalances}
                                     chain={token.chain}
+                                    isNative={token.mint.startsWith("native:")}
                                     onClick={() => onTokenClick(token)}
                                 />
                             ))

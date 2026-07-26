@@ -8,6 +8,7 @@ import { Skeleton } from "boneyard-js/react";
 import RevealPhraseModal from "@/components/wallet/reveal-phrase-modal";
 import ExportKeyModal from "@/components/wallet/export-key-modal";
 import { Panel } from "@/components/settings/ui";
+import { LinkedWalletsPanel } from "@/components/wallet/linked-wallets-panel";
 
 interface WalletManagementProps {
     isLoading?: boolean;
@@ -29,7 +30,9 @@ export default function WalletManagement({ isLoading = false }: WalletManagement
 
     return (
         <Skeleton name="wallet-management" loading={showSkeleton}>
-        <div className="space-y-4">
+        <div className="space-y-8">
+            <LinkedWalletsPanel />
+
             <div>
                 <h2 className="mb-4 text-[16px] font-bold tracking-tight text-white">Wallet</h2>
 

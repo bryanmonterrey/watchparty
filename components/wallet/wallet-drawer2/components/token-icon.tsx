@@ -18,6 +18,13 @@ interface TokenIconProps {
      * chains, so the badge is what tells USDC-on-Base from USDC-on-Solana.
      */
     chain?: ChainId;
+    /**
+     * True for a chain's own coin (ETH, BTC, POL…). Those have no logo from any
+     * indexer — Alchemy returns null metadata for natives — so the chain's
+     * brand mark IS the coin's icon, and the corner badge is dropped since it
+     * would just repeat the same mark.
+     */
+    isNative?: boolean;
     type?: "token" | "nft";
 }
 
@@ -29,6 +36,7 @@ export function TokenIcon({
     size = "md",
     showChainBadge = false,
     chain,
+    isNative = false,
     type = "token",
 }: TokenIconProps) {
     const [imageLoaded, setImageLoaded] = React.useState(false);
@@ -68,6 +76,16 @@ export function TokenIcon({
     const iconSize = sizeClasses[size];
     // Badge scales with the icon: legible at sm, unobtrusive at xl.
     const badgeSize = { sm: 9, md: 12, lg: 14, xl: 16 }[size];
+    const pxSize = { sm: 24, md: 36, lg: 40, xl: 48 }[size];
+
+    // A chain's own coin: its brand mark is the icon.
+    if (isNative && chain && (!src || imageError)) {
+        return (
+            <div className={cn("relative flex-shrink-0", iconSize, className)}>
+                <ChainIcon chain={chain} size={pxSize} className="size-full" />
+            </div>
+        );
+    }
 
     return (
         <div className={cn("relative flex-shrink-0 flex items-center justify-center", iconSize, className)}>
@@ -112,7 +130,7 @@ export function TokenIcon({
                 </div>
             )}
 
-            {(chain || showChainBadge) && (
+            {(chain || showChainBadge) && !isNative && (
                 <div className="absolute -bottom-0.5 -right-0.5 rounded-full bg-[#131313] p-[1.5px]">
                     <ChainIcon chain={chain ?? "solana"} size={badgeSize} />
                 </div>

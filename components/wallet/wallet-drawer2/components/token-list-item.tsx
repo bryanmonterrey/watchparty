@@ -15,6 +15,7 @@ interface TokenListItemProps {
     priceChange24h?: number;
     hideBalances?: boolean;
     chain?: ChainId;
+    isNative?: boolean;
     onClick?: () => void;
 }
 
@@ -27,6 +28,7 @@ export function TokenListItem({
     priceChange24h,
     hideBalances,
     chain,
+    isNative,
     onClick,
 }: TokenListItemProps) {
     return (
@@ -41,6 +43,7 @@ export function TokenListItem({
                     size="lg"
                     type="token"
                     chain={chain}
+                    isNative={isNative}
                 />
 
                 {/* Token Info */}
