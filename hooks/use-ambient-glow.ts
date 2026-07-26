@@ -30,13 +30,22 @@ export function useAmbientGlow(
     options?: AmbientGlowOptions,
     enabled = true,
 ) {
+    // Keyed on the option VALUES, not the object. The effect used to depend on
+    // `enabled` alone, so an instance kept whatever it was constructed with and
+    // every later tweak to blur/scale/opacity was silently ignored — the glow
+    // stayed on this file's DEFAULTS no matter what a caller passed.
+    //
+    // Serialising rather than depending on the object matters: callers pass an
+    // inline literal (`{ brightness: 1.5 }`), which is a new identity every
+    // render and would tear down and rebuild the canvas on each one.
+    const signature = JSON.stringify(options ?? {});
+
     useEffect(() => {
         if (!enabled) return;
         const videoEl = videoRef.current;
         if (!videoEl) return;
 
-        const glow = new AmbientGlow(videoEl, { ...DEFAULTS, ...options });
+        const glow = new AmbientGlow(videoEl, { ...DEFAULTS, ...(JSON.parse(signature) as AmbientGlowOptions) });
         return () => { glow.destroy(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled]);
+    }, [enabled, signature, videoRef]);
 }

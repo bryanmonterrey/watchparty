@@ -165,19 +165,11 @@ function PlayerButton({ label, onClick, wide, children }: { label: string; onCli
 // the browser's native box, and the current cue is surfaced as one line.
 function ActivePanel({ v, chrome = true, ambient = false }: { v: CarouselVideo; chrome?: boolean; ambient?: boolean }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
-    // Tuned for a tight halo rather than the watch page's wash. Two knobs set
-    // how far the light reaches, and they compound:
-    //   scale — how much bigger than the video the canvas is drawn. At the
-    //     hook's default 1.05 that is already ~20px past every edge of an
-    //     830px hero BEFORE any blur. At 1.0 the canvas matches the video, so
-    //     the video covers it and only the blur escapes.
-    //   blur — how far the escaped light feathers out from there.
-    // Dropping opacity/brightness only dims a glow this size; it does not make
-    // it smaller. These two do.
-    //
-    // The hook keys its effect on `enabled`, and this panel remounts per video
-    // id, so each new hero gets its own glow instance.
-    useAmbientGlow(videoRef, { scale: 1, blur: 40, opacity: 0.12, brightness: 0.75 }, ambient);
+    // A tight halo, not the watch page's wash. Size comes from two knobs that
+    // compound — `scale` (how far past the video the canvas is drawn; at 1 it
+    // matches the video, so only the blur escapes) and `blur` (how far that
+    // feathers). Opacity and brightness only dim a glow; they never shrink it.
+    useAmbientGlow(videoRef, { scale: 1, blur: 28, opacity: 0.35, brightness: 1.05 }, ambient);
     const { isOwner, hasOwner, claim, release } = useAudioOwner();
     const [userMuted, setUserMuted] = useState(false);
     const [captionsOn, setCaptionsOn] = useState(false);
