@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
-import { BrowseFeed } from "@/components/browse/browse-feed";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row — no per-column overflow. All three columns
@@ -53,29 +51,6 @@ export default function AppHome() {
                         feed
                         <HugeiconsIcon icon={ArrowDown01Icon} className="size-5" strokeWidth={2} />
                     </span>
-                </div>
-
-                {/* The post feed only — no tab bar, no composer; the "feed"
-                    label above stands in for the tabs.
-
-                    Both overrides below are scoped re-tints of the feed, done
-                    by redefining the CSS variables the utilities resolve
-                    through — so discover, which shares every one of these
-                    components, is untouched:
-                    - --wp-border: globals.css remaps every neutral border
-                      utility to it, so this recolours all the feed's hairlines
-                      to the sidebar's background at once.
-                    - --background: post cards paint bg-background (pure black
-                      in dark mode), which read as a black slab on top of the
-                      column. Pointing it at the column's own fill makes them
-                      sit flush instead. */}
-                <div
-                    style={{
-                        "--wp-border": "#080808",
-                        "--background": "var(--color-panel1)",
-                    } as CSSProperties}
-                >
-                    <BrowseFeed showTabs={false} showComposer={false} />
                 </div>
             </main>
 
