@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpRightStackIcon } from "@hugeicons/core-free-icons";
 import { HomeCategoryTabs } from "@/components/home/home-category-tabs";
+import { HomeRailTabs } from "@/components/home/home-rail-tabs";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row — no per-column overflow. All three columns
@@ -19,7 +18,7 @@ export const metadata: Metadata = {
 
 // The rails pin at the scroller's top, so their own padding is what clears the
 // fixed header — the centre column's mt doesn't apply to them.
-const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+1rem)]";
+const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+4px)]";
 
 export default function AppHome() {
     // Left rail from lg, right rail from xl, centre column taking the rest,
@@ -60,11 +59,11 @@ export default function AppHome() {
                 <div className="flex-1 bg-sidebar-hover/25" />
             </main>
 
-            {/* Right rail. The icon stands in as the rail's title for now —
-                it replaces the text heading that was here. */}
+            {/* Right rail. Its tab row leads with the icon — the icon is the
+                first tab rather than a heading sitting above them. */}
             <aside className="hidden w-75 shrink-0 xl:block">
                 <div className={RAIL_INNER}>
-                    <HugeiconsIcon icon={ArrowUpRightStackIcon} className="size-6" strokeWidth={2} />
+                    <HomeRailTabs />
                 </div>
             </aside>
         </div>
