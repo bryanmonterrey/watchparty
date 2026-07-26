@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
-import { Star2Icon } from "@/components/icons";
+import { PinkStarLogo } from "@/components/icons";
 import { Squircle } from "@/components/ui/squircle";
 
 /**
@@ -21,7 +21,7 @@ export function DesktopOnlyGate() {
         <div className="fixed inset-0 z-[200] flex flex-col items-center bg-background px-6 md:hidden">
             {/* Logo — same top tile as the login card */}
             <div className="mx-auto grid place-items-center pt-14">
-                <Star2Icon className="size-7" />
+                <PinkStarLogo className="size-7" />
             </div>
 
             <div className="flex w-full max-w-[442px] flex-1 flex-col items-center justify-center pb-16 text-center">

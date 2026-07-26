@@ -6,7 +6,7 @@ import { Image } from 'expo-image';
 import { Heart, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
-import { Star2Icon } from '@/components/icons';
+import { PinkStarLogo } from '@/components/icons';
 import { useTheme } from '@/hooks/use-theme';
 import { authClient } from '@/lib/auth-client';
 import { trpc } from '@/lib/trpc';
@@ -30,7 +30,7 @@ export function AppHeader({ title, wordmark }: { title?: string; wordmark?: bool
       ) : wordmark ? (
         <View />
       ) : (
-        <Star2Icon size={26} />
+        <PinkStarLogo size={26} />
       )}
 
       {wordmark && (

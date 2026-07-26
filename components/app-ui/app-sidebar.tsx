@@ -40,7 +40,6 @@ import {
     VerifiedIcon,
     Logo4,
     FlagLogo,
-    Star2Icon,
     QuestsIcon,
 } from "@/components/icons"
 import { trpc } from "@/lib/trpc/client"

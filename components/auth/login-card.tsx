@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
-import { Star2Icon } from "@/components/icons";
+import { PinkStarLogo } from "@/components/icons";
 import { authClient, sendEmailOtp } from "@/lib/auth/client";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { HapticButton } from "@/components/ui/haptic-button";
@@ -147,7 +147,7 @@ export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
       <div className="flex w-full max-w-[442px] flex-col pt-14 sm:pt-[72px]">
         {/* Logo tile — shared across states */}
         <div className="mx-auto grid place-items-center rounded-[40px] sm:size-[62px] sm:rounded-[40px]">
-          <Star2Icon className="size-7 sm:size-[30px]" />
+          <PinkStarLogo className="size-7 sm:size-[30px]" />
         </div>
 
         <AnimatePresence mode="wait" initial={false}>

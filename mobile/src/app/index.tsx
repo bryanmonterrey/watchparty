@@ -23,7 +23,7 @@ import {
   KickIcon,
   MessagesIcon,
   PhantomIcon,
-  Star2Icon,
+  PinkStarLogo,
   TwitchIcon,
   XIcon,
 } from '@/components/icons';
@@ -245,7 +245,7 @@ export default function LoginScreen() {
             <View style={styles.column}>
               {/* Logo — shared across states */}
               <View style={styles.logo}>
-                <Star2Icon size={28} />
+                <PinkStarLogo size={28} />
               </View>
 
               {step === 'methods' ? (

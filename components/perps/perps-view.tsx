@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon, TradeDownIcon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { Star2Icon } from "@/components/icons";
+import { PinkStarLogo } from "@/components/icons";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
@@ -1098,7 +1098,7 @@ function OrderPanel({
                     onClick={onLogin}
                     className="mt-4 flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-base font-extrabold text-black transition-colors hover:bg-white/90"
                 >
-                    <Star2Icon fill="black" className="size-4" />
+                    <PinkStarLogo fill="black" className="size-4" />
                     Login
                 </button>
             ) : (

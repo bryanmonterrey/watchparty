@@ -125,7 +125,7 @@ export function AppHeader() {
           </Button>
           <Link href="/home">
             <Image
-            src="/Star2.svg"
+            src="/pinkstarlogo.svg"
             alt="Logo"
             width={25}
             height={25}

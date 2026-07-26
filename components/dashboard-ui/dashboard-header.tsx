@@ -26,7 +26,7 @@ export function DashboardHeader() {
       <div className="mx-auto flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link className="" href="/">
-            <Image src="/Star2.svg" alt="Logo" width={20} height={20} />
+            <Image src="/pinkstarlogo.svg" alt="Logo" width={20} height={20} />
           </Link>
           <DashboardMenu />
         </div>
