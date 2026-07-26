@@ -26,11 +26,19 @@ const TABS: TabType[] = [
     { id: "activity", name: "Activity", icon: Activity },
 ];
 
-// The tokens tab leads with these four coins, in this order — everything else
-// (the other five chains' natives, and every SPL/ERC-20 holding) sits behind
-// "All Tokens". A fixed set, not the top four by value: this row is meant to
-// read as "your money, at a glance" and stay in the same place every open.
+// How many rows the tokens tab shows before "All Tokens".
+const TOP_COUNT = 4;
+
+// Fallback order for rows worth the same — which, on an untouched wallet, is
+// every row at $0. Holdings always outrank these; this only decides what an
+// empty wallet leads with.
 const TOP_CHAINS: ChainId[] = ["solana", "ethereum", "bitcoin", "base"];
+const HEADLINE_RANK = new Map<ChainId, number>(TOP_CHAINS.map((c, i) => [c, i]));
+
+function headlineRank(t: Token) {
+    if (!isNativeCoin(t)) return Number.MAX_SAFE_INTEGER;
+    return HEADLINE_RANK.get((t.chain ?? "solana") as ChainId) ?? TOP_CHAINS.length;
+}
 
 // Solana's own coin predates the `native:<chain>` key the EVM/BTC pipeline
 // synthesizes for natives — it arrives on the Helius path under the internal
@@ -86,15 +94,17 @@ export function WalletTabs({
     onHideBalances,
     debugMode = false,
 }: WalletTabsProps) {
-    // One row per headline chain, in TOP_CHAINS order. If the native-coin key
-    // ever stops matching, fall back to the first four of the real list rather
-    // than rendering an empty tab.
-    const topTokens = (() => {
-        const picks = TOP_CHAINS.map((chain) =>
-            tokens.find((t) => (t.chain ?? "solana") === chain && isNativeCoin(t))
-        ).filter((t): t is Token => !!t);
-        return picks.length > 0 ? picks : tokens.slice(0, TOP_CHAINS.length);
-    })();
+    // Biggest holdings first, whatever they are — an SPL/ERC-20 position
+    // outranks a chain's own coin. This used to pick the four headline natives
+    // by chain, which meant a token you actually held could never reach the
+    // tab no matter how large the position.
+    //
+    // Sorted by USD value, matching the number each row displays. Ties break on
+    // headline order, so a wallet where everything is $0 still reads SOL / ETH
+    // / BTC / BASE rather than whatever the sort happened to leave on top.
+    const topTokens = [...tokens]
+        .sort((a, b) => (b.usdValue ?? 0) - (a.usdValue ?? 0) || headlineRank(a) - headlineRank(b))
+        .slice(0, TOP_COUNT);
 
     return (
         <div className="flex flex-col flex-1 overflow-hidden">
