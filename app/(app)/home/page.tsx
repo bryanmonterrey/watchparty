@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { DesktopHome } from "@/components/home/desktop-home2";
 
-// Home is a 3-column frame (same model as discover/layout.tsx): sticky side
-// rails around a single content column, one native scroll for the whole row —
-// no per-column overflow. The rails are intentionally empty; the geometry
-// lands first and their content follows.
+// Home is a 3-column frame: rails either side of a single content column, one
+// native scroll for the whole row — no per-column overflow. All three columns
+// are intentionally empty right now; the geometry lands first and the content
+// follows.
 //
 // The old HomeView (desktop/mobile switcher, ssr:false) is retired — mobile
-// web is gated by DesktopOnlyGate and the phone experience is the Expo app —
-// so DesktopHome is imported directly and renders on the server.
+// web is gated by DesktopOnlyGate and the phone experience is the Expo app.
+// The previous centre-column content still lives in components/home/
+// desktop-home2.tsx (hero + categories + IRL); render <DesktopHome /> inside
+// <main> to bring it back.
 export const metadata: Metadata = {
     title: "Home",
 };
@@ -31,12 +32,9 @@ export default function AppHome() {
                 so the fill runs from the top of the scroller and only the
                 content is padded clear of it.
 
-                @container/home so the sections inside size against THIS column
-                rather than the viewport — without it the trending/IRL grids
-                keep counting viewport breakpoints they no longer own. */}
-            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]">
-                <DesktopHome />
-            </main>
+                @container/home stays on: whatever lands here should size
+                against THIS column rather than the viewport. */}
+            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]" />
 
             {/* Right rail — 340px. Content TBD. */}
             <aside className="hidden shrink-0 xl:block w-[340px]">
