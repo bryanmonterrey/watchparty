@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 import {
-    BrowseIcon,
     CreateIcon,
     HomeIcon,
     MessagesIcon,
@@ -71,11 +70,9 @@ const items = [
         url: "/home",
         icon: HomeIcon,
     },
-    {
-        title: "Discover",
-        url: "/discover",
-        icon: BrowseIcon,
-    },
+    // Discover is pulled from the nav for now, same as Shorts below: the route
+    // (app/(app)/discover) is untouched and still reachable directly — put the
+    // entry back here to restore it.
     {
         title: "Search",
         url: "/search",
