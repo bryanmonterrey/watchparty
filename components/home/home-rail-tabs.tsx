@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeftDoubleIcon, ArrowRightDoubleIcon, StarCircleIcon } from "@hugeicons/core-free-icons";
+import { StarCircleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useEdgeScroll } from "@/hooks/use-edge-scroll";
+import { TabScrollArrow } from "./tab-scroll-arrow";
 
 // Right-rail tabs. The icon is the FIRST TAB, not a heading above them — it
 // selects and deselects like any label, and starts selected.
@@ -17,12 +18,6 @@ import { useEdgeScroll } from "@/hooks/use-edge-scroll";
 // rail has no content under it yet.
 const ICON_TAB = "trending";
 const TABS = [ICON_TAB, "For you", "Live", "New", "Upcoming"];
-
-// Overlaid on the strip rather than beside it — the blur wants labels behind
-// it, and a control that toggles with scroll position would otherwise resize
-// the strip and shove the labels sideways each time.
-const ARROW =
-    "absolute top-1/2 z-10 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-sidebar-hover-35 hover:bg-sidebar-hover-55 text-zinc-300 backdrop-blur-lg transition-colors hover:text-white";
 
 export function HomeRailTabs() {
     const [active, setActive] = useState(ICON_TAB);
@@ -61,25 +56,10 @@ export function HomeRailTabs() {
             </div>
 
             {canLeft && (
-                <button
-                    type="button"
-                    aria-label="Scroll tabs left"
-                    onClick={() => nudge(-1)}
-                    className={cn(ARROW, "left-0")}
-                >
-                    <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-4" strokeWidth={2} />
-                </button>
+                <TabScrollArrow direction="left" label="Scroll tabs left" onClick={() => nudge(-1)} />
             )}
-
             {canRight && (
-                <button
-                    type="button"
-                    aria-label="Scroll tabs right"
-                    onClick={() => nudge(1)}
-                    className={cn(ARROW, "right-0")}
-                >
-                    <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-4" strokeWidth={2} />
-                </button>
+                <TabScrollArrow direction="right" label="Scroll tabs right" onClick={() => nudge(1)} />
             )}
         </nav>
     );

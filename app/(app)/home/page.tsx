@@ -19,10 +19,13 @@ export const metadata: Metadata = {
 // The rails pin at the scroller's top, so their own padding is what clears the
 // fixed header — the centre column's mt doesn't apply to them.
 const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+4px)]";
+// The right rail sits against the window edge, so it runs tighter there than
+// the p-4 it carries everywhere else.
+const RAIL_INNER_RIGHT = `${RAIL_INNER} pr-2`;
 
 export default function AppHome() {
     // Left rail from lg, right rail from xl, centre column taking the rest.
-    // The two gutters differ (4 left, 2.5 right), so they are margins on the
+    // The two gutters differ (4 left, 1.25 right), so they are margins on the
     // rails rather than one `gap` on the row.
     return (
         <div className="relative flex min-h-screen w-full">
@@ -62,8 +65,8 @@ export default function AppHome() {
 
             {/* Right rail. Its tab row leads with the icon — the icon is the
                 first tab rather than a heading sitting above them. */}
-            <aside className="hidden w-75 shrink-0 xl:ml-2.5 xl:block">
-                <div className={RAIL_INNER}>
+            <aside className="hidden w-75 shrink-0 xl:ml-1.25 xl:block">
+                <div className={RAIL_INNER_RIGHT}>
                     <HomeRailTabs />
                 </div>
             </aside>
