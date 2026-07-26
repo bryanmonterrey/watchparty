@@ -19,6 +19,10 @@ const TABS = [
     "Traders",
     "Special Events",
     "Music",
+    // Sits in the row as an ordinary tab for now, so it selects like the rest.
+    // It reads as an action rather than a category, so pull it out of this list
+    // when there is something for it to open.
+    "View all",
 ];
 
 // Both arrows overlay the strip rather than sitting beside it. Two reasons:
