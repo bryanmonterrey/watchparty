@@ -25,6 +25,12 @@ const nextConfig: NextConfig = {
     // filesystem cache OFF: cold compiles are a touch slower, but there's no
     // cache DB to corrupt. Safe to re-enable once Turbopack's persistent cache
     // stabilizes. (Dev-only; does not affect production builds/deploys.)
+    //
+    // NOTE: this comment used to sit here with no flag under it, so the cache
+    // stayed on (it defaults to true) and dev kept paying for it — "filesystem
+    // cache has been deleted because we previously detected an internal error",
+    // then 25-70s cache writes and ~28s compactions on every run.
+    turbopackFileSystemCacheForDev: false,
   },
 };
 
