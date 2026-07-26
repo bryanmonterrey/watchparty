@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus } from "lucide-react";
@@ -15,6 +17,12 @@ import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
 import { TradeRow } from "@/components/trades/trade-row";
 import { ProfilePnlCard } from "./profile-pnl-card";
 import { ProfileMediaGrid } from "./profile-media-grid";
+// Lazy: the predictions tab is rarely the landing tab, and this pulls in
+// market cards + charts the rest of the profile never needs.
+const PredictionsView = dynamic(
+    () => import("@/components/predictions/predictions-view").then((m) => m.PredictionsView),
+    { ssr: false }
+);
 import { PostsFilterRail, PostsFilterRow, PostsToolbar, type PostTypeFilter, type PostShowFilter, type PostSort } from "./posts-filter-rail";
 
 interface ProfileTabContentProps {
@@ -220,6 +228,8 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
                         <ProfileMediaGrid userId={user.id} isOwner={isOwner} />
                     ) : activeTab === "Trades" ? (
                         <ProfileTradesFeed userId={user.id} name={user.name} />
+                    ) : activeTab === "Predictions" ? (
+                        <PredictionsView creatorId={user.id} />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-center py-24">
                             <div className="size-24 rounded-[32px] bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center mb-8 shadow-2xl relative group overflow-hidden">

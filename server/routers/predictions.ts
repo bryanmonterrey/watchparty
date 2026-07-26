@@ -86,9 +86,17 @@ function winnerPayout(stake: bigint, winningPool: bigint, losingPool: bigint, fe
 export const predictionsRouter = router({
     /** Markets for the Predictions page: open first, then recently resolved. */
     list: publicProcedure
-        .input(z.object({ category: z.string().optional() }).optional())
+        .input(z.object({
+            category: z.string().optional(),
+            /** Scope to one creator — used by the profile Predictions tab. */
+            creatorId: z.string().optional(),
+        }).optional())
         .query(async ({ input }) => {
-            const where = input?.category ? eq(predictionMarkets.category, input.category) : undefined;
+            const filters = [
+                input?.category ? eq(predictionMarkets.category, input.category) : undefined,
+                input?.creatorId ? eq(predictionMarkets.creatorId, input.creatorId) : undefined,
+            ].filter(Boolean);
+            const where = filters.length ? and(...(filters as any[])) : undefined;
             const markets = await db
                 .select()
                 .from(predictionMarkets)

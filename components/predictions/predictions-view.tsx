@@ -41,7 +41,7 @@ import {
 type SortKey = "trending" | "closing" | "newest";
 const SORT_LABEL: Record<SortKey, string> = { trending: "Trending", closing: "Closing soon", newest: "Newest" };
 
-export function PredictionsView() {
+export function PredictionsView({ creatorId }: { creatorId?: string } = {}) {
     const { data: session } = useAuthSession();
     const isAdmin = session?.user?.role === "admin";
     const [category, setCategory] = useState<string | null>(null);
@@ -49,7 +49,9 @@ export function PredictionsView() {
     const [creating, setCreating] = useState(false);
     const router = useRouter();
 
-    const { data: markets = [], isLoading } = trpc.predictions.list.useQuery({});
+    // creatorId scopes this to one user's markets — the profile tab passes it
+    // so a profile doesn't show everyone else's predictions.
+    const { data: markets = [], isLoading } = trpc.predictions.list.useQuery({ creatorId });
 
     const categories = useMemo(() => {
         const counts = new Map<string, number>();
