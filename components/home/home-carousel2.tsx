@@ -19,11 +19,11 @@ import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 // signature change; only the first entry renders today. The frozen multi-item
 // carousel is separate: home-carousel.tsx, used by _legacy.
 
-// Height-driven: 55svh, with 16:9 setting the width from it. svh (not vh) so
+// Height-driven: 45svh, with 16:9 setting the width from it. svh (not vh) so
 // the mobile URL bar collapsing doesn't resize it mid-scroll. max-w-full is the
-// backstop — on a tall window 55svh wants more width than the centre column
+// backstop — on a tall window 45svh wants more width than the centre column
 // has, and there the column wins and object-cover takes the crop.
-const HERO_BOX = "h-[55svh] aspect-video max-w-full";
+const HERO_BOX = "h-[45svh] aspect-video max-w-full";
 // No padding at all: the hero sits flush in the column's top-left corner, and
 // the only offset above it is the column's own header clearance.
 const HERO_WRAP = "w-full";
