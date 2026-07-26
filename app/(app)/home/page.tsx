@@ -36,9 +36,14 @@ export default function AppHome() {
                 against THIS column rather than the viewport. */}
             <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]" />
 
-            {/* Right rail — 340px. Content TBD. */}
+            {/* Right rail — 340px. The extra top padding clears the fixed
+                header, which would otherwise sit over the title. */}
             <aside className="hidden shrink-0 xl:block w-[340px]">
-                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4" />
+                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+1rem)]">
+                    {/* String expression rather than raw JSX text so the
+                        apostrophe needs no escaping. */}
+                    <h2 className="text-2xl font-semibold">{"What's happening?"}</h2>
+                </div>
             </aside>
         </div>
     );
