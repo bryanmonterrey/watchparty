@@ -158,7 +158,14 @@ function assembleFeed(rawPosts: any[]): FeedItem[] {
     });
 }
 
-export function BrowseFeed() {
+interface BrowseFeedProps {
+    /** The For you / Following tab bar. Discover shows it; home doesn't. */
+    showTabs?: boolean;
+    /** The inline post composer. Discover shows it; home doesn't. */
+    showComposer?: boolean;
+}
+
+export function BrowseFeed({ showTabs = true, showComposer = true }: BrowseFeedProps = {}) {
     const [activeTab, setActiveTab] = useState<FeedType>("for-you");
     const markedPageCount = useRef(0);
     const { data: session } = useAuthSession();
@@ -603,19 +610,23 @@ export function BrowseFeed() {
             {/* Tabs — flush at the top of the feed column, which sits ABOVE the
                 app header (see the layout's z-index), so the header never covers
                 them. */}
-            <div className="flex items-center w-full sticky top-0 z-100 border-b border-soft-gray/[0.12]">
-                <FeedTab
-                    label="For you"
-                    isActive={activeTab === "for-you"}
-                    onClick={() => switchTab("for-you")}
-                    suffix={<ChevronDown className="w-5 h-5 text-zinc-500" />}
-                    className=""
-                />
-                <FeedTab label="Following" isActive={activeTab === "following"} onClick={() => switchTab("following")} />
-            </div>
+            {showTabs && (
+                <div className="flex items-center w-full sticky top-0 z-100 border-b border-soft-gray/[0.12]">
+                    <FeedTab
+                        label="For you"
+                        isActive={activeTab === "for-you"}
+                        onClick={() => switchTab("for-you")}
+                        suffix={<ChevronDown className="w-5 h-5 text-zinc-500" />}
+                        className=""
+                    />
+                    <FeedTab label="Following" isActive={activeTab === "following"} onClick={() => switchTab("following")} />
+                </div>
+            )}
 
-            {/* Floating "new posts" pill — parks just under the tab bar */}
-            <div className="sticky top-[52px] z-50 h-0 overflow-visible">
+            {/* Floating "new posts" pill — parks just under the tab bar. With
+                no tab bar there is nothing covering the app header, so it parks
+                below the header instead; top-0 would sit behind it. */}
+            <div className={`sticky ${showTabs ? "top-[52px]" : "top-[var(--header-height)]"} z-50 h-0 overflow-visible`}>
                 <AnimatePresence>
                     {newPostsCount > 0 && !composerVisible && (
                         <motion.div
@@ -638,9 +649,13 @@ export function BrowseFeed() {
                 </AnimatePresence>
             </div>
 
-            {/* Composer */}
+            {/* Composer. The ref is the "is the user at the top of the feed?"
+                observer target that gates the new-posts pill — so when the
+                composer is hidden this stays as a zero-height sentinel in the
+                same spot rather than dropping out, which would leave the
+                observer unattached and the pill permanently suppressed. */}
             <div ref={composerRef}>
-                <PostComposer />
+                {showComposer && <PostComposer />}
             </div>
 
             {/* Inline "Show X posts" bar */}

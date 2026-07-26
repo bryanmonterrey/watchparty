@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { BrowseFeed } from "@/components/browse/browse-feed";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row — no per-column overflow. All three columns
@@ -51,6 +53,18 @@ export default function AppHome() {
                         feed
                         <HugeiconsIcon icon={ArrowDown01Icon} className="size-5" strokeWidth={2} />
                     </span>
+                </div>
+
+                {/* The post feed only — no tab bar, no composer; the "feed"
+                    label above stands in for the tabs.
+
+                    Borders inside are recoloured to the sidebar's background
+                    (#080808) by overriding --wp-border here. globals.css remaps
+                    every neutral border utility to that variable, so setting it
+                    on this wrapper re-tints the whole feed and nothing else —
+                    discover keeps the standard slate hairline. */}
+                <div style={{ "--wp-border": "#080808" } as CSSProperties}>
+                    <BrowseFeed showTabs={false} showComposer={false} />
                 </div>
             </main>
 
