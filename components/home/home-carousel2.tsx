@@ -47,18 +47,23 @@ function watchHref(v: CarouselVideo) {
     return `/${v.user.username}/${v.id}`;
 }
 
-export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
+/**
+ * @param fill Stretch to the parent's width instead of the fixed 45svh box —
+ *   what the home page's screen slot wants, since that slot already sets its
+ *   own 16:9. The standalone box is kept for any caller that isn't sized.
+ */
+export function HomeCarousel({ videos, fill = false }: { videos: CarouselVideo[]; fill?: boolean }) {
     const v = videos[0];
     if (!v) return null;
 
     return (
-        <div className={`group/carousel relative ${HERO_WRAP}`}>
-            <div className="flex items-start">
+        <div className={`group/carousel relative ${fill ? "size-full" : HERO_WRAP}`}>
+            <div className={fill ? "size-full" : "flex items-start"}>
                 {/* Featured player, top-left of the column. */}
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className={`group/active relative block shrink-0 overflow-hidden rounded-none bg-muted outline-none ${HERO_BOX}`}
+                    className={`group/active relative block overflow-hidden rounded-none bg-muted outline-none ${fill ? "size-full" : `shrink-0 ${HERO_BOX}`}`}
                 >
                     {v.videoUrl ? (
                         <ActivePanel key={v.id} v={v} />

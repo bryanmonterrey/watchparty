@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { HomeCategoryTabs } from "@/components/home/home-category-tabs";
 import { HomeRailTabs } from "@/components/home/home-rail-tabs";
+import { HomeFeedProvider } from "@/components/home/home-feed-context";
+import { HomeHero } from "@/components/home/home-hero";
+import { HomeRailVideos } from "@/components/home/home-rail-videos";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row — no per-column overflow. All three columns
@@ -32,6 +35,9 @@ export default function AppHome() {
     // is what made the left one measure wider than its declared w-70; putting
     // both on the centre column leaves each rail exactly the width it declares.
     return (
+        // Wraps the whole row: the hero sits in <main> and its picker in the
+        // <aside>, so the provider has to be an ancestor of both.
+        <HomeFeedProvider>
         <div className="relative flex min-h-screen w-full">
             {/* Left rail. Content TBD. */}
             <aside className="hidden w-70 shrink-0 lg:block">
@@ -50,9 +56,11 @@ export default function AppHome() {
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
             <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-4 xl:mr-1.25">
-                {/* The screen — 16:9, bg-panel1 (#0D0D0D, the profile banner's
-                    fill). Aspect-driven because nothing sets its height yet. */}
-                <div className="aspect-video w-full bg-sidebar-hover/25" />
+                {/* The screen — 16:9, holding the featured video. The slot owns
+                    the aspect ratio; the player just fills it. */}
+                <div className="relative aspect-video w-full overflow-hidden bg-sidebar-hover/25">
+                    <HomeHero />
+                </div>
 
                 {/* Category tabs, in the gap on bare canvas. Spacing is set per
                     edge rather than by a column `gap`, because the two sides are
@@ -72,8 +80,11 @@ export default function AppHome() {
             <aside className="hidden w-75 shrink-0 xl:block">
                 <div className={RAIL_INNER_RIGHT}>
                     <HomeRailTabs />
+                    {/* The hero's picker: selecting a row swaps the screen. */}
+                    <HomeRailVideos />
                 </div>
             </aside>
         </div>
+        </HomeFeedProvider>
     );
 }
