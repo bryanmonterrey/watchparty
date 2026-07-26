@@ -19,10 +19,11 @@ import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 // signature change; only the first entry renders today. The frozen multi-item
 // carousel is separate: home-carousel.tsx, used by _legacy.
 
-// cqw, not vw: the hero sizes against the centre column (@container/home), not
-// the viewport — the column is ~880px inside a 1512px window, so a viewport
-// unit would badly oversize it. Falls back to the viewport with no container.
-const HERO_BOX = "w-[62cqw] min-w-[280px] max-w-[760px] aspect-video";
+// Height-driven: 55svh, with 16:9 setting the width from it. svh (not vh) so
+// the mobile URL bar collapsing doesn't resize it mid-scroll. max-w-full is the
+// backstop — on a tall window 55svh wants more width than the centre column
+// has, and there the column wins and object-cover takes the crop.
+const HERO_BOX = "h-[55svh] aspect-video max-w-full";
 // No padding at all: the hero sits flush in the column's top-left corner, and
 // the only offset above it is the column's own header clearance.
 const HERO_WRAP = "w-full";
@@ -52,12 +53,12 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
 
     return (
         <div className={`group/carousel relative ${HERO_WRAP}`}>
-            <div className="flex items-stretch">
+            <div className="flex items-start">
                 {/* Featured player, top-left of the column. */}
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className={`group/active relative block shrink-0 overflow-hidden rounded-2xl bg-muted outline-none ${HERO_BOX}`}
+                    className={`group/active relative block shrink-0 overflow-hidden rounded-none bg-muted outline-none ${HERO_BOX}`}
                 >
                     {v.videoUrl ? (
                         <ActivePanel key={v.id} v={v} />
@@ -259,8 +260,8 @@ function ActivePanel({ v }: { v: CarouselVideo }) {
 export function HomeCarouselSkeleton() {
     return (
         <div className={HERO_WRAP}>
-            <div className="flex items-stretch">
-                <div className={`relative shrink-0 overflow-hidden rounded-2xl bg-muted ${HERO_BOX}`}>
+            <div className="flex items-start">
+                <div className={`relative shrink-0 overflow-hidden rounded-none bg-muted ${HERO_BOX}`}>
                     <div className="absolute inset-0 shimmer-skeleton" />
                     <div className="absolute inset-x-3 bottom-3 flex items-center gap-3">
                         <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
