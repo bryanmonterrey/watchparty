@@ -2,32 +2,28 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { ChevronUp, ChevronDown, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAudioOwner } from "@/lib/audio-bus";
 import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
 import { MarketCapChip } from "@/components/tokens/market-cap-chip";
-import { Squircle } from "@/components/ui/squircle";
 
-// Redesigned hero: a featured video player + a 3×3 grid of picker thumbnails,
-// then up/down arrows. The frozen multi-item carousel lives in home-carousel.tsx
-// (used by _legacy).
+// Home hero: ONE featured video, parked at the top-left of the centre column.
+// It autoplays muted+looped with player chrome (mute / captions / LIVE badge)
+// and the whole thing is a <Link> to its watch page.
 //
-// - Player (left): the active featured video, sharp-cornered (rounded-none),
-//   autoplaying muted+looped with player chrome (mute / captions / LIVE badge).
-//   The whole player is a <Link> to its watch page. Prev/next remount the
-//   <video> (keyed on the active id).
-// - Grid (middle): 9 videos as buttons — blurred thumbnail bg + centered avatar
-//   (the original peek style). Click one to make it the active player video.
-// - Arrows (right): page the grid through the video list in blocks of 9.
+// The 3×3 picker grid and the up/down paging arrows that used to sit beside it
+// were pulled while the column layout is rebuilt — restore them from git
+// (they were removed in the commit that introduced HERO_BOX) if they come
+// back. `videos` still takes the whole list so paging can return without a
+// signature change; only the first entry renders today. The frozen multi-item
+// carousel is separate: home-carousel.tsx, used by _legacy.
 
-// cqw, not vw: the hero lives in the home page's centre column (@container/home),
-// so its height has to track that column's width — on a viewport unit it stays
-// tall while the column narrows and the square 3×3 picker eats the player.
-// Falls back to the viewport when rendered outside a container.
-const ROW_H = "h-[clamp(220px,34cqw,340px)]";
-const HERO_WRAP = "mx-auto w-full max-w-[1100px] px-4";
-const PER_PAGE = 9;
+// cqw, not vw: the hero sizes against the centre column (@container/home), not
+// the viewport — the column is ~880px inside a 1512px window, so a viewport
+// unit would badly oversize it. Falls back to the viewport with no container.
+const HERO_BOX = "w-[62cqw] min-w-[280px] max-w-[760px] aspect-video";
+const HERO_WRAP = "w-full px-6";
 
 interface CarouselVideo {
     id: string;
@@ -49,24 +45,17 @@ function watchHref(v: CarouselVideo) {
 }
 
 export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
-    const n = videos.length;
-    const [active, setActive] = useState(0);
-    const [page, setPage] = useState(0);
-    const pageCount = Math.max(1, Math.ceil(n / PER_PAGE));
-    const skipPage = (dir: -1 | 1) => setPage((p) => (p + dir + pageCount) % pageCount);
-
-    if (n === 0) return null;
-    const v = videos[active];
-    const pageVideos = videos.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
+    const v = videos[0];
+    if (!v) return null;
 
     return (
         <div className={`group/carousel relative ${HERO_WRAP}`}>
-            <div className={`flex items-stretch gap-3 ${ROW_H}`}>
-                {/* Featured player — sharp-cornered, fills the remaining width. */}
+            <div className="flex items-stretch">
+                {/* Featured player, top-left of the column. */}
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className="group/active relative block flex-1 overflow-hidden rounded-xl bg-muted outline-none"
+                    className={`group/active relative block shrink-0 overflow-hidden rounded-2xl bg-muted outline-none ${HERO_BOX}`}
                 >
                     {v.videoUrl ? (
                         <ActivePanel key={v.id} v={v} />
@@ -103,68 +92,8 @@ export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {
                         </span>
                     </div>
                 </Link>
-
-                {/* 3×3 picker grid — a square tied to the row height. */}
-                <div className="grid aspect-square h-full shrink-0 grid-cols-3 grid-rows-3 gap-2">
-                    {pageVideos.map((pv, i) => {
-                        const globalIdx = page * PER_PAGE + i;
-                        return (
-                            <GridCell
-                                key={pv.id}
-                                v={pv}
-                                isActive={globalIdx === active}
-                                onClick={() => setActive(globalIdx)}
-                            />
-                        );
-                    })}
-                </div>
-
-                {/* Right-side squircle arrows — page the grid (shorts-style). */}
-                <div className="flex shrink-0 flex-col justify-center gap-3">
-                    <HeroArrow dir="up" onClick={() => skipPage(-1)} />
-                    <HeroArrow dir="down" onClick={() => skipPage(1)} />
-                </div>
             </div>
         </div>
-    );
-}
-
-// One picker button: blurred thumbnail background + centered creator avatar
-// (the original closed-peek look), squircle-clipped.
-//
-// The selected cue lives INSIDE the clip (a lighter wash + a white avatar ring)
-// rather than an outer ring/border — the Squircle clip-path would clip those
-// off. autoEffects={false} so no wrapper div is injected (no border to lose).
-function GridCell({ v, isActive, onClick }: { v: CarouselVideo; isActive: boolean; onClick: () => void }) {
-    return (
-        <Squircle asChild radius={22} autoEffects={false}>
-            <button
-                type="button"
-                onClick={onClick}
-                aria-label={`Play ${v.title}`}
-                aria-pressed={isActive}
-                className="group/cell relative cursor-pointer rounded-3xl overflow-hidden bg-muted outline-none"
-            >
-                {v.thumbnailUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={v.thumbnailUrl} alt="" loading="lazy" className="absolute inset-0 size-full scale-125 object-cover blur-lg" />
-                )}
-                {/* Dark wash — lighter on the selected cell, and eases up on hover. */}
-                <div className={`absolute inset-0 transition-colors ${isActive ? "bg-black/15" : "bg-black/50 group-hover/cell:bg-black/35"}`} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className={`size-9 overflow-hidden rounded-full bg-zinc-800 ring-2 transition ${isActive ? "ring-white" : "ring-white/25"}`}>
-                        {v.user.avatar_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={v.user.avatar_url} alt={v.user.username ?? ""} className="size-full object-cover" />
-                        ) : (
-                            <div className="flex size-full items-center justify-center text-sm font-bold text-white/80">
-                                {(v.user.username ?? "?")[0]?.toUpperCase()}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </button>
-        </Squircle>
     );
 }
 
@@ -175,25 +104,6 @@ function LiveBadge() {
             <span className="size-1.5 rounded-full bg-white" />
             Live
         </span>
-    );
-}
-
-// Squircle up/down control (shorts-style vertical arrows, but smooth-cornered).
-// No border → autoEffects off, so no injected wrapper div (see the Squircle
-// autoEffects tradeoff); the button is the direct flex child at its own size.
-function HeroArrow({ dir, onClick }: { dir: "up" | "down"; onClick: () => void }) {
-    const Icon = dir === "up" ? ChevronUp : ChevronDown;
-    return (
-        <Squircle asChild radius={18} autoEffects={false}>
-            <button
-                type="button"
-                onClick={onClick}
-                aria-label={dir === "up" ? "Previous videos" : "Next videos"}
-                className="flex size-22 rounded-3xl items-center justify-center bg-panel2 text-white/80 backdrop-blur-sm transition-colors hover:bg-baseborder/45 hover:text-white"
-            >
-                <Icon className="size-13" strokeWidth={2} />
-            </button>
-        </Squircle>
     );
 }
 
@@ -343,12 +253,13 @@ function ActivePanel({ v }: { v: CarouselVideo }) {
     );
 }
 
+// Same box as the real hero, so nothing shifts when the feed lands.
 export function HomeCarouselSkeleton() {
     return (
         <div className={HERO_WRAP}>
-            <div className={`flex items-stretch gap-3 ${ROW_H}`}>
-                <div className="relative flex-1 overflow-hidden rounded-none bg-muted">
-                    <div className="absolute inset-0 shimmer-skeleton rounded-none" />
+            <div className="flex items-stretch">
+                <div className={`relative shrink-0 overflow-hidden rounded-2xl bg-muted ${HERO_BOX}`}>
+                    <div className="absolute inset-0 shimmer-skeleton" />
                     <div className="absolute inset-x-3 bottom-3 flex items-center gap-3">
                         <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
                         <div className="min-w-0 flex-1 space-y-2">
@@ -356,19 +267,6 @@ export function HomeCarouselSkeleton() {
                             <div className="h-3 w-1/5 rounded-full shimmer-skeleton" />
                         </div>
                     </div>
-                </div>
-                <div className="grid aspect-square h-full shrink-0 grid-cols-3 grid-rows-3 gap-2">
-                    {Array.from({ length: PER_PAGE }).map((_, i) => (
-                        <div key={i} className="rounded-2xl shimmer-skeleton" />
-                    ))}
-                </div>
-                <div className="flex shrink-0 flex-col justify-center gap-3">
-                    <Squircle asChild radius={18} autoEffects={false}>
-                        <div className="size-24 shimmer-skeleton" />
-                    </Squircle>
-                    <Squircle asChild radius={18} autoEffects={false}>
-                        <div className="size-24 shimmer-skeleton" />
-                    </Squircle>
                 </div>
             </div>
         </div>

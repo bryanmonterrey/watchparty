@@ -601,11 +601,11 @@ export function DesktopHome() {
             (feed.data?.pages.flatMap((p) => p.videos) ?? []).map((v) => [v.id, v]),
         ).values(),
     ];
-    const heroVideos = videos.slice(0, 24);
-    // 12 trending videos after the hero set; fall back to the first 12 when the
-    // feed is too short to fill both.
-    const trendingTail = videos.slice(24, 36);
-    const trendingVideos = trendingTail.length ? trendingTail : videos.slice(0, 12);
+    // The hero is a single video now (its picker grid was pulled), so trending
+    // picks up at index 1 — reserving 24 for the hero would strand 23 videos
+    // nothing renders.
+    const heroVideos = videos.slice(0, 1);
+    const trendingVideos = videos.slice(1, 13);
     const irlVideos = [
         ...new Map(
             (irl.data?.pages.flatMap((p) => p.videos) ?? []).map((v) => [v.id, v]),

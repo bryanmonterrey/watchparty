@@ -13,14 +13,17 @@ export const metadata: Metadata = {
     title: "Home",
 };
 
-// Both rails are the same width so the centre column is optically centred; the
-// content column takes whatever is left.
-const RAIL = "sticky top-[var(--header-height)] hidden h-[calc(100dvh-var(--header-height))] w-[260px] shrink-0 xl:block 2xl:w-[320px] min-[1800px]:w-[368px]";
-
 export default function AppHome() {
+    // Geometry is deliberately identical to the profile page's channel layout
+    // (components/profile/user-profile.tsx): left rail at the sidebar width
+    // from lg, right rail at 340px from xl, centre column taking the rest —
+    // no gaps, no outer padding. Two pages, one frame.
     return (
-        <div className="flex min-h-dvh w-full items-start gap-6 px-4">
-            <aside aria-hidden className={RAIL} />
+        <div className="relative flex min-h-screen w-full">
+            {/* Left rail — sidebar width. Content TBD. */}
+            <aside className="hidden shrink-0 lg:block w-[var(--sidebar-width)]">
+                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4" />
+            </aside>
 
             {/* Centre column: the content surface — bg-panel1 (#0D0D0D), the
                 same fill as the profile banner, sitting on the app scroller's
@@ -31,11 +34,14 @@ export default function AppHome() {
                 @container/home so the sections inside size against THIS column
                 rather than the viewport — without it the trending/IRL grids
                 keep counting viewport breakpoints they no longer own. */}
-            <div className="@container/home min-h-dvh min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]">
+            <main className="@container/home relative min-w-0 flex-1 bg-panel1 md:pt-[var(--header-height)]">
                 <DesktopHome />
-            </div>
+            </main>
 
-            <aside aria-hidden className={RAIL} />
+            {/* Right rail — 340px. Content TBD. */}
+            <aside className="hidden shrink-0 xl:block w-[340px]">
+                <div className="sticky top-0 flex h-screen flex-col gap-4 p-4" />
+            </aside>
         </div>
     );
 }
