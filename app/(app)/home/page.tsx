@@ -58,12 +58,23 @@ export default function AppHome() {
                 {/* The post feed only — no tab bar, no composer; the "feed"
                     label above stands in for the tabs.
 
-                    Borders inside are recoloured to the sidebar's background
-                    (#080808) by overriding --wp-border here. globals.css remaps
-                    every neutral border utility to that variable, so setting it
-                    on this wrapper re-tints the whole feed and nothing else —
-                    discover keeps the standard slate hairline. */}
-                <div style={{ "--wp-border": "#080808" } as CSSProperties}>
+                    Both overrides below are scoped re-tints of the feed, done
+                    by redefining the CSS variables the utilities resolve
+                    through — so discover, which shares every one of these
+                    components, is untouched:
+                    - --wp-border: globals.css remaps every neutral border
+                      utility to it, so this recolours all the feed's hairlines
+                      to the sidebar's background at once.
+                    - --background: post cards paint bg-background (pure black
+                      in dark mode), which read as a black slab on top of the
+                      column. Pointing it at the column's own fill makes them
+                      sit flush instead. */}
+                <div
+                    style={{
+                        "--wp-border": "#080808",
+                        "--background": "var(--color-panel1)",
+                    } as CSSProperties}
+                >
                     <BrowseFeed showTabs={false} showComposer={false} />
                 </div>
             </main>
