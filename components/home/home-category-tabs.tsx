@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 // Category tabs for the home column. They live in the gap BETWEEN the screen
@@ -43,6 +45,14 @@ export function HomeCategoryTabs() {
                     {tab}
                 </button>
             ))}
+
+            {/* Right end of the row. Not a control yet — nothing is wired to
+                it, so it renders as a plain mark rather than a button that
+                would do nothing on click. ml-auto parks it at the right edge
+                whenever the pills don't fill the row. */}
+            <span className="ml-auto shrink-0 pl-2 pr-1 text-zinc-500">
+                <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
+            </span>
         </nav>
     );
 }

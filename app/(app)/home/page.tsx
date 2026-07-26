@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRightStackIcon } from "@hugeicons/core-free-icons";
 import { HomeCategoryTabs } from "@/components/home/home-category-tabs";
 
 // Home is a 3-column frame: rails either side of a single content column, one
@@ -15,7 +17,9 @@ export const metadata: Metadata = {
     title: "Home",
 };
 
-const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4";
+// The rails pin at the scroller's top, so their own padding is what clears the
+// fixed header — the centre column's mt doesn't apply to them.
+const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 p-4 md:pt-[calc(var(--header-height)+1rem)]";
 
 export default function AppHome() {
     // Left rail from lg, right rail from xl, centre column taking the rest,
@@ -41,24 +45,27 @@ export default function AppHome() {
             <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)]">
                 {/* The screen — 16:9, bg-panel1 (#0D0D0D, the profile banner's
                     fill). Aspect-driven because nothing sets its height yet. */}
-                <div className="aspect-video w-full bg-panel1" />
+                <div className="aspect-video w-full bg-sidebar-hover/25" />
 
                 {/* Category tabs, in the gap on bare canvas. Spacing is set per
                     edge rather than by a column `gap`, because the two sides are
                     no longer equal: a full gap-8 off the screen above, and half
                     that to the row below, which the tabs belong to. */}
-                <div className="mt-8 mb-4">
+                <div className="mt-8 mb-2">
                     <HomeCategoryTabs />
                 </div>
 
                 {/* Everything under the tabs: the fill starts over here and
                     runs to the bottom of the column. */}
-                <div className="flex-1 bg-panel1" />
+                <div className="flex-1 bg-sidebar-hover/25" />
             </main>
 
-            {/* Right rail. Content TBD. */}
+            {/* Right rail. The icon stands in as the rail's title for now —
+                it replaces the text heading that was here. */}
             <aside className="hidden w-75 shrink-0 xl:block">
-                <div className={RAIL_INNER} />
+                <div className={RAIL_INNER}>
+                    <HugeiconsIcon icon={ArrowUpRightStackIcon} className="size-6" strokeWidth={2} />
+                </div>
             </aside>
         </div>
     );
