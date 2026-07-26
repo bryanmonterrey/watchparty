@@ -25,12 +25,16 @@ const RAIL_INNER_RIGHT = `${RAIL_INNER} pr-2`;
 
 export default function AppHome() {
     // Left rail from lg, right rail from xl, centre column taking the rest.
-    // The two gutters differ (4 left, 1.25 right), so they are margins on the
-    // rails rather than one `gap` on the row.
+    //
+    // The gutters are asymmetric (4 left, 1.25 right), so a single `gap` on the
+    // row can't express them — but they hang off the CENTRE column, not the
+    // rails. A margin on a rail counts toward that rail's own footprint, which
+    // is what made the left one measure wider than its declared w-70; putting
+    // both on the centre column leaves each rail exactly the width it declares.
     return (
         <div className="relative flex min-h-screen w-full">
             {/* Left rail. Content TBD. */}
-            <aside className="hidden w-70 shrink-0 lg:mr-4 lg:block">
+            <aside className="hidden w-70 shrink-0 lg:block">
                 <div className={RAIL_INNER} />
             </aside>
 
@@ -45,7 +49,7 @@ export default function AppHome() {
 
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)]">
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-4 xl:mr-1.25">
                 {/* The screen — 16:9, bg-panel1 (#0D0D0D, the profile banner's
                     fill). Aspect-driven because nothing sets its height yet. */}
                 <div className="aspect-video w-full bg-sidebar-hover/25" />
@@ -65,7 +69,7 @@ export default function AppHome() {
 
             {/* Right rail. Its tab row leads with the icon — the icon is the
                 first tab rather than a heading sitting above them. */}
-            <aside className="hidden w-75 shrink-0 xl:ml-1.25 xl:block">
+            <aside className="hidden w-75 shrink-0 xl:block">
                 <div className={RAIL_INNER_RIGHT}>
                     <HomeRailTabs />
                 </div>
