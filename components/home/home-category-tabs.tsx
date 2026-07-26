@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeftDoubleIcon, ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 // Category tabs for the home column. They live in the gap BETWEEN the screen
 // and the row under it — on the bare app canvas rather than on either panel —
 // and sit closer to the row below, which is what they filter.
 //
-// Visual only for now: picking a tab recolours it and nothing else, because
-// neither row is wired to content yet.
+// Picking a tab recolours it and nothing else for now, because neither row is
+// wired to content yet. The scroll arrows, by contrast, are real controls.
 const TABS = [
     "Trending Coins",
     "IRL",
@@ -21,15 +21,59 @@ const TABS = [
     "Music",
 ];
 
+// Both arrows overlay the strip rather than sitting beside it. Two reasons:
+// the backdrop blur needs labels behind it to be worth anything, and a control
+// that appears and disappears with scroll position would otherwise resize the
+// strip and shove the labels sideways every time it toggled.
+const ARROW =
+    "absolute top-1/2 z-10 grid size-9 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-sidebar-hover/40 text-zinc-300 backdrop-blur transition-colors hover:text-white";
+
 export function HomeCategoryTabs() {
     const [active, setActive] = useState(TABS[0]);
+    const stripRef = useRef<HTMLDivElement>(null);
+    const [canLeft, setCanLeft] = useState(false);
+    const [canRight, setCanRight] = useState(false);
+
+    // "When available": each arrow shows only while there is actually overflow
+    // in that direction, so neither appears when every label already fits.
+    const sync = useCallback(() => {
+        const el = stripRef.current;
+        if (!el) return;
+        // 1px slack — scrollLeft is fractional under zoom / on trackpads, so an
+        // exact comparison leaves the end arrow stuck on at the last pixel.
+        setCanLeft(el.scrollLeft > 1);
+        setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+    }, []);
+
+    useEffect(() => {
+        const el = stripRef.current;
+        if (!el) return;
+        sync();
+        el.addEventListener("scroll", sync, { passive: true });
+        // Overflow depends on the column's width, which the rails change at
+        // their breakpoints — so re-measure on resize, not just on scroll.
+        const observer = new ResizeObserver(sync);
+        observer.observe(el);
+        return () => {
+            el.removeEventListener("scroll", sync);
+            observer.disconnect();
+        };
+    }, [sync]);
+
+    const nudge = (direction: -1 | 1) => {
+        const el = stripRef.current;
+        if (!el) return;
+        el.scrollBy({ left: direction * Math.max(200, el.clientWidth * 0.7), behavior: "smooth" });
+    };
 
     return (
-        <nav className="flex w-full items-center">
+        <nav className="relative w-full">
             {/* The strip scrolls rather than wraps: seven labels fit an ~830px
-                column, but it narrows well below that at lg. flex-1 + min-w-0
-                so it takes the width the arrow doesn't. */}
-            <div className="hidden-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+                column, but it narrows well below that at lg. */}
+            <div
+                ref={stripRef}
+                className="hidden-scrollbar flex items-center gap-2 overflow-x-auto scroll-smooth"
+            >
                 {TABS.map((tab) => (
                     <button
                         key={tab}
@@ -49,17 +93,27 @@ export function HomeCategoryTabs() {
                 ))}
             </div>
 
-            {/* Pinned to the row's right edge, OUTSIDE the scroller — as a
-                sibling of the strip it can't be pushed along by the labels or
-                scrolled out of view once they overflow. Padding matches a
-                tab's, so its inset from the right mirrors the first label's
-                from the left.
+            {canLeft && (
+                <button
+                    type="button"
+                    aria-label="Scroll categories left"
+                    onClick={() => nudge(-1)}
+                    className={cn(ARROW, "left-0")}
+                >
+                    <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-5" strokeWidth={2} />
+                </button>
+            )}
 
-                Not a control yet: nothing is wired to it, so it renders as a
-                plain mark rather than a button that would do nothing. */}
-            <span className="shrink-0 px-3.5 text-zinc-500">
-                <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
-            </span>
+            {canRight && (
+                <button
+                    type="button"
+                    aria-label="Scroll categories right"
+                    onClick={() => nudge(1)}
+                    className={cn(ARROW, "right-0")}
+                >
+                    <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-5" strokeWidth={2} />
+                </button>
+            )}
         </nav>
     );
 }
