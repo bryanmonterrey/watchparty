@@ -38,15 +38,18 @@ export default function AppHome() {
 
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col gap-8 md:mt-[var(--header-height)]">
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)]">
                 {/* The screen — 16:9, bg-panel1 (#0D0D0D, the profile banner's
                     fill). Aspect-driven because nothing sets its height yet. */}
                 <div className="aspect-video w-full bg-panel1" />
 
-                {/* Category tabs, in the gap on bare canvas. As a flex child of
-                    the gap-8 column it gets that same gap above and below, so
-                    the band around it stays even. */}
-                <HomeCategoryTabs />
+                {/* Category tabs, in the gap on bare canvas. Spacing is set per
+                    edge rather than by a column `gap`, because the two sides are
+                    no longer equal: a full gap-8 off the screen above, and half
+                    that to the row below, which the tabs belong to. */}
+                <div className="mt-8 mb-4">
+                    <HomeCategoryTabs />
+                </div>
 
                 {/* Everything under the tabs: the fill starts over here and
                     runs to the bottom of the column. */}
