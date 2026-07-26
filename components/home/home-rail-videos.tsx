@@ -11,8 +11,8 @@ import { useHomeFeed, type HomeFeedVideo } from "./home-feed-context";
 // h-28 rows: a 16:9 thumbnail at that height would be ~199px wide and leave
 // almost nothing for text in a 300px rail, so the thumbnail is fixed at 135px
 // (still 16:9) and the info takes the rest.
-const ROW = "flex h-28 w-full items-center gap-3 px-3 text-left transition-colors";
-const THUMB = "relative h-[76px] w-[135px] shrink-0 overflow-hidden rounded-xl bg-muted";
+const ROW = "flex h-fit p-2 w-full items-start justify-start gap-3 text-left transition-colors";
+const THUMB = "relative h-[45px] w-[85px] shrink-0 overflow-hidden rounded-xs bg-muted";
 const SKELETON_COUNT = 5;
 
 function RailVideo({ v, isActive, onSelect }: { v: HomeFeedVideo; isActive: boolean; onSelect: () => void }) {
@@ -20,12 +20,12 @@ function RailVideo({ v, isActive, onSelect }: { v: HomeFeedVideo; isActive: bool
         // autoEffects off: the row has no border for the clip-path to eat, and
         // it avoids the wrapper div that would otherwise sit between the list
         // and the button. No rounded-* either — redundant under the clip.
-        <Squircle asChild radius={20} autoEffects={false}>
+        <Squircle asChild radius={12} autoEffects={false}>
         <button
             type="button"
             onClick={onSelect}
             aria-pressed={isActive}
-            className={cn(ROW, "cursor-pointer", isActive ? "bg-sidebar-hover-35" : "hover:bg-sidebar-hover-35/60")}
+            className={cn(ROW, "cursor-pointer", isActive ? "bg-sidebar-hover-55" : "hover:bg-sidebar-hover-35/60")}
         >
             <span className={THUMB}>
                 {v.thumbnailUrl && (

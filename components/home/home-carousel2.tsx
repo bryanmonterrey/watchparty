@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Play } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAudioOwner } from "@/lib/audio-bus";
+import { useAmbientGlow } from "@/hooks/use-ambient-glow";
 import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
 import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 
@@ -55,15 +56,23 @@ function watchHref(v: CarouselVideo) {
  *   and market-cap chip, and the mute/captions controls. Off for the home
  *   screen while its design is worked out — the video plays bare. Nothing is
  *   deleted, so turning it back on restores the lot.
+ * @param ambient The watch page's ambient glow — a blurred, scaled copy of the
+ *   frame painted behind the player so colour spills past its edges. The
+ *   library inserts its canvas into the VIDEO'S PARENT, which is this Link, so
+ *   the Link becomes the ambient container: no overflow-hidden (that would clip
+ *   away the entire effect) and `isolate`, matching the watch page's setup.
+ *   Every ancestor up to where the glow should fade also has to stay unclipped.
  */
 export function HomeCarousel({
     videos,
     fill = false,
     chrome = true,
+    ambient = false,
 }: {
     videos: CarouselVideo[];
     fill?: boolean;
     chrome?: boolean;
+    ambient?: boolean;
 }) {
     const v = videos[0];
     if (!v) return null;
@@ -75,10 +84,14 @@ export function HomeCarousel({
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className={`group/active relative block overflow-hidden rounded-none bg-muted outline-none ${fill ? "size-full" : `shrink-0 ${HERO_BOX}`}`}
+                    className={`group/active relative block rounded-none bg-muted outline-none ${
+                        ambient
+                            ? "ambient-video-container isolate overflow-visible [contain:none]"
+                            : "overflow-hidden"
+                    } ${fill ? "size-full" : `shrink-0 ${HERO_BOX}`}`}
                 >
                     {v.videoUrl ? (
-                        <ActivePanel key={v.id} v={v} chrome={chrome} />
+                        <ActivePanel key={v.id} v={v} chrome={chrome} ambient={ambient} />
                     ) : (
                         <>
                             {v.thumbnailUrl && (
@@ -150,8 +163,16 @@ function PlayerButton({ label, onClick, wide, children }: { label: string; onCli
 // post has caption tracks), and a LIVE badge for streams. Captions mirror the
 // full player: the chosen track is kept "hidden" so it fires cuechange without
 // the browser's native box, and the current cue is surfaced as one line.
-function ActivePanel({ v, chrome = true }: { v: CarouselVideo; chrome?: boolean }) {
+function ActivePanel({ v, chrome = true, ambient = false }: { v: CarouselVideo; chrome?: boolean; ambient?: boolean }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    // Dialled well below the watch page, which runs brightness 1.5 at the
+    // hook's default 0.5 opacity. That reads as too much here: the watch page
+    // glow sits on a dark, otherwise empty page, while this one lands next to
+    // the rail and the tabs. Softer and wider instead — lower opacity does the
+    // work, extra blur keeps the falloff from banding at that opacity. The hook
+    // keys its effect on `enabled`, and this panel remounts per video id, so
+    // each new hero gets its own glow instance.
+    useAmbientGlow(videoRef, { opacity: 0.28, brightness: 1.15, blur: 150 }, ambient);
     const { isOwner, hasOwner, claim, release } = useAudioOwner();
     const [userMuted, setUserMuted] = useState(false);
     const [captionsOn, setCaptionsOn] = useState(false);

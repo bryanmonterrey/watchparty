@@ -57,8 +57,14 @@ export default function AppHome() {
                 against THIS column rather than the viewport. */}
             <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-4 xl:mr-1.25">
                 {/* The screen — 16:9, holding the featured video. The slot owns
-                    the aspect ratio; the player just fills it. */}
-                <div className="relative aspect-video w-full overflow-hidden bg-sidebar-hover/25">
+                    the aspect ratio; the player just fills it.
+
+                    Deliberately NOT overflow-hidden: the hero runs the watch
+                    page's ambient glow, which paints a blurred copy of the
+                    frame past the video's edges. Any clipping ancestor between
+                    the video and where the glow should fade removes the effect
+                    entirely. */}
+                <div className="relative aspect-video w-full bg-sidebar-hover/25">
                     <HomeHero />
                 </div>
 

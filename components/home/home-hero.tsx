@@ -37,5 +37,5 @@ export function HomeHero() {
 
     if (isLoading || !active) return <HeroLoading />;
 
-    return <HomeCarousel key={active.id} videos={[active]} fill chrome={false} />;
+    return <HomeCarousel key={active.id} videos={[active]} fill chrome={false} ambient />;
 }
