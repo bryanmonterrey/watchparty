@@ -212,36 +212,17 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 1, y: 0 }}
                 >
-                    {activeTab === "Home" ? (
-                        <ProfileHome user={user} onTabChange={onTabChange} />
-                    ) : activeTab === "About" ? (
-                        <ProfileAbout user={user} />
-                    ) : activeTab === "Streams" ? (
-                        <StreamViewer
-                            hostUserId={user.id}
-                            hostUsername={user.username ?? user.name ?? ""}
-                            viewerUsername={viewerUsername}
-                        />
-                    ) : activeTab === "Posts" ? (
-                        <ProfilePostsFeed userId={user.id} isOwner={isOwner} />
-                    ) : activeTab === "Media" ? (
-                        <ProfileMediaGrid userId={user.id} isOwner={isOwner} />
-                    ) : activeTab === "Trades" ? (
-                        <ProfileTradesFeed userId={user.id} name={user.name} />
-                    ) : activeTab === "Predictions" ? (
-                        <PredictionsView creatorId={user.id} />
-                    ) : (
-                        <div className="flex flex-col items-center justify-center text-center py-24">
-                            <div className="size-24 rounded-[32px] bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center mb-8 shadow-2xl relative group overflow-hidden">
-                                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <Plus size={40} className="text-zinc-600 group-hover:text-white transition-all transform group-hover:scale-110 duration-500" />
-                            </div>
-                            <h3 className="text-3xl font-black text-white mb-3 tracking-tighter">Nothing here yet</h3>
-                            <p className="text-zinc-500 max-w-md text-[16px] leading-relaxed">
-                                {activeTab} content will appear here.
-                            </p>
-                        </div>
-                    )}
+                    {/* About is the only tab that renders for now. Every other
+                        tab is deliberately blank — no content AND no empty
+                        state, so nothing is shown at all.
+
+                        Nothing below was deleted: ProfileHome, StreamViewer,
+                        ProfilePostsFeed, ProfileMediaGrid, ProfileTradesFeed
+                        and PredictionsView are all still wired up in this file,
+                        so restoring a tab is putting its branch back into this
+                        conditional. That's also why the imports and the two
+                        local feed components read as unused right now. */}
+                    {activeTab === "About" && <ProfileAbout user={user} />}
                 </motion.div>
             </AnimatePresence>
         </div>
