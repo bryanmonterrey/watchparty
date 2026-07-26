@@ -9,6 +9,7 @@ import { user } from "@/db/schema/auth/user";
 import { eq, and, desc, sql, isNotNull, type SQL } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
+import { emitLaunchEvent } from "@/lib/coin-feed/emit";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -265,8 +266,27 @@ export const tradeRouter = router({
                     updatedAt: new Date(),
                 })
                 .where(and(eq(tokens.id, input.tokenId), eq(tokens.status, "draft")))
-                .returning({ id: tokens.id, name: tokens.name, ticker: tokens.ticker });
+                .returning({
+                    id: tokens.id,
+                    name: tokens.name,
+                    ticker: tokens.ticker,
+                    imageUrl: tokens.imageUrl,
+                    creatorId: tokens.creatorId,
+                });
             if (!updated) return { activated: false, alreadyLive: true };
+
+            // Announce the launch in the /home coin alert rail. Market cap is
+            // null here by definition — the first sync hasn't run yet.
+            await emitLaunchEvent({
+                token: {
+                    wpTokenId: updated.id,
+                    tokenAddress: input.tokenAddress,
+                    ticker: updated.ticker,
+                    imageUrl: updated.imageUrl,
+                    marketCapUsd: null,
+                },
+                creatorId: updated.creatorId,
+            });
 
             // Fire-and-forget: watch the pool for external trades + pull the
             // first market snapshot now.

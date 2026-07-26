@@ -4,11 +4,15 @@ import { HomeRailTabs } from "@/components/home/home-rail-tabs";
 import { HomeFeedProvider } from "@/components/home/home-feed-context";
 import { HomeHero } from "@/components/home/home-hero";
 import { HomeRailVideos } from "@/components/home/home-rail-videos";
+import { AlertsRail } from "@/components/coin-feed/alerts-rail";
 
 // Home is a 3-column frame: rails either side of a single content column, one
-// native scroll for the whole row — no per-column overflow. All three columns
-// are intentionally empty right now; the geometry lands first and the content
-// follows.
+// native scroll for the whole row.
+//
+// The LEFT rail is the exception to "no per-column overflow": it hosts the coin
+// alert feed, which is unbounded and constantly appending, so it scrolls inside
+// its own sticky column instead of stretching the page. The centre column and
+// right rail still ride the app scroller.
 //
 // The old HomeView (desktop/mobile switcher, ssr:false) is retired — mobile
 // web is gated by DesktopOnlyGate and the phone experience is the Expo app.
@@ -21,10 +25,15 @@ export const metadata: Metadata = {
 
 // The rails pin at the scroller's top, so their own padding is what clears the
 // fixed header — the centre column's mt doesn't apply to them.
-const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 md:pt-[calc(var(--header-height)+4px)]";
+const RAIL_INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header-height)+4px)]";
 // The right rail sits against the window edge, so it runs tighter there than
-// the p-4 it carries everywhere else.
-const RAIL_INNER_RIGHT = `${RAIL_INNER} pr-1`;
+// the p-4 it carries everywhere else. gap-4 separates its tab row from the
+// video list; the left rail is one component and sets its own spacing, so the
+// gap is declared per rail rather than on the shared base (two conflicting
+// `gap-*` utilities on one element resolve by stylesheet order, not by which
+// one is written last).
+const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-4 pr-1`;
+const RAIL_INNER_LEFT = `${RAIL_INNER} pl-1`;
 
 export default function AppHome() {
     // Left rail from lg, right rail from xl, centre column taking the rest.
@@ -39,9 +48,13 @@ export default function AppHome() {
         // <aside>, so the provider has to be an ancestor of both.
         <HomeFeedProvider>
         <div className="relative flex min-h-screen w-full">
-            {/* Left rail. Content TBD. */}
+            {/* Left rail: the coin alert feed. It scrolls INSIDE the sticky
+                column (min-h-0 on the rail is what allows that), so the page's
+                own scroll is unaffected by however many alerts have landed. */}
             <aside className="hidden w-70 shrink-0 lg:block">
-                <div className={RAIL_INNER} />
+                <div className={RAIL_INNER_LEFT}>
+                    <AlertsRail />
+                </div>
             </aside>
 
             {/* Centre column. Its fill is NOT one continuous slab: the screen

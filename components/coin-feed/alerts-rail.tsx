@@ -1,0 +1,447 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BidirectionalList, { type BidirectionalListRef } from "broad-infinite-list/react";
+import { AnimatePresence, motion } from "motion/react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Notification03Icon, ArrowUp02Icon, VolumeHighIcon, VolumeMute02Icon } from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc/client";
+import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
+import { AlertRow } from "./alert-row";
+import { AlertListSkeleton } from "./alert-row-skeleton";
+import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
+import { useAlertSound } from "./use-alert-sound";
+import { DEFAULT_FILTERS, filtersToInput, type AlertEvent, type AlertFilters } from "./types";
+
+// The coin alert rail — /home's left column.
+//
+// The SCROLL MACHINERY here is ported from components/browse/browse-feed.tsx
+// (the discover feed) and the reasoning carries over verbatim; the differences
+// are called out inline. The short version of what it buys us:
+//
+//   • BidirectionalList is a sliding window over a FULL ordered dataset we keep
+//     in a ref. Items evicted off one edge are restored from that dataset when
+//     you scroll back, instead of being refetched — so scrolling up is instant
+//     and never re-orders under you.
+//   • The window's top is PINNED (establishedTopKeyRef). Anything newer than it
+//     waits behind the "n new" pill rather than being injected above the row you
+//     are looking at. This is the single most important behaviour: an alert feed
+//     writes constantly, so without the pin the rail would shift under the
+//     cursor every few seconds.
+//   • Newer items only fold in automatically when you are already at the top.
+//
+// The one structural change from discover: useWindow={false}. Discover scrolls
+// the page; this rail is a fixed-height sticky column that scrolls INSIDE
+// itself, so BidirectionalList owns the scroller (it applies height:100% +
+// overflowY:auto to its container).
+
+// ── Tuning ───────────────────────────────────────────────────────────────────
+// Rows are ~56px, so 100 items ≈ 5,600px of DOM — comfortably more than a
+// session scrolls, which keeps the window from ever trimming (and thus from
+// scroll-compensating, which snaps).
+const VIEW_COUNT = 100;
+// Smaller than discover's 1200: the rail's viewport is one screen tall, and a
+// threshold near the scroller's own height would keep the loader permanently
+// triggered.
+const LOAD_THRESHOLD_PX = 700;
+const PAGE_SIZE = 20; // keep in sync with the `limit` on the list query below
+const POLL_MS = 25_000;
+
+const keyOf = (e: AlertEvent) => e.id;
+const timeOf = (e: AlertEvent) => new Date(e.occurredAt).getTime();
+
+function dedupeNewestFirst(items: AlertEvent[]): AlertEvent[] {
+    const seen = new Set<string>();
+    const out: AlertEvent[] = [];
+    for (const it of items) {
+        if (seen.has(keyOf(it))) continue;
+        seen.add(keyOf(it));
+        out.push(it);
+    }
+    // Ties on occurredAt are common (a cluster window closes on one block), so
+    // id is the tiebreak here exactly as it is in the server's keyset cursor —
+    // otherwise the client's order and the cursor's order disagree and
+    // pagination duplicates rows at page boundaries.
+    return out.sort((a, b) => timeOf(b) - timeOf(a) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+}
+
+export function AlertsRail({ className }: { className?: string }) {
+    const [filters, setFilters] = useState<AlertFilters>(DEFAULT_FILTERS);
+    const filterInput = useMemo(() => filtersToInput(filters), [filters]);
+    const { enabled: soundOn, toggle: toggleSound, play } = useAlertSound();
+    const utils = trpc.useUtils();
+
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isLoading,
+        isError,
+    } = trpc.coinFeed.list.useInfiniteQuery(
+        { ...filterInput, limit: PAGE_SIZE },
+        { getNextPageParam: (last) => last.nextCursor, staleTime: 30_000 },
+    );
+
+    const { data: coverage } = trpc.coinFeed.coverage.useQuery(undefined, { staleTime: 300_000 });
+
+    // ── Window state ─────────────────────────────────────────────────────────
+    const listRef = useRef<BidirectionalListRef>(null);
+    /** Full ordered dataset (newest-first) — the source the window slices from.
+     *  Holds every loaded alert: paginated-older ones plus locally prepended
+     *  newer ones. */
+    const fullItemsRef = useRef<AlertEvent[]>([]);
+    const [listItems, setListItems] = useState<AlertEvent[]>([]);
+    /** Bumped to remount the list when the filters change — a new filter set is
+     *  a different dataset, and reusing the window would splice them. */
+    const [listKey, setListKey] = useState(0);
+    const populated = useRef(false);
+    /** Key of the feed's ESTABLISHED top: the newest alert present when the rail
+     *  loaded, advanced ONLY by the pill. Scrolling up may restore alerts the
+     *  user already passed, but must never surface anything above this. */
+    const establishedTopKey = useRef<string | null>(null);
+
+    const establishedTopIdx = useCallback((full: AlertEvent[]) => {
+        const k = establishedTopKey.current;
+        if (!k) return 0;
+        const i = full.findIndex((it) => keyOf(it) === k);
+        return i < 0 ? 0 : i;
+    }, []);
+
+    const feedItems = useMemo(
+        () => dedupeNewestFirst(data?.pages.flatMap((p) => p.items) ?? []),
+        [data],
+    );
+
+    // ── "at the top?" gate ───────────────────────────────────────────────────
+    // Discover watches its composer with an IntersectionObserver; this rail has
+    // no composer and BidirectionalList owns the scroll element, so we listen on
+    // that element directly (exposed as scrollViewRef).
+    const [atTop, setAtTop] = useState(true);
+    const atTopRef = useRef(true);
+    useEffect(() => {
+        // The list mounts after this effect's first run on a remount, so poll a
+        // couple of frames for the scroller before giving up.
+        let raf = 0;
+        let el: HTMLElement | null = null;
+        const onScroll = () => {
+            const next = (el?.scrollTop ?? 0) < 8;
+            atTopRef.current = next;
+            setAtTop(next);
+        };
+        const attach = (tries: number) => {
+            el = listRef.current?.scrollViewRef.current ?? null;
+            if (!el) {
+                if (tries > 0) raf = requestAnimationFrame(() => attach(tries - 1));
+                return;
+            }
+            el.addEventListener("scroll", onScroll, { passive: true });
+            onScroll();
+        };
+        attach(10);
+        return () => {
+            cancelAnimationFrame(raf);
+            el?.removeEventListener("scroll", onScroll);
+        };
+    }, [listKey]);
+
+    // ── Seed / merge the window from the query ───────────────────────────────
+    // Pagination of OLDER alerts flows through onLoadMore, not here; this effect
+    // only owns the full dataset and the window's top.
+    useEffect(() => {
+        if (isLoading || feedItems.length === 0) return;
+
+        const feedKeys = new Set(feedItems.map(keyOf));
+        const localPrepends = fullItemsRef.current.filter((i) => !feedKeys.has(keyOf(i)));
+        const full = dedupeNewestFirst([...localPrepends, ...feedItems]);
+        fullItemsRef.current = full;
+
+        if (!populated.current) {
+            populated.current = true;
+            establishedTopKey.current = full[0] ? keyOf(full[0]) : null;
+            setListItems(full.slice(0, VIEW_COUNT));
+            return;
+        }
+
+        setListItems((prev) => {
+            if (prev.length === 0) return full.slice(0, VIEW_COUNT);
+            const topIdx = full.findIndex((i) => keyOf(i) === keyOf(prev[0]));
+            if (topIdx <= 0) return prev; // already showing the newest
+            // Never shift content under someone reading mid-scroll — newer
+            // alerts stay in `full` (reachable by scrolling up) and are
+            // announced by the pill.
+            if (!atTopRef.current) return prev;
+            const estIdx = establishedTopIdx(full);
+            if (estIdx >= topIdx) return prev;
+            return dedupeNewestFirst([...full.slice(estIdx, topIdx), ...prev]);
+        });
+    }, [feedItems, isLoading, establishedTopIdx]);
+
+    // ── New-alert pill ───────────────────────────────────────────────────────
+    const since = useRef<string | null>(null);
+    const [newCount, setNewCount] = useState(0);
+
+    useEffect(() => {
+        if (!data?.pages?.[0]) return;
+        // Anchor on the newest alert we actually hold, not on wall-clock: an
+        // event can land with an occurredAt a few seconds in the past (the scan
+        // reports on-chain time), and "now" would miss it forever.
+        if (!since.current) {
+            const newest = data.pages[0].items[0];
+            since.current = newest ? new Date(newest.occurredAt).toISOString() : new Date().toISOString();
+        }
+    }, [data]);
+
+    const { data: newCountData } = trpc.coinFeed.newCount.useQuery(
+        { ...filterInput, since: since.current ?? new Date().toISOString() },
+        {
+            enabled: !!since.current,
+            refetchInterval: POLL_MS,
+            refetchIntervalInBackground: false,
+            staleTime: POLL_MS - 5_000,
+        },
+    );
+    useEffect(() => {
+        if (newCountData?.count) setNewCount(newCountData.count);
+    }, [newCountData]);
+
+    const loadNewAlerts = useCallback(async () => {
+        setNewCount(0);
+        const fresh = await utils.coinFeed.list.fetchInfinite({ ...filterInput, limit: PAGE_SIZE });
+        const incoming = fresh?.pages?.[0]?.items ?? [];
+        if (incoming.length > 0) {
+            const full = dedupeNewestFirst([...incoming, ...fullItemsRef.current]);
+            fullItemsRef.current = full;
+            // The pill is the ONLY thing that advances the established top.
+            establishedTopKey.current = full[0] ? keyOf(full[0]) : null;
+            since.current = full[0] ? new Date(full[0].occurredAt).toISOString() : since.current;
+            setListItems((prev) => dedupeNewestFirst([...incoming, ...prev]).slice(0, VIEW_COUNT));
+        }
+        listRef.current?.scrollToTop("smooth");
+    }, [filterInput, utils]);
+
+    // ── Realtime ─────────────────────────────────────────────────────────────
+    // An INSERT triggers an authoritative newCount refetch rather than an
+    // optimistic bump, because the client can't cheaply tell whether the new row
+    // passes the active filters — the server already knows.
+    useEffect(() => {
+        let channel: ReturnType<ReturnType<typeof getRealtimeClient>["channel"]> | null = null;
+        let cancelled = false;
+        (async () => {
+            const client = getRealtimeClient();
+            try {
+                await authenticateRealtimeClient();
+            } catch {
+                return; // polling still covers us
+            }
+            if (cancelled) return;
+            channel = client
+                .channel("coin-feed-events")
+                .on(
+                    "postgres_changes",
+                    { event: "INSERT", schema: "public", table: "coin_feed_events" },
+                    (payload: { new?: Record<string, unknown> }) => {
+                        void utils.coinFeed.newCount.invalidate();
+                        const kind = String(payload.new?.kind ?? "");
+                        play(kind.endsWith("_sell") ? "down" : "up");
+                    },
+                )
+                .subscribe();
+        })();
+        return () => {
+            cancelled = true;
+            if (channel) getRealtimeClient().removeChannel(channel);
+        };
+    }, [utils, play]);
+
+    // ── Filter changes reset the window ──────────────────────────────────────
+    const applyFilters = useCallback((next: AlertFilters) => {
+        fullItemsRef.current = [];
+        establishedTopKey.current = null;
+        populated.current = false;
+        since.current = null;
+        setNewCount(0);
+        setListItems([]);
+        setListKey((k) => k + 1);
+        setFilters(next);
+    }, []);
+
+    // ── onLoadMore ───────────────────────────────────────────────────────────
+    const onLoadMore = useCallback(
+        async (direction: "up" | "down", refItem: AlertEvent) => {
+            const full = fullItemsRef.current;
+            const idx = full.findIndex((i) => keyOf(i) === keyOf(refItem));
+
+            if (direction === "up") {
+                // Restore alerts windowed out above the current top — but never
+                // above the established top; anything sorted above THAT belongs
+                // behind the pill.
+                if (idx <= 0) return [];
+                const floor = establishedTopIdx(full);
+                const start = Math.max(idx - PAGE_SIZE, floor);
+                return start >= idx ? [] : full.slice(start, idx);
+            }
+
+            // Older alerts already loaded below the bottom edge.
+            if (idx >= 0 && idx + 1 < full.length) {
+                return full.slice(idx + 1, idx + 1 + PAGE_SIZE);
+            }
+
+            // Ran off the end — pull the next page, fold it into the full
+            // dataset, then hand back the slice BELOW the reference item by
+            // index (not by timestamp, which ties).
+            if (!hasNextPage) return [];
+            const result = await fetchNextPage();
+            if (!result.data) return [];
+            const pages = dedupeNewestFirst(result.data.pages.flatMap((p) => p.items));
+            const pageKeys = new Set(pages.map(keyOf));
+            const localPrepends = fullItemsRef.current.filter((i) => !pageKeys.has(keyOf(i)));
+            const newFull = dedupeNewestFirst([...localPrepends, ...pages]);
+            fullItemsRef.current = newFull;
+            const refIdx = newFull.findIndex((i) => keyOf(i) === keyOf(refItem));
+            return refIdx < 0 ? [] : newFull.slice(refIdx + 1, refIdx + 1 + PAGE_SIZE);
+        },
+        [establishedTopIdx, fetchNextPage, hasNextPage],
+    );
+
+    // Relative times ("5m") are computed at render, so without a tick the rail
+    // would sit frozen on however old each row was when it first painted — very
+    // visible on a feed whose whole point is recency. One cheap re-render a
+    // minute; scroll position is untouched by it.
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const t = setInterval(() => setTick((n) => n + 1), 60_000);
+        return () => clearInterval(t);
+    }, []);
+
+    const renderItem = useCallback((item: AlertEvent) => <AlertRow event={item} />, []);
+
+    const summary = activeFilterSummary(filters);
+
+    // ── Render ───────────────────────────────────────────────────────────────
+    return (
+        <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+            {/* Header */}
+            <div className="flex shrink-0 items-center gap-2 px-2">
+                <HugeiconsIcon icon={Notification03Icon} className="size-4.5 text-white" strokeWidth={2} />
+                <h2 className="text-lg font-semibold tracking-tight text-white">alerts</h2>
+                <button
+                    type="button"
+                    onClick={toggleSound}
+                    aria-pressed={soundOn}
+                    aria-label={soundOn ? "mute alert sounds" : "unmute alert sounds"}
+                    className={cn(
+                        "ml-auto flex size-7 cursor-pointer items-center justify-center rounded-full transition-colors",
+                        soundOn ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white",
+                    )}
+                >
+                    <HugeiconsIcon
+                        icon={soundOn ? VolumeHighIcon : VolumeMute02Icon}
+                        className="size-4"
+                        strokeWidth={2}
+                    />
+                </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex shrink-0 flex-col gap-0.5 px-1 pt-1">
+                <AlertFiltersButton filters={filters} onChange={applyFilters} coverage={coverage} />
+                {summary && <p className="truncate px-2 pb-1 text-[11px] text-zinc-600">{summary}</p>}
+            </div>
+
+            {/* "n new" pill. h-0 wrapper so it floats over the list instead of
+                pushing it down — a pill that reflows the feed would move the row
+                under the cursor, which is the exact thing the pin prevents. */}
+            <div className="relative z-20 h-0 overflow-visible">
+                <AnimatePresence>
+                    {newCount > 0 && !atTop && (
+                        <motion.div
+                            key="new-alerts-pill"
+                            initial={{ y: -40, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -40, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 700, damping: 40, mass: 0.4 }}
+                            className="flex justify-center pt-1.5"
+                        >
+                            <button
+                                type="button"
+                                onClick={loadNewAlerts}
+                                className="flex cursor-pointer items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-black transition-transform active:scale-95"
+                            >
+                                <HugeiconsIcon icon={ArrowUp02Icon} className="size-3.5" strokeWidth={2.5} />
+                                {newCount === 99 ? "99+" : newCount} new
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* Inline bar when already parked at the top — no need to float. */}
+            {newCount > 0 && atTop && (
+                <button
+                    type="button"
+                    onClick={loadNewAlerts}
+                    className="mx-1 mt-1 shrink-0 cursor-pointer rounded-full py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-white/5"
+                >
+                    show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
+                </button>
+            )}
+
+            {/* The list. min-h-0 is what lets it actually scroll inside the
+                sticky rail instead of growing the column. */}
+            <div className="mt-1 flex min-h-0 flex-1 flex-col">
+                {isError ? (
+                    <p className="px-2 py-10 text-center text-[13px] text-zinc-500">couldn&apos;t load alerts.</p>
+                ) : isLoading && !populated.current ? (
+                    <AlertListSkeleton />
+                ) : feedItems.length === 0 ? (
+                    <div className="px-3 py-10 text-center">
+                        <p className="text-[13px] font-bold text-zinc-400">no alerts yet</p>
+                        <p className="mt-1 text-[12px] text-zinc-600">
+                            {summary ? "nothing matches these filters." : "trader clusters, callouts and predictions land here."}
+                        </p>
+                    </div>
+                ) : (
+                    (() => {
+                        const current = listItems.length > 0 ? listItems : feedItems.slice(0, VIEW_COUNT);
+                        const unique = dedupeNewestFirst(current);
+                        const full = fullItemsRef.current;
+                        const top = unique[0];
+                        const bottom = unique[unique.length - 1];
+                        const topIdx = top ? full.findIndex((i) => keyOf(i) === keyOf(top)) : -1;
+                        // Scroll-up loading only when there are SEEN alerts
+                        // between the pinned top and the window top.
+                        const hasPrevious = topIdx > establishedTopIdx(full);
+                        const atLoadedEnd =
+                            !!bottom && full.length > 0 && keyOf(full[full.length - 1]) === keyOf(bottom);
+                        const hasNext = !atLoadedEnd || !!hasNextPage;
+
+                        return (
+                            <BidirectionalList<AlertEvent>
+                                key={listKey}
+                                ref={listRef}
+                                items={unique}
+                                itemKey={keyOf}
+                                renderItem={renderItem}
+                                onLoadMore={onLoadMore}
+                                onItemsChange={setListItems}
+                                hasPrevious={hasPrevious}
+                                hasNext={hasNext}
+                                viewCount={VIEW_COUNT}
+                                threshold={LOAD_THRESHOLD_PX}
+                                // The rail owns its scroller — see the header note.
+                                useWindow={false}
+                                className="hidden-scrollbar"
+                                spinnerRow={
+                                    <div className="flex justify-center py-3">
+                                        <div className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
+                                    </div>
+                                }
+                            />
+                        );
+                    })()
+                )}
+            </div>
+        </div>
+    );
+}

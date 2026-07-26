@@ -9,7 +9,8 @@
 // Schedules (wrangler.jsonc): collect "0 * * * *" (hourly), sweep "*/30 * * * *",
 // feed-corpus "17 * * * *" (hourly, Phoenix ranker corpus refresh),
 // sync-assets-webhook "30 4 * * *" (daily, re-sync Helius watched wallets),
-// predictions-factory "7 * * * *" (hourly, AI market generation + auto-resolve).
+// predictions-factory "7 * * * *" (hourly, AI market generation + auto-resolve),
+// coin-alerts "* * * * *" (per-minute, the /home alert rail's ingestion pass).
 
 interface Env {
     CRON_SECRET: string;
@@ -52,12 +53,16 @@ export default {
             // UTC, then writes the just-ended ISO week's board finishes once.
             ctx.waitUntil(call(env, "/api/cron/weekly-finishes"));
         } else if (event.cron === "* * * * *") {
-            // Every minute — the CF cron floor. Both are cheap single-digit
+            // Every minute — the CF cron floor. All three are cheap bounded
             // API-call passes; in-app swaps additionally trigger instant
             // per-token refreshes so this is the fallback, not the source of
             // truth for perceived latency.
             ctx.waitUntil(call(env, "/api/cron/ivs-viewers"));
             ctx.waitUntil(call(env, "/api/cron/token-sync"));
+            // Coin alert feed (/home left rail): discovers tracked coins across
+            // chains and clusters their swaps into "N traders bought" events.
+            // Self-limits to 24 GeckoTerminal calls per pass.
+            ctx.waitUntil(call(env, "/api/cron/coin-alerts"));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }

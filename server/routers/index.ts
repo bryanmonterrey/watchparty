@@ -37,6 +37,7 @@ import { copyRouter } from "./copy";
 import { profileRouter } from "./profile";
 import { panelsRouter } from "./panels";
 import { discoverRouter } from "./discover";
+import { coinFeedRouter } from "./coinFeed";
 
 /**
  * Root application router
@@ -79,6 +80,7 @@ export const appRouter = router({
     profile: profileRouter,
     panels: panelsRouter,
     discover: discoverRouter,
+    coinFeed: coinFeedRouter,
 });
 
 /**

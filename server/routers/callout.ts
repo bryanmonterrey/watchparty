@@ -7,6 +7,7 @@ import { user } from "@/db/schema/auth";
 import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { recordQuestEvent } from "@/server/lib/quests";
+import { emitCalloutEvent } from "@/lib/coin-feed/emit";
 import { sendPushToUsers } from "@/lib/push/send";
 
 /**
@@ -66,6 +67,21 @@ export const calloutRouter = router({
             });
 
             await recordQuestEvent(ctx.user.id, "callout_created");
+
+            // Also surface the call in the /home coin alert rail. Best-effort:
+            // emitCalloutEvent swallows its own errors so a feed write can never
+            // undo a callout that already landed.
+            await emitCalloutEvent({
+                calloutId: id,
+                userId: ctx.user.id,
+                token: {
+                    wpTokenId: token.id,
+                    tokenAddress: token.tokenAddress,
+                    ticker: token.ticker,
+                    imageUrl: token.imageUrl,
+                    marketCapUsd: token.marketCapUsd,
+                },
+            });
 
             // Fan out to followers. Chunked inserts; non-critical, never fails the call.
             let notified = 0;

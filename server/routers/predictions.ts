@@ -13,6 +13,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, publicProcedure } from "../trpc";
+import { emitPredictionEvent } from "@/lib/coin-feed/emit";
 import { db } from "@/db";
 import { predictionMarkets, predictionOutcomes, predictionBets } from "@/db/schema/content/predictions";
 import { eq, and, desc, asc, sql, inArray, isNull } from "drizzle-orm";
@@ -336,6 +337,15 @@ export const predictionsRouter = router({
             await db.insert(predictionOutcomes).values(
                 input.outcomes.map((label, idx) => ({ marketId: market.id, idx, label: label.trim() })),
             );
+            // Surface the new market in the /home coin alert rail.
+            await emitPredictionEvent({
+                marketId: market.id,
+                question: market.question,
+                category: market.category,
+                creatorId: market.creatorId,
+                imageUrl: market.imageUrl,
+                occurredAt: market.createdAt,
+            });
             return market;
         }),
 

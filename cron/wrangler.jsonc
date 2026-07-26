@@ -7,8 +7,9 @@
   // Drives the premium/treasury/feed crons by calling the app's guarded endpoints.
   // Collect hourly; sweep every 30 min; feed-corpus hourly at :17 (own slot so it
   // never coincides with the others); assets-webhook sync daily at 04:30 UTC;
-  // callout-performance every 10 min; ivs-viewers + token-sync every minute
-  // (the Cloudflare cron floor — keeps market data + live state near-realtime);
+  // callout-performance every 10 min; ivs-viewers + token-sync + coin-alerts
+  // every minute (the Cloudflare cron floor — keeps market data, live state and
+  // the coin alert rail near-realtime);
   // predictions-factory hourly at :07 (AI market generation + auto-resolve).
   // Dispatched by event.cron in code.
   "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *", "*/10 * * * *", "* * * * *", "7 * * * *"] },

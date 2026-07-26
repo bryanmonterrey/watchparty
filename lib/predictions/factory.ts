@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { predictionMarkets, predictionOutcomes } from "@/db/schema/content/predictions";
 import { tokens } from "@/db/schema/content/token";
 import { resolveMarketCore } from "@/lib/predictions/resolve";
+import { emitPredictionEvent } from "@/lib/coin-feed/emit";
 
 // AI market factory — the solo-operator answer to "who creates and resolves
 // prediction markets?". Claude generates timely markets from live platform
@@ -304,6 +305,14 @@ export async function insertGeneratedMarkets(markets: GeneratedMarket[]): Promis
         await db.insert(predictionOutcomes).values(
             m.outcomes.map((label, idx) => ({ marketId: market.id, idx, label: label.trim().slice(0, 60) })),
         );
+        // Surface the new market in the /home coin alert rail.
+        await emitPredictionEvent({
+            marketId: market.id,
+            question: market.question,
+            category: market.category,
+            creatorId: market.creatorId,
+            occurredAt: market.createdAt,
+        });
         created++;
     }
     return created;

@@ -12,6 +12,7 @@ import { tokens } from "@/db/schema/content/token";
 import { eq } from "drizzle-orm";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { maybePriceAlert, migrationAlert } from "@/lib/push/token-alerts";
+import { emitMigrationEvent } from "@/lib/coin-feed/emit";
 
 const GT = "https://api.geckoterminal.com/api/v2/networks/solana";
 const GT_HEADERS = { Accept: "application/json;version=20230302" };
@@ -112,13 +113,27 @@ export async function syncCurveProgress(rows: SyncableToken[]): Promise<number> 
                     ? 1
                     : await client.state.getPoolQuoteTokenCurveProgress(row.poolAddress);
                 const progress = Math.min(100, Math.max(0, ratio * 100));
-                await db.update(tokens).set({
+                const [after] = await db.update(tokens).set({
                     bondingProgress: progress,
                     phase: migrated ? "migrated" : progress >= 70 ? "migrating" : "new",
-                }).where(eq(tokens.id, row.id));
+                }).where(eq(tokens.id, row.id))
+                    // Only read back what the migration event needs; the write
+                    // happens on every pass, the event only on the flip.
+                    .returning({ imageUrl: tokens.imageUrl, marketCapUsd: tokens.marketCapUsd });
                 curves++;
                 if (migrated && row.phase !== "migrated") {
                     await migrationAlert(row).catch(() => {});
+                    // Migration is a headline moment — put it in the /home
+                    // coin alert rail too.
+                    await emitMigrationEvent({
+                        token: {
+                            wpTokenId: row.id,
+                            tokenAddress: row.tokenAddress,
+                            ticker: row.ticker,
+                            imageUrl: after?.imageUrl ?? null,
+                            marketCapUsd: after?.marketCapUsd ?? null,
+                        },
+                    });
                 }
             } catch {
                 // pool read failures are per-token, not per-pass
