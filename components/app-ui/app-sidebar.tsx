@@ -28,7 +28,6 @@ import {
     HomeIcon,
     MessagesIcon,
     NotificationsIcon,
-    ShortsIcon,
     TradeIcon,
     UserIcon,
     SearchIcon,
@@ -83,11 +82,9 @@ const items = [
         url: "/search",
         icon: SearchIcon,
     },
-    {
-        title: "Shorts",
-        url: "/shorts",
-        icon: ShortsIcon,
-    },
+    // Shorts is pulled from the nav for now. The route (app/(app)/shorts) is
+    // untouched and still reachable directly — put the entry back here to
+    // restore it.
     {
         title: "Trade",
         url: "/trade",
