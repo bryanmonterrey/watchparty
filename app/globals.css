@@ -349,6 +349,59 @@
   }
 }
 
+/* Root route-loading star (app/loading.tsx): the header's pink star logo as the
+   app-wide loading affordance. The spin lives on the wrapper and the breathe on
+   the mark itself so the two never fight over `transform`. The star's asymmetry
+   reads as motion on its own — no spinner ring, no glow blob (in-app depth rule). */
+@keyframes star-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes star-loader-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(0.86);
+    opacity: 0.62;
+  }
+}
+
+@keyframes star-loader-fade {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.star-loader {
+  animation: star-loader-spin 2.4s linear infinite;
+}
+
+.star-loader > svg {
+  animation: star-loader-breathe 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .star-loader {
+    animation: none;
+  }
+
+  .star-loader > svg {
+    animation: star-loader-fade 1.8s ease-in-out infinite;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
