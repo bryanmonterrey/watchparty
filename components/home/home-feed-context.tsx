@@ -27,7 +27,17 @@ export interface HomeFeedVideo {
     tokenId?: string | null;
     tokenAddress?: string | null;
     marketCapUsd?: number | null;
+    // ─── Below here: already returned by content.getVideoFeed, declared for
+    // the video header under the hero. Nothing new is fetched for them.
+    views?: number | null;
+    likes?: number | null;
+    /** Server-resolved for the signed-in viewer — no follow-up query needed. */
+    isLiked?: boolean | null;
+    createdAt?: Date | string | null;
+    duration?: number | null;
     user: {
+        id?: string | null;
+        name?: string | null;
         username: string | null;
         avatar_url: string | null;
         /**

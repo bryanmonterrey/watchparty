@@ -6,6 +6,8 @@ import { ArrowDownDoubleIcon, ArrowUpDoubleIcon } from "@hugeicons/core-free-ico
 import { cn } from "@/lib/utils";
 import { HomeHero } from "./home-hero";
 import { HomeCategoryPanel } from "./home-category-panel";
+import { HomeVideoHeader } from "./home-video-header";
+import { useHomeFeed } from "./home-feed-context";
 
 // Home's centre column: the screen, a focus toggle under it, and the category
 // tabs + their content.
@@ -27,6 +29,7 @@ const HERO_DEFAULT = "aspect-video w-full";
 
 export function HomeCenterColumn() {
     const [focus, setFocus] = useState(false);
+    const { active } = useHomeFeed();
 
     // After mount, never during render — the app shell server-renders and
     // reading localStorage in render would be a hydration mismatch.
@@ -64,21 +67,27 @@ export function HomeCenterColumn() {
                 <HomeHero />
             </div>
 
-            {/* Focus toggle, tucked under the screen on the right. Down folds
-                the tabs away and gives the screen the room; up puts them back.
+            {/* The video's header, with the focus toggle at its right edge.
+                One row so the toggle keeps sitting under the screen on the
+                right while the metadata fills the space beside it.
 
                 relative z-10 is load-bearing: the screen above is `relative`,
                 and a positioned element paints above a non-positioned sibling
                 no matter the DOM order — so the hero, including the ambient
-                glow that deliberately spills past its edges, was covering this
-                button entirely. */}
-            <div className="relative z-10 flex justify-end pr-1">
+                glow that deliberately spills past its edges, covers anything in
+                this row unless it's lifted out. */}
+            <div className="relative z-10 flex items-start gap-2 py-2 pl-1 pr-1">
+                {/* Keyed on the video: the header owns like state locally after
+                    seeding it from props, which only stays correct if switching
+                    videos remounts it. */}
+                {active && <HomeVideoHeader key={active.id} video={active} className="flex-1" />}
+
                 <button
                     type="button"
                     onClick={toggle}
                     aria-expanded={!focus}
                     aria-label={focus ? "show categories" : "hide categories"}
-                    className="flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-400 transition-colors hover:text-white"
+                    className="flex shrink-0 cursor-pointer items-center px-1.5 py-1.5 text-zinc-400 transition-colors hover:text-white"
                 >
                     <HugeiconsIcon
                         icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}
