@@ -2,14 +2,17 @@
 
 import { useMemo } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDownRight01Icon, ArrowUpRight01Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
-import { Squircle } from "@/components/ui/squircle";
+import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { staggerPulse } from "@/lib/skeleton-stagger";
-import { explorerUrl } from "@/lib/coin-feed/networks";
+import { explorerUrl, tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
 import type { AppRouter } from "@/server/routers";
 import { ChainBadge } from "./chain-badge";
-import { age, changeTone, compactCount, compactUsd, percent, tokenPrice } from "./trending-format";
+import { useStar } from "./use-starred";
+import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
 
 // The trending board — every-chain coin table behind /trending.
 //
@@ -20,9 +23,16 @@ import { age, changeTone, compactCount, compactUsd, percent, tokenPrice } from "
 //
 // Reads the trending_coins cache only, so a page load costs zero external API
 // calls regardless of traffic — the GeckoTerminal sweep happens in the cron.
+//
+// SHAPE: name / market price / volume / market cap / change / buy / star, per
+// the market-table format the author specced. The board used to carry rank,
+// age, txns, liquidity and a live-activity cell too; those came out with the
+// reformat. The router still returns every one of them (`activity` included),
+// so bringing one back is a cell plus a grid track, not a query change.
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type TrendingRow = RouterOutput["trending"]["list"]["items"][number];
+type QuickBuy = ReturnType<typeof useQuickBuy>["quickBuy"];
 
 type Timeframe = "5m" | "1h" | "6h" | "24h";
 
@@ -46,19 +56,22 @@ const PAGE = 50;
 // it adapts to whatever column hosts it and stays correct if it's remounted
 // somewhere else.
 //
+// The two optional columns come in EARLY (@xl = 36rem, @3xl = 48rem) rather
+// than at the old @2xl/@4xl: home's centre column is ~800px on a laptop, and
+// the point of the format is that market cap and volume are visible, not that
+// they exist at ultrawide.
+//
 // Hidden cells occupy no grid track, so the visible cell count has to match the
 // track count at EVERY step — keep these in sync with the per-cell
 // hidden/@block classes below.
 const GRID =
-    "grid items-center gap-3 " +
-    // # · coin · price · change
-    "grid-cols-[28px_minmax(0,1fr)_92px_76px] " +
+    "grid items-center gap-x-4 " +
+    // coin · price · change · buy · star
+    "grid-cols-[minmax(0,1fr)_92px_76px_44px_24px] " +
     // + volume
-    "@2xl:grid-cols-[28px_minmax(0,1fr)_92px_76px_92px] " +
-    // + age, liquidity
-    "@4xl:grid-cols-[28px_minmax(0,1fr)_92px_64px_76px_92px_92px] " +
-    // + txns, activity
-    "@6xl:grid-cols-[28px_minmax(0,1fr)_92px_64px_76px_76px_92px_92px_100px]";
+    "@xl:grid-cols-[minmax(0,1fr)_104px_96px_84px_48px_26px] " +
+    // + market cap
+    "@3xl:grid-cols-[minmax(0,1fr)_112px_100px_104px_88px_52px_28px]";
 
 function pctFor(row: TrendingRow, tf: Timeframe): number | null {
     return tf === "5m" ? row.priceChange5m : tf === "1h" ? row.priceChange1h : tf === "6h" ? row.priceChange6h : row.priceChange24h;
@@ -68,110 +81,167 @@ function volFor(row: TrendingRow, tf: Timeframe): number | null {
     return tf === "5m" ? row.volume5mUsd : tf === "1h" ? row.volume1hUsd : tf === "6h" ? row.volume6hUsd : row.volume24hUsd;
 }
 
-/** The row's live-activity cell — the thing a plain price table can't show.
- *  Reads the most recent trader cluster on this coin from the alert feed. */
-function ActivityCell({ activity }: { activity: TrendingRow["activity"] }) {
-    if (!activity) return <span className="text-[13px] text-zinc-700">—</span>;
-    const buying = activity.kind.endsWith("_buy");
-    const whale = activity.kind.startsWith("whale");
+/** Direction arrow + magnitude. The arrow is what carries the sign, so the
+ *  cell reads correctly for anyone who can't separate the red from the green. */
+function ChangeCell({ pct }: { pct: number | null }) {
+    const known = pct != null && Number.isFinite(pct) && pct !== 0;
     return (
-        <span className="flex min-w-0 flex-col leading-tight">
-            <span className={cn("truncate text-[13px] font-bold", buying ? "text-jewel" : "text-pastelred")}>
-                {whale ? "whale" : `${activity.traderCount ?? 0} traders`} {buying ? "bought" : "sold"}
-            </span>
-            <span className="truncate text-[11px] text-zinc-600">
-                {compactUsd(activity.usdValue)} · {age(activity.occurredAt)} ago
-            </span>
+        <span className={cn("flex items-center gap-1 text-[14px] font-bold tabular-nums", changeTone(pct))}>
+            {known && (
+                <HugeiconsIcon
+                    icon={pct > 0 ? ArrowUpRight01Icon : ArrowDownRight01Icon}
+                    className="size-4 shrink-0"
+                    strokeWidth={2.5}
+                />
+            )}
+            {percentAbs(pct)}
         </span>
     );
 }
 
-function TrendingRowView({ row, index, timeframe }: { row: TrendingRow; index: number; timeframe: Timeframe }) {
-    const pct = pctFor(row, timeframe);
-    const vol = volFor(row, timeframe);
-    // These are markets we track, not coins we host, so a row links out to the
-    // chain's explorer (GeckoTerminal's pool page for chains we haven't mapped).
-    const explorer = explorerUrl(row.network, row.tokenAddress, row.poolAddress);
+/** Buy, for real: Solana routes through the in-app quick-buy (Jupiter quote →
+ *  the wallet's swap engine, same as the /trade board), every other chain opens
+ *  the pool's venue. A row we can't actually fill would be worse than no cell. */
+function BuyCell({ row, quickBuy, buying }: { row: TrendingRow; quickBuy: QuickBuy; buying: boolean }) {
+    const shared = "text-[14px] font-bold text-royal-blue transition-opacity hover:opacity-80";
 
-    const body = (
-        <div className={cn(GRID, "px-3 py-2.5")}>
-            <span className="text-[13px] font-bold tabular-nums text-zinc-600">{index + 1}</span>
-
-            <span className="flex min-w-0 items-center gap-2.5">
-                {row.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.imageUrl} alt="" loading="lazy" className="size-8 shrink-0 rounded-full object-cover" />
-                ) : (
-                    <span className="size-8 shrink-0 rounded-full bg-white/[0.06]" />
-                )}
-                <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-[14px] font-extrabold text-white">{row.symbol}</span>
-                        <ChainBadge network={row.network} />
-                    </span>
-                    <span className="truncate text-[12px] text-zinc-500">{row.name ?? row.dexId ?? ""}</span>
-                </span>
-            </span>
-
-            <span className="text-right text-[13px] font-bold tabular-nums text-white">{tokenPrice(row.priceUsd)}</span>
-
-            <span className="hidden text-right text-[13px] tabular-nums text-zinc-500 @4xl:block">{age(row.poolCreatedAt)}</span>
-
-            <span className={cn("text-right text-[13px] font-bold tabular-nums", changeTone(pct))}>{percent(pct)}</span>
-
-            <span className="hidden text-right text-[13px] tabular-nums text-zinc-400 @6xl:block">{compactCount(row.txns24h)}</span>
-
-            <span className="hidden text-right text-[13px] font-semibold tabular-nums text-zinc-300 @2xl:block">{compactUsd(vol)}</span>
-
-            <span className="hidden text-right text-[13px] tabular-nums text-zinc-400 @4xl:block">{compactUsd(row.liquidityUsd)}</span>
-
-            <span className="hidden min-w-0 justify-end @6xl:flex">
-                <ActivityCell activity={row.activity} />
-            </span>
-        </div>
-    );
-
-    if (!explorer) {
+    if (row.network === "solana") {
         return (
-            <Squircle asChild radius={12} autoEffects={false}>
-                <div className="transition-colors hover:bg-white/[0.03]">{body}</div>
-            </Squircle>
+            <button
+                type="button"
+                // relative z-10 clears the name cell's stretched link, which
+                // covers the whole row.
+                className={cn(shared, "relative z-10 w-fit cursor-pointer disabled:opacity-50")}
+                disabled={buying}
+                onClick={() => {
+                    void quickBuy({
+                        id: row.id,
+                        tokenAddress: row.tokenAddress,
+                        symbol: row.symbol,
+                        imageUrl: row.imageUrl,
+                    });
+                }}
+            >
+                {buying ? "buying…" : "buy"}
+            </button>
         );
     }
 
     return (
-        <Squircle asChild radius={12} autoEffects={false}>
-            <a
-                href={explorer}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block cursor-pointer transition-colors hover:bg-white/[0.03]"
-            >
-                {body}
-            </a>
-        </Squircle>
+        <a
+            href={tradeUrl(row.network, row.tokenAddress, row.poolAddress)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(shared, "relative z-10 w-fit")}
+        >
+            buy
+        </a>
+    );
+}
+
+function StarCell({ row }: { row: TrendingRow }) {
+    const { starred, toggle } = useStar(trackedTokenId(row.network, row.tokenAddress));
+    return (
+        <button
+            type="button"
+            onClick={toggle}
+            aria-pressed={starred}
+            aria-label={starred ? "unstar coin" : "star coin"}
+            className={cn(
+                "relative z-10 flex cursor-pointer items-center transition-colors",
+                // HugeIcons paths ship fill="none"; a CSS fill outranks a
+                // presentation attribute, so this is what fills the star.
+                starred ? "text-pastel-yellow [&_path]:fill-current" : "text-zinc-600 hover:text-zinc-300",
+            )}
+        >
+            <HugeiconsIcon icon={StarIcon} className="size-[18px]" strokeWidth={2} />
+        </button>
+    );
+}
+
+function TrendingRowView({ row, timeframe, quickBuy, buying }: {
+    row: TrendingRow;
+    timeframe: Timeframe;
+    quickBuy: QuickBuy;
+    buying: boolean;
+}) {
+    // These are markets we track, not coins we host, so the coin's name links
+    // out to the chain's explorer (GeckoTerminal's pool page for chains we
+    // haven't mapped).
+    const explorer = explorerUrl(row.network, row.tokenAddress, row.poolAddress);
+    const title = row.name ?? row.symbol;
+
+    return (
+        // `relative` anchors the stretched link below; the row is a div, not an
+        // anchor, because buy and star are interactive and nesting those inside
+        // an <a> is invalid.
+        <div className={cn(GRID, "group relative border-b border-white/5 px-3 py-3.5 transition-colors hover:bg-white/[0.03]")}>
+            <span className="flex min-w-0 items-center gap-3">
+                {row.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={row.imageUrl} alt="" loading="lazy" className="size-9 shrink-0 rounded-full object-cover" />
+                ) : (
+                    <span className="size-9 shrink-0 rounded-full bg-white/[0.06]" />
+                )}
+                <span className="flex min-w-0 flex-col gap-0.5 leading-tight">
+                    {explorer ? (
+                        <a
+                            href={explorer}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            // after:inset-0 stretches this one link over the
+                            // whole row, so the row is clickable without the
+                            // markup being an anchor.
+                            className="truncate text-[15px] font-bold text-white after:absolute after:inset-0 after:content-['']"
+                        >
+                            {title}
+                        </a>
+                    ) : (
+                        <span className="truncate text-[15px] font-bold text-white">{title}</span>
+                    )}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-[13px] text-zinc-500">{row.symbol}</span>
+                        <ChainBadge network={row.network} />
+                    </span>
+                </span>
+            </span>
+
+            <span className="text-[14px] font-bold tabular-nums text-white">{tokenPrice(row.priceUsd)}</span>
+
+            <span className="hidden text-[14px] font-semibold tabular-nums text-zinc-300 @xl:block">
+                {compactUsd(volFor(row, timeframe))}
+            </span>
+
+            <span className="hidden text-[14px] font-semibold tabular-nums text-zinc-300 @3xl:block">
+                {compactUsd(row.marketCapUsd)}
+            </span>
+
+            <ChangeCell pct={pctFor(row, timeframe)} />
+
+            <BuyCell row={row} quickBuy={quickBuy} buying={buying} />
+
+            <StarCell row={row} />
+        </div>
     );
 }
 
 function RowSkeleton({ index, count }: { index: number; count: number }) {
     const pulse = staggerPulse(index, count);
     return (
-        <div className={cn(GRID, "px-3 py-2.5")}>
-            <span style={pulse} className="h-3 w-4 rounded-full shimmer-skeleton" />
-            <span className="flex min-w-0 items-center gap-2.5">
-                <span style={pulse} className="size-8 shrink-0 rounded-full shimmer-skeleton" />
+        <div className={cn(GRID, "border-b border-white/5 px-3 py-3.5")}>
+            <span className="flex min-w-0 items-center gap-3">
+                <span style={pulse} className="size-9 shrink-0 rounded-full shimmer-skeleton" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span style={pulse} className="h-3 w-24 rounded-full shimmer-skeleton" />
+                    <span style={pulse} className="h-3.5 w-28 rounded-full shimmer-skeleton" />
                     <span style={pulse} className="h-2.5 w-16 rounded-full shimmer-skeleton" />
                 </span>
             </span>
-            <span style={pulse} className="ml-auto h-3 w-14 rounded-full shimmer-skeleton" />
-            <span style={pulse} className="ml-auto hidden h-3 w-8 rounded-full shimmer-skeleton @4xl:block" />
-            <span style={pulse} className="ml-auto h-3 w-12 rounded-full shimmer-skeleton" />
-            <span style={pulse} className="ml-auto hidden h-3 w-10 rounded-full shimmer-skeleton @6xl:block" />
-            <span style={pulse} className="ml-auto hidden h-3 w-14 rounded-full shimmer-skeleton @2xl:block" />
-            <span style={pulse} className="ml-auto hidden h-3 w-14 rounded-full shimmer-skeleton @4xl:block" />
-            <span style={pulse} className="ml-auto hidden h-3 w-20 rounded-full shimmer-skeleton @6xl:block" />
+            <span style={pulse} className="h-3 w-16 rounded-full shimmer-skeleton" />
+            <span style={pulse} className="hidden h-3 w-14 rounded-full shimmer-skeleton @xl:block" />
+            <span style={pulse} className="hidden h-3 w-14 rounded-full shimmer-skeleton @3xl:block" />
+            <span style={pulse} className="h-3 w-12 rounded-full shimmer-skeleton" />
+            <span style={pulse} className="h-3 w-8 rounded-full shimmer-skeleton" />
+            <span style={pulse} className="size-4 rounded-full shimmer-skeleton" />
         </div>
     );
 }
@@ -181,6 +251,11 @@ export function TrendingTable({ className }: { className?: string }) {
     // sort / timeframe / chains / search, so bringing a control row back is
     // wiring state to these, not rebuilding the query.
     const input = useMemo(() => ({ sort: SORT, timeframe: TIMEFRAME, limit: PAGE }), []);
+
+    // One quick-buy instance for the whole board, not one per row: the hook
+    // holds four tRPC mutations and the wallet connection, and fifty copies of
+    // that is fifty subscriptions for a button most rows never press.
+    const { quickBuy, buyingId } = useQuickBuy();
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
         trpc.trending.list.useInfiniteQuery(input, {
@@ -199,16 +274,16 @@ export function TrendingTable({ className }: { className?: string }) {
         // rails. Square and unpanelled: it sits directly on the column's own
         // fill rather than floating in a card.
         <div className={cn("@container", className)}>
-            <div className={cn(GRID, "px-3 pb-2 pt-4 text-[12px] font-semibold text-zinc-500")}>
-                <span>#</span>
-                <span>coin</span>
-                <span className="text-right">price</span>
-                <span className="hidden text-right @4xl:block">age</span>
-                <span className="text-right">{TIMEFRAME}</span>
-                <span className="hidden text-right @6xl:block">txns</span>
-                <span className="hidden text-right @2xl:block">volume</span>
-                <span className="hidden text-right @4xl:block">liquidity</span>
-                <span className="hidden text-right @6xl:block">activity</span>
+            <div className={cn(GRID, "border-b border-white/5 px-3 pb-2.5 pt-4 text-[13px] font-semibold text-zinc-500")}>
+                <span>name</span>
+                <span>market price</span>
+                <span className="hidden @xl:block">volume</span>
+                <span className="hidden @3xl:block">market cap</span>
+                <span>change</span>
+                {/* The action columns are self-evident from the rows; a header
+                    over them would just be noise. They still need their tracks. */}
+                <span />
+                <span />
             </div>
 
             {isError ? (
@@ -226,8 +301,14 @@ export function TrendingTable({ className }: { className?: string }) {
                 </div>
             ) : (
                 <div>
-                    {rows.map((row, i) => (
-                        <TrendingRowView key={row.id} row={row} index={i} timeframe={TIMEFRAME} />
+                    {rows.map((row) => (
+                        <TrendingRowView
+                            key={row.id}
+                            row={row}
+                            timeframe={TIMEFRAME}
+                            quickBuy={quickBuy}
+                            buying={buyingId === row.id}
+                        />
                     ))}
                 </div>
             )}

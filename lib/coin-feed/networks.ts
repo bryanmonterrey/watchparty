@@ -187,6 +187,20 @@ export function explorerUrl(network: string, tokenAddress: string, poolAddress?:
     return null;
 }
 
+/**
+ * Where a row's "buy" goes for a chain we can't swap in-app (everything but
+ * Solana, which routes through Jupiter in the wallet).
+ *
+ * GeckoTerminal's pool page rather than the block explorer: an explorer shows
+ * you a token, a pool page links straight through to the DEX the liquidity
+ * actually lives on. It exists for every network GT indexes, so unlike
+ * `explorerUrl` this never has to return null.
+ */
+export function tradeUrl(network: string, tokenAddress: string, poolAddress?: string | null): string {
+    if (poolAddress) return `https://www.geckoterminal.com/${network}/pools/${poolAddress}`;
+    return `https://www.geckoterminal.com/${network}/tokens/${tokenAddress}`;
+}
+
 export const enabledNetworks = () => COIN_NETWORKS.filter((n) => n.enabled);
 
 export const networkById = (id: string): CoinNetwork | undefined => BY_ID.get(id);

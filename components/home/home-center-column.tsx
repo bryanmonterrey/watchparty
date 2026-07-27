@@ -25,12 +25,13 @@ const STORAGE_KEY = "wp:home:focus";
 // under it. Not 100svh — that would push the strip off the bottom and there'd
 // be no way back without scrolling.
 //
-// 6.5rem, not the 3.5rem this reserved when the strip held only the toggle:
-// expanding is exactly when the video header appears, and that's ~4.5rem of
-// avatar/title/meta/token row. Reserving for the tallest case (a coin video,
-// whose token row is the extra line) — a little unused space below the screen
-// is harmless, overflowing the viewport is not.
-const HERO_EXPANDED = "h-[calc(100svh-var(--header-height)-6.5rem)] w-full";
+// 7.5rem, not the 3.5rem this reserved when the strip held only the toggle:
+// expanding is exactly when the video header appears, and the tallest case (a
+// coin video, whose token row is the extra line) runs ~5.5rem of
+// avatar/title/meta/token row, plus the toggle's own line under it. Reserving
+// for that case — a little unused space below the screen is harmless,
+// overflowing the viewport is not.
+const HERO_EXPANDED = "h-[calc(100svh-var(--header-height)-7.5rem)] w-full";
 const HERO_DEFAULT = "aspect-video w-full";
 
 export function HomeCenterColumn() {
@@ -82,7 +83,7 @@ export function HomeCenterColumn() {
                 no matter the DOM order — so the hero, including the ambient
                 glow that deliberately spills past its edges, covers anything in
                 this row unless it's lifted out. */}
-            <div className="relative z-10 flex items-start gap-2 pl-1 pr-1">
+            <div className="relative z-10 flex flex-col pl-1 pr-1">
                 {/* Expanding swaps what's under the screen: the header appears
                     and the tabs + their content fold away, so the column reads
                     as one video and its details rather than a feed.
@@ -90,24 +91,23 @@ export function HomeCenterColumn() {
                     Keyed on the video: the header owns like state locally after
                     seeding it from props, which only stays correct if switching
                     videos remounts it. */}
-                {focus && active && <HomeVideoHeader key={active.id} video={active} className="flex-1" />}
+                {focus && active && <HomeVideoHeader key={active.id} video={active} />}
 
-                {/* ml-auto pins this right on its own. Nothing else can: the
-                    header is what would otherwise push it, and the header is
-                    absent in the default view and while the feed loads.
-
-                    self-end drops it to the bottom of the row: the row is
-                    items-start so the header's avatar/title line up under the
-                    screen, and the chevron reads better at the row's baseline
-                    than floating at the top of a three-line header. Alone (in
-                    the default view) the row is only as tall as the button, so
-                    it has no effect there. */}
+                {/* Its own line under the header, not a column beside it. As a
+                    sibling in the row it reserved a track at the far right, so
+                    the header's actions ("go to video") stopped short of the
+                    column edge and left a notch above the chevron. Stacked, the
+                    header spans the full width and its actions sit flush right,
+                    with the chevron below them at the bottom of the strip —
+                    which is where it was asked to be. self-end keeps it right-
+                    aligned in both views; in the default view it's the only
+                    thing here. */}
                 <button
                     type="button"
                     onClick={toggle}
                     aria-expanded={!focus}
                     aria-label={focus ? "show categories" : "hide categories"}
-                    className="ml-auto flex shrink-0 cursor-pointer items-center self-end px-1.5 text-zinc-400 transition-colors hover:text-white"
+                    className="flex shrink-0 cursor-pointer items-center self-end px-1.5 text-zinc-400 transition-colors hover:text-white"
                 >
                     <HugeiconsIcon
                         icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}

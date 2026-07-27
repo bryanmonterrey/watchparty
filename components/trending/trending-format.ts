@@ -41,6 +41,14 @@ export function percent(n: number | null | undefined): string {
     return `${n > 0 ? "+" : ""}${v}%`;
 }
 
+/** 0.27% — magnitude only, for the board's change cell, where a direction arrow
+ *  carries the sign (so "-2.01%" next to a down arrow would say it twice). */
+export function percentAbs(n: number | null | undefined): string {
+    if (n == null || !Number.isFinite(n)) return "—";
+    const abs = Math.abs(n);
+    return `${abs >= 100 ? abs.toFixed(0) : abs.toFixed(2)}%`;
+}
+
 /** 3m / 5h / 12d / 4mo — pool age, in the coarsest unit that still says something. */
 export function age(at: Date | string | null | undefined): string {
     if (!at) return "—";
