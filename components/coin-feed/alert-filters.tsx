@@ -152,13 +152,15 @@ export function AlertFiltersButton({
             // Icon-only, and the SAME two-line mark the trade table's control
             // uses — the rail has no room for a label, and a second filter
             // idiom would just be two things meaning one thing.
+            // size-6 to match the rail's other icons (and the right rail's star
+            // tab, which is the reference for all of them).
             triggerClassName={cn(
-                "relative flex size-7 cursor-pointer items-center justify-center rounded-full transition-colors",
-                active ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white",
+                "relative flex cursor-pointer items-center px-1.5 py-1.5 transition-colors",
+                active ? "text-white" : "text-zinc-500 hover:text-white",
             )}
             trigger={
                 <>
-                    <HugeiconsIcon icon={MenuTwoLineIcon} className="size-4" strokeWidth={2} />
+                    <HugeiconsIcon icon={MenuTwoLineIcon} className="size-6" strokeWidth={2} />
                     {/* Dot instead of a count: which filters are on is the
                         panel's job; the trigger only says "something is set". */}
                     {active && <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-jewel" />}

@@ -28,7 +28,6 @@ import {
     MessagesIcon,
     NotificationsIcon,
     TradeIcon,
-    TrendingIcon,
     UserIcon,
     SearchIcon,
     PremiumIcon,
@@ -86,12 +85,6 @@ const items = [
         title: "Trade",
         url: "/trade",
         icon: TradeIcon,
-    },
-    // The outside market, as opposed to Trade (watchparty's own coins).
-    {
-        title: "Trending",
-        url: "/trending",
-        icon: TrendingIcon,
     },
     {
         title: "Communities",
@@ -169,11 +162,6 @@ export function AppSidebar() {
                 break
             case "Trade":
                 utils.trade.getFeed.prefetch()
-                break
-            case "Trending":
-                // Same input the board opens on, so the hover prefetch is the
-                // query the page actually mounts.
-                utils.trending.list.prefetchInfinite({ sort: "trending", timeframe: "24h", limit: 50 })
                 break
             case "Notifications":
                 if (session?.user) utils.notification.getNotifications.prefetchInfinite({ limit: 30 })

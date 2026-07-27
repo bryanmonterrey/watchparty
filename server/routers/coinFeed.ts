@@ -11,6 +11,7 @@ import { router, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { COIN_FEED_KINDS, coinFeedEvents, trackedTokens } from "@/db/schema/content/coin-feed";
 import { follows } from "@/db/schema/content/follow";
+import { tokens } from "@/db/schema/content/token";
 import { and, desc, gt, inArray, or, sql, type SQL } from "drizzle-orm";
 
 /** Cursor is `${iso}|${id}` — both halves of the ORDER BY, so it's total. */
@@ -32,8 +33,8 @@ const filterInput = z.object({
     minUsd: z.number().min(0).optional(),
     /** Only coins launched on watchparty. */
     watchpartyOnly: z.boolean().optional(),
-    /** The rail's "followers" tab — only alerts involving accounts you follow. */
-    following: z.boolean().optional(),
+    /** The rail's tab. "all" is everything; the other two are viewer-relative. */
+    scope: z.enum(["all", "following", "mentions"]).optional(),
 });
 
 type FilterInput = z.infer<typeof filterInput>;
@@ -46,11 +47,12 @@ type FilterInput = z.infer<typeof filterInput>;
 function buildFilters(input: FilterInput, viewerId: string | null): SQL[] {
     const where: SQL[] = [];
 
-    if (input.following) {
-        // Logged out, "following" can only mean nothing.
+    if (input.scope && input.scope !== "all") {
+        // Both viewer-relative scopes are empty when logged out, rather than an
+        // error — the rail should render an empty tab, not blow up.
         if (!viewerId) {
             where.push(sql`false`);
-        } else {
+        } else if (input.scope === "following") {
             // An alert "involves" someone you follow if they're the actor (a
             // callout / a market they opened) OR one of the wallets in a
             // cluster resolved to their account. Subqueries rather than
@@ -62,6 +64,20 @@ function buildFilters(input: FilterInput, viewerId: string | null): SQL[] {
                 OR EXISTS (
                     SELECT 1 FROM jsonb_array_elements(coalesce(${coinFeedEvents.traders}, '[]'::jsonb)) AS tr
                     WHERE tr->>'userId' IN ${followed}
+                )
+            )`);
+        } else {
+            // Mentions = alerts about YOU. Three ways that happens: you're the
+            // actor, one of your wallets was in the cluster, or it's activity
+            // on a coin you launched (the one that matters most to a creator).
+            where.push(sql`(
+                ${coinFeedEvents.actorId} = ${viewerId}
+                OR EXISTS (
+                    SELECT 1 FROM jsonb_array_elements(coalesce(${coinFeedEvents.traders}, '[]'::jsonb)) AS tr
+                    WHERE tr->>'userId' = ${viewerId}
+                )
+                OR ${coinFeedEvents.wpTokenId} IN (
+                    SELECT t.id FROM ${tokens} t WHERE t."creatorId" = ${viewerId}
                 )
             )`);
         }

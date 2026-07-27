@@ -9,9 +9,9 @@ import { TabScrollArrow } from "./tab-scroll-arrow";
 // and the row under it — on the bare app canvas rather than on either panel —
 // and sit closer to the row below, which is what they filter.
 //
-// Picking a tab recolours it and nothing else for now, because neither row is
-// wired to content yet. The scroll arrows, by contrast, are real controls.
-const TABS = [
+// Controlled when given `active`/`onChange` (home lifts the selection so the
+// panel below can render for it), uncontrolled otherwise.
+export const HOME_TABS = [
     "Trending Coins",
     "IRL",
     "Podcasts",
@@ -25,8 +25,19 @@ const TABS = [
     "View all",
 ];
 
-export function HomeCategoryTabs() {
-    const [active, setActive] = useState(TABS[0]);
+export function HomeCategoryTabs({
+    active: controlledActive,
+    onChange,
+}: {
+    active?: string;
+    onChange?: (tab: string) => void;
+} = {}) {
+    const [uncontrolled, setUncontrolled] = useState(HOME_TABS[0]);
+    const active = controlledActive ?? uncontrolled;
+    const setActive = (tab: string) => {
+        if (onChange) onChange(tab);
+        else setUncontrolled(tab);
+    };
     // "When available": each arrow shows only while there is actually overflow
     // that way, so neither appears when every label already fits. Shared with
     // the rail's tabs, which need the same behaviour at a different size.
@@ -40,7 +51,7 @@ export function HomeCategoryTabs() {
                 ref={stripRef}
                 className="hidden-scrollbar flex items-center gap-2 overflow-x-auto scroll-smooth"
             >
-                {TABS.map((tab) => (
+                {HOME_TABS.map((tab) => (
                     <button
                         key={tab}
                         type="button"

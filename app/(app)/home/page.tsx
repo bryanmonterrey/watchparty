@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { HomeCategoryTabs } from "@/components/home/home-category-tabs";
+import { HomeCategoryPanel } from "@/components/home/home-category-panel";
 import { HomeRailTabs } from "@/components/home/home-rail-tabs";
 import { HomeFeedProvider } from "@/components/home/home-feed-context";
 import { HomeHero } from "@/components/home/home-hero";
@@ -80,17 +80,13 @@ export default function AppHome() {
                     <HomeHero />
                 </div>
 
-                {/* Category tabs, in the gap on bare canvas. Spacing is set per
-                    edge rather than by a column `gap`, because the two sides are
-                    no longer equal: a full gap-8 off the screen above, and half
-                    that to the row below, which the tabs belong to. */}
-                <div className="mt-8 mb-2">
-                    <HomeCategoryTabs />
-                </div>
-
-                {/* Everything under the tabs: the fill starts over here and
-                    runs to the bottom of the column. */}
-                <div className="flex-1 bg-sidebar-hover/25" />
+                {/* Category tabs plus the selected tab's content, in the gap on
+                    bare canvas. Spacing is set per edge rather than by a column
+                    `gap`, because the two sides are no longer equal: a full
+                    gap-8 off the screen above, and half that to the row below,
+                    which the tabs belong to. The panel owns both, since the
+                    selection has to drive what renders under it. */}
+                <HomeCategoryPanel />
             </main>
 
             {/* Right rail. Its tab row leads with the icon — the icon is the

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BidirectionalList, { type BidirectionalListRef } from "broad-infinite-list/react";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUp02Icon, ArrowLeftDoubleIcon } from "@hugeicons/core-free-icons";
+import { ArrowUp02Icon, ArrowLeftDoubleIcon, AtIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -65,7 +65,7 @@ function dedupeNewestFirst(items: AlertEvent[]): AlertEvent[] {
     return out.sort((a, b) => timeOf(b) - timeOf(a) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
 }
 
-type RailTab = "alerts" | "followers";
+type RailTab = "alerts" | "followers" | "mentions";
 
 export function AlertsRail({ className, onCollapse }: { className?: string; onCollapse?: () => void }) {
     const [filters, setFilters] = useState<AlertFilters>(DEFAULT_FILTERS);
@@ -74,7 +74,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
     // kept out of AlertFilters so it never shows up in the filter summary or
     // lights the filter button's "something is set" dot.
     const filterInput = useMemo(
-        () => ({ ...filtersToInput(filters), ...(tab === "followers" ? { following: true } : {}) }),
+        () => ({ ...filtersToInput(filters), ...(tab === "alerts" ? {} : { scope: tab === "followers" ? "following" as const : "mentions" as const }) }),
         [filters, tab],
     );
     const utils = trpc.useUtils();
@@ -343,7 +343,10 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
             {/* Header: tabs left, controls right. Same treatment as the home
                 right rail's tabs — colour alone carries the active state. */}
-            <div className="flex shrink-0 items-center gap-1 px-2">
+            {/* Mentions is an ICON tab, the same way the right rail's star is a
+                tab rather than a heading — and every icon in this row matches
+                that star's size-6 so the header reads as one set of controls. */}
+            <div className="flex shrink-0 items-center px-2">
                 {(["alerts", "followers"] as const).map((t) => (
                     <button
                         key={t}
@@ -351,24 +354,36 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         onClick={() => switchTab(t)}
                         aria-pressed={tab === t}
                         className={cn(
-                            "cursor-pointer px-1 py-0.5 text-lg font-semibold tracking-tight transition-colors",
+                            "cursor-pointer whitespace-nowrap px-1.5 py-1.5 text-lg font-semibold tracking-tight transition-colors",
                             tab === t ? "text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
                         {t}
                     </button>
                 ))}
+                <button
+                    type="button"
+                    onClick={() => switchTab("mentions")}
+                    aria-pressed={tab === "mentions"}
+                    aria-label="mentions"
+                    className={cn(
+                        "flex cursor-pointer items-center px-1.5 py-1.5 transition-colors",
+                        tab === "mentions" ? "text-white" : "text-zinc-500 hover:text-white",
+                    )}
+                >
+                    <HugeiconsIcon icon={AtIcon} className="size-6" strokeWidth={2} />
+                </button>
 
-                <div className="ml-auto flex items-center gap-0.5">
+                <div className="ml-auto flex items-center">
                     <AlertFiltersButton filters={filters} onChange={applyFilters} coverage={coverage} />
                     {onCollapse && (
                         <button
                             type="button"
                             onClick={onCollapse}
                             aria-label="collapse alerts rail"
-                            className="flex size-7 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:text-white"
+                            className="flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
                         >
-                            <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-4" strokeWidth={2} />
+                            <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-6" strokeWidth={2} />
                         </button>
                     )}
                 </div>
@@ -423,9 +438,17 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                     <AlertListSkeleton />
                 ) : feedItems.length === 0 ? (
                     <div className="px-3 py-10 text-center">
-                        <p className="text-[13px] font-bold text-zinc-400">no alerts yet</p>
+                        <p className="text-[13px] font-bold text-zinc-400">
+                            {tab === "mentions" ? "no mentions yet" : tab === "followers" ? "nothing from your follows" : "no alerts yet"}
+                        </p>
                         <p className="mt-1 text-[12px] text-zinc-600">
-                            {summary ? "nothing matches these filters." : "trader clusters, callouts and predictions land here."}
+                            {summary
+                                ? "nothing matches these filters."
+                                : tab === "mentions"
+                                  ? "alerts on your coins and your trades land here."
+                                  : tab === "followers"
+                                    ? "activity from accounts you follow lands here."
+                                    : "trader clusters, callouts and predictions land here."}
                         </p>
                     </div>
                 ) : (

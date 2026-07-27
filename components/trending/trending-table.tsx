@@ -55,12 +55,27 @@ const PAGE = 50;
 // drift apart. Progressive disclosure by width rather than a horizontal
 // scrollbar: the board should stay readable in a centre column, not demand the
 // full viewport.
+//
+// CONTAINER queries, not viewport ones. This board renders inside home's centre
+// column, which is narrower than the window by both rails — `lg:` there would
+// measure width this component doesn't own and reveal columns that then
+// overflow. The component declares its own `@container` (see the wrapper), so
+// it adapts to whatever column hosts it and stays correct if it's remounted
+// somewhere else.
+//
+// Hidden cells occupy no grid track, so the visible cell count has to match the
+// track count at EVERY step — keep these in sync with the per-cell
+// hidden/@block classes below.
 const GRID =
     "grid items-center gap-3 " +
+    // # · coin · price · change
     "grid-cols-[28px_minmax(0,1fr)_92px_76px] " +
-    "md:grid-cols-[28px_minmax(0,1fr)_92px_76px_92px] " +
-    "lg:grid-cols-[28px_minmax(0,1fr)_92px_64px_76px_92px_92px] " +
-    "xl:grid-cols-[28px_minmax(0,1fr)_92px_64px_76px_76px_92px_92px_100px]";
+    // + volume
+    "@2xl:grid-cols-[28px_minmax(0,1fr)_92px_76px_92px] " +
+    // + age, liquidity
+    "@4xl:grid-cols-[28px_minmax(0,1fr)_92px_64px_76px_92px_92px] " +
+    // + txns, activity
+    "@6xl:grid-cols-[28px_minmax(0,1fr)_92px_64px_76px_76px_92px_92px_100px]";
 
 function pctFor(row: TrendingRow, tf: Timeframe): number | null {
     return tf === "5m" ? row.priceChange5m : tf === "1h" ? row.priceChange1h : tf === "6h" ? row.priceChange6h : row.priceChange24h;
@@ -117,17 +132,17 @@ function TrendingRowView({ row, index, timeframe }: { row: TrendingRow; index: n
 
             <span className="text-right text-[13px] font-bold tabular-nums text-white">{tokenPrice(row.priceUsd)}</span>
 
-            <span className="hidden text-right text-[13px] tabular-nums text-zinc-500 lg:block">{age(row.poolCreatedAt)}</span>
+            <span className="hidden text-right text-[13px] tabular-nums text-zinc-500 @4xl:block">{age(row.poolCreatedAt)}</span>
 
             <span className={cn("text-right text-[13px] font-bold tabular-nums", changeTone(pct))}>{percent(pct)}</span>
 
-            <span className="hidden text-right text-[13px] tabular-nums text-zinc-400 xl:block">{compactCount(row.txns24h)}</span>
+            <span className="hidden text-right text-[13px] tabular-nums text-zinc-400 @6xl:block">{compactCount(row.txns24h)}</span>
 
-            <span className="hidden text-right text-[13px] font-semibold tabular-nums text-zinc-300 md:block">{compactUsd(vol)}</span>
+            <span className="hidden text-right text-[13px] font-semibold tabular-nums text-zinc-300 @2xl:block">{compactUsd(vol)}</span>
 
-            <span className="hidden text-right text-[13px] tabular-nums text-zinc-400 lg:block">{compactUsd(row.liquidityUsd)}</span>
+            <span className="hidden text-right text-[13px] tabular-nums text-zinc-400 @4xl:block">{compactUsd(row.liquidityUsd)}</span>
 
-            <span className="hidden min-w-0 justify-end xl:flex">
+            <span className="hidden min-w-0 justify-end @6xl:flex">
                 <ActivityCell activity={row.activity} />
             </span>
         </div>
@@ -168,17 +183,26 @@ function RowSkeleton({ index, count }: { index: number; count: number }) {
                 </span>
             </span>
             <span style={pulse} className="ml-auto h-3 w-14 rounded-full shimmer-skeleton" />
-            <span style={pulse} className="ml-auto hidden h-3 w-8 rounded-full shimmer-skeleton lg:block" />
+            <span style={pulse} className="ml-auto hidden h-3 w-8 rounded-full shimmer-skeleton @4xl:block" />
             <span style={pulse} className="ml-auto h-3 w-12 rounded-full shimmer-skeleton" />
-            <span style={pulse} className="ml-auto hidden h-3 w-10 rounded-full shimmer-skeleton xl:block" />
-            <span style={pulse} className="ml-auto hidden h-3 w-14 rounded-full shimmer-skeleton md:block" />
-            <span style={pulse} className="ml-auto hidden h-3 w-14 rounded-full shimmer-skeleton lg:block" />
-            <span style={pulse} className="ml-auto hidden h-3 w-20 rounded-full shimmer-skeleton xl:block" />
+            <span style={pulse} className="ml-auto hidden h-3 w-10 rounded-full shimmer-skeleton @6xl:block" />
+            <span style={pulse} className="ml-auto hidden h-3 w-14 rounded-full shimmer-skeleton @2xl:block" />
+            <span style={pulse} className="ml-auto hidden h-3 w-14 rounded-full shimmer-skeleton @4xl:block" />
+            <span style={pulse} className="ml-auto hidden h-3 w-20 rounded-full shimmer-skeleton @6xl:block" />
         </div>
     );
 }
 
-export function TrendingTable({ className }: { className?: string }) {
+export function TrendingTable({
+    className,
+    /** Off when the board is mounted under something that already names it —
+     *  the home "Trending Coins" tab, for instance, where a second "trending"
+     *  heading is just noise. */
+    showHeader = true,
+}: {
+    className?: string;
+    showHeader?: boolean;
+}) {
     const [sort, setSort] = useState<SortKey>("trending");
     const [timeframe, setTimeframe] = useState<Timeframe>("24h");
     const [chains, setChains] = useState<string[] | null>(null); // null = every chain
@@ -227,13 +251,16 @@ export function TrendingTable({ className }: { className?: string }) {
         on ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} /> : undefined;
 
     return (
-        <div className={cn("flex flex-col gap-4", className)}>
+        // Declares its own container so the grid above measures THIS column.
+        <div className={cn("@container flex flex-col gap-4", className)}>
             {/* Summary strip — the "overall atmosphere" read, before any row. */}
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-1">
-                <span className="flex items-center gap-2">
-                    <HugeiconsIcon icon={FireIcon} className="size-5 text-white" strokeWidth={2} />
-                    <h1 className="text-2xl font-semibold tracking-tight text-white">trending</h1>
-                </span>
+                {showHeader && (
+                    <span className="flex items-center gap-2">
+                        <HugeiconsIcon icon={FireIcon} className="size-5 text-white" strokeWidth={2} />
+                        <h1 className="text-2xl font-semibold tracking-tight text-white">trending</h1>
+                    </span>
+                )}
                 {stats && stats.coins > 0 && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
                         <span className="text-zinc-500">
@@ -254,9 +281,13 @@ export function TrendingTable({ className }: { className?: string }) {
                 )}
             </div>
 
-            {/* Controls */}
+            {/* Controls. Everything is LEFT-packed and nothing stretches: the
+                app header's wallet/create cluster overlays the top-right of any
+                page, so a control that drifts over there ends up underneath it.
+                (An earlier pass had the search on flex-1, which pushed the chain
+                pill into exactly that corner.) */}
             <div className="flex flex-wrap items-center gap-2 px-1">
-                <label className="relative flex h-11 min-w-0 flex-1 items-center sm:max-w-[280px]">
+                <label className="relative flex h-11 w-full min-w-0 items-center @lg:w-[240px]">
                     <HugeiconsIcon
                         icon={Search01Icon}
                         className="pointer-events-none absolute left-3.5 size-4 text-zinc-500"
@@ -355,12 +386,12 @@ export function TrendingTable({ className }: { className?: string }) {
                         <span>#</span>
                         <span>coin</span>
                         <span className="text-right">price</span>
-                        <span className="hidden text-right lg:block">age</span>
+                        <span className="hidden text-right @4xl:block">age</span>
                         <span className="text-right">{timeframe}</span>
-                        <span className="hidden text-right xl:block">txns</span>
-                        <span className="hidden text-right md:block">volume</span>
-                        <span className="hidden text-right lg:block">liquidity</span>
-                        <span className="hidden text-right xl:block">activity</span>
+                        <span className="hidden text-right @6xl:block">txns</span>
+                        <span className="hidden text-right @2xl:block">volume</span>
+                        <span className="hidden text-right @4xl:block">liquidity</span>
+                        <span className="hidden text-right @6xl:block">activity</span>
                     </div>
 
                     {isError ? (
