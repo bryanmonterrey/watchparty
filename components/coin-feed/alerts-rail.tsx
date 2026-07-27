@@ -65,7 +65,9 @@ function dedupeNewestFirst(items: AlertEvent[]): AlertEvent[] {
     return out.sort((a, b) => timeOf(b) - timeOf(a) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
 }
 
-type RailTab = "alerts" | "followers" | "mentions";
+// Tab names match the router's `scope` values exactly, so the query input is a
+// pass-through rather than a mapping.
+type RailTab = "alerts" | "following" | "mentions";
 
 export function AlertsRail({ className, onCollapse }: { className?: string; onCollapse?: () => void }) {
     const [filters, setFilters] = useState<AlertFilters>(DEFAULT_FILTERS);
@@ -74,7 +76,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
     // kept out of AlertFilters so it never shows up in the filter summary or
     // lights the filter button's "something is set" dot.
     const filterInput = useMemo(
-        () => ({ ...filtersToInput(filters), ...(tab === "alerts" ? {} : { scope: tab === "followers" ? "following" as const : "mentions" as const }) }),
+        () => ({ ...filtersToInput(filters), ...(tab === "alerts" ? {} : { scope: tab }) }),
         [filters, tab],
     );
     const utils = trpc.useUtils();
@@ -347,7 +349,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 tab rather than a heading — and every icon in this row matches
                 that star's size-6 so the header reads as one set of controls. */}
             <div className="flex shrink-0 items-center px-2">
-                {(["alerts", "followers"] as const).map((t) => (
+                {(["alerts", "following"] as const).map((t) => (
                     <button
                         key={t}
                         type="button"
@@ -439,14 +441,14 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 ) : feedItems.length === 0 ? (
                     <div className="px-3 py-10 text-center">
                         <p className="text-[13px] font-bold text-zinc-400">
-                            {tab === "mentions" ? "no mentions yet" : tab === "followers" ? "nothing from your follows" : "no alerts yet"}
+                            {tab === "mentions" ? "no mentions yet" : tab === "following" ? "nothing from your follows" : "no alerts yet"}
                         </p>
                         <p className="mt-1 text-[12px] text-zinc-600">
                             {summary
                                 ? "nothing matches these filters."
                                 : tab === "mentions"
                                   ? "alerts on your coins and your trades land here."
-                                  : tab === "followers"
+                                  : tab === "following"
                                     ? "activity from accounts you follow lands here."
                                     : "trader clusters, callouts and predictions land here."}
                         </p>
