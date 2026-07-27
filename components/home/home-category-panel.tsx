@@ -19,7 +19,7 @@ export function HomeCategoryPanel() {
 
     return (
         <>
-            <div className="mt-8 mb-2">
+            <div className="mb-2">
                 <HomeCategoryTabs active={active} onChange={setActive} />
             </div>
 

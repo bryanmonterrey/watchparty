@@ -72,7 +72,7 @@ export function HomeCenterColumn() {
                 no matter the DOM order — so the hero, including the ambient
                 glow that deliberately spills past its edges, was covering this
                 button entirely. */}
-            <div className="relative z-10 flex justify-end pt-1.5 pr-1">
+            <div className="relative z-10 flex justify-end pr-1">
                 <button
                     type="button"
                     onClick={toggle}
