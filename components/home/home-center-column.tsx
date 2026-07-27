@@ -65,14 +65,20 @@ export function HomeCenterColumn() {
             </div>
 
             {/* Focus toggle, tucked under the screen on the right. Down folds
-                the tabs away and gives the screen the room; up puts them back. */}
-            <div className="flex justify-end pt-1 pr-1">
+                the tabs away and gives the screen the room; up puts them back.
+
+                relative z-10 is load-bearing: the screen above is `relative`,
+                and a positioned element paints above a non-positioned sibling
+                no matter the DOM order — so the hero, including the ambient
+                glow that deliberately spills past its edges, was covering this
+                button entirely. */}
+            <div className="relative z-10 flex justify-end pt-1.5 pr-1">
                 <button
                     type="button"
                     onClick={toggle}
                     aria-expanded={!focus}
                     aria-label={focus ? "show categories" : "hide categories"}
-                    className="flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
+                    className="flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-400 transition-colors hover:text-white"
                 >
                     <HugeiconsIcon
                         icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}
