@@ -90,9 +90,18 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         hasNextPage,
         isLoading,
         isError,
+        refetch,
     } = trpc.coinFeed.list.useInfiniteQuery(
         { ...filterInput, limit: PAGE_SIZE },
-        { getNextPageParam: (last) => last.nextCursor, staleTime: 30_000 },
+        {
+            getNextPageParam: (last) => last.nextCursor,
+            staleTime: 30_000,
+            // A rail that sits open for hours will hit the occasional dropped
+            // request; back off and recover rather than surfacing the first
+            // blip. Errors no longer blank the feed either — see the render.
+            retry: 3,
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15_000),
+        },
     );
 
     const { data: coverage } = trpc.coinFeed.coverage.useQuery(undefined, { staleTime: 300_000 });
@@ -468,8 +477,27 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
             {/* The list. min-h-0 is what lets it actually scroll inside the
                 sticky rail instead of growing the column. */}
             <div className="mt-1 flex min-h-0 flex-1 flex-col">
-                {isError ? (
-                    <p className="px-2 py-10 text-center text-[13px] text-zinc-500">couldn&apos;t load alerts.</p>
+                {/* The error state is for having NOTHING to show — not merely
+                    for the query being in an error state.
+
+                    An infinite query goes to isError when ANY fetch fails,
+                    including a fetchNextPage deep into pagination, and its
+                    cached pages stay intact throughout. Checking isError first
+                    therefore threw away a full, working feed the moment one
+                    page request failed — and onLoadMore fires unprompted (the
+                    700px threshold prefetches in a rail this short), so it
+                    happened while just sitting there. */}
+                {isError && windowItems.length === 0 ? (
+                    <div className="px-3 py-10 text-center">
+                        <p className="text-[13px] font-bold text-zinc-400">couldn&apos;t load alerts</p>
+                        <button
+                            type="button"
+                            onClick={() => void refetch()}
+                            className="mt-2 cursor-pointer rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] font-bold text-zinc-300 transition-colors hover:text-white"
+                        >
+                            try again
+                        </button>
+                    </div>
                 ) : isLoading && !populated.current ? (
                     <AlertListSkeleton />
                 ) : windowItems.length === 0 ? (
@@ -499,7 +527,11 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         const hasPrevious = topIdx > establishedTopIdx(full);
                         const atLoadedEnd =
                             !!bottom && full.length > 0 && keyOf(full[full.length - 1]) === keyOf(bottom);
-                        const hasNext = !atLoadedEnd || !!hasNextPage;
+                        // Don't ask for another page while the query is failing
+                        // — the list would call onLoadMore on a loop against a
+                        // fetch that keeps erroring. Local slicing from `full`
+                        // still works, so scrolling stays alive.
+                        const hasNext = !atLoadedEnd || (!!hasNextPage && !isError);
 
                         return (
                             <BidirectionalList<AlertEvent>
@@ -525,6 +557,18 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                             />
                         );
                     })()
+                )}
+
+                {/* Errored but still holding alerts: say so quietly at the
+                    bottom instead of replacing the feed. */}
+                {isError && windowItems.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => void refetch()}
+                        className="mx-1 mb-1 shrink-0 cursor-pointer rounded-full py-1.5 text-[11px] font-semibold text-zinc-600 transition-colors hover:text-zinc-300"
+                    >
+                        couldn&apos;t refresh · retry
+                    </button>
                 )}
             </div>
         </div>
