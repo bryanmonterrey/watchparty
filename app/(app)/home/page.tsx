@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { HomeCategoryPanel } from "@/components/home/home-category-panel";
+import { HomeCenterColumn } from "@/components/home/home-center-column";
 import { HomeRailTabs } from "@/components/home/home-rail-tabs";
 import { HomeFeedProvider } from "@/components/home/home-feed-context";
-import { HomeHero } from "@/components/home/home-hero";
 import { HomeRailVideos } from "@/components/home/home-rail-videos";
 import { HomeLeftRail } from "@/components/home/home-left-rail";
 
@@ -68,25 +67,11 @@ export default function AppHome() {
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
             <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-4 xl:mr-1.25">
-                {/* The screen — 16:9, holding the featured video. The slot owns
-                    the aspect ratio; the player just fills it.
-
-                    Deliberately NOT overflow-hidden: the hero runs the watch
-                    page's ambient glow, which paints a blurred copy of the
-                    frame past the video's edges. Any clipping ancestor between
-                    the video and where the glow should fade removes the effect
-                    entirely. */}
-                <div className="relative aspect-video w-full bg-sidebar-hover/25">
-                    <HomeHero />
-                </div>
-
-                {/* Category tabs plus the selected tab's content, in the gap on
-                    bare canvas. Spacing is set per edge rather than by a column
-                    `gap`, because the two sides are no longer equal: a full
-                    gap-8 off the screen above, and half that to the row below,
-                    which the tabs belong to. The panel owns both, since the
-                    selection has to drive what renders under it. */}
-                <HomeCategoryPanel />
+                {/* The screen, the focus toggle under it, and the category tabs
+                    + their content. One client component because the toggle
+                    collapses the tabs AND resizes the screen, so the state and
+                    everything it changes have to share a boundary. */}
+                <HomeCenterColumn />
             </main>
 
             {/* Right rail. Its tab row leads with the icon — the icon is the
