@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FilterIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { MenuTwoLineIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { GooDropdown, gooMenuItem, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { COIN_NETWORKS, networkLabel } from "@/lib/coin-feed/networks";
@@ -149,14 +149,19 @@ export function AlertFiltersButton({
             fill={GOO_PANEL_FILL}
             maxPanelHeight={420}
             triggerAriaLabel="filter alerts"
+            // Icon-only, and the SAME two-line mark the trade table's control
+            // uses — the rail has no room for a label, and a second filter
+            // idiom would just be two things meaning one thing.
             triggerClassName={cn(
-                "flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-2 text-[13px] font-semibold transition-colors",
+                "relative flex size-7 cursor-pointer items-center justify-center rounded-full transition-colors",
                 active ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white",
             )}
             trigger={
                 <>
-                    <HugeiconsIcon icon={FilterIcon} className="size-3.5" strokeWidth={2} />
-                    filters
+                    <HugeiconsIcon icon={MenuTwoLineIcon} className="size-4" strokeWidth={2} />
+                    {/* Dot instead of a count: which filters are on is the
+                        panel's job; the trigger only says "something is set". */}
+                    {active && <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-jewel" />}
                 </>
             }
             items={items}

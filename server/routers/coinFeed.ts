@@ -10,6 +10,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { COIN_FEED_KINDS, coinFeedEvents, trackedTokens } from "@/db/schema/content/coin-feed";
+import { follows } from "@/db/schema/content/follow";
 import { and, desc, gt, inArray, or, sql, type SQL } from "drizzle-orm";
 
 /** Cursor is `${iso}|${id}` — both halves of the ORDER BY, so it's total. */
@@ -31,14 +32,40 @@ const filterInput = z.object({
     minUsd: z.number().min(0).optional(),
     /** Only coins launched on watchparty. */
     watchpartyOnly: z.boolean().optional(),
+    /** The rail's "followers" tab — only alerts involving accounts you follow. */
+    following: z.boolean().optional(),
 });
 
 type FilterInput = z.infer<typeof filterInput>;
 
 /** Shared WHERE builder so `list` and `newCount` can never drift — a pill that
- *  counts rows the list would filter out is the classic bug here. */
-function buildFilters(input: FilterInput): SQL[] {
+ *  counts rows the list would filter out is the classic bug here.
+ *
+ *  `viewerId` is the signed-in user (null when logged out), needed only by the
+ *  `following` filter. */
+function buildFilters(input: FilterInput, viewerId: string | null): SQL[] {
     const where: SQL[] = [];
+
+    if (input.following) {
+        // Logged out, "following" can only mean nothing.
+        if (!viewerId) {
+            where.push(sql`false`);
+        } else {
+            // An alert "involves" someone you follow if they're the actor (a
+            // callout / a market they opened) OR one of the wallets in a
+            // cluster resolved to their account. Subqueries rather than
+            // loading the follow list — it can be large, and Postgres already
+            // has idx_follows_follower for it.
+            const followed = sql`(SELECT f."followingId" FROM ${follows} f WHERE f."followerId" = ${viewerId})`;
+            where.push(sql`(
+                ${coinFeedEvents.actorId} IN ${followed}
+                OR EXISTS (
+                    SELECT 1 FROM jsonb_array_elements(coalesce(${coinFeedEvents.traders}, '[]'::jsonb)) AS tr
+                    WHERE tr->>'userId' IN ${followed}
+                )
+            )`);
+        }
+    }
     if (input.kinds?.length) where.push(inArray(coinFeedEvents.kind, input.kinds));
     if (input.networks?.length) where.push(inArray(coinFeedEvents.network, input.networks));
     if (input.minTraders != null && input.minTraders > 0) {
@@ -87,8 +114,8 @@ export const coinFeedRouter = router({
                 cursor: z.string().max(120).nullish(),
             }),
         )
-        .query(async ({ input }) => {
-            const where = buildFilters(input);
+        .query(async ({ input, ctx }) => {
+            const where = buildFilters(input, ctx.user?.id ?? null);
 
             if (input.cursor) {
                 const c = decodeCursor(input.cursor);
@@ -122,11 +149,11 @@ export const coinFeedRouter = router({
      *  Takes the same filters as `list` so the count matches what would show. */
     newCount: publicProcedure
         .input(filterInput.extend({ since: z.string().datetime() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
             const since = new Date(input.since);
             if (Number.isNaN(since.getTime())) return { count: 0 };
 
-            const where = buildFilters(input);
+            const where = buildFilters(input, ctx.user?.id ?? null);
             where.push(gt(coinFeedEvents.occurredAt, since));
 
             const [row] = await db

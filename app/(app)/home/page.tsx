@@ -4,7 +4,7 @@ import { HomeRailTabs } from "@/components/home/home-rail-tabs";
 import { HomeFeedProvider } from "@/components/home/home-feed-context";
 import { HomeHero } from "@/components/home/home-hero";
 import { HomeRailVideos } from "@/components/home/home-rail-videos";
-import { AlertsRail } from "@/components/coin-feed/alerts-rail";
+import { HomeLeftRail } from "@/components/home/home-left-rail";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row.
@@ -33,7 +33,8 @@ const RAIL_INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header
 // `gap-*` utilities on one element resolve by stylesheet order, not by which
 // one is written last).
 const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-4 pr-1`;
-const RAIL_INNER_LEFT = `${RAIL_INNER} pl-1`;
+// The left rail carries its own copy of this (it owns its <aside> so it can
+// collapse) — see components/home/home-left-rail.tsx.
 
 export default function AppHome() {
     // Left rail from lg, right rail from xl, centre column taking the rest.
@@ -50,12 +51,10 @@ export default function AppHome() {
         <div className="relative flex min-h-screen w-full">
             {/* Left rail: the coin alert feed. It scrolls INSIDE the sticky
                 column (min-h-0 on the rail is what allows that), so the page's
-                own scroll is unaffected by however many alerts have landed. */}
-            <aside className="hidden w-70 shrink-0 lg:block">
-                <div className={RAIL_INNER_LEFT}>
-                    <AlertsRail />
-                </div>
-            </aside>
+                own scroll is unaffected by however many alerts have landed.
+                Owns its own <aside> because it's collapsible — see the
+                component for why that has to be a client boundary. */}
+            <HomeLeftRail />
 
             {/* Centre column. Its fill is NOT one continuous slab: the screen
                 is its own panel, then a gap-8 of bare app canvas, then the fill

@@ -1,0 +1,67 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
+import { AlertsRail } from "@/components/coin-feed/alerts-rail";
+
+// Home's left column. This exists as a client component purely to own the
+// COLLAPSED state: the page itself is a server component, and the width lives
+// on the <aside>, so the toggle and the element it resizes have to sit in the
+// same client boundary. Rendering the aside here (rather than passing a
+// callback up) keeps that in one place.
+//
+// Collapsed is persisted — a rail you shut should stay shut across navigations
+// and reloads, or the button feels like it did nothing.
+
+const STORAGE_KEY = "wp:coin-alerts:collapsed";
+
+// Mirrors the right rail's RAIL_INNER: the rails pin at the scroller's top, so
+// their own padding is what clears the fixed header.
+const INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header-height)+4px)]";
+
+export function HomeLeftRail() {
+    const [collapsed, setCollapsed] = useState(false);
+
+    // After mount, never during render — the app shell server-renders, and
+    // reading localStorage in render would be a hydration mismatch.
+    useEffect(() => {
+        try {
+            setCollapsed(window.localStorage.getItem(STORAGE_KEY) === "1");
+        } catch {
+            // storage disabled — expanded is the right default
+        }
+    }, []);
+
+    const set = (next: boolean) => {
+        setCollapsed(next);
+        try {
+            window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+        } catch { /* not worth failing the toggle over */ }
+    };
+
+    if (collapsed) {
+        return (
+            <aside className="hidden w-11 shrink-0 lg:block">
+                <div className={INNER}>
+                    <button
+                        type="button"
+                        onClick={() => set(false)}
+                        aria-label="expand alerts rail"
+                        className="mx-auto flex size-8 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-white/5 hover:text-white"
+                    >
+                        <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-4" strokeWidth={2} />
+                    </button>
+                </div>
+            </aside>
+        );
+    }
+
+    return (
+        <aside className="hidden w-70 shrink-0 lg:block">
+            <div className={`${INNER} pl-1`}>
+                <AlertsRail onCollapse={() => set(true)} />
+            </div>
+        </aside>
+    );
+}

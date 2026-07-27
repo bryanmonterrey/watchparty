@@ -4,14 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BidirectionalList, { type BidirectionalListRef } from "broad-infinite-list/react";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Notification03Icon, ArrowUp02Icon, VolumeHighIcon, VolumeMute02Icon } from "@hugeicons/core-free-icons";
+import { ArrowUp02Icon, ArrowLeftDoubleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { AlertRow } from "./alert-row";
 import { AlertListSkeleton } from "./alert-row-skeleton";
 import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
-import { useAlertSound } from "./use-alert-sound";
 import { DEFAULT_FILTERS, filtersToInput, type AlertEvent, type AlertFilters } from "./types";
 
 // The coin alert rail — /home's left column.
@@ -66,10 +65,18 @@ function dedupeNewestFirst(items: AlertEvent[]): AlertEvent[] {
     return out.sort((a, b) => timeOf(b) - timeOf(a) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
 }
 
-export function AlertsRail({ className }: { className?: string }) {
+type RailTab = "alerts" | "followers";
+
+export function AlertsRail({ className, onCollapse }: { className?: string; onCollapse?: () => void }) {
     const [filters, setFilters] = useState<AlertFilters>(DEFAULT_FILTERS);
-    const filterInput = useMemo(() => filtersToInput(filters), [filters]);
-    const { enabled: soundOn, toggle: toggleSound, play } = useAlertSound();
+    const [tab, setTab] = useState<RailTab>("alerts");
+    // The tab is a scope, not a filter — it rides the same query input but is
+    // kept out of AlertFilters so it never shows up in the filter summary or
+    // lights the filter button's "something is set" dot.
+    const filterInput = useMemo(
+        () => ({ ...filtersToInput(filters), ...(tab === "followers" ? { following: true } : {}) }),
+        [filters, tab],
+    );
     const utils = trpc.useUtils();
 
     const {
@@ -240,10 +247,8 @@ export function AlertsRail({ className }: { className?: string }) {
                 .on(
                     "postgres_changes",
                     { event: "INSERT", schema: "public", table: "coin_feed_events" },
-                    (payload: { new?: Record<string, unknown> }) => {
+                    () => {
                         void utils.coinFeed.newCount.invalidate();
-                        const kind = String(payload.new?.kind ?? "");
-                        play(kind.endsWith("_sell") ? "down" : "up");
                     },
                 )
                 .subscribe();
@@ -252,10 +257,14 @@ export function AlertsRail({ className }: { className?: string }) {
             cancelled = true;
             if (channel) getRealtimeClient().removeChannel(channel);
         };
-    }, [utils, play]);
+    }, [utils]);
 
-    // ── Filter changes reset the window ──────────────────────────────────────
-    const applyFilters = useCallback((next: AlertFilters) => {
+    // ── Changing the dataset resets the window ───────────────────────────────
+    // Both the filter panel and the tab switch a different set of rows in, and
+    // the sliding window holds state (full dataset, pinned top, cursor anchor)
+    // that only makes sense for the set it was built from — reusing it would
+    // splice two feeds together.
+    const resetWindow = useCallback(() => {
         fullItemsRef.current = [];
         establishedTopKey.current = null;
         populated.current = false;
@@ -263,8 +272,19 @@ export function AlertsRail({ className }: { className?: string }) {
         setNewCount(0);
         setListItems([]);
         setListKey((k) => k + 1);
-        setFilters(next);
     }, []);
+
+    const applyFilters = useCallback((next: AlertFilters) => {
+        resetWindow();
+        setFilters(next);
+    }, [resetWindow]);
+
+    const switchTab = useCallback((next: RailTab) => {
+        setTab((prev) => {
+            if (prev !== next) resetWindow();
+            return next;
+        });
+    }, [resetWindow]);
 
     // ── onLoadMore ───────────────────────────────────────────────────────────
     const onLoadMore = useCallback(
@@ -321,33 +341,40 @@ export function AlertsRail({ className }: { className?: string }) {
     // ── Render ───────────────────────────────────────────────────────────────
     return (
         <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-            {/* Header */}
-            <div className="flex shrink-0 items-center gap-2 px-2">
-                <HugeiconsIcon icon={Notification03Icon} className="size-4.5 text-white" strokeWidth={2} />
-                <h2 className="text-lg font-semibold tracking-tight text-white">alerts</h2>
-                <button
-                    type="button"
-                    onClick={toggleSound}
-                    aria-pressed={soundOn}
-                    aria-label={soundOn ? "mute alert sounds" : "unmute alert sounds"}
-                    className={cn(
-                        "ml-auto flex size-7 cursor-pointer items-center justify-center rounded-full transition-colors",
-                        soundOn ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white",
+            {/* Header: tabs left, controls right. Same treatment as the home
+                right rail's tabs — colour alone carries the active state. */}
+            <div className="flex shrink-0 items-center gap-1 px-2">
+                {(["alerts", "followers"] as const).map((t) => (
+                    <button
+                        key={t}
+                        type="button"
+                        onClick={() => switchTab(t)}
+                        aria-pressed={tab === t}
+                        className={cn(
+                            "cursor-pointer px-1 py-0.5 text-lg font-semibold tracking-tight transition-colors",
+                            tab === t ? "text-white" : "text-zinc-500 hover:text-white",
+                        )}
+                    >
+                        {t}
+                    </button>
+                ))}
+
+                <div className="ml-auto flex items-center gap-0.5">
+                    <AlertFiltersButton filters={filters} onChange={applyFilters} coverage={coverage} />
+                    {onCollapse && (
+                        <button
+                            type="button"
+                            onClick={onCollapse}
+                            aria-label="collapse alerts rail"
+                            className="flex size-7 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-4" strokeWidth={2} />
+                        </button>
                     )}
-                >
-                    <HugeiconsIcon
-                        icon={soundOn ? VolumeHighIcon : VolumeMute02Icon}
-                        className="size-4"
-                        strokeWidth={2}
-                    />
-                </button>
+                </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex shrink-0 flex-col gap-0.5 px-1 pt-1">
-                <AlertFiltersButton filters={filters} onChange={applyFilters} coverage={coverage} />
-                {summary && <p className="truncate px-2 pb-1 text-[11px] text-zinc-600">{summary}</p>}
-            </div>
+            {summary && <p className="shrink-0 truncate px-2 pt-0.5 text-[11px] text-zinc-600">{summary}</p>}
 
             {/* "n new" pill. h-0 wrapper so it floats over the list instead of
                 pushing it down — a pill that reflows the feed would move the row
