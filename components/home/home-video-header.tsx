@@ -119,7 +119,7 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
     const hasToken = !!tokenSlug && !!video.ticker;
 
     return (
-        <div className={cn("flex min-w-0 items-start gap-3", className)}>
+        <div className={cn("flex min-w-0 py-2.5 items-start gap-3", className)}>
             <Link href={username ? `/${username}` : "#"} className="shrink-0" aria-label={username ?? "creator"}>
                 {/* Always the shared placeholder, never a letter fallback. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}

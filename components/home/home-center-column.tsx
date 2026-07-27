@@ -22,9 +22,15 @@ import { useHomeFeed } from "./home-feed-context";
 const STORAGE_KEY = "wp:home:focus";
 
 // Expanded, the screen takes the viewport below the app header, less the strip
-// the toggle itself occupies. Not 100svh — that would push the toggle off the
-// bottom and there'd be no way back without scrolling.
-const HERO_EXPANDED = "h-[calc(100svh-var(--header-height)-3.5rem)] w-full";
+// under it. Not 100svh — that would push the strip off the bottom and there'd
+// be no way back without scrolling.
+//
+// 6.5rem, not the 3.5rem this reserved when the strip held only the toggle:
+// expanding is exactly when the video header appears, and that's ~4.5rem of
+// avatar/title/meta/token row. Reserving for the tallest case (a coin video,
+// whose token row is the extra line) — a little unused space below the screen
+// is harmless, overflowing the viewport is not.
+const HERO_EXPANDED = "h-[calc(100svh-var(--header-height)-6.5rem)] w-full";
 const HERO_DEFAULT = "aspect-video w-full";
 
 export function HomeCenterColumn() {
@@ -77,20 +83,18 @@ export function HomeCenterColumn() {
                 glow that deliberately spills past its edges, covers anything in
                 this row unless it's lifted out. */}
             <div className="relative z-10 flex items-start gap-2 pl-1 pr-1">
-                {/* The header belongs to the expanded view, so it folds away
-                    with the tabs: collapsed is a clean screen with nothing but
-                    the toggle beside it. It's also what keeps HERO_EXPANDED
-                    honest — that height reserves 3.5rem for this strip, which
-                    fits the toggle alone but not the header's three lines.
+                {/* Expanding swaps what's under the screen: the header appears
+                    and the tabs + their content fold away, so the column reads
+                    as one video and its details rather than a feed.
 
                     Keyed on the video: the header owns like state locally after
                     seeding it from props, which only stays correct if switching
                     videos remounts it. */}
-                {!focus && active && <HomeVideoHeader key={active.id} video={active} className="flex-1" />}
+                {focus && active && <HomeVideoHeader key={active.id} video={active} className="flex-1" />}
 
                 {/* ml-auto pins this right on its own. Nothing else can: the
                     header is what would otherwise push it, and the header is
-                    absent both while the feed loads AND whenever focus is on. */}
+                    absent in the default view and while the feed loads. */}
                 <button
                     type="button"
                     onClick={toggle}
