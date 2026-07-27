@@ -76,7 +76,7 @@ export function HomeCenterColumn() {
                 no matter the DOM order — so the hero, including the ambient
                 glow that deliberately spills past its edges, covers anything in
                 this row unless it's lifted out. */}
-            <div className="relative z-10 flex items-start gap-2 py-2 pl-1 pr-1">
+            <div className="relative z-10 flex items-start gap-2 pl-1 pr-1">
                 {/* Keyed on the video: the header owns like state locally after
                     seeding it from props, which only stays correct if switching
                     videos remounts it. */}
@@ -87,7 +87,7 @@ export function HomeCenterColumn() {
                     onClick={toggle}
                     aria-expanded={!focus}
                     aria-label={focus ? "show categories" : "hide categories"}
-                    className="flex shrink-0 cursor-pointer items-center px-1.5 py-1.5 text-zinc-400 transition-colors hover:text-white"
+                    className="flex shrink-0 cursor-pointer items-center px-1.5 text-zinc-400 transition-colors hover:text-white"
                 >
                     <HugeiconsIcon
                         icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}
