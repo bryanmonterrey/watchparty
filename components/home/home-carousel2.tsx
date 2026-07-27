@@ -23,7 +23,9 @@ import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 // Height-driven: 45svh, with 16:9 setting the width from it. svh (not vh) so
 // the mobile URL bar collapsing doesn't resize it mid-scroll. max-w-full is the
 // backstop — on a tall window 45svh wants more width than the centre column
-// has, and there the column wins and object-cover takes the crop.
+// has, and there the column wins and the box goes narrower than 16:9. The
+// media inside is object-contain, so that never crops the frame; it just adds
+// bars.
 const HERO_BOX = "h-[45svh] aspect-video max-w-full";
 // No padding at all: the hero sits flush in the column's top-left corner, and
 // the only offset above it is the column's own header clearance.
@@ -96,7 +98,9 @@ export function HomeCarousel({
                         <>
                             {v.thumbnailUrl && (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
+                                // Same fit rule as the <video> below — this is
+                                // the same slot when there's no videoUrl.
+                                <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-contain" />
                             )}
                             {chrome && (
                                 <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
@@ -257,7 +261,14 @@ function ActivePanel({ v, chrome = true, ambient = false }: { v: CarouselVideo; 
                 // Required so cross-origin (Supabase Storage) <track> VTT cues
                 // are allowed to load.
                 crossOrigin="anonymous"
-                className="absolute inset-0 size-full object-cover"
+                // contain, NOT cover: the slot is 16:9 but the source often
+                // isn't (square and portrait uploads are common), and cover
+                // zooms until the short edge fills — cropping the sides off a
+                // square video and reading as "why is this so zoomed in".
+                // Contain fits the whole frame and leaves bars, which the
+                // ambient glow then fills with a blurred copy of the frame
+                // rather than dead space.
+                className="absolute inset-0 size-full object-contain"
             >
                 {captionTracks.map((track) => (
                     <track key={track.id} kind="subtitles" src={track.url} srcLang={track.language} label={track.label} />

@@ -199,7 +199,7 @@ export function AppHeader2() {
                     <Button
                       variant="outline"
                       aria-label="Create"
-                      className="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-sidebar-hover/40 hover:bg-soft-gray-10/55 border-sidebar-hover/10 flex h-[52px] w-[52px] p-0 text-flexwhite/80 transition-colors ease-out"
+                      className="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-sidebar-hover-40 hover:bg-soft-gray-10/55 border-sidebar-hover/10 flex h-[52px] w-[52px] p-0 text-flexwhite/80 transition-colors ease-out"
                     >
                       <CreateIcon className="size-6" strokeWidth={2}/>
                     </Button>
