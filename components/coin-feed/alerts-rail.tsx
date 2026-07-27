@@ -46,6 +46,9 @@ const VIEW_COUNT = 100;
 const LOAD_THRESHOLD_PX = 700;
 const PAGE_SIZE = 20; // keep in sync with the `limit` on the list query below
 const POLL_MS = 25_000;
+/** Stand-in for the pill's `since` while the query is disabled. Constant so the
+ *  key never changes before there's a real anchor to use. */
+const SINCE_PLACEHOLDER = "1970-01-01T00:00:00.000Z";
 
 const keyOf = (e: AlertEvent) => e.id;
 const timeOf = (e: AlertEvent) => new Date(e.occurredAt).getTime();
@@ -122,6 +125,23 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         [data],
     );
 
+    /**
+     * What the rail actually renders — and therefore the ONLY correct thing to
+     * test for emptiness.
+     *
+     * `feedItems` is the raw query cache and diverges from the window by
+     * design: the pill merges new alerts straight into `listItems` /
+     * `fullItemsRef` without going through the query, and BidirectionalList
+     * rewrites `listItems` on every trim. Testing `feedItems` for "is this
+     * feed empty" meant any moment the cache was empty or being replaced
+     * flashed the empty state over a window that still had alerts in it —
+     * which is exactly the flicker, and why a new alert could blank the feed.
+     */
+    const windowItems = useMemo(
+        () => dedupeNewestFirst(listItems.length > 0 ? listItems : feedItems.slice(0, VIEW_COUNT)),
+        [listItems, feedItems],
+    );
+
     // ── "at the top?" gate ───────────────────────────────────────────────────
     // Discover watches its composer with an IntersectionObserver; this rail has
     // no composer and BidirectionalList owns the scroll element, so we listen on
@@ -187,7 +207,11 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
     }, [feedItems, isLoading, establishedTopIdx]);
 
     // ── New-alert pill ───────────────────────────────────────────────────────
-    const since = useRef<string | null>(null);
+    // STATE, not a ref, because it feeds a query key. A ref mutates without
+    // re-rendering, so the key would change on whatever unrelated render came
+    // next — and the old `new Date().toISOString()` fallback minted a brand-new
+    // key on EVERY render, which is a query with no cached data each time.
+    const [since, setSince] = useState<string | null>(null);
     const [newCount, setNewCount] = useState(0);
 
     useEffect(() => {
@@ -195,16 +219,19 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         // Anchor on the newest alert we actually hold, not on wall-clock: an
         // event can land with an occurredAt a few seconds in the past (the scan
         // reports on-chain time), and "now" would miss it forever.
-        if (!since.current) {
+        setSince((prev) => {
+            if (prev) return prev;
             const newest = data.pages[0].items[0];
-            since.current = newest ? new Date(newest.occurredAt).toISOString() : new Date().toISOString();
-        }
+            return newest ? new Date(newest.occurredAt).toISOString() : new Date().toISOString();
+        });
     }, [data]);
 
     const { data: newCountData } = trpc.coinFeed.newCount.useQuery(
-        { ...filterInput, since: since.current ?? new Date().toISOString() },
+        // Constant placeholder while disabled — anything derived from `now`
+        // here would churn the key on every render.
+        { ...filterInput, since: since ?? SINCE_PLACEHOLDER },
         {
-            enabled: !!since.current,
+            enabled: !!since,
             refetchInterval: POLL_MS,
             refetchIntervalInBackground: false,
             staleTime: POLL_MS - 5_000,
@@ -216,14 +243,21 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
 
     const loadNewAlerts = useCallback(async () => {
         setNewCount(0);
-        const fresh = await utils.coinFeed.list.fetchInfinite({ ...filterInput, limit: PAGE_SIZE });
-        const incoming = fresh?.pages?.[0]?.items ?? [];
+        // A plain fetch, NOT fetchInfinite: fetchInfinite writes the shared
+        // infinite cache, and without a `pages` option it replaces every loaded
+        // page with a single fresh one — so each pill click silently threw away
+        // everything the user had paginated. This reads the newest page and
+        // merges it into our own refs, leaving the infinite cache untouched.
+        const fresh = await utils.coinFeed.list
+            .fetch({ ...filterInput, limit: PAGE_SIZE })
+            .catch(() => null);
+        const incoming = fresh?.items ?? [];
         if (incoming.length > 0) {
             const full = dedupeNewestFirst([...incoming, ...fullItemsRef.current]);
             fullItemsRef.current = full;
             // The pill is the ONLY thing that advances the established top.
             establishedTopKey.current = full[0] ? keyOf(full[0]) : null;
-            since.current = full[0] ? new Date(full[0].occurredAt).toISOString() : since.current;
+            if (full[0]) setSince(new Date(full[0].occurredAt).toISOString());
             setListItems((prev) => dedupeNewestFirst([...incoming, ...prev]).slice(0, VIEW_COUNT));
         }
         listRef.current?.scrollToTop("smooth");
@@ -270,7 +304,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         fullItemsRef.current = [];
         establishedTopKey.current = null;
         populated.current = false;
-        since.current = null;
+        setSince(null);
         setNewCount(0);
         setListItems([]);
         setListKey((k) => k + 1);
@@ -438,7 +472,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                     <p className="px-2 py-10 text-center text-[13px] text-zinc-500">couldn&apos;t load alerts.</p>
                 ) : isLoading && !populated.current ? (
                     <AlertListSkeleton />
-                ) : feedItems.length === 0 ? (
+                ) : windowItems.length === 0 ? (
                     <div className="px-3 py-10 text-center">
                         <p className="text-[13px] font-bold text-zinc-400">
                             {tab === "mentions" ? "no mentions yet" : tab === "following" ? "nothing from your follows" : "no alerts yet"}
@@ -455,8 +489,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                     </div>
                 ) : (
                     (() => {
-                        const current = listItems.length > 0 ? listItems : feedItems.slice(0, VIEW_COUNT);
-                        const unique = dedupeNewestFirst(current);
+                        const unique = windowItems;
                         const full = fullItemsRef.current;
                         const top = unique[0];
                         const bottom = unique[unique.length - 1];
