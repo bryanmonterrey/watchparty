@@ -80,6 +80,37 @@ export const COIN_NETWORKS: CoinNetwork[] = [
     },
 ];
 
+/**
+ * Coins that are never alert-worthy, however much they trade.
+ *
+ * Learned from the first live pass: CBBTC (wrapped BTC, $6.2B) produced
+ * "85 traders sell $380K" — technically true, completely uninteresting, and it
+ * would fire on EVERY scan because a blue chip always has that many traders in
+ * a 15-minute window. Left in, majors and stables crowd out the memecoin
+ * activity the rail exists to surface.
+ *
+ * Two filters, because neither alone is enough: the cap ceiling catches
+ * established assets generically, and the symbol list catches stablecoins,
+ * whose caps are enormous and whose "clusters" are pure plumbing.
+ */
+export const MAX_MARKET_CAP_USD = 2_000_000_000;
+
+export const EXCLUDED_SYMBOLS = new Set([
+    // stables
+    "USDC", "USDT", "DAI", "USDS", "USDE", "SUSDE", "FDUSD", "PYUSD", "USD1",
+    "TUSD", "USDD", "FRAX", "LUSD", "GUSD", "EURC", "USDG", "RLUSD",
+    // majors + their wrapped/staked forms
+    "WETH", "ETH", "WBTC", "CBBTC", "TBTC", "BTC", "WBNB", "BNB",
+    "SOL", "WSOL", "JITOSOL", "MSOL", "BSOL", "JUPSOL",
+    "STETH", "WSTETH", "RETH", "WEETH", "EZETH", "CBETH", "RSETH",
+]);
+
+/** True when a coin should never enter the watch list / alert feed. */
+export function isExcludedCoin(symbol: string, marketCapUsd: number | null | undefined): boolean {
+    if (EXCLUDED_SYMBOLS.has(symbol.toUpperCase())) return true;
+    return marketCapUsd != null && marketCapUsd > MAX_MARKET_CAP_USD;
+}
+
 const BY_ID = new Map(COIN_NETWORKS.map((n) => [n.id, n]));
 
 export const enabledNetworks = () => COIN_NETWORKS.filter((n) => n.enabled);

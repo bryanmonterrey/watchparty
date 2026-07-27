@@ -83,6 +83,31 @@ the past 24h, so a coin doing 300+ qualifying (>$250) trades between two scans
 will have the overflow silently dropped. Only bites the very hottest coins;
 shortening their effective interval (or a paid key) is the fix.
 
+**When rate-limited**, `gt()` trips a flag on the `CallBudget`, `fetchPoolTrades`
+returns `null` (distinct from `[]` = "genuinely no trades"), `scanToken` leaves
+both cursors untouched, and the scan aborts the rest of the pass. That
+distinction matters: without it a 429 looked identical to a quiet pool, so the
+coin got its `last_scan_at` stamped and was demoted in the priority ordering
+despite never having been read. The cron response reports `skipped` and
+`rateLimited` so this is visible rather than silent.
+
+Note the prod cron already spends ~24 of the 30 calls/min. **Running the
+pipeline locally against the same DB will 429** — that's contention with prod,
+not a bug.
+
+### What never enters the feed
+
+`isExcludedCoin` in `networks.ts` drops stablecoins, wrapped/staked majors, and
+anything over `MAX_MARKET_CAP_USD` (2B). Learned from the first live pass, which
+produced *"85 traders sell $380K · CBBTC at $6.2B mc"* — true, useless, and it
+would fire on every single scan, because a blue chip always has that many
+traders in a 15-minute window. Left alone, majors crowd out the memecoin
+activity the rail exists for.
+
+The filter is applied at discovery **and** as an eviction pass (`evictExcluded`),
+so a coin that grows past the ceiling, or a symbol added to the list later, is
+removed rather than grandfathered in.
+
 ## Scroll behaviour
 
 Ported from `components/browse/browse-feed.tsx` (the discover feed), same

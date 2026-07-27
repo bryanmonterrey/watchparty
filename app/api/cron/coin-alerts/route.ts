@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
         for (let i = 0; i < discoveryBudget.spent; i++) budget.take();
     }
 
-    let scan = { scanned: 0, events: 0 };
+    let scan = { scanned: 0, events: 0, skipped: 0, rateLimited: false };
     try {
         scan = await runClusterScan(budget);
     } catch (err) {
@@ -63,6 +63,9 @@ export async function GET(req: NextRequest) {
         discovery,
         scanned: scan.scanned,
         events: scan.events,
+        // Coins the provider refused on; they keep their place in the queue.
+        skipped: scan.skipped,
+        rateLimited: scan.rateLimited,
         callsSpent: budget.spent,
     });
 }

@@ -24,11 +24,16 @@ export const GT_CALL_BUDGET = 24;
  *  discovery can't starve the trade scan (or vice versa). */
 export class CallBudget {
     private used = 0;
+    /** Set once the provider 429s. The pass should wind down rather than burn
+     *  its remaining calls on requests that will also be rejected. */
+    private limited = false;
     constructor(private readonly max: number = GT_CALL_BUDGET) {}
     get remaining() { return Math.max(0, this.max - this.used); }
     get spent() { return this.used; }
+    get rateLimited() { return this.limited; }
+    markRateLimited() { this.limited = true; }
     take(): boolean {
-        if (this.used >= this.max) return false;
+        if (this.limited || this.used >= this.max) return false;
         this.used++;
         return true;
     }
@@ -40,7 +45,9 @@ const num = (v: unknown): number | null => {
     return Number.isFinite(n) ? n : null;
 };
 
-/** One GT GET. Returns null on any failure — a bad call never kills a pass. */
+/** One GT GET. Returns null on any failure — a bad call never kills a pass.
+ *  A 429 additionally trips the budget's rate-limit flag, so callers can stop
+ *  early AND can tell "the provider refused" apart from "there was nothing". */
 async function gt<T>(path: string, budget: CallBudget): Promise<T | null> {
     if (!budget.take()) return null;
     try {
@@ -48,6 +55,10 @@ async function gt<T>(path: string, budget: CallBudget): Promise<T | null> {
             headers: HEADERS,
             signal: AbortSignal.timeout(TIMEOUT_MS),
         });
+        if (res.status === 429) {
+            budget.markRateLimited();
+            return null;
+        }
         if (!res.ok) return null;
         return (await res.json()) as T;
     } catch {
@@ -207,18 +218,26 @@ export type PoolTrade = {
  * Recent swaps on a pool. GT returns the last 300 trades of the past 24h,
  * newest first, and `minUsd` filters server-side so the dust never costs us
  * parsing (or dilutes a cluster's trader count).
+ *
+ * Returns **null when the call itself failed** (429, timeout, 5xx) as opposed
+ * to an empty array for "this pool genuinely had no qualifying trades". The
+ * caller must not advance the coin's scan cursor on null — treating a refused
+ * request as "nothing happened" silently marks coins as scanned that were never
+ * read, and with the staleness-weighted ordering it sends them to the back of
+ * the queue.
  */
 export async function fetchPoolTrades(
     network: string,
     poolAddress: string,
     budget: CallBudget,
     minUsd = 0,
-): Promise<PoolTrade[]> {
+): Promise<PoolTrade[] | null> {
     const json = await gt<{ data?: GtTradeRaw[] }>(
         `/networks/${network}/pools/${poolAddress}/trades?trade_volume_in_usd_greater_than=${minUsd}`,
         budget,
     );
-    if (!json?.data) return [];
+    if (!json) return null;
+    if (!json.data) return [];
 
     const out: PoolTrade[] = [];
     for (const row of json.data) {

@@ -169,15 +169,20 @@ function findWindows(trades: PoolTrade[], side: "buy" | "sell"): Window[] {
     return windows;
 }
 
-export type ScanResult = { events: number; tradesSeen: number };
+export type ScanResult = { events: number; tradesSeen: number; skipped?: boolean };
 
 /**
  * Scan one coin and write any events it produced. Costs exactly one
- * GeckoTerminal call. Advances the coin's watermark + scan cursor even when
- * nothing fires, so the round-robin keeps moving.
+ * GeckoTerminal call. Advances the coin's watermark + scan cursor when the call
+ * SUCCEEDED — even if it found nothing — so the queue keeps moving.
  */
 export async function scanToken(token: ScannableToken, budget: CallBudget): Promise<ScanResult> {
     const trades = await fetchPoolTrades(token.network, token.poolAddress, budget, MIN_TRADE_USD);
+
+    // null = the request failed (429/timeout), NOT "no trades". Leave both
+    // cursors untouched so this coin is retried next pass instead of being
+    // recorded as freshly scanned and demoted in the priority ordering.
+    if (trades === null) return { events: 0, tradesSeen: 0, skipped: true };
 
     const now = new Date();
     if (trades.length === 0) {
@@ -292,9 +297,11 @@ export async function scanToken(token: ScannableToken, budget: CallBudget): Prom
  * budget where clusters actually form, while staleness still grows without
  * bound, so no coin is ever starved completely.
  */
-export async function runClusterScan(budget: CallBudget): Promise<{ scanned: number; events: number }> {
+export async function runClusterScan(
+    budget: CallBudget,
+): Promise<{ scanned: number; events: number; skipped: number; rateLimited: boolean }> {
     const limit = budget.remaining;
-    if (limit <= 0) return { scanned: 0, events: 0 };
+    if (limit <= 0) return { scanned: 0, events: 0, skipped: 0, rateLimited: budget.rateLimited };
 
     const rows = await db
         .select({
@@ -320,16 +327,21 @@ export async function runClusterScan(budget: CallBudget): Promise<{ scanned: num
 
     let scanned = 0;
     let events = 0;
+    let skipped = 0;
     for (const row of rows) {
-        if (budget.remaining <= 0) break;
+        // Stop the moment the provider starts refusing — the rest of the pass
+        // would just be 429s, and each one would look like a coin with no
+        // trades.
+        if (budget.remaining <= 0 || budget.rateLimited) break;
         try {
             const res = await scanToken(row, budget);
             events += res.events;
-            scanned++;
+            if (res.skipped) skipped++;
+            else scanned++;
         } catch (err) {
             console.error(`[coin-feed] scan failed for ${row.id}:`, err);
         }
     }
 
-    return { scanned, events };
+    return { scanned, events, skipped, rateLimited: budget.rateLimited };
 }

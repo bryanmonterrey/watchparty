@@ -15,7 +15,14 @@ import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { tokens } from "@/db/schema/content/token";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { CallBudget, fetchNewPools, fetchTrendingPools, type DiscoveredPool } from "./geckoterminal";
-import { enabledNetworks, networkById, trackedTokenId } from "./networks";
+import {
+    enabledNetworks,
+    EXCLUDED_SYMBOLS,
+    isExcludedCoin,
+    MAX_MARKET_CAP_USD,
+    networkById,
+    trackedTokenId,
+} from "./networks";
 
 /** A coin with no scan-worthy activity for this long is dropped (unless pinned
  *  or one of ours). Keeps the round-robin scan pointed at things that move. */
@@ -28,27 +35,57 @@ const STALE_AFTER_MS = 48 * 60 * 60 * 1000;
  *  breadth — a paid GeckoTerminal key is the real way to buy both. */
 const MAX_TRACKED = 300;
 
-/** Adopt a discovered pool? Floors are per-network (see networks.ts). */
+/** Adopt a discovered pool? Floors are per-network (see networks.ts), and
+ *  stables / wrapped majors / mega-caps are excluded outright — they always
+ *  clear a trader-count threshold, so they'd fire on every scan and bury the
+ *  memecoin activity the rail is for. */
 function qualifies(pool: DiscoveredPool): boolean {
     const net = networkById(pool.network);
     if (!net) return false;
+    if (isExcludedCoin(pool.symbol, pool.marketCapUsd)) return false;
     const liquidity = pool.liquidityUsd ?? 0;
     const volume = pool.volume24hUsd ?? 0;
     return liquidity >= net.minLiquidityUsd && volume >= net.minVolume24hUsd;
 }
 
+const CHUNK = 100;
+
 /** Upsert pools into the watch list, refreshing cached market columns.
- *  Conflicts on (network, pool_address) — the same coin re-discovered next pass
- *  updates in place rather than duplicating. */
+ *
+ *  The row identity is the TOKEN (`network:tokenAddress`), not the pool — one
+ *  coin, one row, pointing at its deepest pool. Both halves of that matter:
+ *  a coin routinely has several pools, and GT hands us more than one of them
+ *  (trending and new_pools overlap, and a token can trend on two DEXes at
+ *  once), so the batch is collapsed per TOKEN keeping the deepest pool, and the
+ *  conflict target is the primary key. Deduping per pool instead put two rows
+ *  with the same id in one statement, which ON CONFLICT (network, pool_address)
+ *  does not catch — it died on tracked_tokens_pkey. */
 async function upsertPools(pools: DiscoveredPool[]): Promise<number> {
     if (pools.length === 0) return 0;
 
-    // Collapse duplicates within the batch (trending and new_pools overlap):
-    // ON CONFLICT cannot fire twice for the same key in one statement.
-    const byKey = new Map<string, DiscoveredPool>();
-    for (const p of pools) byKey.set(`${p.network}:${p.poolAddress}`, p);
-    const rows = [...byKey.values()];
+    const byToken = new Map<string, DiscoveredPool>();
+    for (const p of pools) {
+        const id = trackedTokenId(p.network, p.tokenAddress);
+        const seen = byToken.get(id);
+        // Deepest pool wins — it's the one whose trades represent the coin.
+        if (!seen || (p.liquidityUsd ?? 0) > (seen.liquidityUsd ?? 0)) byToken.set(id, p);
+    }
+    const rows = [...byToken.values()];
 
+    let written = 0;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+        try {
+            await upsertChunk(rows.slice(i, i + CHUNK));
+            written += Math.min(CHUNK, rows.length - i);
+        } catch (err) {
+            // One bad batch never kills the pass (same rule as market-sync).
+            console.error("[coin-feed] discovery upsert chunk failed:", err);
+        }
+    }
+    return written;
+}
+
+async function upsertChunk(rows: DiscoveredPool[]): Promise<void> {
     await db
         .insert(trackedTokens)
         .values(
@@ -72,8 +109,13 @@ async function upsertPools(pools: DiscoveredPool[]): Promise<number> {
             })),
         )
         .onConflictDoUpdate({
-            target: [trackedTokens.network, trackedTokens.poolAddress],
+            target: trackedTokens.id,
             set: {
+                // The pool can move: a coin's liquidity migrates, and we always
+                // want the deepest one. Conflicting on the PK (not the pool) is
+                // what lets it be updated instead of colliding.
+                poolAddress: sql`excluded.pool_address`,
+                dexId: sql`excluded.dex_id`,
                 symbol: sql`excluded.symbol`,
                 name: sql`excluded.name`,
                 // Keep the image we already have if GT hands back nothing this pass.
@@ -89,8 +131,6 @@ async function upsertPools(pools: DiscoveredPool[]): Promise<number> {
                 updatedAt: new Date(),
             },
         });
-
-    return rows.length;
 }
 
 /** Mirror watchparty's live launches into the watch list so they ride the same
@@ -143,8 +183,10 @@ export async function syncWatchpartyTokens(): Promise<number> {
             })),
         )
         .onConflictDoUpdate({
-            target: [trackedTokens.network, trackedTokens.poolAddress],
+            // Same reasoning as upsertChunk: the row's identity is the token.
+            target: trackedTokens.id,
             set: {
+                poolAddress: sql`excluded.pool_address`,
                 symbol: sql`excluded.symbol`,
                 name: sql`excluded.name`,
                 imageUrl: sql`coalesce(excluded.image_url, ${trackedTokens.imageUrl})`,
@@ -162,6 +204,26 @@ export async function syncWatchpartyTokens(): Promise<number> {
         });
 
     return rows.length;
+}
+
+/** Evict coins that no longer qualify — a coin that grew past the cap ceiling,
+ *  or that was adopted before a symbol joined the exclusion list. Without this
+ *  the filter would only apply to NEW adoptions and anything already tracked
+ *  (CBBTC, in the first live pass) would keep emitting forever. */
+async function evictExcluded(): Promise<number> {
+    const removed = await db
+        .delete(trackedTokens)
+        .where(
+            and(
+                isNull(trackedTokens.wpTokenId), // never evict our own coins
+                or(
+                    inArray(trackedTokens.symbol, [...EXCLUDED_SYMBOLS]),
+                    sql`${trackedTokens.marketCapUsd} > ${MAX_MARKET_CAP_USD}`,
+                ),
+            ),
+        )
+        .returning({ id: trackedTokens.id });
+    return removed.length;
 }
 
 /** Drop coins that stopped mattering: never-scanned rows are exempt (they just
@@ -209,6 +271,7 @@ async function enforceCap(): Promise<number> {
 export type DiscoveryResult = {
     discovered: number;
     watchparty: number;
+    evicted: number;
     pruned: number;
     trimmed: number;
 };
@@ -231,8 +294,9 @@ export async function runDiscovery(budget: CallBudget): Promise<DiscoveryResult>
 
     const discovered = await upsertPools(found);
     const watchparty = await syncWatchpartyTokens();
+    const evicted = await evictExcluded();
     const pruned = await pruneStale();
     const trimmed = await enforceCap();
 
-    return { discovered, watchparty, pruned, trimmed };
+    return { discovered, watchparty, evicted, pruned, trimmed };
 }
