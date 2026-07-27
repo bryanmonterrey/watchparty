@@ -33,9 +33,25 @@ function HeroLoading() {
 // Keyed on the video id so picking a different one remounts the <video> rather
 // than swapping its src on a playing element.
 export function HomeHero() {
-    const { active, isLoading } = useHomeFeed();
+    const { active, videos, next, isLoading } = useHomeFeed();
 
     if (isLoading || !active) return <HeroLoading />;
 
-    return <HomeCarousel key={active.id} videos={[active]} fill chrome={false} ambient />;
+    // onEnded is what makes the screen a queue rather than one looping clip:
+    // the video plays out, the feed advances, and the key change remounts the
+    // player on the new source.
+    //
+    // Only when there IS a next one, though. Passing it turns looping off, so a
+    // one-video feed would advance to itself — no id change, no remount — and
+    // sit frozen on its last frame. Below two videos, looping is the behaviour.
+    return (
+        <HomeCarousel
+            key={active.id}
+            videos={[active]}
+            fill
+            chrome={false}
+            ambient
+            onEnded={videos.length > 1 ? next : undefined}
+        />
+    );
 }

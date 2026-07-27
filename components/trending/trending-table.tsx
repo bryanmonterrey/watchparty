@@ -137,7 +137,7 @@ function BuyCell({ row, quickBuy, buying }: { row: TrendingRow; quickBuy: QuickB
                     });
                 }}
             >
-                {buying ? "buying…" : "buy"}
+                {buying ? "Buying…" : "Buy"}
             </button>
         );
     }
@@ -149,7 +149,7 @@ function BuyCell({ row, quickBuy, buying }: { row: TrendingRow; quickBuy: QuickB
             rel="noopener noreferrer"
             className={cn(shared, "relative z-10 w-fit")}
         >
-            buy
+            Buy
         </a>
     );
 }
@@ -302,11 +302,13 @@ export function TrendingTable({ className }: { className?: string }) {
         // fill rather than floating in a card.
         <div className={cn("@container", className)}>
             <div className={cn(GRID, CELL_TEXT, "px-3 pb-3 pt-4 text-pastelgray")}>
-                <span>name</span>
-                <span>market price</span>
-                <span className="hidden @xl:block">volume</span>
-                <span className="hidden @3xl:block">market cap</span>
-                <span>change</span>
+                {/* Sentence case, capital on the first word only — the one
+                    place in the app that isn't all-lowercase, per the author. */}
+                <span>Name</span>
+                <span>Market price</span>
+                <span className="hidden @xl:block">Volume</span>
+                <span className="hidden @3xl:block">Market cap</span>
+                <span>Change</span>
                 {/* The action columns are self-evident from the rows; a header
                     over them would just be noise. They still need their tracks. */}
                 <span />

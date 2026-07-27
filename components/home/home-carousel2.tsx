@@ -64,17 +64,23 @@ function watchHref(v: CarouselVideo) {
  *   the Link becomes the ambient container: no overflow-hidden (that would clip
  *   away the entire effect) and `isolate`, matching the watch page's setup.
  *   Every ancestor up to where the glow should fade also has to stay unclipped.
+ * @param onEnded Advance to whatever comes next. Passing it turns LOOPING OFF —
+ *   a looping element never fires `ended`, so the two are the same switch. Left
+ *   off, the player keeps repeating one video, which is what every caller but
+ *   the home hero wants.
  */
 export function HomeCarousel({
     videos,
     fill = false,
     chrome = true,
     ambient = false,
+    onEnded,
 }: {
     videos: CarouselVideo[];
     fill?: boolean;
     chrome?: boolean;
     ambient?: boolean;
+    onEnded?: () => void;
 }) {
     const v = videos[0];
     if (!v) return null;
@@ -93,7 +99,7 @@ export function HomeCarousel({
                     } ${fill ? "size-full" : `shrink-0 ${HERO_BOX}`}`}
                 >
                     {v.videoUrl ? (
-                        <ActivePanel key={v.id} v={v} chrome={chrome} ambient={ambient} />
+                        <ActivePanel key={v.id} v={v} chrome={chrome} ambient={ambient} onEnded={onEnded} />
                     ) : (
                         <>
                             {v.thumbnailUrl && (
@@ -167,7 +173,7 @@ function PlayerButton({ label, onClick, wide, children }: { label: string; onCli
 // post has caption tracks), and a LIVE badge for streams. Captions mirror the
 // full player: the chosen track is kept "hidden" so it fires cuechange without
 // the browser's native box, and the current cue is surfaced as one line.
-function ActivePanel({ v, chrome = true, ambient = false }: { v: CarouselVideo; chrome?: boolean; ambient?: boolean }) {
+function ActivePanel({ v, chrome = true, ambient = false, onEnded }: { v: CarouselVideo; chrome?: boolean; ambient?: boolean; onEnded?: () => void }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     // A tight halo, not the watch page's wash. Size comes from two knobs that
     // compound — `scale` (how far past the video the canvas is drawn; at 1 it
@@ -256,7 +262,10 @@ function ActivePanel({ v, chrome = true, ambient = false }: { v: CarouselVideo; 
                 ref={videoRef}
                 src={v.videoUrl ?? undefined}
                 poster={v.thumbnailUrl ?? undefined}
-                loop
+                // A looping element never reaches `ended`, so a caller that
+                // wants the next video gets no loop.
+                loop={!onEnded}
+                onEnded={onEnded}
                 playsInline
                 // Required so cross-origin (Supabase Storage) <track> VTT cues
                 // are allowed to load.

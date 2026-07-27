@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 
 // The home feed's data + selection, shared across the page's columns.
@@ -54,6 +54,8 @@ interface HomeFeedValue {
     /** The video the hero is showing — the first one until something is picked. */
     active: HomeFeedVideo | undefined;
     setActiveId: (id: string) => void;
+    /** Move to the next video in the feed — what the hero calls when one ends. */
+    next: () => void;
     isLoading: boolean;
 }
 
@@ -81,12 +83,26 @@ export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
         return [...new Map(raw.map((v) => [v.id, v])).values()] as HomeFeedVideo[];
     }, [feed.data]);
 
+    const { hasNextPage, isFetchingNextPage, fetchNextPage } = feed;
+
+    // Advance the hero. Wraps at the end rather than stopping — the point is
+    // that the screen keeps playing — but pulls the next page in first when
+    // one exists, so a wrap only happens at the true end of the feed.
+    const next = useCallback(() => {
+        if (videos.length === 0) return;
+        // -1 (nothing picked yet) becomes 0, which is the video the hero is
+        // actually showing, since `active` falls back to videos[0].
+        const current = Math.max(0, videos.findIndex((v) => v.id === activeId));
+        if (current >= videos.length - 3 && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+        setActiveId(videos[(current + 1) % videos.length].id);
+    }, [videos, activeId, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
     const value = useMemo<HomeFeedValue>(() => {
         // Falling back to videos[0] rather than storing it means the hero fills
         // in as soon as the feed lands, without an effect to seed the selection.
         const active = videos.find((v) => v.id === activeId) ?? videos[0];
-        return { videos, active, setActiveId, isLoading: feed.isLoading };
-    }, [videos, activeId, feed.isLoading]);
+        return { videos, active, setActiveId, next, isLoading: feed.isLoading };
+    }, [videos, activeId, next, feed.isLoading]);
 
     return <HomeFeedContext.Provider value={value}>{children}</HomeFeedContext.Provider>;
 }
