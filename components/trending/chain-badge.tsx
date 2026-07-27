@@ -3,57 +3,73 @@
 import { cn } from "@/lib/utils";
 import { chainLabel } from "@/lib/coin-feed/networks";
 
-// Chain marker for a trending row.
+// Chain marker for a trending row: the chain's own logo, no wordmark.
 //
-// No chain logos: shipping 20 brand SVGs for a 14px badge is a lot of bytes and
-// a licensing question, and at this size a wordmark is more legible than a
-// glyph anyway. Each chain gets a stable colour so the eye can group by chain
-// while scanning, with the short name next to it.
+// The URLs are CoinGecko's asset-platform images, resolved once (their
+// /asset_platforms endpoint, keyed off the coingecko_asset_platform_id that
+// GeckoTerminal reports per network) and baked in here rather than fetched at
+// runtime — they're stable, and a per-render lookup would be an extra request
+// and another failure mode for a 14px image. Refresh by re-reading that
+// endpoint if a logo ever 404s.
+//
+// The chain name stays as the alt/title text, so the information is still
+// available to a screen reader and on hover without spending row width on it.
 
-const CHAIN_COLORS: Record<string, string> = {
-    solana: "#14F195",
-    eth: "#627EEA",
-    base: "#0052FF",
-    bsc: "#F0B90B",
-    arbitrum: "#28A0F0",
-    polygon_pos: "#8247E5",
-    avax: "#E84142",
-    optimism: "#FF0420",
-    ton: "#0098EA",
-    "sui-network": "#4DA2FF",
-    aptos: "#06F7F7",
-    "sei-network": "#9C1C1C",
-    hyperevm: "#97FCE4",
-    berachain: "#814625",
-    blast: "#FCFC03",
-    linea: "#61DFFF",
-    tron: "#EF0027",
-    unichain: "#FF007A",
-    sonic: "#FE9A4C",
-    abstract: "#1FE383",
+const CHAIN_IMAGES: Record<string, string> = {
+    solana: "https://coin-images.coingecko.com/asset_platforms/images/5/small/solana.png?1706606708",
+    eth: "https://coin-images.coingecko.com/asset_platforms/images/279/small/ethereum.png?1706606803",
+    base: "https://coin-images.coingecko.com/asset_platforms/images/131/small/base.png?1759905869",
+    bsc: "https://coin-images.coingecko.com/asset_platforms/images/1/small/bnb_smart_chain.png?1706606721",
+    arbitrum: "https://coin-images.coingecko.com/asset_platforms/images/33/small/AO_logomark.png?1706606717",
+    polygon_pos: "https://coin-images.coingecko.com/asset_platforms/images/15/small/polygon_pos.png?1706606645",
+    avax: "https://coin-images.coingecko.com/asset_platforms/images/12/small/avalanche.png?1706606775",
+    optimism: "https://coin-images.coingecko.com/asset_platforms/images/41/small/optimism.png?1706606778",
+    ton: "https://coin-images.coingecko.com/asset_platforms/images/142/small/tonblockchain.jpeg?1706606805",
+    "sui-network": "https://coin-images.coingecko.com/asset_platforms/images/126/small/sui-ocean-square.png?1727791325",
+    aptos: "https://coin-images.coingecko.com/asset_platforms/images/116/small/aptos_round.png?1706606789",
+    "sei-network": "https://coin-images.coingecko.com/asset_platforms/images/148/small/Sei_Logo_-_Transparent.png?1706606762",
+    hyperevm: "https://coin-images.coingecko.com/asset_platforms/images/22208/small/hyperliquid.jpg?1740125774",
+    berachain: "https://coin-images.coingecko.com/asset_platforms/images/176/small/berachain.jpeg?1706606828",
+    blast: "https://coin-images.coingecko.com/asset_platforms/images/192/small/blast.jpeg?1709085131",
+    linea: "https://coin-images.coingecko.com/asset_platforms/images/135/small/linea.jpeg?1706606705",
+    tron: "https://coin-images.coingecko.com/asset_platforms/images/1094/small/TRON_LOGO.png?1706606652",
+    unichain: "https://coin-images.coingecko.com/asset_platforms/images/22206/small/unichain.png?1739323630",
+    sonic: "https://coin-images.coingecko.com/asset_platforms/images/22192/small/128xS_token_Black-BG_2x.png?1735963719",
+    abstract: "https://coin-images.coingecko.com/asset_platforms/images/22196/small/abstract.jpg?1735611808",
 };
 
-/** Anything not in the table still gets a stable colour, hashed off its slug. */
+/** Chains with no logo mapped still need to be distinguishable, so they fall
+ *  back to a stable colour hashed off the slug. */
 const FALLBACK = ["#8A919E", "#A78BFA", "#F472B6", "#FBBF24", "#34D399"];
 function colorFor(network: string) {
-    if (CHAIN_COLORS[network]) return CHAIN_COLORS[network];
     let h = 0;
     for (let i = 0; i < network.length; i++) h = (h * 31 + network.charCodeAt(i)) >>> 0;
     return FALLBACK[h % FALLBACK.length];
 }
 
 export function ChainBadge({ network, className }: { network: string; className?: string }) {
+    const src = CHAIN_IMAGES[network];
+    const label = chainLabel(network);
+
+    if (!src) {
+        return (
+            <span
+                title={label}
+                aria-label={label}
+                className={cn("inline-block size-3.5 shrink-0 rounded-full", className)}
+                style={{ backgroundColor: colorFor(network) }}
+            />
+        );
+    }
+
     return (
-        <span
-            className={cn(
-                "inline-flex shrink-0 items-center gap-1 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold text-zinc-400",
-                className,
-            )}
-        >
-            <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: colorFor(network) }} />
-            {chainLabel(network)}
-        </span>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            src={src}
+            alt={label}
+            title={label}
+            loading="lazy"
+            className={cn("size-3.5 shrink-0 rounded-full object-cover", className)}
+        />
     );
 }
-
-export { colorFor as chainColor };

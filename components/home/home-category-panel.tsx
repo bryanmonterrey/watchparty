@@ -23,10 +23,9 @@ export function HomeCategoryPanel() {
                 <HomeCategoryTabs active={active} onChange={setActive} />
             </div>
 
-            {/* Everything under the tabs sits on the same fill, square-edged and
-                running to the bottom of the column — the board is part of that
-                slab rather than a card floating on it. */}
-            <div className="flex-1 bg-sidebar-hover/25">
+            {/* No fill — everything under the tabs sits straight on the app
+                canvas. */}
+            <div className="flex-1">
                 {active === "Trending Coins" && <TrendingTable />}
             </div>
         </>
