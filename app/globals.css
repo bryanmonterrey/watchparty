@@ -17,6 +17,21 @@
    (public/mobile designs): soft gray canvas, white cards, near-black text.
    Dark values are ported from sidebar (black canvas). */
 :root {
+  /* ── transitions.dev: like button (23-like-button.md) ──────────────────
+     Semantic tunables the .t-like snippet reads. Only this transition's
+     block is installed, not the skill's whole _root.css — nothing else here
+     uses those names yet. --like-color is watchparty's pastel red rather
+     than the snippet's stock #f40051, so the burst matches the liked state
+     the button already paints. */
+  --like-color: #ff746c;
+  --like-fill: 150ms;
+  --like-pop: 350ms;
+  --like-pop-ease: cubic-bezier(0.34, 1.96, 0.64, 1);
+  --like-particle-dur: 600ms;
+  --like-particle-dist: 20px;
+  --like-particle-size: 2.5px;
+  --like-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
   --radius: 0.625rem;
   /* AppHeader height (h-11 content + py-3 = 68px). The header pins itself to
      this via h-(--header-height); pages offset under it with
@@ -852,6 +867,50 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
      divider — so it stays white and remains freely overridable per element.
      Only the TRANSLUCENT white hairlines (border-white/5, /10, /15, …) are
      unified, via the [class*="border-white/"] selector below. */
+/* ── transitions.dev: like button (23-like-button.md) ─────────────────────
+   Pasted verbatim from the skill — the selectors, property enumeration and
+   will-change are tuned, so don't collapse them to shorthand. Drives the
+   video header's like button: heart fills + spring-pops on like, with an
+   eight-dot burst. Unliking reverses the fill without the celebration.
+   Variables live in :root at the top of this file. */
+@layer utilities {
+  .t-like-heart { color: currentColor; transition: color var(--like-fill) var(--like-ease); }
+  .t-like-heart path {
+    fill: transparent; stroke: currentColor;
+    transition: fill var(--like-fill) var(--like-ease), stroke var(--like-fill) var(--like-ease);
+  }
+  .t-like[data-liked="true"] .t-like-heart { color: var(--like-color); }
+  .t-like[data-liked="true"] .t-like-heart path { fill: currentColor; }
+  /* Pop scale lives on an HTML wrapper, never the <svg> itself:
+     transforming an inline SVG makes Chromium rasterise it at 1×
+     (pixelated on hi-DPI). Wrapping keeps the vector crisp. */
+  .t-like[data-liked="true"] .t-like-icon { animation: t-like-pop var(--like-pop) var(--like-pop-ease); }
+  @keyframes t-like-pop { 0% { transform: scale(1); } 30% { transform: scale(0.82); } 100% { transform: scale(1); } }
+
+  /* Particle burst — 8 dots flung along per-particle vectors. */
+  .t-like-particles { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; color: var(--like-color); }
+  .t-like-particles i {
+    position: absolute;
+    left: calc(var(--like-particle-size) * var(--psize, 1) / -2);
+    top: calc(var(--like-particle-size) * var(--psize, 1) / -2);
+    width: calc(var(--like-particle-size) * var(--psize, 1));
+    height: calc(var(--like-particle-size) * var(--psize, 1));
+    border-radius: 50%; background: currentColor; opacity: 0;
+  }
+  @keyframes t-like-burst {
+    0%   { opacity: 0; transform: translate(0, 0) scale(0.4); }
+    20%  { opacity: 1; transform: translate(calc(var(--px) * 0.25), calc(var(--py) * 0.25)) scale(1); }
+    100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(var(--p-end-scale, 0.6)); }
+  }
+  .t-like.is-bursting .t-like-particles i {
+    animation: t-like-burst var(--pdur, var(--like-particle-dur)) ease-out var(--pdelay, 0ms) forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-like-icon, .t-like-particles i { animation: none !important; }
+  }
+}
+
 @layer utilities {
   [class*="border-white/"],
   [class*="border-zinc-"],

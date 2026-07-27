@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Tick02Icon, FavouriteIcon, PlayCircleIcon } from "@hugeicons/core-free-icons";
@@ -68,11 +68,42 @@ function ContractAddress({ address }: { address: string }) {
     );
 }
 
+/** Eight burst dots. Each gets its own vector, size, duration and delay so the
+ *  spray reads as organic instead of a symmetrical starburst — the snippet
+ *  expects these to be randomised per like, which is why they're generated on
+ *  click rather than baked into the markup. */
+const PARTICLE_COUNT = 8;
+
+function makeParticles() {
+    return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
+        // Even angular spread, jittered so it never looks mechanical.
+        const angle = (i / PARTICLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.7;
+        const dist = 14 + Math.random() * 12;
+        return {
+            "--px": `${Math.cos(angle) * dist}px`,
+            "--py": `${Math.sin(angle) * dist}px`,
+            "--pdur": `${480 + Math.round(Math.random() * 240)}ms`,
+            "--pdelay": `${Math.round(Math.random() * 60)}ms`,
+            "--p-end-scale": `${0.4 + Math.random() * 0.4}`,
+            "--psize": `${0.7 + Math.random() * 0.8}`,
+        } as React.CSSProperties;
+    });
+}
+
 function LikeButton({ video }: { video: HomeFeedVideo }) {
     // Seeded from the feed (getVideoFeed resolves isLiked per viewer), then
     // owned here so the tap is instant.
     const [liked, setLiked] = useState(!!video.isLiked);
     const [count, setCount] = useState(video.likes ?? 0);
+    const [bursting, setBursting] = useState(false);
+    const [particles, setParticles] = useState<React.CSSProperties[]>(() => makeParticles());
+    const burstTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // A rapid re-like would otherwise leave a stale timer to clear .is-bursting
+    // mid-animation, and an unmount mid-burst would set state on a dead node.
+    useEffect(() => () => {
+        if (burstTimer.current) clearTimeout(burstTimer.current);
+    }, []);
 
     const toggle = trpc.content.toggleLike.useMutation({
         onError: () => {
@@ -82,30 +113,55 @@ function LikeButton({ video }: { video: HomeFeedVideo }) {
         },
     });
 
+    const onClick = () => {
+        const next = !liked;
+        setLiked(next);
+        setCount((c) => (next ? c + 1 : Math.max(0, c - 1)));
+        toggle.mutate({ postId: video.id });
+
+        // The celebration only plays on the way IN — unliking just reverses the
+        // fill, per the snippet.
+        if (!next) return;
+        if (burstTimer.current) clearTimeout(burstTimer.current);
+        setParticles(makeParticles());
+        setBursting(false);
+        // Reflow between removing and re-adding the class is what makes the
+        // burst replay on a second like instead of sitting at its end state.
+        requestAnimationFrame(() => {
+            setBursting(true);
+            burstTimer.current = setTimeout(() => setBursting(false), 900);
+        });
+    };
+
     return (
         <button
             type="button"
-            onClick={() => {
-                setLiked((prev) => !prev);
-                setCount((c) => (liked ? Math.max(0, c - 1) : c + 1));
-                toggle.mutate({ postId: video.id });
-            }}
+            onClick={onClick}
             aria-pressed={liked}
             aria-label={liked ? "unlike" : "like"}
+            // t-like + data-liked are the snippet's hooks; `relative` is what
+            // the absolutely-positioned particle layer anchors to.
             className={cn(
-                "flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold transition-colors",
+                "t-like relative flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold transition-colors",
+                bursting && "is-bursting",
                 liked ? "bg-pastelred/15 text-pastelred" : "bg-white/[0.06] text-zinc-300 hover:text-white",
             )}
+            data-liked={liked}
         >
-            {/* fill-current, not a fixed colour: the heart's path carries no
-                fill attribute, so the svg's fill inherits down — and following
-                the button's text colour keeps the two in step. Same trick
-                NotificationsIcon uses on this identical path. */}
-            <HugeiconsIcon
-                icon={FavouriteIcon}
-                className={cn("size-4.5", liked && "fill-current")}
-                strokeWidth={2}
-            />
+            {/* The pop scale rides this wrapper, never the <svg> — transforming
+                an inline SVG makes Chromium rasterise it at 1× and it goes
+                fuzzy on hi-DPI. The fill is the snippet's job now (it animates
+                the path), so no fill-current class here. */}
+            <span className="t-like-icon flex">
+                <HugeiconsIcon icon={FavouriteIcon} className="t-like-heart size-4.5" strokeWidth={2} />
+            </span>
+
+            <span className="t-like-particles" aria-hidden>
+                {particles.map((style, i) => (
+                    <i key={i} style={style} />
+                ))}
+            </span>
+
             {count > 0 && <span className="tabular-nums">{compactCount(count)}</span>}
         </button>
     );
