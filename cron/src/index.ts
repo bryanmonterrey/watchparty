@@ -10,7 +10,8 @@
 // feed-corpus "17 * * * *" (hourly, Phoenix ranker corpus refresh),
 // sync-assets-webhook "30 4 * * *" (daily, re-sync Helius watched wallets),
 // predictions-factory "7 * * * *" (hourly, AI market generation + auto-resolve),
-// coin-alerts "* * * * *" (per-minute, the /home alert rail's ingestion pass).
+// coin-alerts "* * * * *" (per-minute, the /home alert rail's ingestion pass),
+// trending-sync "* * * * *" (per-minute slice of the /trending board's chains).
 
 interface Env {
     CRON_SECRET: string;
@@ -61,8 +62,11 @@ export default {
             ctx.waitUntil(call(env, "/api/cron/token-sync"));
             // Coin alert feed (/home left rail): discovers tracked coins across
             // chains and clusters their swaps into "N traders bought" events.
-            // Self-limits to 24 GeckoTerminal calls per pass.
             ctx.waitUntil(call(env, "/api/cron/coin-alerts"));
+            // Trending board (/trending): refreshes a rotating slice of chains.
+            // Its budget and coin-alerts' deliberately sum under GeckoTerminal's
+            // shared ~30 calls/min ceiling — see lib/coin-feed/geckoterminal.ts.
+            ctx.waitUntil(call(env, "/api/cron/trending-sync"));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }

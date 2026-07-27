@@ -38,6 +38,7 @@ import { profileRouter } from "./profile";
 import { panelsRouter } from "./panels";
 import { discoverRouter } from "./discover";
 import { coinFeedRouter } from "./coinFeed";
+import { trendingRouter } from "./trending";
 
 /**
  * Root application router
@@ -81,6 +82,7 @@ export const appRouter = router({
     panels: panelsRouter,
     discover: discoverRouter,
     coinFeed: coinFeedRouter,
+    trending: trendingRouter,
 });
 
 /**

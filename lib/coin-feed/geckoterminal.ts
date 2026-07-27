@@ -15,10 +15,17 @@ const BASE = "https://api.geckoterminal.com/api/v2";
 const HEADERS = { Accept: "application/json;version=20230302" };
 const TIMEOUT_MS = 10_000;
 
-/** Hard ceiling on GeckoTerminal calls in a single cron pass. The free tier is
- *  30/min and the pass runs every minute; the slack absorbs a retry and keeps
- *  us off the rate limiter, which 429s the whole minute if tripped. */
-export const GT_CALL_BUDGET = 24;
+// GeckoTerminal's free tier is ~30 calls/min for the WHOLE APP, and two
+// per-minute crons draw on it, so the ceiling is split between them rather than
+// each assuming it owns the quota. Tripping the limiter 429s everything for the
+// rest of the minute, so the two budgets below deliberately sum under 30.
+
+/** Alert pass: discovery (≤2 per enabled chain, every 5 min) + one call per
+ *  coin scanned. This number is also the alert latency dial — see MAX_TRACKED. */
+export const GT_CALL_BUDGET = 20;
+
+/** Trending pass: one call per chain, NETWORKS_PER_PASS chains per minute. */
+export const GT_TRENDING_BUDGET = 5;
 
 /** Spends a fixed number of API calls across a pass. Handed to each stage so
  *  discovery can't starve the trade scan (or vice versa). */
@@ -77,8 +84,10 @@ type GtPoolRaw = {
         market_cap_usd?: string | null;
         fdv_usd?: string | null;
         reserve_in_usd?: string | null;
+        pool_created_at?: string | null;
         volume_usd?: Record<string, string>;
         price_change_percentage?: Record<string, string>;
+        transactions?: Record<string, { buys?: number; sells?: number }>;
     };
     relationships?: {
         base_token?: { data?: { id?: string } };
@@ -92,6 +101,9 @@ type GtIncluded = {
     attributes?: { symbol?: string; name?: string; image_url?: string; address?: string };
 };
 
+/** Everything GT's pool payload carries. The alert watch list stores a subset;
+ *  the trending board stores the rest. Parsing it all here costs nothing (it's
+ *  the same response) and keeps one parser rather than two that drift. */
 export type DiscoveredPool = {
     network: string;
     poolAddress: string;
@@ -102,11 +114,19 @@ export type DiscoveredPool = {
     imageUrl: string | null;
     priceUsd: number | null;
     marketCapUsd: number | null;
+    fdvUsd: number | null;
     liquidityUsd: number | null;
+    volume5mUsd: number | null;
+    volume1hUsd: number | null;
+    volume6hUsd: number | null;
     volume24hUsd: number | null;
     priceChange5m: number | null;
     priceChange1h: number | null;
+    priceChange6h: number | null;
     priceChange24h: number | null;
+    buys24h: number | null;
+    sells24h: number | null;
+    poolCreatedAt: Date | null;
 };
 
 /** GT ids look like "solana_<address>"; the address is everything after the
@@ -138,6 +158,8 @@ function parsePools(json: { data?: GtPoolRaw[]; included?: GtIncluded[] }, netwo
         const symbol = meta?.symbol ?? a?.name?.split("/")[0]?.trim() ?? "";
         if (!symbol) continue;
 
+        const created = a?.pool_created_at ? new Date(a.pool_created_at) : null;
+
         out.push({
             network,
             poolAddress,
@@ -148,11 +170,19 @@ function parsePools(json: { data?: GtPoolRaw[]; included?: GtIncluded[] }, netwo
             imageUrl: meta?.image_url && meta.image_url !== "missing.png" ? meta.image_url : null,
             priceUsd: num(a?.base_token_price_usd),
             marketCapUsd: num(a?.market_cap_usd) ?? num(a?.fdv_usd),
+            fdvUsd: num(a?.fdv_usd),
             liquidityUsd: num(a?.reserve_in_usd),
+            volume5mUsd: num(a?.volume_usd?.m5),
+            volume1hUsd: num(a?.volume_usd?.h1),
+            volume6hUsd: num(a?.volume_usd?.h6),
             volume24hUsd: num(a?.volume_usd?.h24),
             priceChange5m: num(a?.price_change_percentage?.m5),
             priceChange1h: num(a?.price_change_percentage?.h1),
+            priceChange6h: num(a?.price_change_percentage?.h6),
             priceChange24h: num(a?.price_change_percentage?.h24),
+            buys24h: a?.transactions?.h24?.buys ?? null,
+            sells24h: a?.transactions?.h24?.sells ?? null,
+            poolCreatedAt: created && !Number.isNaN(created.getTime()) ? created : null,
         });
     }
     return out;

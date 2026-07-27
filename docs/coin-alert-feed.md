@@ -1,3 +1,44 @@
+# Coin alert feed + trending board
+
+Two surfaces on one GeckoTerminal pipeline:
+
+| | `/home` left rail | `/trending` |
+| --- | --- | --- |
+| what | trader-cluster alerts | every-chain coin board |
+| table | `coin_feed_events` | `trending_coins` |
+| cost | 1 API call **per coin** scanned | 1 API call **per chain** refreshed |
+| chains | 2 (`enabled` in networks.ts) | 20 (`TRENDING_NETWORKS`) |
+| cron | `/api/cron/coin-alerts` | `/api/cron/trending-sync` |
+
+They share one ~30 calls/min ceiling, which is the single most important
+constraint in this system — see "Chains" below.
+
+## The trending board (/trending)
+
+`trending_coins` is a **cache**, refreshed wholesale, nothing references it — it
+can be truncated and rebuilt at any time. It's deliberately not `tracked_tokens`:
+that table's scan spends a call per coin and orders by staleness × volume, so
+adding 20 chains of display-only coins would dilute the queue until no coin was
+scanned often enough to catch a cluster.
+
+The sweep is a **rotating slice** — `NETWORKS_PER_PASS` (4) chains a minute,
+picked from the wall clock so there's no cursor to persist and a missed pass
+just waits one cycle. Full turnover every 5 minutes. Sweeping all 20 in one
+minute would 429 both features at once; `?all=1` does exactly that and is for
+hand-seeding only.
+
+What makes it more than a DexScreener clone is the `activity` column: the most
+recent trader cluster per coin, joined from the alert feed in one `DISTINCT ON`
+query for the whole page, so a row reads *"88 traders bought · 4m ago"* instead
+of only showing a price delta.
+
+`TrendingTable` takes no data props and owns its own queries, so mounting the
+board elsewhere (the `/trade` landing, a dashboard panel) is an import.
+
+**Chain slugs are GeckoTerminal's and are not guessable** — `sei-v2` 404s, it's
+`sei-network`. A wrong slug degrades gracefully (request fails, chain skipped),
+so a silently empty chain is the symptom to look for.
+
 # Coin alert feed (the /home left rail)
 
 fomo-style multi-chain alerts: "20 traders **buy** $40.3K · PUPPY at $612K mc".
@@ -6,7 +47,8 @@ land in one rail on `/home`.
 
 ## Ship checklist
 
-1. **Run the SQL** — `db/coin-feed.sql`, by hand (Supabase SQL editor or psql).
+1. **Run the SQL** — `db/coin-feed.sql` and `db/trending.sql`, by hand (Supabase
+   SQL editor or psql). *(Both already applied to the live DB on 2026-07-27.)*
    Additive only: two new tables, no `ALTER` of anything existing, so it is safe
    against the live DB that dev also points at. It also adds the realtime
    publication and backfills existing callouts + open prediction markets.
@@ -64,10 +106,11 @@ so a retried pass collides instead of double-posting.
 ~200 networks, so **adding a chain is a row, not plumbing**. Solana and Base ship
 enabled; ethereum, bnb, arbitrum and hyperevm are present but `enabled: false`.
 
-The constraint is the **call budget**, not the code. GT's free tier is 30
-calls/min and the pass runs every minute, so `GT_CALL_BUDGET` is 24. Each
-enabled network costs 2 calls per discovery pass (every 5 min), and every
-tracked coin costs 1 call per trade scan.
+The constraint is the **call budget**, not the code. GT's free tier is ~30
+calls/min for the whole app, split between the two per-minute crons:
+`GT_CALL_BUDGET` (20, alerts) + `GT_TRENDING_BUDGET` (5, trending), deliberately
+summing under 30. Each enabled alert network costs 2 calls per discovery pass
+(every 5 min), and every tracked coin costs 1 call per trade scan.
 
 That makes `MAX_TRACKED` (300, in `discovery.ts`) the **alert-latency dial**:
 worst-case cycle time is `MAX_TRACKED / 24` minutes ≈ 12 min. The scan doesn't

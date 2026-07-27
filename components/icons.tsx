@@ -300,6 +300,29 @@ export function TradeIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & 
     )
 }
 
+// Trending (/trending — the outside market board). A rising line with its
+// arrowhead; the active state fills the head rather than the whole path, since
+// a filled polyline would just read as a smear at 26px.
+export function TrendingIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
+    return (
+        <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M3 17L9 11L13 15L21 7" />
+            <path d="M15 7H21V13" fill={active ? "currentColor" : "none"} />
+        </motion.svg>
+    )
+}
+
 export function NotificationsIcon({ active, ...props }: SVGMotionProps<SVGSVGElement> & { active?: boolean }) {
     return (
         <motion.svg

@@ -4,7 +4,7 @@
 // read the same source for what a kind is called and what colour it carries.
 
 import type { CoinFeedKind } from "@/db/schema/content/coin-feed";
-import { networkById } from "@/lib/coin-feed/networks";
+import { explorerUrl } from "@/lib/coin-feed/networks";
 
 /** $40.3K / $7M / $612 — the rail is 280px wide, so compact is mandatory. */
 export function formatUsd(n: number | null | undefined): string {
@@ -92,6 +92,7 @@ export function alertHref(event: {
     if (event.wpTokenId) {
         return { href: `/${event.tokenAddress ?? event.wpTokenId}`, external: false };
     }
-    const explorer = event.tokenAddress ? networkById(event.network)?.explorerTokenUrl : undefined;
-    return explorer && event.tokenAddress ? { href: explorer(event.tokenAddress), external: true } : null;
+    if (!event.tokenAddress) return null;
+    const url = explorerUrl(event.network, event.tokenAddress);
+    return url ? { href: url, external: true } : null;
 }

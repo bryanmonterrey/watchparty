@@ -23,9 +23,6 @@ export type CoinNetwork = {
     minLiquidityUsd: number;
     /** Minimum 24h volume for discovery to adopt a coin. */
     minVolume24hUsd: number;
-    /** Block explorer base for a token address (deep-link on non-Solana rows,
-     *  where we have no native coin page). */
-    explorerTokenUrl?: (address: string) => string;
 };
 
 export const COIN_NETWORKS: CoinNetwork[] = [
@@ -35,7 +32,6 @@ export const COIN_NETWORKS: CoinNetwork[] = [
         enabled: true,
         minLiquidityUsd: 15_000,
         minVolume24hUsd: 50_000,
-        explorerTokenUrl: (a) => `https://solscan.io/token/${a}`,
     },
     {
         id: "base",
@@ -43,7 +39,6 @@ export const COIN_NETWORKS: CoinNetwork[] = [
         enabled: true,
         minLiquidityUsd: 25_000,
         minVolume24hUsd: 75_000,
-        explorerTokenUrl: (a) => `https://basescan.org/token/${a}`,
     },
     // Ready to switch on once the Solana/Base pass is proven and the call
     // budget below has room. Each one costs discovery + scan calls per minute.
@@ -53,7 +48,6 @@ export const COIN_NETWORKS: CoinNetwork[] = [
         enabled: false,
         minLiquidityUsd: 100_000,
         minVolume24hUsd: 250_000,
-        explorerTokenUrl: (a) => `https://etherscan.io/token/${a}`,
     },
     {
         id: "bsc",
@@ -61,7 +55,6 @@ export const COIN_NETWORKS: CoinNetwork[] = [
         enabled: false,
         minLiquidityUsd: 50_000,
         minVolume24hUsd: 150_000,
-        explorerTokenUrl: (a) => `https://bscscan.com/token/${a}`,
     },
     {
         id: "arbitrum",
@@ -69,7 +62,6 @@ export const COIN_NETWORKS: CoinNetwork[] = [
         enabled: false,
         minLiquidityUsd: 50_000,
         minVolume24hUsd: 150_000,
-        explorerTokenUrl: (a) => `https://arbiscan.io/token/${a}`,
     },
     {
         id: "hyperevm",
@@ -111,7 +103,89 @@ export function isExcludedCoin(symbol: string, marketCapUsd: number | null | und
     return marketCapUsd != null && marketCapUsd > MAX_MARKET_CAP_USD;
 }
 
+/**
+ * Chains the TRENDING page covers — deliberately much wider than the alert
+ * feed's `enabled` set.
+ *
+ * The two lists differ because the work differs by orders of magnitude. Alerts
+ * scan trades PER COIN (1 call per coin per pass), so each chain there is
+ * expensive and takes budget from every other chain. Trending only needs a
+ * chain's trending-pools list (1 call per chain per refresh), so covering 20
+ * chains costs 20 calls total — affordable, and it's what "overall crypto
+ * atmosphere" actually requires.
+ *
+ * Slugs are GeckoTerminal's. A wrong or retired slug degrades gracefully: the
+ * request 404s, `gt()` returns null, and that chain is simply skipped.
+ */
+export const TRENDING_NETWORKS: { id: string; label: string }[] = [
+    { id: "solana", label: "solana" },
+    { id: "eth", label: "ethereum" },
+    { id: "base", label: "base" },
+    { id: "bsc", label: "bnb" },
+    { id: "arbitrum", label: "arbitrum" },
+    { id: "polygon_pos", label: "polygon" },
+    { id: "avax", label: "avalanche" },
+    { id: "optimism", label: "optimism" },
+    { id: "ton", label: "ton" },
+    { id: "sui-network", label: "sui" },
+    { id: "aptos", label: "aptos" },
+    // "sei-network", NOT "sei-v2" — the latter 404s (verified against GT).
+    { id: "sei-network", label: "sei" },
+    { id: "hyperevm", label: "hyperliquid" },
+    { id: "berachain", label: "berachain" },
+    { id: "blast", label: "blast" },
+    { id: "linea", label: "linea" },
+    { id: "tron", label: "tron" },
+    { id: "unichain", label: "unichain" },
+    { id: "sonic", label: "sonic" },
+    { id: "abstract", label: "abstract" },
+];
+
+const TRENDING_BY_ID = new Map(TRENDING_NETWORKS.map((n) => [n.id, n]));
 const BY_ID = new Map(COIN_NETWORKS.map((n) => [n.id, n]));
+
+/** Display label for any chain slug, trending-only ones included. */
+export const chainLabel = (id: string) =>
+    BY_ID.get(id)?.label ?? TRENDING_BY_ID.get(id)?.label ?? id;
+
+/** Per-chain block explorer for a token address. Covers the trending list, not
+ *  just the alert chains — otherwise most rows on the board would be dead. */
+const EXPLORERS: Record<string, (a: string) => string> = {
+    solana: (a) => `https://solscan.io/token/${a}`,
+    eth: (a) => `https://etherscan.io/token/${a}`,
+    base: (a) => `https://basescan.org/token/${a}`,
+    bsc: (a) => `https://bscscan.com/token/${a}`,
+    arbitrum: (a) => `https://arbiscan.io/token/${a}`,
+    polygon_pos: (a) => `https://polygonscan.com/token/${a}`,
+    avax: (a) => `https://snowtrace.io/token/${a}`,
+    optimism: (a) => `https://optimistic.etherscan.io/token/${a}`,
+    ton: (a) => `https://tonviewer.com/${a}`,
+    "sui-network": (a) => `https://suivision.xyz/coin/${a}`,
+    aptos: (a) => `https://explorer.aptoslabs.com/coin/${a}`,
+    "sei-network": (a) => `https://seitrace.com/token/${a}`,
+    hyperevm: (a) => `https://hyperevmscan.io/token/${a}`,
+    berachain: (a) => `https://berascan.com/token/${a}`,
+    blast: (a) => `https://blastscan.io/token/${a}`,
+    linea: (a) => `https://lineascan.build/token/${a}`,
+    tron: (a) => `https://tronscan.org/#/token20/${a}`,
+    unichain: (a) => `https://uniscan.xyz/token/${a}`,
+    sonic: (a) => `https://sonicscan.org/token/${a}`,
+    abstract: (a) => `https://abscan.org/token/${a}`,
+};
+
+/**
+ * Explorer link for a coin, or null when we don't know the chain.
+ *
+ * GeckoTerminal's own pool page is the fallback: it exists for every network GT
+ * indexes by definition, so a chain we haven't mapped still gets a working
+ * link rather than an inert row.
+ */
+export function explorerUrl(network: string, tokenAddress: string, poolAddress?: string | null): string | null {
+    const explorer = EXPLORERS[network];
+    if (explorer) return explorer(tokenAddress);
+    if (poolAddress) return `https://www.geckoterminal.com/${network}/pools/${poolAddress}`;
+    return null;
+}
 
 export const enabledNetworks = () => COIN_NETWORKS.filter((n) => n.enabled);
 
