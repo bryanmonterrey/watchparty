@@ -44,13 +44,16 @@ export function HomeLeftRail() {
         return (
             <aside className="hidden w-11 shrink-0 lg:block">
                 <div className={INNER}>
+                    {/* size-6 and the same padding as the expanded rail's
+                        header buttons — collapsing shouldn't resize the control
+                        you just clicked. */}
                     <button
                         type="button"
                         onClick={() => set(false)}
                         aria-label="expand alerts rail"
-                        className="mx-auto flex size-8 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-white/5 hover:text-white"
+                        className="mx-auto flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
                     >
-                        <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-4" strokeWidth={2} />
+                        <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
                     </button>
                 </div>
             </aside>
