@@ -23,17 +23,12 @@ export function HomeCategoryPanel() {
                 <HomeCategoryTabs active={active} onChange={setActive} />
             </div>
 
-            {active === "Trending Coins" ? (
-                // No header: the tab already says "Trending Coins", and the
-                // board sizes to this column via its own container query.
-                <div className="flex-1 pb-16 pt-2">
-                    <TrendingTable showHeader={false} />
-                </div>
-            ) : (
-                // Everything under the tabs: the fill starts over here and runs
-                // to the bottom of the column.
-                <div className="flex-1 bg-sidebar-hover/25" />
-            )}
+            {/* Everything under the tabs sits on the same fill, square-edged and
+                running to the bottom of the column — the board is part of that
+                slab rather than a card floating on it. */}
+            <div className="flex-1 bg-sidebar-hover/25">
+                {active === "Trending Coins" && <TrendingTable />}
+            </div>
         </>
     );
 }

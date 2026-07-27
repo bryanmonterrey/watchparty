@@ -1,19 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-    ArrowDown01Icon,
-    MenuTwoLineIcon,
-    Search01Icon,
-    Tick02Icon,
-    FireIcon,
-} from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { Squircle } from "@/components/ui/squircle";
-import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { explorerUrl } from "@/lib/coin-feed/networks";
 import type { AppRouter } from "@/server/routers";
@@ -33,21 +24,13 @@ import { age, changeTone, compactCount, compactUsd, percent, tokenPrice } from "
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type TrendingRow = RouterOutput["trending"]["list"]["items"][number];
 
-const TIMEFRAMES = ["5m", "1h", "6h", "24h"] as const;
-type Timeframe = (typeof TIMEFRAMES)[number];
+type Timeframe = "5m" | "1h" | "6h" | "24h";
 
-type SortKey = "trending" | "volume" | "marketCap" | "liquidity" | "gainers" | "losers" | "new" | "txns";
-
-const SORTS: { key: SortKey; label: string }[] = [
-    { key: "trending", label: "trending" },
-    { key: "volume", label: "volume" },
-    { key: "marketCap", label: "market cap" },
-    { key: "liquidity", label: "liquidity" },
-    { key: "gainers", label: "top gainers" },
-    { key: "losers", label: "top losers" },
-    { key: "new", label: "newest" },
-    { key: "txns", label: "transactions" },
-];
+// Fixed for now — the control row that drove these is gone. The router still
+// accepts sort / timeframe / chains / q, so restoring the controls is wiring
+// state to these two constants, not rebuilding the query.
+const TIMEFRAME: Timeframe = "24h";
+const SORT = "trending" as const;
 
 const PAGE = 50;
 
@@ -193,41 +176,11 @@ function RowSkeleton({ index, count }: { index: number; count: number }) {
     );
 }
 
-export function TrendingTable({
-    className,
-    /** Off when the board is mounted under something that already names it —
-     *  the home "Trending Coins" tab, for instance, where a second "trending"
-     *  heading is just noise. */
-    showHeader = true,
-}: {
-    className?: string;
-    showHeader?: boolean;
-}) {
-    const [sort, setSort] = useState<SortKey>("trending");
-    const [timeframe, setTimeframe] = useState<Timeframe>("24h");
-    const [chains, setChains] = useState<string[] | null>(null); // null = every chain
-    const [search, setSearch] = useState("");
-    const [q, setQ] = useState("");
-
-    // Debounced so typing doesn't fire a query per keystroke.
-    useEffect(() => {
-        const t = setTimeout(() => setQ(search.trim()), 250);
-        return () => clearTimeout(t);
-    }, [search]);
-
-    const { data: chainRows } = trpc.trending.chains.useQuery(undefined, { staleTime: 300_000 });
-    const { data: stats } = trpc.trending.stats.useQuery(undefined, { staleTime: 60_000, refetchInterval: 120_000 });
-
-    const input = useMemo(
-        () => ({
-            sort,
-            timeframe,
-            limit: PAGE,
-            ...(chains?.length ? { chains } : {}),
-            ...(q ? { q } : {}),
-        }),
-        [sort, timeframe, chains, q],
-    );
+export function TrendingTable({ className }: { className?: string }) {
+    // No controls for now — the board is just the table. The router still takes
+    // sort / timeframe / chains / search, so bringing a control row back is
+    // wiring state to these, not rebuilding the query.
+    const input = useMemo(() => ({ sort: SORT, timeframe: TIMEFRAME, limit: PAGE }), []);
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
         trpc.trending.list.useInfiniteQuery(input, {
@@ -240,197 +193,57 @@ export function TrendingTable({
 
     const rows = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
 
-    const toggleChain = (id: string) => {
-        const all = (chainRows ?? []).map((c) => c.network);
-        const current = chains ?? all;
-        const next = current.includes(id) ? current.filter((c) => c !== id) : [...current, id];
-        setChains(next.length === 0 || next.length === all.length ? null : next);
-    };
-
-    const check = (on: boolean) =>
-        on ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} /> : undefined;
-
     return (
-        // Declares its own container so the grid above measures THIS column.
-        <div className={cn("@container flex flex-col gap-4", className)}>
-            {/* Summary strip — the "overall atmosphere" read, before any row. */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-1">
-                {showHeader && (
-                    <span className="flex items-center gap-2">
-                        <HugeiconsIcon icon={FireIcon} className="size-5 text-white" strokeWidth={2} />
-                        <h1 className="text-2xl font-semibold tracking-tight text-white">trending</h1>
-                    </span>
-                )}
-                {stats && stats.coins > 0 && (
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
-                        <span className="text-zinc-500">
-                            <span className="font-bold tabular-nums text-zinc-300">{stats.coins}</span> coins
-                        </span>
-                        <span className="text-zinc-500">
-                            <span className="font-bold tabular-nums text-zinc-300">{stats.chains}</span> chains
-                        </span>
-                        <span className="text-zinc-500">
-                            <span className="font-bold tabular-nums text-zinc-300">{compactUsd(stats.volume24hUsd)}</span> 24h vol
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                            <span className="font-bold tabular-nums text-jewel">{stats.gainers}</span>
-                            <span className="text-zinc-700">/</span>
-                            <span className="font-bold tabular-nums text-pastelred">{stats.losers}</span>
-                        </span>
-                    </div>
-                )}
+        // Declares its own container so the grid measures THIS column, not the
+        // viewport — home's centre column is narrower than the window by both
+        // rails. Square and unpanelled: it sits directly on the column's own
+        // fill rather than floating in a card.
+        <div className={cn("@container", className)}>
+            <div className={cn(GRID, "px-3 pb-2 pt-4 text-[12px] font-semibold text-zinc-500")}>
+                <span>#</span>
+                <span>coin</span>
+                <span className="text-right">price</span>
+                <span className="hidden text-right @4xl:block">age</span>
+                <span className="text-right">{TIMEFRAME}</span>
+                <span className="hidden text-right @6xl:block">txns</span>
+                <span className="hidden text-right @2xl:block">volume</span>
+                <span className="hidden text-right @4xl:block">liquidity</span>
+                <span className="hidden text-right @6xl:block">activity</span>
             </div>
 
-            {/* Controls. Everything is LEFT-packed and nothing stretches: the
-                app header's wallet/create cluster overlays the top-right of any
-                page, so a control that drifts over there ends up underneath it.
-                (An earlier pass had the search on flex-1, which pushed the chain
-                pill into exactly that corner.) */}
-            <div className="flex flex-wrap items-center gap-2 px-1">
-                <label className="relative flex h-11 w-full min-w-0 items-center @lg:w-[240px]">
-                    <HugeiconsIcon
-                        icon={Search01Icon}
-                        className="pointer-events-none absolute left-3.5 size-4 text-zinc-500"
-                        strokeWidth={2}
-                    />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="search coins"
-                        aria-label="search coins"
-                        className="h-11 w-full rounded-full bg-white/5 pl-10 pr-4 text-sm font-semibold text-white ring-1 ring-white/10 outline-none placeholder:text-zinc-600 focus:ring-white/20"
-                    />
-                </label>
-
-                {/* Timeframe drives the % and volume columns together. */}
-                <div className="flex h-11 items-center rounded-full bg-white/5 p-1">
-                    {TIMEFRAMES.map((tf) => (
-                        <button
-                            key={tf}
-                            type="button"
-                            onClick={() => setTimeframe(tf)}
-                            className={cn(
-                                "h-9 cursor-pointer rounded-full px-3 text-[13px] font-bold transition-colors",
-                                timeframe === tf ? "bg-white text-black" : "text-zinc-400 hover:text-white",
-                            )}
-                        >
-                            {tf}
-                        </button>
+            {isError ? (
+                <p className="py-16 text-center text-sm text-zinc-500">couldn&apos;t load the board.</p>
+            ) : isLoading ? (
+                <div>
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <RowSkeleton key={i} index={i} count={12} />
                     ))}
                 </div>
-
-                <GooDropdown
-                    align="end"
-                    width={220}
-                    gap={8}
-                    fill={GOO_PANEL_FILL}
-                    triggerAriaLabel="sort coins"
-                    triggerClassName={GOO_TRIGGER_PILL}
-                    trigger={
-                        <>
-                            <HugeiconsIcon icon={MenuTwoLineIcon} className="size-4" strokeWidth={2} />
-                            {SORTS.find((s) => s.key === sort)?.label}
-                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
-                        </>
-                    }
-                    items={SORTS.map((s) =>
-                        gooMenuItem({ key: s.key, label: s.label, onClick: () => setSort(s.key), right: check(sort === s.key) }),
-                    )}
-                />
-
-                <GooDropdown
-                    align="end"
-                    width={220}
-                    gap={8}
-                    fill={GOO_PANEL_FILL}
-                    maxPanelHeight={420}
-                    triggerAriaLabel="filter chains"
-                    triggerClassName={GOO_TRIGGER_PILL}
-                    trigger={
-                        <>
-                            {chains?.length ? `${chains.length} chains` : "all chains"}
-                            <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
-                        </>
-                    }
-                    items={[
-                        gooMenuItem({
-                            key: "all",
-                            label: "all chains",
-                            closeOnSelect: false,
-                            onClick: () => setChains(null),
-                            right: check(!chains?.length),
-                        }),
-                        { type: "separator" as const },
-                        ...(chainRows ?? []).map((c) =>
-                            gooMenuItem({
-                                key: c.network,
-                                label: <ChainBadge network={c.network} />,
-                                closeOnSelect: false,
-                                onClick: () => toggleChain(c.network),
-                                right: (
-                                    <span className="flex items-center gap-2">
-                                        <span className="text-[13px] font-semibold tabular-nums text-zinc-500">{c.coins}</span>
-                                        {check(!chains || chains.includes(c.network))}
-                                    </span>
-                                ),
-                            }),
-                        ),
-                    ]}
-                />
-            </div>
-
-            {/* Table */}
-            <Squircle asChild radius={24} autoEffects={false}>
-                <div className="bg-panel">
-                    <div className={cn(GRID, "px-3 pb-2 pt-4 text-[12px] font-semibold text-zinc-500")}>
-                        <span>#</span>
-                        <span>coin</span>
-                        <span className="text-right">price</span>
-                        <span className="hidden text-right @4xl:block">age</span>
-                        <span className="text-right">{timeframe}</span>
-                        <span className="hidden text-right @6xl:block">txns</span>
-                        <span className="hidden text-right @2xl:block">volume</span>
-                        <span className="hidden text-right @4xl:block">liquidity</span>
-                        <span className="hidden text-right @6xl:block">activity</span>
-                    </div>
-
-                    {isError ? (
-                        <p className="py-16 text-center text-sm text-zinc-500">couldn&apos;t load the board.</p>
-                    ) : isLoading ? (
-                        <div>
-                            {Array.from({ length: 12 }).map((_, i) => (
-                                <RowSkeleton key={i} index={i} count={12} />
-                            ))}
-                        </div>
-                    ) : rows.length === 0 ? (
-                        <div className="flex flex-col items-center gap-1 py-16">
-                            <p className="text-sm font-bold text-zinc-400">nothing here yet</p>
-                            <p className="text-xs text-zinc-600">
-                                {q || chains?.length ? "no coins match these filters." : "the board fills as the chain sweep runs."}
-                            </p>
-                        </div>
-                    ) : (
-                        <div>
-                            {rows.map((row, i) => (
-                                <TrendingRowView key={row.id} row={row} index={i} timeframe={timeframe} />
-                            ))}
-                        </div>
-                    )}
-
-                    {hasNextPage && rows.length > 0 && (
-                        <div className="flex justify-center px-3 py-4">
-                            <button
-                                type="button"
-                                onClick={() => void fetchNextPage()}
-                                disabled={isFetchingNextPage}
-                                className="h-11 cursor-pointer rounded-full bg-white/5 px-5 text-sm font-bold text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white disabled:opacity-50"
-                            >
-                                {isFetchingNextPage ? "loading…" : "load more"}
-                            </button>
-                        </div>
-                    )}
+            ) : rows.length === 0 ? (
+                <div className="flex flex-col items-center gap-1 py-16">
+                    <p className="text-sm font-bold text-zinc-400">nothing here yet</p>
+                    <p className="text-xs text-zinc-600">the board fills as the chain sweep runs.</p>
                 </div>
-            </Squircle>
+            ) : (
+                <div>
+                    {rows.map((row, i) => (
+                        <TrendingRowView key={row.id} row={row} index={i} timeframe={TIMEFRAME} />
+                    ))}
+                </div>
+            )}
+
+            {hasNextPage && rows.length > 0 && (
+                <div className="flex justify-center px-3 py-4">
+                    <button
+                        type="button"
+                        onClick={() => void fetchNextPage()}
+                        disabled={isFetchingNextPage}
+                        className="h-11 cursor-pointer rounded-full bg-white/5 px-5 text-sm font-bold text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white disabled:opacity-50"
+                    >
+                        {isFetchingNextPage ? "loading…" : "load more"}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
