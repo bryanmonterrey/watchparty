@@ -94,13 +94,20 @@ export function HomeCenterColumn() {
 
                 {/* ml-auto pins this right on its own. Nothing else can: the
                     header is what would otherwise push it, and the header is
-                    absent in the default view and while the feed loads. */}
+                    absent in the default view and while the feed loads.
+
+                    self-end drops it to the bottom of the row: the row is
+                    items-start so the header's avatar/title line up under the
+                    screen, and the chevron reads better at the row's baseline
+                    than floating at the top of a three-line header. Alone (in
+                    the default view) the row is only as tall as the button, so
+                    it has no effect there. */}
                 <button
                     type="button"
                     onClick={toggle}
                     aria-expanded={!focus}
                     aria-label={focus ? "show categories" : "hide categories"}
-                    className="ml-auto flex shrink-0 cursor-pointer items-center px-1.5 text-zinc-400 transition-colors hover:text-white"
+                    className="ml-auto flex shrink-0 cursor-pointer items-center self-end px-1.5 text-zinc-400 transition-colors hover:text-white"
                 >
                     <HugeiconsIcon
                         icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}

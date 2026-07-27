@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Tick02Icon, FavouriteIcon, PlayCircleIcon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Tick02Icon, FavouriteIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
@@ -252,12 +252,21 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
 
             <div className="flex shrink-0 items-center gap-2">
                 <LikeButton video={video} />
+                {/* Ghost, not a solid pill: the like button beside it carries the
+                    only fill in this row, and this is a navigation away from the
+                    hero rather than the row's primary action. The arrow trails
+                    the label and nudges on hover — the standard "this goes
+                    somewhere" affordance. */}
                 <Link
                     href={watchHref}
-                    className="flex h-11 cursor-pointer items-center gap-1.5 rounded-full bg-white px-4 text-[13px] font-bold text-black transition-opacity hover:opacity-90"
+                    className="group flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-bold text-zinc-300 transition-colors hover:text-white"
                 >
-                    <HugeiconsIcon icon={PlayCircleIcon} className="size-4.5" strokeWidth={2} />
                     go to video
+                    <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        className="size-4.5 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+                        strokeWidth={2}
+                    />
                 </Link>
             </div>
         </div>
