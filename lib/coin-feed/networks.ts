@@ -87,20 +87,40 @@ export const COIN_NETWORKS: CoinNetwork[] = [
  */
 export const MAX_MARKET_CAP_USD = 2_000_000_000;
 
-export const EXCLUDED_SYMBOLS = new Set([
-    // stables
+/** Pure plumbing on any surface: a stablecoin pool sits at the top of every
+ *  volume sort and tells you nothing. */
+export const STABLE_SYMBOLS = new Set([
     "USDC", "USDT", "DAI", "USDS", "USDE", "SUSDE", "FDUSD", "PYUSD", "USD1",
     "TUSD", "USDD", "FRAX", "LUSD", "GUSD", "EURC", "USDG", "RLUSD",
-    // majors + their wrapped/staked forms
+]);
+
+/** Majors and their wrapped/staked forms. Excluded from ALERTS (see above) but
+ *  deliberately kept on the trending board — a "whole ecosystem top coins" list
+ *  without ETH or SOL in it isn't the list. */
+export const MAJOR_SYMBOLS = new Set([
     "WETH", "ETH", "WBTC", "CBBTC", "TBTC", "BTC", "WBNB", "BNB",
     "SOL", "WSOL", "JITOSOL", "MSOL", "BSOL", "JUPSOL",
     "STETH", "WSTETH", "RETH", "WEETH", "EZETH", "CBETH", "RSETH",
 ]);
 
+export const EXCLUDED_SYMBOLS = new Set([...STABLE_SYMBOLS, ...MAJOR_SYMBOLS]);
+
 /** True when a coin should never enter the watch list / alert feed. */
 export function isExcludedCoin(symbol: string, marketCapUsd: number | null | undefined): boolean {
     if (EXCLUDED_SYMBOLS.has(symbol.toUpperCase())) return true;
     return marketCapUsd != null && marketCapUsd > MAX_MARKET_CAP_USD;
+}
+
+/**
+ * The BOARD's exclusion — stables only, and no cap ceiling.
+ *
+ * The alert feed and the board want opposite things from the same data. Alerts
+ * are a memecoin-activity rail, so a blue chip is noise. The board is the
+ * ecosystem's top coins, so a blue chip is the point; running `isExcludedCoin`
+ * here is what kept BTC/ETH/SOL off it.
+ */
+export function isBoardExcluded(symbol: string): boolean {
+    return STABLE_SYMBOLS.has(symbol.toUpperCase());
 }
 
 /**

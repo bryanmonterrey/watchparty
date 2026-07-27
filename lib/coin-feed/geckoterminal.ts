@@ -197,6 +197,22 @@ export async function fetchTrendingPools(network: string, budget: CallBudget, pa
     return json ? parsePools(json, network) : [];
 }
 
+/**
+ * A network's biggest pools by 24h volume — the "top coins" source.
+ *
+ * Different question from trending_pools: trending is "what's moving right
+ * now" (a churn list of new runners), this is "what the chain actually trades",
+ * which is what a whole-ecosystem board is made of. Same response shape, so it
+ * costs one call like the others.
+ */
+export async function fetchTopPools(network: string, budget: CallBudget, page = 1): Promise<DiscoveredPool[]> {
+    const json = await gt<{ data?: GtPoolRaw[]; included?: GtIncluded[] }>(
+        `/networks/${network}/pools?include=base_token,dex&page=${page}&sort=h24_volume_usd_desc`,
+        budget,
+    );
+    return json ? parsePools(json, network) : [];
+}
+
 /** Freshly created pools — catches a runner before it trends. */
 export async function fetchNewPools(network: string, budget: CallBudget): Promise<DiscoveredPool[]> {
     const json = await gt<{ data?: GtPoolRaw[]; included?: GtIncluded[] }>(

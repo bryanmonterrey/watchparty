@@ -31,8 +31,16 @@ const STORAGE_KEY = "wp:home:focus";
 // avatar/title/meta/token row, plus the toggle's own line under it. Reserving
 // for that case — a little unused space below the screen is harmless,
 // overflowing the viewport is not.
-const HERO_EXPANDED = "h-[calc(100svh-var(--header-height)-7.5rem)] w-full";
-const HERO_DEFAULT = "aspect-video w-full";
+//
+// MIN-height over height, and 16:9 always on: expanding must never make the
+// screen SMALLER. On a wide, short window the column's own 16:9 height is
+// taller than what's left of the viewport, so setting height outright shrank
+// the video on the way into focus mode — the opposite of what the toggle
+// promises. As a floor it can only grow it, and both states are real lengths
+// (0 → px) so the transition still runs.
+const HERO_BASE = "aspect-video w-full transition-[min-height] duration-300 ease-out";
+const HERO_EXPANDED = "min-h-[calc(100svh-var(--header-height)-7.5rem)]";
+const HERO_DEFAULT = "min-h-0";
 
 export function HomeCenterColumn() {
     const [focus, setFocus] = useState(false);
@@ -66,10 +74,7 @@ export function HomeCenterColumn() {
                 video's edges. Any clipping ancestor between the video and where
                 the glow should fade removes the effect entirely. */}
             <div
-                className={cn(
-                    "relative bg-sidebar-hover/25 transition-[height] duration-300 ease-out",
-                    focus ? HERO_EXPANDED : HERO_DEFAULT,
-                )}
+                className={cn("relative bg-sidebar-hover/25", HERO_BASE, focus ? HERO_EXPANDED : HERO_DEFAULT)}
             >
                 <HomeHero />
             </div>

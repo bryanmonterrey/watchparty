@@ -14,8 +14,8 @@
 import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
-import { CallBudget, fetchTrendingPools, type DiscoveredPool } from "./geckoterminal";
-import { isExcludedCoin, TRENDING_NETWORKS, trackedTokenId } from "./networks";
+import { CallBudget, fetchTopPools, fetchTrendingPools, type DiscoveredPool } from "./geckoterminal";
+import { isBoardExcluded, TRENDING_NETWORKS, trackedTokenId } from "./networks";
 
 /** Chains refreshed per pass. 4 × 1 call = 4 calls/min, so the full 20-chain
  *  list turns over every 5 minutes and the alert scan keeps its share. */
@@ -31,18 +31,37 @@ const MIN_VOLUME_24H_USD = 10_000;
  *  chain's trending list should leave the board rather than sit there stale. */
 const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
 
+const SLICES = Math.ceil(TRENDING_NETWORKS.length / NETWORKS_PER_PASS);
+
 /** Which chains this minute handles. Derived from the clock so there's no
  *  cursor to persist and a skipped pass just means that slice waits one cycle. */
 export function networksForPass(now = new Date()): { id: string; label: string }[] {
-    const slices = Math.ceil(TRENDING_NETWORKS.length / NETWORKS_PER_PASS);
-    const slice = Math.floor(now.getTime() / 60_000) % slices;
+    const slice = Math.floor(now.getTime() / 60_000) % SLICES;
     return TRENDING_NETWORKS.slice(slice * NETWORKS_PER_PASS, (slice + 1) * NETWORKS_PER_PASS);
 }
 
+/**
+ * Which GT list this pass pulls. Two sources feed the board and they answer
+ * different questions — `top` is what a chain actually trades (the ecosystem
+ * list), `trending` is what's moving right now (the runners) — so the board
+ * wants both.
+ *
+ * ALTERNATING, not both-per-pass: fetching each chain twice a minute would
+ * double the sweep to 8 calls and the free tier's 30/min is already mostly
+ * spent by the alert scan. Flipping per CYCLE keeps the sweep at 4 calls/min
+ * and gives every chain one of each every ~10 minutes. Clock-derived for the
+ * same reason as the slice: no state to persist, self-healing.
+ */
+export function sourceForPass(now = new Date()): "top" | "trending" {
+    const cycle = Math.floor(Math.floor(now.getTime() / 60_000) / SLICES);
+    return cycle % 2 === 0 ? "top" : "trending";
+}
+
 function boardworthy(pool: DiscoveredPool): boolean {
-    // Same exclusion as the alert feed: stables and wrapped majors are not
-    // "trending", they're plumbing, and they'd sit at the top of every sort.
-    if (isExcludedCoin(pool.symbol, pool.marketCapUsd)) return false;
+    // Stables only — NOT the alert feed's exclusion. That one also drops majors
+    // and anything over a $2B cap, which is right for a memecoin activity rail
+    // and exactly wrong for a board whose job is the ecosystem's top coins.
+    if (isBoardExcluded(pool.symbol)) return false;
     return (pool.liquidityUsd ?? 0) >= MIN_LIQUIDITY_USD && (pool.volume24hUsd ?? 0) >= MIN_VOLUME_24H_USD;
 }
 
@@ -142,26 +161,29 @@ async function pruneStale(networkIds: string[]): Promise<number> {
 
 export type TrendingSyncResult = {
     networks: string[];
+    source: "top" | "trending";
     upserted: number;
     pruned: number;
     rateLimited: boolean;
 };
 
-/** One trending pass over this minute's slice of chains. */
+/** One pass over this minute's slice of chains. */
 export async function runTrendingSync(
     budget: CallBudget,
     networks = networksForPass(),
+    source = sourceForPass(),
 ): Promise<TrendingSyncResult> {
     const found: DiscoveredPool[] = [];
     const ranks = new Map<string, number>();
     const done: string[] = [];
+    const fetchPools = source === "top" ? fetchTopPools : fetchTrendingPools;
 
     for (const net of networks) {
         if (budget.remaining <= 0 || budget.rateLimited) break;
-        const pools = await fetchTrendingPools(net.id, budget);
+        const pools = await fetchPools(net.id, budget);
         done.push(net.id);
-        // GT returns its trending list in order; keep the position before we
-        // filter, so rank reflects the chain's real ranking.
+        // GT returns both lists in order; keep the position before we filter,
+        // so rank reflects the chain's real ranking on whichever list this was.
         pools.forEach((p, i) => ranks.set(`${p.network}:${p.poolAddress}`, i + 1));
         found.push(...pools.filter(boardworthy));
     }
@@ -182,7 +204,7 @@ export async function runTrendingSync(
         console.error("[trending] prune failed:", err);
     }
 
-    return { networks: done, upserted, pruned, rateLimited: budget.rateLimited };
+    return { networks: done, source, upserted, pruned, rateLimited: budget.rateLimited };
 }
 
 /** Remove a chain's rows entirely — used when a slug is retired from the list. */

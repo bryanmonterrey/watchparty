@@ -8,7 +8,7 @@
 // five minutes, which is well inside how fast a trending list actually moves.
 import { NextRequest, NextResponse } from "next/server";
 import { CallBudget, GT_TRENDING_BUDGET } from "@/lib/coin-feed/geckoterminal";
-import { networksForPass, runTrendingSync } from "@/lib/coin-feed/trending-sync";
+import { networksForPass, runTrendingSync, sourceForPass } from "@/lib/coin-feed/trending-sync";
 import { TRENDING_NETWORKS } from "@/lib/coin-feed/networks";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +26,13 @@ export async function GET(req: NextRequest) {
     const networks = sweepAll ? TRENDING_NETWORKS : networksForPass();
     const budget = new CallBudget(sweepAll ? TRENDING_NETWORKS.length : GT_TRENDING_BUDGET);
 
+    // The schedule alternates top/trending by the clock; ?source= pins it, which
+    // is what you want with ?all=1 when seeding the board by hand.
+    const requested = req.nextUrl.searchParams.get("source");
+    const source = requested === "top" || requested === "trending" ? requested : sourceForPass();
+
     try {
-        const result = await runTrendingSync(budget, networks);
+        const result = await runTrendingSync(budget, networks, source);
         return NextResponse.json({ ...result, callsSpent: budget.spent });
     } catch (err) {
         console.error("[trending-sync] pass failed:", err);
