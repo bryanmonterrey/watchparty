@@ -77,17 +77,26 @@ export function HomeCenterColumn() {
                 glow that deliberately spills past its edges, covers anything in
                 this row unless it's lifted out. */}
             <div className="relative z-10 flex items-start gap-2 pl-1 pr-1">
-                {/* Keyed on the video: the header owns like state locally after
+                {/* The header belongs to the expanded view, so it folds away
+                    with the tabs: collapsed is a clean screen with nothing but
+                    the toggle beside it. It's also what keeps HERO_EXPANDED
+                    honest — that height reserves 3.5rem for this strip, which
+                    fits the toggle alone but not the header's three lines.
+
+                    Keyed on the video: the header owns like state locally after
                     seeding it from props, which only stays correct if switching
                     videos remounts it. */}
-                {active && <HomeVideoHeader key={active.id} video={active} className="flex-1" />}
+                {!focus && active && <HomeVideoHeader key={active.id} video={active} className="flex-1" />}
 
+                {/* ml-auto pins this right on its own. Nothing else can: the
+                    header is what would otherwise push it, and the header is
+                    absent both while the feed loads AND whenever focus is on. */}
                 <button
                     type="button"
                     onClick={toggle}
                     aria-expanded={!focus}
                     aria-label={focus ? "show categories" : "hide categories"}
-                    className="flex shrink-0 cursor-pointer items-center px-1.5 text-zinc-400 transition-colors hover:text-white"
+                    className="ml-auto flex shrink-0 cursor-pointer items-center px-1.5 text-zinc-400 transition-colors hover:text-white"
                 >
                     <HugeiconsIcon
                         icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}
