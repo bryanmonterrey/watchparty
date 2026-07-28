@@ -7,17 +7,14 @@ import {
     Coins01Icon,
     Megaphone01Icon,
     Note01Icon,
-    Camera01Icon,
+    ChartUpIcon,
     UserGroupIcon,
     VideoReplayIcon,
     LiveStreaming01Icon,
 } from "@hugeicons/core-free-icons";
 import { CreateIcon } from "@/components/icons";
-import { Squircle } from "@/components/ui/squircle";
-import { Button } from "@/components/ui/button";
 import { GooDropdown, gooMenuItem } from "@/components/ui/goo-dropdown";
 import { CreateDialog } from "./create-dialog";
-import { StoryCreator } from "@/components/browse/story-creator";
 import { WithAuth } from "@/components/auth/with-auth";
 
 // The header's + button: pick what you're making, then get the right surface.
@@ -27,10 +24,14 @@ import { WithAuth } from "@/components/auth/with-auth";
 // were already in the dialog.
 //
 // The four dialog tabs open the dialog ON that tab (CreateDialog takes
-// initialTab + controlled open for exactly this). Story has its own composer.
-// Space and Callout are NAVIGATIONS, not dialogs — a callout is made against a
-// specific coin and a space against a community, so there's nothing to fill in
-// from here; the menu takes you where the thing gets made.
+// initialTab + controlled open for exactly this). Space, Callout and Prediction
+// are NAVIGATIONS, not dialogs — each is made against something specific (a
+// community, a coin, a market), so there's nothing to fill in from the header;
+// the menu takes you where the thing gets made.
+//
+// Deliberately NOT here: Story and Shorts (author's call), Community and
+// Playlist (same). Space is in, but its create workflow doesn't exist yet —
+// spaces-view has no create form, so the item lands on the page.
 
 type DialogTab = "video" | "post" | "coin" | "stream";
 
@@ -39,7 +40,6 @@ export function CreateMenu() {
     const [menuOpen, setMenuOpen] = React.useState(false);
     const [dialogOpen, setDialogOpen] = React.useState(false);
     const [tab, setTab] = React.useState<DialogTab>("video");
-    const [storyOpen, setStoryOpen] = React.useState(false);
 
     const openDialog = (t: DialogTab) => {
         setTab(t);
@@ -61,17 +61,19 @@ export function CreateMenu() {
                 width={228}
                 gap={8}
                 triggerAriaLabel="Create"
-                trigger={
-                    <Squircle asChild radius={16} autoEffects={false}>
-                        <Button
-                            variant="outline"
-                            aria-label="Create"
-                            className="rounded-none border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
-                        >
-                            <CreateIcon className="size-6" strokeWidth={2} />
-                        </Button>
-                    </Squircle>
-                }
+                // GooDropdown renders its OWN <button> and treats `trigger` as
+                // that button's content — so the previous Squircle+Button here
+                // was a button nested inside a button, which is why no dropdown
+                // appeared. Icon only, and the header's skin moves to
+                // triggerClassName.
+                //
+                // That costs the true squircle on this one button: Squircle
+                // clips via an SVG clip-path on an element it owns, and there's
+                // no element here to hand it. rounded-2xl is the same 16px
+                // radius as a plain round-rect. Restorable if GooDropdown ever
+                // takes an asChild trigger.
+                triggerClassName="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#6A6A6A]/35 p-0 text-flexwhite transition-colors hover:bg-[#6A6A6A]/50"
+                trigger={<CreateIcon className="size-6" strokeWidth={2} />}
                 items={[
                     gooMenuItem({
                         key: "stream",
@@ -92,15 +94,6 @@ export function CreateMenu() {
                         label: "Post",
                     }),
                     gooMenuItem({
-                        key: "story",
-                        onClick: () => {
-                            setStoryOpen(true);
-                            setMenuOpen(false);
-                        },
-                        icon: <HugeiconsIcon icon={Camera01Icon} />,
-                        label: "Story",
-                    }),
-                    gooMenuItem({
                         key: "coin",
                         onClick: () => openDialog("coin"),
                         icon: <HugeiconsIcon icon={Coins01Icon} />,
@@ -119,6 +112,15 @@ export function CreateMenu() {
                         icon: <HugeiconsIcon icon={Megaphone01Icon} />,
                         label: "Callout",
                     }),
+                    // predictions.createMarket is a real protected procedure, so
+                    // this one has a flow behind it — the page is where markets
+                    // get made.
+                    gooMenuItem({
+                        key: "prediction",
+                        onClick: () => go("/trade/predictions"),
+                        icon: <HugeiconsIcon icon={ChartUpIcon} />,
+                        label: "Prediction",
+                    }),
                 ]}
             />
 
@@ -131,7 +133,6 @@ export function CreateMenu() {
                 </WithAuth>
             </CreateDialog>
 
-            <StoryCreator open={storyOpen} onClose={() => setStoryOpen(false)} />
         </>
     );
 }
