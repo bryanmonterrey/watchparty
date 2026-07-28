@@ -5,7 +5,6 @@ import { UserType } from "@/db/schema/auth/user";
 import { WatchHeader } from "@/components/video/watch-header";
 import { TokenRow } from "@/components/tokens/token-row";
 import { trpc } from "@/lib/trpc/client";
-import { Link2Icon, NotificationsIcon, RestingDotsIcon, BookmarkIcon, ThumbsDownIcon } from "../icons";
 
 interface StreamMetadataProps {
     host: UserType;
@@ -126,32 +125,6 @@ export function StreamMetadata({
                             <DurationChip startedAt={startedAt} />
                         </>
                     ) : undefined
-                }
-                actions={
-                    <>
-                        <div className="flex items-center overflow-hidden rounded-full bg-white/10 transition-colors hover:bg-white/15">
-                            <button className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/5">
-                                <NotificationsIcon className="w-[18px] h-[18px]" />
-                                Like
-                            </button>
-                            <div className="h-5 w-px bg-white/20" />
-                            <button className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/5">
-                                <ThumbsDownIcon className="w-[18px] h-[18px]" />
-                            </button>
-                        </div>
-
-                        <button className="flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/15">
-                            <Link2Icon className="w-[18px] h-[18px]" />
-                            Share
-                        </button>
-                        <button className="flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/15">
-                            <BookmarkIcon className="w-[18px] h-[18px]" />
-                            Save
-                        </button>
-                        <button className="rounded-full bg-white/10 p-2 text-zinc-100 transition-colors hover:bg-white/15">
-                            <RestingDotsIcon className="w-[18px] h-[18px]" />
-                        </button>
-                    </>
                 }
             />
 

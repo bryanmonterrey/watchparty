@@ -24,12 +24,14 @@ import { EditProfileDialog } from "./edit-profile-dialog";
 const iconBtnClass =
     "flex size-11 items-center justify-center rounded-full border border-baseborder/5 bg-soft-gray-10 text-white2 transition-colors hover:bg-soft-gray-15";
 
-function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
+export function MoreMenu({ userId, username, open, onOpenChange, onClose, triggerClassName }: {
     userId: string;
     username: string | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onClose: () => void;
+    /** The watch header's row runs a lighter skin than the profile header's. */
+    triggerClassName?: string;
 }) {
     const utils = trpc.useUtils();
     const banUser = trpc.moderation.banUser.useMutation({
@@ -60,7 +62,7 @@ function MoreMenu({ userId, username, open, onOpenChange, onClose }: {
             width={236}
             gap={8}
             triggerAriaLabel="More options"
-            triggerClassName={iconBtnClass}
+            triggerClassName={triggerClassName ?? iconBtnClass}
             trigger={<VerticalDotsIcon className="size-5" />}
             items={[
                 gooMenuItem({

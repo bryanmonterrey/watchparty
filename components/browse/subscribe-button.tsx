@@ -21,10 +21,14 @@ type Tier = inferRouterOutputs<AppRouter>["subscription"]["getTiers"][number];
 
 interface SubscribeButtonProps {
     creatorId: string;
+    /** Restyle the trigger — the watch header runs a different button skin. */
+    className?: string;
+    /** Trigger icon override. The watch header uses the user-love mark. */
+    icon?: React.ReactNode;
     creatorName: string;
 }
 
-export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps) {
+export function SubscribeButton({ creatorId, creatorName, className, icon }: SubscribeButtonProps) {
     const { data: session } = useAuthSession();
     const utils = trpc.useUtils();
     const { connection } = useConnection();
@@ -130,9 +134,9 @@ export function SubscribeButton({ creatorId, creatorName }: SubscribeButtonProps
         <div className="relative">
             <button
                 onClick={() => setShowPicker(p => !p)}
-                className="flex h-11 items-center gap-1.5 px-4 rounded-full bg-hotpink text-white text-sm font-bold hover:bg-hotpink/90 transition-colors"
+                className={className ?? "flex h-11 items-center gap-1.5 px-4 rounded-full bg-hotpink text-white text-sm font-bold hover:bg-hotpink/90 transition-colors"}
             >
-                <Crown className="w-4 h-4" />
+                {icon ?? <Crown className="w-4 h-4" />}
                 Subscribe
             </button>
             {showPicker && (

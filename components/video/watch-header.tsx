@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserType } from "@/db/schema/auth/user";
-import { useAuthSession } from "@/hooks/use-auth-session";
-import { ProfileHeaderActions } from "@/components/profile/profile-header-actions";
+import { WatchActions } from "./watch-actions";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 
 // The header under the screen on the video and live pages — home's video header
@@ -23,14 +22,14 @@ import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components
 // It replaces ProfileHeader on both pages. That component is built for a
 // profile — display name, follower counts, level and badges — and stacking all
 // of it under a video title was the reason these headers felt like a different
-// app from home. Its ACTIONS (gift, message, follow, subscribe) are kept: they
-// render here, at the head of each page's own action row.
+// app from home. The action row is WatchActions: gift, follow-or-subscribe,
+// heart, dots.
 
 interface WatchHeaderProps {
     user: UserType;
     title: string;
-    /** Page-specific buttons — like, share, save, overflow. */
-    actions?: ReactNode;
+    /** The heart, when the page has something likeable. See WatchActions. */
+    like?: { liked: boolean; onToggle: () => void };
     /** Bottom right: "4 views · yesterday", or the live viewer + duration chips. */
     stats?: ReactNode;
     /** Third row, under the identity — <TokenRow />, the same coin line home's
@@ -51,15 +50,7 @@ function VerifiedBadge({ tier }: { tier: string | null | undefined }) {
     return null;
 }
 
-export function WatchHeader({ user, title, actions, stats, tokenRow, onNameClick, nameTitle }: WatchHeaderProps) {
-    const { data: session, isPending } = useAuthSession();
-    // Mounted-gated like ProfileHeader's own check: the session resolves on the
-    // client, so deciding ownership during render would mismatch the server's
-    // markup on hydration.
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => { setMounted(true); }, []);
-    const isOwner = mounted && !isPending && session?.user?.id === user.id;
-
+export function WatchHeader({ user, title, like, stats, tokenRow, onNameClick, nameTitle }: WatchHeaderProps) {
     const nameClass = "truncate text-[20px] font-bold leading-snug text-zinc-400 transition-colors hover:text-white";
 
     return (
@@ -108,10 +99,7 @@ export function WatchHeader({ user, title, actions, stats, tokenRow, onNameClick
 
             {/* Actions, with the count beneath them at the bottom right. */}
             <div className="flex shrink-0 flex-col items-end gap-2">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                    <ProfileHeaderActions user={user} isOwner={isOwner} />
-                    {actions}
-                </div>
+                <WatchActions user={user} like={like} />
                 {stats && <div className="flex items-center gap-2 text-sm font-semibold text-zinc-400">{stats}</div>}
             </div>
         </div>

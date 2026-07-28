@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { Link2Icon, BookmarkIcon, RestingDotsIcon, HeartIcon, HeartFilledIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { WatchHeader } from "@/components/video/watch-header";
@@ -155,35 +154,7 @@ export function VideoMetadata({
                         <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
                     </>
                 }
-                actions={
-                    <>
-                        <button
-                            onClick={handleLike}
-                            className={cn(
-                                "cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 transition-colors hover:bg-white/15",
-                                liked ? "text-red1" : "text-zinc-100"
-                            )}
-                        >
-                            {liked
-                                ? <HeartFilledIcon className="size-5" />
-                                : <HeartIcon className="size-5" />
-                            }
-                            {likeCount > 0 ? formatViewers(likeCount) : "Like"}
-                        </button>
-
-                        <button className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                            <Link2Icon className="size-5" />
-                            Share
-                        </button>
-                        <button className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                            <BookmarkIcon className="size-5" />
-                            Save
-                        </button>
-                        <button className="cursor-pointer p-2.5 rounded-full bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                            <RestingDotsIcon className="size-5" />
-                        </button>
-                    </>
-                }
+                like={{ liked, onToggle: handleLike }}
             />
 
             {/* Description Block */}
