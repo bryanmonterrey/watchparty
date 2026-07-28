@@ -119,7 +119,7 @@ export function StreamMetadata({
                 {/* Left: Compact Profile Header */}
                 <div className="flex flex-row items-center gap-4">
                     <ProfileAvatar user={host} isMinimized={true} />
-                    <ProfileHeader user={host} isMinimized={true} onNameClick={onNameClick} />
+                    <ProfileHeader user={host} isMinimized={true} onNameClick={onNameClick} nameTitle="Switch to profile" />
                 </div>
 
                 {/* Right: Actions */}

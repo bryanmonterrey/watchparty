@@ -25,6 +25,8 @@ interface ProfileHeaderProps {
      * no hover underline, because there'd be nothing to switch to.
      */
     onNameClick?: () => void;
+    /** Tooltip for the switch — which way it goes depends on the side calling. */
+    nameTitle?: string;
     /** Live pill beside the name. The profile side sets it, so the name reads as
      *  "there's a stream through here"; the stream side already says so itself. */
     showLivePill?: boolean;
@@ -34,7 +36,7 @@ interface ProfileHeaderProps {
 // both back — the markup and its loading skeleton are left intact below.
 const SHOW_LEVEL_AND_BADGES = false;
 
-export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameClick, showLivePill }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameClick, nameTitle, showLivePill }: ProfileHeaderProps) {
     const [followersDialog, setFollowersDialog] = React.useState<"followers" | "following" | null>(null);
     const { data: session, isPending: sessionPending } = useAuthSession();
     const [mounted, setMounted] = React.useState(false);
@@ -77,7 +79,7 @@ export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameCl
                         <button
                             type="button"
                             onClick={onNameClick}
-                            title={showLivePill ? "Watch the stream" : "Back to profile"}
+                            title={nameTitle}
                             className={cn(
                                 "cursor-pointer font-semibold tracking-tighter text-white underline-offset-4 hover:underline",
                                 isMinimized ? "text-xl" : "text-2xl",

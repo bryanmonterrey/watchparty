@@ -42,12 +42,6 @@ export function UserProfile({ user, initialFollowCounts, initialIsLive }: UserPr
         { enabled: !!initialIsLive, refetchInterval: 60_000, refetchIntervalInBackground: false },
     );
     const isLive = initialIsLive ? (live?.isLive ?? true) : false;
-
-    // Stream ended under you: fall back to the profile rather than leaving a
-    // dead player on screen.
-    useEffect(() => {
-        if (!isLive) setShowLive(false);
-    }, [isLive]);
     const [isMinimized, setIsMinimized] = useState(false);
     const minimizedRef     = useRef(false);
     const buttonMinRef     = useRef(false);
@@ -102,9 +96,12 @@ export function UserProfile({ user, initialFollowCounts, initialIsLive }: UserPr
         return <StreamWatchPage host={user} onShowProfile={() => setShowLive(false)} />;
     }
 
-    // Only a live host's name is a switch — otherwise there's nowhere to go and
-    // an underline on hover would be a lie.
-    const nameToggle = isLive ? () => setShowLive(true) : undefined;
+    // Unconditional, both ways. It was gated on isLive — which meant clicking
+    // your own name did nothing whenever you weren't broadcasting, i.e. almost
+    // always. The live view has a real offline state ("<name> is offline", see
+    // StreamPlayer), so there's somewhere to go either way; whether a stream is
+    // actually running is what the live pill says, not what the switch allows.
+    const toggleView = () => setShowLive((v) => !v);
 
     return (
         // 3-column channel layout: left rail (sidebar width) + center column +
@@ -146,7 +143,8 @@ export function UserProfile({ user, initialFollowCounts, initialIsLive }: UserPr
                                 user={user}
                                 isMinimized={true}
                                 initialFollowCounts={initialFollowCounts}
-                                onNameClick={nameToggle}
+                                onNameClick={toggleView}
+                                nameTitle="Switch to live view"
                                 showLivePill={isLive}
                             />
                         </div>
@@ -176,7 +174,8 @@ export function UserProfile({ user, initialFollowCounts, initialIsLive }: UserPr
                             user={user}
                             isMinimized={false}
                             initialFollowCounts={initialFollowCounts}
-                            onNameClick={nameToggle}
+                            onNameClick={toggleView}
+                            nameTitle="Switch to live view"
                             showLivePill={isLive}
                         />
                     </div>
