@@ -71,16 +71,24 @@ export function TokenRow({
     token,
     postId,
     size = "sm",
+    fallbackImage,
     className,
 }: {
     token: TokenRowToken;
     /** What quickBuy keys its in-flight state on. */
     postId: string;
     size?: Size;
+    /**
+     * Shown when the coin has no art of its own, in place of the blank circle.
+     * The live page passes the host's avatar: a stream's pill is the channel's
+     * coin, so the channel's face is the sensible default.
+     */
+    fallbackImage?: string | null;
     className?: string;
 }) {
     if (!token.ticker) return null;
     const slug = token.tokenAddress ?? token.id;
+    const image = token.imageUrl ?? fallbackImage ?? null;
 
     return (
         <div className={cn("flex min-w-0 flex-wrap items-center gap-2", className)}>
@@ -95,10 +103,10 @@ export function TokenRow({
                     size === "lg" ? "py-1.5 pl-1.5 pr-3 text-[15px]" : "py-1 pl-1 pr-2.5 text-[12px]",
                 )}
             >
-                {token.imageUrl ? (
+                {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                        src={token.imageUrl}
+                        src={image}
                         alt=""
                         loading="lazy"
                         className={cn("shrink-0 rounded-full object-cover", size === "lg" ? "size-5" : "size-4")}

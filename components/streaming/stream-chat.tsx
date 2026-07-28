@@ -1,24 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { Send2Icon } from "../icons";
 import { useStreamChat } from "@/hooks/use-stream-chat";
 import { MiniProfile } from "@/components/profile/mini-profile-card";
 import { ChatIdentity } from "./chat-identity";
-import { TokenInlineChip } from "@/components/tokens/token-inline-chip";
 import { RailTabs, RAIL_TABS } from "@/components/rails/rail-tabs";
 import { RailVideoList } from "@/components/rails/rail-video-list";
 import { RailRowSkeleton } from "@/components/rails/rail-row";
-import { trpc } from "@/lib/trpc/client";
 
 // The live page's right rail — home's rail, with one exception: Chat is the
 // first tab, and it's what the page opens on.
 //
 // The bordered zinc-950 card and the "Chat" header row are gone with that
 // change: the homepage rail is bare on the canvas, a tab row over a list, and
-// "Chat" is a tab now rather than a heading. Everything the chat DOES —
-// realtime messages, the host's pinned token, the composer — is untouched.
+// "Chat" is a tab now rather than a heading.
+//
+// The host's coin chip + Buy button that used to sit above the messages are gone
+// too: the coin is a row in the page header now (see stream-metadata), and the
+// same pill with the same action twice on one screen is just noise. Realtime
+// messages and the composer are untouched.
 
 interface StreamChatProps {
     hostUserId: string;
@@ -44,12 +45,6 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     const { messages, send, connected } = useStreamChat(hostUserId, !!isLive && !isLoading);
-
-    // Creator's live token, pinned above chat with quick-buy (design brief §2).
-    const { data: hostToken } = trpc.trade.tokenByCreator.useQuery(
-        { creatorId: hostUserId },
-        { enabled: !isLoading, staleTime: 60_000 },
-    );
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -89,18 +84,6 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
                 </div>
             ) : (
                 <div className="flex min-h-0 flex-1 flex-col gap-2">
-                    {hostToken && (
-                        <div className="flex items-center gap-2 px-1">
-                            <TokenInlineChip token={hostToken} className="min-w-0 flex-1" />
-                            <Link
-                                href={`/${hostToken.id}`}
-                                className="flex h-9 shrink-0 items-center rounded-full bg-lantern px-4 text-sm font-bold text-black transition-transform hover:scale-105 active:scale-95"
-                            >
-                                Buy
-                            </Link>
-                        </div>
-                    )}
-
                     <div ref={chatContainerRef} className="scrollbar-hide min-h-0 flex-1 space-y-2.5 overflow-y-auto px-1">
                         {messages.length === 0 && (
                             <p className="pt-8 text-center text-xs font-medium text-zinc-500">
