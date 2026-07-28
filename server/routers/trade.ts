@@ -95,6 +95,8 @@ export const tradeRouter = router({
                 const [t] = await db
                     .select({
                         id: tokens.id,
+                        // The mint. Its absence is what "not launched yet" means.
+                        tokenAddress: tokens.tokenAddress,
                         ticker: tokens.ticker,
                         name: tokens.name,
                         imageUrl: tokens.imageUrl,

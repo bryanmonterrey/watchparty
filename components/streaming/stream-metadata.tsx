@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
-import { ProfileAvatar } from "@/components/profile/profile-avatar";
 import { WatchHeader } from "@/components/video/watch-header";
+import { TokenRow } from "@/components/tokens/token-row";
+import { trpc } from "@/lib/trpc/client";
 import { Link2Icon, NotificationsIcon, RestingDotsIcon, BookmarkIcon, ThumbsDownIcon } from "../icons";
 
 interface StreamMetadataProps {
@@ -71,6 +72,13 @@ export function StreamMetadata({
     isLoading,
     onNameClick,
 }: StreamMetadataProps) {
+    // The host's coin. Same query StreamChat pins above chat, so TanStack
+    // dedupes on the key and it's one Redis-cached hit either way.
+    const { data: hostToken } = trpc.trade.tokenByCreator.useQuery(
+        { creatorId: host.id },
+        { enabled: !isLoading, staleTime: 60_000 },
+    );
+
     if (isLoading) {
         return (
             <div className="flex flex-col gap-2 mt-3">
@@ -104,7 +112,7 @@ export function StreamMetadata({
             <WatchHeader
                 user={host}
                 title={streamTitle ?? `${host.name} is live`}
-                avatar={<ProfileAvatar user={host} isMinimized={true} />}
+                tokenRow={hostToken ? <TokenRow token={hostToken} postId={`live:${host.id}`} /> : undefined}
                 // The switch back to the profile. It was on the display name,
                 // which this header no longer shows — @username is the identity
                 // here, and clicking it means the same thing.

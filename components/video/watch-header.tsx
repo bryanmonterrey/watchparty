@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserType } from "@/db/schema/auth/user";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { ProfileHeaderActions } from "@/components/profile/profile-header-actions";
@@ -10,12 +11,11 @@ import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components
 // The header under the screen on the video and live pages — home's video header
 // applied to a full page.
 //
-// Shape: avatar, then title over @username, with the actions right-aligned and
-// the view/viewer count under them at the bottom right. Three differences from
-// home's, all deliberate:
+// Shape: avatar | title, @username, token row | actions over the view/viewer
+// count. Three differences from home's, all deliberate:
 //
-//   · the avatar is whatever each page already had (size-20 video, size-24
-//     live), passed in rather than fixed here
+//   · the avatar is size-24 and ringless, owned here rather than passed in, so
+//     the two pages cannot drift apart again
 //   · @username is set at the TITLE's size, so the identity reads as the
 //     second line of one block instead of a caption under it
 //   · the count sits bottom-right beneath the actions, not inline in a meta row
@@ -29,14 +29,13 @@ import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components
 interface WatchHeaderProps {
     user: UserType;
     title: string;
-    /** Each page keeps the avatar it already had. */
-    avatar: ReactNode;
     /** Page-specific buttons — like, share, save, overflow. */
     actions?: ReactNode;
     /** Bottom right: "4 views · yesterday", or the live viewer + duration chips. */
     stats?: ReactNode;
-    /** Sits beside the username — the video's attached token, on the video page. */
-    chip?: ReactNode;
+    /** Third row, under the identity — <TokenRow />, the same coin line home's
+     *  video header runs. */
+    tokenRow?: ReactNode;
     /**
      * Live page: the username switches back to the profile instead of navigating
      * to it. Both readings are "go to this person", so it's the same control.
@@ -52,7 +51,7 @@ function VerifiedBadge({ tier }: { tier: string | null | undefined }) {
     return null;
 }
 
-export function WatchHeader({ user, title, avatar, actions, stats, chip, onNameClick, nameTitle }: WatchHeaderProps) {
+export function WatchHeader({ user, title, actions, stats, tokenRow, onNameClick, nameTitle }: WatchHeaderProps) {
     const { data: session, isPending } = useAuthSession();
     // Mounted-gated like ProfileHeader's own check: the session resolves on the
     // client, so deciding ownership during render would mismatch the server's
@@ -65,13 +64,26 @@ export function WatchHeader({ user, title, avatar, actions, stats, chip, onNameC
 
     return (
         <div className="mt-3 flex items-start gap-4">
-            {avatar}
+            {/* The header owns the avatar rather than taking it as a prop: the
+                two pages were passing different components at different sizes
+                (size-20 video, size-24 live) and that's the whole reason they
+                didn't match. size-24 for both, and NO border/ring — the 6px
+                black ring those components draw is for an avatar overlapping a
+                banner, which is the profile page's problem, not this one.
+                (components/profile/profile-avatar keeps its ring for exactly
+                that reason; it's still the profile page's.) */}
+            <Link href={`/${user.username ?? ""}`} className="shrink-0" aria-label={user.username ?? "creator"}>
+                <Avatar className="size-24">
+                    <AvatarImage src={user.avatar_url ?? undefined} className="object-cover" />
+                    <AvatarFallback />
+                </Avatar>
+            </Link>
 
             {/* Identity: title, then the handle at the same size under it. */}
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <h1 className="line-clamp-2 text-[20px] font-bold leading-snug text-white">{title}</h1>
 
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <div className="flex min-w-0 items-center gap-x-2">
                     <span className="flex min-w-0 items-center gap-1.5">
                         {onNameClick ? (
                             <button
@@ -89,8 +101,9 @@ export function WatchHeader({ user, title, avatar, actions, stats, chip, onNameC
                         )}
                         <VerifiedBadge tier={user.verifiedTier} />
                     </span>
-                    {chip}
                 </div>
+
+                {tokenRow && <div className="mt-1">{tokenRow}</div>}
             </div>
 
             {/* Actions, with the count beneath them at the bottom right. */}

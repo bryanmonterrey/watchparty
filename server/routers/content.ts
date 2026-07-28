@@ -1321,6 +1321,7 @@ export const contentRouter = router({
                     // null id means no token; shaped to null below.
                     token: {
                         id: tokens.id,
+                        tokenAddress: tokens.tokenAddress,
                         ticker: tokens.ticker,
                         name: tokens.name,
                         imageUrl: tokens.imageUrl,

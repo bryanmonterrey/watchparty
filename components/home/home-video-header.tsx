@@ -7,7 +7,7 @@ import { FavouriteIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
-import { useQuickBuy } from "@/hooks/use-quick-buy";
+import { TokenRow } from "@/components/tokens/token-row";
 import { formatRelativeTime } from "@/lib/date-utils";
 import type { HomeFeedVideo } from "./home-feed-context";
 
@@ -134,51 +134,6 @@ function LikeButton({ video }: { video: HomeFeedVideo }) {
     );
 }
 
-/**
- * The row's blue action, matching the trending board's.
- *
- * LAUNCH vs BUY is the token model, not a label choice: content always creates
- * a draft, and the first buyer IS the launch — they pay and receive, while the
- * creator keeps the pool identity and fees. So a coin with no mint isn't
- * "closed", it's unclaimed, and "Launch" is the honest verb for taking it.
- *
- * They behave differently because the two acts are: Buy is one click at the
- * saved preset (same as the trending board), while launching has to name an
- * amount and create the pool, so it goes to the token page's first-buy card.
- */
-function TokenAction({ video, tokenSlug }: { video: HomeFeedVideo; tokenSlug: string | null | undefined }) {
-    const { quickBuy, buyingId } = useQuickBuy();
-    const mint = video.tokenAddress;
-    const label = "text-sm font-extrabold text-royal-blue transition-opacity hover:opacity-80";
-
-    if (!mint) {
-        return (
-            <Link href={`/${tokenSlug}`} className={label}>
-                Launch
-            </Link>
-        );
-    }
-
-    const buying = buyingId === video.id;
-    return (
-        <button
-            type="button"
-            disabled={buying}
-            onClick={() => {
-                void quickBuy({
-                    id: video.id,
-                    tokenAddress: mint,
-                    symbol: video.ticker ?? "",
-                    imageUrl: null,
-                });
-            }}
-            className={cn(label, "cursor-pointer disabled:opacity-50")}
-        >
-            {buying ? "Buying…" : "Buy"}
-        </button>
-    );
-}
-
 export function HomeVideoHeader({ video, className, action }: {
     video: HomeFeedVideo;
     className?: string;
@@ -209,7 +164,7 @@ export function HomeVideoHeader({ video, className, action }: {
                 />
             </Link>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-0">
                 <h2 className="line-clamp-1 text-[17px] font-bold leading-tight tracking-tight text-white">
                     {video.title}
                 </h2>
@@ -233,38 +188,16 @@ export function HomeVideoHeader({ video, className, action }: {
                     There is no `$—·—` placeholder in the meantime: an empty slot
                     beats a wrong one. */}
                 {hasToken && (
-                    <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
-                        {/* Image INSIDE the pill, not floating beside it. Both
-                            were on the table; inside wins on one concrete
-                            ground — TokenInlineChip (the same idea in the live
-                            rail and the watch header) already puts it inside, so
-                            outside would make the same object look like two
-                            different components. It also reads as one thing you
-                            click rather than a loose circle next to a pill.
-                            pl-1 balances the image's own inset against the
-                            text's px-2.5. */}
-                        <Link
-                            href={`/${tokenSlug}`}
-                            className="flex items-center gap-1.5 rounded-full bg-white/[0.06] py-1 pl-1 pr-2.5 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
-                        >
-                            {tokenImage ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={tokenImage}
-                                    alt=""
-                                    loading="lazy"
-                                    className="size-4 shrink-0 rounded-full object-cover"
-                                />
-                            ) : (
-                                // Keeps the pill's width steady whether or not the
-                                // coin has art.
-                                <span className="size-4 shrink-0 rounded-full bg-white/10" />
-                            )}
-                            ${video.ticker}
-                        </Link>
-
-                        <TokenAction video={video} tokenSlug={tokenSlug} />
-                    </div>
+                    <TokenRow
+                        className="mt-0.5"
+                        postId={video.id}
+                        token={{
+                            id: video.tokenId ?? "",
+                            tokenAddress: video.tokenAddress,
+                            ticker: video.ticker ?? null,
+                            imageUrl: tokenImage,
+                        }}
+                    />
                 )}
             </div>
 

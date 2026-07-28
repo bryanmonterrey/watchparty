@@ -6,11 +6,11 @@ import { formatDistanceToNow } from "date-fns";
 import { Link2Icon, BookmarkIcon, RestingDotsIcon, HeartIcon, HeartFilledIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { ProfileAvatar } from "@/components/video/profile-avatar";
 import { WatchHeader } from "@/components/video/watch-header";
 import { UserType } from "@/db/schema/auth/user";
 import { CommentSection } from "@/components/browse/comment-section";
-import { TokenInlineChip, type InlineChipToken } from "@/components/tokens/token-inline-chip";
+import { type InlineChipToken } from "@/components/tokens/token-inline-chip";
+import { TokenRow } from "@/components/tokens/token-row";
 
 interface VideoAuthor {
     id: string;
@@ -145,8 +145,7 @@ export function VideoMetadata({
             <WatchHeader
                 user={author as unknown as UserType}
                 title={title ?? "Untitled"}
-                avatar={<ProfileAvatar user={author as unknown as UserType} isMinimized={true} />}
-                chip={token ? <TokenInlineChip token={token} /> : undefined}
+                tokenRow={token ? <TokenRow token={token} postId={postId} /> : undefined}
                 // Bottom right, where the meta row used to be inline: the count
                 // and the age of the video.
                 stats={
