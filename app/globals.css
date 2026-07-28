@@ -776,12 +776,6 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     max-height: none !important;
     overflow: visible;
     contain: none;
-    /* The library hard-codes `border-radius: 12px` on its canvas (inline, in
-       its constructor — see dist/index.js). Every player is square now, so the
-       rounded canvas cut the glow away at the four corners and left them dark
-       against the container's black — reading as shadowed corners inside the
-       frame. Nothing else sets a radius here, so overriding it is safe. */
-    border-radius: 0 !important;
   }
 
   .hidden-scrollbar {

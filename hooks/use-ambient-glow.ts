@@ -33,15 +33,16 @@ const DEFAULTS: AmbientGlowOptions = {
  * the page. The other players ran blur 120 and the difference was obvious next
  * to home.
  *
- * `scale` is the ONE number that isn't home's. It was 1 — the canvas exactly
- * the size of the video box — and a blurred element fades out at its own edges,
- * so the glow feathered to nothing right at the frame border. On a 16:9 video
- * the video covers that, but a square or portrait one letterboxes and the bars
- * showed a dark rim hugging the frame: a ring that reads as an inner shadow.
- * 1.08 (the library's own default) pushes the canvas ~4% past each edge, which
- * is more than the 28px of blur, so the fade now happens OUTSIDE the frame and
- * the bars fill evenly. Colour, blur, opacity and brightness are untouched —
- * only how far the canvas reaches.
+ * These are home's numbers EXACTLY, and they stay that way. `scale` was
+ * briefly 1.08 to chase a dark rim in the letterbox bars of a square video —
+ * that widened the halo on every player including home, which was never the
+ * ask. The rim turned out to be a backdrop problem, not a scale one: the glow
+ * is 35% opaque, so a bar is mostly whatever sits behind it, and the two big
+ * players were bg-black where home is bg-muted. Fixing the floor fixed the rim.
+ * At scale 1 the canvas matches the video box, so the halo stays tight.
+ *
+ * If a player ever needs a different glow, it passes its own options — it does
+ * NOT edit this. Changing a shared preset to tune one surface changes them all.
  *
  * EVERY key is spelled out, including the ones that match the defaults above:
  * the live player builds its AmbientGlow by hand rather than through the hook
@@ -53,7 +54,7 @@ export const AMBIENT_PRESET: AmbientGlowOptions = {
     opacity: 0.35,
     brightness: 1.05,
     saturate: 1.2,
-    scale: 1.08,
+    scale: 1,
     downscale: 0.1,
     updateInterval: 98,
     responsiveness: 0.1,
