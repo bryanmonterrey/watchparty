@@ -55,7 +55,7 @@ interface CarouselVideo {
 }
 
 function watchHref(v: CarouselVideo) {
-    return `/${v.user.username}/${v.id}`;
+    return `/video/${v.id}`;
 }
 
 export function HomeCarousel({ videos }: { videos: CarouselVideo[] }) {

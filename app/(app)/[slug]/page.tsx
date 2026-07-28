@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth";
-import { tokens } from "@/db/schema/content";
+import { streams, tokens } from "@/db/schema/content";
 import { follows } from "@/db/schema/content/follow";
 import { count, eq, or } from "drizzle-orm";
 import { UserProfile } from "@/components/profile/user-profile";
@@ -25,6 +25,14 @@ const getTokenBySlug = cache((slug: string) =>
         where: or(eq(tokens.id, slug), eq(tokens.tokenAddress, slug)),
         with: { creator: true },
     })
+);
+
+// The live check the profile page opens on. Server-side deliberately: the page
+// renders straight into the stream when its host is broadcasting, and finding
+// that out on the client would mean painting the profile first and yanking it
+// away a beat later.
+const getStreamByUser = cache((userId: string) =>
+    db.query.streams.findFirst({ where: eq(streams.userId, userId) })
 );
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -66,7 +74,23 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         } catch (err) {
             console.error("[slug] follow-count SSR failed, deferring to client:", err);
         }
-        return <UserProfile user={userProfile} initialFollowCounts={initialFollowCounts} />;
+
+        // Live is a MODE of this page now, not a route of its own. A broadcasting
+        // host opens on their stream; the profile is one click away on the name.
+        let initialIsLive = false;
+        try {
+            initialIsLive = (await getStreamByUser(userProfile.id))?.isLive ?? false;
+        } catch (err) {
+            console.error("[slug] live check failed, opening on the profile:", err);
+        }
+
+        return (
+            <UserProfile
+                user={userProfile}
+                initialFollowCounts={initialFollowCounts}
+                initialIsLive={initialIsLive}
+            />
+        );
     }
 
     // 2. Token (by ID for drafts, or by address for live)

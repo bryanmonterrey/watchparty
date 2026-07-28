@@ -20,7 +20,7 @@ interface FeedVideo {
 
 function LiveCard({ v }: { v: FeedVideo }) {
     return (
-        <Link href={`/${v.user.username}/${v.id}`} className="w-44 shrink-0 snap-start md:w-52">
+        <Link href={`/video/${v.id}`} className="w-44 shrink-0 snap-start md:w-52">
             <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
                 {v.thumbnailUrl && (
                     // eslint-disable-next-line @next/next/no-img-element

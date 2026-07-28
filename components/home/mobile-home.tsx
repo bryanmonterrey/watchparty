@@ -52,7 +52,7 @@ function VideoRow({ videos, isLoading }: { videos: FeedVideo[]; isLoading: boole
             {videos.map((v) => (
                 <Link
                     key={v.id}
-                    href={`/${v.user.username}/${v.id}`}
+                    href={`/video/${v.id}`}
                     className="w-[320px] shrink-0 snap-start"
                 >
                     <div className="aspect-video overflow-hidden rounded-xl bg-muted">

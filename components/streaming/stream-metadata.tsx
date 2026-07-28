@@ -15,6 +15,9 @@ interface StreamMetadataProps {
     startedAt: Date;
     description: string | null;
     isLoading?: boolean;
+    /** Switches back to the host's profile — the stream and the profile are two
+     *  views of the same page, and the display name is the control. */
+    onNameClick?: () => void;
 }
 
 function formatViewers(n: number) {
@@ -65,7 +68,8 @@ export function StreamMetadata({
     viewerCount,
     startedAt,
     description,
-    isLoading
+    isLoading,
+    onNameClick,
 }: StreamMetadataProps) {
     if (isLoading) {
         return (
@@ -115,7 +119,7 @@ export function StreamMetadata({
                 {/* Left: Compact Profile Header */}
                 <div className="flex flex-row items-center gap-4">
                     <ProfileAvatar user={host} isMinimized={true} />
-                    <ProfileHeader user={host} isMinimized={true} />
+                    <ProfileHeader user={host} isMinimized={true} onNameClick={onNameClick} />
                 </div>
 
                 {/* Right: Actions */}

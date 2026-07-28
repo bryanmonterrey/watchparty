@@ -74,7 +74,7 @@ function VideoList({ videos }: { videos: UpNextVideo[] }) {
             {videos.map(v => (
                 <Link
                     key={v.id}
-                    href={`/${v.author.username}/${v.id}`}
+                    href={`/video/${v.id}`}
                     className="flex gap-2 group rounded-xl hover:bg-white/10 p-1 transition-colors"
                 >
                     <div className="relative shrink-0 w-48 aspect-video rounded-lg overflow-hidden bg-zinc-800">

@@ -58,7 +58,7 @@ export function HomeHero({ user, onWatch }: { user: UserType; onWatch?: () => vo
                 </p>
             </div>
             <Link
-                href={`/${user.username ?? user.id}/${video.id}`}
+                href={`/video/${video.id}`}
                 className="group w-full shrink-0 sm:w-[280px]"
             >
                 <Squircle asChild radius={16}>

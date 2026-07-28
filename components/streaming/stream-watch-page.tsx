@@ -13,9 +13,12 @@ import { StreamMetadata } from "./stream-metadata";
 
 interface StreamWatchPageProps {
     host: UserType;
+    /** Back to the host's profile. The stream isn't a route any more — it's a
+     *  mode of /<username> — so leaving it is state, not navigation. */
+    onShowProfile?: () => void;
 }
 
-export function StreamWatchPage({ host }: StreamWatchPageProps) {
+export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
     const [showChat, setShowChat] = useState(true);
     const pathname = usePathname();
     const { miniPlayerData, enterMiniPlayer, exitMiniPlayer } = useMiniPlayer();
@@ -91,6 +94,7 @@ export function StreamWatchPage({ host }: StreamWatchPageProps) {
                     startedAt={startedAt}
                     description={(stream as any)?.description ?? null}
                     isLoading={isLoading}
+                    onNameClick={onShowProfile}
                 />
             </div>
 

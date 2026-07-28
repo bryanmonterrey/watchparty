@@ -169,7 +169,7 @@ function LikeButton({ video }: { video: HomeFeedVideo }) {
 
 export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; className?: string }) {
     const username = video.user.username;
-    const watchHref = username ? `/${username}/${video.id}` : `/${video.id}`;
+    const watchHref = `/video/${video.id}`;
     // The mint once live, else the token row id — /[slug] resolves both.
     const tokenSlug = video.tokenAddress ?? video.tokenId;
     const hasToken = !!tokenSlug && !!video.ticker;

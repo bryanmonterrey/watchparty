@@ -95,9 +95,9 @@ export function VideoSearch({ onClose, onSelect }: VideoSearchProps) {
     }, [data, query]);
 
     const handleSelect = (video: VideoResult) => {
-        const username = (session?.user as { username?: string } | undefined)?.username;
-        const url = username ? `/${username}/${video.id}` : "";
-        onSelect({ url, title: video.title, thumbnailUrl: video.thumbnailUrl });
+        // /video/<id> resolves on its own, so this no longer needs the session's
+        // username — and no longer produces an empty url when there isn't one.
+        onSelect({ url: `/video/${video.id}`, title: video.title, thumbnailUrl: video.thumbnailUrl });
     };
 
     return (

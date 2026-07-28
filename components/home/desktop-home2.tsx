@@ -68,7 +68,7 @@ function formatTime(seconds: number) {
 }
 
 function watchHref(v: FeedVideo) {
-    return `/${v.user.username}/${v.id}`;
+    return `/video/${v.id}`;
 }
 
 // ─── TRENDING HOVER COLORS (experimental — easy to remove) ──────────────────

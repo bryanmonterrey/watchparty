@@ -53,7 +53,7 @@ export function EndScreen({ isEnded, postId }: EndScreenProps) {
                             {videos.map((v) => (
                                 <Link
                                     key={v.id}
-                                    href={`/${v.author.username}/${v.id}`}
+                                    href={`/video/${v.id}`}
                                     className="flex flex-col group flex-1 min-w-0 hover:bg-zinc-900 rounded-2xl -m-2 p-2 transition-all duration-150"
                                 >
                                     {/* Thumbnail */}

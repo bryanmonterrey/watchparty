@@ -18,13 +18,23 @@ interface ProfileHeaderProps {
     /** Server-fetched seed — kills the counts-only second skeleton phase on the
         profile page. Video/stream headers omit it and keep the shimmer. */
     initialFollowCounts?: { followers: number; following: number };
+    /**
+     * Makes the display name the switch between this host's stream and their
+     * profile — the two views share this header, so the name is the one control
+     * that's in the same place in both. Absent, the name is inert text and gets
+     * no hover underline, because there'd be nothing to switch to.
+     */
+    onNameClick?: () => void;
+    /** Live pill beside the name. The profile side sets it, so the name reads as
+     *  "there's a stream through here"; the stream side already says so itself. */
+    showLivePill?: boolean;
 }
 
 // Hidden for now: the XP level bar and the badge strip. Flip to true to bring
 // both back — the markup and its loading skeleton are left intact below.
 const SHOW_LEVEL_AND_BADGES = false;
 
-export function ProfileHeader({ user, isMinimized, initialFollowCounts }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameClick, showLivePill }: ProfileHeaderProps) {
     const [followersDialog, setFollowersDialog] = React.useState<"followers" | "following" | null>(null);
     const { data: session, isPending: sessionPending } = useAuthSession();
     const [mounted, setMounted] = React.useState(false);
@@ -63,9 +73,32 @@ export function ProfileHeader({ user, isMinimized, initialFollowCounts }: Profil
                 this stack's first row and skews the gaps. */}
             <div className="flex flex-col gap-0.5 min-w-0">
                 <div className={cn("flex items-center justify-start min-w-0", isMinimized ? "flex-row gap-1" : "flex-row gap-1")}>
-                    <h1 className={cn("font-semibold tracking-tighter text-white", isMinimized ? "text-xl" : "text-2xl")}>
-                        {user.name}
-                    </h1>
+                    {onNameClick ? (
+                        <button
+                            type="button"
+                            onClick={onNameClick}
+                            title={showLivePill ? "Watch the stream" : "Back to profile"}
+                            className={cn(
+                                "cursor-pointer font-semibold tracking-tighter text-white underline-offset-4 hover:underline",
+                                isMinimized ? "text-xl" : "text-2xl",
+                            )}
+                        >
+                            {user.name}
+                        </button>
+                    ) : (
+                        <h1 className={cn("font-semibold tracking-tighter text-white", isMinimized ? "text-xl" : "text-2xl")}>
+                            {user.name}
+                        </h1>
+                    )}
+                    {showLivePill && (
+                        <span className="ml-1 flex h-6 items-center gap-1.5 rounded-full bg-pastelred/15 px-2 text-[11px] font-bold uppercase tracking-wide text-pastelred">
+                            <span className="relative flex size-1.5">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pastelred opacity-60" />
+                                <span className="relative inline-flex size-1.5 rounded-full bg-pastelred" />
+                            </span>
+                            Live
+                        </span>
+                    )}
                     {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-5.5" />}
                     {user.verifiedTier === "business" && <BusinessBadgeIcon className="size-5.5" />}
                     {user.verifiedTier === "government" && <GovBadgeIcon className="size-5.5" />}

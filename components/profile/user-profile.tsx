@@ -10,7 +10,9 @@ import { ProfileTabs, TABS } from "./profile-tabs";
 import { ProfileTabContent } from "./profile-tab-content";
 // ChannelChat (components/profile/channel-chat.tsx) was briefly a right rail
 // here — pulled 2026-07-21 pending the chat redesign; re-add via an <aside>.
+import { StreamWatchPage } from "@/components/streaming/stream-watch-page";
 import { MaximizeIcon, MinimizeIcon } from "@/components/icons";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 
 // Resize toggle skin — sits right-aligned on the tabs row in both the full and
@@ -21,10 +23,31 @@ interface UserProfileProps {
     user: UserType;
     /** Server-fetched so the counts row renders with the rest of the header. */
     initialFollowCounts?: { followers: number; following: number };
+    /** Resolved on the server at entry — see the live check in [slug]/page.tsx. */
+    initialIsLive?: boolean;
 }
 
-export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
+export function UserProfile({ user, initialFollowCounts, initialIsLive }: UserProfileProps) {
     const [activeTab, setActiveTab] = useState(TABS[0]);
+    // Live is a view of this page, not a page of its own (/<user>/live is gone).
+    // Seeded from the server so a broadcasting host's page opens ON the stream
+    // rather than painting the profile and swapping a beat later.
+    const [showLive, setShowLive] = useState(!!initialIsLive);
+
+    // Only polled for a host who WAS live at entry — a profile view shouldn't
+    // cost an IVS lookup for the ~everyone who isn't streaming. It exists to
+    // catch the stream ending while you're on the page.
+    const { data: live } = trpc.stream.getViewers.useQuery(
+        { userId: user.id },
+        { enabled: !!initialIsLive, refetchInterval: 60_000, refetchIntervalInBackground: false },
+    );
+    const isLive = initialIsLive ? (live?.isLive ?? true) : false;
+
+    // Stream ended under you: fall back to the profile rather than leaving a
+    // dead player on screen.
+    useEffect(() => {
+        if (!isLive) setShowLive(false);
+    }, [isLive]);
     const [isMinimized, setIsMinimized] = useState(false);
     const minimizedRef     = useRef(false);
     const buttonMinRef     = useRef(false);
@@ -74,6 +97,15 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
         }
     };
 
+    // Below every hook, so switching modes never changes the hook order.
+    if (showLive) {
+        return <StreamWatchPage host={user} onShowProfile={() => setShowLive(false)} />;
+    }
+
+    // Only a live host's name is a switch — otherwise there's nowhere to go and
+    // an underline on hover would be a lie.
+    const nameToggle = isLive ? () => setShowLive(true) : undefined;
+
     return (
         // 3-column channel layout: left rail (sidebar width) + center column +
         // right rail (340px). Both rails run the full height (top → bottom); the
@@ -114,6 +146,8 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                                 user={user}
                                 isMinimized={true}
                                 initialFollowCounts={initialFollowCounts}
+                                onNameClick={nameToggle}
+                                showLivePill={isLive}
                             />
                         </div>
                         <ProfileTabs
@@ -142,6 +176,8 @@ export function UserProfile({ user, initialFollowCounts }: UserProfileProps) {
                             user={user}
                             isMinimized={false}
                             initialFollowCounts={initialFollowCounts}
+                            onNameClick={nameToggle}
+                            showLivePill={isLive}
                         />
                     </div>
                     <ProfileTabs

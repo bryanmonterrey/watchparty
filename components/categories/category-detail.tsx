@@ -21,7 +21,7 @@ function compact(n: number) {
 
 function VideoTile({ v }: { v: FeedVideo }) {
     return (
-        <Link href={`/${v.user.username}/${v.id}`} className="group block">
+        <Link href={`/video/${v.id}`} className="group block">
             <div className="relative aspect-video overflow-hidden rounded-xl bg-muted">
                 {v.thumbnailUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
