@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { HammerIcon } from "@hugeicons/core-free-icons";
+import { Dollar02Icon, HammerIcon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { UserType } from "@/db/schema/auth/user";
 import { Button } from "@/components/ui/button";
@@ -167,10 +167,11 @@ export function ProfileHeaderActions({ user, isOwner }: ProfileHeaderActionsProp
                     {user.wallet_address && (
                         <Button
                             onClick={() => setShowTip(true)}
-                            className="h-11 px-5 rounded-full text-base bg-soft-gray-10 font-bold border border-baseborder/5 text-white2 hover:bg-soft-gray-15"
+                            className={iconBtnClass}
                             title="Send SOL"
+                            aria-label="Send SOL"
                         >
-                            Send
+                            <HugeiconsIcon icon={Dollar02Icon} className="size-5" strokeWidth={2} />
                         </Button>
                     )}
                     <Button

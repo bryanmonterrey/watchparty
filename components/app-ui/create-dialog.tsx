@@ -36,6 +36,13 @@ import { PollComposer, type PollOption } from "@/components/browse/poll-composer
 
 interface CreateDialogProps extends React.HTMLAttributes<HTMLElement> {
     children: React.ReactNode
+    /** Controlled mode — the header's create dropdown opens this on a chosen
+     *  tab, so it can't own its own open state there. Omit both and it stays
+     *  self-contained: the child is the trigger, as before. */
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    /** Which tab to land on. Defaults to video, which is what the trigger did. */
+    initialTab?: Tab
 }
 
 type Tab = "video" | "post" | "coin" | "stream"
@@ -59,11 +66,23 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { GooDropdown } from "@/components/ui/goo-dropdown"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export function CreateDialog({ children, ...props }: CreateDialogProps) {
-    const [open, setOpen] = React.useState(false)
+export function CreateDialog({ children, open: openProp, onOpenChange, initialTab, ...props }: CreateDialogProps) {
+    const [openState, setOpenState] = React.useState(false)
+    const isControlled = openProp !== undefined
+    const open = isControlled ? openProp : openState
+    const setOpen = React.useCallback((next: boolean) => {
+        if (!isControlled) setOpenState(next)
+        onOpenChange?.(next)
+    }, [isControlled, onOpenChange])
     const [showCloseAlert, setShowCloseAlert] = React.useState(false)
-    const [activeTab, setActiveTab] = React.useState<Tab>("video")
+    const [activeTab, setActiveTab] = React.useState<Tab>(initialTab ?? "video")
     const { data: session } = useAuthSession()
+
+    // Re-seed the tab whenever the dropdown opens it on a different type; the
+    // state above only covers the first mount.
+    React.useEffect(() => {
+        if (open && initialTab) setActiveTab(initialTab)
+    }, [open, initialTab])
 
     // Video Upload State
     const [step, setStep] = React.useState<Step>("upload")
