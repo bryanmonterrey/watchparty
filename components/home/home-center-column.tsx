@@ -25,12 +25,12 @@ const STORAGE_KEY = "wp:home:focus";
 // under it. Not 100svh — that would push the strip off the bottom and there'd
 // be no way back without scrolling.
 //
-// 7.5rem, not the 3.5rem this reserved when the strip held only the toggle:
+// 6.5rem, not the 3.5rem this reserved when the strip held only the toggle:
 // expanding is exactly when the video header appears, and the tallest case (a
 // coin video, whose token row is the extra line) runs ~5.5rem of
-// avatar/title/meta/token row, plus the toggle's own line under it. Reserving
-// for that case — a little unused space below the screen is harmless,
-// overflowing the viewport is not.
+// avatar/title/meta/token row. It was 7.5 while the toggle sat on its own line
+// below the header; the toggle is inside the header now, so that line is back.
+// A little unused space below the screen is harmless, overflowing is not.
 //
 // MIN-height over height, and 16:9 always on: expanding must never make the
 // screen SMALLER. On a wide, short window the column's own 16:9 height is
@@ -39,7 +39,7 @@ const STORAGE_KEY = "wp:home:focus";
 // promises. As a floor it can only grow it, and both states are real lengths
 // (0 → px) so the transition still runs.
 const HERO_BASE = "aspect-video w-full transition-[min-height] duration-300 ease-out";
-const HERO_EXPANDED = "min-h-[calc(100svh-var(--header-height)-7.5rem)]";
+const HERO_EXPANDED = "min-h-[calc(100svh-var(--header-height)-6.5rem)]";
 const HERO_DEFAULT = "min-h-0";
 
 export function HomeCenterColumn() {
@@ -65,6 +65,24 @@ export function HomeCenterColumn() {
             return next;
         });
     };
+
+    // One definition, two homes: inside the header's second row when expanded,
+    // alone in the strip when not.
+    const toggleButton = (
+        <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={!focus}
+            aria-label={focus ? "show categories" : "hide categories"}
+            className="flex shrink-0 cursor-pointer items-center px-1.5 text-zinc-400 transition-colors hover:text-white"
+        >
+            <HugeiconsIcon
+                icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}
+                className="size-6"
+                strokeWidth={2}
+            />
+        </button>
+    );
 
     return (
         <>
@@ -95,31 +113,19 @@ export function HomeCenterColumn() {
 
                     Keyed on the video: the header owns like state locally after
                     seeding it from props, which only stays correct if switching
-                    videos remounts it. */}
-                {focus && active && <HomeVideoHeader key={active.id} video={active} />}
+                    videos remounts it.
 
-                {/* Its own line under the header, not a column beside it. As a
-                    sibling in the row it reserved a track at the far right, so
-                    the header's actions ("go to video") stopped short of the
-                    column edge and left a notch above the chevron. Stacked, the
-                    header spans the full width and its actions sit flush right,
-                    with the chevron below them at the bottom of the strip —
-                    which is where it was asked to be. self-end keeps it right-
-                    aligned in both views; in the default view it's the only
-                    thing here. */}
-                <button
-                    type="button"
-                    onClick={toggle}
-                    aria-expanded={!focus}
-                    aria-label={focus ? "show categories" : "hide categories"}
-                    className="flex shrink-0 cursor-pointer items-center self-end px-1.5 text-zinc-400 transition-colors hover:text-white"
-                >
-                    <HugeiconsIcon
-                        icon={focus ? ArrowUpDoubleIcon : ArrowDownDoubleIcon}
-                        className="size-6"
-                        strokeWidth={2}
-                    />
-                </button>
+                    The chevron goes INSIDE the header when there is one, as the
+                    last item on its second row next to the count and date —
+                    handed down rather than nudged up with a negative margin, so
+                    flexbox does the aligning and it can't drift when the title
+                    wraps to two lines. With no header (the default view) it
+                    stands alone, right-aligned. */}
+                {focus && active ? (
+                    <HomeVideoHeader key={active.id} video={active} action={toggleButton} />
+                ) : (
+                    <div className="flex justify-end">{toggleButton}</div>
+                )}
             </div>
 
             {/* Category tabs plus the selected tab's content. Unmounted rather

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FavouriteIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { FavouriteIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
@@ -179,9 +179,15 @@ function TokenAction({ video, tokenSlug }: { video: HomeFeedVideo; tokenSlug: st
     );
 }
 
-export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; className?: string }) {
+export function HomeVideoHeader({ video, className, action }: {
+    video: HomeFeedVideo;
+    className?: string;
+    /** Trailing control on the second row — home's collapse chevron. Passed in
+     *  rather than owned here: the toggle it drives is the centre column's
+     *  state, and this header renders inside that column. */
+    action?: React.ReactNode;
+}) {
     const username = video.user.username;
-    const watchHref = `/video/${video.id}`;
     // The mint once live, else the token row id — /[slug] resolves both.
     const tokenSlug = video.tokenAddress ?? video.tokenId;
     const hasToken = !!tokenSlug && !!video.ticker;
@@ -208,7 +214,11 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                     {video.title}
                 </h2>
 
-                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[16px] text-zinc-500">
+                {/* Handle on the left, everything else pushed right: count,
+                    date, then the collapse control. Not flex-wrap — the right
+                    group has to stay ON this line for the chevron to read as
+                    part of it, so the handle truncates instead. */}
+                <div className="flex min-w-0 items-center gap-x-1.5 text-[16px] text-zinc-500">
                     {username && (
                         <Link
                             href={`/${username}`}
@@ -218,28 +228,26 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                             <VerifiedBadge tier={video.user.verifiedTier} />
                         </Link>
                     )}
-                    {video.isLive ? (
-                        <>
-                            <span aria-hidden>·</span>
+
+                    <span className="ml-auto flex shrink-0 items-center gap-x-1.5">
+                        {video.isLive ? (
                             <span className="flex items-center gap-1.5 font-bold text-pastelred">
                                 <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
                                 live
                             </span>
-                        </>
-                    ) : (
-                        video.views != null && (
+                        ) : (
+                            video.views != null && (
+                                <span className="tabular-nums">{compactCount(video.views)} views</span>
+                            )
+                        )}
+                        {video.createdAt && (
                             <>
                                 <span aria-hidden>·</span>
-                                <span className="tabular-nums">{compactCount(video.views)} views</span>
+                                <span>{formatRelativeTime(new Date(video.createdAt).toISOString())}</span>
                             </>
-                        )
-                    )}
-                    {video.createdAt && (
-                        <>
-                            <span aria-hidden>·</span>
-                            <span>{formatRelativeTime(new Date(video.createdAt).toISOString())}</span>
-                        </>
-                    )}
+                        )}
+                        {action}
+                    </span>
                 </div>
 
                 {/* Token row: ticker, then the action.
@@ -286,22 +294,6 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
 
             <div className="flex shrink-0 items-center gap-2">
                 <LikeButton video={video} />
-                {/* Ghost, not a solid pill: the like button beside it carries the
-                    only fill in this row, and this is a navigation away from the
-                    hero rather than the row's primary action. The arrow trails
-                    the label and nudges on hover — the standard "this goes
-                    somewhere" affordance. */}
-                <Link
-                    href={watchHref}
-                    className="group flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-bold text-zinc-300 transition-colors hover:text-white"
-                >
-                    go to video
-                    <HugeiconsIcon
-                        icon={ArrowRight01Icon}
-                        className="size-4.5 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
-                        strokeWidth={2}
-                    />
-                </Link>
             </div>
         </div>
     );
