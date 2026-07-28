@@ -52,7 +52,7 @@ function VideoSkeleton() {
         <>
             {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex gap-2 rounded-xl p-1">
-                    <div className="shimmer-skeleton w-38 aspect-video rounded-lg shrink-0 opacity-50" />
+                    <div className="shimmer-skeleton w-40 aspect-video rounded-lg shrink-0 opacity-50" />
                     <div className="flex-1 min-w-0 py-0.5 flex flex-col">
                         <div className="shimmer-skeleton h-3.5 w-full rounded-full mb-1" />
                         <div className="shimmer-skeleton h-3.5 w-3/4 rounded-full" />
@@ -77,7 +77,7 @@ function VideoList({ videos }: { videos: UpNextVideo[] }) {
                     href={`/video/${v.id}`}
                     className="flex gap-2 group rounded-xl hover:bg-white/10 p-1 transition-colors"
                 >
-                    <div className="relative shrink-0 w-48 aspect-video rounded-lg overflow-hidden bg-zinc-800">
+                    <div className="relative shrink-0 w-40 aspect-video rounded-lg overflow-hidden bg-zinc-800">
                         {v.thumbnailUrl ? (
                             <img src={v.thumbnailUrl} alt={v.title ?? ""} className="object-cover w-full h-full absolute inset-0" />
                         ) : (
@@ -158,7 +158,9 @@ export function UpNextSidebar({ postId, creatorId, creatorName, category, isLoad
     }, [activeTab, allVideos, creatorVideos, relatedVideos, watchedVideos]);
 
     return (
-        <div className="hidden lg:flex flex-col w-[396px] shrink-0 overflow-y-auto custom-scrollbar sticky top-20">
+        // 340px is the app's one right-rail width — the profile page's rail and
+        // the live page's chat are both on it. This was the last 396.
+        <div className="hidden lg:flex flex-col w-[340px] shrink-0 overflow-y-auto custom-scrollbar sticky top-20">
             {/* Tabs */}
             <div className="pb-2 shrink-0">
                 {isLoading ? (
