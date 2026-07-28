@@ -204,7 +204,13 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
 
             if (tokenLaunch.ticker && (tokenLaunch.earningsEnabled || hasBuy)) {
                 const result = await launchToken(
-                    { name: content.slice(0, 32), symbol: tokenLaunch.ticker, image: imageUrl || "", description: content },
+                    {
+                        name: content.slice(0, 32),
+                        symbol: tokenLaunch.ticker,
+                        // Avatar last, matching token_image below.
+                        image: imageUrl || session?.user?.avatar_url || "",
+                        description: content,
+                    },
                     { ...tokenLaunch, earningsEnabled: true }
                 );
                 if (!result.success) { setIsSubmitting(false); return; }

@@ -293,7 +293,10 @@ export function CreateDialog({ children, ...props }: CreateDialogProps) {
                     name: tokenName,
                     symbol: tokenLaunch.ticker,
                     description: postContent,
-                    image: primaryImageUrl
+                    // primaryImageUrl is "" when nothing was uploaded and no
+                    // thumbnail was generated; the avatar keeps the coin from
+                    // minting imageless.
+                    image: primaryImageUrl || session?.user?.avatar_url || ""
                 };
 
                 const metadataBlob = new Blob([JSON.stringify(metadataJson)], { type: 'application/json' });

@@ -46,7 +46,7 @@ function formatAmount(v: number): string {
 // and leftover supply stay with the creator.
 const FIRST_BUY_PRESETS = [0.1, 0.5, 1] as const
 
-function FirstBuyCard({ token, creatorWallet }: { token: Token; creatorWallet: string | null }) {
+function FirstBuyCard({ token, creatorWallet, creatorAvatar }: { token: Token; creatorWallet: string | null; creatorAvatar?: string | null }) {
     const router = useRouter()
     const { data: session } = useAuthSession()
     const { publicKey: adapterPublicKey } = useWallet()
@@ -69,7 +69,12 @@ function FirstBuyCard({ token, creatorWallet }: { token: Token; creatorWallet: s
             {
                 name: token.name,
                 symbol: token.ticker,
-                image: token.imageUrl ?? "",
+                // Avatar as the fallback at LAUNCH, not just in the UI: whatever
+                // goes in here is the image the coin carries from then on, so a
+                // coin with no art of its own would otherwise mint with none at
+                // all. Same rule the stream's pill follows — the coin's own art
+                // wins, the creator's face fills the blank.
+                image: token.imageUrl || creatorAvatar || "",
                 description: token.description ?? "",
             },
             {
@@ -153,7 +158,7 @@ function FirstBuyCard({ token, creatorWallet }: { token: Token; creatorWallet: s
     )
 }
 
-export function TokenSwapCard({ token, creatorWallet = null }: { token: Token; creatorWallet?: string | null }) {
+export function TokenSwapCard({ token, creatorWallet = null, creatorAvatar = null }: { token: Token; creatorWallet?: string | null; creatorAvatar?: string | null }) {
     const { connection } = useConnection()
     const { publicKey: adapterPublicKey, sendTransaction } = useWallet()
     const { signAndSubmit } = useWalletSigning()
@@ -333,7 +338,7 @@ export function TokenSwapCard({ token, creatorWallet = null }: { token: Token; c
     // Drafts have no pool yet — the first buy IS the launch, and anyone can
     // make it (content creates the token; the crowd puts it on-chain).
     if (!mint || token.status === "draft") {
-        return <FirstBuyCard token={token} creatorWallet={creatorWallet} />
+        return <FirstBuyCard token={token} creatorWallet={creatorWallet} creatorAvatar={creatorAvatar} />
     }
 
     const buttonLabel = !walletAddress

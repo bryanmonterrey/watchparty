@@ -92,7 +92,11 @@ export function TokenProfile({ token }: TokenProfileProps) {
 
                 {/* Right Column */}
                 <div className="lg:col-span-3 flex flex-col gap-3">
-                    <TokenSwapCard token={token} creatorWallet={token.creator.wallet_address ?? null} />
+                    <TokenSwapCard
+                        token={token}
+                        creatorWallet={token.creator.wallet_address ?? null}
+                        creatorAvatar={token.creator.avatar_url}
+                    />
                     <TokenBondingCurve token={token} />
                     <TokenChatCard token={token} creatorUsername={token.creator.username} />
                     <TokenNotifiedBanner tokenId={token.id} />

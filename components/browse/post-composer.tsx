@@ -297,7 +297,9 @@ export function PostComposer() {
                 {
                     name: content.slice(0, 32),
                     symbol: tokenLaunch.ticker,
-                    image: imageUrl || generatedOgUrl || "",
+                    // Avatar last, matching token_image below: a coin that mints
+                    // with an empty image keeps it forever.
+                    image: imageUrl || generatedOgUrl || session?.user?.avatar_url || "",
                     description: content,
                 },
                 { ...tokenLaunch, earningsEnabled: true }
