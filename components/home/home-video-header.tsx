@@ -226,15 +226,16 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                     )}
                 </div>
 
-                {/* Token row — only when the video actually launched a coin. */}
+                {/* Token row — only when the video actually launched a coin.
+                    Left to right: price line, market cap, ticker — the line
+                    leads the row. Contract address trails it; it's a utility,
+                    not part of the at-a-glance read. */}
                 {hasToken && (
                     <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
-                        <Link
-                            href={`/${tokenSlug}`}
-                            className="flex items-center rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
-                        >
-                            ${video.ticker}
-                        </Link>
+                        {/* The 24h price line. Grey and flat until the coin has
+                            traded, so the row never changes height. */}
+                        <TokenSparkline mint={video.tokenAddress} className="h-7 w-24 shrink-0" />
+
                         {video.marketCapUsd != null && (
                             <Link
                                 href={`/${tokenSlug}`}
@@ -244,14 +245,17 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                                 <span className="ml-1 font-semibold text-zinc-600">mc</span>
                             </Link>
                         )}
+
+                        <Link
+                            href={`/${tokenSlug}`}
+                            className="flex items-center rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
+                        >
+                            ${video.ticker}
+                        </Link>
+
                         {/* Only a LIVE token has a contract address; a draft has
                             no mint yet, so there'd be nothing to copy. */}
                         {video.tokenAddress && <ContractAddress address={video.tokenAddress} />}
-
-                        {/* The 24h price line, third line of the header under the
-                            title and handle. Grey and flat until the coin has
-                            traded, so the row never changes height. */}
-                        <TokenSparkline mint={video.tokenAddress} className="ml-auto h-7 w-24 shrink-0" />
                     </div>
                 )}
             </div>
