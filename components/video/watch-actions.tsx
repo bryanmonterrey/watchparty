@@ -7,19 +7,19 @@ import { UserType } from "@/db/schema/auth/user";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-// The SAME icons post-card uses for these three actions — BubbleIcon,
-// RetweetIcon and the Heart pair — so a like on a post and a like on a video
-// don't look like different features. HugeIcons has near-equivalents, but
-// "near" is exactly the problem.
-import { BubbleIcon, HeartFilledIcon, HeartIcon, RetweetIcon } from "@/components/icons";
+// The SAME icons post-card uses — RetweetIcon and the Heart pair — so a like on
+// a post and a like on a video don't look like different features. HugeIcons has
+// near-equivalents, but "near" is exactly the problem.
+import { HeartFilledIcon, HeartIcon, RetweetIcon } from "@/components/icons";
 import { MoreMenu } from "@/components/profile/profile-header-actions";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 
 // The right-hand action row on the video and live pages.
 //
-// Left to right: comment, repost, heart, follow-or-subscribe, gift subs, dots —
-// i.e. dots outermost, reading right to left as specced.
+// Left to right: repost, heart, follow-or-subscribe, gift subs, dots — i.e. dots
+// outermost, reading right to left as specced. No comment icon: that action is
+// the post card's, and this page already has the comment section on it.
 //
 // It is NOT ProfileHeaderActions. That one is the profile page's full set (dots,
 // gift premium, message, send, follow AND subscribe side by side) and it shows
@@ -119,19 +119,11 @@ export function WatchActions({ user, post }: WatchActionsProps) {
         <div className="flex items-center gap-2">
             {post && (
                 <>
-                    {/* Comments live further down the same page, so this scrolls
-                        rather than navigates. */}
-                    <button
-                        type="button"
-                        onClick={() =>
-                            document.getElementById("comments")?.scrollIntoView({ behavior: "smooth", block: "start" })
-                        }
-                        aria-label="jump to comments"
-                        className={ICON_BTN}
-                    >
-                        <BubbleIcon className="size-5" />
-                    </button>
-
+                    {/* No comment button. Commenting is a post-card action — the
+                        icon belongs there, and the comment section is already
+                        further down this page, so a second entry point in the
+                        header would be a shortcut to something in view. Repost
+                        and heart stay here. */}
                     <RepostButton postId={post.id} reposted={post.reposted} />
 
                     <button

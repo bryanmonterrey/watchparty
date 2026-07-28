@@ -188,7 +188,8 @@ export function VideoMetadata({
                 )}
             </div>
 
-            {/* Comments. The id is the header's comment button target. */}
+            {/* Comments. The id stays a deep-link target (#comments) even though
+                the header no longer has a button pointing at it. */}
             <div id="comments" className="pt-4">
                 <p className="text-lg font-bold text-white mb-4">
                     {formatViewers(comments)} Comments
