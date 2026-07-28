@@ -65,11 +65,13 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
     }
 
     return (
-        // bg-black on the CONTAINER rather than an absolute layer inside it: the
-        // glow canvas sits at z-index:-1, which paints over a parent background
-        // but under any positioned sibling, so the old backdrop was hiding the
-        // glow it was meant to catch.
-        <div className="ambient-video-container isolate relative aspect-video bg-black [contain:none] overflow-visible">
+        // bg-muted on the CONTAINER rather than a black layer inside it. Two
+        // things going on: the glow canvas sits at z-index:-1, which paints over
+        // a parent background but under any positioned sibling, so an absolute
+        // backdrop hid the glow it was meant to catch — and the glow is only 35%
+        // opaque, so the backdrop colour is 65% of what a letterbox bar looks
+        // like. Home uses muted; black is what made these bars murky.
+        <div className="ambient-video-container isolate relative aspect-video bg-muted [contain:none] overflow-visible">
             {isLive ? (
                 <video
                     ref={videoRef}

@@ -137,7 +137,12 @@ export function VideoPlayer(props: VideoPlayerProps) {
         <div
             ref={containerRef}
             className={cn(
-                "ambient-video-container isolate p-0 relative w-full [contain:none] overflow-visible bg-black group",
+                // bg-MUTED, not bg-black — this is what made the letterbox bars darker
+                // here than on home. The glow canvas runs at opacity 0.35, so 65% of
+                // what you see in a bar is the backdrop behind it: over home's muted
+                // grey the bar reads as lit, over pure black it reads as murky. Same
+                // glow, different floor.
+                "ambient-video-container isolate p-0 relative w-full [contain:none] overflow-visible bg-muted group",
                 !isMiniPlayer && "aspect-video"
             )}
             style={{ cursor: !showControls && isPlaying ? "none" : "auto" }}
