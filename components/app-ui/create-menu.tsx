@@ -67,11 +67,11 @@ export function CreateMenu({ triggerClassName }: { triggerClassName?: string }) 
                 // appeared. Icon only, and the header's skin moves to
                 // triggerClassName.
                 //
-                // That costs the true squircle on this one button: Squircle
-                // clips via an SVG clip-path on an element it owns, and there's
-                // no element here to hand it. rounded-2xl is the same 16px
-                // radius as a plain round-rect. Restorable if GooDropdown ever
-                // takes an asChild trigger.
+                // Nothing is lost by that: the button is a circle (Create is a
+                // pill by the repo rule), so there's no squircle to hand off —
+                // and a circle is what GooDropdown's goo already morphs from,
+                // since no buttonRadius is passed and the blob falls back to
+                // btn.h / 2.
                 //
                 // The skin comes from the header, not from here — the live header
                 // (app-header2) and the frozen one style this button differently.

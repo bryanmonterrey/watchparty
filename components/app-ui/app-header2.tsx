@@ -18,18 +18,19 @@ import { TradeNav } from '@/components/trade/trade-nav'
 import { MessagesNav } from '@/components/messages/messages-nav'
 import Link from 'next/link'
  
-// Same skin as the live CreateMenu trigger below (52px, rounded-2xl,
+// Same skin as the live CreateMenu trigger below (52px circle,
 // bg-soft-gray-10), with the icon slot as the only shimmering part — the tile
 // itself never changes between loading and loaded, so nothing pops.
 //
-// Deliberately NOT wrapped in <Squircle>: the loaded trigger can't be squircled
-// either (GooDropdown owns its own <button>, see create-menu.tsx), so a
-// squircled skeleton would snap to a plain round-rect on load.
+// Circle, and no <Squircle>: Create is a pill by the repo rule, and it's what
+// GooDropdown already draws — it takes no buttonRadius here, so its goo blob
+// falls back to btn.h / 2 (goo-dropdown.tsx). rounded-2xl had the CSS and the
+// blob disagreeing.
 function CreateButtonSkeleton() {
   return (
     <div
       aria-hidden
-      className="flex size-[52px] items-center justify-center rounded-2xl border-sidebar-hover/10 bg-soft-gray-10"
+      className="flex size-[52px] items-center justify-center rounded-full border-sidebar-hover/10 bg-soft-gray-10"
     >
       <div className="size-6 rounded-lg shimmer-skeleton" />
     </div>
@@ -191,13 +192,14 @@ export function AppHeader2() {
             <SolBalanceChip />
             {/* The + button is a create MENU now (pick the content type), not a
                 straight-to-CreateDialog trigger. The skin stays here because
-                this header and the frozen one style it differently; rounded-2xl
-                stands in for the Squircle, which GooDropdown can't take since it
-                owns the trigger button itself. */}
+                this header and the frozen one style it differently. It's a
+                circle: Create is a pill (repo rule, no Squircle), and it's the
+                shape GooDropdown's goo already morphs from — no buttonRadius is
+                passed, so the blob uses btn.h / 2. */}
             {isLoading ? (
               <CreateButtonSkeleton />
             ) : (
-              <CreateMenu triggerClassName="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex h-[52px] w-[52px] items-center justify-center rounded-2xl border-sidebar-hover/10 bg-soft-gray-10 p-0 text-flexwhite/80 transition-colors ease-out hover:bg-soft-gray-15" />
+              <CreateMenu triggerClassName="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex h-[52px] w-[52px] items-center justify-center rounded-full border-sidebar-hover/10 bg-soft-gray-10 p-0 text-flexwhite/80 transition-colors ease-out hover:bg-soft-gray-15" />
             )}
             <WalletButton />
           </>
