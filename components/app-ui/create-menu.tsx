@@ -81,38 +81,38 @@ export function CreateMenu({ triggerClassName }: { triggerClassName?: string }) 
                     gooMenuItem({
                         key: "stream",
                         onClick: () => openDialog("stream"),
-                        icon: <HugeiconsIcon icon={LiveStreaming01Icon} />,
+                        
                         label: "Go live",
                     }),
                     gooMenuItem({
                         key: "video",
                         onClick: () => openDialog("video"),
-                        icon: <HugeiconsIcon icon={VideoReplayIcon} />,
+                        
                         label: "Video",
                     }),
                     gooMenuItem({
                         key: "post",
                         onClick: () => openDialog("post"),
-                        icon: <HugeiconsIcon icon={Note01Icon} />,
+                        
                         label: "Post",
                     }),
                     gooMenuItem({
                         key: "coin",
                         onClick: () => openDialog("coin"),
-                        icon: <HugeiconsIcon icon={Coins01Icon} />,
+                        
                         label: "Coin",
                     }),
                     { key: "sep", type: "separator" },
                     gooMenuItem({
                         key: "space",
                         onClick: () => go("/communities/spaces"),
-                        icon: <HugeiconsIcon icon={UserGroupIcon} />,
+                        
                         label: "Space",
                     }),
                     gooMenuItem({
                         key: "callout",
                         onClick: () => go("/trade/callouts"),
-                        icon: <HugeiconsIcon icon={Megaphone01Icon} />,
+                        
                         label: "Callout",
                     }),
                     // predictions.createMarket is a real protected procedure, so
@@ -121,7 +121,7 @@ export function CreateMenu({ triggerClassName }: { triggerClassName?: string }) 
                     gooMenuItem({
                         key: "prediction",
                         onClick: () => go("/trade/predictions"),
-                        icon: <HugeiconsIcon icon={ChartUpIcon} />,
+                    
                         label: "Prediction",
                     }),
                 ]}

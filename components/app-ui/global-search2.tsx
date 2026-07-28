@@ -79,7 +79,7 @@ export function GlobalSearch({
                     // z-50 keeps the bar above the attached suggestion panel
                     // (docs/searchbar.svg: the panel wraps the bar at a 2px
                     // inset and renders behind it).
-                    "relative z-50 h-[52px] backdrop-blur-xl inner-shadow hover:cursor-pointer inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-sidebar-hover-40 hover:bg-soft-gray-10/50 rounded-full border-sidebar-hover/10 border transition-colors",
+                    "relative z-50 h-[52px] backdrop-blur-xl inner-shadow hover:cursor-pointer inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-soft-gray-10 hover:bg-soft-gray-15 rounded-full border-sidebar-hover/10 border transition-colors",
                     // Single source of truth for the ring: isFocused (set on
                     // input focus, cleared on submit / outside click). No ring
                     // while the panel is showing — it would sit inside the

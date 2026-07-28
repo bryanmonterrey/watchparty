@@ -63,8 +63,8 @@ export type GooDropdownProps = {
   className?: string
 }
 
-const PANEL_PAD = 6
-const SEPARATOR_ROW_H = 9
+const PANEL_PAD = 8
+const SEPARATOR_ROW_H = 12
 
 // Row corner radius. Rows are SQUIRCLED (Lisse clip-path), not rounded-* —
 // owner call 2026-07-22: "i didn't want everything rounded full, i wanted all
@@ -83,7 +83,7 @@ export const GOO_TRIGGER_PILL =
   'flex h-11 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white'
 
 /** Standard panel fill — pair with the default panelRadius/itemHeight. */
-export const GOO_PANEL_FILL = '#0a0a0a'
+export const GOO_PANEL_FILL = '#111111ff'
 
 export function gooMenuItem({ icon, label, onClick, href, right, variant = 'default', closeOnSelect = true, key }: {
   icon?: React.ReactNode
@@ -103,7 +103,7 @@ export function gooMenuItem({ icon, label, onClick, href, right, variant = 'defa
     closeOnSelect,
     className: cn(
       // No rounded-* — the row is squircled by the component (clip-path).
-      'gap-3 px-4 cursor-pointer text-base font-bold group',
+      'gap-3 px-4 py-1.5 cursor-pointer text-lg font-bold group',
       variant === 'danger'
         ? 'text-red-500 hover:bg-red-500/10 hover:text-red-500'
         : 'text-zinc-200 hover:bg-white/5 hover:text-white',
@@ -155,12 +155,12 @@ export function GooDropdown({
   stopPropagation = false,
   header,
   headerHeight = 48,
-  width = 240,
+  width = 450,
   align = 'end',
   shift = 0,
   side = 'bottom',
   gap = 14,
-  itemHeight = 44,
+  itemHeight = 52,
   maxPanelHeight,
   disabled = false,
   buttonRadius,
@@ -477,7 +477,7 @@ export function GooDropdown({
             if (item.type === 'separator') {
               return (
                 <div key={k} className="flex shrink-0 items-center px-2" style={{ height: h }}>
-                  <div className={cn('h-px w-full bg-border/60', item.className)} />
+                  <div className={cn('h-px w-full bg-border/10', item.className)} />
                 </div>
               )
             }
@@ -513,7 +513,7 @@ export function GooDropdown({
             // A call site can still override via item.className, but it no
             // longer has to style rows at all.
             const rowClass = cn(
-              'flex w-full shrink-0 items-center px-4 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
+              'flex w-full shrink-0 items-center px-4 py-2 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
               item.className,
             )
             return (
