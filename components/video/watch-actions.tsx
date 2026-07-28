@@ -25,20 +25,20 @@ import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 // and Save are rows in the dots menu, not buttons.
 //
 // It is NOT ProfileHeaderActions. That one is the profile page's full set (dots,
-// gift premium, message, send, follow AND subscribe side by side) and it shows
-// Follow and Subscribe as two separate buttons. Here they're ONE slot: a creator
-// with no subscription tiers gets Follow/Following, a creator with tiers gets
-// Subscribe. The underlying flows are still the shared components, so tier
-// gating, the tier picker and the gift dialog all come from one place.
+// gift premium, message, send, follow AND subscribe side by side). Here the text
+// button is ONE thing: Follow when the creator has no tiers, Subscribe when they
+// do — and in the Subscribe case the follow mark becomes its own icon button to
+// its left, since following can't just lose its control. The underlying flows are
+// still the shared components, so tier gating, the tier picker and the gift
+// dialog all come from one place.
 
 const ICON_BTN =
     "flex size-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-zinc-100 transition-colors hover:bg-white/15";
 const PILL_BTN =
     "flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-5 text-md font-semibold text-zinc-100 transition-colors hover:bg-white/15";
 
-/** Follow, with its optimistic flip. Rendered only when the creator has no
- *  tiers — with tiers, subscribing is the stronger action and takes the slot. */
-function FollowButton({ userId }: { userId: string }) {
+/** The follow toggle's state + action, shared by both of its shapes below. */
+function useFollow(userId: string) {
     const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
     const utils = trpc.useUtils();
 
@@ -51,22 +51,45 @@ function FollowButton({ userId }: { userId: string }) {
     const unfollow = trpc.user.unfollow.useMutation({ onSuccess: settle, onError: () => setOptimistic(null) });
 
     const isFollowing = optimistic ?? data?.isFollowing ?? false;
+    const toggle = () => {
+        const next = !isFollowing;
+        setOptimistic(next);
+        if (next) follow.mutate({ followingId: userId });
+        else unfollow.mutate({ followingId: userId });
+    };
+    return { isFollowing, toggle };
+}
 
+/** Text shape — the creator has NO subscription tiers, so following is the only
+ *  relationship on offer and it gets the whole button. No icon here: the mark is
+ *  what distinguishes the icon-button shape below. */
+function FollowButton({ userId }: { userId: string }) {
+    const { isFollowing, toggle } = useFollow(userId);
+    return (
+        <button type="button" onClick={toggle} className={PILL_BTN}>
+            {isFollowing ? "Following" : "Follow"}
+        </button>
+    );
+}
+
+/** Icon shape — the creator HAS tiers, so Subscribe takes the text button and
+ *  following needs its own control rather than losing its slot. Filled + accented
+ *  once you follow, so the state reads without a label. */
+function FollowIconButton({ userId }: { userId: string }) {
+    const { isFollowing, toggle } = useFollow(userId);
     return (
         <button
             type="button"
-            onClick={() => {
-                const next = !isFollowing;
-                setOptimistic(next);
-                if (next) follow.mutate({ followingId: userId });
-                else unfollow.mutate({ followingId: userId });
-            }}
-            className={PILL_BTN}
+            onClick={toggle}
+            aria-pressed={isFollowing}
+            aria-label={isFollowing ? "unfollow" : "follow"}
+            title={isFollowing ? "Following" : "Follow"}
+            className={cn(
+                ICON_BTN,
+                isFollowing && "text-royal-blue [&_path]:fill-current",
+            )}
         >
-            {/* The mark rides the FOLLOWING state, matching Subscribe — both mean
-                "you're connected to this creator". Plain Follow stays text. */}
-            {isFollowing && <HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />}
-            {isFollowing ? "Following" : "Follow"}
+            <HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />
         </button>
     );
 }
@@ -166,15 +189,22 @@ export function WatchActions({ user, post, likeButton, followFirst, giftSubs = t
         ]
         : undefined;
 
+    // One text button either way — Follow when there's nothing to subscribe to,
+    // Subscribe when there is — with the follow mark breaking out into its own
+    // icon button to its LEFT in the subscribe case, so following is still
+    // reachable when it no longer owns the label.
     const followSlot = !isOwner
         ? hasTiers
             ? (
-                <SubscribeButton
-                    creatorId={user.id}
-                    creatorName={user.name ?? ""}
-                    className={PILL_BTN}
-                    icon={<HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />}
-                />
+                <>
+                    <FollowIconButton userId={user.id} />
+                    <SubscribeButton
+                        creatorId={user.id}
+                        creatorName={user.name ?? ""}
+                        className={PILL_BTN}
+                        icon={null}
+                    />
+                </>
             )
             : <FollowButton userId={user.id} />
         : null;

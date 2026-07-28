@@ -23,8 +23,9 @@ interface SubscribeButtonProps {
     creatorId: string;
     /** Restyle the trigger — the watch header runs a different button skin. */
     className?: string;
-    /** Trigger icon override. The watch header uses the user-love mark. */
-    icon?: React.ReactNode;
+    /** Trigger icon override. Pass null for a text-only trigger — the watch
+     *  header's follow mark is its own button now, so Subscribe carries none. */
+    icon?: React.ReactNode | null;
     creatorName: string;
 }
 
@@ -136,7 +137,9 @@ export function SubscribeButton({ creatorId, creatorName, className, icon }: Sub
                 onClick={() => setShowPicker(p => !p)}
                 className={className ?? "flex h-11 items-center gap-1.5 px-4 rounded-full bg-hotpink text-white text-sm font-bold hover:bg-hotpink/90 transition-colors"}
             >
-                {icon ?? <Crown className="w-4 h-4" />}
+                {/* `icon` may be null to mean NO icon — hence the undefined
+                    check rather than ??, which would fall back to the crown. */}
+                {icon !== undefined ? icon : <Crown className="w-4 h-4" />}
                 Subscribe
             </button>
             {showPicker && (
