@@ -111,7 +111,7 @@ export function StreamMetadata({
             <WatchHeader
                 user={host}
                 title={streamTitle ?? `${host.name} is live`}
-                tokenRow={hostToken ? <TokenRow token={hostToken} postId={`live:${host.id}`} /> : undefined}
+                tokenRow={hostToken ? <TokenRow token={hostToken} postId={`live:${host.id}`} size="lg" /> : undefined}
                 // The switch back to the profile. It was on the display name,
                 // which this header no longer shows — @username is the identity
                 // here, and clicking it means the same thing.

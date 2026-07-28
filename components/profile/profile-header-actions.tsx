@@ -24,7 +24,7 @@ import { EditProfileDialog } from "./edit-profile-dialog";
 const iconBtnClass =
     "flex size-11 items-center justify-center rounded-full border border-baseborder/5 bg-soft-gray-10 text-white2 transition-colors hover:bg-soft-gray-15";
 
-export function MoreMenu({ userId, username, open, onOpenChange, onClose, triggerClassName }: {
+export function MoreMenu({ userId, username, open, onOpenChange, onClose, triggerClassName, extraItems }: {
     userId: string;
     username: string | null;
     open: boolean;
@@ -32,6 +32,9 @@ export function MoreMenu({ userId, username, open, onOpenChange, onClose, trigge
     onClose: () => void;
     /** The watch header's row runs a lighter skin than the profile header's. */
     triggerClassName?: string;
+    /** Rows prepended above "Copy profile link" — the watch header puts Share
+     *  and Save here rather than spending two more buttons on them. */
+    extraItems?: React.ComponentProps<typeof GooDropdown>["items"];
 }) {
     const utils = trpc.useUtils();
     const banUser = trpc.moderation.banUser.useMutation({
@@ -65,6 +68,7 @@ export function MoreMenu({ userId, username, open, onOpenChange, onClose, trigge
             triggerClassName={triggerClassName ?? iconBtnClass}
             trigger={<VerticalDotsIcon className="size-5" />}
             items={[
+                ...(extraItems ?? []),
                 gooMenuItem({
                     key: "copy",
                     onClick: copyProfileLink,

@@ -27,10 +27,13 @@ export interface TokenRowToken {
  * saved preset (same as the trending board), while launching has to name an
  * amount and create the pool, so it goes to the token page's first-buy card.
  */
-function TokenAction({ token, postId }: { token: TokenRowToken; postId: string }) {
+function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: string; size: Size }) {
     const { quickBuy, buyingId } = useQuickBuy();
     const mint = token.tokenAddress;
-    const label = "text-[12px] font-extrabold text-royal-blue transition-opacity hover:opacity-80";
+    const label = cn(
+        "font-extrabold text-royal-blue transition-opacity hover:opacity-80",
+        size === "lg" ? "text-[15px]" : "text-[12px]",
+    );
 
     if (!mint) {
         return (
@@ -60,14 +63,20 @@ function TokenAction({ token, postId }: { token: TokenRowToken; postId: string }
     );
 }
 
+/** `lg` on the video and live pages, where the header runs at page scale;
+ *  the default is home's compact header. */
+type Size = "sm" | "lg";
+
 export function TokenRow({
     token,
     postId,
+    size = "sm",
     className,
 }: {
     token: TokenRowToken;
     /** What quickBuy keys its in-flight state on. */
     postId: string;
+    size?: Size;
     className?: string;
 }) {
     if (!token.ticker) return null;
@@ -81,7 +90,10 @@ export function TokenRow({
                 against the text's pr-2.5. */}
             <Link
                 href={`/${slug}`}
-                className="flex items-center gap-1.5 rounded-full bg-white/[0.06] py-1 pl-1 pr-2.5 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
+                className={cn(
+                    "flex items-center gap-1.5 rounded-full bg-white/[0.06] font-extrabold text-white transition-colors hover:bg-white/10",
+                    size === "lg" ? "py-1.5 pl-1.5 pr-3 text-[15px]" : "py-1 pl-1 pr-2.5 text-[12px]",
+                )}
             >
                 {token.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -89,16 +101,16 @@ export function TokenRow({
                         src={token.imageUrl}
                         alt=""
                         loading="lazy"
-                        className="size-4 shrink-0 rounded-full object-cover"
+                        className={cn("shrink-0 rounded-full object-cover", size === "lg" ? "size-5" : "size-4")}
                     />
                 ) : (
                     // Keeps the pill's width steady whether or not the coin has art.
-                    <span className="size-4 shrink-0 rounded-full bg-white/10" />
+                    <span className={cn("shrink-0 rounded-full bg-white/10", size === "lg" ? "size-5" : "size-4")} />
                 )}
                 ${token.ticker}
             </Link>
 
-            <TokenAction token={token} postId={postId} />
+            <TokenAction token={token} postId={postId} size={size} />
         </div>
     );
 }

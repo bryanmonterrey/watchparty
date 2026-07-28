@@ -108,6 +108,7 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
                     category={video?.category ?? null}
                     isLiked={video?.isLiked ?? false}
                     isReposted={video?.isReposted ?? false}
+                    isBookmarked={video?.isBookmarked ?? false}
                     author={video?.author ?? { id: "", name: null, username: null, avatar_url: null, verifiedTier: null, followerCount: 0 }}
                     token={video?.token ?? null}
                     isLoading={isLoading}

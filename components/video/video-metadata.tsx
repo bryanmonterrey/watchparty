@@ -35,6 +35,8 @@ interface VideoMetadataProps {
     isLiked: boolean;
     /** Server-resolved for the viewer, so the repost button is right on first paint. */
     isReposted?: boolean;
+    /** Likewise for the dots menu's Save row. */
+    isBookmarked?: boolean;
     author: VideoAuthor;
     /** Attached live token, when the video has one (design brief §2). */
     token?: InlineChipToken | null;
@@ -58,6 +60,7 @@ export function VideoMetadata({
     category,
     isLiked: initialLiked,
     isReposted = false,
+    isBookmarked = false,
     author,
     token,
     isLoading,
@@ -150,7 +153,7 @@ export function VideoMetadata({
             <WatchHeader
                 user={author as unknown as UserType}
                 title={title ?? "Untitled"}
-                tokenRow={token ? <TokenRow token={token} postId={postId} /> : undefined}
+                tokenRow={token ? <TokenRow token={token} postId={postId} size="lg" /> : undefined}
                 // Bottom right, where the meta row used to be inline: the count
                 // and the age of the video.
                 stats={
@@ -160,7 +163,7 @@ export function VideoMetadata({
                         <span>{formatRelativeTime(new Date(createdAt).toISOString())}</span>
                     </>
                 }
-                post={{ id: postId, liked, onLikeToggle: handleLike, reposted: isReposted }}
+                post={{ id: postId, liked, onLikeToggle: handleLike, reposted: isReposted, bookmarked: isBookmarked }}
             />
 
             {/* Description Block */}

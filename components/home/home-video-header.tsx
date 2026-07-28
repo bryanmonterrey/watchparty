@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { TokenRow } from "@/components/tokens/token-row";
+import { WatchActions } from "@/components/video/watch-actions";
 import { formatRelativeTime } from "@/lib/date-utils";
 import type { HomeFeedVideo } from "./home-feed-context";
 
@@ -206,8 +207,18 @@ export function HomeVideoHeader({ video, className, action }: {
                 right half of the identity rows — those keep their own spacing
                 and wrap on their own terms, and nothing here has to line up
                 with a title that might run to two lines. */}
-            <div className="flex shrink-0 flex-col items-end gap-2">
-                <LikeButton video={video} />
+            <div className="flex shrink-0 flex-col items-end gap-3.5">
+                {/* Same row as the video and live headers, so the three read as
+                    one component — but home keeps its OWN heart: LikeButton
+                    carries the burst animation and a count, and swapping it for
+                    the plain icon button would throw both away. */}
+                <WatchActions
+                    user={{ id: video.user.id ?? "", name: video.user.name ?? null, username: video.user.username }}
+                    // onLikeToggle is unused here — likeButton replaces the heart
+                    // and LikeButton owns its own optimistic toggle.
+                    post={{ id: video.id, liked: !!video.isLiked, onLikeToggle: () => {}, reposted: !!video.isReposted }}
+                    likeButton={<LikeButton video={video} />}
+                />
 
                 <div className="flex items-center gap-x-1.5 text-[16px] text-zinc-500">
                     {video.isLive ? (

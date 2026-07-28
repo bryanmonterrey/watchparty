@@ -3,14 +3,15 @@
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserLove01Icon } from "@hugeicons/core-free-icons";
-import { UserType } from "@/db/schema/auth/user";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 // The SAME icons post-card uses — RetweetIcon and the Heart pair — so a like on
 // a post and a like on a video don't look like different features. HugeIcons has
 // near-equivalents, but "near" is exactly the problem.
-import { HeartFilledIcon, HeartIcon, RetweetIcon } from "@/components/icons";
+import { BookmarkFilledIcon, BookmarkIcon, HeartFilledIcon, HeartIcon, Link2Icon, RetweetIcon } from "@/components/icons";
+import { toast } from "sonner";
+import { gooMenuItem } from "@/components/ui/goo-dropdown";
 import { MoreMenu } from "@/components/profile/profile-header-actions";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { GiftSubsButton } from "@/components/browse/gift-subs-button";
@@ -19,7 +20,8 @@ import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 //
 // Left to right: repost, heart, follow-or-subscribe, gift subs, dots — i.e. dots
 // outermost, reading right to left as specced. No comment icon: that action is
-// the post card's, and this page already has the comment section on it.
+// the post card's, and this page already has the comment section on it. Share
+// and Save are rows in the dots menu, not buttons.
 //
 // It is NOT ProfileHeaderActions. That one is the profile page's full set (dots,
 // gift premium, message, send, follow AND subscribe side by side) and it shows
@@ -93,10 +95,17 @@ export interface WatchPost {
     liked: boolean;
     onLikeToggle: () => void;
     reposted: boolean;
+    /** Seeded from the server so the Save row opens in the right state. */
+    bookmarked?: boolean;
 }
 
 interface WatchActionsProps {
-    user: UserType;
+    /** Only what the row actually needs — narrowing this to three fields is what
+     *  lets home pass a feed row instead of casting one to UserType. */
+    user: { id: string; name: string | null; username: string | null };
+    /** Replaces the default heart. Home passes its animated LikeButton so the
+     *  burst survives; the watch pages take the plain icon button. */
+    likeButton?: React.ReactNode;
     /**
      * The post being watched. Comment, repost and heart all act on a post row,
      * and a live stream doesn't have one — so the live page passes nothing and
@@ -105,7 +114,7 @@ interface WatchActionsProps {
     post?: WatchPost;
 }
 
-export function WatchActions({ user, post }: WatchActionsProps) {
+export function WatchActions({ user, post, likeButton }: WatchActionsProps) {
     const { data: session } = useAuthSession();
     const [showMore, setShowMore] = React.useState(false);
 
@@ -114,6 +123,38 @@ export function WatchActions({ user, post }: WatchActionsProps) {
     const { data: tiers } = trpc.subscription.getTiers.useQuery({ creatorId: user.id });
     const hasTiers = !!tiers?.length;
     const isOwner = session?.user?.id === user.id;
+
+    const [saved, setSaved] = React.useState<boolean | null>(null);
+    const toggleBookmark = trpc.content.toggleBookmark.useMutation({
+        onError: () => setSaved(null),
+    });
+    const isSaved = saved ?? post?.bookmarked ?? false;
+
+    // Share and Save live in the overflow menu rather than as two more buttons:
+    // the row already carries five, and neither is a primary action.
+    const menuExtras = post
+        ? [
+            gooMenuItem({
+                key: "share",
+                onClick: () => {
+                    void navigator.clipboard.writeText(window.location.href);
+                    toast.success("Link copied");
+                },
+                icon: <Link2Icon />,
+                label: "Share",
+            }),
+            gooMenuItem({
+                key: "save",
+                onClick: () => {
+                    setSaved(!isSaved);
+                    toggleBookmark.mutate({ postId: post.id, contentType: "video" });
+                },
+                icon: isSaved ? <BookmarkFilledIcon /> : <BookmarkIcon />,
+                label: isSaved ? "Saved" : "Save",
+            }),
+            { key: "sep-extras", type: "separator" as const },
+        ]
+        : undefined;
 
     return (
         <div className="flex items-center gap-2">
@@ -126,17 +167,19 @@ export function WatchActions({ user, post }: WatchActionsProps) {
                         and heart stay here. */}
                     <RepostButton postId={post.id} reposted={post.reposted} />
 
-                    <button
-                        type="button"
-                        onClick={post.onLikeToggle}
-                        aria-pressed={post.liked}
-                        aria-label={post.liked ? "unlike" : "like"}
-                        className={cn(ICON_BTN, post.liked && "text-pastelred")}
-                    >
-                        {/* Filled variant when liked, as post-card does — not a
-                            fill-current override on the outline one. */}
-                        {post.liked ? <HeartFilledIcon className="size-5" /> : <HeartIcon className="size-5" />}
-                    </button>
+                    {likeButton ?? (
+                        <button
+                            type="button"
+                            onClick={post.onLikeToggle}
+                            aria-pressed={post.liked}
+                            aria-label={post.liked ? "unlike" : "like"}
+                            className={cn(ICON_BTN, post.liked && "text-pastelred")}
+                        >
+                            {/* Filled variant when liked, as post-card does — not a
+                                fill-current override on the outline one. */}
+                            {post.liked ? <HeartFilledIcon className="size-5" /> : <HeartIcon className="size-5" />}
+                        </button>
+                    )}
                 </>
             )}
 
@@ -144,7 +187,7 @@ export function WatchActions({ user, post }: WatchActionsProps) {
                 (hasTiers ? (
                     <SubscribeButton
                         creatorId={user.id}
-                        creatorName={user.name}
+                        creatorName={user.name ?? ""}
                         className={PILL_BTN}
                         icon={<HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />}
                     />
@@ -164,6 +207,7 @@ export function WatchActions({ user, post }: WatchActionsProps) {
                 onOpenChange={setShowMore}
                 onClose={() => setShowMore(false)}
                 triggerClassName={ICON_BTN}
+                extraItems={menuExtras}
             />
         </div>
     );

@@ -224,6 +224,10 @@ export const feedRouter = router({
                     origTokenImageUrl: origTokens.imageUrl,
                     repostOfId: posts.repostOfId,
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
+                    // Same shape, for the header's repost button. COALESCE for the
+                    // same reason isLiked uses it: on a repost row the engagement
+                    // belongs to the ORIGINAL post, not the repost.
+                    isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts r WHERE r."repostOfId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND r."userId" = ${ctx.user?.id ?? ""} AND r.status = 'published')`,
                     user: {
                         id: user.id,
                         name: user.name,

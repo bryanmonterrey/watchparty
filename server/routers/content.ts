@@ -1306,6 +1306,9 @@ export const contentRouter = router({
                     category: posts.category,
                     collaborators: posts.collaborators,
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = ${posts.id} AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
+                    // Same shape as isLiked, so the header's Save row knows whether
+                    // it's already saved instead of starting at "not saved".
+                    isBookmarked: sql<boolean>`EXISTS (SELECT 1 FROM bookmarks WHERE bookmarks."contentId" = ${posts.id} AND bookmarks."userId" = ${ctx.user?.id ?? ""})`,
                     // Same shape as isLiked, so the header's repost button knows
                     // its state on first paint instead of guessing. A plain
                     // repost is a published post row pointing back at this one

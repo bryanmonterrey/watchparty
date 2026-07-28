@@ -42,6 +42,7 @@ export interface HomeFeedVideo {
     likes?: number | null;
     /** Server-resolved for the signed-in viewer — no follow-up query needed. */
     isLiked?: boolean | null;
+    isReposted?: boolean | null;
     createdAt?: Date | string | null;
     duration?: number | null;
     user: {
