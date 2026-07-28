@@ -35,7 +35,7 @@ import { WithAuth } from "@/components/auth/with-auth";
 
 type DialogTab = "video" | "post" | "coin" | "stream";
 
-export function CreateMenu() {
+export function CreateMenu({ triggerClassName }: { triggerClassName?: string }) {
     const router = useRouter();
     const [menuOpen, setMenuOpen] = React.useState(false);
     const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -72,7 +72,10 @@ export function CreateMenu() {
                 // no element here to hand it. rounded-2xl is the same 16px
                 // radius as a plain round-rect. Restorable if GooDropdown ever
                 // takes an asChild trigger.
-                triggerClassName="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#6A6A6A]/35 p-0 text-flexwhite transition-colors hover:bg-[#6A6A6A]/50"
+                //
+                // The skin comes from the header, not from here — the live header
+                // (app-header2) and the frozen one style this button differently.
+                triggerClassName={triggerClassName}
                 trigger={<CreateIcon className="size-6" strokeWidth={2} />}
                 items={[
                     gooMenuItem({

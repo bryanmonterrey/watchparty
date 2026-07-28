@@ -6,9 +6,9 @@ import WalletButton from '@/components/wallet/wallet-button'
 import { WalletButtonSkeleton } from '@/components/wallet/wallet-button-skeleton'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
-import { MenuIcon, SearchIcon } from '../icons'
+import { CreateIcon, MenuIcon, SearchIcon } from '../icons'
 import Image from 'next/image'
-import { CreateMenu } from './create-menu'
+import { CreateDialog } from './create-dialog'
 import { WithAuth } from '@/components/auth/with-auth'
 import { Squircle } from '@/components/ui/squircle'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip'
@@ -196,7 +196,23 @@ export function AppHeader() {
         ) : (
           <>
             <SolBalanceChip />
-            {isLoading ? <CreateButtonSkeleton /> : <CreateMenu />}
+            <CreateDialog>
+              <WithAuth>
+                {isLoading ? (
+                  <CreateButtonSkeleton />
+                ) : (
+                  <Squircle asChild radius={16} autoEffects={false}>
+                    <Button
+                      variant="outline"
+                      aria-label="Create"
+                      className="rounded-none border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
+                    >
+                      <CreateIcon className="size-6" strokeWidth={2}/>
+                    </Button>
+                  </Squircle>
+                )}
+              </WithAuth>
+            </CreateDialog>
             <WalletButton />
           </>
         )}

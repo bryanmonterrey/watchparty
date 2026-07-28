@@ -6,9 +6,8 @@ import WalletButton from '@/components/wallet/wallet-button'
 import { WalletButtonSkeleton } from '@/components/wallet/wallet-button-skeleton'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
-import { CreateIcon, MenuIcon, SearchIcon, PinkStarLogo } from '../icons'
-import { CreateDialog } from './create-dialog'
-import { WithAuth } from '@/components/auth/with-auth'
+import { MenuIcon, SearchIcon, PinkStarLogo } from '../icons'
+import { CreateMenu } from './create-menu'
 import { Squircle } from '@/components/ui/squircle'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
@@ -190,23 +189,16 @@ export function AppHeader2() {
         ) : (
           <>
             <SolBalanceChip />
-            <CreateDialog>
-              <WithAuth>
-                {isLoading ? (
-                  <CreateButtonSkeleton />
-                ) : (
-                  <Squircle asChild radius={16} autoEffects={false}>
-                    <Button
-                      variant="outline"
-                      aria-label="Create"
-                      className="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-sidebar-hover-40 hover:bg-soft-gray-10/55 border-sidebar-hover/10 flex h-[52px] w-[52px] p-0 text-flexwhite/80 transition-colors ease-out"
-                    >
-                      <CreateIcon className="size-6" strokeWidth={2}/>
-                    </Button>
-                  </Squircle>
-                )}
-              </WithAuth>
-            </CreateDialog>
+            {/* The + button is a create MENU now (pick the content type), not a
+                straight-to-CreateDialog trigger. The skin stays here because
+                this header and the frozen one style it differently; rounded-2xl
+                stands in for the Squircle, which GooDropdown can't take since it
+                owns the trigger button itself. */}
+            {isLoading ? (
+              <CreateButtonSkeleton />
+            ) : (
+              <CreateMenu triggerClassName="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex h-[52px] w-[52px] items-center justify-center rounded-2xl border-sidebar-hover/10 bg-sidebar-hover-40 p-0 text-flexwhite/80 transition-colors ease-out hover:bg-soft-gray-10/55" />
+            )}
             <WalletButton />
           </>
         )}

@@ -32,7 +32,7 @@ function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: st
     const mint = token.tokenAddress;
     const label = cn(
         "font-extrabold text-royal-blue transition-opacity hover:opacity-80",
-        size === "lg" ? "text-[15px]" : "text-[12px]",
+        size === "lg" ? "text-[15px]" : "text-[15px]",
     );
 
     if (!mint) {
@@ -99,7 +99,7 @@ export function TokenRow({
             <Link
                 href={`/${slug}`}
                 className={cn(
-                    "flex items-center gap-1.5 rounded-full bg-white/[0.06] font-extrabold text-white transition-colors hover:bg-white/10",
+                    "flex items-center gap-1.5 rounded-full bg-blue/45 font-semibold border border-bleu/50 text-bleu transition-colors hover:bg-white/10",
                     size === "lg" ? "py-1.5 pl-1.5 pr-3 text-[15px]" : "py-1 pl-1 pr-2.5 text-[12px]",
                 )}
             >
