@@ -58,6 +58,24 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {/*
+          Shim for esbuild's keepNames helper, and it has to come BEFORE
+          ThemeProvider.
+
+          next-themes builds its pre-paint script by stringifying a function into
+          an inline <script>. The Cloudflare/OpenNext build runs the server bundle
+          through esbuild with keepNames, which wraps inner functions as
+          `__name(fn, "fn")` — and that wrapper travels INSIDE the stringified
+          source into the HTML, where the browser has no `__name`. Result in
+          production (verified in the served markup): `ReferenceError: Can't find
+          variable: __name`, thrown before the script reaches its own
+          `k2(theme)` call, so the theme is never applied pre-paint.
+
+          Defining it as identity makes the injected wrapper a no-op. Cheap, and
+          it can't be fixed further up: defineCloudflareConfig exposes no esbuild
+          options, and next-themes has no way to opt out of the inline script.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: "window.__name||(window.__name=function(f){return f})" }} />
+        {/*
           ThemeProvider lives at the root (not in (app)/AppProviders) so
           next-themes' own pre-paint script renders synchronously here, before
           any async boundary. Previously it sat behind (app)/layout's
