@@ -145,14 +145,24 @@ export function VideoPlayer(props: VideoPlayerProps) {
             tabIndex={0}
             onContextMenu={e => e.preventDefault()}
         >
-            <div className="absolute inset-0 z-0 bg-black" />
+            {/* The opaque backdrop that used to sit here is GONE, and that is the
+                whole trick behind the hero's ambient look. The glow library
+                inserts its canvas at z-index:-1 in the video's parent, which
+                paints above the parent's own background but below any
+                POSITIONED sibling — so an absolute z-0 black layer covered the
+                glow everywhere except the 5% it overhangs the box. bg-black on
+                the container does the same job (a plain background paints under
+                a negative-z child), so the glow now fills the frame.
 
-            {/* ── Video element ────────────────────────────────────────────── */}
+                ── Video element ────────────────────────────────────────────── */}
             <video
                 ref={videoRef}
                 poster={thumbnailUrl ?? undefined}
                 crossOrigin="anonymous"
-                className="block w-full h-full outline-none relative z-10 cursor-pointer"
+                // object-contain, matching the hero: a square or portrait upload
+                // fits whole and leaves bars, and the bars are where the blurred
+                // copy of the frame shows through instead of dead black.
+                className="block w-full h-full object-contain outline-none relative z-10 cursor-pointer"
                 onTimeUpdate={onTimeUpdate}
                 onLoadedMetadata={onLoadedMetadata}
                 onPlay={onPlay}

@@ -70,15 +70,19 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
     }
 
     return (
-        <div className="ambient-video-container isolate relative aspect-video [contain:none] overflow-visible">
-            {/* Dark backdrop to catch the glow */}
-            <div className="absolute inset-0 z-0 bg-black" />
-
+        // bg-black on the CONTAINER rather than an absolute layer inside it: the
+        // glow canvas sits at z-index:-1, which paints over a parent background
+        // but under any positioned sibling, so the old backdrop was hiding the
+        // glow it was meant to catch.
+        <div className="ambient-video-container isolate relative aspect-video bg-black [contain:none] overflow-visible">
             {isLive ? (
                 <video
                     ref={videoRef}
                     crossOrigin="anonymous"
-                    className="w-full h-full object-cover outline-none relative z-10"
+                    // contain, not cover: a stream that isn't 16:9 was being
+                    // cropped to fill. It fits whole now, and the ambient glow
+                    // fills the bars — same as the home hero.
+                    className="w-full h-full object-contain outline-none relative z-10"
                     playsInline
                     autoPlay
                 />
