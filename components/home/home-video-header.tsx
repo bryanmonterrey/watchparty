@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { formatMarketCap } from "@/components/tokens/market-cap-chip";
+import { TokenSparkline } from "@/components/tokens/token-sparkline";
 import { formatRelativeTime } from "@/lib/date-utils";
 import type { HomeFeedVideo } from "./home-feed-context";
 
@@ -246,6 +247,11 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                         {/* Only a LIVE token has a contract address; a draft has
                             no mint yet, so there'd be nothing to copy. */}
                         {video.tokenAddress && <ContractAddress address={video.tokenAddress} />}
+
+                        {/* The 24h price line, third line of the header under the
+                            title and handle. Grey and flat until the coin has
+                            traded, so the row never changes height. */}
+                        <TokenSparkline mint={video.tokenAddress} className="ml-auto h-7 w-24 shrink-0" />
                     </div>
                 )}
             </div>
