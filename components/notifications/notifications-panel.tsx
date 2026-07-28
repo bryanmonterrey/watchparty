@@ -62,31 +62,23 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
         <AnimatePresence>
             {open && (
                 <>
-                    {/* The backdrop actually dims now. It was invisible, which
-                        was fine for a slab welded to the left edge but not for
-                        a floating sheet — without it the panel reads as part of
-                        the page rather than over it. */}
                     <motion.div
                         key="notifications-backdrop"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
-                        className="fixed inset-0 z-[55] bg-black/50 backdrop-blur-[2px]"
+                        transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
+                        className="fixed inset-0 z-[55]"
                         onClick={onClose}
                     />
 
-                    {/* Inset, heavily rounded, flat fill with one inner hairline
-                        — the house overlay surface, not a full-height slab with
-                        a border down its right edge. Springs in from the rail it
-                        belongs to rather than fading in place. */}
                     <motion.div
                         key="notifications-panel"
-                        initial={{ x: -24, opacity: 0, scale: 0.98 }}
-                        animate={{ x: 0, opacity: 1, scale: 1 }}
-                        exit={{ x: -24, opacity: 0, scale: 0.98 }}
-                        transition={{ type: "spring", stiffness: 420, damping: 36, mass: 0.8 }}
-                        className="fixed bottom-3 left-3 top-3 z-[60] flex w-[420px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[28px] bg-[#0C0C0E] ring-1 ring-white/10"
+                        initial={{ x: -16, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: -16, opacity: 0 }}
+                        transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
+                        className="fixed left-0 top-0 h-screen w-[440px] z-[60] flex flex-col bg-black border-r border-flexborder/50 overflow-hidden"
                     >
                         <NotificationHeader
                             unreadCount={unreadData?.count ?? 0}
