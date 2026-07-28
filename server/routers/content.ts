@@ -260,8 +260,22 @@ export const contentRouter = router({
                     input.tokenName?.trim() ||
                     input.content?.split('\n')[0]?.trim().slice(0, 32) ||
                     input.ticker;
-                // Token image: client already resolved post media -> avatar into token_image.
-                const tokenImage = input.token_image || input.imageUrl?.split(',')[0];
+                // Token image: post media -> creator avatar, and the avatar step is
+                // resolved HERE rather than trusted to the client.
+                //
+                // This used to end at input.imageUrl, on the assumption that the
+                // composer had already folded the avatar into token_image. Any
+                // caller that didn't — a coin created with no post behind it, which
+                // is what a stream's coin is — minted imageless. 11 rows in the DB
+                // got created that way; see db/token-image-avatar-backfill.sql.
+                // The video path above already did this; now both do.
+                const postSessionUser = ctx.session.user as { avatar_url?: string | null; image?: string | null };
+                const tokenImage =
+                    input.token_image ||
+                    input.imageUrl?.split(',')[0] ||
+                    postSessionUser.avatar_url ||
+                    postSessionUser.image ||
+                    undefined;
 
                 await db.insert(tokens).values({
                     id: tokenId,
