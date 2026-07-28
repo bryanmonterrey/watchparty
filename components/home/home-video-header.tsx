@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Tick02Icon, FavouriteIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { FavouriteIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { formatMarketCap } from "@/components/tokens/market-cap-chip";
-import { TokenSparkline } from "@/components/tokens/token-sparkline";
+import { NoMarketCap, TokenSparkline } from "@/components/tokens/token-sparkline";
+import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { formatRelativeTime } from "@/lib/date-utils";
 import type { HomeFeedVideo } from "./home-feed-context";
 
@@ -29,44 +30,11 @@ function compactCount(n: number | null | undefined): string {
     return String(Math.round(n));
 }
 
-/** 7xKXtg…Bpump — enough to eyeball against a block explorer, not so much that
- *  it eats the row. The full value still goes to the clipboard. */
-function shortAddress(a: string): string {
-    return a.length <= 13 ? a : `${a.slice(0, 6)}…${a.slice(-5)}`;
-}
-
 function VerifiedBadge({ tier }: { tier: HomeFeedVideo["user"]["verifiedTier"] }) {
     if (tier === "verified") return <VerifiedBadgeIcon className="size-4 shrink-0" />;
     if (tier === "business") return <BusinessBadgeIcon className="size-4 shrink-0" />;
     if (tier === "government") return <GovBadgeIcon className="size-4 shrink-0" />;
     return null;
-}
-
-/** Contract address + copy. Confirms with a tick rather than a toast — the
- *  action is local and instant, and a toast for it would be noise. */
-function ContractAddress({ address }: { address: string }) {
-    const [copied, setCopied] = useState(false);
-
-    return (
-        <button
-            type="button"
-            onClick={() => {
-                void navigator.clipboard.writeText(address);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1200);
-            }}
-            aria-label={copied ? "contract address copied" : "copy contract address"}
-            title={address}
-            className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-semibold text-zinc-400 transition-colors hover:text-white"
-        >
-            <span className="font-mono tabular-nums">{shortAddress(address)}</span>
-            <HugeiconsIcon
-                icon={copied ? Tick02Icon : Copy01Icon}
-                className={cn("size-3.5", copied && "text-jewel")}
-                strokeWidth={2}
-            />
-        </button>
-    );
 }
 
 /** Eight burst dots. Each gets its own vector, size, duration and delay so the
@@ -168,12 +136,60 @@ function LikeButton({ video }: { video: HomeFeedVideo }) {
     );
 }
 
+/**
+ * The row's blue action, matching the trending board's.
+ *
+ * LAUNCH vs BUY is the token model, not a label choice: content always creates
+ * a draft, and the first buyer IS the launch — they pay and receive, while the
+ * creator keeps the pool identity and fees. So a coin with no mint isn't
+ * "closed", it's unclaimed, and "Launch" is the honest verb for taking it.
+ *
+ * They behave differently because the two acts are: Buy is one click at the
+ * saved preset (same as the trending board), while launching has to name an
+ * amount and create the pool, so it goes to the token page's first-buy card.
+ */
+function TokenAction({ video, tokenSlug }: { video: HomeFeedVideo; tokenSlug: string | null | undefined }) {
+    const { quickBuy, buyingId } = useQuickBuy();
+    const mint = video.tokenAddress;
+    const label = "text-[12px] font-extrabold text-royal-blue transition-opacity hover:opacity-80";
+
+    if (!mint) {
+        return (
+            <Link href={`/${tokenSlug}`} className={label}>
+                Launch
+            </Link>
+        );
+    }
+
+    const buying = buyingId === video.id;
+    return (
+        <button
+            type="button"
+            disabled={buying}
+            onClick={() => {
+                void quickBuy({
+                    id: video.id,
+                    tokenAddress: mint,
+                    symbol: video.ticker ?? "",
+                    imageUrl: null,
+                });
+            }}
+            className={cn(label, "cursor-pointer disabled:opacity-50")}
+        >
+            {buying ? "Buying…" : "Buy"}
+        </button>
+    );
+}
+
 export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; className?: string }) {
     const username = video.user.username;
     const watchHref = `/video/${video.id}`;
     // The mint once live, else the token row id — /[slug] resolves both.
     const tokenSlug = video.tokenAddress ?? video.tokenId;
     const hasToken = !!tokenSlug && !!video.ticker;
+    // A mint only exists once someone has taken the first buy — that IS the
+    // launch. No mint, no market, no cap.
+    const launched = !!video.tokenAddress;
 
     return (
         <div className={cn("flex min-w-0 py-2.5 items-start gap-3", className)}>
@@ -226,17 +242,15 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                     )}
                 </div>
 
-                {/* Token row — only when the video actually launched a coin.
-                    Left to right: price line, market cap, ticker — the line
-                    leads the row. Contract address trails it; it's a utility,
-                    not part of the at-a-glance read. */}
+                {/* Token row. Left to right: price line, market cap, ticker,
+                    action. A coin with no mint hasn't launched, and the row says
+                    so twice without a word — the line is flat grey and the cap
+                    is `$—·—` — so the state reads at a glance. */}
                 {hasToken && (
                     <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
-                        {/* The 24h price line. Grey and flat until the coin has
-                            traded, so the row never changes height. */}
                         <TokenSparkline mint={video.tokenAddress} className="h-7 w-24 shrink-0" />
 
-                        {video.marketCapUsd != null && (
+                        {launched && video.marketCapUsd != null ? (
                             <Link
                                 href={`/${tokenSlug}`}
                                 className="text-[12px] font-extrabold tabular-nums text-emerald-400 transition-opacity hover:opacity-80"
@@ -244,6 +258,8 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                                 {formatMarketCap(video.marketCapUsd)}
                                 <span className="ml-1 font-semibold text-zinc-600">mc</span>
                             </Link>
+                        ) : (
+                            <NoMarketCap />
                         )}
 
                         <Link
@@ -253,9 +269,7 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                             ${video.ticker}
                         </Link>
 
-                        {/* Only a LIVE token has a contract address; a draft has
-                            no mint yet, so there'd be nothing to copy. */}
-                        {video.tokenAddress && <ContractAddress address={video.tokenAddress} />}
+                        <TokenAction video={video} tokenSlug={tokenSlug} />
                     </div>
                 )}
             </div>
