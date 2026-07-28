@@ -106,9 +106,8 @@ export function RailRowSkeleton({ index, count }: { index: number; count: number
                 <span className="size-full shimmer-skeleton" />
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-2">
-                <span className="h-3.5 w-full rounded-full shimmer-skeleton" style={pulse} />
-                <span className="h-3.5 w-3/5 rounded-full shimmer-skeleton" style={pulse} />
-                <span className="h-3 w-2/5 rounded-full shimmer-skeleton" style={pulse} />
+                <span className="h-3.5 w-full rounded-xs shimmer-skeleton" style={pulse} />
+                <span className="h-3.5 w-3/5 rounded-xs shimmer-skeleton" style={pulse} />
             </span>
         </div>
     );

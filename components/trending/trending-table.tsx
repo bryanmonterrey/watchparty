@@ -259,15 +259,15 @@ function RowSkeleton({ index, count }: { index: number; count: number }) {
             <span className="flex min-w-0 items-center gap-3">
                 <span style={pulse} className="size-9 shrink-0 rounded-full shimmer-skeleton" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span style={pulse} className="h-3.5 w-28 rounded-full shimmer-skeleton" />
-                    <span style={pulse} className="h-3.5 w-16 rounded-full shimmer-skeleton" />
+                    <span style={pulse} className="h-3.5 w-28 rounded-xs shimmer-skeleton" />
+                    <span style={pulse} className="h-3.5 w-16 rounded-xs shimmer-skeleton" />
                 </span>
             </span>
-            <span style={pulse} className="h-3 w-16 rounded-full shimmer-skeleton" />
-            <span style={pulse} className="hidden h-3 w-14 rounded-full shimmer-skeleton @xl:block" />
-            <span style={pulse} className="hidden h-3 w-14 rounded-full shimmer-skeleton @3xl:block" />
-            <span style={pulse} className="h-3 w-12 rounded-full shimmer-skeleton" />
-            <span style={pulse} className="h-3 w-8 rounded-full shimmer-skeleton" />
+            <span style={pulse} className="h-3 w-16 rounded-xs shimmer-skeleton" />
+            <span style={pulse} className="hidden h-3 w-14 rounded-xs shimmer-skeleton @xl:block" />
+            <span style={pulse} className="hidden h-3 w-14 rounded-xs shimmer-skeleton @3xl:block" />
+            <span style={pulse} className="h-3 w-12 rounded-xs shimmer-skeleton" />
+            <span style={pulse} className="h-3 w-8 rounded-xs shimmer-skeleton" />
             <span style={pulse} className="size-4 rounded-full shimmer-skeleton" />
         </div>
     );
@@ -301,7 +301,7 @@ export function TrendingTable({ className }: { className?: string }) {
         // rails. Square and unpanelled: it sits directly on the column's own
         // fill rather than floating in a card.
         <div className={cn("@container", className)}>
-            <div className={cn(GRID, CELL_TEXT, "px-3 pb-3 pt-4 text-pastelgray")}>
+            <div className={cn(GRID, CELL_TEXT, "px-3 pb-3 pt-4 text-zinc-500")}>
                 {/* Sentence case, capital on the first word only — the one
                     place in the app that isn't all-lowercase, per the author. */}
                 <span>Name</span>
