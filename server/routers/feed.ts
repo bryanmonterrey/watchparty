@@ -212,9 +212,16 @@ export const feedRouter = router({
                     tokenId: posts.tokenId,
                     tokenAddress: postTokens.tokenAddress,
                     marketCapUsd: postTokens.marketCapUsd,
+                    // The COIN's image, off the token row — not posts.token_image,
+                    // which is only written by the post composer and is null for
+                    // every video post in the DB. When a creator sets no art,
+                    // token creation stores the video's thumbnail here, so this
+                    // column is populated either way.
+                    tokenImageUrl: postTokens.imageUrl,
                     origTokenId: origPosts.tokenId,
                     origTokenAddress: origTokens.tokenAddress,
                     origMarketCapUsd: origTokens.marketCapUsd,
+                    origTokenImageUrl: origTokens.imageUrl,
                     repostOfId: posts.repostOfId,
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
                     user: {
@@ -288,6 +295,7 @@ export const feedRouter = router({
                         tokenId: s.origTokenId ?? s.tokenId,
                         tokenAddress: s.origTokenAddress ?? s.tokenAddress,
                         marketCapUsd: s.origMarketCapUsd ?? s.marketCapUsd,
+                        tokenImageUrl: s.origTokenImageUrl ?? s.tokenImageUrl,
                         user: s.origUser!,
                         repostedBy: { name: s.user.name, username: s.user.username },
                     };

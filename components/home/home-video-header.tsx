@@ -185,6 +185,11 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
     // The mint once live, else the token row id — /[slug] resolves both.
     const tokenSlug = video.tokenAddress ?? video.tokenId;
     const hasToken = !!tokenSlug && !!video.ticker;
+    // The token row's image, with the video's own thumbnail as a backstop.
+    // Token creation already writes the thumbnail into tokens.imageUrl when a
+    // creator supplies no art, so the fallback only covers rows that predate
+    // that — but it costs nothing and the pill is never blank.
+    const tokenImage = video.tokenImageUrl ?? video.thumbnailUrl;
 
     return (
         <div className={cn("flex min-w-0 py-2.5 items-start gap-3", className)}>
@@ -258,10 +263,10 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                             href={`/${tokenSlug}`}
                             className="flex items-center gap-1.5 rounded-full bg-white/[0.06] py-1 pl-1 pr-2.5 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
                         >
-                            {video.token_image ? (
+                            {tokenImage ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                    src={video.token_image}
+                                    src={tokenImage}
                                     alt=""
                                     loading="lazy"
                                     className="size-4 shrink-0 rounded-full object-cover"

@@ -24,9 +24,15 @@ export interface HomeFeedVideo {
     isLive?: boolean | null;
     /** Launched token (if any) — drives the market-cap chip. */
     ticker?: string | null;
-    /** The coin's own image. Already selected by getVideoFeed in both branches
-     *  (posts.token_image), so showing it costs no extra query. */
-    token_image?: string | null;
+    /**
+     * The coin's image, from the TOKEN row (tokens.imageUrl).
+     *
+     * NOT posts.token_image — that column is only ever written by the post
+     * composer and is null for every video post in the database, which is why
+     * the pill rendered blank. Token creation falls back to the video's
+     * thumbnail when a creator sets no art, so this one is always populated.
+     */
+    tokenImageUrl?: string | null;
     tokenId?: string | null;
     tokenAddress?: string | null;
     marketCapUsd?: number | null;
