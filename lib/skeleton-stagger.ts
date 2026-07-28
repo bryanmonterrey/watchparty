@@ -12,6 +12,6 @@ import type { CSSProperties } from "react";
 // ripple is one edit away if it ever comes back.
 export function staggerPulse(_index: number, _count: number): CSSProperties {
     return {
-        backgroundColor: "color-mix(in oklab, var(--color-soft-gray) 5%, transparent)",
+        backgroundColor: "var(--color-skeleton)",
     };
 }

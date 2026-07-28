@@ -265,6 +265,19 @@
   --color-soft-gray-5: #0C0C0C;
   --color-soft-gray-10: #181818;
   --color-soft-gray-15: #242425;
+  /* The skeleton fill — same idea, one surface further along: the flat hex
+     that soft-gray 5% collapses to over the APP CANVAS (#080808, i.e.
+     bg-panel's white 3% over black), not over pure black like soft-gray-5.
+     Opaque on purpose: the fill used to be translucent, so overlapping
+     skeletons (the alert rail's -space-x-2 avatar cluster) showed through
+     each other and read as glass rings instead of solid circles.
+     Same colour as before on the canvas, just no longer see-through.
+
+     Tradeoff, same one the soft-gray-N fills make: on a surface LIGHTER
+     than the canvas (a bg-soft-gray-10 card) this is now slightly darker
+     than its backdrop rather than lighter, so a skeleton there reads as a
+     hole. Override per element in that rare case. */
+  --color-skeleton: #141414;
   --color-vice-purple: oklch(0.862065 0.092364 310.7446);
   --color-notification: oklch(0.648371 0.237552 23.7857);
   --animate-marquee: marquee var(--duration) infinite linear;
@@ -710,7 +723,7 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
      override (nothing left to disable). Rounding is all that's left to
      configure. */
   .shimmer-skeleton {
-    background-color: color-mix(in oklab, var(--color-soft-gray) 5%, transparent);
+    background-color: var(--color-skeleton);
   }
 
   /* Default rounding when the caller didn't set a rounded-* utility (matches
