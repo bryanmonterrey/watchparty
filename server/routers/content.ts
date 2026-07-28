@@ -1340,7 +1340,13 @@ export const contentRouter = router({
 
             const row = result[0];
             if (!row) return null;
-            return { ...row, token: row.token?.id && row.token.status === "live" ? row.token : null };
+            // Drafts included. The status === "live" gate here is why no coin
+            // line appeared under an unlaunched video: tokens.status is
+            // "draft" | "live", content always creates a draft, and the first
+            // buyer is what flips it. Dropping drafts made Launch unreachable.
+            // The UI decides what to show from tokenAddress (the mint), which
+            // only exists once it has actually launched.
+            return { ...row, token: row.token?.id ? row.token : null };
         }),
 
     // ─── Get public videos for "Up Next" sidebar ─────────────────────────────

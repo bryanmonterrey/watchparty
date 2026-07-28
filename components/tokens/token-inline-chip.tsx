@@ -10,6 +10,8 @@ import { formatMarketCap } from "./market-cap-chip";
 
 export interface InlineChipToken {
     id: string;
+    /** The mint, once launched. Absent on a draft. */
+    tokenAddress?: string | null;
     ticker: string;
     imageUrl: string | null;
     marketCapUsd: number | null;

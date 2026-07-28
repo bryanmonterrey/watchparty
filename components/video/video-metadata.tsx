@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+// formatRelativeTime, not date-fns' formatDistanceToNow: that renders
+// "about 6 hours ago", where this gives "6h ago" — same information, a third
+// of the width, and what home's header already shows.
+import { formatRelativeTime } from "@/lib/date-utils";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { WatchHeader } from "@/components/video/watch-header";
@@ -151,7 +154,7 @@ export function VideoMetadata({
                     <>
                         <span className="tabular-nums">{formatViewers(views)} views</span>
                         <span aria-hidden>·</span>
-                        <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
+                        <span>{formatRelativeTime(new Date(createdAt).toISOString())}</span>
                     </>
                 }
                 like={{ liked, onToggle: handleLike }}

@@ -106,8 +106,11 @@ export const tradeRouter = router({
                         phase: tokens.phase,
                     })
                     .from(tokens)
-                    .where(and(eq(tokens.creatorId, input.creatorId), eq(tokens.status, "live")))
-                    .orderBy(desc(tokens.createdAt))
+                    // Drafts included, so an unlaunched coin still shows with a
+                    // Launch action — but live first, so a brand-new draft can
+                    // never shadow the creator's established coin.
+                    .where(eq(tokens.creatorId, input.creatorId))
+                    .orderBy(sql`case when ${tokens.status} = 'live' then 0 else 1 end`, desc(tokens.createdAt))
                     .limit(1);
                 return t ?? null;
             })

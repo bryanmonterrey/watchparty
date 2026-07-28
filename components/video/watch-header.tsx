@@ -100,7 +100,7 @@ export function WatchHeader({ user, title, like, stats, tokenRow, onNameClick, n
             {/* Actions, with the count beneath them at the bottom right. */}
             <div className="flex shrink-0 flex-col items-end gap-2">
                 <WatchActions user={user} like={like} />
-                {stats && <div className="flex items-center gap-2 text-sm font-semibold text-zinc-400">{stats}</div>}
+                {stats && <div className="flex items-center gap-x-1.5 text-[16px] font-semibold text-zinc-400">{stats}</div>}
             </div>
         </div>
     );
