@@ -164,6 +164,10 @@ export function VideoMetadata({
                     </>
                 }
                 post={{ id: postId, liked, onLikeToggle: handleLike, reposted: isReposted, bookmarked: isBookmarked }}
+                // Follow/Subscribe leads here, and no Gift Subs — gifting is a
+                // channel act; this row is about the video.
+                followFirst
+                giftSubs={false}
             />
 
             {/* Description Block */}

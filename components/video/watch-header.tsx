@@ -30,6 +30,9 @@ interface WatchHeaderProps {
     title: string;
     /** The post being watched — drives comment/repost/heart. See WatchActions. */
     post?: WatchPost;
+    /** Row layout knobs, forwarded to WatchActions. */
+    followFirst?: boolean;
+    giftSubs?: boolean;
     /** Bottom right: "4 views · yesterday", or the live viewer + duration chips. */
     stats?: ReactNode;
     /** Third row, under the identity — <TokenRow />, the same coin line home's
@@ -50,7 +53,7 @@ function VerifiedBadge({ tier }: { tier: string | null | undefined }) {
     return null;
 }
 
-export function WatchHeader({ user, title, post, stats, tokenRow, onNameClick, nameTitle }: WatchHeaderProps) {
+export function WatchHeader({ user, title, post, stats, tokenRow, onNameClick, nameTitle, followFirst, giftSubs }: WatchHeaderProps) {
     const nameClass = "truncate text-[20px] font-bold leading-snug text-zinc-400 transition-colors hover:text-white";
 
     return (
@@ -99,7 +102,7 @@ export function WatchHeader({ user, title, post, stats, tokenRow, onNameClick, n
 
             {/* Actions, with the count beneath them at the bottom right. */}
             <div className="flex shrink-0 flex-col items-end gap-3.5">
-                <WatchActions user={user} post={post} />
+                <WatchActions user={user} post={post} followFirst={followFirst} giftSubs={giftSubs} />
                 {stats && <div className="flex items-center gap-x-1.5 text-[16px] font-semibold text-zinc-400">{stats}</div>}
             </div>
         </div>

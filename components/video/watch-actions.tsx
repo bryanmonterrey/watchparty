@@ -19,7 +19,8 @@ import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 // The right-hand action row on the video and live pages.
 //
 // Left to right: repost, heart, follow-or-subscribe, gift subs, dots — i.e. dots
-// outermost, reading right to left as specced. No comment icon: that action is
+// outermost, reading right to left as specced. The VIDEO page reorders it with
+// followFirst and drops gift subs (see those props). No comment icon: that action is
 // the post card's, and this page already has the comment section on it. Share
 // and Save are rows in the dots menu, not buttons.
 //
@@ -62,6 +63,9 @@ function FollowButton({ userId }: { userId: string }) {
             }}
             className={PILL_BTN}
         >
+            {/* The mark rides the FOLLOWING state, matching Subscribe — both mean
+                "you're connected to this creator". Plain Follow stays text. */}
+            {isFollowing && <HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />}
             {isFollowing ? "Following" : "Follow"}
         </button>
     );
@@ -112,9 +116,15 @@ interface WatchActionsProps {
      * those three don't render, rather than sitting there dead.
      */
     post?: WatchPost;
+    /** Follow/Subscribe leads the row instead of sitting after repost + heart —
+     *  what the video page wants. */
+    followFirst?: boolean;
+    /** Gift Subs is off on the video page: gifting is a channel act, and the
+     *  video page's row is about the video. */
+    giftSubs?: boolean;
 }
 
-export function WatchActions({ user, post, likeButton }: WatchActionsProps) {
+export function WatchActions({ user, post, likeButton, followFirst, giftSubs = true }: WatchActionsProps) {
     const { data: session } = useAuthSession();
     const [showMore, setShowMore] = React.useState(false);
 
@@ -156,8 +166,23 @@ export function WatchActions({ user, post, likeButton }: WatchActionsProps) {
         ]
         : undefined;
 
+    const followSlot = !isOwner
+        ? hasTiers
+            ? (
+                <SubscribeButton
+                    creatorId={user.id}
+                    creatorName={user.name ?? ""}
+                    className={PILL_BTN}
+                    icon={<HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />}
+                />
+            )
+            : <FollowButton userId={user.id} />
+        : null;
+
     return (
         <div className="flex items-center gap-2">
+            {followFirst && followSlot}
+
             {post && (
                 <>
                     {/* No comment button. Commenting is a post-card action — the
@@ -183,22 +208,13 @@ export function WatchActions({ user, post, likeButton }: WatchActionsProps) {
                 </>
             )}
 
-            {!isOwner &&
-                (hasTiers ? (
-                    <SubscribeButton
-                        creatorId={user.id}
-                        creatorName={user.name ?? ""}
-                        className={PILL_BTN}
-                        icon={<HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />}
-                    />
-                ) : (
-                    <FollowButton userId={user.id} />
-                ))}
+
+            {!followFirst && followSlot}
 
             {/* Full "Gift Subs" button, not an icon — it self-gates, so it only
                 appears for a creator who has subscriptions turned on, and at
                 that point it's worth its own label. */}
-            <GiftSubsButton creatorId={user.id} creatorName={user.name ?? ""} className={PILL_BTN} />
+            {giftSubs && <GiftSubsButton creatorId={user.id} creatorName={user.name ?? ""} className={PILL_BTN} />}
 
             <MoreMenu
                 userId={user.id}

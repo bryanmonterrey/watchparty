@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -75,17 +74,20 @@ export default function RootLayout({
           fixed further up: defineCloudflareConfig exposes no esbuild options, and
           next-themes has no way to opt out of the inline script.
 
-          next/script, NOT a raw <script>. A plain inline <script> here was
-          silently DROPPED from the SSR output by React 19 (verified against the
-          deployed HTML — the tag was absent while next-themes' script, and its
-          __name call, were still there). `beforeInteractive` is injected into the
-          initial HTML and runs before any Next module, and per the Next docs it
-          has to live in the root layout, which is where it already needed to be.
-          Inline content requires an `id` for Next to track it.
+          A FILE, not inline, after two failed attempts — both verified against
+          the deployed HTML rather than assumed:
+            · a raw inline <script> was silently dropped from the SSR output
+            · next/script strategy="beforeInteractive" with inline content is
+              emitted as `(self.__next_s=…).push([0,{children:"…"}])`, a QUEUE
+              entry the Next runtime executes after hydration begins — far too
+              late for a script that must beat next-themes' own inline one.
+          A classic <script src> with no async/defer is blocking and runs in
+          document order, so placing it first in <body> guarantees it precedes
+          the theme script. It also can't be fixed in the build: wrangler's
+          esbuild sets keepNames, and `define` can't substitute __name because
+          esbuild declares it as a local binding in the bundle.
         */}
-        <Script id="esbuild-keepnames-shim" strategy="beforeInteractive">
-          {`window.__name||(window.__name=function(f){return f})`}
-        </Script>
+        <script src="/__name-shim.js" />
         {/*
           ThemeProvider lives at the root (not in (app)/AppProviders) so
           next-themes' own pre-paint script renders synchronously here, before
