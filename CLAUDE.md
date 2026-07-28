@@ -53,6 +53,32 @@ Package manager is **bun** (`bun.lock`). Runtime is Next.js 16 (App Router, Turb
   A real pass is **empty output**. Treat crash frames (`node::Start`, `dyld`) as
   a failure regardless of exit code.
 
+### TypeScript stays on 6.x — do NOT bump to 7 (evaluated 2026-07-28)
+
+TS 7 (the native rewrite) is genuinely ~40x faster here (~10min → ~60s cold) and
+type-checks this repo clean. It was still rejected, on purpose:
+
+- **Zero production upside.** `tsconfig` is `noEmit` and Next transpiles with
+  SWC, so tsc never emits a byte — TS 6 and TS 7 ship an **identical bundle**.
+  The entire gain is local iteration speed.
+- **It breaks `next build`.** The build type-checks via TypeScript's *JavaScript
+  compiler API*, which the native rewrite doesn't expose: the build dies after a
+  full compile with "TypeScript 7.0.2 does not provide the compiler API required
+  by Next.js". The only fix is `experimental.useTypeScriptCli`, i.e. putting an
+  **experimental flag in the deploy path** ("behavior may change" per Next docs).
+- **It kills lint entirely** (below), so a second safety net goes down too.
+- tsc is the **only** automated gate here (no tests), and TS 7 is a from-scratch
+  reimplementation — a false negative wouldn't announce itself.
+
+Revisit when typescript-eslint supports TS 7 and `useTypeScriptCli` is stable.
+
+- **`bun run lint` works — keep eslint on 9.x, do NOT bump to 10.** eslint 10
+  crashes on `eslint-plugin-react`, which hasn't adopted its rule API
+  (`TypeError: contextOrFilename.getFilename is not a function`). Verified
+  2026-07-28. Lint currently reports ~650 errors / ~17k warnings (pre-existing,
+  mostly `no-explicit-any`), and runs in neither CI nor `next build` — Next 16
+  removed `next lint`.
+
 No test framework is configured yet — do not assume one exists.
 
 ## Architecture
