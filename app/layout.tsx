@@ -25,10 +25,10 @@ const geistPixel = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "Watchparty",
-    template: "%s / Watchparty",
+    default: "watchparty",
+    template: "%s / watchparty",
   },
-  description: "Magic internet money meets streaming",
+  description: "magic internet money meets streaming",
 };
 
 // Paints the mobile browser chrome (address bar) to match the black app
