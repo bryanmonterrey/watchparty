@@ -26,12 +26,18 @@ export function UpNextSidebar({ postId }: UpNextSidebarProps) {
     const [tab, setTab] = useState(RAIL_ICON_TAB);
 
     return (
-        // 340px is the app's one right-rail width — the profile page's rail and
-        // the live page's chat are both on it. gap-4 between the tab row and the
-        // list, matching home.
-        <div className="hidden-scrollbar sticky top-20 hidden w-[340px] shrink-0 flex-col gap-4 overflow-y-auto lg:flex">
-            <RailTabs active={tab} onChange={setTab} />
-            <RailVideoList tab={tab} excludePostId={postId} />
-        </div>
+        // Home's rail shell: the <aside> holds the width, the inner div pins to
+        // the scroller's top and clears the fixed header with its OWN padding
+        // (the column's margin doesn't apply here). pr-2 against the window
+        // edge; the list scrolls inside the sticky column rather than growing
+        // the page. 340px is the app's one right-rail width.
+        <aside className="hidden w-[340px] shrink-0 lg:block">
+            <div className="sticky top-0 flex h-screen flex-col gap-4 pr-2 md:pt-[calc(var(--header-height)+4px)]">
+                <RailTabs active={tab} onChange={setTab} />
+                <div className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
+                    <RailVideoList tab={tab} excludePostId={postId} />
+                </div>
+            </div>
+        </aside>
     );
 }

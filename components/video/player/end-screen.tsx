@@ -40,7 +40,7 @@ export function EndScreen({ isEnded, postId }: EndScreenProps) {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.35 }}
-                    className="absolute inset-0 z-[25] bg-black rounded-2xl flex items-center justify-center px-10"
+                    className="absolute inset-0 z-[25] bg-black flex items-center justify-center px-10"
                 >
                     {videos.length === 0 ? (
                         // Empty state — just the dark overlay, no cards

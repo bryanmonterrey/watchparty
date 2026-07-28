@@ -5,6 +5,7 @@ import { UserType } from "@/db/schema/auth/user";
 import { X, MessageCircle, PictureInPicture2 } from "lucide-react";
 import { AmbientGlow } from "video-ambient-glow";
 import { StreamOverlayAd } from "@/components/ads/stream-overlay-ad";
+import { PlayerLoadingScreen } from "@/components/video/player-loading";
 
 interface StreamPlayerProps {
     playbackUrl: string | null;
@@ -64,25 +65,25 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
 
     if (isLoading) {
         return (
-            <div className="shimmer-skeleton w-full aspect-video rounded-xl" />
+            <PlayerLoadingScreen />
         );
     }
 
     return (
-        <div className="ambient-video-container isolate relative aspect-video rounded-xl shadow-2xl [contain:none] overflow-visible">
+        <div className="ambient-video-container isolate relative aspect-video [contain:none] overflow-visible">
             {/* Dark backdrop to catch the glow */}
-            <div className="absolute inset-0 z-0 bg-black rounded-xl" />
+            <div className="absolute inset-0 z-0 bg-black" />
 
             {isLive ? (
                 <video
                     ref={videoRef}
                     crossOrigin="anonymous"
-                    className="w-full h-full object-cover outline-none rounded-xl relative z-10"
+                    className="w-full h-full object-cover outline-none relative z-10"
                     playsInline
                     autoPlay
                 />
             ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm rounded-xl z-10">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm z-10">
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-zinc-800 border-[3px] border-zinc-700 mb-4 opacity-50 grayscale">
                         {host.avatar_url ? (
                             <img src={host.avatar_url} alt={host.name ?? ""} className="object-cover w-full h-full" />

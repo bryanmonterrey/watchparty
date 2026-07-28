@@ -62,13 +62,19 @@ export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
     }, [playbackUrl, miniId, streamTitle, host.name, host.username, pathname, enterMiniPlayer]);
 
     return (
-        <div className="flex flex-col lg:flex-row gap-6 min-h-screen w-full max-w-[1400px] mx-auto px-4 pt-16 pb-4">
+        // Home's frame: no page padding and no centred max-w. The gutters hang
+        // off the COLUMN, exactly as they do on home — ml-4 on the left (the
+        // page's old px-4, kept), 1.25 before the rail on the right — so the
+        // screen fills everything between them instead of being centred inside
+        // a max-w with dead space either side. Header clearance is a margin on
+        // the column, not padding on the row.
+        <div className="relative flex min-h-screen w-full flex-col lg:flex-row">
             {/* ── Main column ─────────────────────────────────────────────── */}
-            <div className={cn("flex flex-col min-w-0", showChat ? "flex-1" : "w-full")}>
+            <main className={cn("relative flex min-w-0 flex-col pb-4 md:mt-[var(--header-height)] lg:ml-4 lg:mr-1.25", showChat ? "flex-1" : "w-full")}>
                 {isMiniActive ? (
                     <button
                         onClick={exitMiniPlayer}
-                        className="relative flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl bg-black text-white"
+                        className="relative flex aspect-video w-full flex-col items-center justify-center gap-2 bg-black text-white"
                     >
                         <p className="text-lg font-bold">Playing in mini player</p>
                         <p className="text-sm text-zinc-400">Click to bring the stream back</p>
@@ -96,7 +102,7 @@ export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
                     isLoading={isLoading}
                     onNameClick={onShowProfile}
                 />
-            </div>
+            </main>
 
             {/* ── Chat sidebar ──────────────────────────────────────────────── */}
             {(showChat || isLoading) && (

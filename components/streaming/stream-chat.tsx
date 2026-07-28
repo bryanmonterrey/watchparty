@@ -31,9 +31,12 @@ interface StreamChatProps {
 const CHAT_TAB = "Chat";
 const TABS = [CHAT_TAB, ...RAIL_TABS];
 
-// 340px, the app's one right-rail width, shared with the profile rail and the
-// video page's. gap-4 between tabs and content, matching home.
-const RAIL = "hidden lg:flex w-full lg:w-[340px] shrink-0 flex-col gap-4 lg:h-[calc(100vh-120px)] lg:sticky lg:top-20";
+// Home's rail shell, same as the video page's: the <aside> holds the width,
+// the inner div pins to the scroller's top and clears the fixed header with its
+// own padding, pr-2 against the window edge. 340px is the app's one right-rail
+// width. Content scrolls inside the sticky column, never growing the page.
+const RAIL_ASIDE = "hidden w-[340px] shrink-0 lg:block";
+const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 pr-2 md:pt-[calc(var(--header-height)+4px)]";
 
 export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
     const [tab, setTab] = useState(CHAT_TAB);
@@ -62,19 +65,22 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
 
     if (isLoading) {
         return (
-            <div className={RAIL}>
-                <RailTabs tabs={TABS} active={tab} onChange={setTab} />
-                <div className="flex min-h-0 flex-1 flex-col">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <RailRowSkeleton key={i} index={i} count={6} />
-                    ))}
+            <aside className={RAIL_ASIDE}>
+                <div className={RAIL_INNER}>
+                    <RailTabs tabs={TABS} active={tab} onChange={setTab} />
+                    <div className="flex min-h-0 flex-1 flex-col">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <RailRowSkeleton key={i} index={i} count={6} />
+                        ))}
+                    </div>
                 </div>
-            </div>
+            </aside>
         );
     }
 
     return (
-        <div className={RAIL}>
+        <aside className={RAIL_ASIDE}>
+            <div className={RAIL_INNER}>
             <RailTabs tabs={TABS} active={tab} onChange={setTab} />
 
             {tab !== CHAT_TAB ? (
@@ -140,6 +146,7 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </aside>
     );
 }

@@ -49,7 +49,7 @@ export function FineScrubStrip({
 
     return (
         <div
-            className="absolute inset-0 rounded-b-3xl overflow-hidden"
+            className="absolute inset-0 overflow-hidden"
             style={{ pointerEvents: isActive ? "auto" : "none" }}
         >
             {/* Scrolling filmstrip */}

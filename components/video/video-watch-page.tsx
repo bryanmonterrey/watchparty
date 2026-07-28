@@ -55,16 +55,24 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
     }
 
     return (
-        <div className="flex flex-col lg:flex-row gap-3 lg:gap-6 min-h-dvh md:min-h-[calc(100dvh-var(--header-height))] w-screen mx-auto px-4 md:pt-[var(--header-height)] pb-4">
+        // Home's frame, exactly. The gutters hang off the COLUMN rather than the
+        // row — ml-4 on the left (the page's old px-4, kept) and 1.25 before the
+        // rail — so the screen fills everything between them. The header offset
+        // is a MARGIN on the column for the same reason home does it that way:
+        // padding would run the column's fill up behind the fixed header.
+        <div className="relative flex min-h-dvh w-full flex-col lg:flex-row">
             {/* ── Main column ─────────────────────────────────────────────── */}
-            <div className="flex flex-col flex-1 min-w-0">
-                <div className="relative w-full mx-auto aspect-video max-w-[min(1840px,calc((100dvh_-_172px)*16/9))]">
+            <main className="relative flex min-w-0 flex-1 flex-col pb-4 md:mt-[var(--header-height)] lg:ml-4 lg:mr-1.25">
+                {/* No mx-auto and no max-w: the screen spans the column, left
+                    edge to the rail. It used to be centred inside a max-w, which
+                    is what left the gap down the left side. */}
+                <div className="relative aspect-video w-full">
                     {isGlobalMiniActive ? (
                         /* Placeholder shown while this video plays in the global mini player */
-                        <div className="absolute inset-0 rounded-3xl bg-black flex flex-col items-center justify-center gap-3">
+                        <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-3">
                             <img
                                 src={video?.thumbnailUrl ?? ""}
-                                className="absolute inset-0 w-full h-full object-cover rounded-3xl opacity-20"
+                                className="absolute inset-0 w-full h-full object-cover opacity-20"
                                 alt=""
                             />
                             <p className="relative text-white/70 text-sm">Playing in mini player</p>
@@ -103,7 +111,7 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
                     token={video?.token ?? null}
                     isLoading={isLoading}
                 />
-            </div>
+            </main>
 
             {/* ── Up Next sidebar ──────────────────────────────────────────── */}
             <UpNextSidebar postId={postId} />
