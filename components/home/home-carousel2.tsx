@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Play } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAudioOwner } from "@/lib/audio-bus";
-import { useAmbientGlow } from "@/hooks/use-ambient-glow";
+import { useAmbientGlow, AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
 import { VolumeMorph, CaptionsMorph } from "@/components/morph-icons";
 import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 
@@ -175,11 +175,14 @@ function PlayerButton({ label, onClick, wide, children }: { label: string; onCli
 // the browser's native box, and the current cue is surfaced as one line.
 function ActivePanel({ v, chrome = true, ambient = false, onEnded }: { v: CarouselVideo; chrome?: boolean; ambient?: boolean; onEnded?: () => void }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
-    // A tight halo, not the watch page's wash. Size comes from two knobs that
-    // compound — `scale` (how far past the video the canvas is drawn; at 1 it
-    // matches the video, so only the blur escapes) and `blur` (how far that
-    // feathers). Opacity and brightness only dim a glow; they never shrink it.
-    useAmbientGlow(videoRef, { scale: 1, blur: 28, opacity: 0.35, brightness: 1.05 }, ambient);
+    // A tight halo. Size comes from two knobs that compound — `scale` (how far
+    // past the video the canvas is drawn; at 1 it matches the video, so only the
+    // blur escapes) and `blur` (how far that feathers). Opacity and brightness
+    // only dim a glow; they never shrink it.
+    //
+    // These numbers were this component's, and are now the app's: AMBIENT_PRESET
+    // is what the watch and live players run too.
+    useAmbientGlow(videoRef, AMBIENT_PRESET, ambient);
     const { isOwner, hasOwner, claim, release } = useAudioOwner();
     const [userMuted, setUserMuted] = useState(false);
     const [captionsOn, setCaptionsOn] = useState(false);

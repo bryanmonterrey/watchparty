@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
 import { X, MessageCircle, PictureInPicture2 } from "lucide-react";
 import { AmbientGlow } from "video-ambient-glow";
+import { AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
 import { StreamOverlayAd } from "@/components/ads/stream-overlay-ad";
 import { PlayerLoadingScreen } from "@/components/video/player-loading";
 
@@ -44,16 +45,10 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
         player.load(playbackUrl);
         player.play();
 
-        glowRef.current = new AmbientGlow(videoRef.current, {
-            blur: 120,
-            opacity: 0.5,
-            brightness: 1.1,
-            saturate: 1.2,
-            scale: 1.05,
-            downscale: 0.1,
-            updateInterval: 98,
-            responsiveness: 0.1,
-        });
+        // The shared preset (home's), spread whole — this is the one player that
+        // constructs AmbientGlow directly instead of going through the hook, so
+        // nothing fills in the keys it leaves out.
+        glowRef.current = new AmbientGlow(videoRef.current, AMBIENT_PRESET);
 
         return () => { 
             player.delete(); 

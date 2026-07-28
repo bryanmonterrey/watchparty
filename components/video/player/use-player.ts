@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { flushSync } from "react-dom";
-import { useAmbientGlow } from "@/hooks/use-ambient-glow";
+import { useAmbientGlow, AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useAds } from "./use-ads";
@@ -217,7 +217,9 @@ export function usePlayer(props: VideoPlayerProps) {
         },
     });
 
-    useAmbientGlow(videoRef, { brightness: 1.5 }, !isLoading && ambientMode);
+    // Home's preset, not this player's old brightness-1.5 wash — same glow
+    // everywhere. Still behind the ambientMode toggle (persisted, default on).
+    useAmbientGlow(videoRef, AMBIENT_PRESET, !isLoading && ambientMode);
 
     // ── Hidden video + canvas for frame-accurate thumbnail previews ───────────
     useEffect(() => {

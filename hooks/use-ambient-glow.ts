@@ -25,6 +25,30 @@ const DEFAULTS: AmbientGlowOptions = {
     responsiveness: 0.1,
 };
 
+/**
+ * The app's glow — home's hero tuning, now every player's.
+ *
+ * A tight halo rather than a wide wash: at scale 1 the canvas matches the video
+ * box exactly, so the blur reads as the frame CONTINUING into the letterbox bars
+ * instead of a haze bleeding onto the page around it. The other players ran
+ * blur 120 at scale 1.05 and the difference was obvious next to home.
+ *
+ * EVERY key is spelled out, including the ones that match the defaults above:
+ * the live player builds its AmbientGlow by hand rather than through the hook
+ * (its lifecycle is tied to the IVS player's), so it never sees DEFAULTS. A
+ * partial preset would silently drift between the two call styles.
+ */
+export const AMBIENT_PRESET: AmbientGlowOptions = {
+    blur: 28,
+    opacity: 0.35,
+    brightness: 1.05,
+    saturate: 1.2,
+    scale: 1,
+    downscale: 0.1,
+    updateInterval: 98,
+    responsiveness: 0.1,
+};
+
 export function useAmbientGlow(
     videoRef: React.RefObject<HTMLVideoElement | null>,
     options?: AmbientGlowOptions,
