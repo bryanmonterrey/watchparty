@@ -30,7 +30,7 @@ async function subscriberIds(tokenId: string): Promise<string[]> {
     return rows.map((r) => r.userId);
 }
 
-const tokenUrl = (t: AlertableToken) => `/${t.tokenAddress ?? t.id}`;
+const tokenUrl = (t: AlertableToken) => `/coin/${t.tokenAddress ?? t.id}`;
 
 const fmtPrice = (p: number) =>
     p >= 1 ? `$${p.toFixed(2)}` : `$${p.toPrecision(3).replace(/0+$/, "").replace(/\.$/, "")}`;

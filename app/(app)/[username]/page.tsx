@@ -1,16 +1,18 @@
 import { cache } from "react";
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth";
 import { streams, tokens } from "@/db/schema/content";
 import { follows } from "@/db/schema/content/follow";
 import { count, eq, or } from "drizzle-orm";
 import { UserProfile } from "@/components/profile/user-profile";
-import { TokenProfile } from "@/components/tokens/token-profile";
 
-// Port of sidebar's (browse)/[slug]/page.tsx — a top-level slug resolves to
-// either a user profile or a token page.
+// A top-level slug is a USERNAME and nothing else. Coins used to share this
+// route — one string resolving to either a user or a token — and now live at
+// `/coin/<mint>` (see app/(app)/coin/[mint]/page.tsx).
+//
+// Port of sidebar's (browse)/[slug]/page.tsx, minus that second branch.
 
 // cache() dedupes across generateMetadata + the page within one request —
 // Next only dedupes fetch(), not raw Drizzle calls.
@@ -20,10 +22,15 @@ const getUserBySlug = cache((slug: string) =>
     })
 );
 
+// Legacy `/{mint}` links only. Coin URLs are already out in the world —
+// trade-fanout and copy-executor wrote `/${mint}` into push notifications that
+// have ALREADY been delivered to phones, and coin links get shared — so a miss
+// here checks for a token before 404ing and forwards it to the new route.
+// Costs one extra query only on the path that was going to be a 404 anyway.
 const getTokenBySlug = cache((slug: string) =>
     db.query.tokens.findFirst({
         where: or(eq(tokens.id, slug), eq(tokens.tokenAddress, slug)),
-        with: { creator: true },
+        columns: { id: true, tokenAddress: true },
     })
 );
 
@@ -35,24 +42,19 @@ const getStreamByUser = cache((userId: string) =>
     db.query.streams.findFirst({ where: eq(streams.userId, userId) })
 );
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-    const { slug } = await params;
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+    const { username } = await params;
 
-    const userProfile = await getUserBySlug(slug);
+    const userProfile = await getUserBySlug(username);
     if (userProfile) {
         return { title: `@${userProfile.username}` };
-    }
-
-    const tokenProfile = await getTokenBySlug(slug);
-    if (tokenProfile) {
-        return { title: `${tokenProfile.name} ($${tokenProfile.ticker})` };
     }
 
     return { title: "Not Found" };
 }
 
-export default async function SlugPage({ params }: { params: Promise<{ slug: string }> }) {
-    const { slug } = await params;
+export default async function UsernamePage({ params }: { params: Promise<{ username: string }> }) {
+    const slug = (await params).username;
 
     // 1. User profile
     const userProfile = await getUserBySlug(slug);
@@ -72,7 +74,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
                 following: followingResult[0]?.count ?? 0,
             };
         } catch (err) {
-            console.error("[slug] follow-count SSR failed, deferring to client:", err);
+            console.error("[username] follow-count SSR failed, deferring to client:", err);
         }
 
         // Live is a MODE of this page now, not a route of its own. A broadcasting
@@ -81,7 +83,7 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         try {
             initialIsLive = (await getStreamByUser(userProfile.id))?.isLive ?? false;
         } catch (err) {
-            console.error("[slug] live check failed, opening on the profile:", err);
+            console.error("[username] live check failed, opening on the profile:", err);
         }
 
         return (
@@ -93,10 +95,11 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
         );
     }
 
-    // 2. Token (by ID for drafts, or by address for live)
+    // 2. Not a user — but it may be an old coin link from before coins moved to
+    // /coin/<mint>. Forward those instead of 404ing. 308: the move is permanent.
     const tokenProfile = await getTokenBySlug(slug);
     if (tokenProfile) {
-        return <TokenProfile token={tokenProfile} />;
+        permanentRedirect(`/coin/${tokenProfile.tokenAddress ?? tokenProfile.id}`);
     }
 
     notFound();

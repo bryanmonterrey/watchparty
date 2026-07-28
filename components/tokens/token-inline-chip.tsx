@@ -24,7 +24,7 @@ export function TokenInlineChip({ token, className }: { token: InlineChipToken; 
     const progress = Math.max(0, Math.min(100, token.bondingProgress ?? 0));
     return (
         <Link
-            href={`/${token.id}`}
+            href={`/coin/${token.id}`}
             className={cn(
                 "flex h-9 items-center gap-2 rounded-full bg-white/5 pl-1.5 pr-3 ring-1 ring-white/10 transition-colors hover:bg-white/10",
                 className,

@@ -66,7 +66,7 @@ function RunnerRow({ runner, rank }: { runner: Runner; rank: number }) {
     const change = runner.priceChange24h ?? 0;
     return (
         <Link
-            href={`/${runner.tokenAddress ?? runner.id}`}
+            href={`/coin/${runner.tokenAddress ?? runner.id}`}
             className="flex w-full items-center gap-3 px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]"
         >
             <span className="w-4 shrink-0 text-[15px] font-bold text-muted-foreground tabular-nums">{rank}</span>
@@ -176,7 +176,7 @@ function WhoToFollowCard() {
 // ── What's happening (GLM coin news) ────────────────────────────────────────
 function TrendRow({ title, meta, ticker, tokenAddress }: { title: string; meta: string; ticker?: string; tokenAddress?: string | null }) {
     // Deep-link to the coin when we know it, else search for the ticker.
-    const href = tokenAddress ? `/${tokenAddress}` : ticker ? `/discover/search?q=${encodeURIComponent("$" + ticker)}` : "/trade";
+    const href = tokenAddress ? `/coin/${tokenAddress}` : ticker ? `/discover/search?q=${encodeURIComponent("$" + ticker)}` : "/trade";
     return (
         <Link href={href} className="block w-full px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]">
             <p className="text-[14px] text-muted-foreground">{meta}</p>

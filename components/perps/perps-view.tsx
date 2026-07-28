@@ -435,7 +435,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                                                 <div key={i} className="h-12 overflow-hidden"><div className="size-full shimmer-skeleton" /></div>
                                             ))
                                             : coins.map((t) => (
-                                                <TokenRailRow key={t.id} token={t} onOpen={() => router.push(`/${t.tokenAddress || t.id}`)} />
+                                                <TokenRailRow key={t.id} token={t} onOpen={() => router.push(`/coin/${t.tokenAddress || t.id}`)} />
                                             ))}
                                     </>
                                 );

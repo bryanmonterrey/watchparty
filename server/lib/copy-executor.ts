@@ -205,7 +205,7 @@ export async function executeAutoCopies(leader: LeaderBuy): Promise<void> {
                 await sendPushToUsers([c.followerId], {
                     title: `Copied ${leader.traderName}: bought ${leader.label} — $${Math.round(usd).toLocaleString()}`,
                     body: "Auto-copy executed within your caps. Tap to view.",
-                    url: `/${leader.mint}`,
+                    url: `/coin/${leader.mint}`,
                     tag: `copyexec-${leader.tradeId}`,
                 });
             } catch (err) {

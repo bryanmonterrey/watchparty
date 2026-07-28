@@ -40,7 +40,7 @@ export function TradeRow({ t }: { t: TradeRowData }) {
             )}>
                 {t.side}
             </span>
-            <Link href={`/${t.mint}`} className="flex items-center gap-2 min-w-0 group">
+            <Link href={`/coin/${t.mint}`} className="flex items-center gap-2 min-w-0 group">
                 <div className="size-7 overflow-hidden rounded-lg border border-zinc-700/40 bg-zinc-800 shrink-0">
                     {t.token?.imageUrl && <img src={t.token.imageUrl} alt={t.token.name} className="size-full object-cover" />}
                 </div>
@@ -55,7 +55,7 @@ export function TradeRow({ t }: { t: TradeRowData }) {
                 </span>
                 {t.side === "buy" && (
                     <Link
-                        href={`/${t.mint}`}
+                        href={`/coin/${t.mint}`}
                         className="rounded-full bg-lantern/10 px-3 py-1.5 text-xs font-bold text-lantern transition-colors hover:bg-lantern/20"
                     >
                         Copy

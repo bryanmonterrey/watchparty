@@ -15,7 +15,7 @@ export function formatMarketCap(mc: number): string {
 interface MarketCapChipProps {
     /**
      * Token page slug: the mint address once live, else the token row id —
-     * /[slug] resolves both (same rule as trade's token-row).
+     * /coin/<mint> resolves both (same rule as trade's token-row).
      */
     tokenSlug: string | null | undefined;
     marketCap: number | null | undefined;
@@ -42,7 +42,7 @@ export function MarketCapChip({ tokenSlug, marketCap, className }: MarketCapChip
             onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                router.push(`/${tokenSlug}`);
+                router.push(`/coin/${tokenSlug}`);
             }}
             className={cn(
                 "flex cursor-pointer items-center rounded-full bg-black/45 px-3 py-1.75 text-[13px] font-extrabold leading-none tracking-tight backdrop-blur-sm transition-colors hover:bg-black/70",

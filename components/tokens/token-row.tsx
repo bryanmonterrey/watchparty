@@ -9,7 +9,7 @@ import { useQuickBuy } from "@/hooks/use-quick-buy";
 // same object rather than three lookalikes.
 
 export interface TokenRowToken {
-    /** The token row id. /[slug] resolves this or the mint. */
+    /** The token row id. /coin/<mint> resolves this or the mint. */
     id: string;
     ticker: string | null;
     imageUrl: string | null;
@@ -37,7 +37,7 @@ function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: st
 
     if (!mint) {
         return (
-            <Link href={`/${token.id}`} className={label}>
+            <Link href={`/coin/${token.id}`} className={label}>
                 Launch
             </Link>
         );
@@ -97,7 +97,7 @@ export function TokenRow({
                 two different components. pl-1 balances the image's own inset
                 against the text's pr-2.5. */}
             <Link
-                href={`/${slug}`}
+                href={`/coin/${slug}`}
                 className={cn(
                     "flex items-center gap-1.5 rounded-full bg-bleu/15 font-semibold border border-bleu/20 text-bleu transition-colors hover:bg-bleu/50",
                     size === "lg" ? "py-1 pl-1.5 pr-3 text-[14px]" : "py-1 pl-1 pr-2.5 text-[12px]",

@@ -62,7 +62,7 @@ export async function fanOutTrade(t: FanOutTradeInput): Promise<void> {
         await sendPushToUsers(followerRows.map((f) => f.followerId), {
             title: `${u.name || "A trader you follow"} ${body}`,
             body: "Tap to see the token",
-            url: `/${mint}`,
+            url: `/coin/${mint}`,
             tag: `trade-${t.id}`,
         });
 
@@ -90,7 +90,7 @@ export async function fanOutTrade(t: FanOutTradeInput): Promise<void> {
                 await sendPushToUsers([c.followerId], {
                     title: `Copy ready: buy ${label} — $${Math.round(size).toLocaleString()}`,
                     body: `${u.name || "Your trader"} just bought. Tap to execute your copy.`,
-                    url: `/${mint}`,
+                    url: `/coin/${mint}`,
                     tag: `copy-${t.id}`,
                 });
             }

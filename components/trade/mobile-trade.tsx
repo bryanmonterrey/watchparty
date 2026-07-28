@@ -30,7 +30,7 @@ function fmtCap(n: number) {
 }
 
 function TokenRow({ token }: { token: TradeToken }) {
-    const href = `/${token.tokenAddress ?? token.id}`;
+    const href = `/coin/${token.tokenAddress ?? token.id}`;
     const up = token.changePercent >= 0;
 
     return (

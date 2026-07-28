@@ -60,8 +60,15 @@ export function AppHeader2() {
                      pathname === '/search' ||
                      ((segments.length === 2 || segments.length === 3) && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment));
 
-  const isWatchPage = segments.length === 3 && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment);
-  const isTokenPage = segments.length === 2 && firstSegment.length >= 21;
+  // `/coin/<mint>` is excluded from isWatchPage explicitly: it's three segments
+  // and 'coin' isn't a protected first segment, so without this a coin page
+  // would read as a watch page. (isMediaPage would come out true either way —
+  // but only by accident, and isWatchPage would be wrong for the next reader.)
+  const isWatchPage = segments.length === 3 && firstSegment !== 'coin' && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment);
+  // Coins live at /coin/<mint> now. This used to be `segments.length === 2 &&
+  // firstSegment.length >= 21` — guessing "is this a mint address?" from string
+  // length, back when a coin and a username shared the top-level namespace.
+  const isTokenPage = firstSegment === 'coin';
   const isMediaPage = isWatchPage || isTokenPage;
   // The scroll-in backdrop exists on media-style pages (watch/token), the /home
   // feed, /search, and /settings; everywhere else the header stays as-is on

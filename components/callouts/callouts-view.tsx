@@ -78,7 +78,7 @@ function CalloutsFeed() {
                 <div key={c.id} className="flex items-center gap-3 rounded-[20px] bg-panel px-4 py-3">
                     <CallerIdentity caller={c.caller} />
                     <span className="hidden sm:block text-xs font-semibold text-zinc-500 shrink-0">called</span>
-                    <Link href={`/${c.token.id}`} className="flex items-center gap-2 min-w-0 group">
+                    <Link href={`/coin/${c.token.id}`} className="flex items-center gap-2 min-w-0 group">
                         <div className="size-8 rounded-lg bg-zinc-800 overflow-hidden shrink-0 border border-zinc-700/40">
                             {c.token.imageUrl && <img src={c.token.imageUrl} alt={c.token.name} className="size-full object-cover" />}
                         </div>

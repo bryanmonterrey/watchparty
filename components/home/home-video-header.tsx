@@ -144,7 +144,7 @@ export function HomeVideoHeader({ video, className, action }: {
     action?: React.ReactNode;
 }) {
     const username = video.user.username;
-    // The mint once live, else the token row id — /[slug] resolves both.
+    // The mint once live, else the token row id — /coin/<mint> resolves both.
     const tokenSlug = video.tokenAddress ?? video.tokenId;
     const hasToken = !!tokenSlug && !!video.ticker;
     // The token row's image, with the video's own thumbnail as a backstop.

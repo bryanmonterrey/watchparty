@@ -83,14 +83,14 @@ export function alertHref(event: {
         // Callouts always name one of our coins; prefer the coin page and fall
         // back to the callouts board.
         if (event.tokenAddress || event.wpTokenId) {
-            return { href: `/${event.tokenAddress ?? event.wpTokenId}`, external: false };
+            return { href: `/coin/${event.tokenAddress ?? event.wpTokenId}`, external: false };
         }
         return { href: "/trade/callouts", external: false };
     }
-    // Only coins we LAUNCHED have a page here — /[slug] resolves against the
+    // Only coins we LAUNCHED have a page here — /coin/<mint> resolves against the
     // `tokens` table, so sending a merely-tracked mint there 404s.
     if (event.wpTokenId) {
-        return { href: `/${event.tokenAddress ?? event.wpTokenId}`, external: false };
+        return { href: `/coin/${event.tokenAddress ?? event.wpTokenId}`, external: false };
     }
     if (!event.tokenAddress) return null;
     const url = explorerUrl(event.network, event.tokenAddress);

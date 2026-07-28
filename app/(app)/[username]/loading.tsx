@@ -1,6 +1,6 @@
 import { staggerPulse } from "@/lib/skeleton-stagger";
 
-// Route-level skeleton for /[slug].
+// Route-level skeleton for /[username].
 //
 // It has to trace UserProfile's real geometry or the page jumps when the data
 // lands, and the previous version traced a layout that no longer exists: a

@@ -90,13 +90,13 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
     const router = useRouter();
     const [copied, setCopied] = useState(false);
 
-    // Token page resolves by tokenAddress (live) or id — either works via /[slug].
+    // Token page resolves by tokenAddress (live) or id — either works via /coin.
     const slug = token.tokenAddress || token.id;
     // Token page is server-rendered, so warm the route's RSC payload on hover
     // intent (120ms rest, once per row — cheap even on a dense board).
-    const rowPrefetch = useHoverPrefetch(() => router.prefetch(`/${slug}`));
+    const rowPrefetch = useHoverPrefetch(() => router.prefetch(`/coin/${slug}`));
     // Mouse-only pointerdown navigation — commits the nav on press.
-    const instantNav = useInstantNav(() => `/${slug}`);
+    const instantNav = useInstantNav(() => `/coin/${slug}`);
 
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -113,11 +113,11 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
     const handleBuy = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!quickBuy) {
-            router.push(`/${slug}`);
+            router.push(`/coin/${slug}`);
             return;
         }
         const result = await quickBuy(token);
-        if (result === "no-mint") router.push(`/${slug}`);
+        if (result === "no-mint") router.push(`/coin/${slug}`);
     };
 
     const up = token.changePercent >= 0;
@@ -128,7 +128,7 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
             onPointerDown={instantNav.onPointerDown}
             onClick={() => {
                 if (instantNav.consumedClick()) return;
-                router.push(`/${slug}`);
+                router.push(`/coin/${slug}`);
             }}
             className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
         >

@@ -23,7 +23,7 @@ interface UserProfileProps {
     user: UserType;
     /** Server-fetched so the counts row renders with the rest of the header. */
     initialFollowCounts?: { followers: number; following: number };
-    /** Resolved on the server at entry — see the live check in [slug]/page.tsx. */
+    /** Resolved on the server at entry — see the live check in [username]/page.tsx. */
     initialIsLive?: boolean;
 }
 
