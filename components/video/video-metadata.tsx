@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { Link2Icon, BookmarkIcon, RestingDotsIcon, ThumbsDownIcon, HeartIcon, HeartFilledIcon } from "@/components/icons";
+import { Link2Icon, BookmarkIcon, RestingDotsIcon, HeartIcon, HeartFilledIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileAvatar } from "@/components/video/profile-avatar";
+import { WatchHeader } from "@/components/video/watch-header";
 import { UserType } from "@/db/schema/auth/user";
 import { CommentSection } from "@/components/browse/comment-section";
 import { TokenInlineChip, type InlineChipToken } from "@/components/tokens/token-inline-chip";
@@ -142,27 +142,26 @@ export function VideoMetadata({
 
     return (
         <div className="flex flex-col gap-2 mt-2">
-            {/* Title */}
-            <h1 className="text-[20px] font-bold text-white leading-snug line-clamp-2">
-                {title ?? "Untitled"}
-            </h1>
-
-            {/* Creator + Actions Row */}
-            <div className="flex flex-wrap items-center justify-between gap-4 py-1">
-                {/* Left: Compact Profile Header + token chip */}
-                <div className="flex flex-row items-center gap-4">
-                    <ProfileAvatar user={author as unknown as UserType} isMinimized={true} />
-                    <ProfileHeader user={author as unknown as UserType} isMinimized={true} />
-                    {token && <TokenInlineChip token={token} />}
-                </div>
-
-                {/* Right: Actions */}
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-white/10 hover:bg-white/15 transition-colors rounded-full overflow-hidden">
+            <WatchHeader
+                user={author as unknown as UserType}
+                title={title ?? "Untitled"}
+                avatar={<ProfileAvatar user={author as unknown as UserType} isMinimized={true} />}
+                chip={token ? <TokenInlineChip token={token} /> : undefined}
+                // Bottom right, where the meta row used to be inline: the count
+                // and the age of the video.
+                stats={
+                    <>
+                        <span className="tabular-nums">{formatViewers(views)} views</span>
+                        <span aria-hidden>·</span>
+                        <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
+                    </>
+                }
+                actions={
+                    <>
                         <button
                             onClick={handleLike}
                             className={cn(
-                                "cursor-pointer flex items-center gap-2 px-5 py-2.5 text-md font-semibold transition-colors hover:bg-white/5",
+                                "cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 transition-colors hover:bg-white/15",
                                 liked ? "text-red1" : "text-zinc-100"
                             )}
                         >
@@ -172,40 +171,36 @@ export function VideoMetadata({
                             }
                             {likeCount > 0 ? formatViewers(likeCount) : "Like"}
                         </button>
-                    </div>
 
-                    <button className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                        <Link2Icon className="size-5" />
-                        Share
-                    </button>
-                    <button className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                        <BookmarkIcon className="size-5" />
-                        Save
-                    </button>
-                    <button className="cursor-pointer p-2.5 rounded-full bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                        <RestingDotsIcon className="size-5" />
-                    </button>
-                </div>
-            </div>
+                        <button className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
+                            <Link2Icon className="size-5" />
+                            Share
+                        </button>
+                        <button className="cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-md font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
+                            <BookmarkIcon className="size-5" />
+                            Save
+                        </button>
+                        <button className="cursor-pointer p-2.5 rounded-full bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
+                            <RestingDotsIcon className="size-5" />
+                        </button>
+                    </>
+                }
+            />
 
             {/* Description Block */}
             <div
                 className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl p-3 mt-1 cursor-pointer"
                 onClick={() => setDescExpanded(v => !v)}
             >
-                <div className="flex gap-2 items-center mb-1">
-                    <p className="text-sm font-bold text-zinc-200">
-                        {formatViewers(views)} views
-                    </p>
-                    <p className="text-sm font-bold text-zinc-200">
-                        {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
-                    </p>
-                    {category && (
-                        <span className="text-sm font-bold text-lantern ml-1">
+                {/* Views and age moved to the header's bottom right, so this row
+                    is just the category now. */}
+                {category && (
+                    <div className="flex gap-2 items-center mb-1">
+                        <span className="text-sm font-bold text-lantern">
                             #{category.replace(/\s+/g, "")}
                         </span>
-                    )}
-                </div>
+                    </div>
+                )}
                 <p className="text-sm text-zinc-100 whitespace-pre-wrap leading-relaxed font-medium">
                     {descExpanded ? content : shortDesc}
                     {!descExpanded && hasMore && "..."}

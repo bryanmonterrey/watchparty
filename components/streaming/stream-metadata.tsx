@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
-import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileAvatar } from "@/components/profile/profile-avatar";
+import { WatchHeader } from "@/components/video/watch-header";
 import { Link2Icon, NotificationsIcon, RestingDotsIcon, BookmarkIcon, ThumbsDownIcon } from "../icons";
 
 interface StreamMetadataProps {
@@ -101,53 +101,51 @@ export function StreamMetadata({
 
     return (
         <div className="flex flex-col gap-2 mt-3">
-            {/* Title + live chips */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                <h1 className="text-[20px] font-bold text-white leading-snug line-clamp-2">
-                    {streamTitle ?? `${host.name} is live`}
-                </h1>
-                {isLive && (
-                    <div className="flex items-center gap-1.5">
-                        <ViewerChip count={viewerCount} />
-                        <DurationChip startedAt={startedAt} />
-                    </div>
-                )}
-            </div>
+            <WatchHeader
+                user={host}
+                title={streamTitle ?? `${host.name} is live`}
+                avatar={<ProfileAvatar user={host} isMinimized={true} />}
+                // The switch back to the profile. It was on the display name,
+                // which this header no longer shows — @username is the identity
+                // here, and clicking it means the same thing.
+                onNameClick={onNameClick}
+                nameTitle="Switch to profile"
+                // Bottom right, where the video page puts its view count.
+                stats={
+                    isLive ? (
+                        <>
+                            <ViewerChip count={viewerCount} />
+                            <DurationChip startedAt={startedAt} />
+                        </>
+                    ) : undefined
+                }
+                actions={
+                    <>
+                        <div className="flex items-center overflow-hidden rounded-full bg-white/10 transition-colors hover:bg-white/15">
+                            <button className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/5">
+                                <NotificationsIcon className="w-[18px] h-[18px]" />
+                                Like
+                            </button>
+                            <div className="h-5 w-px bg-white/20" />
+                            <button className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/5">
+                                <ThumbsDownIcon className="w-[18px] h-[18px]" />
+                            </button>
+                        </div>
 
-            {/* Creator + Actions Row */}
-            <div className="flex flex-wrap items-center justify-between gap-4 py-1">
-                {/* Left: Compact Profile Header */}
-                <div className="flex flex-row items-center gap-4">
-                    <ProfileAvatar user={host} isMinimized={true} />
-                    <ProfileHeader user={host} isMinimized={true} onNameClick={onNameClick} nameTitle="Switch to profile" />
-                </div>
-
-                {/* Right: Actions */}
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-white/10 hover:bg-white/15 transition-colors rounded-full overflow-hidden">
-                        <button className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/5">
-                            <NotificationsIcon className="w-[18px] h-[18px]" />
-                            Like
+                        <button className="flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/15">
+                            <Link2Icon className="w-[18px] h-[18px]" />
+                            Share
                         </button>
-                        <div className="w-px h-5 bg-white/20" />
-                        <button className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/5">
-                            <ThumbsDownIcon className="w-[18px] h-[18px]" />
+                        <button className="flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-2 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/15">
+                            <BookmarkIcon className="w-[18px] h-[18px]" />
+                            Save
                         </button>
-                    </div>
-                    
-                    <button className="flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                        <Link2Icon className="w-[18px] h-[18px]" />
-                        Share
-                    </button>
-                    <button className="flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-semibold bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                        <BookmarkIcon className="w-[18px] h-[18px]" />
-                        Save
-                    </button>
-                    <button className="p-2 rounded-full bg-white/10 text-zinc-100 hover:bg-white/15 transition-colors">
-                        <RestingDotsIcon className="w-[18px] h-[18px]" />
-                    </button>
-                </div>
-            </div>
+                        <button className="rounded-full bg-white/10 p-2 text-zinc-100 transition-colors hover:bg-white/15">
+                            <RestingDotsIcon className="w-[18px] h-[18px]" />
+                        </button>
+                    </>
+                }
+            />
 
             {/* Description Block */}
             <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl p-3 mt-1">
