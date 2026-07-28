@@ -106,13 +106,7 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
             </div>
 
             {/* ── Up Next sidebar ──────────────────────────────────────────── */}
-            <UpNextSidebar
-                postId={postId}
-                creatorId={video?.author?.id ?? ""}
-                creatorName={video?.author?.name ?? null}
-                category={video?.category ?? null}
-                isLoading={isLoading}
-            />
+            <UpNextSidebar postId={postId} />
         </div>
     );
 }
