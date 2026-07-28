@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -70,11 +71,21 @@ export default function RootLayout({
           variable: __name`, thrown before the script reaches its own
           `k2(theme)` call, so the theme is never applied pre-paint.
 
-          Defining it as identity makes the injected wrapper a no-op. Cheap, and
-          it can't be fixed further up: defineCloudflareConfig exposes no esbuild
-          options, and next-themes has no way to opt out of the inline script.
+          Defining it as identity makes the injected wrapper a no-op. It can't be
+          fixed further up: defineCloudflareConfig exposes no esbuild options, and
+          next-themes has no way to opt out of the inline script.
+
+          next/script, NOT a raw <script>. A plain inline <script> here was
+          silently DROPPED from the SSR output by React 19 (verified against the
+          deployed HTML — the tag was absent while next-themes' script, and its
+          __name call, were still there). `beforeInteractive` is injected into the
+          initial HTML and runs before any Next module, and per the Next docs it
+          has to live in the root layout, which is where it already needed to be.
+          Inline content requires an `id` for Next to track it.
         */}
-        <script dangerouslySetInnerHTML={{ __html: "window.__name||(window.__name=function(f){return f})" }} />
+        <Script id="esbuild-keepnames-shim" strategy="beforeInteractive">
+          {`window.__name||(window.__name=function(f){return f})`}
+        </Script>
         {/*
           ThemeProvider lives at the root (not in (app)/AppProviders) so
           next-themes' own pre-paint script renders synchronously here, before
