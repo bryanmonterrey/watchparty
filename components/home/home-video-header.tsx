@@ -7,8 +7,6 @@ import { FavouriteIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
-import { formatMarketCap } from "@/components/tokens/market-cap-chip";
-import { NoMarketCap, TokenSparkline } from "@/components/tokens/token-sparkline";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { formatRelativeTime } from "@/lib/date-utils";
 import type { HomeFeedVideo } from "./home-feed-context";
@@ -187,9 +185,6 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
     // The mint once live, else the token row id — /[slug] resolves both.
     const tokenSlug = video.tokenAddress ?? video.tokenId;
     const hasToken = !!tokenSlug && !!video.ticker;
-    // A mint only exists once someone has taken the first buy — that IS the
-    // launch. No mint, no market, no cap.
-    const launched = !!video.tokenAddress;
 
     return (
         <div className={cn("flex min-w-0 py-2.5 items-start gap-3", className)}>
@@ -242,26 +237,14 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                     )}
                 </div>
 
-                {/* Token row. Left to right: price line, market cap, ticker,
-                    action. A coin with no mint hasn't launched, and the row says
-                    so twice without a word — the line is flat grey and the cap
-                    is `$—·—` — so the state reads at a glance. */}
+                {/* Token row: ticker, then the action.
+                    The price line and the market cap are DELIBERATELY out for
+                    now — the line is being rebuilt on a real charting engine,
+                    and the cap comes back with it, for launched coins only.
+                    There is no `$—·—` placeholder in the meantime: an empty slot
+                    beats a wrong one. */}
                 {hasToken && (
                     <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
-                        <TokenSparkline mint={video.tokenAddress} className="h-7 w-24 shrink-0" />
-
-                        {launched && video.marketCapUsd != null ? (
-                            <Link
-                                href={`/${tokenSlug}`}
-                                className="text-[12px] font-extrabold tabular-nums text-emerald-400 transition-opacity hover:opacity-80"
-                            >
-                                {formatMarketCap(video.marketCapUsd)}
-                                <span className="ml-1 font-semibold text-zinc-600">mc</span>
-                            </Link>
-                        ) : (
-                            <NoMarketCap />
-                        )}
-
                         <Link
                             href={`/${tokenSlug}`}
                             className="flex items-center rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
