@@ -1306,6 +1306,11 @@ export const contentRouter = router({
                     category: posts.category,
                     collaborators: posts.collaborators,
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = ${posts.id} AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
+                    // Same shape as isLiked, so the header's repost button knows
+                    // its state on first paint instead of guessing. A plain
+                    // repost is a published post row pointing back at this one
+                    // (see the repost mutation's own idempotency check).
+                    isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts r WHERE r."repostOfId" = ${posts.id} AND r."userId" = ${ctx.user?.id ?? ""} AND r.status = 'published')`,
                     author: {
                         id: user.id,
                         name: user.name,

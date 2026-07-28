@@ -2,26 +2,31 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FavouriteIcon, UserLove01Icon } from "@hugeicons/core-free-icons";
+import { UserLove01Icon } from "@hugeicons/core-free-icons";
 import { UserType } from "@/db/schema/auth/user";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
+// The SAME icons post-card uses for these three actions — BubbleIcon,
+// RetweetIcon and the Heart pair — so a like on a post and a like on a video
+// don't look like different features. HugeIcons has near-equivalents, but
+// "near" is exactly the problem.
+import { BubbleIcon, HeartFilledIcon, HeartIcon, RetweetIcon } from "@/components/icons";
 import { MoreMenu } from "@/components/profile/profile-header-actions";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 
 // The right-hand action row on the video and live pages.
 //
-// Left to right: gift subs, follow-or-subscribe, heart, overflow menu — i.e.
-// dots outermost, reading right to left as specced.
+// Left to right: comment, repost, heart, follow-or-subscribe, gift subs, dots —
+// i.e. dots outermost, reading right to left as specced.
 //
 // It is NOT ProfileHeaderActions. That one is the profile page's full set (dots,
-// gift premium, message, send, follow, AND subscribe side by side) and it shows
-// Follow and Subscribe as two separate buttons. Here they're ONE button: a
-// creator with no subscription tiers gets Follow/Following, a creator with tiers
-// gets Subscribe. The underlying flows are the same components, so tier gating,
-// the tier picker and the gift dialog all still come from one place.
+// gift premium, message, send, follow AND subscribe side by side) and it shows
+// Follow and Subscribe as two separate buttons. Here they're ONE slot: a creator
+// with no subscription tiers gets Follow/Following, a creator with tiers gets
+// Subscribe. The underlying flows are still the shared components, so tier
+// gating, the tier picker and the gift dialog all come from one place.
 
 const ICON_BTN =
     "flex size-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-zinc-100 transition-colors hover:bg-white/15";
@@ -60,21 +65,51 @@ function FollowButton({ userId }: { userId: string }) {
     );
 }
 
+/** Repost toggle. content.repost is idempotent — it deletes the existing repost
+ *  row when there is one — so one call covers both directions. */
+function RepostButton({ postId, reposted }: { postId: string; reposted: boolean }) {
+    const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
+    const on = optimistic ?? reposted;
+    const repost = trpc.content.repost.useMutation({ onError: () => setOptimistic(null) });
+
+    return (
+        <button
+            type="button"
+            onClick={() => {
+                setOptimistic(!on);
+                repost.mutate({ postId });
+            }}
+            aria-pressed={on}
+            aria-label={on ? "undo repost" : "repost"}
+            className={cn(ICON_BTN, on && "text-lantern")}
+        >
+            <RetweetIcon className="size-5" />
+        </button>
+    );
+}
+
+export interface WatchPost {
+    id: string;
+    liked: boolean;
+    onLikeToggle: () => void;
+    reposted: boolean;
+}
+
 interface WatchActionsProps {
     user: UserType;
     /**
-     * The heart. Owned by the page because only it knows what's being liked —
-     * the video page has a post to like, and a live stream has no likeable row
-     * yet, so it passes nothing and no heart renders rather than a dead one.
+     * The post being watched. Comment, repost and heart all act on a post row,
+     * and a live stream doesn't have one — so the live page passes nothing and
+     * those three don't render, rather than sitting there dead.
      */
-    like?: { liked: boolean; onToggle: () => void };
+    post?: WatchPost;
 }
 
-export function WatchActions({ user, like }: WatchActionsProps) {
+export function WatchActions({ user, post }: WatchActionsProps) {
     const { data: session } = useAuthSession();
     const [showMore, setShowMore] = React.useState(false);
 
-    // Same query SubscribeButton and GiftSubsButton gate themselves on, so
+    // The same query SubscribeButton and GiftSubsButton gate themselves on, so
     // TanStack serves all three from one fetch.
     const { data: tiers } = trpc.subscription.getTiers.useQuery({ creatorId: user.id });
     const hasTiers = !!tiers?.length;
@@ -82,10 +117,39 @@ export function WatchActions({ user, like }: WatchActionsProps) {
 
     return (
         <div className="flex items-center gap-2">
-            <GiftSubsButton creatorId={user.id} creatorName={user.name ?? ""} className={ICON_BTN} iconOnly />
+            {post && (
+                <>
+                    {/* Comments live further down the same page, so this scrolls
+                        rather than navigates. */}
+                    <button
+                        type="button"
+                        onClick={() =>
+                            document.getElementById("comments")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }
+                        aria-label="jump to comments"
+                        className={ICON_BTN}
+                    >
+                        <BubbleIcon className="size-5" />
+                    </button>
 
-            {!isOwner && (
-                hasTiers ? (
+                    <RepostButton postId={post.id} reposted={post.reposted} />
+
+                    <button
+                        type="button"
+                        onClick={post.onLikeToggle}
+                        aria-pressed={post.liked}
+                        aria-label={post.liked ? "unlike" : "like"}
+                        className={cn(ICON_BTN, post.liked && "text-pastelred")}
+                    >
+                        {/* Filled variant when liked, as post-card does — not a
+                            fill-current override on the outline one. */}
+                        {post.liked ? <HeartFilledIcon className="size-5" /> : <HeartIcon className="size-5" />}
+                    </button>
+                </>
+            )}
+
+            {!isOwner &&
+                (hasTiers ? (
                     <SubscribeButton
                         creatorId={user.id}
                         creatorName={user.name}
@@ -94,20 +158,12 @@ export function WatchActions({ user, like }: WatchActionsProps) {
                     />
                 ) : (
                     <FollowButton userId={user.id} />
-                )
-            )}
+                ))}
 
-            {like && (
-                <button
-                    type="button"
-                    onClick={like.onToggle}
-                    aria-pressed={like.liked}
-                    aria-label={like.liked ? "unlike" : "like"}
-                    className={cn(ICON_BTN, like.liked && "text-pastelred [&_path]:fill-current")}
-                >
-                    <HugeiconsIcon icon={FavouriteIcon} className="size-5" strokeWidth={2} />
-                </button>
-            )}
+            {/* Full "Gift Subs" button, not an icon — it self-gates, so it only
+                appears for a creator who has subscriptions turned on, and at
+                that point it's worth its own label. */}
+            <GiftSubsButton creatorId={user.id} creatorName={user.name ?? ""} className={PILL_BTN} />
 
             <MoreMenu
                 userId={user.id}

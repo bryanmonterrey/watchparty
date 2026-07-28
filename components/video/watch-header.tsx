@@ -4,7 +4,7 @@ import Link from "next/link";
 import { type ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserType } from "@/db/schema/auth/user";
-import { WatchActions } from "./watch-actions";
+import { WatchActions, type WatchPost } from "./watch-actions";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 
 // The header under the screen on the video and live pages — home's video header
@@ -28,8 +28,8 @@ import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components
 interface WatchHeaderProps {
     user: UserType;
     title: string;
-    /** The heart, when the page has something likeable. See WatchActions. */
-    like?: { liked: boolean; onToggle: () => void };
+    /** The post being watched — drives comment/repost/heart. See WatchActions. */
+    post?: WatchPost;
     /** Bottom right: "4 views · yesterday", or the live viewer + duration chips. */
     stats?: ReactNode;
     /** Third row, under the identity — <TokenRow />, the same coin line home's
@@ -50,11 +50,11 @@ function VerifiedBadge({ tier }: { tier: string | null | undefined }) {
     return null;
 }
 
-export function WatchHeader({ user, title, like, stats, tokenRow, onNameClick, nameTitle }: WatchHeaderProps) {
+export function WatchHeader({ user, title, post, stats, tokenRow, onNameClick, nameTitle }: WatchHeaderProps) {
     const nameClass = "truncate text-[20px] font-bold leading-snug text-zinc-400 transition-colors hover:text-white";
 
     return (
-        <div className="mt-3 flex items-start gap-4">
+        <div className="mt-3 flex items-start gap-4 px-3">
             {/* The header owns the avatar rather than taking it as a prop: the
                 two pages were passing different components at different sizes
                 (size-20 video, size-24 live) and that's the whole reason they
@@ -98,8 +98,8 @@ export function WatchHeader({ user, title, like, stats, tokenRow, onNameClick, n
             </div>
 
             {/* Actions, with the count beneath them at the bottom right. */}
-            <div className="flex shrink-0 flex-col items-end gap-2">
-                <WatchActions user={user} like={like} />
+            <div className="flex shrink-0 flex-col items-end gap-3.5">
+                <WatchActions user={user} post={post} />
                 {stats && <div className="flex items-center gap-x-1.5 text-[16px] font-semibold text-zinc-400">{stats}</div>}
             </div>
         </div>

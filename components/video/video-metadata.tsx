@@ -33,6 +33,8 @@ interface VideoMetadataProps {
     createdAt: Date;
     category: string | null;
     isLiked: boolean;
+    /** Server-resolved for the viewer, so the repost button is right on first paint. */
+    isReposted?: boolean;
     author: VideoAuthor;
     /** Attached live token, when the video has one (design brief §2). */
     token?: InlineChipToken | null;
@@ -55,6 +57,7 @@ export function VideoMetadata({
     createdAt,
     category,
     isLiked: initialLiked,
+    isReposted = false,
     author,
     token,
     isLoading,
@@ -157,7 +160,7 @@ export function VideoMetadata({
                         <span>{formatRelativeTime(new Date(createdAt).toISOString())}</span>
                     </>
                 }
-                like={{ liked, onToggle: handleLike }}
+                post={{ id: postId, liked, onLikeToggle: handleLike, reposted: isReposted }}
             />
 
             {/* Description Block */}
@@ -185,8 +188,8 @@ export function VideoMetadata({
                 )}
             </div>
 
-            {/* Comments */}
-            <div className="pt-4">
+            {/* Comments. The id is the header's comment button target. */}
+            <div id="comments" className="pt-4">
                 <p className="text-lg font-bold text-white mb-4">
                     {formatViewers(comments)} Comments
                 </p>
