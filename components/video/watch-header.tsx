@@ -108,3 +108,66 @@ export function WatchHeader({ user, title, post, stats, tokenRow, onNameClick, n
         </div>
     );
 }
+
+/**
+ * Loading twin of WatchHeader — same file, on purpose.
+ *
+ * The video and live pages each hand-rolled their own header skeleton, and both
+ * still traced the layout WatchHeader REPLACED: a title bar stacked above the
+ * row (the title is beside the avatar now), an avatar at size-20 (video) vs
+ * w-24 h-24 (live) wearing the profile page's `border-[6px] border-black` ring
+ * (this header's avatar is ringless), and h-9 action pills (they're h-11, per
+ * the button standard). So the two pages disagreed with the real header and
+ * with each other — the exact drift the note at the top of this file says the
+ * shared avatar exists to prevent.
+ *
+ * One skeleton, next to the component it mirrors, so it can't drift again.
+ * Every number below is read off the real markup above: gap-4/px-3/mt-3 frame,
+ * size-24 avatar, gap-0.5 identity column, gap-3.5 action column, gap-2 between
+ * action buttons.
+ */
+export function WatchHeaderSkeleton({
+    /** Reserve the coin pill's row — pass what you pass `tokenRow`. */
+    tokenRow = false,
+    /** Reserve the bottom-right stats line (views / viewer + duration chips). */
+    stats = true,
+}: { tokenRow?: boolean; stats?: boolean } = {}) {
+    return (
+        <div className="mt-3 flex items-start gap-4 px-3">
+            {/* size-24, ringless — matches the Avatar above exactly. */}
+            <div className="size-24 shrink-0 rounded-full shimmer-skeleton" />
+
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                {/* Title and @username are BOTH text-[20px] leading-snug, so each
+                    occupies a 27.5px line box — h-7 wrappers hold that height and
+                    centre a shorter bar, so nothing shifts when the text lands. */}
+                <div className="flex h-7 items-center">
+                    <div className="h-5 w-2/3 max-w-100 rounded-xs shimmer-skeleton" />
+                </div>
+                <div className="flex h-7 items-center">
+                    <div className="h-4.5 w-36 rounded-xs shimmer-skeleton" />
+                </div>
+                {tokenRow && (
+                    // TokenRow size="lg" is a py-1 pill around 14px text.
+                    <div className="mt-1 h-7 w-40 rounded-full shimmer-skeleton" />
+                )}
+            </div>
+
+            <div className="flex shrink-0 flex-col items-end gap-3.5">
+                {/* WatchActions: one text pill (Follow/Subscribe) plus icon
+                    buttons — h-11 / size-11, gap-2, all rounded-full. */}
+                <div className="flex items-center gap-2">
+                    <div className="h-11 w-28 rounded-full shimmer-skeleton" />
+                    <div className="size-11 rounded-full shimmer-skeleton" />
+                    <div className="size-11 rounded-full shimmer-skeleton" />
+                    <div className="size-11 rounded-full shimmer-skeleton" />
+                </div>
+                {stats && (
+                    <div className="flex h-6 items-center">
+                        <div className="h-4 w-32 rounded-xs shimmer-skeleton" />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

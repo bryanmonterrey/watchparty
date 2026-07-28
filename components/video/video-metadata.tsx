@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/date-utils";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { WatchHeader } from "@/components/video/watch-header";
+import { WatchHeader, WatchHeaderSkeleton } from "@/components/video/watch-header";
 import { UserType } from "@/db/schema/auth/user";
 import { CommentSection } from "@/components/browse/comment-section";
 import { type InlineChipToken } from "@/components/tokens/token-inline-chip";
@@ -75,32 +75,11 @@ export function VideoMetadata({
     if (isLoading) {
         return (
             <div className="flex flex-col gap-2 mt-2">
-                {/* Title (text-[20px], up to 2 lines) */}
-                <div className="shimmer-skeleton h-6 w-2/3 rounded-full" />
-
-                {/* Creator + Actions Row — mirrors avatar (size-20) + name/username
-                    + badge strip on the left, Like/Share/Save/menu pills on the right */}
-                <div className="flex flex-wrap items-center justify-between gap-4 py-1">
-                    <div className="flex items-center gap-4">
-                        <div className="shimmer-skeleton size-20 rounded-full shrink-0 border-[6px] border-black" />
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                                <div className="shimmer-skeleton h-6 w-36 rounded-full" />
-                                <div className="shimmer-skeleton h-11 w-24 rounded-full" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="shimmer-skeleton h-4 w-24 rounded-full opacity-60" />
-                                <div className="shimmer-skeleton h-4 w-28 rounded-full opacity-40" />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="shimmer-skeleton h-11 w-28 rounded-full" />
-                        <div className="shimmer-skeleton h-11 w-28 rounded-full" />
-                        <div className="shimmer-skeleton h-11 w-26 rounded-full" />
-                        <div className="shimmer-skeleton size-11 rounded-full" />
-                    </div>
-                </div>
+                {/* The header's own loading twin — see watch-header.tsx. This used
+                    to be hand-rolled here and had drifted back to the pre-
+                    WatchHeader layout (title stacked above the row, size-20
+                    ringed avatar), which is why it didn't match the live page. */}
+                <WatchHeaderSkeleton tokenRow />
 
                 {/* Description Block — meta line + two text lines in the box */}
                 <div className="mt-1 flex flex-col gap-2 rounded-xl bg-white/5 p-3">

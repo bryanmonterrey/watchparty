@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
-import { WatchHeader } from "@/components/video/watch-header";
+import { WatchHeader, WatchHeaderSkeleton } from "@/components/video/watch-header";
 import { TokenRow } from "@/components/tokens/token-row";
 import { trpc } from "@/lib/trpc/client";
 
@@ -87,24 +87,11 @@ export function StreamMetadata({
     if (isLoading) {
         return (
             <div className="flex flex-col gap-2 mt-3">
-                {/* Title Skeleton */}
-                <div className="shimmer-skeleton h-6 w-3/4 rounded-full" />
-
-                {/* Creator + Actions Row Skeleton */}
-                <div className="flex flex-wrap items-center justify-between gap-4 py-1">
-                    <div className="flex items-center gap-4">
-                        <div className="shimmer-skeleton w-24 h-24 rounded-full shrink-0 border-[6px] border-black" />
-                        <div className="flex flex-col gap-2">
-                            <div className="shimmer-skeleton h-6 w-36 rounded-full" />
-                            <div className="shimmer-skeleton h-4 w-24 rounded-full opacity-60" />
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="shimmer-skeleton h-9 w-24 rounded-full" />
-                        <div className="shimmer-skeleton h-9 w-28 rounded-full" />
-                        <div className="shimmer-skeleton h-9 w-9 rounded-full" />
-                    </div>
-                </div>
+                {/* Same header skeleton the video page uses — both render
+                    WatchHeader, so both wait on the same shape. This was a
+                    hand-rolled copy that had drifted from it (ringed avatar,
+                    h-9 actions, title above the row). */}
+                <WatchHeaderSkeleton tokenRow />
 
                 {/* Description Block Skeleton */}
                 <div className="shimmer-skeleton h-24 w-full rounded-xl mt-1" />
