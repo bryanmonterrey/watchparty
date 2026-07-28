@@ -37,7 +37,7 @@ export function SolBalanceChipSkeleton() {
             className="flex h-[52px] items-center gap-2 rounded-full border border-sidebar-hover/10 bg-soft-gray-10 px-5 backdrop-blur-xs"
         >
             {/* Mirrors SolanaMarkIcon's h-3.5 w-4 box, then the balance text. */}
-            <div className="h-3.5 w-4 shrink-0 rounded-[3px] shimmer-skeleton" />
+            <div className="h-3.5 w-4 shrink-0 rounded-full shimmer-skeleton" />
             <div className="h-4 w-10 rounded-full shimmer-skeleton" />
         </div>
     );

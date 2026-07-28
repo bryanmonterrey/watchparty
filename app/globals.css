@@ -265,6 +265,7 @@
   --color-soft-gray-5: #0C0C0C;
   --color-soft-gray-10: #181818;
   --color-soft-gray-15: #242425;
+  --color-soft-gray-20: #303131;
   /* The skeleton fill — same idea, one surface further along: the flat hex
      that soft-gray 5% collapses to over the APP CANVAS (#080808, i.e.
      bg-panel's white 3% over black), not over pure black like soft-gray-5.
@@ -557,7 +558,7 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
   width: 200%;
   height: 100%;
   border-style: solid;
-  border-color: white white transparent;
+  border-color: #18181B;
   border-radius: 50%;
   border-width: 6px;
 }
