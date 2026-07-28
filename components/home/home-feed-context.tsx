@@ -24,6 +24,9 @@ export interface HomeFeedVideo {
     isLive?: boolean | null;
     /** Launched token (if any) — drives the market-cap chip. */
     ticker?: string | null;
+    /** The coin's own image. Already selected by getVideoFeed in both branches
+     *  (posts.token_image), so showing it costs no extra query. */
+    token_image?: string | null;
     tokenId?: string | null;
     tokenAddress?: string | null;
     marketCapUsd?: number | null;

@@ -149,7 +149,7 @@ function LikeButton({ video }: { video: HomeFeedVideo }) {
 function TokenAction({ video, tokenSlug }: { video: HomeFeedVideo; tokenSlug: string | null | undefined }) {
     const { quickBuy, buyingId } = useQuickBuy();
     const mint = video.tokenAddress;
-    const label = "text-[12px] font-extrabold text-royal-blue transition-opacity hover:opacity-80";
+    const label = "text-sm font-extrabold text-royal-blue transition-opacity hover:opacity-80";
 
     if (!mint) {
         return (
@@ -203,7 +203,7 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                     {video.title}
                 </h2>
 
-                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-zinc-500">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[16px] text-zinc-500">
                     {username && (
                         <Link
                             href={`/${username}`}
@@ -245,10 +245,32 @@ export function HomeVideoHeader({ video, className }: { video: HomeFeedVideo; cl
                     beats a wrong one. */}
                 {hasToken && (
                     <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
+                        {/* Image INSIDE the pill, not floating beside it. Both
+                            were on the table; inside wins on one concrete
+                            ground — TokenInlineChip (the same idea in the live
+                            rail and the watch header) already puts it inside, so
+                            outside would make the same object look like two
+                            different components. It also reads as one thing you
+                            click rather than a loose circle next to a pill.
+                            pl-1 balances the image's own inset against the
+                            text's px-2.5. */}
                         <Link
                             href={`/${tokenSlug}`}
-                            className="flex items-center rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
+                            className="flex items-center gap-1.5 rounded-full bg-white/[0.06] py-1 pl-1 pr-2.5 text-[12px] font-extrabold text-white transition-colors hover:bg-white/10"
                         >
+                            {video.token_image ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={video.token_image}
+                                    alt=""
+                                    loading="lazy"
+                                    className="size-4 shrink-0 rounded-full object-cover"
+                                />
+                            ) : (
+                                // Keeps the pill's width steady whether or not the
+                                // coin has art.
+                                <span className="size-4 shrink-0 rounded-full bg-white/10" />
+                            )}
                             ${video.ticker}
                         </Link>
 
