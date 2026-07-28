@@ -182,9 +182,9 @@ function TokenAction({ video, tokenSlug }: { video: HomeFeedVideo; tokenSlug: st
 export function HomeVideoHeader({ video, className, action }: {
     video: HomeFeedVideo;
     className?: string;
-    /** Trailing control on the second row — home's collapse chevron. Passed in
-     *  rather than owned here: the toggle it drives is the centre column's
-     *  state, and this header renders inside that column. */
+    /** Last item on the right column's second row — home's collapse chevron.
+     *  Passed in rather than owned here: the toggle it drives is the centre
+     *  column's state, and this header renders inside that column. */
     action?: React.ReactNode;
 }) {
     const username = video.user.username;
@@ -214,11 +214,7 @@ export function HomeVideoHeader({ video, className, action }: {
                     {video.title}
                 </h2>
 
-                {/* Handle on the left, everything else pushed right: count,
-                    date, then the collapse control. Not flex-wrap — the right
-                    group has to stay ON this line for the chevron to read as
-                    part of it, so the handle truncates instead. */}
-                <div className="flex min-w-0 items-center gap-x-1.5 text-[16px] text-zinc-500">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[16px] text-zinc-500">
                     {username && (
                         <Link
                             href={`/${username}`}
@@ -228,26 +224,6 @@ export function HomeVideoHeader({ video, className, action }: {
                             <VerifiedBadge tier={video.user.verifiedTier} />
                         </Link>
                     )}
-
-                    <span className="ml-auto flex shrink-0 items-center gap-x-1.5">
-                        {video.isLive ? (
-                            <span className="flex items-center gap-1.5 font-bold text-pastelred">
-                                <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
-                                live
-                            </span>
-                        ) : (
-                            video.views != null && (
-                                <span className="tabular-nums">{compactCount(video.views)} views</span>
-                            )
-                        )}
-                        {video.createdAt && (
-                            <>
-                                <span aria-hidden>·</span>
-                                <span>{formatRelativeTime(new Date(video.createdAt).toISOString())}</span>
-                            </>
-                        )}
-                        {action}
-                    </span>
                 </div>
 
                 {/* Token row: ticker, then the action.
@@ -292,8 +268,33 @@ export function HomeVideoHeader({ video, className, action }: {
                 )}
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
+            {/* Third column, right end: the like button on one row, the count,
+                date and collapse control on the next. Its own column, NOT the
+                right half of the identity rows — those keep their own spacing
+                and wrap on their own terms, and nothing here has to line up
+                with a title that might run to two lines. */}
+            <div className="flex shrink-0 flex-col items-end gap-2">
                 <LikeButton video={video} />
+
+                <div className="flex items-center gap-x-1.5 text-[16px] text-zinc-500">
+                    {video.isLive ? (
+                        <span className="flex items-center gap-1.5 font-bold text-pastelred">
+                            <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
+                            live
+                        </span>
+                    ) : (
+                        video.views != null && (
+                            <span className="tabular-nums">{compactCount(video.views)} views</span>
+                        )
+                    )}
+                    {video.createdAt && (
+                        <>
+                            <span aria-hidden>·</span>
+                            <span>{formatRelativeTime(new Date(video.createdAt).toISOString())}</span>
+                        </>
+                    )}
+                    {action}
+                </div>
             </div>
         </div>
     );
