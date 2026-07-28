@@ -6,6 +6,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { SolanaMarkIcon } from "@/components/icons";
+import { useForceLoading } from "@/lib/debug-loading";
 
 // Native SOL mint as reported by getWalletAssets (display/balances mint).
 const SOL_MINT = "So11111111111111111111111111111111111111111";
@@ -108,6 +109,10 @@ function subscribeAssetsChanged(address: string, listener: () => void): () => vo
 // fresh balance swaps in when the fetch lands. isLoading only covers the
 // initial no-placeholder fetch — background refetches never re-skeleton.
 export function useHeaderWalletLoading() {
+    // Debug switch (?debug-loading) pins the tiles into their skeletons. Also
+    // needed here, not just in the "2" copy: wallet-button.tsx imports its
+    // header-loading gate from THIS module.
+    const forceLoading = useForceLoading();
     const { data: session, isLoading: sessionLoading } = useAuthSession();
     const walletAddress = session?.user?.wallet_address;
 
@@ -140,7 +145,7 @@ export function useHeaderWalletLoading() {
 
     // No wallet linked → query stays disabled (isLoading false), tiles render
     // their signed-out states as soon as the session resolves.
-    return { loading: sessionLoading || isLoading, data, session };
+    return { loading: forceLoading || sessionLoading || isLoading, data, session };
 }
 
 // Header SOL balance: Solana mark + amount; at zero balance it becomes an

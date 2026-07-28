@@ -11,6 +11,7 @@ import { MiniPlayerShell } from "@/components/app-ui/mini-player-shell";
 import { UpgradeOverlay } from "@/components/premium/upgrade-overlay";
 import OnboardingDialog from "@/components/app-ui/app-onboarding";
 import { DesktopOnlyGate } from "@/components/app-ui/desktop-only-gate";
+import { LoadingDebug } from "@/components/dev/loading-debug";
 
 // Authenticated app shell. Guards every (app) route (no session -> /login) and
 // hosts the app's provider stack + sidebar frame.
@@ -55,6 +56,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Suspense>
           <OnboardingDialog />
         </Suspense>
+        {/* Renders nothing until ?debug-loading reveals it; then it pins the
+            UI in its loading state so skeletons can be designed against. */}
+        <LoadingDebug />
       </MiniPlayerShell>
     </AppProviders>
   );

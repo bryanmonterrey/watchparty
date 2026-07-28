@@ -6,6 +6,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { SolanaMarkIcon } from "@/components/icons";
+import { useForceLoading } from "@/lib/debug-loading";
 
 // Native SOL mint as reported by getWalletAssets (display/balances mint).
 const SOL_MINT = "So11111111111111111111111111111111111111111";
@@ -20,14 +21,24 @@ function formatSol(balance: number) {
     return balance.toFixed(3);
 }
 
-// The chip is a pill (rounded-full, no Squircle — repo rule for pills), so
-// its skeleton is the same pill shape; only Create/Wallet are squircles.
-// opacity-50 matches those two, which are disabled <Button>s and inherit
-// disabled:opacity-50.
+// The chip's SHELL is identical loading or loaded — same 52px pill, same
+// bg-soft-gray-10 surface, same hairline — because that's what's actually true:
+// the button exists, only the balance inside it is pending. So the skeleton
+// wears the real chip's classes and shimmers just the two content slots (the
+// Solana mark and the number), which lands the loaded state with no size, color
+// or shape pop. Its intrinsic width (~104px) matches a formatted balance, so
+// nothing beside it shifts either.
+//
+// Pill = rounded-full with NO Squircle (repo rule for pills).
 export function SolBalanceChipSkeleton() {
     return (
-        <div className="flex h-11 w-[92px] items-center justify-center overflow-hidden rounded-full bg-[#6A6A6A]/35 opacity-50 backdrop-blur-xs">
-            <div className="size-full shimmer-skeleton" />
+        <div
+            aria-hidden
+            className="flex h-[52px] items-center gap-2 rounded-full border border-sidebar-hover/10 bg-soft-gray-10 px-5 backdrop-blur-xs"
+        >
+            {/* Mirrors SolanaMarkIcon's h-3.5 w-4 box, then the balance text. */}
+            <div className="h-3.5 w-4 shrink-0 rounded-[3px] shimmer-skeleton" />
+            <div className="h-4 w-10 rounded-full shimmer-skeleton" />
         </div>
     );
 }
@@ -108,6 +119,8 @@ function subscribeAssetsChanged(address: string, listener: () => void): () => vo
 // fresh balance swaps in when the fetch lands. isLoading only covers the
 // initial no-placeholder fetch — background refetches never re-skeleton.
 export function useHeaderWalletLoading() {
+    // Debug switch (?debug-loading) pins all three tiles into their skeletons.
+    const forceLoading = useForceLoading();
     const { data: session, isLoading: sessionLoading } = useAuthSession();
     const walletAddress = session?.user?.wallet_address;
 
@@ -140,7 +153,7 @@ export function useHeaderWalletLoading() {
 
     // No wallet linked → query stays disabled (isLoading false), tiles render
     // their signed-out states as soon as the session resolves.
-    return { loading: sessionLoading || isLoading, data, session };
+    return { loading: forceLoading || sessionLoading || isLoading, data, session };
 }
 
 // Header SOL balance: Solana mark + amount; at zero balance it becomes an
@@ -158,7 +171,7 @@ export function SolBalanceChip() {
             type="button"
             aria-label={balance > 0 ? `Wallet balance ${formatSol(balance)} SOL` : "Add money"}
             onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))}
-            className="flex h-[52px] inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-sidebar-hover-40 hover:bg-soft-gray-10/55 rounded-full border-sidebar-hover/10 border cursor-pointer items-center gap-2 rounded-full px-5 backdrop-blur-xs transition-colors ease-out"
+            className="flex h-[52px] inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-soft-gray-10 hover:bg-soft-gray-15 rounded-full border-sidebar-hover/10 border cursor-pointer items-center gap-2 rounded-full px-5 backdrop-blur-xs transition-colors ease-out"
         >
             {balance > 0 ? (
                 <>

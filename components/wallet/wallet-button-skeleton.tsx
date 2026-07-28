@@ -1,6 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Squircle } from "@/components/ui/squircle";
-
 /**
  * Standalone wallet-button loading placeholder.
  *
@@ -10,21 +7,19 @@ import { Squircle } from "@/components/ui/squircle";
  * both the header's pre-mount placeholder and the dynamic import's `loading`
  * fallback, so the wallet skeleton appears in lockstep with the Create skeleton.
  *
- * Skeletons are the only header tiles present in the server-rendered HTML, and
- * Lisse's squircle is a clip-path applied from a client layout effect — so
- * pre-hydration they'd render square. rounded-2xl stands in until Lisse stamps
- * data-state="ready", at which point the clip is the only shape.
+ * Shape matches the loaded button exactly: the signed-in wallet trigger is a
+ * 52px CIRCLE filled edge-to-edge by the avatar (wallet-button.tsx), so this is
+ * a circle with a full-bleed shimmer — no Squircle, no <Button> (whose disabled
+ * opacity-50 dimmed the tile below the real one). Every (app) route is
+ * session-guarded, so signed-in is the state this always resolves into.
  */
 export function WalletButtonSkeleton() {
     return (
-        <Squircle asChild radius={16} autoEffects={false}>
-            <Button
-                disabled
-                variant="outline"
-                className="text-zinc-300 rounded-2xl data-[state=ready]:rounded-none size-11 p-0 overflow-hidden bg-[#6A6A6A]/35 backdrop-blur-xs border-none"
-            >
-                <div className="size-full shimmer-skeleton shrink-0" />
-            </Button>
-        </Squircle>
+        <div
+            aria-hidden
+            className="size-[52px] overflow-hidden rounded-full border border-baseborder/5 bg-soft-gray/10 backdrop-blur-xs"
+        >
+            <div className="size-full rounded-full shimmer-skeleton" />
+        </div>
     );
 }

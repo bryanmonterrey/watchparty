@@ -8,7 +8,6 @@ import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { MenuIcon, SearchIcon, PinkStarLogo } from '../icons'
 import { CreateMenu } from './create-menu'
-import { Squircle } from '@/components/ui/squircle'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -19,20 +18,21 @@ import { TradeNav } from '@/components/trade/trade-nav'
 import { MessagesNav } from '@/components/messages/messages-nav'
 import Link from 'next/link'
  
-// rounded-2xl approximates the squircle server-side; Lisse stamps
-// data-state="ready" once its clip-path lands, which switches it off so the
-// clip is the only shape (see wallet-button-skeleton).
+// Same skin as the live CreateMenu trigger below (52px, rounded-2xl,
+// bg-soft-gray-10), with the icon slot as the only shimmering part — the tile
+// itself never changes between loading and loaded, so nothing pops.
+//
+// Deliberately NOT wrapped in <Squircle>: the loaded trigger can't be squircled
+// either (GooDropdown owns its own <button>, see create-menu.tsx), so a
+// squircled skeleton would snap to a plain round-rect on load.
 function CreateButtonSkeleton() {
   return (
-    <Squircle asChild radius={16} autoEffects={false}>
-      <Button
-        disabled
-        variant="outline"
-        className="rounded-2xl data-[state=ready]:rounded-none border-none flex bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50 backdrop-blur-xs text-white/90 size-11 p-0 overflow-hidden"
-      >
-        <div className="size-full shimmer-skeleton shrink-0" />
-      </Button>
-    </Squircle>
+    <div
+      aria-hidden
+      className="flex size-[52px] items-center justify-center rounded-2xl border-sidebar-hover/10 bg-soft-gray-10"
+    >
+      <div className="size-6 rounded-lg shimmer-skeleton" />
+    </div>
   )
 }
 
@@ -197,7 +197,7 @@ export function AppHeader2() {
             {isLoading ? (
               <CreateButtonSkeleton />
             ) : (
-              <CreateMenu triggerClassName="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex h-[52px] w-[52px] items-center justify-center rounded-2xl border-sidebar-hover/10 bg-sidebar-hover-40 p-0 text-flexwhite/80 transition-colors ease-out hover:bg-soft-gray-10/55" />
+              <CreateMenu triggerClassName="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex h-[52px] w-[52px] items-center justify-center rounded-2xl border-sidebar-hover/10 bg-soft-gray-10 p-0 text-flexwhite/80 transition-colors ease-out hover:bg-soft-gray-15" />
             )}
             <WalletButton />
           </>
