@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
-import { X, MessageCircle, PictureInPicture2 } from "lucide-react";
+import { PictureInPicture2 } from "lucide-react";
 import { AmbientGlow } from "video-ambient-glow";
 import { AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
 import { StreamOverlayAd } from "@/components/ads/stream-overlay-ad";
@@ -98,8 +98,14 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
                 </div>
             )}
 
-            <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                {isLive && onEnterMiniPlayer && (
+            {/* The chat collapse toggle used to sit here, over the picture. It's
+                gone: chat is a tab in the right rail now, so hiding it from on
+                top of the video was a control for a layout that no longer
+                exists — and nothing should cover the frame that doesn't have to.
+                onToggleChat/showChat stay on the props so the parent's state and
+                the rail's width logic are untouched. */}
+            {isLive && onEnterMiniPlayer && (
+                <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
                     <button
                         onClick={onEnterMiniPlayer}
                         title="Pop out player"
@@ -107,14 +113,8 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
                     >
                         <PictureInPicture2 className="w-[18px] h-[18px]" />
                     </button>
-                )}
-                <button
-                    onClick={onToggleChat}
-                    className="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-colors"
-                >
-                    {showChat ? <X className="w-[18px] h-[18px]" /> : <MessageCircle className="w-[18px] h-[18px]" />}
-                </button>
-            </div>
+                </div>
+            )}
 
             {/* Sponsored overlay — only on a live stream; self-hides when unfilled. */}
             {isLive && <StreamOverlayAd />}
