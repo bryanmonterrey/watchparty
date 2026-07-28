@@ -336,20 +336,6 @@
   }
 }
 
-/* Canonical skeleton shimmer (next-beats style): a soft highlight band sweeps
-   left-to-right across a flat translucent fill. Top-level so it's always
-   emitted — it's referenced both by the `.shimmer-skeleton` utility and by the
-   inline style from lib/skeleton-stagger.ts, never via an --animate-* token. */
-@keyframes skeleton-wave {
-  0% {
-    background-position: 150% 0;
-  }
-
-  100% {
-    background-position: -50% 0;
-  }
-}
-
 /* Root route-loading star (app/loading.tsx): the header's pink star logo as the
    app-wide loading affordance. The spin lives on the wrapper and the breathe on
    the mark itself so the two never fight over `transform`. The star's asymmetry
@@ -716,52 +702,21 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     }
   }
 
-  /* Canonical loading skeleton. A translucent highlight band sweeps across a
-     flat fill (see the `skeleton-wave` keyframe). This is the ONE skeleton look
-     across the app — the <Skeleton> primitive and lib/skeleton-stagger.ts both
-     render it. Siblings offset the sweep so a group ripples left-to-right. */
+  /* Canonical loading skeleton: a STILL translucent fill, no sweep. The
+     highlight band and its animation were removed deliberately (owner call
+     2026-07-28) — don't reintroduce them here. Everything that served the
+     sweep went with them: the gradient, background-size/repeat, the
+     nth-child phase offsets that rippled a group, and the reduced-motion
+     override (nothing left to disable). Rounding is all that's left to
+     configure. */
   .shimmer-skeleton {
     background-color: color-mix(in oklab, var(--color-soft-gray) 5%, transparent);
-    background-image: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.12) 30%,
-      rgba(255, 255, 255, 0.22) 50%,
-      rgba(255, 255, 255, 0.12) 70%,
-      rgba(255, 255, 255, 0) 100%
-    );
-    background-size: 200% 100%;
-    background-repeat: no-repeat;
-    animation: skeleton-wave 1.5s ease-in-out infinite;
   }
 
   /* Default rounding when the caller didn't set a rounded-* utility (matches
      next-beats: bare skeletons get a soft radius, explicit rounding wins). */
   .shimmer-skeleton:not([class*="rounded-"]) {
     border-radius: 8px;
-  }
-
-  .shimmer-skeleton:nth-child(5n + 2) {
-    animation-delay: 0.12s;
-  }
-
-  .shimmer-skeleton:nth-child(5n + 3) {
-    animation-delay: 0.24s;
-  }
-
-  .shimmer-skeleton:nth-child(5n + 4) {
-    animation-delay: 0.36s;
-  }
-
-  .shimmer-skeleton:nth-child(5n + 5) {
-    animation-delay: 0.48s;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .shimmer-skeleton {
-      animation: none;
-      background-image: none;
-    }
   }
 
   /* Ambient glow video container.

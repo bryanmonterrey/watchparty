@@ -1,22 +1,17 @@
 import type { CSSProperties } from "react";
 
-// One full sweep of the shimmer highlight band.
-const SHIMMER_CYCLE_MS = 1500;
-
-// Self-contained inline style that renders the same shimmer as the
-// `.shimmer-skeleton` utility (see globals.css) on ANY element — even a plain
-// `bg-*` div — so callers don't need the class. A per-item negative delay
-// offsets each sibling's phase, so a row ripples left-to-right instead of
-// sweeping in unison. Apply the SAME index to every skeleton within one card so
-// the card reads as a single object.
-export function staggerPulse(index: number, count: number): CSSProperties {
+// Self-contained inline style matching the `.shimmer-skeleton` utility (see
+// globals.css) on ANY element — even a plain `bg-*` div — so callers don't need
+// the class.
+//
+// The sweeping highlight band this used to render is GONE (owner call
+// 2026-07-28), same as `.shimmer-skeleton`'s: skeletons are a still fill now.
+// `index`/`count` are inert as a result — they used to offset each sibling's
+// animation phase so a row rippled left-to-right instead of sweeping in unison.
+// The signature is kept so the 13 call sites don't have to change, and so the
+// ripple is one edit away if it ever comes back.
+export function staggerPulse(_index: number, _count: number): CSSProperties {
     return {
         backgroundColor: "color-mix(in oklab, var(--color-soft-gray) 5%, transparent)",
-        backgroundImage:
-            "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0.12) 70%, rgba(255,255,255,0) 100%)",
-        backgroundSize: "200% 100%",
-        backgroundRepeat: "no-repeat",
-        animation: `skeleton-wave ${SHIMMER_CYCLE_MS}ms ease-in-out infinite`,
-        animationDelay: `-${count > 0 ? (index * SHIMMER_CYCLE_MS) / count : 0}ms`,
     };
 }
