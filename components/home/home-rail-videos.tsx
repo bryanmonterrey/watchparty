@@ -20,19 +20,10 @@ const LOADING_MORE_ROWS = 3;
 const PREFETCH_MARGIN = "400px";
 
 export function HomeRailVideos() {
+    // On Liked the feed itself is filtered server-side (see home-feed-context),
+    // so this list is just whatever the query returned — no sieving here.
     const { videos, active, setActiveId, isLoading, hasMore, isLoadingMore, loadMore, tab } = useHomeFeed();
-
-    // "Liked" filters the rows already loaded — getVideoFeed resolves isLiked
-    // per row for the signed-in viewer, so this costs no extra query. It's the
-    // same client-side approach the video rail takes for its own tabs
-    // (rail-video-list.tsx sorts by views / date off one query).
-    //
-    // The consequence: it shows liked videos WITHIN the loaded feed, not a
-    // complete archive of everything ever liked. Because the sentinel below
-    // keeps pulling while the filtered list is short, a sparse Liked tab walks
-    // the feed toward the 300 cap looking for more.
     const onLiked = tab === HOME_TAB_LIKED;
-    const shown = onLiked ? videos.filter((v) => v.isLiked) : videos;
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
@@ -67,7 +58,7 @@ export function HomeRailVideos() {
     // rather than growing the page.
     return (
         <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {shown.map((v) => (
+            {videos.map((v) => (
                 <RailRow
                     key={v.id}
                     thumbnailUrl={v.thumbnailUrl}
@@ -80,9 +71,10 @@ export function HomeRailVideos() {
                 />
             ))}
 
-            {/* Only reachable on Liked — every other tab shows the whole feed,
-                which is empty only while the initial query is still running. */}
-            {shown.length === 0 && !isLoadingMore && !hasMore && (
+            {/* Liked is the only tab that can legitimately come back empty — the
+                unfiltered feed is empty only while the first page is in flight,
+                which the skeleton above already covers. */}
+            {onLiked && videos.length === 0 && !isLoadingMore && (
                 <p className="px-1 py-6 text-sm text-zinc-500">nothing liked yet</p>
             )}
 

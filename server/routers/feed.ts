@@ -162,15 +162,25 @@ export const feedRouter = router({
         }),
 
     getVideoFeed: publicProcedure
-        .input(z.object({ 
-            cursor: z.string().optional(), 
+        .input(z.object({
+            cursor: z.string().optional(),
             limit: z.number().min(1).max(50).default(20),
-            category: z.string().optional()
+            category: z.string().optional(),
+            /**
+             * Narrow to videos the CALLER has liked — the home rail's "Liked"
+             * tab. A filter on this procedure rather than its own one so the
+             * projection, repost resolution and cursor stay identical to the
+             * unfiltered feed; the rail and hero consume one row shape.
+             */
+            likedOnly: z.boolean().default(false),
         }))
         .query(async ({ ctx, input }) => {
             // Ranked path (homepage carousels) uses an anchor cursor like for-you;
             // chronological otherwise. See the for-you branch for the cursor shape.
-            const rankEligible = FEED_RANKER_ENABLED && !!ctx.user;
+            // Liked opts out: it's a personal archive, and ranking a set the user
+            // already curated by hand would only fight them. Chronological also
+            // keeps the plain createdAt cursor, which the ranked path replaces.
+            const rankEligible = FEED_RANKER_ENABLED && !!ctx.user && !input.likedOnly;
             const isRankCursor = input.cursor?.startsWith("r:");
             const rankAnchor = isRankCursor
                 ? new Date(input.cursor!.slice(2, input.cursor!.lastIndexOf(":")))
@@ -272,6 +282,16 @@ export const feedRouter = router({
                         ? (input.category.toLowerCase() === "live"
                             ? eq(posts.isLive, true)
                             : sql`lower(${posts.category}) = lower(${input.category})`)
+                        : undefined,
+                    // Liked: the same EXISTS the isLiked projection above uses,
+                    // promoted to a filter — COALESCE included, so liking the
+                    // original surfaces its reposts and vice versa. Signed-out
+                    // callers have no likes at all, so short-circuit to an empty
+                    // page rather than silently returning the whole feed.
+                    input.likedOnly
+                        ? (ctx.user
+                            ? sql`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user.id} AND likes."contentType" = 'post')`
+                            : sql`false`)
                         : undefined,
                 ))
                 .orderBy(desc(posts.createdAt))

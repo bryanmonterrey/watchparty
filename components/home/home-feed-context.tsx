@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { RAIL_ICON_TAB } from "@/components/rails/rail-tabs";
+import { HOME_TAB_LIKED, RAIL_ICON_TAB } from "@/components/rails/rail-tabs";
 
 // The home feed's data + selection, shared across the page's columns.
 //
@@ -99,11 +99,19 @@ export function useHomeFeed() {
 }
 
 export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
-    const [activeId, setActiveId] = useState<string | null>(null);
+    // The active video is held as the OBJECT, not an id looked up in the current
+    // list. The Liked tab swaps the list underneath, and the hero has to keep
+    // playing what it was playing — an id resolved against `videos` would fall
+    // through to videos[0] the moment the playing video left the list.
+    const [activeVideo, setActiveVideo] = useState<HomeFeedVideo | null>(null);
     const [tab, setTab] = useState<string>(RAIL_ICON_TAB);
 
+    // The tab IS the query: Liked pages a filtered feed server-side rather than
+    // sieving loaded rows, so the tab shows everything the viewer has liked
+    // instead of whichever liked videos happened to be nearby. Separate input =
+    // separate cache entry, so each tab keeps its own pagination.
     const feed = trpc.content.getVideoFeed.useInfiniteQuery(
-        { limit: 12 },
+        { limit: 12, likedOnly: tab === HOME_TAB_LIKED },
         { getNextPageParam: (p) => p.nextCursor }
     );
 
@@ -124,24 +132,32 @@ export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
         if (hasMore && !isFetchingNextPage) void fetchNextPage();
     }, [hasMore, isFetchingNextPage, fetchNextPage]);
 
+    // Nothing picked yet → the hero shows the top of the list, so the screen
+    // fills in as soon as the feed lands without an effect to seed a selection.
+    const active = activeVideo ?? videos[0];
+
+    // Pick by id: callers have the row's id, not the row, and the id always
+    // belongs to the list currently on screen.
+    const setActiveId = useCallback((id: string) => {
+        const found = videos.find((v) => v.id === id);
+        if (found) setActiveVideo(found);
+    }, [videos]);
+
     // Advance the hero. Wraps at the end rather than stopping — the point is
     // that the screen keeps playing — but pulls the next page in first when
     // one exists, so a wrap only happens at the true end of the feed.
     const next = useCallback(() => {
         if (videos.length === 0) return;
-        // -1 (nothing picked yet) becomes 0, which is the video the hero is
-        // actually showing, since `active` falls back to videos[0].
-        const current = Math.max(0, videos.findIndex((v) => v.id === activeId));
+        // -1 means the playing video isn't in this list (it was picked on another
+        // tab), which becomes 0 — so "next" continues into the visible list.
+        const current = Math.max(0, videos.findIndex((v) => v.id === active?.id));
         // Same prefetch as before, now behind the cap: past MAX_FEED_VIDEOS the
         // hero wraps to the top instead of growing the list forever.
         if (current >= videos.length - 3) loadMore();
-        setActiveId(videos[(current + 1) % videos.length].id);
-    }, [videos, activeId, loadMore]);
+        setActiveVideo(videos[(current + 1) % videos.length]);
+    }, [videos, active, loadMore]);
 
     const value = useMemo<HomeFeedValue>(() => {
-        // Falling back to videos[0] rather than storing it means the hero fills
-        // in as soon as the feed lands, without an effect to seed the selection.
-        const active = videos.find((v) => v.id === activeId) ?? videos[0];
         return {
             videos,
             active,
@@ -154,7 +170,7 @@ export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
             tab,
             setTab,
         };
-    }, [videos, activeId, next, feed.isLoading, hasMore, isFetchingNextPage, loadMore, tab]);
+    }, [videos, active, setActiveId, next, feed.isLoading, hasMore, isFetchingNextPage, loadMore, tab]);
 
     return <HomeFeedContext.Provider value={value}>{children}</HomeFeedContext.Provider>;
 }
