@@ -301,7 +301,20 @@ export function TrendingTable({ className }: { className?: string }) {
         // rails. Square and unpanelled: it sits directly on the column's own
         // fill rather than floating in a card.
         <div className={cn("@container", className)}>
-            <div className={cn(GRID, CELL_TEXT, "px-3 pb-3 pt-4 text-zinc-500")}>
+            {/* The labels pin as the board scrolls under them, so you can still
+                read which column is which a hundred rows down.
+
+                --board-stick is supplied by whoever renders the board and says
+                where its header should land — home sets it to sit under the
+                category tabs. Defaults to 0px, so a caller that doesn't set it
+                gets a header that sticks to the top of its scroller, and the
+                board stays usable outside home.
+
+                Opaque #080808 (the app canvas, i.e. bg-panel's 3% white over
+                black) — bg-panel itself is translucent and would let the rows
+                show through. z-10 keeps it over the rows but under the tabs,
+                which are z-20, so the two stack rather than fight. */}
+            <div className={cn(GRID, CELL_TEXT, "sticky top-[var(--board-stick,0px)] z-10 bg-[#080808] px-3 pb-3 pt-4 text-zinc-500")}>
                 {/* Sentence case, capital on the first word only — the one
                     place in the app that isn't all-lowercase, per the author. */}
                 <span>Name</span>
