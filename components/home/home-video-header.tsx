@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FavouriteIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { useBurst } from "@/hooks/use-burst";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { TokenRow } from "@/components/tokens/token-row";
@@ -36,42 +37,14 @@ function VerifiedBadge({ tier }: { tier: HomeFeedVideo["user"]["verifiedTier"] }
     return null;
 }
 
-/** Eight burst dots. Each gets its own vector, size, duration and delay so the
- *  spray reads as organic instead of a symmetrical starburst — the snippet
- *  expects these to be randomised per like, which is why they're generated on
- *  click rather than baked into the markup. */
-const PARTICLE_COUNT = 8;
-
-function makeParticles() {
-    return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-        // Even angular spread, jittered so it never looks mechanical.
-        const angle = (i / PARTICLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.7;
-        const dist = 14 + Math.random() * 12;
-        return {
-            "--px": `${Math.cos(angle) * dist}px`,
-            "--py": `${Math.sin(angle) * dist}px`,
-            "--pdur": `${480 + Math.round(Math.random() * 240)}ms`,
-            "--pdelay": `${Math.round(Math.random() * 60)}ms`,
-            "--p-end-scale": `${0.4 + Math.random() * 0.4}`,
-            "--psize": `${0.7 + Math.random() * 0.8}`,
-        } as React.CSSProperties;
-    });
-}
-
 function LikeButton({ video }: { video: HomeFeedVideo }) {
     // Seeded from the feed (getVideoFeed resolves isLiked per viewer), then
     // owned here so the tap is instant.
     const [liked, setLiked] = useState(!!video.isLiked);
     const [count, setCount] = useState(video.likes ?? 0);
-    const [bursting, setBursting] = useState(false);
-    const [particles, setParticles] = useState<React.CSSProperties[]>(() => makeParticles());
-    const burstTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // A rapid re-like would otherwise leave a stale timer to clear .is-bursting
-    // mid-animation, and an unmount mid-burst would set state on a dead node.
-    useEffect(() => () => {
-        if (burstTimer.current) clearTimeout(burstTimer.current);
-    }, []);
+    // The burst moved to hooks/use-burst so the trending star can fire the same
+    // one — it recolours it by overriding --like-color on its own button.
+    const { bursting, particles, fire } = useBurst();
 
     const toggle = trpc.content.toggleLike.useMutation({
         onError: () => {
@@ -89,16 +62,7 @@ function LikeButton({ video }: { video: HomeFeedVideo }) {
 
         // The celebration only plays on the way IN — unliking just reverses the
         // fill, per the snippet.
-        if (!next) return;
-        if (burstTimer.current) clearTimeout(burstTimer.current);
-        setParticles(makeParticles());
-        setBursting(false);
-        // Reflow between removing and re-adding the class is what makes the
-        // burst replay on a second like instead of sitting at its end state.
-        requestAnimationFrame(() => {
-            setBursting(true);
-            burstTimer.current = setTimeout(() => setBursting(false), 900);
-        });
+        if (next) fire();
     };
 
     return (
@@ -220,7 +184,7 @@ export function HomeVideoHeader({ video, className, action }: {
                     likeButton={<LikeButton video={video} />}
                 />
 
-                <div className="flex items-center gap-x-1.5 text-[16px] text-zinc-500">
+                <div className="flex items-center gap-x-1.5 text-[16px] font-medium text-zinc-500">
                     {video.isLive ? (
                         <span className="flex items-center gap-1.5 font-bold text-pastelred">
                             <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />

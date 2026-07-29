@@ -396,7 +396,7 @@ export function TradeDiscover() {
             {/* Glass control bar under the fixed header (same pattern as the
                 memescope board's sticky header). */}
             <div className="sticky top-0 z-40">
-                <div className="pointer-events-none absolute inset-0 -z-10 bg-black/20 backdrop-blur-sm" />
+                <div className="pointer-events-none absolute inset-0 -z-10 bg-background backdrop-blur-sm" />
                 <div className="h-(--header-height) max-md:hidden" />
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-2 lg:px-6">
                     <div className="flex items-center gap-1.5">
@@ -405,9 +405,9 @@ export function TradeDiscover() {
                                 key={t.key}
                                 onClick={() => selectTab(t.key)}
                                 className={cn(
-                                    "flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-bold tracking-tight transition-colors",
+                                    "flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-lg font-bold tracking-tight transition-colors",
                                     tab === t.key
-                                        ? "bg-white text-black"
+                                        ? "bg-sidebar-hover text-flexwhite"
                                         : "text-zinc-400 hover:bg-white/10 hover:text-white",
                                 )}
                             >
@@ -435,8 +435,8 @@ export function TradeDiscover() {
                                 key={tf}
                                 onClick={() => setTimeframe(tf)}
                                 className={cn(
-                                    "h-8 cursor-pointer rounded-full px-3 text-[13px] font-bold transition-colors",
-                                    timeframe === tf ? "bg-white text-black" : "text-zinc-400 hover:text-white",
+                                    "h-11 cursor-pointer rounded-full px-3 text-base font-bold transition-colors",
+                                    timeframe === tf ? "bg-soft-gray-15 text-long" : "text-zinc-400 hover:text-white",
                                 )}
                             >
                                 {tf}
@@ -454,9 +454,9 @@ export function TradeDiscover() {
                         triggerClassName={GOO_TRIGGER_PILL}
                         trigger={
                             <>
-                                <SolanaIcon className="size-3.5" />
+                                <SolanaIcon className="size-4" />
                                 {amountSol}
-                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
                             </>
                         }
                         items={QUICK_BUY_PRESETS.map((v) => gooMenuItem({
@@ -478,9 +478,9 @@ export function TradeDiscover() {
                         triggerClassName={GOO_TRIGGER_PILL}
                         trigger={
                             <>
-                                <HugeiconsIcon icon={MenuTwoLineIcon} className="size-4" strokeWidth={2} />
+                                <HugeiconsIcon icon={MenuTwoLineIcon} className="size-6" strokeWidth={2} />
                                 {SORTS.find((s) => s.key === sort)?.label}
-                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-zinc-500" strokeWidth={2} />
+                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
                             </>
                         }
                         items={SORTS.map((s) => gooMenuItem({
@@ -498,10 +498,13 @@ export function TradeDiscover() {
 
             {/* Token table */}
             <div className="flex-1 px-4 pb-8 lg:px-6">
-                <Squircle asChild radius={24} autoEffects={false}>
-                    <div className="bg-panel">
+                <Squircle asChild radius={20} autoEffects={false}>
+                    {/* Opaque, not sidebar-hover/30: same colour, but it holds
+                        it anywhere instead of darkening or lightening with
+                        whatever it's over. */}
+                    <div className="bg-sidebar-hover-30">
                         {/* Column headers */}
-                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-[14px] font-semibold text-zinc-500")}>
+                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-base font-semibold text-zinc-400")}>
                             <span>Coin</span>
                             <span>Market cap</span>
                             <span className="max-md:hidden">Volume</span>
@@ -515,8 +518,8 @@ export function TradeDiscover() {
                                 Array.from({ length: 10 }).map((_, i) => <RowSkeleton key={i} />)
                             ) : tokens.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center gap-1 py-20">
-                                    <p className="text-sm font-bold text-zinc-400">{EMPTY_COPY[tab].title}</p>
-                                    <p className="text-xs text-zinc-600">{EMPTY_COPY[tab].hint}</p>
+                                    <p className="text-base font-bold text-zinc-400">{EMPTY_COPY[tab].title}</p>
+                                    <p className="text-sm text-zinc-600">{EMPTY_COPY[tab].hint}</p>
                                 </div>
                             ) : (
                                 tokens.map((t) => (

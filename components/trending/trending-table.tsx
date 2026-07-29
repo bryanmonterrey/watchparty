@@ -7,6 +7,7 @@ import { ArrowDownRight01Icon, ArrowUpRight01Icon, StarIcon } from "@hugeicons/c
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
+import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { explorerUrl, tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
 import type { AppRouter } from "@/server/routers";
@@ -156,20 +157,47 @@ function BuyCell({ row, quickBuy, buying }: { row: TrendingRow; quickBuy: QuickB
 
 function StarCell({ row }: { row: TrendingRow }) {
     const { starred, toggle } = useStar(trackedTokenId(row.network, row.tokenAddress));
+    const { bursting, particles, fire } = useBurst();
+
+    const onClick = () => {
+        toggle();
+        // Celebrate on the way IN only — unstarring just reverses the fill,
+        // same rule the like button follows.
+        if (!starred) fire();
+    };
+
     return (
         <button
             type="button"
-            onClick={toggle}
+            onClick={onClick}
             aria-pressed={starred}
             aria-label={starred ? "unstar coin" : "star coin"}
+            // The like button's animation, in blue: `t-like` + data-liked are
+            // the shared hooks, and --like-color is the ONE thing this
+            // overrides — it recolours the filled star and every burst dot in
+            // one go (:root's pastel red stays the default elsewhere).
+            //
+            // No [&_path]:fill-current any more: the .t-like-mark rules own the
+            // fill now and TRANSITION it, where the old class snapped it on.
+            data-liked={starred}
             className={cn(
-                "relative z-10 flex cursor-pointer items-center transition-colors",
-                // HugeIcons paths ship fill="none"; a CSS fill outranks a
-                // presentation attribute, so this is what fills the star.
-                starred ? "text-royal-blue [&_path]:fill-current" : "text-white hover:text-white/60",
+                "t-like relative z-10 flex cursor-pointer items-center transition-colors [--like-color:var(--color-bleu)]",
+                bursting && "is-bursting",
+                starred ? "text-bleu" : "text-white hover:text-white/60",
             )}
         >
-            <HugeiconsIcon icon={StarIcon} className="size-[18px]" strokeWidth={2} />
+            {/* The pop scale rides this wrapper, never the <svg> — transforming
+                an inline SVG makes Chromium rasterise it at 1× and it goes
+                fuzzy on hi-DPI. */}
+            <span className="t-like-icon flex">
+                <HugeiconsIcon icon={StarIcon} className="t-like-mark size-[18px]" strokeWidth={2} />
+            </span>
+
+            <span className="t-like-particles" aria-hidden>
+                {particles.map((style, i) => (
+                    <i key={i} style={style} />
+                ))}
+            </span>
         </button>
     );
 }

@@ -199,6 +199,7 @@
      panel and lightening over the canvas. The trade: an opaque fill has
      nothing to see through, so pairing one with backdrop-blur-* makes the
      blur a no-op — keep the alpha version wherever the blur is the point. */
+  --color-sidebar-hover-30: #0D0D0E;
   --color-sidebar-hover-35: #0E0E0F;
   --color-sidebar-hover-40: #0E0E10;
   --color-sidebar-hover-45: #0F0F11;
@@ -895,15 +896,25 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
    will-change are tuned, so don't collapse them to shorthand. Drives the
    video header's like button: heart fills + spring-pops on like, with an
    eight-dot burst. Unliking reverses the fill without the celebration.
-   Variables live in :root at the top of this file. */
+   Variables live in :root at the top of this file.
+
+   NOT heart-specific, despite the class name: `.t-like-mark` is the neutral
+   alias for the same treatment on any outline icon whose path should fill —
+   the trending board's star uses it. The effect's colour is `--like-color`,
+   so an element can recolour the fill AND the burst by overriding that one
+   variable on itself (the star sets it to the app blue; :root's pastel red is
+   the default). */
 @layer utilities {
-  .t-like-heart { color: currentColor; transition: color var(--like-fill) var(--like-ease); }
-  .t-like-heart path {
+  .t-like-heart, .t-like-mark { color: currentColor; transition: color var(--like-fill) var(--like-ease); }
+  .t-like-heart path,
+  .t-like-mark path {
     fill: transparent; stroke: currentColor;
     transition: fill var(--like-fill) var(--like-ease), stroke var(--like-fill) var(--like-ease);
   }
-  .t-like[data-liked="true"] .t-like-heart { color: var(--like-color); }
-  .t-like[data-liked="true"] .t-like-heart path { fill: currentColor; }
+  .t-like[data-liked="true"] .t-like-heart,
+  .t-like[data-liked="true"] .t-like-mark { color: var(--like-color); }
+  .t-like[data-liked="true"] .t-like-heart path,
+  .t-like[data-liked="true"] .t-like-mark path { fill: currentColor; }
   /* Pop scale lives on an HTML wrapper, never the <svg> itself:
      transforming an inline SVG makes Chromium rasterise it at 1×
      (pixelated on hi-DPI). Wrapping keeps the vector crisp. */
