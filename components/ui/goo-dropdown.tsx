@@ -4,31 +4,43 @@ import React from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Squircle } from '@/components/ui/squircle'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/motion/popover'
+import {
+  MorphPopover,
+  MorphPopoverContent,
+  MorphPopoverTrigger,
+} from '@/components/motion/popover-morph'
 
-// Every dropdown in the app is a GooDropdown. The goo itself is now
-// @beui/popover (components/motion/popover.tsx, added through the shadcn
-// registry), which replaced ~450 lines of hand-rolled geometry that used to
-// live in this file — trigger/panel rect math, a clip-path morph, a portal
-// layer with a replica trigger, and the spring bookkeeping around it.
+// Every dropdown in the app is a GooDropdown. The engine is @beui/popover-morph
+// (components/motion/popover-morph.tsx, added through the shadcn registry): the
+// panel is laid out at full size, clipped to the corner nearest the trigger,
+// and unclips as one piece. There is NO neck — the panel is a separate surface
+// that grows out of the trigger's corner.
+//
+// It replaced @beui/popover (the goo one), which fused trigger and panel into
+// one blob through an SVG blur+threshold filter. That was working as designed,
+// but the connector read as a mistake: the fill bridged the gap at every gap
+// value our call sites pass (6/8/10px — the neck only pinches off past ~12px),
+// so every menu in the app looked tethered to its button. Owner call 2026-07-29.
 //
 // The API here is UNCHANGED on purpose: ~70 call sites across ~40 files pass
-// `items[]` plus width/align/side/header/maxPanelHeight, and rewriting each
-// into beui's compositional <Popover><PopoverTrigger/><PopoverContent/></Popover>
-// would be an enormous, risky diff for no user-visible gain. So this file is
-// now an ADAPTER — menu semantics (rows, separators, labels, closeOnSelect)
-// stay here, motion and goo come from the beui component.
+// `items[]` plus width/align/side/header/maxPanelHeight, and rewriting each into
+// the compositional <MorphPopover><MorphPopoverTrigger/><MorphPopoverContent/>
+// would be an enormous, risky diff for no user-visible gain. So this file is an
+// ADAPTER — menu semantics (rows, separators, labels, closeOnSelect) stay here,
+// motion and geometry come from the beui component.
 //
-// What improved under the hood:
+// The name stays GooDropdown, and so do `gooStrength` / GOO_PANEL_FILL: renaming
+// them means touching every call site to rename a thing that still works.
+//
+// What holds from the previous engine:
 //   · the panel PORTALS to <body>, so a menu near a container edge is no longer
-//     clipped. The old one deliberately did NOT portal, which is why call sites
-//     near the viewport bottom had to pass side="top" to compensate. Those props
-//     still work — they're just no longer load-bearing.
+//     clipped. The pre-beui one deliberately did NOT portal, which is why call
+//     sites near the viewport bottom had to pass side="top" to compensate. Those
+//     props still work — they're just no longer load-bearing.
 //   · position follows scroll and resize (ResizeObserver + capture-phase
 //     scroll), where the old geometry was measured once per open.
-//   · the neck is a real SVG goo filter, not a clip-path approximation.
 //
-// Three props are now no-ops. They're still accepted so no call site breaks;
+// Four props are now no-ops. They're still accepted so no call site breaks;
 // see the destructure below for what each one's job was.
 
 export type GooDropdownItem = {
@@ -170,12 +182,13 @@ export function GooDropdown({
   disabled = false,
   panelRadius = 24,
   fill = GOO_PANEL_FILL,
-  gooStrength = 8,
+  gooStrength: _gooStrength,
   className,
   // Accepted and ignored — the beui popover owns motion and geometry now:
-  //   spring       → its own GOO_OPEN_SPRING / GOO_CLOSE_SPRING
-  //   buttonRadius → derived from the trigger's measured height
+  //   spring       → its own SPRING_PANEL / clip tween (lib/ease.ts)
+  //   buttonRadius → the panel no longer morphs out of the trigger's shape
   //   shift        → align start/end covers every current call site
+  //   gooStrength  → there is no goo filter to feed; kept so call sites compile
   spring: _spring,
   buttonRadius: _buttonRadius,
   shift: _shift,
@@ -198,18 +211,12 @@ export function GooDropdown({
   }
 
   return (
-    <Popover
+    <MorphPopover
       open={open}
       onOpenChange={(next) => { if (!disabled) setOpen(next) }}
-      align={align}
-      side={side}
-      sideOffset={gap}
-      panelRadius={panelRadius}
-      gooStrength={gooStrength}
-      fill={fill}
       className={className}
     >
-      <PopoverTrigger>
+      <MorphPopoverTrigger>
         <button
           type="button"
           aria-label={triggerAriaLabel}
@@ -223,12 +230,18 @@ export function GooDropdown({
         >
           {trigger}
         </button>
-      </PopoverTrigger>
+      </MorphPopoverTrigger>
 
-      {/* The popover ships p-4 and max-w-[min(92vw,20rem)] for prose panels;
-          a menu is neither — rows are full-bleed and the width is the caller's.
-          PANEL_PAD is the inset the rows actually sit in. */}
-      <PopoverContent className="max-w-none p-0">
+      {/* Rows are full-bleed and the width is the caller's, so the panel keeps
+          no padding of its own — PANEL_PAD is the inset the rows sit in. */}
+      <MorphPopoverContent
+        side={side}
+        align={align}
+        sideOffset={gap}
+        radius={panelRadius}
+        fill={fill}
+        className="max-w-none p-0"
+      >
         <div
           role="menu"
           onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
@@ -322,8 +335,8 @@ export function GooDropdown({
             })}
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      </MorphPopoverContent>
+    </MorphPopover>
   )
 }
 
