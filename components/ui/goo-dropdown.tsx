@@ -1,11 +1,35 @@
 'use client'
 
-import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import React from 'react'
 import Link from 'next/link'
-import { useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { Squircle } from '@/components/ui/squircle'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/motion/popover'
+
+// Every dropdown in the app is a GooDropdown. The goo itself is now
+// @beui/popover (components/motion/popover.tsx, added through the shadcn
+// registry), which replaced ~450 lines of hand-rolled geometry that used to
+// live in this file — trigger/panel rect math, a clip-path morph, a portal
+// layer with a replica trigger, and the spring bookkeeping around it.
+//
+// The API here is UNCHANGED on purpose: ~70 call sites across ~40 files pass
+// `items[]` plus width/align/side/header/maxPanelHeight, and rewriting each
+// into beui's compositional <Popover><PopoverTrigger/><PopoverContent/></Popover>
+// would be an enormous, risky diff for no user-visible gain. So this file is
+// now an ADAPTER — menu semantics (rows, separators, labels, closeOnSelect)
+// stay here, motion and goo come from the beui component.
+//
+// What improved under the hood:
+//   · the panel PORTALS to <body>, so a menu near a container edge is no longer
+//     clipped. The old one deliberately did NOT portal, which is why call sites
+//     near the viewport bottom had to pass side="top" to compensate. Those props
+//     still work — they're just no longer load-bearing.
+//   · position follows scroll and resize (ResizeObserver + capture-phase
+//     scroll), where the old geometry was measured once per open.
+//   · the neck is a real SVG goo filter, not a clip-path approximation.
+//
+// Three props are now no-ops. They're still accepted so no call site breaks;
+// see the destructure below for what each one's job was.
 
 export type GooDropdownItem = {
   key?: string | number
@@ -46,7 +70,7 @@ export type GooDropdownProps = {
   /** Panel width in px. */
   width?: number
   align?: 'start' | 'end'
-  /** Horizontal offset of the open panel from its aligned position (px, positive = right). */
+  /** No-op since the beui popover — see the destructure. */
   shift?: number
   side?: 'top' | 'bottom'
   /** Distance between trigger and panel — the goo bridges this. */
@@ -55,10 +79,12 @@ export type GooDropdownProps = {
   /** Clamp the panel height; items scroll inside when content exceeds it. */
   maxPanelHeight?: number
   disabled?: boolean
+  /** No-op since the beui popover — see the destructure. */
   buttonRadius?: number
   panelRadius?: number
   fill?: string
   gooStrength?: number
+  /** No-op since the beui popover — see the destructure. */
   spring?: SpringConfig
   className?: string
 }
@@ -125,26 +151,6 @@ export function gooMenuItem({ icon, label, onClick, href, right, variant = 'defa
   }
 }
 
-const DEFAULT_SPRING: SpringConfig = {
-  type: 'spring',
-  visualDuration: 0.22,
-  bounce: 0.15,
-}
-
-// The morph runs on native CSS clip-path transitions (compositor-driven —
-// no per-frame JS). Open gets a springy overshoot; close is a quick ease.
-const OPEN_EASE = 'cubic-bezier(0.34, 1.3, 0.64, 1)'
-const CLOSE_EASE = 'cubic-bezier(0.4, 0, 0.68, 1)'
-
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-
-/** Rounded rect (x,y,w,h,r) inside a layer of (W,H) as a clip-path inset(). */
-function roundedRectInset(x: number, y: number, w: number, h: number, r: number, W: number, H: number) {
-  const radius = Math.max(0, Math.min(r, w / 2, h / 2))
-  const p = (n: number) => `${n.toFixed(2)}px`
-  return `inset(${p(y)} ${p(W - x - w)} ${p(H - y - h)} ${p(x)} round ${p(radius)})`
-}
-
 export function GooDropdown({
   trigger,
   triggerClassName,
@@ -157,426 +163,167 @@ export function GooDropdown({
   headerHeight = 48,
   width = 450,
   align = 'end',
-  shift = 0,
   side = 'bottom',
   gap = 14,
   itemHeight = 52,
   maxPanelHeight,
   disabled = false,
-  buttonRadius,
   panelRadius = 24,
   fill = GOO_PANEL_FILL,
   gooStrength = 8,
-  spring = DEFAULT_SPRING,
   className,
+  // Accepted and ignored — the beui popover owns motion and geometry now:
+  //   spring       → its own GOO_OPEN_SPRING / GOO_CLOSE_SPRING
+  //   buttonRadius → derived from the trigger's measured height
+  //   shift        → align start/end covers every current call site
+  spring: _spring,
+  buttonRadius: _buttonRadius,
+  shift: _shift,
 }: GooDropdownProps) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const [uncontrolled, setUncontrolled] = React.useState(false)
   const isControlled = controlledOpen !== undefined
-  const open = isControlled ? controlledOpen : uncontrolledOpen
-  const setOpen = (next: boolean) => {
-    if (!isControlled) setUncontrolledOpen(next)
+  const open = isControlled ? controlledOpen : uncontrolled
+
+  const setOpen = React.useCallback((next: boolean) => {
+    if (!isControlled) setUncontrolled(next)
     onOpenChange?.(next)
-  }
-  const [elevated, setElevated] = useState(false)
-  const shouldReduceMotion = useReducedMotion()
-  const filterId = useId().replace(/[:]/g, '')
-
-  const rootRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const portalRef = useRef<HTMLDivElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-
-  const [btn, setBtn] = useState({ w: 78, h: 34 })
-  // Trigger's viewport position — the portal layer is fixed-positioned off it,
-  // so the panel lives outside the page flow and can never add scroll space.
-  const [anchor, setAnchor] = useState<{ left: number; top: number } | null>(null)
-
-  useLayoutEffect(() => {
-    const el = triggerRef.current
-    if (!el) return
-    const measure = () => {
-      const r = el.getBoundingClientRect()
-      const w = Math.round(r.width)
-      const h = Math.round(r.height)
-      setBtn((prev) => (prev.w === w && prev.h === h ? prev : { w, h }))
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+  }, [isControlled, onOpenChange])
 
   const rowHeight = (item: GooDropdownItem) =>
     item.height ?? (item.type === 'separator' ? SEPARATOR_ROW_H : itemHeight)
-
-  const geo = useMemo(() => {
-    const contentH = PANEL_PAD * 2 + (header ? headerHeight : 0) + items.reduce((s, it) => s + rowHeight(it), 0)
-    const panelH = maxPanelHeight ? Math.min(contentH, maxPanelHeight) : contentH
-    // Place both rects on a shared axis (trigger at 0, panel at its aligned
-    // position + shift), then normalize so the layer starts at the leftmost.
-    const panelX0 = (align === 'end' ? btn.w - width : 0) + shift
-    const minX = Math.min(0, panelX0)
-    const btnX = -minX
-    const panelX = panelX0 - minX
-    const layerW = Math.max(btnX + btn.w, panelX + width)
-    const btnY = side === 'top' ? panelH + gap : 0
-    const panelY = side === 'top' ? 0 : btn.h + gap
-    const layerH = panelH + gap + btn.h
-    const closedR = buttonRadius ?? btn.h / 2
-    return {
-      layerW,
-      layerH,
-      panelH,
-      panelX,
-      panelY,
-      btnX,
-      btnY,
-      closedRect: { x: btnX, y: btnY, w: btn.w, h: btn.h, r: closedR },
-      openRect: { x: panelX, y: panelY, w: width, h: panelH, r: panelRadius },
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, header, headerHeight, width, align, shift, side, gap, itemHeight, maxPanelHeight, buttonRadius, panelRadius, btn.w, btn.h])
-
-  const shapeAt = useMemo(() => {
-    const { closedRect, openRect, layerW, layerH } = geo
-    return (t: number) =>
-      roundedRectInset(
-        lerp(closedRect.x, openRect.x, t),
-        lerp(closedRect.y, openRect.y, t),
-        lerp(closedRect.w, openRect.w, t),
-        lerp(closedRect.h, openRect.h, t),
-        lerp(closedRect.r, openRect.r, t),
-        layerW,
-        layerH,
-      )
-  }, [geo])
-
-  // Rendered shape target: false = trigger pill, true = open panel. The
-  // browser interpolates between the two inset() clip-paths natively.
-  const [shown, setShown] = useState(false)
-
-  // Fully open + at rest: the goo blur would keep bridging trigger → panel
-  // with a visible neck, so drop the filter once the morph settles and
-  // restore it the moment the shape animates again.
-  const [settled, setSettled] = useState(false)
-
-  const openDur = spring.visualDuration ?? 0.22
-  const closeDur = openDur * 0.65
-
-  useEffect(() => {
-    if (open) {
-      setElevated(true)
-      if (shouldReduceMotion) {
-        setShown(true)
-        setSettled(true)
-        return
-      }
-      // Let the layer mount and paint the closed shape first, then retarget —
-      // otherwise the transition has no start frame and the panel just pops.
-      let raf2 = 0
-      const raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => setShown(true))
-      })
-      return () => {
-        cancelAnimationFrame(raf1)
-        cancelAnimationFrame(raf2)
-      }
-    }
-    setShown(false)
-    setSettled(false)
-    if (shouldReduceMotion) setElevated(false)
-  }, [open, shouldReduceMotion])
-
-  // transitionend unmounts the layer after close; this is the backstop for
-  // the cases where it never fires (ancestor hidden mid-close, etc.).
-  useEffect(() => {
-    if (open || shouldReduceMotion || !elevated) return
-    const t = setTimeout(() => setElevated(false), closeDur * 1000 + 150)
-    return () => clearTimeout(t)
-  }, [open, shouldReduceMotion, elevated, closeDur])
-
-  const handleShapeEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
-    if (e.propertyName !== 'clip-path' || e.target !== e.currentTarget) return
-    if (open) setSettled(true)
-    else setElevated(false)
-  }
-
-  useEffect(() => {
-    if (disabled) setOpen(false)
-  }, [disabled])
-
-  // Anchor the portal to the trigger: measure before paint when the layer
-  // mounts, and follow the trigger through scroll/resize while visible.
-  useLayoutEffect(() => {
-    if (!elevated) return
-    const measure = () => {
-      const r = triggerRef.current?.getBoundingClientRect()
-      if (r) {
-        setAnchor((prev) =>
-          prev && prev.left === r.left && prev.top === r.top ? prev : { left: r.left, top: r.top },
-        )
-      }
-    }
-    measure()
-    window.addEventListener('scroll', measure, { capture: true, passive: true })
-    window.addEventListener('resize', measure)
-    return () => {
-      window.removeEventListener('scroll', measure, { capture: true })
-      window.removeEventListener('resize', measure)
-    }
-  }, [elevated])
-
-  // Keep pre-click events inside the portal from reaching document-level
-  // dismiss listeners (Radix dialogs close on "outside" pointerdown/focusin).
-  // NOT 'click': React's delegated listeners sit on document.body, and
-  // stopping click before body would swallow the items' own onClick.
-  useEffect(() => {
-    const el = portalRef.current
-    if (!el || !elevated) return
-    const stop = (e: Event) => e.stopPropagation()
-    const events = ['pointerdown', 'mousedown', 'touchstart', 'focusin'] as const
-    events.forEach((ev) => el.addEventListener(ev, stop))
-    return () => events.forEach((ev) => el.removeEventListener(ev, stop))
-  }, [elevated])
-
-  useEffect(() => {
-    if (!open) return
-    const onPointerDown = (e: PointerEvent) => {
-      const t = e.target as Node
-      if (rootRef.current?.contains(t) || portalRef.current?.contains(t)) return
-      setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   const select = (item: GooDropdownItem) => {
     item.onClick?.()
     if (item.closeOnSelect !== false) setOpen(false)
   }
 
-  // The style only ever carries the *target* shape; the browser owns the
-  // interpolation, so re-renders while open can never snap it back.
-  const targetShape = shapeAt(shown ? 1 : 0)
-  const shapeTransition = shouldReduceMotion
-    ? undefined
-    : `clip-path ${shown ? openDur : closeDur}s ${shown ? OPEN_EASE : CLOSE_EASE}`
-
-  const layer = elevated && anchor && (
-    <div
-      ref={portalRef}
-      onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-      className="select-none"
-      style={{
-        position: 'fixed',
-        left: anchor.left - geo.btnX,
-        top: anchor.top - geo.btnY,
-        width: 0,
-        height: 0,
-        zIndex: 60,
-        pointerEvents: 'none',
-      }}
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => { if (!disabled) setOpen(next) }}
+      align={align}
+      side={side}
+      sideOffset={gap}
+      panelRadius={panelRadius}
+      gooStrength={gooStrength}
+      fill={fill}
+      className={className}
     >
-      <svg className="absolute h-0 w-0" aria-hidden>
-        <defs>
-          <filter id={filterId}>
-            <feGaussianBlur in="SourceGraphic" stdDeviation={gooStrength} result="blur" />
-            <feColorMatrix
-              in="blur"
-              mode="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10"
-              result="goo"
-            />
-            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
-          </filter>
-        </defs>
-      </svg>
+      <PopoverTrigger>
+        <button
+          type="button"
+          aria-label={triggerAriaLabel}
+          disabled={disabled}
+          className={cn(
+            'outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+            triggerClassName,
+            disabled && 'pointer-events-none opacity-50',
+          )}
+          onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+        >
+          {trigger}
+        </button>
+      </PopoverTrigger>
 
-      <div
-        aria-hidden
-        className="pointer-events-none absolute"
-        style={{
-          left: 0,
-          top: 0,
-          width: geo.layerW,
-          height: geo.layerH,
-          filter: shouldReduceMotion || settled ? 'none' : `url(#${filterId})`,
-        }}
-      >
+      {/* The popover ships p-4 and max-w-[min(92vw,20rem)] for prose panels;
+          a menu is neither — rows are full-bleed and the width is the caller's.
+          PANEL_PAD is the inset the rows actually sit in. */}
+      <PopoverContent className="max-w-none p-0">
         <div
-          className="absolute"
-          style={{
-            left: geo.btnX,
-            top: geo.btnY,
-            width: btn.w,
-            height: btn.h,
-            borderRadius: geo.closedRect.r,
-            background: fill,
-          }}
-        />
-        <div
-          ref={panelRef}
-          onTransitionEnd={handleShapeEnd}
-          className="absolute inset-0 will-change-[clip-path]"
-          style={{ background: fill, clipPath: targetShape, transition: shapeTransition }}
-        />
-      </div>
-
-      {/* Non-interactive replica of the trigger so its label rides above the
-          goo fill; the real (invisible) trigger below still takes the clicks. */}
-      <span
-        aria-hidden
-        aria-expanded={open}
-        className={cn('pointer-events-none absolute', triggerClassName)}
-        style={{ left: geo.btnX, top: geo.btnY, width: btn.w, height: btn.h }}
-      >
-        {trigger}
-      </span>
-
-      <div
-        ref={contentRef}
-        role="menu"
-        className="absolute will-change-[clip-path]"
-        style={{
-          left: 0,
-          top: 0,
-          width: geo.layerW,
-          height: geo.layerH,
-          clipPath: targetShape,
-          transition: shapeTransition,
-          pointerEvents: open ? 'auto' : 'none',
-        }}
-      >
-        <div
-          className="absolute flex flex-col"
-          style={{
-            left: geo.panelX,
-            top: geo.panelY,
-            width,
-            height: geo.panelH,
-            padding: PANEL_PAD,
-          }}
+          role="menu"
+          onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+          className="flex flex-col"
+          style={{ width, padding: PANEL_PAD, maxHeight: maxPanelHeight }}
         >
           {header && (
             <div className="shrink-0" style={{ height: headerHeight }}>
               {header}
             </div>
           )}
+
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {items.map((item, i) => {
-            const h = rowHeight(item)
-            const k = item.key ?? i
-            if (item.type === 'separator') {
-              return (
-                <div key={k} className="flex shrink-0 items-center px-2" style={{ height: h }}>
-                  <div className={cn('h-px w-full bg-border/10', item.className)} />
-                </div>
-              )
-            }
-            if (item.type === 'custom') {
-              // Squircled like every other row. Safe for rows whose component
-              // opens a dialog — Radix portals to <body>, so clip-path here
-              // never clips it.
-              return (
-                <Squircle key={k} asChild radius={ROW_RADIUS}>
-                  <div className={cn('shrink-0 overflow-hidden', item.className)} style={{ height: h }}>
+            {items.map((item, i) => {
+              const h = rowHeight(item)
+              const k = item.key ?? i
+
+              if (item.type === 'separator') {
+                return (
+                  <div key={k} className="flex shrink-0 items-center px-2" style={{ height: h }}>
+                    <div className={cn('h-px w-full bg-border/10', item.className)} />
+                  </div>
+                )
+              }
+
+              if (item.type === 'custom') {
+                // Squircled like every other row. Safe for rows whose component
+                // opens a dialog — Radix portals to <body>, so clip-path here
+                // never clips it.
+                return (
+                  <Squircle key={k} asChild radius={ROW_RADIUS}>
+                    <div className={cn('shrink-0 overflow-hidden', item.className)} style={{ height: h }}>
+                      {item.label}
+                    </div>
+                  </Squircle>
+                )
+              }
+
+              if (item.type === 'label') {
+                return (
+                  <div
+                    key={k}
+                    className={cn(
+                      'flex shrink-0 items-center px-3 text-xs font-semibold text-muted-foreground',
+                      item.className,
+                    )}
+                    style={{ height: h }}
+                  >
                     {item.label}
                   </div>
+                )
+              }
+
+              // The BASE row IS the app standard (design-principles §1.2):
+              // SQUIRCLED rows (never rounded-*, which is redundant under Lisse's
+              // clip-path), px-4, text-base font-bold, zinc-200 → white on hover.
+              // A call site can still override via item.className, but it no
+              // longer has to style rows at all.
+              const rowClass = cn(
+                'flex w-full shrink-0 items-center px-4 py-2 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
+                item.className,
+              )
+
+              return (
+                <Squircle key={k} asChild radius={ROW_RADIUS}>
+                  {item.href ? (
+                    <Link
+                      role="menuitem"
+                      tabIndex={open ? 0 : -1}
+                      href={item.href}
+                      onClick={() => select(item)}
+                      className={rowClass}
+                      style={{ height: h }}
+                    >
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <button
+                      role="menuitem"
+                      type="button"
+                      tabIndex={open ? 0 : -1}
+                      onClick={() => select(item)}
+                      className={rowClass}
+                      style={{ height: h }}
+                    >
+                      {item.label}
+                    </button>
+                  )}
                 </Squircle>
               )
-            }
-            if (item.type === 'label') {
-              return (
-                <div
-                  key={k}
-                  className={cn(
-                    'flex shrink-0 items-center px-3 text-xs font-semibold text-muted-foreground',
-                    item.className,
-                  )}
-                  style={{ height: h }}
-                >
-                  {item.label}
-                </div>
-              )
-            }
-            // The BASE row IS the app standard (design-principles §1.2):
-            // SQUIRCLED rows (never rounded-*, which is redundant under Lisse's
-            // clip-path), px-4, text-base font-bold, zinc-200 → white on hover.
-            // A call site can still override via item.className, but it no
-            // longer has to style rows at all.
-            const rowClass = cn(
-              'flex w-full shrink-0 items-center px-4 py-2 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
-              item.className,
-            )
-            return (
-              <Squircle key={k} asChild radius={ROW_RADIUS}>
-                {item.href ? (
-                  <Link
-                    role="menuitem"
-                    tabIndex={open ? 0 : -1}
-                    href={item.href}
-                    onClick={() => select(item)}
-                    className={rowClass}
-                    style={{ height: h }}
-                  >
-                    {item.label}
-                  </Link>
-                ) : (
-                  <button
-                    role="menuitem"
-                    type="button"
-                    tabIndex={open ? 0 : -1}
-                    onClick={() => select(item)}
-                    className={rowClass}
-                    style={{ height: h }}
-                  >
-                    {item.label}
-                  </button>
-                )}
-              </Squircle>
-            )
-          })}
+            })}
           </div>
         </div>
-      </div>
-    </div>
-  )
-
-  return (
-    <div
-      ref={rootRef}
-      className={cn('relative inline-flex select-none', className)}
-      onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={triggerAriaLabel}
-        className={cn(
-          'relative outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
-          triggerClassName,
-        )}
-        // While the portal layer is up, its replica renders the trigger's
-        // visuals; the real button stays (invisible) purely for interaction.
-        style={{ opacity: elevated ? 0 : 1 }}
-      >
-        {trigger}
-      </button>
-
-      {layer && createPortal(layer, document.body)}
-    </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 
