@@ -59,6 +59,16 @@ export interface HomeFeedVideo {
     };
 }
 
+/**
+ * Ceiling on how many videos the feed will accumulate in one session.
+ *
+ * The rail lazy-loads on scroll, so without a stop it would keep appending for
+ * as long as someone keeps scrolling — every row staying mounted, every
+ * thumbnail staying in memory. 300 is far past what anyone scrolls in a sitting
+ * and still bounded. Hitting it ends the infinite scroll; a reload starts over.
+ */
+export const MAX_FEED_VIDEOS = 300;
+
 interface HomeFeedValue {
     videos: HomeFeedVideo[];
     /** The video the hero is showing — the first one until something is picked. */
@@ -67,6 +77,12 @@ interface HomeFeedValue {
     /** Move to the next video in the feed — what the hero calls when one ends. */
     next: () => void;
     isLoading: boolean;
+    /** Another page exists AND we're under the cap — drives the rail's sentinel. */
+    hasMore: boolean;
+    /** A page is in flight; the rail shows skeleton rows for it. */
+    isLoadingMore: boolean;
+    /** Pull the next page. Safe to call repeatedly — it no-ops when it can't. */
+    loadMore: () => void;
 }
 
 const HomeFeedContext = createContext<HomeFeedValue | null>(null);
@@ -90,10 +106,17 @@ export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
         // the same video) and differ only by `feedKey`. Keep the first, so a
         // repost can't take the hero slot twice or collide on a list key.
         const raw = feed.data?.pages.flatMap((p) => p.videos) ?? [];
-        return [...new Map(raw.map((v) => [v.id, v])).values()] as HomeFeedVideo[];
+        const unique = [...new Map(raw.map((v) => [v.id, v])).values()] as HomeFeedVideo[];
+        // Cap AFTER deduping, so the limit counts videos someone can actually
+        // see rather than rows the dedupe was going to drop anyway.
+        return unique.slice(0, MAX_FEED_VIDEOS);
     }, [feed.data]);
 
     const { hasNextPage, isFetchingNextPage, fetchNextPage } = feed;
+    const hasMore = hasNextPage && videos.length < MAX_FEED_VIDEOS;
+    const loadMore = useCallback(() => {
+        if (hasMore && !isFetchingNextPage) void fetchNextPage();
+    }, [hasMore, isFetchingNextPage, fetchNextPage]);
 
     // Advance the hero. Wraps at the end rather than stopping — the point is
     // that the screen keeps playing — but pulls the next page in first when
@@ -103,16 +126,27 @@ export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
         // -1 (nothing picked yet) becomes 0, which is the video the hero is
         // actually showing, since `active` falls back to videos[0].
         const current = Math.max(0, videos.findIndex((v) => v.id === activeId));
-        if (current >= videos.length - 3 && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+        // Same prefetch as before, now behind the cap: past MAX_FEED_VIDEOS the
+        // hero wraps to the top instead of growing the list forever.
+        if (current >= videos.length - 3) loadMore();
         setActiveId(videos[(current + 1) % videos.length].id);
-    }, [videos, activeId, hasNextPage, isFetchingNextPage, fetchNextPage]);
+    }, [videos, activeId, loadMore]);
 
     const value = useMemo<HomeFeedValue>(() => {
         // Falling back to videos[0] rather than storing it means the hero fills
         // in as soon as the feed lands, without an effect to seed the selection.
         const active = videos.find((v) => v.id === activeId) ?? videos[0];
-        return { videos, active, setActiveId, next, isLoading: feed.isLoading };
-    }, [videos, activeId, next, feed.isLoading]);
+        return {
+            videos,
+            active,
+            setActiveId,
+            next,
+            isLoading: feed.isLoading,
+            hasMore,
+            isLoadingMore: isFetchingNextPage,
+            loadMore,
+        };
+    }, [videos, activeId, next, feed.isLoading, hasMore, isFetchingNextPage, loadMore]);
 
     return <HomeFeedContext.Provider value={value}>{children}</HomeFeedContext.Provider>;
 }
