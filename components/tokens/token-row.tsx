@@ -31,7 +31,7 @@ function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: st
     const { quickBuy, buyingId } = useQuickBuy();
     const mint = token.tokenAddress;
     const label = cn(
-        "font-extrabold text-royal-blue transition-opacity hover:opacity-80",
+        "font-extrabold text-twitter2 transition-opacity hover:opacity-80",
         size === "lg" ? "text-[16px]" : "text-[16px]",
     );
 

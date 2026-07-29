@@ -169,13 +169,13 @@ function VideoElementForm({
           className={cn(
             "flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors",
             current === opt.value
-              ? "border-blue-500/60 bg-blue-500/10"
+              ? "border-bleu/60 bg-bleu/10"
               : "border-flexborder/40 hover:border-flexborder/80"
           )}
         >
           <input
             type="radio"
-            className="mt-0.5 accent-blue-500"
+            className="mt-0.5 accent-bleu"
             checked={current === opt.value}
             onChange={() => {
               onPatch(el.id, { videoMode: opt.value })

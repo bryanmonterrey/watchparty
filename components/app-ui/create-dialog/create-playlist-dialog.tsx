@@ -65,7 +65,7 @@ export function CreatePlaylistDialog({ open, onOpenChange, onCreate }: CreatePla
                         <Textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            className="min-h-[120px] pt-6 bg-transparent border-zinc-600 focus:border-blue-400 rounded resize-none placeholder:text-zinc-500"
+                            className="min-h-[120px] pt-6 bg-transparent border-zinc-600 focus:border-bleu rounded resize-none placeholder:text-zinc-500"
                             placeholder="Add description"
                             maxLength={5000}
                         />
@@ -168,7 +168,7 @@ export function CreatePlaylistDialog({ open, onOpenChange, onCreate }: CreatePla
                     </Button>
                     <Button
                         onClick={handleCreate}
-                        className="bg-transparent text-blue-400 hover:bg-blue-400/10 hover:text-blue-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-transparent text-bleu hover:bg-bleu/10 hover:text-bleu/80 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!title.trim()}
                     >
                         Create

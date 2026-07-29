@@ -138,7 +138,7 @@ export default function SessionManager() {
                             <div
                                 key={session.id}
                                 className={`bg-greyy/25 rounded-3xl p-4 border ${isCurrentSession
-                                    ? "border-blue-500/30 bg-blue-500/5"
+                                    ? "border-bleu/30 bg-bleu/5"
                                     : "border-neutral-800/10"
                                     }`}
                             >
@@ -153,7 +153,7 @@ export default function SessionManager() {
                                                     {getDeviceName(session.userAgent)}
                                                 </p>
                                                 {isCurrentSession && (
-                                                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                                                    <span className="px-2 py-0.5 bg-bleu/20 text-bleu text-xs rounded-full">
                                                         Current
                                                     </span>
                                                 )}

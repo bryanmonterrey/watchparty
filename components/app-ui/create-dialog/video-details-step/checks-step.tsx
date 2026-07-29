@@ -7,7 +7,7 @@ export function ChecksStep() {
         <div className="max-w-4xl mx-auto space-y-8">
             <div className="space-y-1">
                 <h3 className="text-xl font-semibold text-white">Checks</h3>
-                <p className="text-sm text-zinc-400">We'll check your video for issues that may restrict its visibility and then you will have the opportunity to fix issues before publishing your video. <a href="#" className="text-blue-500 hover:underline">Learn more</a></p>
+                <p className="text-sm text-zinc-400">We'll check your video for issues that may restrict its visibility and then you will have the opportunity to fix issues before publishing your video. <a href="#" className="text-bleu hover:underline">Learn more</a></p>
             </div>
 
             <div className="space-y-6">
@@ -25,7 +25,7 @@ export function ChecksStep() {
                 </div>
                 <div className="space-y-2">
                     <p className="text-xs text-zinc-500">
-                        Remember: These check results aren't final. Issues may come up in the future that impact your video. <a href="#" className="text-blue-500 hover:underline">Learn more</a>
+                        Remember: These check results aren't final. Issues may come up in the future that impact your video. <a href="#" className="text-bleu hover:underline">Learn more</a>
                     </p>
                 </div>
             </div>

@@ -18,7 +18,7 @@ export function VideoElementsStep({ pendingCards, onCardsEditorOpen, pendingEndS
         <div className="max-w-4xl mx-auto space-y-6">
             <div className="space-y-1 mb-8">
                 <h3 className="text-xl font-semibold text-white">Video elements</h3>
-                <p className="text-sm text-zinc-400">Use cards and an end screen to show viewers related videos, websites, and calls to action. <a href="#" className="text-blue-500 hover:underline">Learn more</a></p>
+                <p className="text-sm text-zinc-400">Use cards and an end screen to show viewers related videos, websites, and calls to action. <a href="#" className="text-bleu hover:underline">Learn more</a></p>
             </div>
 
             {/* End Screen */}

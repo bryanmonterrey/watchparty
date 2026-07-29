@@ -274,7 +274,7 @@ export function AdminDashboard() {
                         <div className="grid grid-cols-2 gap-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
                     ) : stats ? (
                         <div className="grid grid-cols-2 gap-3">
-                            <StatCard label="Total Users" value={stats.users} icon={<Users className="w-4 h-4" />} color="text-blue-400" />
+                            <StatCard label="Total Users" value={stats.users} icon={<Users className="w-4 h-4" />} color="text-bleu" />
                             <StatCard label="Total Posts" value={stats.posts} icon={<FileText className="w-4 h-4" />} color="text-zinc-400" />
                             <StatCard label="Pending Reports" value={stats.pendingReports} icon={<Flag className="w-4 h-4" />} color="text-red-400" />
                             <StatCard label="Pending Verif." value={stats.pendingVerifications} icon={<Clock className="w-4 h-4" />} color="text-amber-400" />

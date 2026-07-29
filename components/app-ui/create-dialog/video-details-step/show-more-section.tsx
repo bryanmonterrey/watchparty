@@ -143,7 +143,7 @@ export function ShowMoreSection({
                             <div className="space-y-3">
                                 <h3 className="text-sm font-medium text-zinc-300">Automatic chapters</h3>
                                 <p className="text-xs text-zinc-500">
-                                    Chapters and key moments make your video easier to watch. You can overwrite automatic suggestions by creating your own chapters in the video description. <a href="#" className="text-blue-500 hover:underline">Learn more</a>
+                                    Chapters and key moments make your video easier to watch. You can overwrite automatic suggestions by creating your own chapters in the video description. <a href="#" className="text-bleu hover:underline">Learn more</a>
                                 </p>
                                 <div className="flex items-start space-x-2">
                                     <Checkbox
@@ -162,7 +162,7 @@ export function ShowMoreSection({
                             <div className="space-y-3">
                                 <h3 className="text-sm font-medium text-zinc-300">Featured places</h3>
                                 <p className="text-xs text-zinc-500">
-                                    Help viewers explore key places in your video. These are public places like restaurants and shops – we don't display your current location or other private info. <a href="#" className="text-blue-500 hover:underline">Learn more</a>
+                                    Help viewers explore key places in your video. These are public places like restaurants and shops – we don't display your current location or other private info. <a href="#" className="text-bleu hover:underline">Learn more</a>
                                 </p>
                                 <div className="flex items-start space-x-2">
                                     <Checkbox
@@ -191,7 +191,7 @@ export function ShowMoreSection({
                             {/* License */}
                             <div className="space-y-3">
                                 <h3 className="text-sm font-medium text-zinc-300">License</h3>
-                                <p className="text-xs text-zinc-500">Learn about <a href="#" className="text-blue-500 hover:underline">license types</a>.</p>
+                                <p className="text-xs text-zinc-500">Learn about <a href="#" className="text-bleu hover:underline">license types</a>.</p>
 
                                 <div className="space-y-4">
                                     <GooDropdown
@@ -290,7 +290,7 @@ export function ShowMoreSection({
                             <div className="space-y-3">
                                 <h3 className="text-sm font-medium text-zinc-300">Shorts remixing</h3>
                                 <p className="text-xs text-zinc-500">
-                                    Let others create Shorts using content from this video. <a href="#" className="text-blue-500 hover:underline">Learn more</a>
+                                    Let others create Shorts using content from this video. <a href="#" className="text-bleu hover:underline">Learn more</a>
                                 </p>
                                 <RadioGroup value={remixing} onValueChange={setRemixing} className="space-y-3">
                                     <div className="flex items-center space-x-2">

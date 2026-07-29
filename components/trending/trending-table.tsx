@@ -119,7 +119,7 @@ function ChangeCell({ pct }: { pct: number | null }) {
  *  the wallet's swap engine, same as the /trade board), every other chain opens
  *  the pool's venue. A row we can't actually fill would be worse than no cell. */
 function BuyCell({ row, quickBuy, buying }: { row: TrendingRow; quickBuy: QuickBuy; buying: boolean }) {
-    const shared = cn(CELL_TEXT, "text-royal-blue transition-opacity hover:opacity-80");
+    const shared = cn(CELL_TEXT, "text-bleu transition-opacity hover:opacity-80");
 
     if (row.network === "solana") {
         return (

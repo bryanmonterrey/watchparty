@@ -183,11 +183,11 @@ export function PostCardBody({
                                 </div>
 
                                 <div className="border-y border-white/10 py-3 flex items-center justify-between w-full">
-                                    <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={comments} hoverColor="hover:text-sky-500 text-zinc-500" />
+                                    <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={comments} hoverColor="hover:text-bleu text-zinc-500" />
                                     <ActionButton icon={<RetweetIcon className="w-[20px] h-[20px]" />} count={reposts} hoverColor="hover:text-green-500 text-zinc-500" />
                                     <ActionButton icon={liked ? <HeartFilledIcon className="w-[20px] h-[20px]" /> : <HeartIcon className="w-[20px] h-[20px]" />} count={likeCount} hoverColor="hover:text-rose-500 text-zinc-500" onClick={handleLike} active={liked} activeColor="text-rose-500" />
-                                    <ActionButton icon={bookmarked ? <BookmarkFilledIcon className="w-[20px] h-[20px]" /> : <BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-sky-500 text-zinc-500" onClick={handleBookmark} active={bookmarked} activeColor="text-sky-500" />
-                                    <ActionButton icon={<LinkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-sky-500 text-zinc-500" />
+                                    <ActionButton icon={bookmarked ? <BookmarkFilledIcon className="w-[20px] h-[20px]" /> : <BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" onClick={handleBookmark} active={bookmarked} activeColor="text-bleu" />
+                                    <ActionButton icon={<LinkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" />
                                 </div>
 
                                 <div className="flex items-center gap-3 py-4 border-b border-white/10">
@@ -201,13 +201,13 @@ export function PostCardBody({
                     bottomLeftContent={
                         <div className="flex items-center justify-between w-full max-w-[600px] mx-auto px-4">
                             <div className="flex items-center justify-between flex-1 pr-6 md:pr-12">
-                                <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={comments} hoverColor="text-zinc-200 hover:text-sky-500" />
+                                <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={comments} hoverColor="text-zinc-200 hover:text-bleu" />
                                 <ActionButton icon={<RetweetIcon className="w-[20px] h-[20px]" />} count={reposts} hoverColor="text-zinc-200 hover:text-green-500" />
                                 <ActionButton icon={liked ? <HeartFilledIcon className="w-[20px] h-[20px]" /> : <HeartIcon className="w-[20px] h-[20px]" />} count={likeCount} hoverColor="text-zinc-200 hover:text-rose-500 hover:bg-rose-500/10" onClick={handleLike} active={liked} activeColor="text-rose-500" />
                                 <ActionButton icon={<BarsIcon className="w-[20px] h-[20px]" />} count={views} hoverColor="text-zinc-200 hover:text-twitter2" />
                             </div>
                             <div className="flex items-center gap-1">
-                                <ActionButton icon={bookmarked ? <BookmarkFilledIcon className="w-[20px] h-[20px]" /> : <BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="text-zinc-200 hover:text-sky-500 hover:bg-sky-500/10" onClick={handleBookmark} active={bookmarked} activeColor="text-sky-500" />
+                                <ActionButton icon={bookmarked ? <BookmarkFilledIcon className="w-[20px] h-[20px]" /> : <BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="text-zinc-200 hover:text-bleu hover:bg-bleu/10" onClick={handleBookmark} active={bookmarked} activeColor="text-bleu" />
                                 <button className="text-zinc-200 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors">
                                     <LinkIcon className="w-[20px] h-[20px]" />
                                 </button>

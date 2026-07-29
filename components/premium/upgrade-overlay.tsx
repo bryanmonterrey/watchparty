@@ -96,7 +96,7 @@ export function UpgradeOverlay() {
                             {/* Verification Sparkle Checkmark Badge */}
                             <div className="flex justify-center mb-4">
                                 <div className="relative flex items-center justify-center w-16 h-16">
-                                    <svg className="absolute w-24 h-24 text-sky-500/80 animate-pulse" viewBox="0 0 100 100" fill="none">
+                                    <svg className="absolute w-24 h-24 text-bleu/80 animate-pulse" viewBox="0 0 100 100" fill="none">
                                         <circle cx="50" cy="18" r="2" fill="currentColor" />
                                         <circle cx="22" cy="45" r="1.5" fill="currentColor" />
                                         <circle cx="80" cy="50" r="1.5" fill="currentColor" />
@@ -105,7 +105,7 @@ export function UpgradeOverlay() {
                                         <path d="M 45,26 L 39,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
                                         <path d="M 55,26 L 61,32" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="2 3" />
                                     </svg>
-                                    <svg className="w-12 h-12 text-sky-500 drop-shadow-[0_0_8px_rgba(14,165,233,0.3)]" viewBox="0 0 24 24" fill="currentColor">
+                                    <svg className="w-12 h-12 text-bleu drop-shadow-[0_0_8px_rgba(14,165,233,0.3)]" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.15-.4.218-.84.218-1.28 0-2.205-1.795-4-4-4-.44 0-.88.068-1.28.218C14.787 2.625 13.418 1.75 12 1.75c-1.417 0-2.787.875-3.434 2.15-.4-.15-.84-.218-1.28-.218-2.205 0-4 1.795-4 4 0 .44.068.88.218 1.28C2.25 9.55 1.375 10.92 1.375 12.5c0 1.58.875 2.95 2.148 3.6-.15.4-.218.84-.218 1.28 0 2.205 1.795 4 4 4 .44 0 .88-.068-1.28-.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218-1.28.218C9.213 22.375 10.582 23.25 12 23.25c1.417 0 2.787-.875 3.434-2.15.4.15.84.218 1.28.218 2.205 0 4-1.795 4-4 0-.44-.068-.88-.218-1.28 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.11l-3.24-3.24 1.06-1.06 2.18 2.18 5.66-5.66 1.06 1.06-6.72 6.72z" />
                                     </svg>
                                 </div>
@@ -485,7 +485,7 @@ function SubscribeBar({
                     </button>
                     <div className="border border-zinc-800/80 rounded-xl p-3 bg-zinc-950/40 w-full">
                         <p className="text-[10px] leading-relaxed text-zinc-400">
-                            By subscribing, you agree to our <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Purchaser Terms</span>, and that subscriptions auto-renew until you cancel. <span className="underline text-sky-500 cursor-pointer hover:text-sky-400">Cancel anytime</span>, at least 24 hours prior to renewal to avoid additional charges. Price subject to change. Manage your subscription through the platform you subscribed on.
+                            By subscribing, you agree to our <span className="underline text-bleu cursor-pointer hover:text-bleu">Purchaser Terms</span>, and that subscriptions auto-renew until you cancel. <span className="underline text-bleu cursor-pointer hover:text-bleu">Cancel anytime</span>, at least 24 hours prior to renewal to avoid additional charges. Price subject to change. Manage your subscription through the platform you subscribed on.
                         </p>
                     </div>
                 </div>

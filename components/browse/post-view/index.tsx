@@ -184,7 +184,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
     const renderNotFound = () => (
         <div className="flex flex-col items-center justify-center py-20 bg-black">
             <p className="text-zinc-500">Post not found.</p>
-            <button onClick={() => router.back()} className="mt-4 text-sky-500 hover:underline">Go back</button>
+            <button onClick={() => router.back()} className="mt-4 text-bleu hover:underline">Go back</button>
         </div>
     );
 
@@ -567,11 +567,11 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                 </div>
 
                                 <div className="border-y border-white/10 py-3 flex items-center justify-between w-full">
-                                    <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={post.comments} hoverColor="hover:text-sky-500 text-zinc-500" />
+                                    <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={post.comments} hoverColor="hover:text-bleu text-zinc-500" />
                                     <ActionButton icon={<RetweetIcon className="w-[20px] h-[20px]" />} count={repostCount} hoverColor="hover:text-green-500 text-zinc-500" />
                                     <ActionButton icon={liked ? <HeartFilledIcon className="w-[20px] h-[20px]" /> : <HeartIcon className="w-[20px] h-[20px]" />} count={likeCount} hoverColor="hover:text-rose-500 text-zinc-500" onClick={(e) => { e.stopPropagation(); toggleLike.mutate({ postId: post.id, contentType: "post" }); }} active={liked} activeColor="text-rose-500" />
-                                    <ActionButton icon={bookmarked ? <BookmarkFilledIcon className="w-[20px] h-[20px]" /> : <BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-sky-500 text-zinc-500" onClick={(e) => { e.stopPropagation(); toggleBookmark.mutate({ postId: post.id, contentType: "post" }); }} active={bookmarked} activeColor="text-sky-500" />
-                                    <ActionButton icon={<LinkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-sky-500 text-zinc-500" />
+                                    <ActionButton icon={bookmarked ? <BookmarkFilledIcon className="w-[20px] h-[20px]" /> : <BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" onClick={(e) => { e.stopPropagation(); toggleBookmark.mutate({ postId: post.id, contentType: "post" }); }} active={bookmarked} activeColor="text-bleu" />
+                                    <ActionButton icon={<LinkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" />
                                 </div>
 
                                 <div className="flex items-center gap-3 py-4 border-b border-white/10">

@@ -43,9 +43,9 @@ export function ReceiveActions({ walletAddress }: ReceiveActionsProps) {
                             initial={{ opacity: 0, scale: 0.9, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                            className="absolute inset-0 bg-blue-500/10 backdrop-blur-sm flex items-center justify-center pointer-events-none"
+                            className="absolute inset-0 bg-bleu/10 backdrop-blur-sm flex items-center justify-center pointer-events-none"
                         >
-                            <span className="text-[14px] font-bold text-blue-400 flex items-center gap-2">
+                            <span className="text-[14px] font-bold text-bleu flex items-center gap-2">
                                 <Check className="w-4 h-4" />
                                 Copied!
                             </span>

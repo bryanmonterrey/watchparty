@@ -18,7 +18,7 @@ const SEED_PALETTE = [
     "var(--color-jewel)",
     "var(--color-soft-pink)",
     "var(--color-soft-blue)",
-    "var(--color-royal-blue)",
+    "var(--color-bleu)",
     "var(--color-pastel-yellow)",
     "var(--color-bitcoin-orange)",
     "var(--color-vice-purple)",

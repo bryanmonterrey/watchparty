@@ -44,7 +44,7 @@ export function BookmarksFeed() {
                             <button
                                 onClick={() => fetchNextPage()}
                                 disabled={isFetchingNextPage}
-                                className="text-sky-500 hover:underline disabled:text-zinc-500"
+                                className="text-bleu hover:underline disabled:text-zinc-500"
                             >
                                 {isFetchingNextPage ? "Loading more…" : "Load more"}
                             </button>

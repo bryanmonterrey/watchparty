@@ -86,7 +86,7 @@ function FollowIconButton({ userId }: { userId: string }) {
             title={isFollowing ? "Following" : "Follow"}
             className={cn(
                 ICON_BTN,
-                isFollowing && "text-royal-blue [&_path]:fill-current",
+                isFollowing && "text-bleu [&_path]:fill-current",
             )}
         >
             <HugeiconsIcon icon={UserLove01Icon} className="size-5" strokeWidth={2} />

@@ -152,11 +152,11 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
                             </div>
 
                             <div className="border-y border-white/10 py-3 flex items-center justify-between w-full">
-                                <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={0} hoverColor="hover:text-sky-500 text-zinc-500" />
+                                <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={0} hoverColor="hover:text-bleu text-zinc-500" />
                                 <ActionButton icon={<RetweetIcon className="w-[20px] h-[20px]" />} count={0} hoverColor="hover:text-green-500 text-zinc-500" />
                                 <ActionButton icon={<HeartIcon className="w-[20px] h-[20px]" />} count={0} hoverColor="hover:text-rose-500 text-zinc-500" />
-                                <ActionButton icon={<BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-sky-500 text-zinc-500" />
-                                <ActionButton icon={<LinkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-sky-500 text-zinc-500" />
+                                <ActionButton icon={<BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" />
+                                <ActionButton icon={<LinkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" />
                             </div>
                         </div>
                     </div>

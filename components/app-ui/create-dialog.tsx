@@ -697,9 +697,9 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                 }
                                                 items={[
                                                     ...([
-                                                        { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" />, bubble: "bg-blue-500/20 text-blue-500" },
+                                                        { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" />, bubble: "bg-bleu/20 text-bleu" },
                                                         { value: "followers", label: "Followers", icon: <Users className="w-5 h-5" />, bubble: "bg-green-500/20 text-green-500" },
-                                                        { value: "verified", label: "Verified", icon: <BadgeCheck className="w-5 h-5" />, bubble: "bg-blue-500/20 text-blue-500" },
+                                                        { value: "verified", label: "Verified", icon: <BadgeCheck className="w-5 h-5" />, bubble: "bg-bleu/20 text-bleu" },
                                                         { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" />, bubble: "bg-yellow-500/20 text-yellow-500" },
                                                     ] as const).map((opt) => ({
                                                         key: opt.value,
@@ -713,7 +713,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                                     </span>
                                                                     <span className="font-semibold text-white">{opt.label}</span>
                                                                 </span>
-                                                                {audience === opt.value && <Check className="w-5 h-5 text-blue-500" />}
+                                                                {audience === opt.value && <Check className="w-5 h-5 text-bleu" />}
                                                             </>
                                                         ),
                                                     })),
@@ -743,7 +743,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                                                   <span className="text-sm text-zinc-400">{community.membersCount} Members</span>
                                                                               </span>
                                                                           </span>
-                                                                          {audience === "community" && <Check className="w-5 h-5 text-blue-500" />}
+                                                                          {audience === "community" && <Check className="w-5 h-5 text-bleu" />}
                                                                       </>
                                                                   ),
                                                               })),
@@ -917,12 +917,12 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                         label: (
                                                             <>
                                                                 <span className="flex items-center gap-3">
-                                                                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white">
+                                                                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-bleu text-white">
                                                                         {opt.icon}
                                                                     </span>
                                                                     <span className="font-semibold text-white">{opt.label}</span>
                                                                 </span>
-                                                                {replyPrivacy === opt.value && <Check className="w-5 h-5 text-blue-500" />}
+                                                                {replyPrivacy === opt.value && <Check className="w-5 h-5 text-bleu" />}
                                                             </>
                                                         ),
                                                     }))}

@@ -105,7 +105,7 @@ export function RequestCryptoTray({ open, onOpenChange }: RequestCryptoTrayProps
                         <div className="flex flex-col items-center w-full max-w-sm gap-8 pt-4">
                             {/* QR Code Container */}
                             <div className="bg-white p-4 rounded-[2.5rem] shadow-2xl relative group transition-transform hover:scale-[1.02] duration-300">
-                                <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div className="absolute inset-0 bg-bleu/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                 <div className="relative">
                                     {address ? (
                                         <QRCodeContainer walletAddress={address} />

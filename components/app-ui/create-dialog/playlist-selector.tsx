@@ -128,7 +128,7 @@ export function PlaylistSelector({ selectedPlaylists, onSelect }: PlaylistSelect
                         variant="ghost"
                         size="sm"
                         onClick={() => setOpen(false)}
-                        className="h-8 px-3 rounded-full bg-transparent text-blue-400 hover:bg-blue-400/10 hover:text-blue-300 text-xs font-semibold"
+                        className="h-8 px-3 rounded-full bg-transparent text-bleu hover:bg-bleu/10 hover:text-bleu/80 text-xs font-semibold"
                     >
                         Done
                     </Button>

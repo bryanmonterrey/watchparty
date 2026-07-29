@@ -406,9 +406,9 @@ export function PostComposer() {
                                 </>
                             }
                             items={([
-                                { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" />, bubble: "bg-blue-500/15 text-blue-500" },
+                                { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" />, bubble: "bg-bleu/15 text-bleu" },
                                 { value: "followers", label: "Followers", icon: <Users className="w-5 h-5" />, bubble: "bg-green-500/15 text-green-500" },
-                                { value: "verified", label: "Verified", icon: <BadgeCheck className="w-5 h-5" />, bubble: "bg-blue-500/15 text-blue-500" },
+                                { value: "verified", label: "Verified", icon: <BadgeCheck className="w-5 h-5" />, bubble: "bg-bleu/15 text-bleu" },
                                 { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" />, bubble: "bg-yellow-500/15 text-yellow-500" },
                                 { value: "vip", label: "VIP Only", icon: <Crown className="w-5 h-5" />, bubble: "bg-amber-500/15 text-amber-400" },
                             ] as const).map((opt) => ({
@@ -639,7 +639,7 @@ export function PostComposer() {
                                 label: (
                                     <>
                                         <span className="flex items-center gap-3">
-                                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white">
+                                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-bleu text-white">
                                                 {opt.icon}
                                             </span>
                                             <span className="font-bold text-white text-[15px]">{opt.label}</span>

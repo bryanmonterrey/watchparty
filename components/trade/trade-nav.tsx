@@ -77,7 +77,7 @@ export function TradeNav() {
             trigger={
                 <>
                     {sectionLabel(pathname)}
-                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-4.5 text-white/60" strokeWidth={2} />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-white/60" strokeWidth={2} />
                 </>
             }
             items={[

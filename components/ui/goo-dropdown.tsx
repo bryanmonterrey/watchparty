@@ -80,7 +80,7 @@ const ROW_RADIUS = 16
 
 /** Standard pill trigger for dropdowns (h-11, matches the button standard). */
 export const GOO_TRIGGER_PILL =
-  'flex h-11 cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 text-sm font-bold text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white'
+  'flex h-11 cursor-pointer items-center gap-2 rounded-full bg-soft-gray-10 px-4 text-base font-bold text-zinc-400 transition-colors hover:text-flexwhite'
 
 /** Standard panel fill — pair with the default panelRadius/itemHeight. */
 export const GOO_PANEL_FILL = '#111111ff'

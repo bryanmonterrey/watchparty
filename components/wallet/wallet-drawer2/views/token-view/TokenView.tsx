@@ -96,7 +96,7 @@ export function TokenDetailView({ token, tokens, onBack, onSend, onReceive, onSw
                                 <h3 className="text-lg font-bold text-white/90">Activity</h3>
                                 <button
                                     onClick={onSeeActivity}
-                                    className="text-[13px] font-bold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                                    className="text-[13px] font-bold text-bleu hover:text-bleu/80 transition-colors cursor-pointer"
                                 >
                                     See More
                                 </button>

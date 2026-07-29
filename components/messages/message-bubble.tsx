@@ -156,7 +156,7 @@ export function MessageBubble({ message, isSent, onReact, onReply, onImageLoad, 
                                     className={cn(
                                         "mb-2 rounded-md p-2 text-xs border-l-2 cursor-pointer transition-colors relative overflow-hidden",
                                         "bg-black/10 hover:bg-black/20 dark:bg-white/5 dark:hover:bg-white/10",
-                                        isSent ? "border-white/40" : "border-blue-500/40"
+                                        isSent ? "border-white/40" : "border-bleu/40"
                                     )}
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -347,7 +347,7 @@ export function MessageBubble({ message, isSent, onReact, onReply, onImageLoad, 
                                 className={cn(
                                     "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs border transition-colors",
                                     hasReacted
-                                        ? "bg-blue-500/20 border-blue-500/50 text-blue-200"
+                                        ? "bg-bleu/20 border-bleu/50 text-blue-200"
                                         : "bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                                 )}
                             >

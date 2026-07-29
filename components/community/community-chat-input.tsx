@@ -204,7 +204,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                 <button
                     type="submit"
                     disabled={sendMessage.isPending || !content.trim()}
-                    className="mr-2 h-8 w-8 shrink-0 flex items-center justify-center rounded-full bg-royal-blue text-white transition-all hover:bg-royal-blue/80 active:scale-95 disabled:opacity-0 disabled:scale-50"
+                    className="mr-2 h-8 w-8 shrink-0 flex items-center justify-center rounded-full bg-bleu text-white transition-all hover:bg-bleu/80 active:scale-95 disabled:opacity-0 disabled:scale-50"
                     title="Send"
                 >
                     <ArrowUpIcon className="h-5.5 w-5.5" />

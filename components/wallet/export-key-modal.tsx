@@ -149,11 +149,11 @@ export default function ExportKeyModal({ isOpen, onClose }: ExportKeyModalProps)
                             </div>
                         )}
 
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4">
+                        <div className="bg-bleu/10 border border-bleu/20 rounded-lg p-4 mt-4">
                             <div className="flex gap-3">
-                                <Shield className="w-5 h-5 text-blue-500 mt-0.5" />
+                                <Shield className="w-5 h-5 text-bleu mt-0.5" />
                                 <div className="space-y-1 text-sm">
-                                    <p className="text-blue-400 font-medium">Biometric Verification Required</p>
+                                    <p className="text-bleu font-medium">Biometric Verification Required</p>
                                     <p className="text-neutral-300">
                                         You'll be prompted to verify your identity with Face ID, Touch ID, or Windows Hello
                                         before exporting your private key.
@@ -188,7 +188,7 @@ export default function ExportKeyModal({ isOpen, onClose }: ExportKeyModalProps)
                         <>
                             <DialogHeader>
                                 <DialogTitle className="text-center text-white flex items-center justify-center gap-2">
-                                    <Shield className="w-5 h-5 text-blue-500" />
+                                    <Shield className="w-5 h-5 text-bleu" />
                                     Verifying Identity
                                 </DialogTitle>
                                 <DialogDescription className="text-center text-neutral-400">

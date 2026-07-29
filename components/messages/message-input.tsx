@@ -192,9 +192,9 @@ export function MessageInput({ conversationId }: MessageInputProps) {
             {replyToMessage && (
                 <div className="flex items-start justify-between bg-zinc-900/40 border border-zinc-800 p-3 rounded-2xl mx-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
                     <div className="flex gap-3 items-center overflow-hidden">
-                        <div className="h-full w-1 rounded-full bg-blue-500 flex-shrink-0 self-stretch min-h-[32px]" />
+                        <div className="h-full w-1 rounded-full bg-bleu flex-shrink-0 self-stretch min-h-[32px]" />
                         <div className="flex flex-col overflow-hidden">
-                            <span className="text-xs font-medium text-blue-400">Replying to {replyToMessage.senderId === currentUserId ? 'You' : 'User'}</span>
+                            <span className="text-xs font-medium text-bleu">Replying to {replyToMessage.senderId === currentUserId ? 'You' : 'User'}</span>
                             <span className="text-xs text-zinc-400 truncate max-w-[60vw]">
                                 {replyToMessage.messageType === 'image' ? '📷 Image' :
                                     replyToMessage.messageType === 'audio' ? '🎤 Voice Message' :
