@@ -10,7 +10,7 @@ import { useState } from "react";
 import { Reorder } from "motion/react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { HomeIcon, CreateIcon } from "@/components/icons";
+import { CreateIcon, PinkStarLogo } from "@/components/icons";
 
 export function CommunityServerList() {
     const { onOpen } = useCommunityModal();
@@ -35,9 +35,11 @@ export function CommunityServerList() {
     // "Home" = any community page that isn't a specific server.
     const onHome = !/^\/communities\/[0-9a-fA-F-]{20,}/.test(pathname);
 
+    // Rail gutter is aligned to the header's menu icon (pl-4) and clears the
+    // sidebar column by pr-5 — 16 + 48 + 20 = 84px total.
     return (
-        <div className="flex flex-col items-center gap-3.5 py-3 md:pt-[calc(var(--header-height)+0.25rem)] h-full w-[112px] shrink-0">
-            {/* Home */}
+        <div className="flex flex-col items-center gap-3 py-3 pl-4 pr-5 md:pt-[calc(var(--header-height)+0.25rem)] h-full w-[84px] shrink-0">
+            {/* Home — the star logo; the only squircle in the rail (servers are circles) */}
             <TooltipProvider delayDuration={50}>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -45,16 +47,16 @@ export function CommunityServerList() {
                             onClick={() => router.push("/communities")}
                             className="group relative flex cursor-pointer items-center justify-center w-full"
                         >
-                            <Squircle asChild radius={18} autoEffects={false}>
+                            <Squircle asChild radius={14} autoEffects={false}>
                                 <div
                                     className={cn(
-                                        "flex h-[62px] w-[62px] transition-all ease-in-out duration-200 items-center justify-center",
+                                        "flex size-12 transition-all ease-in-out duration-200 items-center justify-center",
                                         onHome
-                                            ? "bg-white/90 text-black/85"
-                                            : "bg-black4 text-white/90 group-hover:bg-[#6A6A6A]/50"
+                                            ? "bg-soft-gray-20"
+                                            : "bg-soft-gray-15 group-hover:bg-soft-gray-20"
                                     )}
                                 >
-                                    <HomeIcon className="size-8" />
+                                    <PinkStarLogo className="size-5" />
                                 </div>
                             </Squircle>
                         </button>
@@ -66,13 +68,15 @@ export function CommunityServerList() {
             </TooltipProvider>
 
             {/* Server icons + create */}
-            <ScrollArea className="flex-1 w-full [&_[data-slot=scroll-area-viewport]]:[scrollbar-width:none] [&_[data-slot=scroll-area-viewport]::-webkit-scrollbar]:hidden">
-                <div className="flex flex-col items-center gap-3">
+            {/* Bleeds back over the rail's pl-4 gutter (then re-pads it) so the
+                active/unread pill left of each tile isn't clipped by overflow. */}
+            <ScrollArea className="flex-1 -ml-4 w-[calc(100%+1rem)] pl-4 [&_[data-slot=scroll-area-viewport]]:[scrollbar-width:none] [&_[data-slot=scroll-area-viewport]::-webkit-scrollbar]:hidden">
+                <div className="flex flex-col items-center gap-2">
                     <Reorder.Group
                         axis="y"
                         values={ordered.map((s) => s.id)}
                         onReorder={(ids: string[]) => setOrder(ids)}
-                        className="flex w-full flex-col items-center gap-3"
+                        className="flex w-full flex-col items-center gap-2"
                     >
                         {ordered.map((server) => (
                             <Reorder.Item
@@ -101,11 +105,9 @@ export function CommunityServerList() {
                                     onClick={() => onOpen("createServer")}
                                     className="group flex w-full cursor-pointer items-center justify-center"
                                 >
-                                    <Squircle asChild radius={18} autoEffects={false}>
-                                        <div className="flex h-[62px] w-[62px] transition-all ease-in-out duration-200 items-center justify-center bg-black4 text-white/90 group-hover:bg-[#6A6A6A]/50">
-                                            <CreateIcon className="size-8" />
-                                        </div>
-                                    </Squircle>
+                                    <div className="flex size-12 rounded-full transition-all ease-in-out duration-200 items-center justify-center bg-soft-gray-15 text-white/90 group-hover:bg-soft-gray-20">
+                                        <CreateIcon className="size-7" />
+                                    </div>
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right" align="center">

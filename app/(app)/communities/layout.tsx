@@ -50,8 +50,8 @@ export default function CommunitiesLayout({
                     <CommunityServerList />
                 </div>
 
-                {/* Columns 2+3 */}
-                <div className="flex min-w-0 flex-1 overflow-hidden md:pl-2">
+                {/* Columns 2+3 — the rail's own pr-5 is the gutter, so no extra pad */}
+                <div className="flex min-w-0 flex-1 overflow-hidden">
                     <div
                         className={cn(
                             "flex h-full min-w-0",
