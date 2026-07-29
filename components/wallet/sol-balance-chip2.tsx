@@ -156,31 +156,40 @@ export function useHeaderWalletLoading() {
     return { loading: forceLoading || sessionLoading || isLoading, data, session };
 }
 
-// Header SOL balance: Solana mark + amount; at zero balance it becomes an
-// "Add money" prompt in the Solana gradient. Reads the same getWalletAssets
-// query the wallet button prefetches, so it shares that cache entry.
+// Header SOL balance: Solana mark + amount. An empty wallet is still a balance,
+// so it reads as one — the mark stays and the number is 0.000, rather than the
+// chip swapping into a differently-shaped prompt. Hovering an empty chip trades
+// the zero for "Deposit", which is the only case where the chip has something to
+// say beyond the number. Reads the same getWalletAssets query the wallet button
+// prefetches, so it shares that cache entry.
 export function SolBalanceChip() {
     const { loading, data } = useHeaderWalletLoading();
 
     if (loading) return <SolBalanceChipSkeleton />;
 
     const balance = data?.tokens?.find((t) => t.mint === SOL_MINT)?.balance ?? 0;
+    const isEmpty = balance <= 0;
 
     return (
         <button
             type="button"
-            aria-label={balance > 0 ? `Wallet balance ${formatSol(balance)} SOL` : "Add money"}
+            aria-label={isEmpty ? "Deposit" : `Wallet balance ${formatSol(balance)} SOL`}
             onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))}
-            className="flex h-[52px] inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-soft-gray-10 hover:bg-soft-gray-15 rounded-full border-sidebar-hover/10 border cursor-pointer items-center gap-2 rounded-full px-5 backdrop-blur-xs transition-colors ease-out"
+            className="group flex h-[52px] inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-soft-gray-10 hover:bg-soft-gray-15 rounded-full border-sidebar-hover/10 border cursor-pointer items-center gap-2 rounded-full px-5 backdrop-blur-xs transition-colors ease-out"
         >
-            {balance > 0 ? (
-                <>
-                    <SolanaMarkIcon className="h-3.5 w-4 shrink-0" />
-                    <span className="text-base font-medium text-white">{formatSol(balance)}</span>
-                </>
-            ) : (
-                <span className="text-base font-medium text-flexwhite/90">Add money</span>
-            )}
+            <SolanaMarkIcon className="h-3.5 w-4 shrink-0" />
+            <span className="text-base font-medium text-white">
+                {isEmpty ? (
+                    // Swapped in CSS, not state — no re-render, and the label is
+                    // in the DOM either way for the accessible name above.
+                    <>
+                        <span className="group-hover:hidden">{formatSol(0)}</span>
+                        <span className="hidden group-hover:inline">Deposit</span>
+                    </>
+                ) : (
+                    formatSol(balance)
+                )}
+            </span>
         </button>
     );
 }
