@@ -366,7 +366,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                     page outgrows the viewport, and the whole thing scrolls. */}
                 <div
                     className={cn(
-                        "mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:gap-2",
+                        "mt-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:gap-1",
                         railCollapsed
                             ? "lg:grid-cols-[minmax(0,1fr)_320px]"
                             : "lg:grid-cols-[320px_minmax(0,1fr)_320px]",
@@ -376,7 +376,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         list in place (Phantom anatomy): Perps = Flash markets,
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
-                    <aside className={cn("hidden min-h-0 flex-col overflow-hidden rounded-lg border border-white/5 bg-panel2", !railCollapsed && "lg:flex")}>
+                    <aside className={cn("hidden min-h-0 flex-col overflow-hidden rounded-lg border border-baseborder/15 bg-panel2", !railCollapsed && "lg:flex")}>
                         {/* Inactive tabs carry the dark fill; the active tab is
                             transparent so it IS the body color at any opacity. */}
                         <div className="flex">
@@ -477,17 +477,17 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                             })}
                         </div>
 
-                        <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-2">
-                            <div className="relative overflow-hidden rounded-lg border border-white/5 bg-panel1">
+                        <div className="lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-1">
+                            <div className="relative overflow-hidden rounded-lg border border-baseborder/15 bg-panel1">
                                 {/* Rail collapse toggle — Phantom's edge tab */}
                                 <button
                                     onClick={toggleRail}
                                     aria-label={railCollapsed ? "Show markets" : "Hide markets"}
-                                    className="absolute left-0 top-4 z-10 hidden h-9 w-4 cursor-pointer items-center justify-center rounded-r-md bg-white/[0.06] text-zinc-500 transition-colors hover:bg-white/[0.1] hover:text-white lg:flex"
+                                    className="absolute left-0 top-1 z-10 hidden h-13 w-4 cursor-pointer items-center justify-center rounded-r-md bg-white/[0.06] text-zinc-500 transition-colors hover:bg-white/[0.1] hover:text-white lg:flex"
                                 >
                                     <HugeiconsIcon
                                         icon={railCollapsed ? ArrowRight01Icon : ArrowLeft01Icon}
-                                        className="size-3"
+                                        className="size-4"
                                         strokeWidth={2.5}
                                     />
                                 </button>
@@ -941,7 +941,7 @@ function OrderPanel({
     };
 
     return (
-        <div className="rounded-lg bg-panel1 p-4 border border-white/5">
+        <div className="rounded-lg bg-panel1 p-4 border border-baseborder/15">
             {/* Direction — rounded pills; active side gets a very light white
                 wash + its accent color. */}
             <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
@@ -1159,7 +1159,7 @@ function TerminalTabs({
         orders: "Order History",
     };
     return (
-        <div className="flex flex-col overflow-hidden rounded-lg border border-white/5 bg-panel2">
+        <div className="flex flex-col overflow-hidden rounded-lg border border-baseborder/15 bg-panel2">
             {/* Segmented strip, same anatomy as the rail/book tabs. */}
             <div className="flex">
                 {TERM_TABS.map((t) => (

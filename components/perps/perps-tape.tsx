@@ -134,7 +134,7 @@ export function PerpsTape({
     ) || 1;
 
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-white/5 bg-panel2">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-baseborder/15 bg-panel2">
             <div className="flex">
                 {(["book", "trades"] as const).map((t) => (
                     <button

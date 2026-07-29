@@ -23,11 +23,11 @@ const EMPTY_COPY: Record<TokenStatus, { title: string; hint: string }> = {
 
 export function TokenColumn({ status, tokens, loading, className, quickBuy, buyingId, amountSol }: TokenColumnProps) {
   return (
-    <div className={cn("h-full overflow-y-auto scroll-smooth hidden-scrollbar", className)}>
+    <div className={cn("h-full overflow-y-auto scroll-smooth hidden-scrollbar mt-2", className)}>
       {/* Pushes initial content below the fixed header; scrolls away as you go up */}
       <div className="h-[116px] shrink-0" />
-      <Squircle asChild radius={24} autoEffects={false}>
-        <div className="bg-panel">
+      <Squircle asChild radius={10} autoEffects={false}>
+        <div className="bg-panel/50">
           {loading ? (
             <div className="flex flex-col py-1">
               {Array.from({ length: 8 }).map((_, i) => (

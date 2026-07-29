@@ -52,19 +52,19 @@ export function TradeFeed() {
     <div className="h-full relative" style={{ transform: "translateZ(0)" }}>
       {/* FIXED GLASS HEADER */}
       <div className="sticky w-full top-0 left-0 right-0 z-40 flex items-center justify-center flex-col pt-2 pb-0 space-y-3">
-        <div className="absolute inset-0 backdrop-blur-sm bg-black/20 -z-10 pointer-events-none" />
+        <div className="absolute inset-0 -z-10 pointer-events-none" />
         {/* Spacer clears the app header (logo + menu overlay this row). The
             quick-buy amount selector that used to sit here collided with
             them — removed for now; rows quick-buy at the hook's amount. */}
         <div className="w-full h-[52px]" />
-        <div className="flex-1 w-full grid grid-cols-3 gap-3 px-3 lg:px-4">
+        <div className="flex-1 w-full grid grid-cols-3 gap-1 px-2">
           <TokenColumnHeader status="new" tokensCount={data.new.length} />
           <TokenColumnHeader status="migrating" tokensCount={data.migrating.length} />
           <TokenColumnHeader status="migrated" tokensCount={data.migrated.length} />
         </div>
       </div>
 
-      <div className="absolute inset-0 grid grid-cols-3 gap-3 px-3 lg:px-4 overflow-hidden">
+      <div className="absolute inset-0 grid grid-cols-3 gap-1 px-2 lg:px-2 overflow-hidden">
         {(["new", "migrating", "migrated"] as const).map((status) => (
           <TokenColumn
             key={status}
