@@ -30,7 +30,11 @@ export const RAIL_TABS = [RAIL_ICON_TAB, "For you", "Live", "New", "Upcoming"];
  */
 export const HOME_TAB_FEED = "Feed";
 export const HOME_TAB_LIKED = "Liked";
-export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_LIKED, "Live", "New", "Upcoming"];
+// "Clips" has no data behind it yet — nothing marks a post as a clip of a stream
+// (posts.isShort is the Shorts surface, a different thing). It selects and
+// recolours like Live/New/Upcoming, which are equally inert here, and starts
+// filtering as soon as there's a clip to filter on.
+export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_LIKED, "Live", "Clips", "New", "Upcoming"];
 
 export function RailTabs({
     tabs = RAIL_TABS,
