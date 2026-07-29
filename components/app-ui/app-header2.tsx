@@ -6,7 +6,9 @@ import WalletButton from '@/components/wallet/wallet-button'
 import { WalletButtonSkeleton } from '@/components/wallet/wallet-button-skeleton'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
-import { MenuIcon, SearchIcon, PinkStarLogo } from '../icons'
+import { SearchIcon, PinkStarLogo } from '../icons'
+import { MorphMenuIcon } from '@/components/marketing/morph-menu-icon'
+import { useClipsOverlay } from '@/hooks/use-clips-overlay'
 import { CreateMenu } from './create-menu'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
@@ -47,6 +49,8 @@ export function AppHeader2() {
   // leaves its skeleton in the same paint as the balance chip and avatar.
   const { loading: isLoading } = useHeaderWalletLoading()
   const { toggleSidebar, state: sidebarState } = useSidebar()
+  const clipsOpen = useClipsOverlay((s) => s.open)
+  const closeClips = useClipsOverlay((s) => s.onClose)
   const [mounted, setMounted] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
@@ -120,14 +124,19 @@ export function AppHeader2() {
             and click-outside are handled by Sidebar itself. */}
         {/* Plain trigger + logo on the canvas — no pill, per desktopdesigns. */}
         <div className="flex items-center gap-3 h-11 pointer-events-auto">
+          {/* Doubles as the Clips overlay's close button: while that's open the
+              hamburger path-morphs to an X and the press closes it instead of
+              touching the sidebar. MorphMenuIcon's resting paths are identical to
+              MenuIcon's, so nothing moves when it's shut. */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleSidebar}
-            data-sidebar="trigger"
+            onClick={clipsOpen ? closeClips : toggleSidebar}
+            data-sidebar={clipsOpen ? undefined : 'trigger'}
+            aria-label={clipsOpen ? 'Close clips' : 'Toggle sidebar'}
             className="size-10 text-white/80 hover:bg-white/10 hover:text-white"
           >
-            <MenuIcon className="size-8" />
+            <MorphMenuIcon open={clipsOpen} className="size-8" />
           </Button>
           {/* Communities owns the star: it's the home tile at the top of the
               server rail there, directly under this spot — so the header drops

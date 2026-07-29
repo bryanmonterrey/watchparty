@@ -30,11 +30,14 @@ export const RAIL_TABS = [RAIL_ICON_TAB, "For you", "Live", "New", "Upcoming"];
  */
 export const HOME_TAB_FEED = "Feed";
 export const HOME_TAB_LIKED = "Liked";
-// "Clips" has no data behind it yet — nothing marks a post as a clip of a stream
-// (posts.isShort is the Shorts surface, a different thing). It selects and
-// recolours like Live/New/Upcoming, which are equally inert here, and starts
-// filtering as soon as there's a clip to filter on.
-export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_LIKED, "Live", "Clips", "New", "Upcoming"];
+/**
+ * "Clips" is a BUTTON wearing a tab, not a filter: it opens the shorts feed as a
+ * full-bleed overlay (components/home/clips-overlay.tsx) instead of narrowing the
+ * rail's list. So it never becomes the rail's active tab — whatever was selected
+ * stays selected underneath, and is still selected when the overlay closes.
+ */
+export const HOME_TAB_CLIPS = "Clips";
+export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_LIKED, "Live", HOME_TAB_CLIPS, "New", "Upcoming"];
 
 export function RailTabs({
     tabs = RAIL_TABS,

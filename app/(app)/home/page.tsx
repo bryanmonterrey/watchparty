@@ -4,6 +4,7 @@ import { HomeRailTabs } from "@/components/home/home-rail-tabs";
 import { HomeFeedProvider } from "@/components/home/home-feed-context";
 import { HomeRailVideos } from "@/components/home/home-rail-videos";
 import { HomeLeftRail } from "@/components/home/home-left-rail";
+import { ClipsOverlay } from "@/components/home/clips-overlay";
 
 // Home is a 3-column frame: rails either side of a single content column, one
 // native scroll for the whole row.
@@ -83,6 +84,11 @@ export default function AppHome() {
                     <HomeRailVideos />
                 </div>
             </aside>
+
+            {/* The Clips tab's surface. Outside the rail (it's full-bleed) but
+                inside the page, since Clips is a home affordance — its open
+                state rides a store so the header's X can reach it. */}
+            <ClipsOverlay />
         </div>
         </HomeFeedProvider>
     );
