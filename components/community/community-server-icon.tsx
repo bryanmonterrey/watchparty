@@ -12,6 +12,26 @@ type CommunityServerIconProps = {
     mentionCount?: number;
 };
 
+/**
+ * The rail's left-gutter state pill (the Discord anatomy): tall = active,
+ * short = unread, grows on hover, absent otherwise. Shared by every tile in
+ * the rail — the home/star tile included — so they all read the same way.
+ * Anchors to `left-0` of a `w-full` tile button, i.e. the rail's own edge.
+ */
+export function CommunityRailPill({ isActive, hasUnread = false }: { isActive: boolean; hasUnread?: boolean }) {
+    return (
+        <span
+            aria-hidden
+            className={cn(
+                "absolute left-0 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-white transition-all duration-200",
+                isActive ? "h-7 opacity-100"
+                    : hasUnread ? "h-2 opacity-100 group-hover:h-4"
+                    : "h-2 opacity-0 group-hover:h-4 group-hover:opacity-100",
+            )}
+        />
+    );
+}
+
 export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false, mentionCount = 0 }: CommunityServerIconProps) {
     const params = useParams();
     const router = useRouter();
@@ -29,7 +49,7 @@ export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false, men
                             squircle in the rail. */}
                         <div
                             className={cn(
-                                "relative flex size-12 overflow-hidden items-center justify-center rounded-full transition-colors",
+                                "relative flex size-12 overflow-hidden border-2 border-sidebar-hover/65 items-center justify-center rounded-full transition-colors",
                                 isActive
                                     ? "bg-soft-gray-20"
                                     : "bg-soft-gray-15 group-hover:bg-soft-gray-20"
@@ -43,17 +63,7 @@ export function CommunityServerIcon({ id, imageUrl, name, hasUnread = false, men
                                 />
                             )}
                         </div>
-                        {/* Left-edge state pill (the Discord anatomy): tall =
-                            active server, short = unread, grows on hover. */}
-                        <span
-                            aria-hidden
-                            className={cn(
-                                "absolute -left-4 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-white transition-all duration-200",
-                                isActive ? "h-7 opacity-100"
-                                    : hasUnread ? "h-2 opacity-100 group-hover:h-4"
-                                    : "h-2 opacity-0 group-hover:h-4 group-hover:opacity-100",
-                            )}
-                        />
+                        <CommunityRailPill isActive={isActive} hasUnread={hasUnread} />
                         {/* Mention badge, bottom-right */}
                         {mentionCount > 0 && (
                             <span

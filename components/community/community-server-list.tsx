@@ -4,7 +4,7 @@ import { Squircle } from "@/components/ui/squircle";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useCommunityModal } from "@/hooks/use-community-modal";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CommunityServerIcon } from "./community-server-icon";
+import { CommunityRailPill, CommunityServerIcon } from "./community-server-icon";
 import { trpc } from "@/lib/trpc/client";
 import { useState } from "react";
 import { Reorder } from "motion/react";
@@ -34,11 +34,15 @@ export function CommunityServerList() {
 
     // "Home" = any community page that isn't a specific server.
     const onHome = !/^\/communities\/[0-9a-fA-F-]{20,}/.test(pathname);
+    // The home tile's unread pill mirrors a server's: the home area's only
+    // inbox is friend requests waiting on the user.
+    const { data: pendingFriends = 0 } = trpc.friends.pendingCount.useQuery();
+    const homeHasUnread = pendingFriends > 0;
 
     // Rail gutter is aligned to the header's menu icon (pl-4) and clears the
     // sidebar column by pr-5 — 16 + 48 + 20 = 84px total.
     return (
-        <div className="flex flex-col items-center gap-3 py-3 pl-4 pr-5 md:pt-[calc(var(--header-height)+0.25rem)] h-full w-[84px] shrink-0">
+        <div className="flex flex-col items-center gap-3 py-3 pr-1 md:pt-[calc(var(--header-height)+0.25rem)] h-full w-[80px] shrink-0">
             {/* Home — the star logo; the only squircle in the rail (servers are circles) */}
             <TooltipProvider delayDuration={50}>
                 <Tooltip>
@@ -50,7 +54,7 @@ export function CommunityServerList() {
                             <Squircle asChild radius={14} autoEffects={false}>
                                 <div
                                     className={cn(
-                                        "flex size-12 transition-all ease-in-out duration-200 items-center justify-center",
+                                        "flex size-11 transition-all ease-in-out duration-200 items-center justify-center",
                                         onHome
                                             ? "bg-soft-gray-20"
                                             : "bg-soft-gray-15 group-hover:bg-soft-gray-20"
@@ -59,6 +63,7 @@ export function CommunityServerList() {
                                     <PinkStarLogo className="size-5" />
                                 </div>
                             </Squircle>
+                            <CommunityRailPill isActive={onHome} hasUnread={homeHasUnread} />
                         </button>
                     </TooltipTrigger>
                     <TooltipContent side="right" align="center">
@@ -68,9 +73,7 @@ export function CommunityServerList() {
             </TooltipProvider>
 
             {/* Server icons + create */}
-            {/* Bleeds back over the rail's pl-4 gutter (then re-pads it) so the
-                active/unread pill left of each tile isn't clipped by overflow. */}
-            <ScrollArea className="flex-1 -ml-4 w-[calc(100%+1rem)] pl-4 [&_[data-slot=scroll-area-viewport]]:[scrollbar-width:none] [&_[data-slot=scroll-area-viewport]::-webkit-scrollbar]:hidden">
+            <ScrollArea className="flex-1 w-full [&_[data-slot=scroll-area-viewport]]:[scrollbar-width:none] [&_[data-slot=scroll-area-viewport]::-webkit-scrollbar]:hidden">
                 <div className="flex flex-col items-center gap-2">
                     <Reorder.Group
                         axis="y"

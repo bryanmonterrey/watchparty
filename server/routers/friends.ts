@@ -79,6 +79,16 @@ export const friendsRouter = router({
             return { friends, onlineCount: friends.filter((f) => f.isOnline).length };
         }),
 
+    /**
+     * Just how many requests are waiting on me — the rail's home tile polls
+     * this to decide whether to show its unread pill, so it deliberately skips
+     * the user hydration `pending` does.
+     */
+    pendingCount: protectedProcedure.query(async ({ ctx }) => {
+        const { following, followers } = await edges(ctx.user.id);
+        return [...followers].filter((id) => !following.has(id)).length;
+    }),
+
     /** Incoming (can accept) + outgoing (awaiting) requests. */
     pending: protectedProcedure.query(async ({ ctx }) => {
         const { following, followers } = await edges(ctx.user.id);
