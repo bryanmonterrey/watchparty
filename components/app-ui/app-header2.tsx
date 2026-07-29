@@ -129,10 +129,15 @@ export function AppHeader2() {
           >
             <MenuIcon className="size-8" />
           </Button>
-          <Link href="/home" aria-label="Home">
-            {/* Pink star logo, sized to match the menu icon (size-8). */}
-            <PinkStarLogo className="size-5.5" />
-          </Link>
+          {/* Communities owns the star: it's the home tile at the top of the
+              server rail there, directly under this spot — so the header
+              drops its own copy rather than stacking two. */}
+          {firstSegment !== 'communities' && (
+            <Link href="/home" aria-label="Home">
+              {/* Pink star logo, sized to match the menu icon (size-8). */}
+              <PinkStarLogo className="size-5.5" />
+            </Link>
+          )}
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
           {firstSegment === 'trade' && <TradeNav />}
