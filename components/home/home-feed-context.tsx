@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { RAIL_ICON_TAB } from "@/components/rails/rail-tabs";
 
 // The home feed's data + selection, shared across the page's columns.
 //
@@ -83,6 +84,10 @@ interface HomeFeedValue {
     isLoadingMore: boolean;
     /** Pull the next page. Safe to call repeatedly — it no-ops when it can't. */
     loadMore: () => void;
+    /** The rail's selected tab. Here rather than in the tab row because the row
+     *  and the list it filters are siblings under this provider. */
+    tab: string;
+    setTab: (tab: string) => void;
 }
 
 const HomeFeedContext = createContext<HomeFeedValue | null>(null);
@@ -95,6 +100,7 @@ export function useHomeFeed() {
 
 export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [tab, setTab] = useState<string>(RAIL_ICON_TAB);
 
     const feed = trpc.content.getVideoFeed.useInfiniteQuery(
         { limit: 12 },
@@ -145,8 +151,10 @@ export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
             hasMore,
             isLoadingMore: isFetchingNextPage,
             loadMore,
+            tab,
+            setTab,
         };
-    }, [videos, activeId, next, feed.isLoading, hasMore, isFetchingNextPage, loadMore]);
+    }, [videos, activeId, next, feed.isLoading, hasMore, isFetchingNextPage, loadMore, tab]);
 
     return <HomeFeedContext.Provider value={value}>{children}</HomeFeedContext.Provider>;
 }

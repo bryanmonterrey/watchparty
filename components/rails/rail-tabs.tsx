@@ -19,8 +19,18 @@ import { TabScrollArrow } from "@/components/home/tab-scroll-arrow";
 /** Rendered as a mark instead of a word. Still just a tab. */
 export const RAIL_ICON_TAB = "trending";
 
-/** The shared set. Home, video and live all run these; live prepends "Chat". */
+/** The shared set. Video and live run these; live prepends "Chat". */
 export const RAIL_TABS = [RAIL_ICON_TAB, "For you", "Live", "New", "Upcoming"];
+
+/**
+ * Home diverges: "For you" is named "Feed" there (it IS the feed the hero plays
+ * from, not a recommendation slice beside one), and "Liked" follows it. Kept as
+ * its own list rather than changed in RAIL_TABS so the video and live rails —
+ * which nobody asked to change — keep the labels they have.
+ */
+export const HOME_TAB_FEED = "Feed";
+export const HOME_TAB_LIKED = "Liked";
+export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_LIKED, "Live", "New", "Upcoming"];
 
 export function RailTabs({
     tabs = RAIL_TABS,

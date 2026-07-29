@@ -66,7 +66,7 @@ export default function AppHome() {
 
                 @container/home stays on: whatever lands here should size
                 against THIS column rather than the viewport. */}
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-4 xl:mr-1.25">
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5 xl:mr-1.25">
                 {/* The screen, the focus toggle under it, and the category tabs
                     + their content. One client component because the toggle
                     collapses the tabs AND resizes the screen, so the state and

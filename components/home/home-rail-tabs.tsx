@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { RailTabs, RAIL_ICON_TAB } from "@/components/rails/rail-tabs";
+import { RailTabs, HOME_RAIL_TABS } from "@/components/rails/rail-tabs";
+import { useHomeFeed } from "./home-feed-context";
 
 // Home's right-rail tabs. The row itself now lives in components/rails so the
 // video and live rails are literally the same component — see rail-tabs.tsx for
 // the design notes.
 //
-// Still visual only HERE: picking one recolours it and nothing else, because
-// this rail's content is the hero picker and doesn't filter. The video and live
-// rails do run content off these tabs (rail-video-list.tsx).
+// Home runs its own label set (HOME_RAIL_TABS): "Feed" where the other rails say
+// "For you", plus "Liked" after it. Selection lives in the feed context because
+// the list this filters is a sibling, not a child.
+//
+// "Feed" and "Liked" filter the rail. The rest are still visual only — the same
+// as before — since nothing behind them has changed.
 export function HomeRailTabs() {
-    const [active, setActive] = useState(RAIL_ICON_TAB);
-    return <RailTabs active={active} onChange={setActive} />;
+    const { tab, setTab } = useHomeFeed();
+    return <RailTabs tabs={HOME_RAIL_TABS} active={tab} onChange={setTab} />;
 }
