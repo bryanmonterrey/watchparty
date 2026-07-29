@@ -46,7 +46,7 @@ export function AppHeader2() {
   // Shared gate (session + first wallet-assets fetch) so the Create tile
   // leaves its skeleton in the same paint as the balance chip and avatar.
   const { loading: isLoading } = useHeaderWalletLoading()
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, state: sidebarState } = useSidebar()
   const [mounted, setMounted] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
@@ -130,9 +130,11 @@ export function AppHeader2() {
             <MenuIcon className="size-8" />
           </Button>
           {/* Communities owns the star: it's the home tile at the top of the
-              server rail there, directly under this spot — so the header
-              drops its own copy rather than stacking two. */}
-          {firstSegment !== 'communities' && (
+              server rail there, directly under this spot — so the header drops
+              its own copy rather than stacking two. Opening the sidebar (pinned
+              or hovered) covers the rail, which takes the star with it, so the
+              header takes the logo back for as long as it's expanded. */}
+          {(firstSegment !== 'communities' || sidebarState === 'expanded') && (
             <Link href="/home" aria-label="Home">
               {/* Pink star logo, sized to match the menu icon (size-8). */}
               <PinkStarLogo className="size-5.5" />
