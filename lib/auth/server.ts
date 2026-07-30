@@ -244,7 +244,14 @@ export const auth = betterAuth({
       };
     }),
 
-    multiSession({ maximumSessions: 5 }),
+    // X-style multiple signed-in accounts per device. The plugin's after-hook
+    // matches EVERY endpoint that mints a session, so OTP, OAuth, SIWS and
+    // passkey sign-ins all register themselves — no per-flow work.
+    //
+    // Past the cap the hook silently declines to add the cookie: the sign-in
+    // still succeeds and becomes active, it just never appears in the switcher.
+    // The switcher warns before that happens (components/auth/account-switcher).
+    multiSession({ maximumSessions: 10 }),
 
     twoFactor({
       totpOptions: { period: 30, digits: 6 },

@@ -14,6 +14,9 @@ import {
     MorphPopoverTrigger,
 } from "@/components/motion/popover-morph";
 import { trpc } from "@/lib/trpc/client";
+import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { Avatar as AccountAvatar } from "@/components/ui/avatar";
 
 interface WalletHeaderProps {
     username: string;
@@ -44,6 +47,12 @@ export function WalletHeader({
         enabled: accountOpen,
         staleTime: 60_000,
     });
+
+    // Every account signed in on this device (better-auth multiSession). Same
+    // deal — nothing is fetched until the panel opens.
+    const { data: session } = useAuthSession();
+    const activeUserId = session?.user?.id;
+    const { accounts, setActive, revoke, atCapacity } = useDeviceSessions(accountOpen);
     const setPrimary = trpc.wallet.setPrimaryWallet.useMutation({
         onSuccess: () => {
             utils.wallet.listLinkedWallets.invalidate();
@@ -111,7 +120,83 @@ export function WalletHeader({
                         fill="#111111ff"
                         className="w-[264px] p-1.5"
                     >
+                        {/* Accounts first: which person you are, then which of
+                            that person's wallets. Both live in one panel so the
+                            avatar answers the whole "who am I" question. */}
                         <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
+                            accounts
+                        </p>
+                        <ul>
+                            {accounts.map((a) => {
+                                const isActive = a.user.id === activeUserId;
+                                const handle = a.user.username ? `@${a.user.username}` : a.user.name || "account";
+                                return (
+                                    <li
+                                        key={a.session.token}
+                                        className={`flex items-center rounded-2xl pr-1.5 transition-colors ${isActive ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
+                                    >
+                                        <button
+                                            onClick={() => {
+                                                if (isActive) { setAccountOpen(false); return; }
+                                                setActive.mutate(a.session.token);
+                                            }}
+                                            disabled={setActive.isPending}
+                                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
+                                        >
+                                            <AccountAvatar className="size-8 shrink-0">
+                                                <AvatarImage src={a.user.avatar_url ?? undefined} alt={handle} className="object-cover" />
+                                                <AvatarFallback></AvatarFallback>
+                                            </AccountAvatar>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-sm font-semibold text-white">
+                                                    {a.user.name || handle}
+                                                </span>
+                                                <span className="block truncate text-xs font-medium text-zinc-500">
+                                                    {handle}
+                                                </span>
+                                            </span>
+                                            {isActive && <Check className="size-4 shrink-0 text-white" />}
+                                        </button>
+                                        {/* Per-account log out. `revoke` drops just this
+                                            session; signOut() would clear every account
+                                            on the device, which is what Disconnect is
+                                            for. */}
+                                        {!isActive && (
+                                            <button
+                                                onClick={() => revoke.mutate(a.session.token)}
+                                                disabled={revoke.isPending}
+                                                aria-label={`log out ${handle}`}
+                                                className="cursor-pointer rounded-full p-1.5 text-zinc-600 transition-colors hover:text-red-400"
+                                            >
+                                                <LogoutIcon className="size-4" />
+                                            </button>
+                                        )}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                        <a
+                            href="/login?add=1"
+                            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors ${atCapacity ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-white/[0.04]"}`}
+                            onClick={(e) => {
+                                // Past the cap the plugin silently declines to
+                                // register the new session, so the sign-in would
+                                // "work" and then be invisible here. Refuse instead.
+                                if (atCapacity) {
+                                    e.preventDefault();
+                                    appToast.error(`${MAX_DEVICE_ACCOUNTS} accounts is the limit — log one out first`);
+                                }
+                            }}
+                        >
+                            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.06] text-lg font-medium text-zinc-400">
+                                +
+                            </span>
+                            <span className="text-sm font-semibold text-white">add an existing account</span>
+                        </a>
+
+                        <div className="mx-3 my-1.5 h-px bg-white/[0.06]" />
+
+                        <p className="px-3 pt-1 pb-1.5 text-xs font-semibold text-zinc-500">
                             your wallets
                         </p>
                         {wallets.length === 0 ? (
@@ -208,10 +293,13 @@ export function WalletHeader({
                             key: "disconnect",
                             onClick: onSignOut,
                             className: "gap-3 px-4 cursor-pointer text-lg font-medium text-red-400/90 hover:bg-red-500/10 hover:text-red-400",
+                            // signOut() clears every _multi- cookie, so with
+                            // several accounts signed in this is all of them.
+                            // Logging out one is in the account switcher.
                             label: (
                                 <>
                                     <LogoutIcon className="w-5 h-5 shrink-0" />
-                                    Disconnect
+                                    {accounts.length > 1 ? "Log out all" : "Disconnect"}
                                 </>
                             ),
                         },
