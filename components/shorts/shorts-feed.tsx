@@ -65,7 +65,7 @@ export function ShortsFeed() {
 
     if (videos.length === 0 && !isLoading) {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-background">
+            <div className="w-full h-full flex items-center justify-center bg-sidebar">
                 <p className="text-zinc-500">No shorts available yet.</p>
             </div>
         );
@@ -90,8 +90,8 @@ export function ShortsFeed() {
 
     if (isLoading) {
         return (
-            <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-background">
-                <div className="absolute inset-0 bg-background" />
+            <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-sidebar">
+                <div className="absolute inset-0 bg-sidebar" />
                 <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-zinc-900/60">
                     <Skeleton name="shorts-video" loading>
                         <div className="w-full h-full bg-zinc-800/20" />
@@ -132,13 +132,13 @@ export function ShortsFeed() {
             <div
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="w-full h-full overflow-y-scroll snap-y snap-mandatory hidden-scrollbar relative bg-background"
+                className="w-full h-full overflow-y-scroll snap-y snap-mandatory hidden-scrollbar relative bg-sidebar"
             >
                 {videos.map((video) => (
                     <div
                         key={video.id}
                         data-video-id={video.id}
-                        className="short-video-container snap-start snap-always w-full h-full relative bg-background [contain:none] overflow-visible"
+                        className="short-video-container snap-start snap-always w-full h-full relative bg-sidebar [contain:none] overflow-visible"
                     >
                         <ShortVideoCard
                             video={video}

@@ -468,9 +468,9 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 <button
                     type="button"
                     onClick={loadNewAlerts}
-                    className="mx-1 mt-1 shrink-0 cursor-pointer rounded-full py-1.5 text-[12px] font-bold text-twitter2 transition-colors"
+                    className="mx-1 mt-1 shrink-0 cursor-pointer rounded-full py-1.5 text-[13px] font-bold text-twitter2 transition-colors"
                 >
-                    show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
+                    Show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
                 </button>
             )}
 
