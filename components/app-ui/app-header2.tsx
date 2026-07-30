@@ -19,6 +19,7 @@ import { GlobalSearch } from './global-search2'
 import { TradeNav } from '@/components/trade/trade-nav'
 import { MessagesNav } from '@/components/messages/messages-nav'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
  
 // Same skin as the live CreateMenu trigger below (52px circle,
 // bg-soft-gray-10), with the icon slot as the only shimmering part — the tile
@@ -155,30 +156,24 @@ export function AppHeader2() {
               The header is `fixed left-0 w-full`, so it does NOT shift with the
               inset when the sidebar opens, and these would otherwise sit on top
               of an expanded sidebar. They do not MOVE to get out of the way —
-              they stay exactly where they are and the sidebar covers them.
+              they hold their place and blur out while it's open.
 
-              Clip rather than z-index: the sidebar panel is also z-50, so at
-              equal depth DOM order decides and the header (rendered after it,
-              inside SidebarInset) always wins. Dropping these below it would
-              mean lifting them out of the header, which would also put them
-              under the header's own scroll backdrop. So the group clips itself
-              at the sidebar's right edge instead: same position, occluded by
-              exactly as much sidebar as overlaps it.
+              Not a z-index: the sidebar panel is also z-50, so at equal depth
+              DOM order decides and the header — rendered after it, inside
+              SidebarInset — always wins. Putting the titles under the sidebar
+              would mean lifting them out of the header, which would also drop
+              them under the header's own scroll backdrop (85% opaque on
+              /settings once scrolled) and wash them out. Raising the SIDEBAR
+              instead would cover the toggle and the logo with it, and the
+              toggle is what closes the sidebar.
 
-              The inset is measured from the group's own left edge, which is the
-              header gutter plus the trigger (40) + gap (12) + logo (22) + gap
-              (12). Open dropdowns are unaffected — GooDropdown portals to
-              <body>, so the clip can't reach them. */}
+              pointer-events-none while faded, so an invisible TradeNav can't
+              still be clicked. */}
           <div
-            className="flex items-center gap-3"
-            style={
-              sidebarState === 'expanded'
-                ? {
-                    clipPath:
-                      'inset(0 0 0 max(0px, calc(var(--sidebar-width) - var(--header-px) - 86px)))',
-                  }
-                : undefined
-            }
+            className={cn(
+              'flex items-center gap-3 transition-[opacity,filter] duration-200 ease-out',
+              sidebarState === 'expanded' && 'pointer-events-none opacity-0 blur-sm',
+            )}
           >
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
