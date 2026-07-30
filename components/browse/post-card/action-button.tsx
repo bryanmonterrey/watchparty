@@ -2,6 +2,7 @@
 
 import React from "react";
 import { cn, compactCount } from "@/lib/utils";
+import { PopNumber } from "@/components/ui/pop-number";
 
 interface ActionButtonProps {
     icon: React.ReactNode;
@@ -52,8 +53,9 @@ export function ActionButton({
                 )}>
                     {/* Shortened, so the bar's view count reads the same as the
                         stat above it — and so a six-figure count can't stretch
-                        the row. */}
-                    {(count === 0 && hideCountAtZero) ? "" : compactCount(count)}
+                        the row. Pops on change: a like is the clearest case of a
+                        number moving under the user. */}
+                    {(count === 0 && hideCountAtZero) ? "" : <PopNumber value={compactCount(count)} />}
                 </span>
             )}
         </button>

@@ -31,6 +31,19 @@
   --like-particle-dist: 20px;
   --like-particle-size: 2.5px;
   --like-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* ── transitions.dev: number pop-in (02-number-pop-in.md) ──────────────
+     Every number that can change re-enters through .t-digit-group — view
+     counts, engagement counts, the wallet balance, token prices. Stock
+     tuning, except the distance and duration are pulled in a little: these
+     land in dense rows (a token list, an action bar) where the stock 8px /
+     500ms read as a lurch rather than a tick. */
+  --digit-dur: 420ms;
+  --digit-distance: 6px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-dir-x: 0;
+  --digit-dir-y: 1;
 
   --radius: 0.625rem;
   /* AppHeader height (h-11 content + py-3 = 68px). The header pins itself to
@@ -954,6 +967,50 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 
   @media (prefers-reduced-motion: reduce) {
     .t-like-icon, .t-like-particles i { animation: none !important; }
+  }
+}
+
+/* ── transitions.dev: number pop-in (02-number-pop-in.md) ─────────────────
+   Pasted verbatim from the skill. Driven by components/ui/pop-number.tsx,
+   which rebuilds the digit spans and replays by removing .is-animating,
+   forcing a reflow, then re-adding it — the reflow is what makes it replay,
+   so don't "simplify" that away. Variables live in :root at the top.
+
+   Deliberately NOT played on first mount: a token list mounting twenty rows
+   would pop twenty numbers at once. It fires on change only. */
+@layer components {
+  @keyframes t-digit-pop-in {
+    0%   {
+      transform: translate(
+        calc(var(--digit-distance) * var(--digit-dir-x)),
+        calc(var(--digit-distance) * var(--digit-dir-y))
+      );
+      opacity: 0;
+      filter: blur(var(--digit-blur));
+    }
+    100% { transform: translate(0, 0); opacity: 1; filter: blur(0); }
+  }
+
+  .t-digit-group {
+    display: inline-flex;
+    align-items: baseline;
+  }
+  .t-digit {
+    display: inline-block;
+    will-change: transform, opacity, filter;
+  }
+  .t-digit-group.is-animating .t-digit {
+    animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+  }
+  .t-digit-group.is-animating .t-digit[data-stagger="1"] {
+    animation-delay: var(--digit-stagger);
+  }
+  .t-digit-group.is-animating .t-digit[data-stagger="2"] {
+    animation-delay: calc(var(--digit-stagger) * 2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-digit-group .t-digit { animation: none !important; }
   }
 }
 

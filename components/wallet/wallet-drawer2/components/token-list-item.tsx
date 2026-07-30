@@ -8,6 +8,7 @@ import type { ChainId } from "@/lib/chains/types";
 import { getChainOrDefault } from "@/lib/chains/registry";
 import { isVerifiedToken } from "@/lib/tokens/verified";
 import { VerifiedTokenBadge } from "@/components/tokens/verified-token-badge";
+import { PopNumber } from "@/components/ui/pop-number";
 
 interface TokenListItemProps {
     icon?: string;
@@ -69,10 +70,14 @@ export function TokenListItem({
                         )}
                     </p>
                     <p className="text-md font-semibold text-zinc-500">
-                        {hideBalances ? "••••••" : balance.toLocaleString(undefined, {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 4,
-                        })}
+                        {hideBalances ? "••••••" : (
+                            <PopNumber
+                                value={balance.toLocaleString(undefined, {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 4,
+                                })}
+                            />
+                        )}
                     </p>
                 </div>
             </div>
@@ -87,11 +92,12 @@ export function TokenListItem({
                 ) : (
                     <>
                         <p className="text-md text-white">
-                            $
-                            {(usdValue ?? 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                            })}
+                            <PopNumber
+                                value={`$${(usdValue ?? 0).toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}`}
+                            />
                         </p>
                         <p className={cn(
                             "text-md font-medium",
@@ -106,12 +112,12 @@ export function TokenListItem({
                                 const isPositive = usdChange > 0;
                                 const isNegative = usdChange < 0;
                                 return (
-                                    <>
-                                        {isPositive ? "+" : isNegative ? "-" : ""}${Math.abs(usdChange).toLocaleString(undefined, {
+                                    <PopNumber
+                                        value={`${isPositive ? "+" : isNegative ? "-" : ""}$${Math.abs(usdChange).toLocaleString(undefined, {
                                             minimumFractionDigits: 2,
                                             maximumFractionDigits: 2,
-                                        })}
-                                    </>
+                                        })}`}
+                                    />
                                 );
                             })()}
                         </p>

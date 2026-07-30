@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { PopNumber } from "@/components/ui/pop-number";
 
 interface WalletBalanceProps {
     totalUsdBalance: number | null;
@@ -51,7 +52,9 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                     <p className="text-5xl font-bold text-white tracking-[0.2em] leading-none">••••••</p>
                 ) : (
                     <p className="text-5xl font-bold text-white">
-                        ${totalUsdBalance !== null ? totalUsdBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                        <PopNumber
+                            value={`$${totalUsdBalance !== null ? totalUsdBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}`}
+                        />
                     </p>
                 )}
             </div>
@@ -66,10 +69,12 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                 ) : (
                     <>
                         <span className={cn("text-[15px] font-bold", changeColor)}>
-                            {isPositive ? "+" : isNegative ? "-" : ""}${Math.abs(usdChange24h).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <PopNumber
+                                value={`${isPositive ? "+" : isNegative ? "-" : ""}$${Math.abs(usdChange24h).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            />
                         </span>
                         <div className={cn("px-2 py-0.5 rounded-md text-[13px] font-bold", changeBg)}>
-                            {isPositive ? "+" : ""}{pctChange24h.toFixed(2)}%
+                            <PopNumber value={`${isPositive ? "+" : ""}${pctChange24h.toFixed(2)}%`} />
                         </div>
                     </>
                 )}

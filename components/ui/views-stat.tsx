@@ -1,5 +1,6 @@
 import { BarsIcon } from "@/components/icons";
 import { cn, compactCount } from "@/lib/utils";
+import { PopNumber } from "@/components/ui/pop-number";
 
 /**
  * A view count, read as the engagement bar plus a shortened number.
@@ -26,7 +27,7 @@ export function ViewsStat({
     return (
         <span className={cn("flex items-center gap-1 tabular-nums", className)}>
             <BarsIcon className={cn("size-6 shrink-0", iconClassName)} />
-            {compactCount(views)}
+            <PopNumber value={compactCount(views)} />
         </span>
     );
 }
