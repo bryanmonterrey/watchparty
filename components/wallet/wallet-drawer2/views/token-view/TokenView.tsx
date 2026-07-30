@@ -67,7 +67,7 @@ export function TokenDetailView({ token, tokens, onBack, onSend, onReceive, onSw
                         <span className="text-2xl font-bold text-white/90">{token.name}</span>
                         {/* Same mark the list row carries, one click deeper. */}
                         {isVerifiedToken({ mint: token.mint, chain: token.chain }) && (
-                            <VerifiedTokenBadge className="p-1" />
+                            <VerifiedTokenBadge className="size-5" />
                         )}
                     </div>
                 </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
+import { TradeUpIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 
@@ -71,9 +71,11 @@ export function TokenAction({
         "inline-flex shrink-0 items-center gap-0.5 font-extrabold text-twitter2 transition-opacity hover:opacity-80",
         ACTION_TEXT[size],
     );
+    // The same mark the header's trade switcher gives Perpetuals, so the coin
+    // action and that menu row read as the same idea.
     const arrow = (
         <HugeiconsIcon
-            icon={ArrowUpRight01Icon}
+            icon={TradeUpIcon}
             className={size === "xs" ? "size-3.5" : "size-4"}
             strokeWidth={2.5}
         />
