@@ -16,7 +16,6 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { Avatar as AccountAvatar } from "@/components/ui/avatar";
 
 interface WalletHeaderProps {
     username: string;
@@ -143,10 +142,14 @@ export function WalletHeader({
                                             disabled={setActive.isPending}
                                             className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
                                         >
-                                            <AccountAvatar className="size-8 shrink-0">
+                                            {/* That account's own avatar, from the
+                                                session row — parseUserOutput passes
+                                                our additionalFields through, so
+                                                avatar_url is already here. */}
+                                            <Avatar className="size-9 shrink-0">
                                                 <AvatarImage src={a.user.avatar_url ?? undefined} alt={handle} className="object-cover" />
-                                                <AvatarFallback></AvatarFallback>
-                                            </AccountAvatar>
+                                                <AvatarFallback />
+                                            </Avatar>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block truncate text-sm font-semibold text-white">
                                                     {a.user.name || handle}

@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth/client";
+import { useRouter } from "next/navigation";
+import {
+    listDeviceSessions,
+    revokeDeviceSession,
+    setActiveDeviceSession,
+    type DeviceSessionRow,
+} from "@/lib/auth/client";
 
 /**
  * Every account signed in on this device — better-auth's multiSession plugin.
@@ -10,63 +16,52 @@ import { authClient } from "@/lib/auth/client";
  * endpoint that mints a session, so OTP, OAuth, SIWS and passkey logins all
  * land in this list without any per-flow code. What the app has to provide is
  * the UI, which is what this hook feeds.
- *
- * The rows carry the full user record (the plugin runs parseUserOutput, so our
- * `additionalFields` — username, avatar_url, wallet_address — come through), so
- * a switcher needs no second lookup.
  */
 
 /** Keep in step with `maximumSessions` in lib/auth/server.ts. */
 export const MAX_DEVICE_ACCOUNTS = 10;
 
-export interface DeviceSession {
-    session: { token: string; userId: string; expiresAt: string | Date };
-    user: {
-        id: string;
-        name?: string | null;
-        email?: string | null;
-        username?: string | null;
-        avatar_url?: string | null;
-    };
-}
+export type DeviceSession = DeviceSessionRow;
 
 export function useDeviceSessions(enabled = true) {
     const queryClient = useQueryClient();
+    const router = useRouter();
 
     const query = useQuery({
         queryKey: ["device-sessions"],
-        queryFn: async () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data } = await (authClient as any).multiSession.listDeviceSessions();
-            return (data ?? []) as DeviceSession[];
-        },
+        queryFn: listDeviceSessions,
         enabled,
         staleTime: 60_000,
     });
 
     const setActive = useMutation({
         mutationFn: async (sessionToken: string) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const res = await (authClient as any).multiSession.setActive({ sessionToken });
+            const res = await setActiveDeviceSession(sessionToken);
             if (res?.error) throw new Error(res.error.message ?? "Could not switch account");
             return res;
         },
-        // A hard reload rather than cache invalidation, deliberately. Switching
-        // the active session changes who every server component, tRPC query and
-        // cached list belongs to — repainting from a warm cache would show the
-        // previous account's data under the new account's name.
+        // No page reload. The cookie has already flipped by the time this
+        // resolves, so the two things that still hold the old account's data are
+        // the query cache and the rendered server components — clear one, refresh
+        // the other, and client state (open drawer, scroll position) survives.
+        //
+        // clear() rather than invalidateQueries: invalidation keeps serving stale
+        // data while it refetches, which here means the previous account's
+        // balances under the new account's name.
         onSuccess: () => {
-            window.location.reload();
+            queryClient.clear();
+            router.refresh();
         },
     });
 
     const revoke = useMutation({
         mutationFn: async (sessionToken: string) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const res = await (authClient as any).multiSession.revoke({ sessionToken });
+            const res = await revokeDeviceSession(sessionToken);
             if (res?.error) throw new Error(res.error.message ?? "Could not log out that account");
             return res;
         },
+        // Only the list changes — the active account is untouched, so there is
+        // nothing to refresh beyond it.
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["device-sessions"] });
         },

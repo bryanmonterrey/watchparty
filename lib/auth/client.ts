@@ -45,3 +45,41 @@ export function verifyEmailOtp(email: string, otp: string): Promise<OtpResult> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (authClient as any).signIn.emailOtp({ email, otp });
 }
+
+// ── multiSession (several accounts signed in on one device) ─────────────────
+// Same inference casualty as emailOtp above, so the same treatment. Shapes are
+// the plugin's own: list-device-sessions returns { session, user } rows deduped
+// by user, and both set-active and revoke take the session's token.
+//
+// `user` carries our `additionalFields` — better-auth's parseUserOutput merges
+// them into the output schema — which is why a switcher gets username and
+// avatar_url without a second lookup.
+
+export interface DeviceSessionRow {
+  session: { token: string; userId: string; expiresAt: string | Date };
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    username?: string | null;
+    avatar_url?: string | null;
+  };
+}
+
+export async function listDeviceSessions(): Promise<DeviceSessionRow[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (authClient as any).multiSession.listDeviceSessions();
+  return (data ?? []) as DeviceSessionRow[];
+}
+
+/** Make one of the device's sessions the active one. */
+export function setActiveDeviceSession(sessionToken: string): Promise<OtpResult> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (authClient as any).multiSession.setActive({ sessionToken });
+}
+
+/** Sign ONE account out, leaving the rest signed in. `signOut()` clears them all. */
+export function revokeDeviceSession(sessionToken: string): Promise<OtpResult> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (authClient as any).multiSession.revoke({ sessionToken });
+}
