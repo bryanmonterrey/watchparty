@@ -74,11 +74,7 @@ export function TokenAction({
     // The same mark the header's trade switcher gives Perpetuals, so the coin
     // action and that menu row read as the same idea.
     const arrow = (
-        <HugeiconsIcon
-            icon={TradeUpIcon}
-            className={size === "xs" ? "size-3.5" : "size-4"}
-            strokeWidth={2.5}
-        />
+        <HugeiconsIcon icon={TradeUpIcon} className="size-6" strokeWidth={2.5} />
     );
 
     if (!mint) {
