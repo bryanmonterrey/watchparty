@@ -292,11 +292,16 @@ export function WalletDrawer({
                     </motion.div>
                 )}
 
-                {currentView === "receive" && (chainAddresses[chainKindOf(receiveChain)] || walletAddress) && (
+                {currentView === "receive" && (
                     <motion.div key="receive" {...viewMotionProps}>
                         <ReceiveView
                             chain={receiveChain}
-                            walletAddress={chainAddresses[chainKindOf(receiveChain)] ?? walletAddress!}
+                            // Strictly the address for the chain being received
+                            // on — it must never fall back to another chain's.
+                            // Showing the Solana address under a "receive on
+                            // Base" header is how a deposit gets lost. Undefined
+                            // until the query lands; the view skeletons it.
+                            walletAddress={chainAddresses[chainKindOf(receiveChain)]}
                             onChangeNetwork={() => setCurrentView("network")}
                             onBack={() => {
                                 setCurrentView("main");
@@ -406,7 +411,13 @@ export function WalletDrawer({
                             tokens={allTokens}
                             onBack={() => setCurrentView(tokenDetailOrigin)}
                             onSend={() => setCurrentView("send")}
-                            onReceive={() => setCurrentView("receive")}
+                            onReceive={() => {
+                                // Depositing THIS token, so receive opens on the
+                                // token's own network, not whatever chain the
+                                // receive screen was last left on.
+                                setReceiveChain(selectedToken.chain ?? "solana");
+                                setCurrentView("receive");
+                            }}
                             onSwap={() => setCurrentView("swap")}
                             onBuy={() => setCurrentView("buy")}
                             onSeeActivity={() => setCurrentView("activity")}

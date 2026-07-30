@@ -11,7 +11,8 @@ import type { ChainId } from "@/lib/chains/types";
 
 
 interface ReceiveViewProps {
-    walletAddress: string;
+    /** Undefined while the per-chain address is still being fetched. */
+    walletAddress?: string;
     onBack: () => void;
     onBuy: () => void;
     chain?: ChainId;
@@ -71,7 +72,13 @@ export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana", on
                     </div>
                 )}
 
-                <ReceiveQrCode walletAddress={walletAddress} />
+                {walletAddress ? (
+                    <ReceiveQrCode walletAddress={walletAddress} />
+                ) : (
+                    <div className="mb-8 flex justify-center">
+                        <div className="size-[224px] rounded-[32px] border border-zinc-800/60 shimmer-skeleton" />
+                    </div>
+                )}
 
                 <div className="flex-1 flex flex-col justify-end mt-auto space-y-3">
                     <div className="text-center px-4 space-y-1">
