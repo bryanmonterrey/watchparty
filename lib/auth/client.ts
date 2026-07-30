@@ -47,39 +47,52 @@ export function verifyEmailOtp(email: string, otp: string): Promise<OtpResult> {
 }
 
 // ── multiSession (several accounts signed in on one device) ─────────────────
-// Same inference casualty as emailOtp above, so the same treatment. Shapes are
-// the plugin's own: list-device-sessions returns { session, user } rows deduped
-// by user, and both set-active and revoke take the session's token.
+// Same inference casualty as emailOtp above — but NOT the same `any`, because
+// `any` switches type checking off at the call site. A typo'd method name or a
+// body of `{ token }` instead of `{ sessionToken }` would compile clean and fail
+// in the browser, which is precisely the class of bug types exist to catch.
 //
-// `user` carries our `additionalFields` — better-auth's parseUserOutput merges
-// them into the output schema — which is why a switcher gets username and
-// avatar_url without a second lookup.
+// So the namespace is asserted ONCE to a narrow declared interface, and every
+// call is checked against it. The row type is derived from the SERVER endpoint,
+// where better-auth's types are intact, so if the plugin's response shape
+// changes upstream this file stops compiling instead of quietly handing the UI a
+// different object.
+type MultiSessionRows = Awaited<ReturnType<typeof auth.api.listDeviceSessions>>;
+type ServerDeviceSessionRow = MultiSessionRows extends readonly (infer R)[] ? R : never;
 
-export interface DeviceSessionRow {
-  session: { token: string; userId: string; expiresAt: string | Date };
-  user: {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    username?: string | null;
-    avatar_url?: string | null;
-  };
+/**
+ * `user` carries our `additionalFields` at runtime — better-auth's
+ * parseUserOutput merges them into the output schema — which is why the account
+ * switcher gets username and avatar_url with no second lookup. They're spelled
+ * out here because the endpoint's own type is the base user record.
+ */
+export type DeviceSessionRow = ServerDeviceSessionRow & {
+  user: { username?: string | null; avatar_url?: string | null };
+};
+
+type ClientResult<T> = { data: T | null; error: { message?: string } | null };
+
+interface MultiSessionClientApi {
+  listDeviceSessions: () => Promise<ClientResult<DeviceSessionRow[]>>;
+  setActive: (input: { sessionToken: string }) => Promise<ClientResult<unknown>>;
+  revoke: (input: { sessionToken: string }) => Promise<ClientResult<unknown>>;
 }
 
+/** The one assertion. Everything downstream of it is type-checked. */
+const multiSession = (authClient as unknown as { multiSession: MultiSessionClientApi })
+  .multiSession;
+
 export async function listDeviceSessions(): Promise<DeviceSessionRow[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (authClient as any).multiSession.listDeviceSessions();
-  return (data ?? []) as DeviceSessionRow[];
+  const { data } = await multiSession.listDeviceSessions();
+  return data ?? [];
 }
 
 /** Make one of the device's sessions the active one. */
-export function setActiveDeviceSession(sessionToken: string): Promise<OtpResult> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (authClient as any).multiSession.setActive({ sessionToken });
+export function setActiveDeviceSession(sessionToken: string) {
+  return multiSession.setActive({ sessionToken });
 }
 
 /** Sign ONE account out, leaving the rest signed in. `signOut()` clears them all. */
-export function revokeDeviceSession(sessionToken: string): Promise<OtpResult> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (authClient as any).multiSession.revoke({ sessionToken });
+export function revokeDeviceSession(sessionToken: string) {
+  return multiSession.revoke({ sessionToken });
 }
