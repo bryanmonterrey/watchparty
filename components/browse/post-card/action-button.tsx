@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/lib/utils";
+import { cn, compactCount } from "@/lib/utils";
 
 interface ActionButtonProps {
     icon: React.ReactNode;
@@ -50,7 +50,10 @@ export function ActionButton({
                     "text-[13px] -ml-1 min-w-[2ch] tracking-tight tabular-nums transition-opacity duration-200",
                     (count === 0 && hideCountAtZero) ? "opacity-0 select-none" : (active && activeColor ? activeColor : "text-postgray")
                 )}>
-                    {(count === 0 && hideCountAtZero) ? "" : count}
+                    {/* Shortened, so the bar's view count reads the same as the
+                        stat above it — and so a six-figure count can't stretch
+                        the row. */}
+                    {(count === 0 && hideCountAtZero) ? "" : compactCount(count)}
                 </span>
             )}
         </button>

@@ -12,6 +12,7 @@ import { MoreHorizontal } from "lucide-react";
 import { ActionButton } from "./action-button";
 import { QuotedPostView } from "./quoted-post-view";
 import type { PostCardPost } from "./post-card.types";
+import { compactCount } from "@/lib/utils";
 
 interface PostCardBodyProps {
     post: PostCardPost;
@@ -173,11 +174,18 @@ export function PostCardBody({
                                     <span>{displayCreatedAt ? new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(displayCreatedAt)) : "--:--"}</span>
                                     <span>·</span>
                                     <span>{displayCreatedAt ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(displayCreatedAt)) : "Unknown date"}</span>
+                                    {/* The engagement bar IS the view count — the
+                                        same mark the action row below uses — so the
+                                        stat is the bar plus a shortened number
+                                        rather than a raw figure and the word
+                                        "Views". */}
                                     {views !== undefined && (
                                         <>
                                             <span>·</span>
-                                            <span className="text-white font-bold">{views}</span>
-                                            <span>Views</span>
+                                            <span className="flex items-center gap-1.5 font-bold text-white">
+                                                <BarsIcon className="h-4 w-4" />
+                                                {compactCount(views)}
+                                            </span>
                                         </>
                                     )}
                                 </div>
