@@ -35,8 +35,11 @@ interface WatchHeaderProps {
     giftSubs?: boolean;
     /** Bottom right: "4 views · yesterday", or the live viewer + duration chips. */
     stats?: ReactNode;
-    /** Third row, under the identity — <TokenRow />, the same coin line home's
-     *  video header runs. */
+    /**
+     * Third row, under the identity. Empty on both pages now — the coin's ticker
+     * pill was removed from the headers and its Launch/Buy moved into `stats`.
+     * The slot stays because the row is generic, not because anything fills it.
+     */
     tokenRow?: ReactNode;
     /**
      * Live page: the username switches back to the profile instead of navigating

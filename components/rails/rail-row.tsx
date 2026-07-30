@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { Squircle } from "@/components/ui/squircle";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
-import { TokenRow, type TokenRowToken } from "@/components/tokens/token-row";
 import { ViewsStat } from "@/components/ui/views-stat";
 
 // One rail row for the whole app — home's picker, the video page's up-next and
@@ -31,10 +30,6 @@ interface RailRowProps {
     title?: string | null;
     /** Sits after the badge on the identity line. Omit to leave it off. */
     views?: number | null;
-    /** Coin line under the identity, same pill the video header runs. */
-    token?: TokenRowToken | null;
-    /** What the coin pill's quick-buy keys its in-flight state on. */
-    postId?: string;
     /** Row-level menu, rendered on its own line at the end. */
     menu?: React.ReactNode;
     /** Home's picker: the row that's currently the hero. */
@@ -52,8 +47,6 @@ export function RailRow({
     verifiedTier,
     title,
     views,
-    token,
-    postId,
     menu,
     isActive,
     href,
@@ -99,14 +92,13 @@ export function RailRow({
         </>
     );
 
-    // The coin pill and the menu are real controls — a Link and a button — so
-    // they CANNOT live inside the row's own button/link. Nesting them would be
-    // invalid HTML and their clicks would fight the row's. So the click target
-    // wraps the thumb and text only, and the extra lines are siblings under it.
-    // With no extras the result is identical to what this row has always been:
-    // a full-width target with the hover/active fill, just carried by the
-    // wrapper instead of the target itself.
-    const hasExtras = !!token || !!menu;
+    // The menu is a real button, so it CANNOT live inside the row's own
+    // button/link — nesting them would be invalid HTML and its clicks would
+    // fight the row's. So the click target wraps the thumb and text only, and
+    // the menu is a sibling under it. With no menu the result is identical to
+    // what this row has always been: a full-width target with the hover/active
+    // fill, just carried by the wrapper instead of the target itself.
+    const hasExtras = !!menu;
     const target = cn(RAIL_ROW, "cursor-pointer p-0");
 
     return (
@@ -129,21 +121,10 @@ export function RailRow({
 
                 {hasExtras && (
                     <div className={cn("flex flex-col", INFO_INDENT)}>
-                        {/* Ticker only — no Launch/Buy in the rail. xs because the
-                            rail is 300px wide and its title is 14px, so the
-                            header's pill sizing reads oversized here. */}
-                        {token && postId && (
-                            <TokenRow
-                                className="mt-1"
-                                size="xs"
-                                showAction={false}
-                                postId={postId}
-                                token={token}
-                            />
-                        )}
-                        {menu && <div className="flex justify-end">{menu}</div>}
+                        <div className="flex justify-end">{menu}</div>
                     </div>
                 )}
+
             </div>
         </Squircle>
     );

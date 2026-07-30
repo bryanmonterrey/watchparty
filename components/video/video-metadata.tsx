@@ -139,13 +139,13 @@ export function VideoMetadata({
                 // and the age of the video.
                 stats={
                     <>
-                        <ViewsStat views={views} />
                         {token && (
                             <>
-                                <span aria-hidden>·</span>
                                 <TokenAction token={token} postId={postId} size="lg" />
+                                <span aria-hidden>·</span>
                             </>
                         )}
+                        <ViewsStat views={views} />
                         <span aria-hidden>·</span>
                         <span>{formatRelativeTime(new Date(createdAt).toISOString())}</span>
                     </>

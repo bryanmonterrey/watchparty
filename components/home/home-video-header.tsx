@@ -161,20 +161,12 @@ export function HomeVideoHeader({ video, className, action }: {
                 />
 
                 <div className="flex items-center gap-x-1.5 text-[16px] font-medium text-zinc-500">
-                    {video.isLive ? (
-                        <span className="flex items-center gap-1.5 font-bold text-pastelred">
-                            <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
-                            live
-                        </span>
-                    ) : (
-                        <ViewsStat views={video.views} />
-                    )}
-                    {/* The coin's action sits with the stats, not on a line of
-                        its own — the ticker pill is gone from this header, so
-                        Launch/Buy is all that's left of the coin row. */}
+                    {/* Action first, engagement stat second. The separator
+                        after it is conditional: with no views and not live there
+                        is nothing to separate from, and a dangling · would be
+                        left hanging before the date. */}
                     {hasToken && (
                         <>
-                            <span aria-hidden>·</span>
                             <TokenAction
                                 postId={video.id}
                                 token={{
@@ -184,7 +176,16 @@ export function HomeVideoHeader({ video, className, action }: {
                                     imageUrl: tokenImage,
                                 }}
                             />
+                            {(video.isLive || video.views != null) && <span aria-hidden>·</span>}
                         </>
+                    )}
+                    {video.isLive ? (
+                        <span className="flex items-center gap-1.5 font-bold text-pastelred">
+                            <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
+                            live
+                        </span>
+                    ) : (
+                        <ViewsStat views={video.views} />
                     )}
                     {video.createdAt && (
                         <>

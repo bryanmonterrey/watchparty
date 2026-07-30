@@ -115,18 +115,18 @@ export function StreamMetadata({
                 stats={
                     isLive || hostToken ? (
                         <>
-                            {isLive && (
-                                <>
-                                    <ViewerChip count={viewerCount} />
-                                    <DurationChip startedAt={startedAt} />
-                                </>
-                            )}
                             {hostToken && (
                                 <TokenAction
                                     token={hostToken}
                                     postId={`live:${host.id}`}
                                     size="lg"
                                 />
+                            )}
+                            {isLive && (
+                                <>
+                                    <ViewerChip count={viewerCount} />
+                                    <DurationChip startedAt={startedAt} />
+                                </>
                             )}
                         </>
                     ) : undefined
