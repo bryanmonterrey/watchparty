@@ -37,7 +37,13 @@ export const HOME_TAB_LIKED = "Liked";
  * stays selected underneath, and is still selected when the overlay closes.
  */
 export const HOME_TAB_CLIPS = "Clips";
-export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_LIKED, "Live", HOME_TAB_CLIPS, "New", "Upcoming"];
+/**
+ * "Online" is home's version of the video/live rails' "Live" tab, and it sits
+ * ahead of Liked. Only in HOME_RAIL_TABS — RAIL_TABS keeps "Live", which
+ * rail-video-list.tsx branches on to swap in the live-streams query.
+ */
+export const HOME_TAB_ONLINE = "Online";
+export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_ONLINE, HOME_TAB_LIKED, HOME_TAB_CLIPS, "New", "Upcoming"];
 
 export function RailTabs({
     tabs = RAIL_TABS,
