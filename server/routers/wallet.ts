@@ -39,6 +39,7 @@ import {
     sendOnChain as sendOnChainTx,
     validateAddress,
 } from "@/lib/chains/send";
+import { accrueSendFee } from "@/lib/chains/send/fees";
 import { getChain, CHAINS, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
@@ -672,6 +673,17 @@ export const walletRouter = router({
             try {
                 const seed = await getSeedForUser(ctx.user.id);
                 const result = await sendOnChainTx(seed, { ...input, chain: chain.id });
+
+                // EVM can't carry the platform fee in the same transaction, so
+                // it's recorded here and swept later. No-op on every other
+                // chain, which takes its fee in-transaction.
+                await accrueSendFee({
+                    userId: ctx.user.id,
+                    chain: chain.id,
+                    contract: input.contract,
+                    amount: input.amount,
+                    sourceTx: result.txId,
+                });
 
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
                 await invalidateCache(`assets:${chain.id}:${(await getAddressesByKind(ctx.user.id))[chain.kind]}`);

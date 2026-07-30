@@ -490,20 +490,18 @@ export function SendView({
                     chain={sendChain}
                 />
 
-                {/* What this send actually costs, per path. Solana takes the 0.5%
-                    platform fee in the asset being sent; the chains that go
-                    through sendOnChain take no platform fee and quote gas. */}
+                {/* What this send costs. The 0.5% is charged on every path — as
+                    an instruction on Solana, an output on Bitcoin, and accrued
+                    for a batched sweep on EVM, where a transfer can only pay one
+                    address. Either way the sender covers it and the recipient
+                    receives the full amount. Gas is quoted where we can. */}
                 {hasAmount && (
                     <p className="text-center text-[12px] text-zinc-500">
-                        {isSolanaSend ? (
-                            <>
-                                0.5% platform fee · {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))}{" "}
-                                {selectedToken?.symbol ?? "SOL"}
-                            </>
-                        ) : feeQuote ? (
-                            <>network fee · ~{feeQuote.feeFormatted.toFixed(6)} {feeQuote.symbol}</>
-                        ) : (
-                            <>network fee · {chainConfig.nativeCurrency.symbol} gas</>
+                        0.5% platform fee ·{" "}
+                        {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))}{" "}
+                        {selectedToken?.symbol ?? "SOL"}
+                        {!isSolanaSend && feeQuote && (
+                            <> · network fee ~{feeQuote.feeFormatted.toFixed(6)} {feeQuote.symbol}</>
                         )}
                     </p>
                 )}

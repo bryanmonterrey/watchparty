@@ -9,11 +9,37 @@
 import { Transaction, p2wpkh } from "@scure/btc-signer";
 import { hex } from "@scure/base";
 import { BITCOIN } from "../registry";
+import { isAddressFormat } from "../address";
 import { deriveBitcoin } from "../derive";
 import type { FeeEstimate, SendRequest, SendResult } from "./types";
 
 /** Below this, an output costs more to spend than it holds. */
 const DUST_LIMIT = BigInt(294);
+
+/** Matches the Solana send path. */
+const PLATFORM_FEE_BPS = BigInt(50);
+
+/**
+ * The platform fee, taken as one more output in the same transaction rather
+ * than a second transaction — a UTXO tx pays as many recipients as it likes,
+ * and an extra output costs 31 vBytes (see estimateVsize) instead of a whole
+ * second transaction's overhead.
+ *
+ * Returns 0 when there is no treasury configured, when the address is
+ * malformed, or when the fee would be a dust output — an unspendable output is
+ * worse than an uncollected fee, and neither is worth failing the user's send
+ * over.
+ */
+export function platformFeeFor(amount: bigint): { fee: bigint; treasury?: string } {
+  const treasury = process.env.TREASURY_BTC_ADDRESS;
+  if (!treasury) return { fee: BigInt(0) };
+  if (!isAddressFormat("bitcoin", treasury)) {
+    console.warn("TREASURY_BTC_ADDRESS is not a valid Bitcoin address — fee skipped");
+    return { fee: BigInt(0) };
+  }
+  const fee = (amount * PLATFORM_FEE_BPS) / BigInt(10_000);
+  return fee >= DUST_LIMIT ? { fee, treasury } : { fee: BigInt(0) };
+}
 
 interface Utxo {
   txid: string;
@@ -57,8 +83,18 @@ interface Selection {
 /**
  * Largest-first accumulation. Re-checks the fee after each pick because adding
  * an input raises the fee, which can undo a selection that just barely covered.
+ *
+ * `target` is everything being paid out (amount plus any platform fee), and
+ * `extraOutputs` is how many outputs beyond recipient+change the transaction
+ * carries — the miner fee scales with output count, so a selection that ignored
+ * the fee output would come up short by exactly its 31 vBytes.
  */
-function selectUtxos(utxos: Utxo[], target: bigint, feeRate: number): Selection {
+export function selectUtxos(
+  utxos: Utxo[],
+  target: bigint,
+  feeRate: number,
+  extraOutputs = 0
+): Selection {
   const sorted = [...utxos].sort((a, b) => b.value - a.value);
   const chosen: Utxo[] = [];
   let total = BigInt(0);
@@ -68,13 +104,17 @@ function selectUtxos(utxos: Utxo[], target: bigint, feeRate: number): Selection 
     total += BigInt(utxo.value);
 
     // Assume a change output while checking; drop it below if uneconomical.
-    const withChange = BigInt(Math.ceil(estimateVsize(chosen.length, 2) * feeRate));
+    const withChange = BigInt(
+      Math.ceil(estimateVsize(chosen.length, 2 + extraOutputs) * feeRate)
+    );
     if (total >= target + withChange) {
       const change = total - target - withChange;
       if (change >= DUST_LIMIT) return { chosen, fee: withChange, change };
 
       // Change would be dust — drop the output and give the remainder to the fee.
-      const noChange = BigInt(Math.ceil(estimateVsize(chosen.length, 1) * feeRate));
+      const noChange = BigInt(
+        Math.ceil(estimateVsize(chosen.length, 1 + extraOutputs) * feeRate)
+      );
       if (total >= target + noChange) {
         return { chosen, fee: total - target, change: BigInt(0) };
       }
@@ -89,7 +129,15 @@ export async function estimateBitcoinFee(
   request: SendRequest
 ): Promise<FeeEstimate> {
   const [utxos, feeRate] = await Promise.all([getUtxos(address), getFeeRate()]);
-  const { fee } = selectUtxos(utxos, BigInt(request.amount), feeRate);
+  const amount = BigInt(request.amount);
+  // Quote the transaction that will actually be built, fee output included.
+  const platform = platformFeeFor(amount);
+  const { fee } = selectUtxos(
+    utxos,
+    amount + platform.fee,
+    feeRate,
+    platform.fee > BigInt(0) ? 1 : 0
+  );
   return {
     fee: fee.toString(),
     feeFormatted: Number(fee) / 10 ** BITCOIN.nativeCurrency.decimals,
@@ -110,7 +158,13 @@ export async function sendBitcoin(
   if (amount <= BigInt(0)) throw new Error("Amount must be positive");
 
   const [utxos, feeRate] = await Promise.all([getUtxos(from), getFeeRate()]);
-  const { chosen, change } = selectUtxos(utxos, amount, feeRate);
+  const platform = platformFeeFor(amount);
+  const { chosen, change } = selectUtxos(
+    utxos,
+    amount + platform.fee,
+    feeRate,
+    platform.fee > BigInt(0) ? 1 : 0
+  );
 
   const tx = new Transaction();
   for (const utxo of chosen) {
@@ -122,6 +176,11 @@ export async function sendBitcoin(
   }
 
   tx.addOutputAddress(request.to, amount);
+  // The platform fee rides along as its own output — the recipient still
+  // receives the full amount, and the sender covers the fee.
+  if (platform.fee > BigInt(0) && platform.treasury) {
+    tx.addOutputAddress(platform.treasury, platform.fee);
+  }
   // The change output. Omitted only when selectUtxos decided it would be dust.
   if (change > BigInt(0)) tx.addOutputAddress(from, change);
 
