@@ -66,6 +66,18 @@ Follow-ups (small, whenever):
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.
+- **`verifiedTier` in better-auth `additionalFields` — confirm sign-UP still works (2026-07-30).**
+  Added so every session payload (including multiSession's device list) carries the
+  tier and the account switcher can badge each row without a per-account lookup.
+  Verified already: better-auth boots with it (`/api/auth/ok` → `{"ok":true}`), and
+  its own adapter returns it on a real user (`auth.$context` →
+  `internalAdapter.findUserByEmail` → `verifiedTier: null` present in the keys).
+  Unproven: the INSERT path on a brand-new sign-up. It should be fine —
+  `last_signed_in` is already `{ input: false }` with no default and sign-ups work —
+  but if a new account fails to register, **the fix is one line**: drop `verifiedTier`
+  back out of `lib/auth/server.ts` additionalFields and have the switcher fetch tiers
+  through tRPC instead (`components/wallet/wallet-drawer2/components/wallet-header.tsx`
+  reads `a.user.verifiedTier`; `lib/auth/client.ts` declares it on `DeviceSessionRow`).
 
 ## 🧪 Gamification test runbook (all shipped code, zero live usage — run in order)
 

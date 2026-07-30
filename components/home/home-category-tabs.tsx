@@ -17,7 +17,7 @@ export const HOME_TABS = [
     "Podcasts",
     "Streamers",
     "Traders",
-    "Special Events",
+    "Predictions",
     "Music",
     // Sits in the row as an ordinary tab for now, so it selects like the rest.
     // It reads as an action rather than a category, so pull it out of this list

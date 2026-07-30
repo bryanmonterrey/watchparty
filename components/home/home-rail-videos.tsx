@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { RailRow, RailRowSkeleton } from "@/components/rails/rail-row";
 import { HOME_TAB_LIKED } from "@/components/rails/rail-tabs";
 import { useHomeFeed } from "./home-feed-context";
+import { HomeRailRowMenu } from "./home-rail-row-menu";
 
 // The rail's video list — this is the carousel's picker, relocated. Clicking a
 // row makes it the hero, exactly as clicking a cell in the old 3x3 grid did.
@@ -66,6 +67,21 @@ export function HomeRailVideos() {
                     username={v.user.username}
                     verifiedTier={v.user.verifiedTier}
                     title={v.title}
+                    views={v.views}
+                    // Same pill the video header runs, on the same data — the
+                    // feed already returns all of it, so no extra fetch.
+                    token={
+                        v.ticker
+                            ? {
+                                id: v.tokenId ?? "",
+                                tokenAddress: v.tokenAddress,
+                                ticker: v.ticker,
+                                imageUrl: v.tokenImageUrl ?? v.thumbnailUrl ?? null,
+                            }
+                            : null
+                    }
+                    postId={v.id}
+                    menu={<HomeRailRowMenu postId={v.id} userId={v.user.id} />}
                     isActive={v.id === active?.id}
                     onSelect={() => setActiveId(v.id)}
                 />

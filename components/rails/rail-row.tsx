@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { Squircle } from "@/components/ui/squircle";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
+import { TokenRow, type TokenRowToken } from "@/components/tokens/token-row";
 
 // One rail row for the whole app — home's picker, the video page's up-next and
 // the live page's list are the same object doing three jobs, so they're one
@@ -16,6 +17,10 @@ import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components
 export const RAIL_ROW = "flex h-fit p-2 w-full items-start justify-start gap-3 text-left transition-colors";
 export const RAIL_THUMB = "relative h-[45px] w-[85px] shrink-0 overflow-hidden rounded-xs bg-muted";
 
+/** Thumb width + the row's gap-3 — what the extra lines indent to so they sit
+ *  under the text column rather than under the thumbnail. */
+const INFO_INDENT = "pl-[97px]";
+
 interface RailRowProps {
     thumbnailUrl?: string | null;
     isLive?: boolean | null;
@@ -23,6 +28,14 @@ interface RailRowProps {
     /** Already the EFFECTIVE tier — null for anyone hiding their badge. */
     verifiedTier?: string | null;
     title?: string | null;
+    /** Sits after the badge on the identity line. Omit to leave it off. */
+    views?: number | null;
+    /** Coin line under the identity, same pill the video header runs. */
+    token?: TokenRowToken | null;
+    /** What the coin pill's quick-buy keys its in-flight state on. */
+    postId?: string;
+    /** Row-level menu, rendered on its own line at the end. */
+    menu?: React.ReactNode;
     /** Home's picker: the row that's currently the hero. */
     isActive?: boolean;
     /** Navigates. Mutually exclusive with onSelect — pass one. */
@@ -31,17 +44,27 @@ interface RailRowProps {
     onSelect?: () => void;
 }
 
+function formatViews(n: number) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+    return `${n}`;
+}
+
 export function RailRow({
     thumbnailUrl,
     isLive,
     username,
     verifiedTier,
     title,
+    views,
+    token,
+    postId,
+    menu,
     isActive,
     href,
     onSelect,
 }: RailRowProps) {
-    const body = (
+    const info = (
         <>
             <span className={RAIL_THUMB}>
                 {thumbnailUrl && (
@@ -55,7 +78,7 @@ export function RailRow({
                 )}
             </span>
 
-            <span className="flex min-w-0 flex-1 flex-col gap-0.2">   
+            <span className="flex min-w-0 flex-1 flex-col gap-0.2">
                 <span
                     className={cn(
                         "line-clamp-2 text-sm font-bold leading-snug",
@@ -70,28 +93,52 @@ export function RailRow({
                         {verifiedTier === "verified" && <VerifiedBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "business" && <BusinessBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}
+                        {views != null && (
+                            <span className="shrink-0 text-xs font-medium text-flexwhite/50">
+                                {formatViews(views)} views
+                            </span>
+                        )}
                     </span>
                 )}
             </span>
         </>
     );
 
-    const shell = cn(RAIL_ROW, "cursor-pointer", isActive ? "bg-sidebar-hover/85" : "hover:bg-sidebar-hover-35/60");
+    // The coin pill and the menu are real controls — a Link and a button — so
+    // they CANNOT live inside the row's own button/link. Nesting them would be
+    // invalid HTML and their clicks would fight the row's. So the click target
+    // wraps the thumb and text only, and the extra lines are siblings under it.
+    // With no extras the result is identical to what this row has always been:
+    // a full-width target with the hover/active fill, just carried by the
+    // wrapper instead of the target itself.
+    const hasExtras = !!token || !!menu;
+    const target = cn(RAIL_ROW, "cursor-pointer p-0");
 
-    // autoEffects off: the row has no border for the clip-path to eat, and it
-    // avoids the wrapper div that would otherwise sit between the list and the
-    // row. No rounded-* either — redundant under the clip.
     return (
         <Squircle asChild radius={12} autoEffects={false}>
-            {href ? (
-                <Link href={href} className={shell}>
-                    {body}
-                </Link>
-            ) : (
-                <button type="button" onClick={onSelect} aria-pressed={isActive} className={shell}>
-                    {body}
-                </button>
-            )}
+            <div
+                className={cn(
+                    "flex h-fit w-full flex-col p-2 transition-colors",
+                    isActive ? "bg-sidebar-hover/85" : "hover:bg-sidebar-hover-35/60",
+                )}
+            >
+                {href ? (
+                    <Link href={href} className={target}>
+                        {info}
+                    </Link>
+                ) : (
+                    <button type="button" onClick={onSelect} aria-pressed={isActive} className={target}>
+                        {info}
+                    </button>
+                )}
+
+                {hasExtras && (
+                    <div className={cn("flex flex-col", INFO_INDENT)}>
+                        {token && postId && <TokenRow className="mt-1" postId={postId} token={token} />}
+                        {menu && <div className="flex justify-end">{menu}</div>}
+                    </div>
+                )}
+            </div>
         </Squircle>
     );
 }
