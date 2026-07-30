@@ -8,7 +8,7 @@ import { cn, compactCount } from "@/lib/utils";
 import { useBurst } from "@/hooks/use-burst";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
-import { TokenRow } from "@/components/tokens/token-row";
+import { TokenAction } from "@/components/tokens/token-row";
 import { ViewsStat } from "@/components/ui/views-stat";
 import { WatchActions } from "@/components/video/watch-actions";
 import { formatRelativeTime } from "@/lib/date-utils";
@@ -140,24 +140,6 @@ export function HomeVideoHeader({ video, className, action }: {
                     )}
                 </div>
 
-                {/* Token row: ticker, then the action.
-                    The price line and the market cap are DELIBERATELY out for
-                    now — the line is being rebuilt on a real charting engine,
-                    and the cap comes back with it, for launched coins only.
-                    There is no `$—·—` placeholder in the meantime: an empty slot
-                    beats a wrong one. */}
-                {hasToken && (
-                    <TokenRow
-                        className="mt-0.5"
-                        postId={video.id}
-                        token={{
-                            id: video.tokenId ?? "",
-                            tokenAddress: video.tokenAddress,
-                            ticker: video.ticker ?? null,
-                            imageUrl: tokenImage,
-                        }}
-                    />
-                )}
             </div>
 
             {/* Third column, right end: the like button on one row, the count,
@@ -186,6 +168,23 @@ export function HomeVideoHeader({ video, className, action }: {
                         </span>
                     ) : (
                         <ViewsStat views={video.views} />
+                    )}
+                    {/* The coin's action sits with the stats, not on a line of
+                        its own — the ticker pill is gone from this header, so
+                        Launch/Buy is all that's left of the coin row. */}
+                    {hasToken && (
+                        <>
+                            <span aria-hidden>·</span>
+                            <TokenAction
+                                postId={video.id}
+                                token={{
+                                    id: video.tokenId ?? "",
+                                    tokenAddress: video.tokenAddress,
+                                    ticker: video.ticker ?? null,
+                                    imageUrl: tokenImage,
+                                }}
+                            />
+                        </>
                     )}
                     {video.createdAt && (
                         <>

@@ -17,6 +17,29 @@ export interface TokenRowToken {
     tokenAddress?: string | null;
 }
 
+/** `lg` on the video and live pages, where the header runs at page scale;
+ *  `sm` is home's compact header; `xs` is the 300px rail row, where a 16px
+ *  action was the largest text in a row whose title is 14px. */
+type Size = "xs" | "sm" | "lg";
+
+const ACTION_TEXT: Record<Size, string> = {
+    xs: "text-[11px]",
+    sm: "text-[16px]",
+    lg: "text-[16px]",
+};
+
+const PILL: Record<Size, string> = {
+    xs: "py-0.5 pl-0.5 pr-2 text-[11px]",
+    sm: "py-1 pl-1 pr-2.5 text-[12px]",
+    lg: "py-1 pl-1.5 pr-3 text-[14px]",
+};
+
+const PILL_IMAGE: Record<Size, string> = {
+    xs: "size-3.5",
+    sm: "size-4",
+    lg: "size-5",
+};
+
 /**
  * LAUNCH vs BUY is the token model, not a label choice: content always creates a
  * draft, and the first buyer IS the launch — they pay and receive, while the
@@ -27,7 +50,15 @@ export interface TokenRowToken {
  * saved preset (same as the trending board), while launching has to name an
  * amount and create the pool, so it goes to the token page's first-buy card.
  */
-function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: string; size: Size }) {
+export function TokenAction({
+    token,
+    postId,
+    size = "sm",
+}: {
+    token: TokenRowToken;
+    postId: string;
+    size?: Size;
+}) {
     const { quickBuy, buyingId } = useQuickBuy();
     const mint = token.tokenAddress;
     // shrink-0 so the action is never what gives way when the row is tight.
@@ -63,29 +94,6 @@ function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: st
         </button>
     );
 }
-
-/** `lg` on the video and live pages, where the header runs at page scale;
- *  `sm` is home's compact header; `xs` is the 300px rail row, where a 16px
- *  action was the largest text in a row whose title is 14px. */
-type Size = "xs" | "sm" | "lg";
-
-const ACTION_TEXT: Record<Size, string> = {
-    xs: "text-[11px]",
-    sm: "text-[16px]",
-    lg: "text-[16px]",
-};
-
-const PILL: Record<Size, string> = {
-    xs: "py-0.5 pl-0.5 pr-2 text-[11px]",
-    sm: "py-1 pl-1 pr-2.5 text-[12px]",
-    lg: "py-1 pl-1.5 pr-3 text-[14px]",
-};
-
-const PILL_IMAGE: Record<Size, string> = {
-    xs: "size-3.5",
-    sm: "size-4",
-    lg: "size-5",
-};
 
 export function TokenRow({
     token,

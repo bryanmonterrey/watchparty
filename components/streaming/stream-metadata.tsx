@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { UserType } from "@/db/schema/auth/user";
 import { WatchHeader, WatchHeaderSkeleton } from "@/components/video/watch-header";
-import { TokenRow } from "@/components/tokens/token-row";
+import { TokenAction } from "@/components/tokens/token-row";
 import { trpc } from "@/lib/trpc/client";
 
 interface StreamMetadataProps {
@@ -91,7 +91,7 @@ export function StreamMetadata({
                     WatchHeader, so both wait on the same shape. This was a
                     hand-rolled copy that had drifted from it (ringed avatar,
                     h-9 actions, title above the row). */}
-                <WatchHeaderSkeleton tokenRow />
+                <WatchHeaderSkeleton />
 
                 {/* Description Block Skeleton */}
                 <div className="shimmer-skeleton h-24 w-full rounded-xl mt-1" />
@@ -104,16 +104,8 @@ export function StreamMetadata({
             <WatchHeader
                 user={host}
                 title={streamTitle ?? `${host.name} is live`}
-                tokenRow={
-                    hostToken ? (
-                        <TokenRow
-                            token={hostToken}
-                            postId={`live:${host.id}`}
-                            size="lg"
-                            fallbackImage={host.avatar_url}
-                        />
-                    ) : undefined
-                }
+                // No ticker pill: the coin's action moved to the stats line,
+                // same as the video page.
                 // The switch back to the profile. It was on the display name,
                 // which this header no longer shows — @username is the identity
                 // here, and clicking it means the same thing.
@@ -121,10 +113,21 @@ export function StreamMetadata({
                 nameTitle="Switch to profile"
                 // Bottom right, where the video page puts its view count.
                 stats={
-                    isLive ? (
+                    isLive || hostToken ? (
                         <>
-                            <ViewerChip count={viewerCount} />
-                            <DurationChip startedAt={startedAt} />
+                            {isLive && (
+                                <>
+                                    <ViewerChip count={viewerCount} />
+                                    <DurationChip startedAt={startedAt} />
+                                </>
+                            )}
+                            {hostToken && (
+                                <TokenAction
+                                    token={hostToken}
+                                    postId={`live:${host.id}`}
+                                    size="lg"
+                                />
+                            )}
                         </>
                     ) : undefined
                 }

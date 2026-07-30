@@ -25,7 +25,7 @@ export function ViewsStat({
     if (views == null) return null;
     return (
         <span className={cn("flex items-center gap-1 tabular-nums", className)}>
-            <BarsIcon className={cn("size-4 shrink-0", iconClassName)} />
+            <BarsIcon className={cn("size-6 shrink-0", iconClassName)} />
             {compactCount(views)}
         </span>
     );

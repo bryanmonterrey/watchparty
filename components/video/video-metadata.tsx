@@ -12,7 +12,7 @@ import { WatchHeader, WatchHeaderSkeleton } from "@/components/video/watch-heade
 import { UserType } from "@/db/schema/auth/user";
 import { CommentSection } from "@/components/browse/comment-section";
 import { type InlineChipToken } from "@/components/tokens/token-inline-chip";
-import { TokenRow } from "@/components/tokens/token-row";
+import { TokenAction } from "@/components/tokens/token-row";
 import { ViewsStat } from "@/components/ui/views-stat";
 
 interface VideoAuthor {
@@ -80,7 +80,7 @@ export function VideoMetadata({
                     to be hand-rolled here and had drifted back to the pre-
                     WatchHeader layout (title stacked above the row, size-20
                     ringed avatar), which is why it didn't match the live page. */}
-                <WatchHeaderSkeleton tokenRow />
+                <WatchHeaderSkeleton />
 
                 {/* Description Block — meta line + two text lines in the box */}
                 <div className="mt-1 flex flex-col gap-2 rounded-xl bg-white/5 p-3">
@@ -133,12 +133,19 @@ export function VideoMetadata({
             <WatchHeader
                 user={author as unknown as UserType}
                 title={title ?? "Untitled"}
-                tokenRow={token ? <TokenRow token={token} postId={postId} size="lg" /> : undefined}
+                // No ticker pill: the coin's action moved down to the stats
+                // line, beside the view count.
                 // Bottom right, where the meta row used to be inline: the count
                 // and the age of the video.
                 stats={
                     <>
                         <ViewsStat views={views} />
+                        {token && (
+                            <>
+                                <span aria-hidden>·</span>
+                                <TokenAction token={token} postId={postId} size="lg" />
+                            </>
+                        )}
                         <span aria-hidden>·</span>
                         <span>{formatRelativeTime(new Date(createdAt).toISOString())}</span>
                     </>
