@@ -249,6 +249,11 @@
   --color-bleu: rgb(34, 79, 255);
   --color-black1: #0C0C0E;
   --color-black: #000000;
+  --color-grok: rgba(20, 20, 20, 0.75);
+  --color-grokdropdown: rgb(20, 20, 20);
+  --color-grokborder: oklch(0.9924 0 none / 0.08);
+  --color-groksecondary: rgb(158, 158, 158);
+  --color-grokwhite: rgb(252, 252, 252);
   --color-black3: #101114;
   --color-black4: #17181C;
   --color-darkfantasy: #FC353E;
