@@ -13,6 +13,10 @@ import type { ChainId } from "@/lib/chains/types";
 interface ReceiveViewProps {
     /** Undefined while the per-chain address is still being fetched. */
     walletAddress?: string;
+    /** True only while the address query is in flight. */
+    loadingAddress?: boolean;
+    /** Retry, for when the query settled without an address for this chain. */
+    onRetryAddress?: () => void;
     onBack: () => void;
     onBuy: () => void;
     chain?: ChainId;
@@ -34,8 +38,20 @@ const DEPOSIT_WARNING: Record<ChainId, string> = {
     robinhood: "only send ETH and tokens on Robinhood Chain",
 };
 
-export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana", onChangeNetwork }: ReceiveViewProps) {
+export function ReceiveView({
+    walletAddress,
+    loadingAddress,
+    onRetryAddress,
+    onBack,
+    onBuy,
+    chain = "solana",
+    onChangeNetwork,
+}: ReceiveViewProps) {
     const config = getChainOrDefault(chain);
+    // Three states, not two. A missing address used to skeleton forever, which
+    // looks identical to a hung request — so once the query has settled, say
+    // plainly that there's no address for this chain and offer a retry.
+    const missingAddress = !walletAddress && !loadingAddress;
     return (
         <motion.div
             initial={{ opacity: 0, y: 0 }}
@@ -74,6 +90,22 @@ export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana", on
 
                 {walletAddress ? (
                     <ReceiveQrCode walletAddress={walletAddress} />
+                ) : missingAddress ? (
+                    <div className="mb-8 flex justify-center">
+                        <div className="flex size-[224px] flex-col items-center justify-center gap-3 rounded-[32px] border border-zinc-800/60 px-6 text-center">
+                            <p className="text-[13px] font-medium text-zinc-400">
+                                no {config.name} address yet
+                            </p>
+                            {onRetryAddress && (
+                                <button
+                                    onClick={onRetryAddress}
+                                    className="cursor-pointer rounded-full bg-white/[0.06] px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.1]"
+                                >
+                                    try again
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 ) : (
                     <div className="mb-8 flex justify-center">
                         <div className="size-[224px] rounded-[32px] border border-zinc-800/60 shimmer-skeleton" />
@@ -90,12 +122,14 @@ export function ReceiveView({ walletAddress, onBack, onBuy, chain = "solana", on
                         </p>
                     </div>
 
-                    <ReceiveActions walletAddress={walletAddress} />
+                    <ReceiveActions walletAddress={walletAddress} missingAddress={missingAddress} />
 
                     <div className="pt-2">
+                        {/* w-2/3, centred — matches the address card and copy
+                            button so the three read as one stack. */}
                         <button
                             onClick={onBuy}
-                            className="w-full cursor-pointer h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold flex items-center justify-center gap-2 transition-all"
+                            className="mx-auto w-2/3 cursor-pointer h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold flex items-center justify-center gap-2 transition-all"
                         >
                             <CreditCard className="w-5 h-5" />
                             Buy {config.nativeCurrency.symbol} with Fiat

@@ -23,7 +23,11 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
     const enabled = !!open && !!walletAddress;
 
     // Every derived address, so receive/send can show the right one per chain.
-    const { data: chainAddresses } = trpc.wallet.getChainAddresses.useQuery(undefined, {
+    const {
+        data: chainAddresses,
+        isPending: isLoadingChainAddresses,
+        refetch: refetchChainAddresses,
+    } = trpc.wallet.getChainAddresses.useQuery(undefined, {
         enabled: !!open,
         staleTime: 5 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
@@ -312,6 +316,11 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
             ...(chainAddresses ?? {}),
             solana: chainAddresses?.solana ?? walletAddress ?? undefined,
         } as Partial<Record<string, string>>,
+        // Receive needs to tell "still fetching" from "there is no address for
+        // this chain". Without it, a chain the query never returns shows a
+        // skeleton forever, which is indistinguishable from a hung request.
+        isLoadingChainAddresses,
+        refetchChainAddresses,
         /** Chains whose holdings may be incomplete, and chains we couldn't reach. */
         partial: chainAssets?.partial ?? [],
         failedChains: chainAssets?.failed ?? [],

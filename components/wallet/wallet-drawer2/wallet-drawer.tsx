@@ -153,6 +153,8 @@ export function WalletDrawer({
         hiddenCollectionIds,
         hiddenTokenMints,
         chainAddresses,
+        isLoadingChainAddresses,
+        refetchChainAddresses,
     } = useWalletData({ walletAddress, open: resolvedOpen, activeTab });
 
     const onOpenChangeHandler = (next: boolean) => {
@@ -312,6 +314,8 @@ export function WalletDrawer({
                             // Base" header is how a deposit gets lost. Undefined
                             // until the query lands; the view skeletons it.
                             walletAddress={chainAddresses[chainKindOf(receiveChain)]}
+                            loadingAddress={isLoadingChainAddresses}
+                            onRetryAddress={() => { refetchChainAddresses(); }}
                             onChangeNetwork={() => setCurrentView("network")}
                             onBack={() => {
                                 setCurrentView("main");

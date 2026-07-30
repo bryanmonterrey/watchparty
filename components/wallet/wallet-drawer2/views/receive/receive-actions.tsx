@@ -8,9 +8,11 @@ import { motion, AnimatePresence } from "motion/react";
 interface ReceiveActionsProps {
     /** Undefined while the per-chain address is still being fetched. */
     walletAddress?: string;
+    /** The query settled with no address for this chain — say so, don't shimmer. */
+    missingAddress?: boolean;
 }
 
-export function ReceiveActions({ walletAddress }: ReceiveActionsProps) {
+export function ReceiveActions({ walletAddress, missingAddress }: ReceiveActionsProps) {
     const [copied, setCopied] = React.useState(false);
 
     const handleCopy = async () => {
@@ -27,7 +29,7 @@ export function ReceiveActions({ walletAddress }: ReceiveActionsProps) {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="mx-auto w-2/3 space-y-4">
             {/* Wallet Address Display */}
             <motion.button
                 whileHover={{ backgroundColor: "#252526" }}
@@ -41,6 +43,8 @@ export function ReceiveActions({ walletAddress }: ReceiveActionsProps) {
                     <p className="text-[14px] font-medium text-white break-all leading-relaxed">
                         {walletAddress}
                     </p>
+                ) : missingAddress ? (
+                    <p className="text-[14px] font-medium text-zinc-500">not available yet</p>
                 ) : (
                     <span className="my-[3px] h-4 w-[85%] rounded-full shimmer-skeleton" />
                 )}
