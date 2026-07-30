@@ -8,7 +8,6 @@ import {
     SettingsIcon, PowerIcon, WalletIcon, CopyIcon, LogoutIcon,
     VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon,
 } from "@/components/icons";
-import { shortenWalletAddress } from "@/lib/utils";
 import { appToast } from "@/components/app-ui/app-toast";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
 import {
@@ -58,6 +57,9 @@ export function WalletHeader({
     // is fetched until the panel opens.
     const { data: session } = useAuthSession();
     const activeUserId = session?.user?.id;
+    const activeUser = session?.user as
+        | { verifiedTier?: string | null; hideVerifiedBadge?: boolean | null }
+        | undefined;
     const { accounts, setActive, revoke, atCapacity } = useDeviceSessions(accountOpen);
 
     const handleCopyAddress = () => {
@@ -99,9 +101,16 @@ export function WalletHeader({
                                 <AvatarImage src={avatarUrl} alt={username} className="object-cover" />
                                 <AvatarFallback></AvatarFallback>
                             </Avatar>
-                            <div className="flex min-w-0 flex-col items-start">
+                            {/* Username and its badge, no address: the address was
+                                the only thing making this two lines, and rendering
+                                one is against house rules anyway (Copy Address on
+                                the power menu is the functional path). */}
+                            <div className="flex min-w-0 items-center gap-1">
                                 <p className="truncate text-base font-bold text-white">{username}</p>
-                                <p className="text-xs font-medium text-zinc-400">{shortenWalletAddress(walletAddress || "")}</p>
+                                <VerifiedBadge
+                                    tier={activeUser?.verifiedTier}
+                                    hidden={activeUser?.hideVerifiedBadge}
+                                />
                             </div>
                             <ChevronDown
                                 className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}

@@ -19,6 +19,7 @@ import { GlobalSearch } from './global-search2'
 import { TradeNav } from '@/components/trade/trade-nav'
 import { MessagesNav } from '@/components/messages/messages-nav'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
  
 // Same skin as the live CreateMenu trigger below (52px circle,
 // bg-soft-gray-10), with the icon slot as the only shimmering part — the tile
@@ -149,6 +150,23 @@ export function AppHeader2() {
               <PinkStarLogo className="size-5.5" />
             </Link>
           )}
+          {/* Page titles — trade's switcher, the static settings/premium ones,
+              messages' conversation switcher, discover's search.
+
+              The header is `fixed left-0 w-full`, so it does NOT shift with the
+              inset when the sidebar opens; left unhandled these sat on top of an
+              expanded sidebar. Absolutely positioned at the sidebar's right edge
+              while it's expanded, which is where the page content starts too, so
+              they read as titles over the page rather than over the nav. The
+              trigger and logo stay put on purpose — they belong to the header,
+              not the page. */}
+          <div
+            className={cn(
+              'flex items-center gap-3',
+              sidebarState === 'expanded' &&
+                'absolute top-1/2 left-(--sidebar-width) -translate-y-1/2 pl-3',
+            )}
+          >
           {/* Trade section switcher (Frame 546): the page title doubles as a
               goo dropdown over Discover/Memescope/Perps/Predictions. */}
           {firstSegment === 'trade' && <TradeNav />}
@@ -174,6 +192,7 @@ export function AppHeader2() {
               <SearchIcon className="size-7" />
             </Link>
           )}
+          </div>
         </div>
       </div>
 

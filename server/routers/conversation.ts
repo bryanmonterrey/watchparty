@@ -175,6 +175,51 @@ export const conversationRouter = router({
                 }
             }
 
+            // Reuse the DM these two already have instead of stacking another.
+            // This used to insert unconditionally, so every press of Message on a
+            // profile minted a fresh conversation — a pair could end up with any
+            // number of parallel threads, all but one of them dead, and the
+            // newest one empty even when there was history to open.
+            //
+            // Deliberately AFTER the follow/paywall gates above: an old thread
+            // must not become a way around a restriction the recipient has turned
+            // on since.
+            if (!input.isGroup && input.participantIds.length === 1) {
+                const recipientId = input.participantIds[0];
+                const mine = aliasedTable(conversationParticipants, "mine");
+                const theirs = aliasedTable(conversationParticipants, "theirs");
+
+                const [existing] = await db
+                    .select({ conversation: conversations })
+                    .from(conversations)
+                    .innerJoin(
+                        mine,
+                        and(eq(mine.conversationId, conversations.id), eq(mine.userId, ctx.user.id)),
+                    )
+                    .innerJoin(
+                        theirs,
+                        and(eq(theirs.conversationId, conversations.id), eq(theirs.userId, recipientId)),
+                    )
+                    .where(
+                        and(
+                            eq(conversations.isGroup, false),
+                            // Exactly the two of them. Matching on "both are in it"
+                            // alone would also match a group that happens to
+                            // include the pair.
+                            sql`(SELECT count(*) FROM ${conversationParticipants} cp WHERE cp.conversation_id = ${conversations.id}) = 2`,
+                        ),
+                    )
+                    // The thread with real history wins. NULLS LAST is load-bearing:
+                    // lastMessageAt is null on an empty thread and Postgres sorts
+                    // nulls FIRST on DESC, which would hand back the empty one.
+                    .orderBy(sql`${conversations.lastMessageAt} DESC NULLS LAST`, desc(conversations.createdAt))
+                    .limit(1);
+
+                if (existing) {
+                    return { success: true, conversation: existing.conversation, existing: true };
+                }
+            }
+
             // Create conversation
             const [newConversation] = await db
                 .insert(conversations)
@@ -196,6 +241,7 @@ export const conversationRouter = router({
             return {
                 success: true,
                 conversation: newConversation,
+                existing: false,
             };
         }),
 
