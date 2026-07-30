@@ -134,7 +134,18 @@ export function RailRow({
 
                 {hasExtras && (
                     <div className={cn("flex flex-col", INFO_INDENT)}>
-                        {token && postId && <TokenRow className="mt-1" postId={postId} token={token} />}
+                        {/* Ticker only — no Launch/Buy in the rail. xs because the
+                            rail is 300px wide and its title is 14px, so the
+                            header's pill sizing reads oversized here. */}
+                        {token && postId && (
+                            <TokenRow
+                                className="mt-1"
+                                size="xs"
+                                showAction={false}
+                                postId={postId}
+                                token={token}
+                            />
+                        )}
                         {menu && <div className="flex justify-end">{menu}</div>}
                     </div>
                 )}

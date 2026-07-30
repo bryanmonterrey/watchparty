@@ -30,9 +30,10 @@ export interface TokenRowToken {
 function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: string; size: Size }) {
     const { quickBuy, buyingId } = useQuickBuy();
     const mint = token.tokenAddress;
+    // shrink-0 so the action is never what gives way when the row is tight.
     const label = cn(
-        "font-extrabold text-twitter2 transition-opacity hover:opacity-80",
-        size === "lg" ? "text-[16px]" : "text-[16px]",
+        "shrink-0 font-extrabold text-twitter2 transition-opacity hover:opacity-80",
+        ACTION_TEXT[size],
     );
 
     if (!mint) {
@@ -64,13 +65,33 @@ function TokenAction({ token, postId, size }: { token: TokenRowToken; postId: st
 }
 
 /** `lg` on the video and live pages, where the header runs at page scale;
- *  the default is home's compact header. */
-type Size = "sm" | "lg";
+ *  `sm` is home's compact header; `xs` is the 300px rail row, where a 16px
+ *  action was the largest text in a row whose title is 14px. */
+type Size = "xs" | "sm" | "lg";
+
+const ACTION_TEXT: Record<Size, string> = {
+    xs: "text-[11px]",
+    sm: "text-[16px]",
+    lg: "text-[16px]",
+};
+
+const PILL: Record<Size, string> = {
+    xs: "py-0.5 pl-0.5 pr-2 text-[11px]",
+    sm: "py-1 pl-1 pr-2.5 text-[12px]",
+    lg: "py-1 pl-1.5 pr-3 text-[14px]",
+};
+
+const PILL_IMAGE: Record<Size, string> = {
+    xs: "size-3.5",
+    sm: "size-4",
+    lg: "size-5",
+};
 
 export function TokenRow({
     token,
     postId,
     size = "sm",
+    showAction = true,
     fallbackImage,
     className,
 }: {
@@ -78,6 +99,8 @@ export function TokenRow({
     /** What quickBuy keys its in-flight state on. */
     postId: string;
     size?: Size;
+    /** False renders the ticker alone — the rail wants the pill without a CTA. */
+    showAction?: boolean;
     /**
      * Shown when the coin has no art of its own, in place of the blank circle.
      * The live page passes the host's avatar: a stream's pill is the channel's
@@ -91,7 +114,7 @@ export function TokenRow({
     const image = token.imageUrl ?? fallbackImage ?? null;
 
     return (
-        <div className={cn("flex min-w-0 flex-wrap items-center gap-2", className)}>
+        <div className={cn("flex min-w-0 items-center gap-2", size === "xs" ? "flex-nowrap" : "flex-wrap", className)}>
             {/* Image INSIDE the pill, not floating beside it — TokenInlineChip
                 does the same, so a loose circle would make one object look like
                 two different components. pl-1 balances the image's own inset
@@ -99,8 +122,8 @@ export function TokenRow({
             <Link
                 href={`/coin/${slug}`}
                 className={cn(
-                    "flex items-center gap-1.5 rounded-full bg-bleu/15 font-semibold border border-bleu/20 text-bleu transition-colors hover:bg-bleu/50",
-                    size === "lg" ? "py-1 pl-1.5 pr-3 text-[14px]" : "py-1 pl-1 pr-2.5 text-[12px]",
+                    "flex min-w-0 items-center gap-1.5 rounded-full bg-bleu/15 font-semibold border border-bleu/20 text-bleu transition-colors hover:bg-bleu/50",
+                    PILL[size],
                 )}
             >
                 {image ? (
@@ -109,16 +132,16 @@ export function TokenRow({
                         src={image}
                         alt=""
                         loading="lazy"
-                        className={cn("shrink-0 rounded-full object-cover", size === "lg" ? "size-5" : "size-4")}
+                        className={cn("shrink-0 rounded-full object-cover", PILL_IMAGE[size])}
                     />
                 ) : (
                     // Keeps the pill's width steady whether or not the coin has art.
-                    <span className={cn("shrink-0 rounded-full bg-bleu/40", size === "lg" ? "size-5" : "size-4")} />
+                    <span className={cn("shrink-0 rounded-full bg-bleu/40", PILL_IMAGE[size])} />
                 )}
-                ${token.ticker}
+                <span className="truncate">${token.ticker}</span>
             </Link>
 
-            <TokenAction token={token} postId={postId} size={size} />
+            {showAction && <TokenAction token={token} postId={postId} size={size} />}
         </div>
     );
 }
