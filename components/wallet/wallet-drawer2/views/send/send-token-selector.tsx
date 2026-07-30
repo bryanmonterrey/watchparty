@@ -8,9 +8,12 @@ import {
 } from "@/components/ui/dialog";
 import { Search, X } from "lucide-react";
 import { TokenIcon } from "../../components/token-icon";
+import type { ChainId } from "@/lib/chains/types";
 
 export interface SendToken {
     mint: string;
+    /** Network the asset lives on — decides which send path moves it. */
+    chain?: ChainId;
     symbol: string;
     name: string;
     icon?: string;
@@ -96,12 +99,18 @@ export function SendTokenSelector({
                                         : "hover:bg-zinc-800/40"
                                         }`}
                                 >
-                                    {/* Logo */}
+                                    {/* Logo. The chain badge is load-bearing here,
+                                        not decoration: the network decides which
+                                        address a send is valid for, and without it
+                                        USDC-on-Base and USDC-on-Solana are the
+                                        same row. */}
                                     <TokenIcon
                                         src={token.icon}
                                         symbol={token.symbol}
                                         size="md"
                                         type="token"
+                                        chain={token.chain}
+                                        isNative={token.mint.startsWith("native:")}
                                     />
 
                                     {/* Name / symbol */}

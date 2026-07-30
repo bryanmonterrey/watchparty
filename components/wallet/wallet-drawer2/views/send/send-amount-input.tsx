@@ -3,6 +3,8 @@
 import * as React from "react";
 import { ArrowUpDown, ChevronDown } from "lucide-react";
 import { SendToken, SendTokenSelector } from "./send-token-selector";
+import { TokenIcon } from "../../components/token-icon";
+import { getChainOrDefault } from "@/lib/chains/registry";
 
 interface SendAmountInputProps {
     token: SendToken | null;
@@ -45,6 +47,12 @@ export function SendAmountInput({
         if (inputMode === "usd") onUsdAmountChange(val);
         else onTokenAmountChange(val);
     };
+
+    // Named only when it isn't Solana — Solana is the default and labelling
+    // every row with it would be noise.
+    const network = token?.chain && getChainOrDefault(token.chain).kind !== "solana"
+        ? getChainOrDefault(token.chain).name
+        : null;
 
     const balance = token?.balance ?? 0;
     const balanceUsd = token?.usdValue;
@@ -110,25 +118,23 @@ export function SendAmountInput({
                     onClick={(e) => { e.stopPropagation(); setSelectorOpen(true); }}
                     className="cursor-pointer w-full flex items-center gap-3 px-5 py-4 hover:bg-zinc-800/20 transition-colors"
                 >
-                    {/* Logo */}
-                    <div className="w-9 h-9 min-w-[36px] rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center flex-shrink-0">
-                        {token?.icon ? (
-                            <img
-                                src={token.icon}
-                                alt={token.symbol}
-                                className="w-full h-full object-contain"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                            />
-                        ) : (
-                            <span className="text-[11px] font-bold text-zinc-400">
-                                {token?.symbol?.slice(0, 2) ?? "?"}
-                            </span>
-                        )}
-                    </div>
+                    {/* Logo, badged with its network — which asset is selected
+                        decides which chain the send goes out on. */}
+                    <TokenIcon
+                        src={token?.icon}
+                        symbol={token?.symbol}
+                        size="md"
+                        type="token"
+                        chain={token?.chain}
+                        isNative={!!token?.mint.startsWith("native:")}
+                    />
 
                     {/* Name + balance */}
                     <div className="flex-1 text-left min-w-0">
-                        <p className="text-[15px] font-semibold text-white leading-tight">{token?.symbol ?? "—"}</p>
+                        <p className="text-[15px] font-semibold text-white leading-tight">
+                            {token?.symbol ?? "—"}
+                            {network && <span className="text-zinc-500 font-medium"> on {network}</span>}
+                        </p>
                         <p className="text-[12px] text-zinc-500 leading-tight">
                             Balance: {balanceStr}
                             {balanceUsd !== undefined && ` ($${balanceUsd.toFixed(2)})`}

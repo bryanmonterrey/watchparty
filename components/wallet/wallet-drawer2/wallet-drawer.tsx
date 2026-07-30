@@ -101,6 +101,9 @@ export function WalletDrawer({
     const [selectedCollection, setSelectedCollection] = React.useState<NFTCollection | null>(null);
     const [selectedNFT, setSelectedNFT] = React.useState<NFT | null>(null);
     const [swapInitialToken, setSwapInitialToken] = React.useState<SwapToken | null>(null);
+    // Which asset Send opens on. Set when Send is reached from a token, so the
+    // view doesn't default to SOL while the user is looking at Base USDC.
+    const [sendInitialToken, setSendInitialToken] = React.useState<Token | null>(null);
     const [recipientAddress, setRecipientAddress] = React.useState("");
     const [recipientDisplay, setRecipientDisplay] = React.useState("");
     const [recipientMeta, setRecipientMeta] = React.useState<{ username?: string; name?: string; avatar_url?: string } | undefined>();
@@ -232,6 +235,7 @@ export function WalletDrawer({
                                         // available inside the receive screen for
                                         // the rarer case.
                                         if (view === "receive") setReceiveChain("solana");
+                                        if (view === "send") setSendInitialToken(null);
                                         setCurrentView(view);
                                     }}
                                 />
@@ -316,7 +320,8 @@ export function WalletDrawer({
                     <motion.div key="send" {...viewMotionProps}>
                         <SendView
                             walletAddress={walletAddress}
-                            tokens={tokens as any}
+                            tokens={tokens}
+                            initialToken={sendInitialToken ?? undefined}
                             solPrice={solPrice}
                             onBack={() => {
                                 setCurrentView("main");
@@ -410,7 +415,10 @@ export function WalletDrawer({
                             token={selectedToken}
                             tokens={allTokens}
                             onBack={() => setCurrentView(tokenDetailOrigin)}
-                            onSend={() => setCurrentView("send")}
+                            onSend={() => {
+                                setSendInitialToken(selectedToken);
+                                setCurrentView("send");
+                            }}
                             onReceive={() => {
                                 // Depositing THIS token, so receive opens on the
                                 // token's own network, not whatever chain the

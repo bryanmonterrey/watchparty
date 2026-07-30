@@ -6,7 +6,6 @@ import {
     PublicKey,
     SystemProgram,
     Transaction,
-    LAMPORTS_PER_SOL,
     ComputeBudgetProgram,
 } from "@solana/web3.js";
 import { ArrowLeft } from "lucide-react";
@@ -21,6 +20,10 @@ import { ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { getRecommendedMicrolamports } from "@/lib/solana/priority-fees";
+import { getChainOrDefault } from "@/lib/chains/registry";
+import { validateAddressFormat } from "@/lib/chains/address";
+import { toBaseUnits } from "@/lib/chains/amounts";
+import type { ChainId } from "@/lib/chains/types";
 
 const RECENTS_KEY = "send_recents_v1";
 const MAX_RECENTS = 10;
@@ -28,6 +31,17 @@ import { toPublicKey } from "@/lib/solana/pubkey";
 
 const TREASURY = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_PUBKEY!);
 const PLATFORM_FEE_BPS = 50; // 0.5%
+const SOL_MINT = "So11111111111111111111111111111111111111111";
+
+/**
+ * A row in the aggregated list is a native coin when it has no contract — the
+ * list synthesizes `native:<chain>` for those, and SOL keeps its wrapped mint
+ * as its id. Everything else is a token contract to transfer.
+ */
+function contractOf(token: SendToken): string | undefined {
+    if (token.mint === SOL_MINT || token.mint.startsWith("native:")) return undefined;
+    return token.mint;
+}
 
 function loadRecents(): RecentRecipient[] {
     try {
@@ -71,10 +85,8 @@ interface SendViewProps {
     tokens: SendToken[];
     onBack: () => void;
     solPrice?: number | null;
-}
-
-function isValidSolanaAddress(addr: string): boolean {
-    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
+    /** Asset to open on — set when Send is reached from a specific token. */
+    initialToken?: SendToken;
 }
 
 export function SendView({
@@ -82,6 +94,7 @@ export function SendView({
     tokens,
     onBack,
     solPrice,
+    initialToken,
 }: SendViewProps) {
     const { connection } = useConnection();
     const { publicKey: adapterPublicKey, sendTransaction } = useWallet();
@@ -90,9 +103,10 @@ export function SendView({
 
     const activePublicKeyStr = adapterPublicKey?.toBase58() || custodialWalletAddress;
     const publicKey = toPublicKey(activePublicKeyStr);
+    const sendOnChain = trpc.wallet.sendOnChain.useMutation();
 
-    const solToken = tokens.find((t) => t.mint === "So11111111111111111111111111111111111111111") ?? tokens[0] ?? null;
-    const [selectedToken, setSelectedToken] = React.useState<SendToken | null>(solToken);
+    const solToken = tokens.find((t) => t.mint === SOL_MINT) ?? tokens[0] ?? null;
+    const [selectedToken, setSelectedToken] = React.useState<SendToken | null>(initialToken ?? solToken);
     const [tokenAmount, setTokenAmount] = React.useState("");
     const [usdAmount, setUsdAmount] = React.useState("");
     const [inputMode, setInputMode] = React.useState<"usd" | "token">("usd");
@@ -132,8 +146,11 @@ export function SendView({
     const handleUsdAmountChange = (val: string) => {
         setUsdAmount(val);
         const n = parseFloat(val);
+        // Capped below the asset's precision on purpose: an 18-decimal token
+        // would otherwise fill the input with noise, and fewer decimals always
+        // converts cleanly.
         if (!isNaN(n) && currentPrice)
-            setTokenAmount((n / currentPrice).toFixed(selectedToken?.decimals ?? 6));
+            setTokenAmount((n / currentPrice).toFixed(Math.min(sendDecimals, 8)));
         else setTokenAmount("");
     };
 
@@ -148,14 +165,150 @@ export function SendView({
         handleRecipientChange(address, display, { username, name, avatar_url });
     };
 
+    // Which network this send happens on, and therefore which of the three
+    // paths below moves it. Solana rows are tagged "solana" upstream; a missing
+    // tag can only be a Solana row from before the list was aggregated.
+    const sendChain: ChainId = selectedToken?.chain ?? "solana";
+    const chainConfig = getChainOrDefault(sendChain);
+    const isSolanaSend = chainConfig.kind === "solana";
+    const contract = selectedToken ? contractOf(selectedToken) : undefined;
+    const isNativeSend = !contract;
+
+    // Native SOL is pinned to 9 rather than trusting the row's decimals —
+    // lamports are not negotiable, and this used to be a hardcoded
+    // LAMPORTS_PER_SOL. Everything else moves at its own precision.
+    const sendDecimals = isSolanaSend && isNativeSend ? 9 : (selectedToken?.decimals ?? 0);
+
     const parsedTokenAmount = parseFloat(tokenAmount);
     const hasAmount = !isNaN(parsedTokenAmount) && parsedTokenAmount > 0;
-    const hasValidRecipient = isValidSolanaAddress(recipient);
-    const canSend = hasAmount && hasValidRecipient && !isSending && !!selectedToken;
+    // Precision is checked here rather than at send time: typing more decimals
+    // than the asset has must block the button, not throw mid-transaction.
+    const amountFitsDecimals =
+        !hasAmount ||
+        (() => {
+            try {
+                return toBaseUnits(tokenAmount, sendDecimals) > BigInt(0);
+            } catch {
+                return false;
+            }
+        })();
+    const overBalance = hasAmount && !!selectedToken && parsedTokenAmount > selectedToken.balance;
+    const hasValidRecipient = !!recipient && validateAddressFormat(sendChain, recipient);
+    const canSend =
+        hasAmount &&
+        amountFitsDecimals &&
+        !overBalance &&
+        hasValidRecipient &&
+        !isSending &&
+        !!selectedToken;
+
+    // A recipient is only meaningful for the chain it was entered for. Switching
+    // from SOL to Base USDC must not carry a Solana address into an EVM send.
+    const recipientChainRef = React.useRef(sendChain);
+    React.useEffect(() => {
+        if (recipientChainRef.current === sendChain) return;
+        const previous = getChainOrDefault(recipientChainRef.current);
+        recipientChainRef.current = sendChain;
+        // Same address kind (all five EVM chains) stays valid — clearing it
+        // there would just be annoying.
+        if (previous.kind === chainConfig.kind) return;
+        setRecipient("");
+        setRecipientDisplay("");
+        setRecipientMeta(undefined);
+    }, [sendChain, chainConfig.kind]);
+
+    // Gas quote for the chains that go through sendOnChain. Solana's fee is a
+    // handful of lamports and already priced into the priority-fee helper.
+    const { data: feeQuote } = trpc.wallet.estimateChainFee.useQuery(
+        {
+            chain: sendChain,
+            to: recipient,
+            amount: hasAmount && amountFitsDecimals
+                ? toBaseUnits(tokenAmount, sendDecimals).toString()
+                : "0",
+            contract,
+        },
+        {
+            enabled: !isSolanaSend && hasValidRecipient && hasAmount && amountFitsDecimals,
+            staleTime: 15_000,
+            retry: false,
+        }
+    );
+
+    /**
+     * Solana transfer for the selected asset — native SOL or an SPL token.
+     *
+     * The token branch is the whole reason this function exists: before it, every
+     * send built a SystemProgram.transfer of `amount * LAMPORTS_PER_SOL`, so
+     * picking USDC and sending 25 moved 25 SOL.
+     */
+    const buildSolanaTransaction = async (recipientPubkey: PublicKey, amount: bigint) => {
+        const microLamports = await getRecommendedMicrolamports([publicKey!.toBase58()]);
+        const transaction = new Transaction().add(
+            ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
+            // 900 covers two system transfers. The token path can carry up to two
+            // idempotent account creations plus two transfers, so it needs room —
+            // a limit below what the tx actually burns fails the whole transfer.
+            ComputeBudgetProgram.setComputeUnitLimit({ units: contract ? 120_000 : 900 }),
+        );
+
+        if (!contract) {
+            const lamports = Number(amount);
+            transaction.add(
+                SystemProgram.transfer({ fromPubkey: publicKey!, toPubkey: recipientPubkey, lamports }),
+                SystemProgram.transfer({
+                    fromPubkey: publicKey!,
+                    toPubkey: TREASURY,
+                    lamports: Math.max(1, Math.floor((lamports * PLATFORM_FEE_BPS) / 10000)),
+                }),
+            );
+            return transaction;
+        }
+
+        // Loaded on click, not on drawer open — spl-token is dead weight for the
+        // SOL path and for everyone who never opens Send.
+        const spl = await import("@solana/spl-token");
+        const mint = new PublicKey(contract);
+
+        // Token-2022 mints live under a different program, and deriving their ATA
+        // against the classic one silently produces an address that doesn't exist.
+        // The mint account's owner is the authority on which program it is.
+        const mintInfo = await connection.getAccountInfo(mint);
+        if (!mintInfo) throw new Error("Token mint not found on Solana");
+        const tokenProgram = mintInfo.owner;
+
+        // Both owners can be off-curve: the account wallet is a Swig PDA, and so
+        // is any recipient who signed up here.
+        const fromAta = spl.getAssociatedTokenAddressSync(mint, publicKey!, true, tokenProgram);
+        const toAta = spl.getAssociatedTokenAddressSync(mint, recipientPubkey, true, tokenProgram);
+
+        transaction.add(
+            spl.createAssociatedTokenAccountIdempotentInstruction(
+                publicKey!, toAta, recipientPubkey, mint, tokenProgram,
+            ),
+            spl.createTransferInstruction(fromAta, toAta, publicKey!, amount, [], tokenProgram),
+        );
+
+        // The 0.5% fee rides in the token being sent. Skipped when it floors to
+        // nothing — creating a treasury account for zero units would charge the
+        // sender rent to move dust.
+        const feeUnits = (amount * BigInt(PLATFORM_FEE_BPS)) / BigInt(10_000);
+        if (feeUnits > BigInt(0)) {
+            const treasuryAta = spl.getAssociatedTokenAddressSync(mint, TREASURY, true, tokenProgram);
+            transaction.add(
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    publicKey!, treasuryAta, TREASURY, mint, tokenProgram,
+                ),
+                spl.createTransferInstruction(fromAta, treasuryAta, publicKey!, feeUnits, [], tokenProgram),
+            );
+        }
+
+        return transaction;
+    };
 
     const handleSend = async () => {
-        if (!publicKey || !connection || !selectedToken) return;
-        if (!recipient || !hasAmount) return;
+        if (!selectedToken || !recipient || !hasAmount) return;
+        if (isSolanaSend && (!publicKey || !connection)) return;
 
         const sendToast = showSendToast({
             tokenSymbol: selectedToken.symbol,
@@ -166,54 +319,63 @@ export function SendView({
 
         try {
             setIsSending(true);
-            const recipientPubkey = new PublicKey(recipient.trim());
-            const lamports = Math.floor(parsedTokenAmount * LAMPORTS_PER_SOL);
-            const feeLamports = Math.max(1, Math.floor(lamports * PLATFORM_FEE_BPS / 10000));
-            const microLamports = await getRecommendedMicrolamports([publicKey.toBase58()]);
-            const transaction = new Transaction().add(
-                ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
-                ComputeBudgetProgram.setComputeUnitLimit({ units: 900 }),
-                SystemProgram.transfer({
-                    fromPubkey: publicKey,
-                    toPubkey: recipientPubkey,
-                    lamports,
-                }),
-                SystemProgram.transfer({
-                    fromPubkey: publicKey,
-                    toPubkey: TREASURY,
-                    lamports: feeLamports,
-                }),
-            );
+            const amount = toBaseUnits(tokenAmount, sendDecimals);
 
             let signature: string;
+            let explorerUrl: string | undefined;
 
-            if (adapterPublicKey) {
-                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = publicKey;
-                signature = await sendTransaction(transaction, connection);
-                await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-            } else if (custodialWalletAddress) {
-                // Don't bake a blockhash here — the server refreshes it right before signing
-                // to avoid expiry during Swig/FROST session creation.
-                transaction.recentBlockhash = "11111111111111111111111111111111";
-                transaction.feePayer = publicKey;
-                const serialized = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
-                const result = await signAndSendCustodialTx({
-                    transaction: serialized.toString("base64"),
+            // Everything that isn't Solana signs server-side from the seed-derived
+            // key — FROST is ed25519-only, so it can't produce a secp256k1
+            // signature. That key owns the same address the receive screen shows,
+            // which is what keeps sending consistent with where funds arrived.
+            if (!isSolanaSend) {
+                const result = await sendOnChain.mutateAsync({
+                    chain: sendChain,
+                    to: recipient.trim(),
+                    amount: amount.toString(),
+                    contract,
                 });
-                signature = result.signature;
-                // Confirm using a fresh blockhash — the old one is stale by now.
-                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-                await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                signature = result.txId;
+                explorerUrl = result.explorerUrl;
             } else {
-                throw new Error("No wallet connected");
-            }
-            sendToast.success(signature);
+                const recipientPubkey = new PublicKey(recipient.trim());
+                const transaction = await buildSolanaTransaction(recipientPubkey, amount);
 
-            // Immediately refresh balance — don't wait for the 15s poll
-            trpcUtils.wallet.getWalletAssets.invalidate();
-            trpcUtils.wallet.getTransactions.invalidate();
+                if (adapterPublicKey) {
+                    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+                    transaction.recentBlockhash = blockhash;
+                    transaction.feePayer = publicKey!;
+                    signature = await sendTransaction(transaction, connection);
+                    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                } else if (custodialWalletAddress) {
+                    // Don't bake a blockhash here — the server refreshes it right before signing
+                    // to avoid expiry during Swig/FROST session creation.
+                    transaction.recentBlockhash = "11111111111111111111111111111111";
+                    transaction.feePayer = publicKey!;
+                    const serialized = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
+                    const result = await signAndSendCustodialTx({
+                        transaction: serialized.toString("base64"),
+                    });
+                    signature = result.signature;
+                    // Confirm using a fresh blockhash — the old one is stale by now.
+                    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+                    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                } else {
+                    throw new Error("No wallet connected");
+                }
+            }
+
+            sendToast.success(signature, explorerUrl);
+
+            // Immediately refresh balances — don't wait for the poll. Solana and
+            // the aggregated chains are separate queries; refresh the one that moved.
+            if (isSolanaSend) {
+                trpcUtils.wallet.getWalletAssets.invalidate();
+                trpcUtils.wallet.getTransactions.invalidate();
+            } else {
+                trpcUtils.wallet.getAllChainAssets.invalidate();
+                trpcUtils.wallet.getAllChainActivity.invalidate();
+            }
 
             // Save to recents
             const updated = saveRecent(recents, recipient, recipientMeta);
@@ -241,9 +403,18 @@ export function SendView({
         ? "Sending..."
         : !hasAmount
             ? "Enter an amount"
-            : !hasValidRecipient
-                ? "Enter a recipient"
-                : `Send ${selectedToken?.symbol ?? ""}`;
+            : !amountFitsDecimals
+                ? `${selectedToken?.symbol ?? "This token"} only has ${selectedToken?.decimals ?? 0} decimals`
+                : overBalance
+                    ? `Not enough ${selectedToken?.symbol ?? ""}`
+                    : !recipient
+                        ? "Enter a recipient"
+                        // Naming the network is the whole point: the reason a
+                        // recipient is rejected is almost always that it belongs
+                        // to a different chain than the asset.
+                        : !hasValidRecipient
+                            ? `Enter a ${chainConfig.name} recipient`
+                            : `Send ${selectedToken?.symbol ?? ""}`;
 
     return (
         <motion.div
@@ -316,12 +487,24 @@ export function SendView({
                     onClose={() => setRecipientSelectorOpen(false)}
                     onSelect={handleRecipientSelect}
                     recents={recents}
+                    chain={sendChain}
                 />
 
-                {/* Fee line */}
+                {/* What this send actually costs, per path. Solana takes the 0.5%
+                    platform fee in the asset being sent; the chains that go
+                    through sendOnChain take no platform fee and quote gas. */}
                 {hasAmount && (
                     <p className="text-center text-[12px] text-zinc-500">
-                        0.5% platform fee · {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(6)} {selectedToken?.symbol ?? "SOL"}
+                        {isSolanaSend ? (
+                            <>
+                                0.5% platform fee · {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))}{" "}
+                                {selectedToken?.symbol ?? "SOL"}
+                            </>
+                        ) : feeQuote ? (
+                            <>network fee · ~{feeQuote.feeFormatted.toFixed(6)} {feeQuote.symbol}</>
+                        ) : (
+                            <>network fee · {chainConfig.nativeCurrency.symbol} gas</>
+                        )}
                     </p>
                 )}
 

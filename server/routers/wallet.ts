@@ -364,6 +364,27 @@ export const walletRouter = router({
     }),
 
     /**
+     * Another user's receive address for one chain kind, so a send on a
+     * non-Solana chain can target an @username the way a Solana send already
+     * can — resolved on select, one recipient per call.
+     *
+     * Same class of data `user.search` already returns for Solana
+     * (`wallet_address`): a receive address derived from the recipient's
+     * account. Authenticated so it isn't an open address-book scrape. Returns
+     * null for a wallet that predates wallet_addresses — we can't derive
+     * someone else's rows, so the caller has to say "no address on file".
+     */
+    getUserChainAddress: protectedProcedure
+        .input(z.object({ userId: z.string().min(1), kind: z.string() }))
+        .query(async ({ input }) => {
+            if (!CHAIN_KINDS.includes(input.kind as (typeof CHAIN_KINDS)[number])) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown chain kind" });
+            }
+            const addresses = await getAddressesByKind(input.userId);
+            return { address: addresses[input.kind as (typeof CHAIN_KINDS)[number]] ?? null };
+        }),
+
+    /**
      * Holdings across every non-Solana chain, in one round trip.
      *
      * The tokens list is aggregated (one list, chain badge per row), so the

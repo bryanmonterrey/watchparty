@@ -6,11 +6,11 @@ import { Search, Clock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { trpc } from "@/lib/trpc/client";
 import { shortenWalletAddress } from "@/lib/utils";
+import { appToast } from "@/components/app-ui/app-toast";
+import { getChainOrDefault } from "@/lib/chains/registry";
+import { validateAddressFormat } from "@/lib/chains/address";
+import type { ChainId } from "@/lib/chains/types";
 import type { RecentRecipient } from "./send-recipient";
-
-function isValidSolanaAddress(addr: string): boolean {
-    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
-}
 
 export interface SelectedRecipient {
     address: string;
@@ -25,6 +25,8 @@ interface SendRecipientSelectorProps {
     onClose: () => void;
     onSelect: (recipient: SelectedRecipient) => void;
     recents: RecentRecipient[];
+    /** Chain the asset being sent lives on — decides what counts as an address. */
+    chain?: ChainId;
 }
 
 export function SendRecipientSelector({
@@ -32,11 +34,17 @@ export function SendRecipientSelector({
     onClose,
     onSelect,
     recents,
+    chain = "solana",
 }: SendRecipientSelectorProps) {
     const [search, setSearch] = React.useState("");
+    const [resolvingUserId, setResolvingUserId] = React.useState<string | null>(null);
+
+    const chainConfig = getChainOrDefault(chain);
+    const isSolana = chainConfig.kind === "solana";
+    const trpcUtils = trpc.useUtils();
 
     const rawQuery = search.startsWith("@") ? search.slice(1) : search;
-    const isAddress = isValidSolanaAddress(search);
+    const isAddress = validateAddressFormat(chain, search);
     const shouldSearch = !isAddress && rawQuery.length >= 1;
 
     const { data: searchData, isFetching } = trpc.user.search.useQuery(
@@ -46,10 +54,61 @@ export function SendRecipientSelector({
 
     const userResults = searchData?.users ?? [];
 
+    // Recents are a flat address book across every chain sent on. Offering one
+    // that belongs to a different chain would just produce a rejected recipient.
+    const chainRecents = React.useMemo(
+        () => recents.filter((r) => validateAddressFormat(chain, r.address)),
+        [recents, chain]
+    );
+
     const handleSelect = (recipient: SelectedRecipient) => {
         onSelect(recipient);
         onClose();
         setSearch("");
+    };
+
+    /**
+     * Picking a user off the search list gives us their Solana address. On any
+     * other chain that address is meaningless, so resolve the one derived for
+     * this chain's kind instead — on select, for the one person chosen, rather
+     * than fetching addresses for everyone who happens to match the query.
+     */
+    const handleUserSelect = async (u: {
+        id: string;
+        wallet_address: string | null;
+        username?: string | null;
+        name?: string | null;
+        avatar_url?: string | null;
+    }) => {
+        const display = u.username ? `@${u.username}` : shortenWalletAddress(u.wallet_address ?? "");
+        const meta = {
+            username: u.username ?? undefined,
+            name: u.name ?? undefined,
+            avatar_url: u.avatar_url ?? undefined,
+        };
+
+        if (isSolana) {
+            if (!u.wallet_address) return;
+            handleSelect({ address: u.wallet_address, display, ...meta });
+            return;
+        }
+
+        setResolvingUserId(u.id);
+        try {
+            const { address } = await trpcUtils.wallet.getUserChainAddress.fetch({
+                userId: u.id,
+                kind: chainConfig.kind,
+            });
+            if (!address) {
+                appToast.error(`${display} has no ${chainConfig.name} address yet`);
+                return;
+            }
+            handleSelect({ address, display, ...meta });
+        } catch {
+            appToast.error(`Couldn't look up their ${chainConfig.name} address`);
+        } finally {
+            setResolvingUserId(null);
+        }
     };
 
     const handleClose = () => {
@@ -115,18 +174,8 @@ export function SendRecipientSelector({
                             {userResults.map((u) => (
                                 <button
                                     key={u.id}
-                                    onClick={() => {
-                                        if (!u.wallet_address) return;
-                                        const display = u.username ? `@${u.username}` : u.wallet_address;
-                                        handleSelect({
-                                            address: u.wallet_address,
-                                            display,
-                                            username: u.username ?? undefined,
-                                            name: u.name ?? undefined,
-                                            avatar_url: u.avatar_url ?? undefined,
-                                        });
-                                    }}
-                                    disabled={!u.wallet_address}
+                                    onClick={() => handleUserSelect(u)}
+                                    disabled={!u.wallet_address || resolvingUserId === u.id}
                                     className={`cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors ${u.wallet_address ? "hover:bg-zinc-800/40" : "opacity-40 cursor-not-allowed"}`}
                                 >
                                     <Avatar className="w-9 h-9 flex-shrink-0">
@@ -143,11 +192,18 @@ export function SendRecipientSelector({
                                             {!u.wallet_address && " · no wallet"}
                                         </p>
                                     </div>
-                                    {u.wallet_address && (
+                                    {/* Their Solana address says nothing about
+                                        where a Base or BTC send lands, so name
+                                        the network being resolved instead. */}
+                                    {!isSolana ? (
+                                        <span className="text-[12px] text-zinc-600 flex-shrink-0">
+                                            {resolvingUserId === u.id ? "resolving…" : chainConfig.name}
+                                        </span>
+                                    ) : u.wallet_address ? (
                                         <span className="text-[12px] text-zinc-600 flex-shrink-0">
                                             {shortenWalletAddress(u.wallet_address)}
                                         </span>
-                                    )}
+                                    ) : null}
                                 </button>
                             ))}
                             {!isFetching && userResults.length === 0 && (
@@ -157,12 +213,12 @@ export function SendRecipientSelector({
                     )}
 
                     {/* Recents */}
-                    {!shouldSearch && !isAddress && recents.length > 0 && (
+                    {!shouldSearch && !isAddress && chainRecents.length > 0 && (
                         <>
                             <div className="px-2 pb-2">
                                 <span className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Recents</span>
                             </div>
-                            {recents.slice(0, 5).map((r) => (
+                            {chainRecents.slice(0, 5).map((r) => (
                                 <button
                                     key={r.address}
                                     onClick={() => handleSelect({
@@ -204,7 +260,7 @@ export function SendRecipientSelector({
                     )}
 
                     {/* Empty state */}
-                    {!shouldSearch && !isAddress && recents.length === 0 && (
+                    {!shouldSearch && !isAddress && chainRecents.length === 0 && (
                         <div className="py-10 text-center text-[14px] text-zinc-500">
                             Search for a user or paste a wallet address
                         </div>

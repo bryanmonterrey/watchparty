@@ -11,6 +11,8 @@ interface SendToastData {
     amount: string;
     recipientDisplay: string;
     txHash?: string;
+    /** Explorer link for chains that aren't Solana, which the default won't reach. */
+    explorerUrl?: string;
     error?: string;
 }
 
@@ -23,7 +25,7 @@ function SendToastContent({
     data: SendToastData;
     toastId: string | number;
 }) {
-    const { status, tokenSymbol, tokenIcon, amount, recipientDisplay, txHash, error } = data;
+    const { status, tokenSymbol, tokenIcon, amount, recipientDisplay, txHash, explorerUrl, error } = data;
     const isSending = status === "sending";
     const isSent = status === "sent";
     const isError = status === "error";
@@ -118,7 +120,7 @@ function SendToastContent({
                     {isSent && txHash && (
                         <motion.a
                             key="solscan"
-                            href={`https://orbmarkets.io/tx/${txHash}`}
+                            href={explorerUrl ?? `https://orbmarkets.io/tx/${txHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             initial={{ opacity: 0, x: 8 }}
@@ -157,7 +159,8 @@ export function showSendToast(opts: {
     render(base);
 
     return {
-        success: (txHash?: string) => render({ ...base, status: "sent", txHash }),
+        success: (txHash?: string, explorerUrl?: string) =>
+            render({ ...base, status: "sent", txHash, explorerUrl }),
         error: (message?: string) => render({ ...base, status: "error", error: message }),
         dismiss: () => toast.dismiss(TOAST_ID),
     };

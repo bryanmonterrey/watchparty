@@ -5,6 +5,7 @@
 // reconstructs a private key. The chains here cannot use that path because
 // FROST is ed25519-only, so they sign from the seed instead.
 
+import { isAddressFormat } from "../address";
 import { getChain } from "../registry";
 import type { ChainId } from "../types";
 import { estimateBitcoinFee, sendBitcoin } from "./bitcoin";
@@ -30,8 +31,9 @@ export function validateAddress(chainId: ChainId, address: string): boolean {
     case "sui":
       return validateSuiAddress(address);
     case "bitcoin":
-      // Accept bech32 (native segwit) and legacy base58 forms.
-      return /^(bc1[a-z0-9]{25,62}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(address);
+      // No SDK check to defer to here, so the shared format rule IS the check
+      // — kept in lib/chains/address.ts so the send UI validates identically.
+      return isAddressFormat("bitcoin", address);
     default:
       return false;
   }
