@@ -1,4 +1,4 @@
-import { VerifiedTwoToneIcon } from "@/components/icons";
+import { VerifiedBadgeIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -9,21 +9,20 @@ import { cn } from "@/lib/utils";
  * one mark is easier to learn than two. The colour is what separates them, so a
  * verified coin can never be misread as a verified creator.
  *
- * Two tones, not one on a coloured chip. VerifiedBadgeIcon draws the tick as a
- * hole in the badge, so colouring it green gave a green badge with a see-through
- * tick sitting on a pale disc — the inverse of the intent. VerifiedTwoToneIcon
- * fills the body and the tick separately: long-soft ground, long tick.
+ * The tick is knocked out, not painted: this icon's single path winds the tick
+ * as a hole, so it shows whatever sits behind the badge. Nothing goes behind it
+ * — no chip, no disc — which is what keeps the tick transparent against the row
+ * it lands on.
  *
  * Which coins qualify is lib/tokens/verified.ts, not a prop — callers pass the
  * token, the rule stays in one place.
  */
 export function VerifiedTokenBadge({ className }: { className?: string }) {
     return (
-        <VerifiedTwoToneIcon
+        <VerifiedBadgeIcon
             aria-label="verified coin"
             role="img"
-            ground="var(--color-long-soft)"
-            mark="var(--color-long)"
+            fill="var(--color-long)"
             className={cn("size-4 shrink-0", className)}
         />
     );

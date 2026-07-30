@@ -24,9 +24,11 @@ export const RAIL_TABS = [RAIL_ICON_TAB, "For you", "Live", "New", "Upcoming"];
 
 /**
  * Home diverges: "For you" is named "Feed" there (it IS the feed the hero plays
- * from, not a recommendation slice beside one), and "Liked" follows it. Kept as
- * its own list rather than changed in RAIL_TABS so the video and live rails —
- * which nobody asked to change — keep the labels they have.
+ * from, not a recommendation slice beside one). Kept as its own list rather than
+ * changed in RAIL_TABS so the video and live rails — which nobody asked to
+ * change — keep the labels they have.
+ *
+ * Order: trending · Feed · Online · Clips · Liked · New · Upcoming.
  */
 export const HOME_TAB_FEED = "Feed";
 export const HOME_TAB_LIKED = "Liked";
@@ -38,12 +40,12 @@ export const HOME_TAB_LIKED = "Liked";
  */
 export const HOME_TAB_CLIPS = "Clips";
 /**
- * "Online" is home's version of the video/live rails' "Live" tab, and it sits
- * ahead of Liked. Only in HOME_RAIL_TABS — RAIL_TABS keeps "Live", which
- * rail-video-list.tsx branches on to swap in the live-streams query.
+ * "Online" is home's version of the video/live rails' "Live" tab. Only in
+ * HOME_RAIL_TABS — RAIL_TABS keeps "Live", which rail-video-list.tsx branches on
+ * to swap in the live-streams query.
  */
 export const HOME_TAB_ONLINE = "Online";
-export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_ONLINE, HOME_TAB_LIKED, HOME_TAB_CLIPS, "New", "Upcoming"];
+export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_ONLINE, HOME_TAB_CLIPS, HOME_TAB_LIKED, "New", "Upcoming"];
 
 export function RailTabs({
     tabs = RAIL_TABS,

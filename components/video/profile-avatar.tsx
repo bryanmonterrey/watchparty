@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Edit2 } from "lucide-react";
 import { UserType } from "@/db/schema/auth/user";
 import { OnlineIndicator } from "@/components/ui/online-indicator";
 import { LiveBadge } from "@/components/streaming/live-badge";
@@ -22,7 +21,7 @@ export function ProfileAvatar({ user, isMinimized }: ProfileAvatarProps) {
         <div className="relative z-30 ">
             <div
                 className={cn(
-                    "rounded-full border-black ring-1 ring-white/10 bg-zinc-900 overflow-hidden shadow-2xl group cursor-pointer relative",
+                    "rounded-full border-black ring-1 ring-white/10 bg-zinc-900 overflow-hidden shadow-2xl relative",
                     isMinimized ? "size-20 border-[6px]" : "size-16 border-[6px]"
                 )}
             >
@@ -31,9 +30,6 @@ export function ProfileAvatar({ user, isMinimized }: ProfileAvatarProps) {
                     alt={user.username || ""}
                     className="object-cover size-full"
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                    <Edit2 className="text-white" size={32} />
-                </div>
             </div>
         </div>
     );

@@ -150,18 +150,12 @@ export function ProfileHeaderActions({ user, isOwner }: ProfileHeaderActionsProp
     return (
         <div className="flex items-center gap-2 shrink-0">
             {!isOwner ? (
-                // Left to right (owner order, 2026-07-20): dots, gift premium
-                // (icon-only), message, send, follow, [subscribe/gift subs — no
-                // live tiers to test placement against yet]. Resize moved to the
-                // banner (top-right full / bottom-right compact) in user-profile.
+                // Left to right: gift premium (icon-only), message, send,
+                // follow, [subscribe/gift subs], then the dots LAST — the
+                // overflow menu is the row's final item, not its first. Resize
+                // moved to the banner (top-right full / bottom-right compact)
+                // in user-profile.
                 <>
-                    <MoreMenu
-                        userId={user.id}
-                        username={user.username}
-                        open={showMoreMenu}
-                        onOpenChange={setShowMoreMenu}
-                        onClose={() => setShowMoreMenu(false)}
-                    />
                     <GiftPremiumButton recipientId={user.id} recipientName={user.name} className={iconBtnClass} />
                     <MessageButton userId={user.id} className={cn(iconBtnClass, "disabled:opacity-50")} />
                     {user.wallet_address && (
@@ -185,6 +179,13 @@ export function ProfileHeaderActions({ user, isOwner }: ProfileHeaderActionsProp
                         creatorId={user.id}
                         creatorName={user.name}
                         className="flex h-11 items-center gap-1.5 rounded-full border border-baseborder/5 bg-soft-gray-10 px-4 text-base font-bold text-white2 transition-colors hover:bg-soft-gray-15"
+                    />
+                    <MoreMenu
+                        userId={user.id}
+                        username={user.username}
+                        open={showMoreMenu}
+                        onOpenChange={setShowMoreMenu}
+                        onClose={() => setShowMoreMenu(false)}
                     />
                 </>
             ) : (
