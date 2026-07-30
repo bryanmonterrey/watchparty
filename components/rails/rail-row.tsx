@@ -83,14 +83,6 @@ export function RailRow({
                         {verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}
                     </span>
                 )}
-                {/* Its own line under the identity, a step up in size from the
-                    12px it had while it shared the username's row. Renders
-                    nothing without a count, so the line can't sit empty. */}
-                <ViewsStat
-                    views={views}
-                    className="mt-0.5 text-[13px] font-medium text-flexwhite/50"
-                    iconClassName="size-4"
-                />
             </span>
         </>
     );
@@ -98,10 +90,11 @@ export function RailRow({
     // The menu is a real button, so it CANNOT live inside the row's own
     // button/link — nesting them would be invalid HTML and its clicks would
     // fight the row's. So the click target wraps the thumb and text only, and
-    // the menu is a sibling under it. With no menu the result is identical to
-    // what this row has always been: a full-width target with the hover/active
-    // fill, just carried by the wrapper instead of the target itself.
-    const hasExtras = !!menu;
+    // the line below it carries the view count and the menu together. With
+    // neither, the result is identical to what this row has always been: a
+    // full-width target with the hover/active fill, just carried by the wrapper
+    // instead of the target itself.
+    const hasExtras = !!menu || views != null;
     const target = cn(RAIL_ROW, "cursor-pointer p-0");
 
     return (
@@ -122,9 +115,16 @@ export function RailRow({
                     </button>
                 )}
 
+                {/* One line at the end: the view count sits directly left of the
+                    menu, both at 22px so the mark and the dots read as a pair. */}
                 {hasExtras && (
-                    <div className={cn("flex flex-col", INFO_INDENT)}>
-                        <div className="flex justify-end">{menu}</div>
+                    <div className={cn("flex items-center justify-end gap-1.5", INFO_INDENT)}>
+                        <ViewsStat
+                            views={views}
+                            className="text-[15px] font-medium text-flexwhite/50"
+                            iconClassName="size-5.5"
+                        />
+                        {menu}
                     </div>
                 )}
 
