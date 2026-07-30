@@ -8,16 +8,11 @@ import { cn } from "@/lib/utils";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 import { Video } from "./types";
+import { ViewsStat } from "@/components/ui/views-stat";
 
 interface VideoCardProps {
     video?: Video;
     loading?: boolean;
-}
-
-function formatViews(n: number): string {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-    return String(n);
 }
 
 export function VideoCard({ video, loading }: VideoCardProps) {
@@ -118,7 +113,7 @@ export function VideoCard({ video, loading }: VideoCardProps) {
                         )}
                     </div>
                     <div className="flex items-center space-x-1">
-                        <span className="text-sm font-medium text-zinc-500">{formatViews(video.views)} views</span>
+                        <ViewsStat views={video.views} className="text-sm font-medium text-zinc-500" />
                         <span className="text-zinc-700">•</span>
                         <span className="text-sm font-medium text-zinc-500">{formatRelativeTime(video.createdAt.toISOString())}</span>
                     </div>

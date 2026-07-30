@@ -4,11 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FavouriteIcon } from "@hugeicons/core-free-icons";
-import { cn } from "@/lib/utils";
+import { cn, compactCount } from "@/lib/utils";
 import { useBurst } from "@/hooks/use-burst";
 import { trpc } from "@/lib/trpc/client";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { TokenRow } from "@/components/tokens/token-row";
+import { ViewsStat } from "@/components/ui/views-stat";
 import { WatchActions } from "@/components/video/watch-actions";
 import { formatRelativeTime } from "@/lib/date-utils";
 import type { HomeFeedVideo } from "./home-feed-context";
@@ -23,13 +24,6 @@ import type { HomeFeedVideo } from "./home-feed-context";
 // correct if switching videos remounts the component.
 
 /** 1.2K / 48.3K / 2.1M — view and like counts get large. */
-function compactCount(n: number | null | undefined): string {
-    if (n == null || !Number.isFinite(n)) return "0";
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
-    return String(Math.round(n));
-}
-
 function VerifiedBadge({ tier }: { tier: HomeFeedVideo["user"]["verifiedTier"] }) {
     if (tier === "verified") return <VerifiedBadgeIcon className="size-4 shrink-0" />;
     if (tier === "business") return <BusinessBadgeIcon className="size-4 shrink-0" />;
@@ -191,9 +185,7 @@ export function HomeVideoHeader({ video, className, action }: {
                             live
                         </span>
                     ) : (
-                        video.views != null && (
-                            <span className="tabular-nums">{compactCount(video.views)} views</span>
-                        )
+                        <ViewsStat views={video.views} />
                     )}
                     {video.createdAt && (
                         <>

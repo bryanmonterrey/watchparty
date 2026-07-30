@@ -6,6 +6,7 @@ import { staggerPulse } from "@/lib/skeleton-stagger";
 import { Squircle } from "@/components/ui/squircle";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { TokenRow, type TokenRowToken } from "@/components/tokens/token-row";
+import { ViewsStat } from "@/components/ui/views-stat";
 
 // One rail row for the whole app — home's picker, the video page's up-next and
 // the live page's list are the same object doing three jobs, so they're one
@@ -42,12 +43,6 @@ interface RailRowProps {
     href?: string;
     /** Selects in place. */
     onSelect?: () => void;
-}
-
-function formatViews(n: number) {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}K`;
-    return `${n}`;
 }
 
 export function RailRow({
@@ -93,11 +88,11 @@ export function RailRow({
                         {verifiedTier === "verified" && <VerifiedBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "business" && <BusinessBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}
-                        {views != null && (
-                            <span className="shrink-0 text-xs font-medium text-flexwhite/50">
-                                {formatViews(views)} views
-                            </span>
-                        )}
+                        <ViewsStat
+                            views={views}
+                            className="shrink-0 text-xs font-medium text-flexwhite/50"
+                            iconClassName="size-3.5"
+                        />
                     </span>
                 )}
             </span>

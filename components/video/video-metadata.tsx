@@ -13,6 +13,7 @@ import { UserType } from "@/db/schema/auth/user";
 import { CommentSection } from "@/components/browse/comment-section";
 import { type InlineChipToken } from "@/components/tokens/token-inline-chip";
 import { TokenRow } from "@/components/tokens/token-row";
+import { ViewsStat } from "@/components/ui/views-stat";
 
 interface VideoAuthor {
     id: string;
@@ -137,7 +138,7 @@ export function VideoMetadata({
                 // and the age of the video.
                 stats={
                     <>
-                        <span className="tabular-nums">{formatViewers(views)} views</span>
+                        <ViewsStat views={views} />
                         <span aria-hidden>·</span>
                         <span>{formatRelativeTime(new Date(createdAt).toISOString())}</span>
                     </>
