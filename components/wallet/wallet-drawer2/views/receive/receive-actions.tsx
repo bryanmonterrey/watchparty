@@ -29,7 +29,7 @@ export function ReceiveActions({ walletAddress, missingAddress }: ReceiveActions
     };
 
     return (
-        <div className="mx-auto w-2/3 space-y-4">
+        <div className="mx-auto w-3/4 space-y-4">
             {/* Wallet Address Display */}
             <motion.button
                 whileHover={{ backgroundColor: "#252526" }}

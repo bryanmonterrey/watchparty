@@ -11,6 +11,13 @@ import { ChainIcon } from "@/components/wallet/chain-icon";
 interface NetworkViewProps {
   onSelect: (chain: ChainId) => void;
   onClose: () => void;
+  /**
+   * Address kinds this account actually has. Chains outside it are dropped:
+   * an extension-only account has no mnemonic, so no address was ever derived
+   * for Base or BTC, and offering the network would invite a deposit to
+   * nothing. Omit to show every chain.
+   */
+  availableKinds?: string[];
 }
 
 /**
@@ -21,7 +28,10 @@ interface NetworkViewProps {
  * infer from, so the choice lives here, at the moment it is actually needed,
  * rather than as a global mode you have to set beforehand.
  */
-export function NetworkView({ onSelect, onClose }: NetworkViewProps) {
+export function NetworkView({ onSelect, onClose, availableKinds }: NetworkViewProps) {
+  const chains = availableKinds
+    ? CHAINS.filter((c) => availableKinds.includes(c.kind))
+    : CHAINS;
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -44,7 +54,7 @@ export function NetworkView({ onSelect, onClose }: NetworkViewProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4">
-        {CHAINS.map((chain) => {
+        {chains.map((chain) => {
           return (
             <button
               key={chain.id}

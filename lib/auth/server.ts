@@ -57,6 +57,11 @@ const config = {
       wallet_address: { type: "string" as const, required: false },
       bio: { type: "string" as const, required: false },
       role: { type: "string" as const, defaultValue: "user", input: false },
+      // Read-only like `role`: the badge is awarded, never self-assigned. Here
+      // so every session payload carries it — including multiSession's device
+      // list, which is what lets the account switcher badge each account
+      // without a lookup per row. Pairs with hideVerifiedBadge below.
+      verifiedTier: { type: "string" as const, required: false, input: false },
       username: { type: "string" as const, required: false },
       gender: { type: "boolean" as const, required: false },
       last_signed_in: { type: "date" as const, input: false },

@@ -125,11 +125,11 @@ export function ReceiveView({
                     <ReceiveActions walletAddress={walletAddress} missingAddress={missingAddress} />
 
                     <div className="pt-2">
-                        {/* w-2/3, centred — matches the address card and copy
+                        {/* w-3/4, centred — matches the address card and copy
                             button so the three read as one stack. */}
                         <button
                             onClick={onBuy}
-                            className="mx-auto w-2/3 cursor-pointer h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold flex items-center justify-center gap-2 transition-all"
+                            className="mx-auto w-3/4 cursor-pointer h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold flex items-center justify-center gap-2 transition-all"
                         >
                             <CreditCard className="w-5 h-5" />
                             Buy {config.nativeCurrency.symbol} with Fiat

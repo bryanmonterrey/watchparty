@@ -4,7 +4,10 @@ import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronDown } from "lucide-react";
-import { SettingsIcon, PowerIcon, WalletIcon, CopyIcon, LogoutIcon } from "@/components/icons";
+import {
+    SettingsIcon, PowerIcon, WalletIcon, CopyIcon, LogoutIcon,
+    VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon,
+} from "@/components/icons";
 import { shortenWalletAddress } from "@/lib/utils";
 import { appToast } from "@/components/app-ui/app-toast";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
@@ -13,9 +16,21 @@ import {
     MorphPopoverContent,
     MorphPopoverTrigger,
 } from "@/components/motion/popover-morph";
-import { trpc } from "@/lib/trpc/client";
 import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
 import { useAuthSession } from "@/hooks/use-auth-session";
+
+/**
+ * Same three tiers the watch and home headers render. `hidden` honours the
+ * user's own opt-out (hideVerifiedBadge), so an account that suppressed its
+ * checkmark everywhere else doesn't get one here.
+ */
+function VerifiedBadge({ tier, hidden }: { tier?: string | null; hidden?: boolean | null }) {
+    if (hidden) return null;
+    if (tier === "verified") return <VerifiedBadgeIcon className="size-3.5 shrink-0" />;
+    if (tier === "business") return <BusinessBadgeIcon className="size-3.5 shrink-0" />;
+    if (tier === "government") return <GovBadgeIcon className="size-3.5 shrink-0" />;
+    return null;
+}
 
 interface WalletHeaderProps {
     username: string;
@@ -39,29 +54,11 @@ export function WalletHeader({
     const [isOpen, setIsOpen] = React.useState(false);
     const [accountOpen, setAccountOpen] = React.useState(false);
 
-    const utils = trpc.useUtils();
-    // Only fetched once the account popover is opened — the header shouldn't pay
-    // for a wallet list nobody has asked to see.
-    const { data: linked } = trpc.wallet.listLinkedWallets.useQuery(undefined, {
-        enabled: accountOpen,
-        staleTime: 60_000,
-    });
-
-    // Every account signed in on this device (better-auth multiSession). Same
-    // deal — nothing is fetched until the panel opens.
+    // Every account signed in on this device (better-auth multiSession). Nothing
+    // is fetched until the panel opens.
     const { data: session } = useAuthSession();
     const activeUserId = session?.user?.id;
     const { accounts, setActive, revoke, atCapacity } = useDeviceSessions(accountOpen);
-    const setPrimary = trpc.wallet.setPrimaryWallet.useMutation({
-        onSuccess: () => {
-            utils.wallet.listLinkedWallets.invalidate();
-            appToast.success("primary wallet updated");
-            setAccountOpen(false);
-        },
-        onError: (e) => appToast.error(e.message),
-    });
-
-    const wallets = linked?.wallets ?? [];
 
     const handleCopyAddress = () => {
         if (walletAddress) {
@@ -73,13 +70,13 @@ export function WalletHeader({
 
     return (
         <div className="flex items-center justify-between px-5 pt-5 bg-canvas relative">
-            {/* The account row is its own popover — the wallet switcher, modelled
+            {/* The account row is its own popover — the account switcher, modelled
                 on the wallet-card block's account trigger. It is deliberately NOT
                 the session menu: those actions stay on the power button.
 
                 MorphPopover rather than GooDropdown here. Goo is the standard for
-                menus of rows; this panel is a switcher with its own header and
-                per-wallet layout, which is what the morph primitive is for. */}
+                menus of rows; this panel has its own header and per-account layout,
+                which is what the morph primitive is for. */}
             {loading ? (
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full shimmer-skeleton" />
@@ -92,7 +89,7 @@ export function WalletHeader({
                 <MorphPopover open={accountOpen} onOpenChange={setAccountOpen}>
                     <MorphPopoverTrigger>
                         <button
-                            aria-label="Switch wallet"
+                            aria-label="Switch account"
                             // -ml-2 pulls the avatar back to the card's content
                             // edge, so it still lines up with the balance below
                             // despite the trigger's own padding.
@@ -119,9 +116,10 @@ export function WalletHeader({
                         fill="#111111ff"
                         className="w-[264px] p-1.5"
                     >
-                        {/* Accounts first: which person you are, then which of
-                            that person's wallets. Both live in one panel so the
-                            avatar answers the whole "who am I" question. */}
+                        {/* Accounts only. The wallet list lived here too and was
+                            redundant: switching the primary wallet already has a
+                            home in settings, and the panel that answers "who am I"
+                            shouldn't also be a wallet manager. */}
                         <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
                             accounts
                         </p>
@@ -150,13 +148,32 @@ export function WalletHeader({
                                                 <AvatarImage src={a.user.avatar_url ?? undefined} alt={handle} className="object-cover" />
                                                 <AvatarFallback />
                                             </Avatar>
+                                            {/* The badge follows the username, and
+                                                renders exactly once: an account with
+                                                no display name has the handle on the
+                                                first line, so the second would repeat
+                                                it. */}
                                             <span className="min-w-0 flex-1">
-                                                <span className="block truncate text-sm font-semibold text-white">
-                                                    {a.user.name || handle}
+                                                <span className="flex items-center gap-1">
+                                                    <span className="truncate text-sm font-semibold text-white">
+                                                        {a.user.name || handle}
+                                                    </span>
+                                                    {!a.user.name && (
+                                                        <VerifiedBadge
+                                                            tier={a.user.verifiedTier}
+                                                            hidden={a.user.hideVerifiedBadge}
+                                                        />
+                                                    )}
                                                 </span>
-                                                <span className="block truncate text-xs font-medium text-zinc-500">
-                                                    {handle}
-                                                </span>
+                                                {a.user.name && (
+                                                    <span className="flex items-center gap-1 text-xs font-medium text-zinc-500">
+                                                        <span className="truncate">{handle}</span>
+                                                        <VerifiedBadge
+                                                            tier={a.user.verifiedTier}
+                                                            hidden={a.user.hideVerifiedBadge}
+                                                        />
+                                                    </span>
+                                                )}
                                             </span>
                                             {isActive && <Check className="size-4 shrink-0 text-white" />}
                                         </button>
@@ -197,49 +214,6 @@ export function WalletHeader({
                             <span className="text-sm font-semibold text-white">add an existing account</span>
                         </a>
 
-                        <div className="mx-3 my-1.5 h-px bg-white/[0.06]" />
-
-                        <p className="px-3 pt-1 pb-1.5 text-xs font-semibold text-zinc-500">
-                            your wallets
-                        </p>
-                        {wallets.length === 0 ? (
-                            <div className="px-3 pb-3 pt-1 text-sm font-medium text-zinc-500">
-                                loading…
-                            </div>
-                        ) : (
-                            <ul className="max-h-64 overflow-y-auto">
-                                {wallets.map((w) => {
-                                    // Labelled by name and source, never by address —
-                                    // same house rule linked-wallets-panel follows.
-                                    const isEmbedded = w.source === "swig";
-                                    return (
-                                        <li key={w.id}>
-                                            <button
-                                                onClick={() => {
-                                                    if (w.isPrimary) { setAccountOpen(false); return; }
-                                                    setPrimary.mutate({ address: w.address });
-                                                }}
-                                                disabled={setPrimary.isPending}
-                                                className={`flex w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${w.isPrimary ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
-                                            >
-                                                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.06]">
-                                                    <WalletIcon className="size-4 text-zinc-400" />
-                                                </span>
-                                                <span className="min-w-0 flex-1">
-                                                    <span className="block truncate text-sm font-semibold text-white">
-                                                        {w.label || (isEmbedded ? "watchparty wallet" : "connected wallet")}
-                                                    </span>
-                                                    <span className="block text-xs font-medium text-zinc-500">
-                                                        {w.isPrimary ? "primary" : "tap to make primary"}
-                                                    </span>
-                                                </span>
-                                                {w.isPrimary && <Check className="size-4 shrink-0 text-white" />}
-                                            </button>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
                     </MorphPopoverContent>
                 </MorphPopover>
             )}

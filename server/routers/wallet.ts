@@ -451,12 +451,17 @@ export const walletRouter = router({
             }
         });
 
-        // Every visible chain gets a row, even with no address and no balance.
-        // Accounts that predate the embedded wallet have no mnemonic, so no
-        // derived address exists to query — but the wallet should still show
-        // which networks it supports rather than collapsing to just Solana.
+        // A zero-balance row for every chain the user can actually RECEIVE on, so
+        // a funded network never hides just because the balance is 0.
+        //
+        // It used to be every visible chain, address or not, on the reasoning
+        // that the wallet should advertise which networks it supports. That reads
+        // as a lie: an extension-only account has no mnemonic, so no derived
+        // address exists for Base or BTC — offering those rows invites a deposit
+        // to an address that was never created. Support belongs on a setup
+        // prompt, not in the holdings list.
         const haveNative = new Set(assets.filter((a) => a.isNative).map((a) => a.chain));
-        const missing = allTargets.filter((c) => !haveNative.has(c.id));
+        const missing = allTargets.filter((c) => !haveNative.has(c.id) && !!addresses[c.kind]);
 
         const prices = await Promise.all(
             missing.map((c) => getNativePrice(c.id).catch(() => null))

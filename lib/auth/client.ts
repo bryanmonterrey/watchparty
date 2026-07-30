@@ -67,7 +67,12 @@ type ServerDeviceSessionRow = MultiSessionRows extends readonly (infer R)[] ? R 
  * out here because the endpoint's own type is the base user record.
  */
 export type DeviceSessionRow = ServerDeviceSessionRow & {
-  user: { username?: string | null; avatar_url?: string | null };
+  user: {
+    username?: string | null;
+    avatar_url?: string | null;
+    verifiedTier?: string | null;
+    hideVerifiedBadge?: boolean | null;
+  };
 };
 
 type ClientResult<T> = { data: T | null; error: { message?: string } | null };

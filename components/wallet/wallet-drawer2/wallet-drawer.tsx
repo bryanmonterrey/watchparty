@@ -294,6 +294,11 @@ export function WalletDrawer({
                 {currentView === "network" && (
                     <motion.div key="network" {...viewMotionProps} className="h-full">
                         <NetworkView
+                            // Only networks this account has an address for —
+                            // see the prop's note.
+                            availableKinds={Object.keys(chainAddresses).filter(
+                                (k) => !!chainAddresses[k]
+                            )}
                             onSelect={(chain) => {
                                 setReceiveChain(chain);
                                 setCurrentView("receive");
