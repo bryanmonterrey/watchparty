@@ -32,7 +32,7 @@ function CreateButtonSkeleton() {
   return (
     <div
       aria-hidden
-      className="flex size-[52px] items-center justify-center rounded-full border-sidebar-hover/10 bg-soft-gray-10"
+      className="flex size-[52px] items-center justify-center rounded-full border-sidebar-hover/10"
     >
       <div className="size-6 rounded-lg shimmer-skeleton" />
     </div>

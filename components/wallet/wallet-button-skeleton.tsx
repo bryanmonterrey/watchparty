@@ -17,9 +17,9 @@ export function WalletButtonSkeleton() {
     return (
         <div
             aria-hidden
-            className="size-[52px] overflow-hidden rounded-full border border-baseborder/5 bg-soft-gray/10 backdrop-blur-xs"
+            className="size-[52px] overflow-hidden rounded-full border border-baseborder/5"
         >
-            <div className="size-full rounded-full shimmer-skeleton" />
+            <div className="size-6 rounded-full shimmer-skeleton" />
         </div>
     );
 }
