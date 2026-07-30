@@ -92,11 +92,11 @@ export function ShortsFeed() {
         return (
             <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-sidebar">
                 <div className="absolute inset-0 bg-sidebar" />
-                <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-zinc-900/60">
+                <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-sidebar">
                     <Skeleton name="shorts-video" loading>
                         <div className="w-full h-full bg-zinc-800/20" />
                     </Skeleton>
-                    <div className="absolute bottom-0 left-0 w-full p-4 pt-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end gap-2">
+                    <div className="absolute bottom-0 left-0 w-full p-4 pt-20 flex flex-col justify-end gap-2">
                         <Skeleton name="shorts-title" loading>
                             <div className="h-4 w-32 rounded-full bg-zinc-700/30" />
                         </Skeleton>

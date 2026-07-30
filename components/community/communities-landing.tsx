@@ -161,14 +161,14 @@ export function CommunitiesLanding() {
     };
 
     return (
-        <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 bg-background">
+        <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 bg-sidebar-hover/25">
             <div className="flex flex-col max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-4xl font-black tracking-tighter text-white">
+                        <h1 className="text-2xl font-semibold tracking-tight text-white">
                             Communities
                         </h1>
-                        <p className="text-flexwhite/40 mt-1.5 text-lg font-medium">
+                        <p className="text-zinc-400 mt-1.5 text-lg font-medium">
                             Your servers and community spaces
                         </p>
                     </div>
@@ -178,7 +178,11 @@ export function CommunitiesLanding() {
                 {!mounted && (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="aspect-square rounded-[32px] border border-flexwhite/10 shimmer-skeleton" />
+                            <div key={i} className="aspect-square flex flex-col p-4 gap-2 items-start justify-end rounded-[32px] border border-baseborder/25" >
+                                <div className="relative h-3.5 w-3/4 bg-soft-gray-10 rounded-xs" />
+                                <div className="relative h-3.5 w-2/3 bg-soft-gray-10 rounded-xs" />
+                            
+                            </div>
                         ))}
                     </div>
                 )}
@@ -233,7 +237,11 @@ export function CommunitiesLanding() {
                 {mounted && session?.user && isLoading && (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="aspect-square rounded-[32px] border border-flexwhite/10 shimmer-skeleton" />
+                            <div key={i} className="aspect-square flex flex-col p-4 gap-2 items-start justify-end rounded-[32px] border border-baseborder/25" >
+                                <div className="relative h-3.5 w-3/4 bg-soft-gray-10 rounded-xs" />
+                                <div className="relative h-3.5 w-2/3 bg-soft-gray-10 rounded-xs" />
+                            
+                            </div>
                         ))}
                     </div>
                 )}
