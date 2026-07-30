@@ -81,13 +81,16 @@ export function RailRow({
                         {verifiedTier === "verified" && <VerifiedBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "business" && <BusinessBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}
-                        <ViewsStat
-                            views={views}
-                            className="shrink-0 text-xs font-medium text-flexwhite/50"
-                            iconClassName="size-3.5"
-                        />
                     </span>
                 )}
+                {/* Its own line under the identity, a step up in size from the
+                    12px it had while it shared the username's row. Renders
+                    nothing without a count, so the line can't sit empty. */}
+                <ViewsStat
+                    views={views}
+                    className="mt-0.5 text-[13px] font-medium text-flexwhite/50"
+                    iconClassName="size-4"
+                />
             </span>
         </>
     );
