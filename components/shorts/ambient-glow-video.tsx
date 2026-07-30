@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { AmbientGlow } from "video-ambient-glow";
+import { useAmbientGlow, AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
 
 interface AmbientGlowVideoProps {
     src?: string | undefined;
@@ -26,31 +26,13 @@ export function AmbientGlowVideo({
 }: AmbientGlowVideoProps) {
     const internalRef = useRef<HTMLVideoElement>(null);
     const videoRef = externalVideoRef ?? internalRef;
-    const glowRef = useRef<AmbientGlow | null>(null);
 
-    useEffect(() => {
-        const videoEl = videoRef.current;
-        if (!videoEl) return;
-
-        // Portrait-optimized halo for 9:16 aspect ratio.
-        // Reduced blur and scale to prevent excessive side bleed.
-        glowRef.current = new AmbientGlow(videoEl, {
-            blur: 120,
-            opacity: 0.5,
-            brightness: 1.1,
-            saturate: 1.2,
-            scale: 1.05,
-            downscale: 0.1,
-            updateInterval: 98,
-            responsiveness: 0.1,
-        });
-
-        return () => {
-            glowRef.current?.destroy();
-            glowRef.current = null;
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    // The app's shared glow, same as home's hero, the watch page and the live
+    // player. This ran its own blur 120 / opacity 0.5 / scale 1.05 — a wide
+    // haze bleeding onto the page rather than the tight halo everywhere else,
+    // which is exactly the drift the preset exists to prevent. Going through
+    // the hook means a future tuning reaches shorts too.
+    useAmbientGlow(videoRef, AMBIENT_PRESET);
 
     useEffect(() => {
         const videoEl = videoRef.current;

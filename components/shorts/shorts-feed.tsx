@@ -7,6 +7,11 @@ import { ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "boneyard-js/react";
 
+// Every surface here fills with #080808 — the app canvas, and what the sidebar
+// actually paints (components/ui/sidebar.tsx). These were `bg-sidebar`, which is
+// the shadcn token at #18181B: lighter and blue-tinted, so the feed didn't match
+// the sidebar beside it or the Clips overlay behind it.
+
 export function ShortsFeed() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
@@ -65,7 +70,7 @@ export function ShortsFeed() {
 
     if (videos.length === 0 && !isLoading) {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-sidebar">
+            <div className="w-full h-full flex items-center justify-center bg-[#080808]">
                 <p className="text-zinc-500">No shorts available yet.</p>
             </div>
         );
@@ -90,9 +95,9 @@ export function ShortsFeed() {
 
     if (isLoading) {
         return (
-            <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-sidebar">
-                <div className="absolute inset-0 bg-sidebar" />
-                <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-sidebar">
+            <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-[#080808]">
+                <div className="absolute inset-0 bg-[#080808]" />
+                <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-[#080808]">
                     <Skeleton name="shorts-video" loading>
                         <div className="w-full h-full bg-zinc-800/20" />
                     </Skeleton>
@@ -132,13 +137,13 @@ export function ShortsFeed() {
             <div
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="w-full h-full overflow-y-scroll snap-y snap-mandatory hidden-scrollbar relative bg-sidebar"
+                className="w-full h-full overflow-y-scroll snap-y snap-mandatory hidden-scrollbar relative bg-[#080808]"
             >
                 {videos.map((video) => (
                     <div
                         key={video.id}
                         data-video-id={video.id}
-                        className="short-video-container snap-start snap-always w-full h-full relative bg-sidebar [contain:none] overflow-visible"
+                        className="short-video-container snap-start snap-always w-full h-full relative bg-[#080808] [contain:none] overflow-visible"
                     >
                         <ShortVideoCard
                             video={video}

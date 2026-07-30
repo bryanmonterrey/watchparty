@@ -7,6 +7,10 @@ import { AmbientGlowVideo } from "./ambient-glow-video";
 import { trpc } from "@/lib/trpc/client";
 import { PostComposerDialog } from "@/components/browse/post-composer-dialog";
 
+// The card fills with #080808 — the app canvas, and what the sidebar actually
+// paints. Not `bg-sidebar` (#18181B), which is a different, lighter colour; see
+// shorts-feed.tsx.
+
 interface ShortVideoCardProps {
     video: {
         id: string;
@@ -96,8 +100,8 @@ export function ShortVideoCard({ video, isActive }: ShortVideoCardProps) {
 
     return (
         <>
-            <div className="snap-start snap-always w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-sidebar [contain:none] overflow-visible">
-                <div className="absolute inset-0 z-0 bg-sidebar" />
+            <div className="snap-start snap-always w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-[#080808] [contain:none] overflow-visible">
+                <div className="absolute inset-0 z-0 bg-[#080808]" />
 
                 <div className="ambient-video-container isolate relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl [contain:none] overflow-visible">
                     <AmbientGlowVideo
