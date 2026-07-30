@@ -338,11 +338,11 @@ export function TrendingTable({ className }: { className?: string }) {
                 gets a header that sticks to the top of its scroller, and the
                 board stays usable outside home.
 
-                Opaque #080808 (the app canvas, i.e. bg-panel's 3% white over
+                Opaque bg-canvas (the app canvas, i.e. bg-panel's 3% white over
                 black) — bg-panel itself is translucent and would let the rows
                 show through. z-10 keeps it over the rows but under the tabs,
                 which are z-20, so the two stack rather than fight. */}
-            <div className={cn(GRID, CELL_TEXT, "sticky top-[var(--board-stick,0px)] z-10 bg-[#080808] px-3 pb-3 pt-4 text-zinc-500")}>
+            <div className={cn(GRID, CELL_TEXT, "sticky top-[var(--board-stick,0px)] z-10 bg-canvas px-3 pb-3 pt-4 text-zinc-500")}>
                 {/* Sentence case, capital on the first word only — the one
                     place in the app that isn't all-lowercase, per the author. */}
                 <span>Name</span>

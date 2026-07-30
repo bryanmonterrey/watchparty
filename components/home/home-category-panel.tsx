@@ -27,11 +27,11 @@ export function HomeCategoryPanel() {
                   the centre column's md:mt-[var(--header-height)] — below md the
                   fixed header is hidden (max-md:hidden), so there's nothing to
                   offset against.
-                · the fill is the OPAQUE #080808, not bg-panel. bg-panel is
+                · the fill is the OPAQUE bg-canvas, not bg-panel. bg-panel is
                   rgba(255,255,255,0.03) — translucent — so the board would show
-                  through the tabs as it scrolled under them. #080808 is exactly
-                  what that 3% white composites to over the black canvas, which
-                  is why it's the literal used for this surface elsewhere.
+                  through the tabs as it scrolled under them. bg-canvas is exactly
+                  what that 3% white composites to over the black shell, and it's
+                  the token every full-bleed app surface shares.
                 · pb-2 rather than mb-2: a margin isn't painted, so the gap under
                   a stuck bar would be a transparent slot with rows sliding
                   through it.
@@ -42,7 +42,7 @@ export function HomeCategoryPanel() {
                 buttons (28px line box + 12px = 40px) and the arrows are
                 absolute, so 40 + pb-2 = 48px = h-12. Pin it and the number
                 can't drift out from under whatever stacks beneath it. */}
-            <div className="sticky top-0 z-20 h-12 bg-[#080808] pb-2 md:top-[var(--header-height)]">
+            <div className="sticky top-0 z-20 h-12 bg-canvas pb-2 md:top-[var(--header-height)]">
                 <HomeCategoryTabs active={active} onChange={setActive} />
             </div>
 

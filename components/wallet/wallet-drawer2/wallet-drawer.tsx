@@ -223,7 +223,13 @@ export function WalletDrawer({
                                             usdChange24h={totalUsdChange24h}
                                             pctChange24h={pctChange24h}
                                             hideBalances={hideBalances}
-                                            onToggleHideBalances={() => setHideBalances(false)}
+                                            // A real toggle now: the eye sits above the
+                                            // balance permanently, so it has to hide as
+                                            // well as reveal. It used to only ever
+                                            // un-hide, because the only affordance was a
+                                            // "Show Balance" button that appeared once
+                                            // the number was already masked.
+                                            onToggleHideBalances={() => setHideBalances(h => !h)}
                                             loading={isLoadingTokens}
                                         />
                                     );
@@ -702,7 +708,7 @@ export function WalletDrawer({
                                 animate={{ y: 0 }}
                                 exit={{ y: "100%" }}
                                 transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
-                                className="fixed bottom-0 left-0 right-0 h-[90vh] z-[60] flex flex-col bg-[#080808] border-t border-flexborder/50 overflow-hidden rounded-t-2xl"
+                                className="fixed bottom-0 left-0 right-0 h-[90vh] z-[60] flex flex-col bg-canvas border-t border-flexborder/50 overflow-hidden rounded-t-2xl"
                             >
                                 {panelContent}
                             </motion.div>
@@ -713,7 +719,7 @@ export function WalletDrawer({
                                 animate={{ x: 0, opacity: 1 }}
                                 exit={{ x: 16, opacity: 0 }}
                                 transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
-                                className="fixed right-0 top-0 h-screen w-[515px] z-[60] flex flex-col bg-[#080808] border-l border-baseborder/45 overflow-hidden"
+                                className="fixed right-0 top-0 h-screen w-[515px] z-[60] flex flex-col bg-canvas border-l border-baseborder/45 overflow-hidden"
                             >
                                 {panelContent}
                             </motion.div>

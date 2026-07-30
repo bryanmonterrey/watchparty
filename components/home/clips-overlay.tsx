@@ -22,11 +22,9 @@ const ShortsFeed = dynamic(
 // UNDER the header's z-50, which is what keeps the search bar and the menu icon
 // live while it's open, rather than sealing the app off behind a modal.
 //
-// The fill is #080808 — the app canvas, and what the sidebar actually paints
-// (components/ui/sidebar.tsx). NOT `bg-sidebar`: that token is #18181B, three
-// times lighter and blue-tinted, so the overlay read as a different surface than
-// the sidebar it sits against. The marketing menu goes to pure black, but this
-// one lives inside the app and should read as an app surface.
+// bg-canvas, the same fill the sidebar paints — the marketing menu goes to pure
+// black, but this one lives inside the app and reads as an app surface. It used
+// to reach for `bg-sidebar`, which is a different colour entirely (globals.css).
 //
 // The header offset is padding, not a top inset: the fill should run edge to edge
 // behind the header band, and only the feed needs to clear it.
@@ -47,7 +45,7 @@ export function ClipsOverlay() {
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-40 bg-[#080808] md:pt-[var(--header-height)]">
+        <div className="fixed inset-0 z-40 bg-canvas md:pt-[var(--header-height)]">
             <motion.div
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -183,6 +183,19 @@
   --color-lantern2: #35FFAA;
   --color-lantern: #00ED89;
   --color-gray1: #17171B;
+  /* The app canvas — bg-panel's white 3% over the black shell, flattened, and
+     the exact value the sidebar paints. Every full-bleed app surface that must
+     sit flush against the sidebar uses this: the sidebar itself, the Clips
+     overlay, the shorts feed, the wallet drawer, sticky table and tab headers.
+
+     It is NOT `bg-sidebar`. That is the shadcn token at #18181B — lighter and
+     blue-tinted — and reaching for it by name is how the Clips overlay ended up
+     a visibly different colour from the sidebar it sits against.
+
+     Flat rather than theme-aware, like --color-sidebar-hover below: these
+     surfaces were hardcoded hexes before this token existed, so a light-mode
+     value here would silently change what they render. */
+  --color-canvas: #080808;
   /* Sidebar menu-item hover pill (the `before:` capsule behind each item).
      Flat and opaque on purpose. It was zinc-900 on the nav items and
      zinc-800/50 on the More trigger — over the sidebar's #080808 that blend

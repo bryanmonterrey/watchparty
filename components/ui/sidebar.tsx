@@ -309,11 +309,11 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          // Solid #080808 = the profile/app page background (bg-panel, white 3%,
-          // composited over the black shell). Solid, not bg-panel itself, because
+          // bg-canvas = the profile/app page background (bg-panel's white 3%,
+          // composited over the black shell). Opaque, not bg-panel itself, because
           // the sidebar overlays content when it peeks on hover — translucent
-          // would bleed.
-          className="bg-[#080808] flex h-full w-full flex-col justify-between group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm"
+          // would bleed. This is the value bg-canvas is defined FROM (globals.css).
+          className="bg-canvas flex h-full w-full flex-col justify-between group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm"
         >
           {children}
         </div>

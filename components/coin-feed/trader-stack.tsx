@@ -54,7 +54,7 @@ export function TraderStack({
                     key={t.address ?? i}
                     // ring-canvas, not a border: the faces overlap, and a
                     // hairline border would read as a seam where they meet.
-                    className="relative size-6 overflow-hidden rounded-full ring-2 ring-[#080808]"
+                    className="relative size-6 overflow-hidden rounded-full ring-2 ring-canvas"
                     style={{ zIndex: SHOWN - i, backgroundColor: t.avatarUrl ? undefined : seedColor(t.address ?? String(i)) }}
                 >
                     {t.avatarUrl && (
@@ -64,7 +64,7 @@ export function TraderStack({
                 </span>
             ))}
             {overflow > 0 && (
-                <span className="relative z-0 flex size-6 items-center justify-center rounded-full bg-sidebar-hover ring-2 ring-[#080808]">
+                <span className="relative z-0 flex size-6 items-center justify-center rounded-full bg-sidebar-hover ring-2 ring-canvas">
                     <span className="text-[9px] font-bold tabular-nums text-zinc-400">+{overflow > 99 ? "99" : overflow}</span>
                 </span>
             )}

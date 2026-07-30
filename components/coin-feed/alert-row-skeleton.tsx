@@ -18,7 +18,7 @@ export function AlertRowSkeleton({ index, count }: { index: number; count: numbe
                     <span
                         key={i}
                         style={pulse}
-                        className="size-6 rounded-full shimmer-skeleton ring-2 ring-[#080808]"
+                        className="size-6 rounded-full shimmer-skeleton ring-2 ring-canvas"
                     />
                 ))}
             </div>

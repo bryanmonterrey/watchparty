@@ -1,4 +1,5 @@
-import { Eye } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ViewIcon, ViewOffSlashIcon, InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 interface WalletBalanceProps {
@@ -17,8 +18,33 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
     const changeBg = isPositive ? "bg-[#75ba80]/20 text-[#75ba80]" : isNegative ? "bg-[#e07d6f]/20 text-[#e07d6f]" : "bg-zinc-800 text-zinc-500";
 
     return (
-        <div className="px-5 pt-3 pb-3 bg-[#080808]">
-            <div className="flex items-end gap-2">
+        <div className="px-5 pt-3 pb-3 bg-canvas">
+            {/* Label + eye above the number, per the wallet-card block. The eye
+                lives here rather than appearing only once the balance is hidden,
+                so hiding is discoverable instead of one-way. */}
+            <div className="flex items-center gap-1.5">
+                {loading ? (
+                    <div className="h-3 w-14 rounded-full shimmer-skeleton" />
+                ) : (
+                    <>
+                        <p className="text-xs font-medium text-zinc-500">balance</p>
+                        <button
+                            onClick={onToggleHideBalances}
+                            aria-label={hideBalances ? "show balance" : "hide balance"}
+                            aria-pressed={hideBalances}
+                            className="cursor-pointer text-zinc-500 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon
+                                icon={hideBalances ? ViewOffSlashIcon : ViewIcon}
+                                className="size-3.5"
+                                strokeWidth={2}
+                            />
+                        </button>
+                    </>
+                )}
+            </div>
+
+            <div className="mt-1 flex items-end gap-2">
                 {loading ? (
                     <div className="h-10 w-40 rounded-3xl shimmer-skeleton" />
                 ) : hideBalances ? (
@@ -29,17 +55,14 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                     </p>
                 )}
             </div>
+
             <div className="mt-2 flex items-center gap-2">
                 {loading ? (
                     <div className="h-5 w-24 rounded-full shimmer-skeleton" />
                 ) : hideBalances ? (
-                    <button
-                        onClick={onToggleHideBalances}
-                        className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                    >
-                        <Eye className="w-4 h-4" />
-                        <span className="text-sm font-medium">Show Balance</span>
-                    </button>
+                    // Masked to the same height as the pills, so revealing doesn't
+                    // shift the rows below it.
+                    <span className="text-[15px] font-bold leading-none tracking-[0.3em] text-zinc-600">•••••</span>
                 ) : (
                     <>
                         <span className={cn("text-[15px] font-bold", changeColor)}>
@@ -50,6 +73,11 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                         </div>
                     </>
                 )}
+            </div>
+
+            <div className="mt-2 flex items-center gap-1 text-zinc-500">
+                <span className="text-xs font-medium">your assets are safe</span>
+                <HugeiconsIcon icon={InformationCircleIcon} className="size-3" strokeWidth={2} />
             </div>
         </div>
     );
