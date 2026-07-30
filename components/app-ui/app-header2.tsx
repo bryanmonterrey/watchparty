@@ -177,8 +177,10 @@ export function AppHeader2() {
         </div>
       </div>
 
-      {/* SEARCH BAR CENTERED */}
-      {showSearch && (
+      {/* SEARCH BAR CENTERED — hidden while the Clips overlay is up: it searches
+          the page underneath, which is covered, so it would only mislead. The
+          menu icon (now an X) and the right-hand cluster stay. */}
+      {showSearch && !clipsOpen && (
         <div className="relative z-10 flex-[2] flex items-center justify-center">
            <div className="w-full max-w-[560px] pointer-events-auto">
               {isSearchPage ? (
