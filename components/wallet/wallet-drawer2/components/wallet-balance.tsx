@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ViewIcon, ViewOffSlashIcon, InformationCircleIcon } from "@hugeicons/core-free-icons";
+import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 interface WalletBalanceProps {
@@ -27,7 +27,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                     <div className="h-3 w-14 rounded-full shimmer-skeleton" />
                 ) : (
                     <>
-                        <p className="text-xs font-medium text-zinc-500">balance</p>
+                        <p className="text-xs font-medium text-zinc-500">Balance</p>
                         <button
                             onClick={onToggleHideBalances}
                             aria-label={hideBalances ? "show balance" : "hide balance"}
@@ -73,11 +73,6 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                         </div>
                     </>
                 )}
-            </div>
-
-            <div className="mt-2 flex items-center gap-1 text-zinc-500">
-                <span className="text-xs font-medium">your assets are safe</span>
-                <HugeiconsIcon icon={InformationCircleIcon} className="size-3" strokeWidth={2} />
             </div>
         </div>
     );
