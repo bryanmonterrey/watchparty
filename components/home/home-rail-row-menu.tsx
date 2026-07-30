@@ -30,8 +30,8 @@ export function HomeRailRowMenu({ postId, userId }: { postId: string; userId?: s
                 "cursor-pointer rounded-full p-1 text-flexwhite/40 transition-colors hover:bg-white/10 hover:text-white",
                 open && "text-white",
             )}
-            // 22px, matching the engagement mark it sits beside.
-            trigger={<MoreVertical className="size-5.5" />}
+            // Matches the engagement mark it sits beside.
+            trigger={<MoreVertical className="size-5" />}
         />
     );
 }

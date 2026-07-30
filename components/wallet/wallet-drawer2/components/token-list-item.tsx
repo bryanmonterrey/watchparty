@@ -5,9 +5,14 @@ import { Coins } from "lucide-react";
 import { TokenIcon } from "./token-icon";
 import { cn } from "@/lib/utils";
 import type { ChainId } from "@/lib/chains/types";
+import { getChainOrDefault } from "@/lib/chains/registry";
+import { isVerifiedToken } from "@/lib/tokens/verified";
+import { VerifiedTokenBadge } from "@/components/tokens/verified-token-badge";
 
 interface TokenListItemProps {
     icon?: string;
+    /** Mint / contract, for the verified check. */
+    mint?: string;
     symbol: string;
     name: string;
     balance: number;
@@ -21,6 +26,7 @@ interface TokenListItemProps {
 
 export function TokenListItem({
     icon,
+    mint,
     symbol,
     name,
     balance,
@@ -31,6 +37,13 @@ export function TokenListItem({
     isNative,
     onClick,
 }: TokenListItemProps) {
+    const verified = isVerifiedToken({ mint, chain, isNative });
+    // Base's coin IS ether, so its symbol is ETH — identical to Ethereum's row
+    // in a list that spans both. The chain qualifies it. Only for a chain's own
+    // coin: on a token the corner badge already says which network, and
+    // repeating it on every row would be noise.
+    const config = chain ? getChainOrDefault(chain) : null;
+    const nativeChain = isNative && config && config.kind !== "solana" ? config.name : null;
     return (
         <button
             onClick={onClick}
@@ -48,8 +61,12 @@ export function TokenListItem({
 
                 {/* Token Info */}
                 <div className="flex flex-col items-start">
-                    <p className="text-md font-semibold text-white/85 group-hover:text-white transition-colors">
+                    <p className="flex items-center gap-1.5 text-md font-semibold text-white/85 group-hover:text-white transition-colors">
                         {symbol}
+                        {verified && <VerifiedTokenBadge />}
+                        {nativeChain && (
+                            <span className="text-sm font-medium text-zinc-500">{nativeChain}</span>
+                        )}
                     </p>
                     <p className="text-md font-semibold text-zinc-500">
                         {hideBalances ? "••••••" : balance.toLocaleString(undefined, {

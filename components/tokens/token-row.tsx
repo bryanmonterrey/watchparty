@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 
@@ -62,14 +64,25 @@ export function TokenAction({
     const { quickBuy, buyingId } = useQuickBuy();
     const mint = token.tokenAddress;
     // shrink-0 so the action is never what gives way when the row is tight.
+    // inline-flex for the trending arrow that leads the label — it lives here
+    // rather than at each call site so the home, video and live headers can't
+    // drift into three different-looking actions.
     const label = cn(
-        "shrink-0 font-extrabold text-twitter2 transition-opacity hover:opacity-80",
+        "inline-flex shrink-0 items-center gap-0.5 font-extrabold text-twitter2 transition-opacity hover:opacity-80",
         ACTION_TEXT[size],
+    );
+    const arrow = (
+        <HugeiconsIcon
+            icon={ArrowUpRight01Icon}
+            className={size === "xs" ? "size-3.5" : "size-4"}
+            strokeWidth={2.5}
+        />
     );
 
     if (!mint) {
         return (
             <Link href={`/coin/${token.id}`} className={label}>
+                {arrow}
                 Launch
             </Link>
         );
@@ -90,6 +103,7 @@ export function TokenAction({
             }}
             className={cn(label, "cursor-pointer disabled:opacity-50")}
         >
+            {arrow}
             {buying ? "Buying…" : "Buy"}
         </button>
     );

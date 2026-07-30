@@ -116,13 +116,13 @@ export function RailRow({
                 )}
 
                 {/* One line at the end: the view count sits directly left of the
-                    menu, both at 22px so the mark and the dots read as a pair. */}
+                    menu, both marks at size-5 so they read as a pair. */}
                 {hasExtras && (
                     <div className={cn("flex items-center justify-end gap-1.5", INFO_INDENT)}>
                         <ViewsStat
                             views={views}
-                            className="text-[15px] font-medium text-flexwhite/50"
-                            iconClassName="size-5.5"
+                            className="text-sm font-medium text-flexwhite/50"
+                            iconClassName="size-5"
                         />
                         {menu}
                     </div>

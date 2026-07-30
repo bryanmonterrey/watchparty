@@ -201,6 +201,7 @@ export function WalletTabs({
                                     // the mint alone is not unique here.
                                     key={`${token.chain ?? "solana"}:${token.mint}`}
                                     icon={token.icon}
+                                    mint={token.mint}
                                     symbol={token.symbol}
                                     name={token.name}
                                     balance={token.balance}

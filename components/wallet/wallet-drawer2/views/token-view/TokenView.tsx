@@ -13,6 +13,8 @@ import { TokenInfo } from "./TokenInfo";
 import { TokenAbout } from "./TokenAbout";
 import { TokenPerformance } from "./TokenPerformance";
 import { TokenActivity } from "./TokenActivity";
+import { isVerifiedToken } from "@/lib/tokens/verified";
+import { VerifiedTokenBadge } from "@/components/tokens/verified-token-badge";
 
 interface TokenDetailViewProps {
     token: Token;
@@ -63,6 +65,10 @@ export function TokenDetailView({ token, tokens, onBack, onSend, onReceive, onSw
                     </button>
                     <div className="flex items-center gap-2">
                         <span className="text-2xl font-bold text-white/90">{token.name}</span>
+                        {/* Same mark the list row carries, one click deeper. */}
+                        {isVerifiedToken({ mint: token.mint, chain: token.chain }) && (
+                            <VerifiedTokenBadge className="p-1" />
+                        )}
                     </div>
                 </div>
 
