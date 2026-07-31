@@ -1,3 +1,6 @@
+// Module marker so top-level await is allowed when Next.js type-checks this file.
+export {}
+
 // Minimal latency benchmark: fires N requests at C concurrency against a URL,
 // reports p50/p95/mean/min/max and the x-rpc-cache header distribution.
 //
