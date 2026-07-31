@@ -338,14 +338,11 @@ export function TrendingTable({ className }: { className?: string }) {
                 gets a header that sticks to the top of its scroller, and the
                 board stays usable outside home.
 
-                Deliberate glass (bg-canvas/30 + backdrop-blur): the rows smear
-                under the pinned labels instead of vanishing under an opaque
-                slab. z-15, not z-10 — the rows' Buy and Star cells are
-                themselves relative z-10 (they clear the row's stretched link),
-                and a z-index tie resolves by DOM order: rows come later, so
-                those cells painted crisply OVER the header as the list
-                scrolled under it. Still under the tabs, which are z-20. */}
-            <div className={cn(GRID, CELL_TEXT, "sticky w-full top-[var(--board-stick,0px)] z-15 bg-canvas/30 backdrop-blur-xl px-3 pb-3 pt-4 text-zinc-400")}>
+                The opaque canvas fill exactly matches home's category strip,
+                so both sticky pieces read as one uninterrupted surface and
+                rows cannot show through either one. z-15 keeps the labels over
+                the board rows while remaining beneath the app header. */}
+            <div className={cn(GRID, CELL_TEXT, "sticky top-[var(--board-stick,0px)] z-15 w-full bg-canvas px-3 pb-3 pt-4 text-zinc-400")}>
                 {/* Sentence case, capital on the first word only — the one
                     place in the app that isn't all-lowercase, per the author. */}
                 <span>Name</span>

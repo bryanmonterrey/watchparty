@@ -27,22 +27,20 @@ export function HomeCategoryPanel() {
                   the centre column's md:mt-[var(--header-height)] — below md the
                   fixed header is hidden (max-md:hidden), so there's nothing to
                   offset against.
-                · the fill is the same glass the board's own column header
-                  carries — bg-canvas/30 + backdrop-blur — so the tabs, the
-                  board header and the bare chevron strip above them read as
-                  one surface, and rows smear under a pinned bar instead of
-                  sitting beneath an opaque slab.
+                · the tabs and the board's column header use the exact same
+                  opaque canvas fill. That makes the stacked sticky pieces read
+                  as one surface while preventing rows from showing through.
                 · pb-2 rather than mb-2: a margin isn't painted, so the gap under
                   a stuck bar would be a transparent slot with rows sliding
                   through it.
-                · z-20 clears the row above (relative z-10) and stays under the
-                  app header (z-50). */}
+                · z-15 clears the content below and stays under the app header
+                  (z-50). */}
             {/* h-12 is declared rather than left to the content so the offset
                 below can be exact: the strip is one row of py-1.5 text-lg
                 buttons (28px line box + 12px = 40px) and the arrows are
                 absolute, so 40 + pb-2 = 48px = h-12. Pin it and the number
                 can't drift out from under whatever stacks beneath it. */}
-            <div className="sticky top-0 z-15 h-12 pb-2 md:top-[var(--header-height)]">
+            <div className="sticky top-0 z-15 h-12 bg-canvas pb-2 md:top-[var(--header-height)]">
                 <HomeCategoryTabs active={active} onChange={setActive} />
             </div>
 
