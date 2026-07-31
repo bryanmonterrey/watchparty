@@ -223,7 +223,7 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
         // `relative` anchors the stretched link below; the row is a div, not an
         // anchor, because buy and star are interactive and nesting those inside
         // an <a> is invalid.
-        <div className={cn(GRID, "group -z-5 relative px-3 py-3 transition-colors hover:bg-white/[0.02]")}>
+        <div className={cn(GRID, "group relative z-0 px-3 py-3 transition-colors hover:bg-white/[0.02]")}>
             <span className="flex min-w-0 items-center gap-3">
                 {/* The chain mark rides the coin's icon rather than sitting
                     beside the ticker: this board spans twenty chains and the
