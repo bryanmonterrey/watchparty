@@ -60,7 +60,7 @@ export default function SafetyPage() {
                     rows={[
                         { title: "Nothing to track", body: "No personally identifiable information, no asset-balance snooping. Your activity is yours." },
                         { title: "Encrypted by default", body: "Direct and group messages are end-to-end encrypted, always." },
-                        { title: "Spam, gone for good", body: "Burn unwanted spam tokens and NFTs in a tap. Your wallet stays clean." },
+                        { title: "Spam, gone for good", body: "Burn unwanted spam coins and NFTs in a tap. Your wallet stays clean." },
                     ]}
                 />
             </BgZone>

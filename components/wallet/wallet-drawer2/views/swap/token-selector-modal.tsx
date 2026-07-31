@@ -106,7 +106,7 @@ export function TokenSelectorModal({
                     </button>
                 ) : (
                     <button className="flex items-center gap-2 bg-[#1b1b1b] hover:bg-zinc-800 text-white px-4 py-2 rounded-full text-[17px] font-bold outline-none transition-colors border border-zinc-700/50 shadow-sm">
-                        <span>Select token</span>
+                        <span>Select coin</span>
                         <ChevronDown className="w-5 h-5 text-zinc-400" />
                     </button>
                 )}
@@ -115,11 +115,11 @@ export function TokenSelectorModal({
                 className="sm:max-w-md rounded-3xl text-white p-0 overflow-hidden flex flex-col h-[85vh] sm:h-[650px] shadow-2xl"
                 style={{ animationDuration: '0.2s' }}
             >
-                <DialogTitle className="sr-only">Select a token</DialogTitle>
+                <DialogTitle className="sr-only">Select a coin</DialogTitle>
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                    <span className="font-semibold text-[17px]">Select a token</span>
+                    <span className="font-semibold text-[17px]">Select a coin</span>
                 </div>
 
                 {/* Search Bar */}
@@ -128,7 +128,7 @@ export function TokenSelectorModal({
                         <Search className="absolute left-4 w-[18px] h-[18px] text-zinc-400" />
                         <input
                             type="text"
-                            placeholder="Search tokens"
+                            placeholder="Search coins"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="h-[52px] w-full bg-transparent pl-11 pr-[80px] text-[17px] font-medium placeholder:text-zinc-500 focus:outline-none"

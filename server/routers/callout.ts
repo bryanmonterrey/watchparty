@@ -46,10 +46,10 @@ export const calloutRouter = router({
         .mutation(async ({ ctx, input }) => {
             const token = await db.query.tokens.findFirst({ where: eq(tokens.id, input.tokenId) });
             if (!token || token.status !== "live" || !token.poolAddress) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: "Token isn't tradeable" });
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Coin isn't tradeable" });
             }
             if (token.priceUsd == null || token.priceUsd <= 0) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: "No price data for this token yet" });
+                throw new TRPCError({ code: "BAD_REQUEST", message: "No price data for this coin yet" });
             }
 
             const last = await lastCalloutAt(ctx.user.id);

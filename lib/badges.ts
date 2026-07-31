@@ -36,10 +36,10 @@ export type BadgeId =
 export const BADGE_CATALOG: readonly BadgeDef[] = [
     { id: "top_caller", name: "Top Caller", description: "Finished top 3 on the weekly caller board", family: "caller" },
     { id: "top_trader", name: "Top Trader", description: "Finished top 3 on the weekly trader board", family: "trading" },
-    { id: "callout_sniper", name: "Sniper", description: "Called a token before it did a 10×", family: "caller" },
+    { id: "callout_sniper", name: "Sniper", description: "Called a coin before it did a 10×", family: "caller" },
     { id: "prophet", name: "Prophet", description: "Won a prediction market", family: "social" },
     { id: "profitable", name: "In Profit", description: "Positive 30-day realized PnL, trades shared", family: "trading" },
-    { id: "token_launcher", name: "Launcher", description: "Launched a token on watchparty", family: "trading" },
+    { id: "token_launcher", name: "Launcher", description: "Launched a coin on watchparty", family: "trading" },
     { id: "level_50", name: "Level 50", description: "Reached level 50", family: "social" },
     { id: "level_20", name: "Level 20", description: "Reached level 20", family: "social" },
     { id: "level_10", name: "Level 10", description: "Reached level 10", family: "social" },

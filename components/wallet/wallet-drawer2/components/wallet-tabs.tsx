@@ -21,12 +21,12 @@ import {
 import { GooDropdown } from "@/components/ui/goo-dropdown";
 
 const TABS: TabType[] = [
-    { id: "tokens", name: "Tokens", icon: Coins },
+    { id: "tokens", name: "Coins", icon: Coins },
     { id: "nfts", name: "Collections", icon: Image },
     { id: "activity", name: "Activity", icon: Activity },
 ];
 
-// How many rows the tokens tab shows before "All Tokens".
+// How many rows the coins tab shows before "All Coins".
 const TOP_COUNT = 4;
 
 // Fallback order for rows worth the same — which, on an untouched wallet, is
@@ -154,7 +154,7 @@ export function WalletTabs({
                                           <>
                                               <ToggleIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
                                               <span className="text-lg font-medium text-white/90">
-                                                  {activeTab === "tokens" ? "Manage Tokens" : "Manage Collectibles"}
+                                                  {activeTab === "tokens" ? "Manage Coins" : "Manage Collectibles"}
                                               </span>
                                           </>
                                       ),
@@ -220,8 +220,8 @@ export function WalletTabs({
                         ) : tokens.length === 0 && !isLoadingTokens ? (
                             <EmptyState
                                 icon={Coins}
-                                title="No Tokens Found"
-                                description="Your token balances will appear here once you have assets."
+                                title="No Coins Found"
+                                description="Your coin balances will appear here once you have assets."
                             />
                         ) : (
                             <TokenListSkeleton />
@@ -235,7 +235,7 @@ export function WalletTabs({
                                     onClick={onAllTokens}
                                     className="flex items-center gap-1 px-2 py-1.5 text-md font-semibold text-zinc-500 hover:text-white transition-colors cursor-pointer"
                                 >
-                                    All Tokens
+                                    All Coins
                                     <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" strokeWidth={2.5} />
                                 </button>
                             </div>

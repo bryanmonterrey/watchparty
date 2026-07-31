@@ -372,7 +372,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                         {audience === "everyone" && "Everyone"}
                                                         {audience === "followers" && "Followers"}
                                                         {audience === "verified" && "Verified"}
-                                                        {audience === "token_holders" && "Token Holders"}
+                                                        {audience === "token_holders" && "Coin Holders"}
                                                         {audience === "vip" && "VIP Only"}
                                                         <ChevronDown className="w-4 h-4" />
                                                     </>
@@ -381,7 +381,7 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                                     { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" />, bubble: "bg-bleu/15 text-bleu" },
                                                     { value: "followers", label: "Followers", icon: <Users className="w-5 h-5" />, bubble: "bg-green-500/15 text-green-500" },
                                                     { value: "verified", label: "Verified", icon: <BadgeCheck className="w-5 h-5" />, bubble: "bg-bleu/15 text-bleu" },
-                                                    { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" />, bubble: "bg-yellow-500/15 text-yellow-500" },
+                                                    { value: "token_holders", label: "Coin Holders", icon: <Medal className="w-5 h-5" />, bubble: "bg-yellow-500/15 text-yellow-500" },
                                                     { value: "vip", label: "VIP Only", icon: <Crown className="w-5 h-5" />, bubble: "bg-amber-500/15 text-amber-400" },
                                                 ] as const).map((opt) => ({
                                                     key: opt.value,
@@ -529,14 +529,14 @@ export function PostComposerDialog({ open, onOpenChange, mode, post, onSuccess }
                                             {replyPrivacy === "everyone" && <><GlobeIcon className="w-5 h-5" /> Everyone can reply</>}
                                             {replyPrivacy === "followers" && <><Users className="w-5 h-5" /> Followers can reply</>}
                                             {replyPrivacy === "verified" && <><BadgeCheck className="w-5 h-5" /> Verified can reply</>}
-                                            {replyPrivacy === "token_holders" && <><Medal className="w-5 h-5" /> Token Holders can reply</>}
+                                            {replyPrivacy === "token_holders" && <><Medal className="w-5 h-5" /> Coin Holders can reply</>}
                                         </>
                                     }
                                     items={([
                                         { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" /> },
                                         { value: "followers", label: "Accounts you follow", icon: <Users className="w-5 h-5" /> },
                                         { value: "verified", label: "Verified accounts", icon: <BadgeCheck className="w-5 h-5" /> },
-                                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" /> },
+                                        { value: "token_holders", label: "Coin Holders", icon: <Medal className="w-5 h-5" /> },
                                     ] as const).map((opt) => ({
                                         key: opt.value,
                                         onClick: () => setReplyPrivacy(opt.value),

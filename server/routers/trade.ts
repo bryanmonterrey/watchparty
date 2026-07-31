@@ -245,7 +245,7 @@ export const tradeRouter = router({
                 .from(tokens)
                 .where(eq(tokens.id, input.tokenId))
                 .limit(1);
-            if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Token not found" });
+            if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Coin not found" });
             if (row.status === "live") return { activated: false, alreadyLive: true };
 
             // On-chain proof: the pool must exist and be for this mint.

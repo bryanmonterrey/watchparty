@@ -44,7 +44,7 @@ export function AllTokensView({ tokens, hideBalances, onBack, onTokenClick }: Al
                     <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
                 <h2 className="text-[17px] font-bold text-white flex-1 text-center mr-8">
-                    All Tokens
+                    All Coins
                 </h2>
             </div>
 
@@ -72,8 +72,8 @@ export function AllTokensView({ tokens, hideBalances, onBack, onTokenClick }: Al
                     ) : (
                         <EmptyState
                             icon={Coins}
-                            title="No Tokens Found"
-                            description="Your token balances will appear here once you have assets."
+                            title="No Coins Found"
+                            description="Your coin balances will appear here once you have assets."
                         />
                     )}
                 </div>

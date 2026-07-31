@@ -68,7 +68,7 @@ function CalloutsFeed() {
         return (
             <div className="flex flex-col items-center gap-3 py-20 text-center">
                 <Megaphone className="size-8 text-zinc-600" />
-                <p className="text-sm font-semibold text-zinc-400">No callouts yet — be the first to call a token from its page.</p>
+                <p className="text-sm font-semibold text-zinc-400">No callouts yet — be the first to call a coin from its page.</p>
             </div>
         );
     }
@@ -257,7 +257,7 @@ export function CalloutsView() {
                         );
                     })}
                 </div>
-                <p className="text-xs font-medium text-zinc-500">One callout per 6h — call from any token page.</p>
+                <p className="text-xs font-medium text-zinc-500">One callout per 6h — call from any coin page.</p>
             </div>
 
             <AnimatePresence mode="wait">

@@ -141,7 +141,7 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
                         {token.symbol.startsWith("$") ? token.symbol : `$${token.symbol}`}
                     </span>
                     <span className="truncate text-[13px] font-medium text-zinc-500">{token.name}</span>
-                    <button onClick={handleCopy} aria-label="Copy token address" className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300">
+                    <button onClick={handleCopy} aria-label="Copy coin address" className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300">
                         {copied
                             ? <HugeiconsIcon icon={Tick02Icon} className="size-3 text-white" strokeWidth={2.5} />
                             : <HugeiconsIcon icon={Copy01Icon} className="size-3" strokeWidth={2} />}

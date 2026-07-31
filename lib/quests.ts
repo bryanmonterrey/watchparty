@@ -32,11 +32,11 @@ export interface QuestDef {
 export const QUESTS: QuestDef[] = [
     { id: "daily_post", title: "Make a post", event: "post_created", target: 1, xpReward: 25, period: "daily" },
     { id: "daily_comments", title: "Leave 3 comments", event: "comment_created", target: 3, xpReward: 30, period: "daily" },
-    { id: "daily_callout", title: "Call out a token", event: "callout_created", target: 1, xpReward: 40, period: "daily" },
+    { id: "daily_callout", title: "Call out a coin", event: "callout_created", target: 1, xpReward: 40, period: "daily" },
     { id: "weekly_posts", title: "Post 10 times", event: "post_created", target: 10, xpReward: 150, period: "weekly" },
     { id: "weekly_likes", title: "Collect 25 likes", event: "like_received", target: 25, xpReward: 150, period: "weekly" },
     { id: "weekly_followers", title: "Gain 5 followers", event: "follow_received", target: 5, xpReward: 200, period: "weekly" },
-    { id: "weekly_launch", title: "Launch a token", event: "token_launched", target: 1, xpReward: 250, period: "weekly" },
+    { id: "weekly_launch", title: "Launch a coin", event: "token_launched", target: 1, xpReward: 250, period: "weekly" },
     { id: "daily_prediction", title: "Back a prediction", event: "prediction_bet", target: 1, xpReward: 30, period: "daily" },
     { id: "weekly_predictions", title: "Place 5 prediction bets", event: "prediction_bet", target: 5, xpReward: 150, period: "weekly" },
     { id: "daily_perps", title: "Open a perps position", event: "perps_trade", target: 1, xpReward: 40, period: "daily" },

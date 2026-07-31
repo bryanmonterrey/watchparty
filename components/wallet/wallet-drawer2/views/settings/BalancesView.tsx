@@ -37,9 +37,9 @@ export function BalancesView({ onBack }: BalancesViewProps) {
                     </div>
                     <div className="flex items-center justify-between px-4 py-4 border-b border-white/5">
                         <div className="flex flex-col flex-1 pr-4">
-                            <span className="text-[17px] font-semibold text-white">Hide unknown tokens</span>
+                            <span className="text-[17px] font-semibold text-white">Hide unknown coins</span>
                             <span className="text-[13px] text-zinc-500 leading-snug mt-0.5">
-                                Potential scam tokens will be hidden from your portfolio.
+                                Potential scam coins will be hidden from your portfolio.
                             </span>
                         </div>
                         <Switch checked={hideUnknownTokens} onCheckedChange={setHideUnknownTokens} />

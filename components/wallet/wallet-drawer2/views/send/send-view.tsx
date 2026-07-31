@@ -274,7 +274,7 @@ export function SendView({
         // against the classic one silently produces an address that doesn't exist.
         // The mint account's owner is the authority on which program it is.
         const mintInfo = await connection.getAccountInfo(mint);
-        if (!mintInfo) throw new Error("Token mint not found on Solana");
+        if (!mintInfo) throw new Error("Coin mint not found on Solana");
         const tokenProgram = mintInfo.owner;
 
         // Both owners can be off-curve: the account wallet is a Swig PDA, and so
@@ -404,7 +404,7 @@ export function SendView({
         : !hasAmount
             ? "Enter an amount"
             : !amountFitsDecimals
-                ? `${selectedToken?.symbol ?? "This token"} only has ${selectedToken?.decimals ?? 0} decimals`
+                ? `${selectedToken?.symbol ?? "This coin"} only has ${selectedToken?.decimals ?? 0} decimals`
                 : overBalance
                     ? `Not enough ${selectedToken?.symbol ?? ""}`
                     : !recipient

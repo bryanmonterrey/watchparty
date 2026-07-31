@@ -98,7 +98,7 @@ export const escrowRouter = router({
             });
 
             if (!tokenRecord || !tokenRecord.tokenAddress) {
-                throw new Error("Token is not live or does not exist on-chain");
+                throw new Error("Coin is not live or does not exist on-chain");
             }
 
             // 2. Execute On-Chain Claim (Treasury pays gas, Proxy authorizes)

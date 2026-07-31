@@ -27,11 +27,11 @@ const WalletStep = dynamic(() => import("./wallet-step"), { ssr: false });
 
 // `provider` is the better-auth social id (X signs in via "twitter").
 const PROVIDERS = [
-  { id: "google", provider: "google", label: "Continue with Google", Icon: GoogleIcon, w: 26, h: 26 },
-  { id: "x", provider: "twitter", label: "Continue with X", Icon: XIcon, w: 24, h: 25 },
-  { id: "twitch", provider: "twitch", label: "Continue with Twitch", Icon: TwitchIcon, w: 26, h: 26 },
-  { id: "kick", provider: "kick", label: "Continue with Kick", Icon: KickIcon, w: 23, h: 23 },
-  { id: "discord", provider: "discord", label: "Continue with Discord", Icon: DiscordIcon, w: 33, h: 26 },
+  { id: "google", provider: "google", label: "Continue with Google", Icon: GoogleIcon, w: 21, h: 21 },
+  { id: "x", provider: "twitter", label: "Continue with X", Icon: XIcon, w: 19, h: 20 },
+  { id: "twitch", provider: "twitch", label: "Continue with Twitch", Icon: TwitchIcon, w: 21, h: 21 },
+  { id: "kick", provider: "kick", label: "Continue with Kick", Icon: KickIcon, w: 18, h: 18 },
+  { id: "discord", provider: "discord", label: "Continue with Discord", Icon: DiscordIcon, w: 28, h: 21 },
 ] as const;
 
 const tap = { scale: 0.97 };
@@ -156,7 +156,7 @@ export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
               <h1 className="mt-7 text-2xl font-semibold tracking-tight sm:mt-7 sm:text-[28px]">Login</h1>
 
               {/* OAuth providers */}
-              <div className="mt-5 flex gap-2.5 sm:gap-[17px]">
+              <div className="mt-5 flex gap-2.5 sm:gap-3">
                 {PROVIDERS.map(({ id, provider, label, Icon, w, h }) => (
                   <Squircle key={id} asChild radius={20} autoEffects={false}>
                     <motion.button
@@ -165,7 +165,7 @@ export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
                       whileTap={tap}
                       disabled={!!busy}
                       onClick={() => signInWithProvider(provider, id)}
-                      className="grid h-14 flex-1 place-items-center bg-[#6A6A6A]/35 transition-colors hover:bg-[#6A6A6A]/50 disabled:opacity-50 sm:h-[61px]"
+                      className="grid h-9 flex-1 place-items-center bg-soft-gray-15 transition-colors hover:bg-[#6A6A6A]/50 disabled:opacity-50 sm:h-[50px]"
                     >
                       {busy === id ? <Spinner /> : <Icon width={w} height={h} />}
                     </motion.button>
@@ -180,9 +180,9 @@ export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
                   e.preventDefault();
                   sendCode();
                 }}
-                className="mt-6 flex h-[68px] items-center gap-3 bg-[#6A6A6A]/35 pl-5 pr-4 sm:mt-7 sm:h-[82px] sm:pl-6 sm:pr-5"
+                className="mt-6 flex h-[55px] items-center gap-3 bg-soft-gray-15 pl-5 pr-4 sm:mt-7 sm:h-[69px] sm:pl-6 sm:pr-5"
               >
-                <MessagesIcon className="shrink-0 size-7 text-white/85" />
+                <MessagesIcon className="shrink-0 size-7 text-zinc-400" />
                 <input
                   type="email"
                   inputMode="email"
@@ -192,30 +192,33 @@ export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
                   onChange={(e) => setEmail(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-base text-white caret-white placeholder:text-zinc-500 focus:outline-none sm:text-[17px]"
                 />
+                
                 <HapticButton
                   haptic={canSend && !sending}
                   disabled={!canSend || sending}
                   onClick={sendCode}
-                  className={`flex shrink-0 items-center gap-1.5 text-sm font-medium transition-colors sm:text-[15px] ${
-                    canSend && !sending ? "text-[#207AFF] hover:opacity-80" : "cursor-default text-zinc-500"
+                  className={`flex shrink-0 items-center h-11 rounded-full gap-1.5 text-sm font-medium transition-colors sm:text-[15px] ${
+                    canSend && !sending ? "text-twitter2 hover:opacity-80" : "cursor-default text-zinc-500"
                   }`}
                 >
                   {sending ? <Spinner /> : null}
-                  send code
+                  Send code
+                  
                 </HapticButton>
+                
               </form>
               </Squircle>
 
-              <div className="my-6 text-center text-[15px] font-bold tracking-wide sm:my-7">OR</div>
+              <div className="my-6 text-center text-[15px] font-medium tracking-wide sm:my-7">or</div>
 
               {/* Connect Wallet → wallet state */}
               <motion.button
                 type="button"
                 whileTap={tap}
                 onClick={() => setStep("wallet")}
-                className="flex h-[68px] tracking-tight items-center justify-center rounded-full bg-white text-lg font-semibold text-black transition-colors hover:bg-white/90 sm:h-[82px] sm:text-xl"
+                className="flex h-[55px] tracking-tighter items-center justify-center rounded-full bg-flexwhite/90 text-base font-semibold text-canvas transition-colors hover:bg-white/90 sm:h-[69px] sm:text-lg"
               >
-                Connect Wallet
+                Connect wallet
               </motion.button>
 
               <button

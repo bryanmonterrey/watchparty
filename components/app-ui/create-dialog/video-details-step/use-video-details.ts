@@ -263,7 +263,7 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
                         // On-chain launch: upload metadata + execute Solana transactions
                         let primaryImageUrl = thumbnailUrl || "";
 
-                        const tokenName = title.slice(0, 32) || "Video Token";
+                        const tokenName = title.slice(0, 32) || "Video Coin";
                         const metadataBlob = new Blob([JSON.stringify({
                             name: tokenName,
                             symbol: tokenLaunch.ticker,

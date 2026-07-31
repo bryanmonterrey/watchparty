@@ -38,11 +38,11 @@ export function WaitingStep({
         {/* Soft brand glow breathing behind the tile. */}
         <motion.div
           aria-hidden
-          className="absolute -inset-2 rounded-[30px] bg-[#00ED89]/25 blur-xl"
+          className="absolute -inset-2 rounded-full bg-[#00ED89]/25 blur-xl"
           animate={{ opacity: [0.35, 0.75, 0.35] }}
           transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
         />
-        <div className="absolute inset-0 overflow-hidden rounded-[26px]">
+        <div className="absolute inset-0 overflow-hidden rounded-full">
           <motion.div
             className="absolute -inset-1/2"
             style={{ background: "conic-gradient(from 0deg, rgba(0,237,137,0) 55%, #00ED89 100%)" }}
@@ -51,7 +51,7 @@ export function WaitingStep({
           />
         </div>
         <Squircle asChild radius={22} autoEffects={false}>
-          <div className="absolute inset-[3px] grid place-items-center bg-[#141414]">
+          <div className="absolute rounded-full inset-[3px] grid place-items-center bg-canvas">
             {icon}
           </div>
         </Squircle>
@@ -81,7 +81,7 @@ export function WaitingStep({
       <HapticButton
         disabled={busy}
         onClick={onContinue}
-        className="mt-8 flex h-[68px] w-full items-center justify-center rounded-full bg-white text-xl font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50 sm:h-[82px] sm:text-xl"
+        className="mt-8 flex h-[55px] w-full items-center justify-center rounded-full bg-flexwhite/90 hover:bg-white/90 text-lg font-semibold text-canvas disabled:opacity-50 sm:h-[69px] sm:text-base"
       >
         Continue
       </HapticButton>
@@ -90,7 +90,7 @@ export function WaitingStep({
         <button
           type="button"
           onClick={onBack}
-          className="mt-3 flex h-[68px] w-full items-center justify-center rounded-full bg-[#6A6A6A]/35 text-xl font-semibold text-white transition-colors hover:bg-[#6A6A6A]/50 sm:h-[82px]"
+          className="mt-3 flex h-[55px] w-full items-center justify-center rounded-full bg-[#6A6A6A]/35 text-xl font-semibold text-white transition-colors hover:bg-[#6A6A6A]/50 sm:h-[69px] sm:text-base"
         >
           {backLabel}
         </button>

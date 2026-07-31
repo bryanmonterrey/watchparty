@@ -149,7 +149,7 @@ export async function sendBitcoin(
   seed: Uint8Array,
   request: SendRequest
 ): Promise<SendResult> {
-  if (request.contract) throw new Error("Bitcoin has no token transfers");
+  if (request.contract) throw new Error("Bitcoin has no coin transfers");
 
   const derived = deriveBitcoin(seed);
   const payment = p2wpkh(derived.publicKey);

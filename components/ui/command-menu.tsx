@@ -40,7 +40,7 @@ const CommandDialog = ({
       >
         <VisuallyHidden>
             <CommandDialogTitle>Search Command Menu</CommandDialogTitle>
-            <CommandDialogDescription>Search for tokens, users, or streams across the platform.</CommandDialogDescription>
+            <CommandDialogDescription>Search for coins, users, or streams across the platform.</CommandDialogDescription>
         </VisuallyHidden>
         <motion.div
            initial={{ opacity: 0, scale: 0.98, y: 10 }}

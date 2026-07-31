@@ -129,7 +129,7 @@ export function DetailsStep({
             {/* Thumbnail */}
             <div className="space-y-4">
                 <Label className="text-sm font-medium text-zinc-300">Thumbnail</Label>
-                <p className="text-xs text-zinc-500">Set a thumbnail that stands out and draws viewers' attention. Image will also be used as token image</p>
+                <p className="text-xs text-zinc-500">Set a thumbnail that stands out and draws viewers' attention. Image will also be used as coin image</p>
                 <div className="grid grid-cols-3 gap-4">
                     <div
                         {...getThumbnailRootProps()}
@@ -188,7 +188,7 @@ export function DetailsStep({
                             {videoAudience === "everyone" && <><Globe className="w-5 h-5 text-bleu" />Everyone</>}
                             {videoAudience === "followers" && <><Users className="w-5 h-5 text-green-400" />Followers</>}
                             {videoAudience === "verified" && <><BadgeCheck className="w-5 h-5 text-bleu" />Verified</>}
-                            {videoAudience === "token_holders" && <><Medal className="w-5 h-5 text-yellow-400" />Token Holders</>}
+                            {videoAudience === "token_holders" && <><Medal className="w-5 h-5 text-yellow-400" />Coin Holders</>}
                             <ChevronDown className="w-5 h-5 ml-1 opacity-50" />
                         </>
                     }
@@ -196,7 +196,7 @@ export function DetailsStep({
                         { value: "everyone", label: "Everyone", icon: <Globe className="w-4 h-4" />, color: "text-bleu", bg: "bg-bleu/10" },
                         { value: "followers", label: "Followers", icon: <Users className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
                         { value: "verified", label: "Verified", icon: <BadgeCheck className="w-4 h-4" />, color: "text-bleu", bg: "bg-bleu/10" },
-                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
+                        { value: "token_holders", label: "Coin Holders", icon: <Medal className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
                     ] as const).map((opt) => ({
                         key: opt.value,
                         onClick: () => setVideoAudience(opt.value),

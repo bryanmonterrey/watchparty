@@ -63,7 +63,7 @@ export function ManageTokensView({
                     <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
                 <h2 className="text-[17px] font-bold text-white flex-1 text-center mr-8">
-                    Manage Tokens
+                    Manage Coins
                 </h2>
             </div>
 
@@ -84,7 +84,7 @@ export function ManageTokensView({
 
                 {filteredTokens.length === 0 && (
                     <div className="flex flex-col items-center justify-center pt-20 text-zinc-500">
-                        <p className="text-lg font-medium">No tokens found</p>
+                        <p className="text-lg font-medium">No coins found</p>
                     </div>
                 )}
             </div>

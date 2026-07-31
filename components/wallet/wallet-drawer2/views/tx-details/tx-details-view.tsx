@@ -30,7 +30,7 @@ export function TransactionDetailsView({
             <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-black/80 backdrop-blur-md z-20">
                 <div className="w-10" />
                 <h2 className="text-[17px] font-bold tracking-tight text-white/90">
-                    {isSwap ? "Token Swap" : (transaction.isOutgoing ? "Sent" : "Received")}
+                    {isSwap ? "Coin Swap" : (transaction.isOutgoing ? "Sent" : "Received")}
                 </h2>
                 <button
                     onClick={onBack}

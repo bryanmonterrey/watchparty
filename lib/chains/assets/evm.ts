@@ -145,7 +145,7 @@ export async function getEvmAssetsBatch(
       chain: chain.id,
       contract: token.tokenAddress,
       symbol: (isNative ? chain.nativeCurrency.symbol : token.tokenMetadata?.symbol) || "UNKNOWN",
-      name: (isNative ? chain.name : token.tokenMetadata?.name) || "Unknown Token",
+      name: (isNative ? chain.name : token.tokenMetadata?.name) || "Unknown Coin",
       icon: token.tokenMetadata?.logo ?? undefined,
       decimals,
       balance,
@@ -226,7 +226,7 @@ async function discoverViaAlchemy(
   const apiKey = process.env.ALCHEMY_API_KEY;
   const network = ALCHEMY_NETWORKS[chain.id];
 
-  if (!apiKey) return { tokens: null, reason: "set ALCHEMY_API_KEY to see all tokens" };
+  if (!apiKey) return { tokens: null, reason: "set ALCHEMY_API_KEY to see all coins" };
   if (!network) {
     return { tokens: null, reason: `Alchemy does not support ${chain.name}` };
   }
@@ -311,7 +311,7 @@ export const evmAssetProvider: AssetProvider = {
     const tokens = discovered.tokens ?? (await probeCurated(address, chain));
     const partial = discovered.tokens
       ? undefined
-      : { reason: `${discovered.reason} — showing well-known tokens only` };
+      : { reason: `${discovered.reason} — showing well-known coins only` };
 
     // Symbol/name/decimals per discovered token.
     const metadata = await Promise.all(

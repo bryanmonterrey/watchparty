@@ -96,7 +96,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[12px] font-medium text-twitter2">
                             {audience === "followers" && <><Users className="w-3.5 h-3.5" /> Followers</>}
                             {audience === "verified" && <><BadgeCheck className="w-3.5 h-3.5" /> Verified</>}
-                            {audience === "token_holders" && <><Medal className="w-3.5 h-3.5" /> Token Holders</>}
+                            {audience === "token_holders" && <><Medal className="w-3.5 h-3.5" /> Coin Holders</>}
                             {audience === "vip" && <><Crown className="w-3.5 h-3.5" /> VIP Only</>}
                         </div>
                     )}
@@ -104,7 +104,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[12px] font-medium text-twitter2">
                             {replyPrivacy === "followers" && <><Users className="w-3.5 h-3.5" /> Following</>}
                             {replyPrivacy === "verified" && <><BadgeCheck className="w-3.5 h-3.5" /> Verified</>}
-                            {replyPrivacy === "token_holders" && <><Medal className="w-3.5 h-3.5" /> Token Holders</>}
+                            {replyPrivacy === "token_holders" && <><Medal className="w-3.5 h-3.5" /> Coin Holders</>}
                         </div>
                     )}
                 </div>

@@ -122,7 +122,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
 
     const toggleHideToken = React.useCallback(async (mint: string, hidden: boolean) => {
         try { await toggleHideTokenMutation({ mint, hidden }); }
-        catch (error) { console.error("Failed to toggle token visibility", error); }
+        catch (error) { console.error("Failed to toggle coin visibility", error); }
     }, [toggleHideTokenMutation]);
 
     const { mutateAsync: toggleHideCollectionMutation } = trpc.wallet.toggleHideCollection.useMutation({
@@ -164,7 +164,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
         tokens = tokens.filter(t => t.mint === SOL_MINT || (t.usdValue ?? 0) >= 1);
     }
     if (hideUnknownTokens) {
-        tokens = tokens.filter(t => t.symbol !== "UNKNOWN" && t.name !== "Unknown Token");
+        tokens = tokens.filter(t => t.symbol !== "UNKNOWN" && t.name !== "Unknown Coin");
     }
 
     const solToken = tokens.find(t => t.mint === "So11111111111111111111111111111111111111111");
@@ -255,7 +255,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
         // A chain's own coin always shows, even at zero — same rule SOL gets.
         if (t.mint.startsWith("native:")) return true;
         if (hideSmallBalances && (t.usdValue ?? 0) < 1) return false;
-        if (hideUnknownTokens && (t.symbol === "UNKNOWN" || t.name === "Unknown Token")) return false;
+        if (hideUnknownTokens && (t.symbol === "UNKNOWN" || t.name === "Unknown Coin")) return false;
         return true;
     };
 

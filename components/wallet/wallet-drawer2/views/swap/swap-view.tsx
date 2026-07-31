@@ -209,7 +209,7 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
         } catch (error: any) {
             console.error("Swap error:", error);
             const msg = error?.message || "Something went wrong. Please try again.";
-            swapToast.error(msg.includes("address table") ? "Route unavailable — try a different token pair or amount." : msg);
+            swapToast.error(msg.includes("address table") ? "Route unavailable — try a different coin pair or amount." : msg);
         }
     };
 

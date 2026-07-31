@@ -129,7 +129,7 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
 
                     {/* Token Name */}
                     <div className="space-y-2">
-                        <Label className="text-[15px] font-semibold text-zinc-300">Token name</Label>
+                        <Label className="text-[15px] font-semibold text-zinc-300">Coin name</Label>
                         <Input
                             radius={16}
                             value={localState.name}

@@ -40,19 +40,19 @@ export function AppDataView({ onBack }: AppDataViewProps) {
         {
             icon: HistoryIcon,
             label: "Clear account history",
-            description: "Transaction history, token balances, recent searches, and pending notifications",
+            description: "Transaction history, coin balances, recent searches, and pending notifications",
             onClick: handleClearHistory,
         },
         {
             icon: User3Icon,
             label: "Clear preferences",
-            description: "Favorites, swap settings, token warnings, language, and currency",
+            description: "Favorites, swap settings, coin warnings, language, and currency",
             onClick: handleClearPreferences,
         },
         {
             icon: DatabaseIcon,
             label: "Clear cache",
-            description: "Temporary data such as token prices",
+            description: "Temporary data such as coin prices",
             onClick: handleClearCache,
         },
     ];

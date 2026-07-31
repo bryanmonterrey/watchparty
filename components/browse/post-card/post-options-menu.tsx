@@ -179,7 +179,7 @@ export function PostOptionsMenu({
             menuItem(Globe, "Everyone", () => updateSettings.mutate({ postId, replyPrivacy: "everyone" })),
             menuItem(Users, "Followers", () => updateSettings.mutate({ postId, replyPrivacy: "followers" })),
             menuItem(BadgeCheck, "Verified users", () => updateSettings.mutate({ postId, replyPrivacy: "verified" })),
-            menuItem(Coins, "Token holders", () => updateSettings.mutate({ postId, replyPrivacy: "token_holders" })),
+            menuItem(Coins, "Coin holders", () => updateSettings.mutate({ postId, replyPrivacy: "token_holders" })),
         ];
     } else if (view === "disclosure") {
         headerHeight = 40;

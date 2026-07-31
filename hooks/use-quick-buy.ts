@@ -108,7 +108,7 @@ export function useQuickBuy() {
             return "done";
         } catch (error) {
             const msg = (error as Error)?.message || "Something went wrong. Please try again.";
-            swapToast.error(msg.includes("address table") ? "Route unavailable — try the token page." : msg);
+            swapToast.error(msg.includes("address table") ? "Route unavailable — try the coin page." : msg);
             return "failed";
         } finally {
             setBuyingId(null);

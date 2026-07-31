@@ -210,7 +210,7 @@ function DiscoverRow({
                             {token.symbol.startsWith("$") ? token.symbol : `$${token.symbol}`}
                         </span>
                         <span className="hidden truncate text-[14px] font-medium text-zinc-500 sm:inline">{token.name}</span>
-                        <button onClick={copy} aria-label="Copy token address" className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300">
+                        <button onClick={copy} aria-label="Copy coin address" className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300">
                             {copied
                                 ? <HugeiconsIcon icon={Tick02Icon} className="size-3 text-white" strokeWidth={2.5} />
                                 : <HugeiconsIcon icon={Copy01Icon} className="size-3" strokeWidth={2} />}

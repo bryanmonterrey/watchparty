@@ -343,7 +343,7 @@ export function useTokenLaunch() {
             // Use whichever wallet has sufficient funds (determined above).
             if (useCustodial) {
                 // Custodial Wallet — fetch fresh blockhash per tx to avoid expiry
-                toast.loading("Setting up Token Config (1/2)...", { id: "custodial-tx" });
+                toast.loading("Setting up Coin Config (1/2)...", { id: "custodial-tx" });
                 const { blockhash: bh1, lastValidBlockHeight: lbh1 } = await connection.getLatestBlockhash();
                 setupTx.recentBlockhash = bh1;
                 setupTx.feePayer = publicKey!;
@@ -355,7 +355,7 @@ export function useTokenLaunch() {
                 console.log("[launchToken] config tx confirmed:", result1.signature);
 
                 // Fresh blockhash for second tx — first confirmation may take ~5-10s
-                toast.loading("Deploying Token Pool (2/2)...", { id: "custodial-tx" });
+                toast.loading("Deploying Coin Pool (2/2)...", { id: "custodial-tx" });
                 const { blockhash: bh2, lastValidBlockHeight: lbh2 } = await connection.getLatestBlockhash();
                 launchTx.recentBlockhash = bh2;
                 launchTx.feePayer = publicKey!;
@@ -381,12 +381,12 @@ export function useTokenLaunch() {
                     launchTx.partialSign(baseMintKeypair);
                     const signedTxs = await signAllTransactions([setupTx, launchTx]);
 
-                    toast.loading("Confirming Token Setup (1/2)...", { id: "tx-status" });
+                    toast.loading("Confirming Coin Setup (1/2)...", { id: "tx-status" });
                     const sig1 = await connection.sendRawTransaction(signedTxs[0].serialize());
                     const conf1 = await connection.confirmTransaction({ signature: sig1, blockhash, lastValidBlockHeight }, "confirmed");
                     if (conf1.value.err) throw new Error(`Config tx failed: ${JSON.stringify(conf1.value.err)}`);
 
-                    toast.loading("Deploying Token Pool (2/2)...", { id: "tx-status" });
+                    toast.loading("Deploying Coin Pool (2/2)...", { id: "tx-status" });
                     const sig2 = await connection.sendRawTransaction(signedTxs[1].serialize());
                     const conf2 = await connection.confirmTransaction({ signature: sig2, blockhash, lastValidBlockHeight }, "confirmed");
                     if (conf2.value.err) throw new Error(`Pool tx failed: ${JSON.stringify(conf2.value.err)}`);
@@ -419,7 +419,7 @@ export function useTokenLaunch() {
             );
 
             console.log("Token Launch TX:", finalSignature);
-            toast.success("Token launched successfully!");
+            toast.success("Coin launched successfully!");
 
             return {
                 success: true,
@@ -430,7 +430,7 @@ export function useTokenLaunch() {
 
         } catch (error) {
             console.error("Token launch failed:", error);
-            toast.error("Failed to launch token. See console.");
+            toast.error("Failed to launch coin. See console.");
             return { success: false, error };
         } finally {
             setIsLaunching(false);

@@ -97,7 +97,7 @@ export function TokenIcon({
                     <img
                         ref={imgRef}
                         src={src}
-                        alt={symbol || "Token icon"}
+                        alt={symbol || "Coin icon"}
                         className={cn(
                             "w-full h-full object-cover",
                             type === "token" ? "rounded-full" : "rounded-none",

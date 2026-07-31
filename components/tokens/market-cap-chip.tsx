@@ -38,7 +38,7 @@ export function MarketCapChip({ tokenSlug, marketCap, className }: MarketCapChip
     return (
         <button
             type="button"
-            aria-label={`Token market cap ${marketCap == null ? "unavailable" : formatMarketCap(marketCap)} — open token page`}
+            aria-label={`Coin market cap ${marketCap == null ? "unavailable" : formatMarketCap(marketCap)} — open coin page`}
             onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

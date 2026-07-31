@@ -452,7 +452,7 @@ export function InsetInfoCard({
 // ── Compact "chip" visuals for CaptionCards rows — small, realistic slices of
 // product UI sized to sit inside a ~220px caption-card surface. ----
 
-// Launch a coin — a mini "create token" form.
+// Launch a coin — a mini "create coin" form.
 export function MiniLaunch({ className }: { className?: string }) {
     return (
         <div className={cn("w-full max-w-[240px] rounded-2xl bg-white p-4 text-black ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]", className)}>

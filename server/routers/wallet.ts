@@ -118,7 +118,7 @@ const GT_OHLCV_TTL = 5  * 60 * 1000;  // kept for reference
 function normalizeSwapToken(asset: any) {
     const address = asset.id as string;
     const rawSymbol = asset.token_info?.symbol || asset.content?.metadata?.symbol || "UNKNOWN";
-    const rawName   = asset.content?.metadata?.name || "Unknown Token";
+    const rawName   = asset.content?.metadata?.name || "Unknown Coin";
     const logoURI   = asset.content?.links?.image || asset.content?.files?.[0]?.uri || null;
     const decimals  = asset.token_info?.decimals ?? 9;
 
@@ -1681,7 +1681,7 @@ export const walletRouter = router({
                         tokens.push({
                             address: t.address,
                             symbol: t.address === SOL_WSOL_MINT ? "SOL" : (t.symbol || "UNKNOWN"),
-                            name:   t.address === SOL_WSOL_MINT ? "Solana" : (t.name || t.symbol || "Unknown Token"),
+                            name:   t.address === SOL_WSOL_MINT ? "Solana" : (t.name || t.symbol || "Unknown Coin"),
                             decimals: 9,
                             logoURI: pair.info?.imageUrl || undefined,
                         });
@@ -1745,7 +1745,7 @@ export const walletRouter = router({
                         if (asset && asset.id) {
                             const meta = {
                                 symbol: asset.token_info?.symbol || asset.content?.metadata?.symbol || "UNKNOWN",
-                                name: asset.content?.metadata?.name || "Unknown Token",
+                                name: asset.content?.metadata?.name || "Unknown Coin",
                                 logoURI: asset.content?.links?.image || asset.content?.files?.[0]?.uri || null,
                                 decimals: asset.token_info?.decimals,
                             };
@@ -1758,7 +1758,7 @@ export const walletRouter = router({
                 return result;
             } catch (error) {
                 console.error("Failed to fetch token metadata:", error);
-                throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch token metadata" });
+                throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch coin metadata" });
             }
         }),
 
@@ -3066,7 +3066,7 @@ export const walletRouter = router({
                 formattedTokens.push({
                     mint: item.id,
                     symbol: info?.symbol || item.content?.metadata?.symbol || "UNKNOWN",
-                    name: item.content?.metadata?.name || info?.symbol || "Unknown Token",
+                    name: item.content?.metadata?.name || info?.symbol || "Unknown Coin",
                     icon: item.content?.links?.image || item.content?.files?.[0]?.uri || undefined,
                     balance,
                     decimals: tokenDecimals,
@@ -3125,7 +3125,7 @@ export const walletRouter = router({
                             formattedTokens.push({
                                 mint,
                                 symbol: asset?.token_info?.symbol || asset?.content?.metadata?.symbol || "UNKNOWN",
-                                name: asset?.content?.metadata?.name || asset?.token_info?.symbol || "Unknown Token",
+                                name: asset?.content?.metadata?.name || asset?.token_info?.symbol || "Unknown Coin",
                                 icon: asset?.content?.links?.image || asset?.content?.files?.[0]?.uri || undefined,
                                 balance: uiAmount,
                                 decimals,

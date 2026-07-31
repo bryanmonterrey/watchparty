@@ -59,11 +59,11 @@ export function SendTokenSelector({
     return (
         <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); setSearch(""); } }}>
             <DialogContent className="sm:max-w-sm rounded-3xl text-white p-0 overflow-hidden flex flex-col max-h-[75vh] shadow-2xl">
-                <DialogTitle className="sr-only">Select a token</DialogTitle>
+                <DialogTitle className="sr-only">Select a coin</DialogTitle>
 
                 {/* Header */}
                 <div className="px-5 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
-                    <span className="text-[16px] font-semibold text-white">Select a token</span>
+                    <span className="text-[16px] font-semibold text-white">Select a coin</span>
                 </div>
 
                 {/* Search */}
@@ -72,7 +72,7 @@ export function SendTokenSelector({
                         <Search className="absolute left-4 w-[18px] h-[18px] text-zinc-400" />
                         <input
                             type="text"
-                            placeholder="Search tokens"
+                            placeholder="Search coins"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             autoFocus
@@ -84,11 +84,11 @@ export function SendTokenSelector({
                 {/* Token list */}
                 <div className="overflow-y-auto flex-1 px-3 pb-4">
                     <div className="px-2 pb-2">
-                        <span className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Your tokens</span>
+                        <span className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Your coins</span>
                     </div>
                     <div className="space-y-0.5">
                         {filtered.length === 0 ? (
-                            <div className="py-10 text-center text-[14px] text-zinc-500">No tokens found</div>
+                            <div className="py-10 text-center text-[14px] text-zinc-500">No coins found</div>
                         ) : (
                             filtered.map((token) => (
                                 <button

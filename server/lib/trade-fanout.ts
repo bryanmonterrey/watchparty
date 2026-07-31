@@ -61,7 +61,7 @@ export async function fanOutTrade(t: FanOutTradeInput): Promise<void> {
         }
         await sendPushToUsers(followerRows.map((f) => f.followerId), {
             title: `${u.name || "A trader you follow"} ${body}`,
-            body: "Tap to see the token",
+            body: "Tap to see the coin",
             url: `/coin/${mint}`,
             tag: `trade-${t.id}`,
         });

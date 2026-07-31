@@ -36,7 +36,7 @@ export default function CreatorsPage() {
                 <TwoUpBold
                     items={[
                         { title: "Go live in seconds", body: "Stream from your phone, chat in real time, and keep every broadcast as a replay.", bg: "bg-soft-pink", visual: <PhoneMock className="w-[180px]"><LiveScreen /></PhoneMock> },
-                        { title: "Launch a coin for your people", body: "Give your community a token to rally around, trade it in-app, and earn a fee on every swap.", bg: "bg-black", dark: true, visual: <HeroTrade className="max-w-[300px]" /> },
+                        { title: "Launch a coin for your people", body: "Give your community a coin to rally around, trade it in-app, and earn a fee on every swap.", bg: "bg-black", dark: true, visual: <HeroTrade className="max-w-[300px]" /> },
                     ]}
                 />
             </BgZone>

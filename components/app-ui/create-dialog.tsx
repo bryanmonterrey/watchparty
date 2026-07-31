@@ -305,7 +305,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                     return
                 }
 
-                const tokenName = postContent.slice(0, 32) || "Post Token"
+                const tokenName = postContent.slice(0, 32) || "Post Coin"
 
                 // Construct Standard Metadata JSON for On-Chain Display
                 const metadataJson = {
@@ -587,7 +587,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                 )}>
                     <VisuallyHidden.Root>
                         <DialogTitle>Create Content</DialogTitle>
-                        <DialogDescription>Create a new video, post, or stream with token launch capabilities.</DialogDescription>
+                        <DialogDescription>Create a new video, post, or stream with coin launch capabilities.</DialogDescription>
                     </VisuallyHidden.Root>
 
                     {/* Header with Tabs (Only show in Upload step) */}
@@ -690,7 +690,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                         {audience === "everyone" && "Everyone"}
                                                         {audience === "followers" && "Followers"}
                                                         {audience === "verified" && "Verified"}
-                                                        {audience === "token_holders" && "Token Holders"}
+                                                        {audience === "token_holders" && "Coin Holders"}
                                                         {audience === "community" && "Community"}
                                                         <ChevronDown className="w-4 h-4" />
                                                     </>
@@ -700,7 +700,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                         { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" />, bubble: "bg-bleu/20 text-bleu" },
                                                         { value: "followers", label: "Followers", icon: <Users className="w-5 h-5" />, bubble: "bg-green-500/20 text-green-500" },
                                                         { value: "verified", label: "Verified", icon: <BadgeCheck className="w-5 h-5" />, bubble: "bg-bleu/20 text-bleu" },
-                                                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" />, bubble: "bg-yellow-500/20 text-yellow-500" },
+                                                        { value: "token_holders", label: "Coin Holders", icon: <Medal className="w-5 h-5" />, bubble: "bg-yellow-500/20 text-yellow-500" },
                                                     ] as const).map((opt) => ({
                                                         key: opt.value,
                                                         onClick: () => setAudience(opt.value),
@@ -902,14 +902,14 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                             {replyPrivacy === "everyone" && <><Globe className="w-4 h-4" /> Everyone can reply</>}
                                                             {replyPrivacy === "followers" && <><Users className="w-4 h-4" /> Followers can reply</>}
                                                             {replyPrivacy === "verified" && <><BadgeCheck className="w-4 h-4" /> Verified can reply</>}
-                                                            {replyPrivacy === "token_holders" && <><Medal className="w-4 h-4" /> Token Holders can reply</>}
+                                                            {replyPrivacy === "token_holders" && <><Medal className="w-4 h-4" /> Coin Holders can reply</>}
                                                         </>
                                                     }
                                                     items={([
                                                         { value: "everyone", label: "Everyone", icon: <Globe className="w-5 h-5" /> },
                                                         { value: "followers", label: "Accounts you follow", icon: <Users className="w-5 h-5" /> },
                                                         { value: "verified", label: "Verified accounts", icon: <BadgeCheck className="w-5 h-5" /> },
-                                                        { value: "token_holders", label: "Token Holders", icon: <Medal className="w-5 h-5" /> },
+                                                        { value: "token_holders", label: "Coin Holders", icon: <Medal className="w-5 h-5" /> },
                                                     ] as const).map((opt) => ({
                                                         key: opt.value,
                                                         onClick: () => setReplyPrivacy(opt.value),
