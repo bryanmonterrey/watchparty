@@ -175,10 +175,10 @@ export function SolBalanceChip() {
             type="button"
             aria-label={isEmpty ? "Deposit" : `Wallet balance ${formatSol(balance)} SOL`}
             onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))}
-            className="group flex h-[52px] inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-soft-gray-10 hover:bg-soft-gray-15 rounded-full border-sidebar-hover/10 border cursor-pointer items-center gap-2 rounded-full px-5 backdrop-blur-xs transition-colors ease-out"
+            className="group flex h-11 inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-soft-gray-10 hover:bg-soft-gray-15 rounded-full border-sidebar-hover/10 border cursor-pointer items-center gap-2 rounded-full px-5 backdrop-blur-xs transition-colors ease-out"
         >
-            <SolanaMarkIcon className="h-3.5 w-4 shrink-0" />
-            <span className="text-base font-medium text-white">
+            <SolanaMarkIcon className="h-3 w-3.5 shrink-0" />
+            <span className="text-sm font-semibold text-flexwhite/90 hover:text-white/95">
                 {isEmpty ? (
                     // Swapped in CSS, not state — no re-render, and the label is
                     // in the DOM either way for the accessible name above.

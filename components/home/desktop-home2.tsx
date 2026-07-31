@@ -257,7 +257,7 @@ function VideoCard({ v }: { v: FeedVideo }) {
 
     return (
         <div
-            className="group relative isolate z-0 flex flex-col gap-3"
+            className="group relative rounded-lg isolate z-0 flex flex-col gap-3"
             onMouseEnter={() => v.videoUrl && setHovered(true)}
             onMouseLeave={endHover}
         >

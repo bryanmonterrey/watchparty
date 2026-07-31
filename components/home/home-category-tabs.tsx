@@ -13,6 +13,8 @@ import { TabScrollArrow } from "./tab-scroll-arrow";
 // panel below can render for it), uncontrolled otherwise.
 export const HOME_TABS = [
     "Trending Coins",
+    "Feed",
+    "Just Chatting",
     "IRL",
     "Podcasts",
     "Streamers",
@@ -45,8 +47,8 @@ export function HomeCategoryTabs({
 
     return (
         <nav className="relative w-full">
-            {/* The strip scrolls rather than wraps: seven labels fit an ~830px
-                column, but it narrows well below that at lg. */}
+            {/* The strip scrolls rather than wraps: the labels fit the full
+                centre column, but it narrows well below that at lg. */}
             <div
                 ref={stripRef}
                 className="hidden-scrollbar flex items-center gap-2 overflow-x-auto scroll-smooth"
@@ -62,7 +64,7 @@ export function HomeCategoryTabs({
                         // paints it, and is what spaces the labels apart.
                         className={cn(
                             "shrink-0 cursor-pointer whitespace-nowrap px-3.5 py-1.5 tracking-tight text-lg font-semibold transition-colors",
-                            active === tab ? "text-white" : "text-zinc-500 hover:text-white"
+                            active === tab ? "text-twitter2" : "text-zinc-500 hover:text-white"
                         )}
                     >
                         {tab}

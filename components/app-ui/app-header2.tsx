@@ -33,7 +33,7 @@ function CreateButtonSkeleton() {
   return (
     <div
       aria-hidden
-      className="flex size-[52px] items-center justify-center rounded-full border-sidebar-hover/10"
+      className="flex size-11 items-center justify-center rounded-full border-sidebar-hover/10"
     >
       <div className="size-6 rounded-lg shimmer-skeleton" />
     </div>
@@ -251,7 +251,7 @@ export function AppHeader2() {
             {isLoading ? (
               <CreateButtonSkeleton />
             ) : (
-              <CreateMenu triggerClassName="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex h-[52px] w-[52px] items-center justify-center rounded-full border-sidebar-hover/10 bg-soft-gray-10 p-0 text-flexwhite/80 transition-colors ease-out hover:bg-soft-gray-15" />
+              <CreateMenu triggerClassName="inner-shadow inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex h-11 w-11 items-center justify-center rounded-full border-sidebar-hover/10 bg-soft-gray-10 p-0 text-flexwhite/80 transition-colors ease-out hover:bg-soft-gray-15" />
             )}
             <WalletButton />
           </>

@@ -79,7 +79,7 @@ export function GlobalSearch({
                     // z-50 keeps the bar above the attached suggestion panel
                     // (docs/searchbar.svg: the panel wraps the bar at a 2px
                     // inset and renders behind it).
-                    "relative z-50 h-[52px] backdrop-blur-xl inner-shadow hover:cursor-pointer inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-grok rounded-full transition-colors",
+                    "relative z-50 h-11 backdrop-blur-xl inner-shadow hover:cursor-pointer inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-grok rounded-full transition-colors",
                     // Single source of truth for the ring: isFocused (set on
                     // input focus, cleared on submit / outside click). No ring
                     // while the panel is showing — it would sit inside the
@@ -87,7 +87,7 @@ export function GlobalSearch({
                     isFocused && !(showDropdown && (inputValue.length > 0 || history.length > 0)) && "ring-2 ring-white/35"
                 )}
             >
-                <SearchIcon className="absolute left-4 size-6 text-flexwhite/35" />
+                <SearchIcon className="absolute left-4 size-5.5 text-flexwhite/35" />
                 <input
                     type="text"
                     value={inputValue}
@@ -98,7 +98,7 @@ export function GlobalSearch({
                     onFocus={() => setIsFocused(true)}
                     placeholder={placeholder}
                     autoFocus={autoFocus}
-                    className="w-full bg-transparent pl-12.5 pr-20 py-2.5 text-lg font-medium text-white placeholder:text-flexwhite/35 hover:cursor-pointer active:cursor-text focus-visible:cursor-text focus-within:cursor-text focus:outline-none"
+                    className="w-full bg-transparent pl-12.5 pr-20 py-2.5 text-base font-medium text-white placeholder:text-flexwhite/35 hover:cursor-pointer active:cursor-text focus-visible:cursor-text focus-within:cursor-text focus:outline-none"
                 />
                 <div className="absolute right-3 flex items-center gap-1">
                     <AnimatePresence>
@@ -121,11 +121,11 @@ export function GlobalSearch({
                         <AnimatePresence mode="wait">
                             {inputValue.length > 0 ? (
                                 <motion.span key="arrow" initial={{ opacity: 1, scale: 1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 1, scale: 1 }} transition={{ duration: 0.125 }}>
-                                    <ArrowRightIcon className="w-6 h-6" />
+                                    <ArrowRightIcon className="w-5.5 h-5.5" />
                                 </motion.span>
                             ) : (
                                 <motion.span key="live" initial={{ opacity: 1, scale: 1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 1, scale: 1 }} transition={{ duration: 0.125 }}>
-                                    <AudioWavesIcon className="w-6 h-6" />
+                                    <AudioWavesIcon className="w-5.5 h-5.5" />
                                 </motion.span>
                             )}
                         </AnimatePresence>

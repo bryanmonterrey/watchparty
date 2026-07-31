@@ -223,7 +223,7 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
         // `relative` anchors the stretched link below; the row is a div, not an
         // anchor, because buy and star are interactive and nesting those inside
         // an <a> is invalid.
-        <div className={cn(GRID, "group relative px-3 py-3 transition-colors hover:bg-white/[0.02]")}>
+        <div className={cn(GRID, "group -z-5 relative px-3 py-3 transition-colors hover:bg-white/[0.02]")}>
             <span className="flex min-w-0 items-center gap-3">
                 {/* The chain mark rides the coin's icon rather than sitting
                     beside the ticker: this board spans twenty chains and the
@@ -338,11 +338,14 @@ export function TrendingTable({ className }: { className?: string }) {
                 gets a header that sticks to the top of its scroller, and the
                 board stays usable outside home.
 
-                Opaque bg-canvas (the app canvas, i.e. bg-panel's 3% white over
-                black) — bg-panel itself is translucent and would let the rows
-                show through. z-10 keeps it over the rows but under the tabs,
-                which are z-20, so the two stack rather than fight. */}
-            <div className={cn(GRID, CELL_TEXT, "sticky top-[var(--board-stick,0px)] z-10 bg-canvas px-3 pb-3 pt-4 text-zinc-500")}>
+                Deliberate glass (bg-canvas/30 + backdrop-blur): the rows smear
+                under the pinned labels instead of vanishing under an opaque
+                slab. z-15, not z-10 — the rows' Buy and Star cells are
+                themselves relative z-10 (they clear the row's stretched link),
+                and a z-index tie resolves by DOM order: rows come later, so
+                those cells painted crisply OVER the header as the list
+                scrolled under it. Still under the tabs, which are z-20. */}
+            <div className={cn(GRID, CELL_TEXT, "sticky w-full top-[var(--board-stick,0px)] z-15 bg-canvas/30 backdrop-blur-xl px-3 pb-3 pt-4 text-zinc-400")}>
                 {/* Sentence case, capital on the first word only — the one
                     place in the app that isn't all-lowercase, per the author. */}
                 <span>Name</span>

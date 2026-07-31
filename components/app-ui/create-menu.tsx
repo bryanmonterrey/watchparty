@@ -76,7 +76,7 @@ export function CreateMenu({ triggerClassName }: { triggerClassName?: string }) 
                 // The skin comes from the header, not from here — the live header
                 // (app-header2) and the frozen one style this button differently.
                 triggerClassName={triggerClassName}
-                trigger={<CreateIcon className="size-6" strokeWidth={2} />}
+                trigger={<CreateIcon className="size-5.5" strokeWidth={2} />}
                 items={[
                     gooMenuItem({
                         key: "stream",

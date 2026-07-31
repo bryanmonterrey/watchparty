@@ -192,7 +192,7 @@ export function ProfileHeaderActions({ user, isOwner }: ProfileHeaderActionsProp
                 <Button
                     variant="outline"
                     onClick={() => setIsEditing(true)}
-                    className="font-bold rounded-full bg-soft-gray-10 hover:bg-soft-gray-15 border border-baseborder/5 h-11 px-4"
+                    className="font-semibold rounded-full bg-soft-gray-10 hover:bg-soft-gray-15 border border-baseborder/5 h-11 px-4"
                 >
                     Edit profile
                 </Button>

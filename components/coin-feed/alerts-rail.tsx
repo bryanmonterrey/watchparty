@@ -385,7 +385,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
-        <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+        <div className={cn("flex min-h-0 flex-1 flex-col bg-soft-gray-5 border-grokborder border rounded-lg", className)}>
             {/* Header: tabs left, controls right. Same treatment as the home
                 right rail's tabs — colour alone carries the active state. */}
             {/* Mentions is an ICON tab, the same way the right rail's star is a
@@ -399,7 +399,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         onClick={() => switchTab(t)}
                         aria-pressed={tab === t}
                         className={cn(
-                            "cursor-pointer whitespace-nowrap px-1.5 py-1.5 text-lg font-semibold tracking-tight transition-colors",
+                            "cursor-pointer whitespace-nowrap px-1.5 py-1.5 text-sm font-semibold tracking-tight transition-colors",
                             tab === t ? "text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
@@ -468,7 +468,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 <button
                     type="button"
                     onClick={loadNewAlerts}
-                    className="mx-1 mt-1 shrink-0 cursor-pointer rounded-full py-1.5 text-[13px] font-bold text-twitter2 transition-colors"
+                    className=" shrink-0 cursor-pointer bg-soft-gray-10 py-2.5 text-[13px] font-bold text-twitter2 transition-colors"
                 >
                     Show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
                 </button>

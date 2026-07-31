@@ -23,14 +23,12 @@ export const RAIL_ICON_TAB = "trending";
 export const RAIL_TABS = [RAIL_ICON_TAB, "For you", "Live", "New", "Upcoming"];
 
 /**
- * Home diverges: "For you" is named "Feed" there (it IS the feed the hero plays
- * from, not a recommendation slice beside one). Kept as its own list rather than
- * changed in RAIL_TABS so the video and live rails — which nobody asked to
- * change — keep the labels they have.
+ * Home keeps its own list because its picker has home-only destinations and
+ * labels. The centre category row now owns "Feed", while the video and live
+ * rails keep their shared labels unchanged.
  *
- * Order: trending · Feed · Online · Clips · Liked · New · Upcoming.
+ * Order: trending · Online · Clips · Liked · New · Upcoming.
  */
-export const HOME_TAB_FEED = "Feed";
 export const HOME_TAB_LIKED = "Liked";
 /**
  * "Clips" is a BUTTON wearing a tab, not a filter: it opens the shorts feed as a
@@ -45,7 +43,7 @@ export const HOME_TAB_CLIPS = "Clips";
  * to swap in the live-streams query.
  */
 export const HOME_TAB_ONLINE = "Online";
-export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_FEED, HOME_TAB_ONLINE, HOME_TAB_CLIPS, HOME_TAB_LIKED, "New", "Upcoming"];
+export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_ONLINE, HOME_TAB_CLIPS, HOME_TAB_LIKED, "New", "Upcoming"];
 
 export function RailTabs({
     tabs = RAIL_TABS,

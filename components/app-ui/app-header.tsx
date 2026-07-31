@@ -207,7 +207,7 @@ export function AppHeader() {
                       aria-label="Create"
                       className="rounded-none border-none flex size-11 p-0 text-flexwhite bg-[#6A6A6A]/35 hover:bg-[#6A6A6A]/50"
                     >
-                      <CreateIcon className="size-6" strokeWidth={2}/>
+                      <CreateIcon className="size-5.5" strokeWidth={2}/>
                     </Button>
                   </Squircle>
                 )}

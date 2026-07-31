@@ -26,10 +26,10 @@ import { MarketCapChip } from "@/components/tokens/market-cap-chip";
 // has, and there the column wins and the box goes narrower than 16:9. The
 // media inside is object-contain, so that never crops the frame; it just adds
 // bars.
-const HERO_BOX = "h-[45svh] aspect-video max-w-full";
+const HERO_BOX = "h-[45svh] aspect-video  max-w-full";
 // No padding at all: the hero sits flush in the column's top-left corner, and
 // the only offset above it is the column's own header clearance.
-const HERO_WRAP = "w-full";
+const HERO_WRAP = "w-full ";
 
 interface CarouselVideo {
     id: string;
@@ -92,7 +92,7 @@ export function HomeCarousel({
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className={`group/active relative block rounded-none bg-muted outline-none ${
+                    className={`group/active relative block rounded-xl bg-muted outline-none ${
                         ambient
                             ? "ambient-video-container isolate overflow-visible [contain:none]"
                             : "overflow-hidden"

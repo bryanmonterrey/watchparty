@@ -27,11 +27,11 @@ export function HomeCategoryPanel() {
                   the centre column's md:mt-[var(--header-height)] — below md the
                   fixed header is hidden (max-md:hidden), so there's nothing to
                   offset against.
-                · the fill is the OPAQUE bg-canvas, not bg-panel. bg-panel is
-                  rgba(255,255,255,0.03) — translucent — so the board would show
-                  through the tabs as it scrolled under them. bg-canvas is exactly
-                  what that 3% white composites to over the black shell, and it's
-                  the token every full-bleed app surface shares.
+                · the fill is the same glass the board's own column header
+                  carries — bg-canvas/30 + backdrop-blur — so the tabs, the
+                  board header and the bare chevron strip above them read as
+                  one surface, and rows smear under a pinned bar instead of
+                  sitting beneath an opaque slab.
                 · pb-2 rather than mb-2: a margin isn't painted, so the gap under
                   a stuck bar would be a transparent slot with rows sliding
                   through it.
@@ -42,7 +42,7 @@ export function HomeCategoryPanel() {
                 buttons (28px line box + 12px = 40px) and the arrows are
                 absolute, so 40 + pb-2 = 48px = h-12. Pin it and the number
                 can't drift out from under whatever stacks beneath it. */}
-            <div className="sticky top-0 z-20 h-12 bg-canvas pb-2 md:top-[var(--header-height)]">
+            <div className="sticky top-0 z-15 h-12 pb-2 md:top-[var(--header-height)]">
                 <HomeCategoryTabs active={active} onChange={setActive} />
             </div>
 
@@ -55,7 +55,7 @@ export function HomeCategoryPanel() {
                 keeps home's layout math here instead of baked into a component
                 that isn't home's. Below md the fixed app header is hidden, so
                 the tabs sit at 0 and this is just their height. */}
-            <div className="flex-1 [--board-stick:3rem] md:[--board-stick:calc(var(--header-height)+3rem)]">
+            <div className="z-0 flex-1 overflow-clip bg-canvas [--board-stick:3rem] md:[--board-stick:calc(var(--header-height)+3rem)]">
                 {active === "Trending Coins" && <TrendingTable />}
             </div>
         </>
