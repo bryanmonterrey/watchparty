@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MaximizeIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { useEdgeScroll } from "@/hooks/use-edge-scroll";
 import { TabScrollArrow } from "./tab-scroll-arrow";
@@ -59,15 +60,17 @@ export function HomeCategoryTabs({
                         type="button"
                         onClick={() => setActive(tab)}
                         aria-pressed={active === tab}
+                        aria-haspopup={tab === "Feed" && active === tab ? "dialog" : undefined}
                         // No fill behind the active tab — colour alone carries
                         // it. The padding stays for hit area even though nothing
                         // paints it, and is what spaces the labels apart.
                         className={cn(
-                            "shrink-0 cursor-pointer whitespace-nowrap px-3.5 py-1.5 tracking-tight text-lg font-semibold transition-colors",
+                            "flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 tracking-tight text-lg font-semibold transition-colors",
                             active === tab ? "text-twitter2" : "text-zinc-500 hover:text-white"
                         )}
                     >
                         {tab}
+                        {tab === "Feed" && active === tab && <MaximizeIcon className="size-5 shrink-0" />}
                     </button>
                 ))}
             </div>

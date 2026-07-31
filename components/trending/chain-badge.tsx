@@ -56,7 +56,7 @@ export function ChainBadge({ network, className }: { network: string; className?
             <span
                 title={label}
                 aria-label={label}
-                className={cn("inline-block size-3.5 shrink-0 rounded-md", className)}
+                className={cn("inline-block size-3 shrink-0 rounded-xs", className)}
                 style={{ backgroundColor: colorFor(network) }}
             />
         );
@@ -69,7 +69,7 @@ export function ChainBadge({ network, className }: { network: string; className?
             alt={label}
             title={label}
             loading="lazy"
-            className={cn("size-3.5 shrink-0 rounded-full object-cover", className)}
+            className={cn("size-3.5 shrink-0 rounded-sm object-cover", className)}
         />
     );
 }

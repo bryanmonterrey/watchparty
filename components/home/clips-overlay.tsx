@@ -3,15 +3,16 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "motion/react";
+import { ShortsFeedLoading } from "@/components/shorts/shorts-feed-loading";
 import { useClipsOverlay } from "@/hooks/use-clips-overlay";
 
 // Behind interaction, per the speed rule: the shorts feed drags in video players
-// (short-video-card, ambient-glow-video), and nobody on /home has paid for those
-// until they actually open Clips. The canvas is the fallback — it's already the
-// overlay's own background, so there's nothing to flash.
+// (short-video-card, ambient-glow-video), and nobody on /home pays for those
+// until Clips opens. The fallback keeps the final layout and uses the app's
+// black player screen + spinner convention instead of flashing an empty canvas.
 const ShortsFeed = dynamic(
     () => import("@/components/shorts/shorts-feed").then((m) => m.ShortsFeed),
-    { ssr: false },
+    { ssr: false, loading: () => <ShortsFeedLoading /> },
 );
 
 // The Clips tab's surface: the shorts feed, full-bleed over the app.

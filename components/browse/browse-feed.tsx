@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import BidirectionalList, { type BidirectionalListRef } from "broad-infinite-list/react";
 import { trpc } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
 import { PostCard } from "./post-card";
 import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
@@ -159,13 +160,17 @@ function assembleFeed(rawPosts: any[]): FeedItem[] {
 }
 
 interface BrowseFeedProps {
-    /** The For you / Following tab bar. Discover shows it; home doesn't. */
+    /** The For you / Following tab bar. */
     showTabs?: boolean;
-    /** The inline post composer. Discover shows it; home doesn't. */
+    /** The inline post composer. */
     showComposer?: boolean;
+    /** Dock sticky feed chrome beneath the global app header. */
+    headerOffset?: boolean;
+    /** Embedded home feed also clears home's sticky category tabs. */
+    homeTabsOffset?: boolean;
 }
 
-export function BrowseFeed({ showTabs = true, showComposer = true }: BrowseFeedProps = {}) {
+export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset = false, homeTabsOffset = false }: BrowseFeedProps = {}) {
     const [activeTab, setActiveTab] = useState<FeedType>("for-you");
     const markedPageCount = useRef(0);
     const { data: session } = useAuthSession();
@@ -350,8 +355,8 @@ export function BrowseFeed({ showTabs = true, showComposer = true }: BrowseFeedP
             if (updatedFull[0]) establishedTopKeyRef.current.set(activeTab, keyOf(updatedFull[0]));
         }
 
-        // Always scroll to top when manually loading new posts
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        // The authenticated app scrolls inside AppContainer, not window.
+        document.getElementById("app-scroll-container")?.scrollTo({ top: 0, behavior: "smooth" });
         listRef.current?.scrollToTop("smooth");
     }, [activeTab, utils]);
 
@@ -606,12 +611,19 @@ export function BrowseFeed({ showTabs = true, showComposer = true }: BrowseFeedP
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <PollProvider postIds={postIds}>
-        <div className="flex flex-col">
+        <div className="flex flex-col bg-canvas">
             {/* Tabs — flush at the top of the feed column, which sits ABOVE the
                 app header (see the layout's z-index), so the header never covers
                 them. */}
             {showTabs && (
-                <div className="flex items-center w-full sticky top-0 z-100 border-b border-soft-gray/[0.12]">
+                <div className={cn(
+                    "sticky z-100 flex w-full items-center border-b border-soft-gray/[0.12] bg-canvas",
+                    homeTabsOffset
+                        ? "top-12 md:top-[calc(var(--header-height)+3rem)]"
+                        : headerOffset
+                          ? "top-0 md:top-[var(--header-height)]"
+                          : "top-0",
+                )}>
                     <FeedTab
                         label="For you"
                         isActive={activeTab === "for-you"}
@@ -626,7 +638,16 @@ export function BrowseFeed({ showTabs = true, showComposer = true }: BrowseFeedP
             {/* Floating "new posts" pill — parks just under the tab bar. With
                 no tab bar there is nothing covering the app header, so it parks
                 below the header instead; top-0 would sit behind it. */}
-            <div className={`sticky ${showTabs ? "top-[52px]" : "top-[var(--header-height)]"} z-50 h-0 overflow-visible`}>
+            <div className={cn(
+                "sticky z-50 h-0 overflow-visible",
+                showTabs
+                    ? homeTabsOffset
+                        ? "top-[100px] md:top-[calc(var(--header-height)+100px)]"
+                        : headerOffset
+                          ? "top-[52px] md:top-[calc(var(--header-height)+52px)]"
+                          : "top-[52px]"
+                    : "top-[var(--header-height)]",
+            )}>
                 <AnimatePresence>
                     {newPostsCount > 0 && !composerVisible && (
                         <motion.div
@@ -681,7 +702,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true }: BrowseFeedP
                     Failed to load feed. Please try again.
                 </div>
             ) : isLoading && !populatedTabs.current.has(activeTab) ? (
-                <div className="flex flex-col">
+                <div className="flex flex-col bg-canvas">
                     {Array.from({ length: 7 }).map((_, i) => (
                         <PostCardSkeleton key={i} withMedia={i % 2 === 1} />
                     ))}

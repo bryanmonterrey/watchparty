@@ -10,7 +10,8 @@ import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { stableHoverColor } from "@/lib/stable-hover-color";
-import { explorerUrl, tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
+import { tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
+import { useCoinOverlay } from "@/hooks/use-coin-overlay";
 import type { AppRouter } from "@/server/routers";
 import { Squircle } from "@/components/ui/squircle";
 import { ChainBadge } from "./chain-badge";
@@ -210,12 +211,9 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
     quickBuy: QuickBuy;
     buying: boolean;
 }) {
-    // These are markets we track, not coins we host, so the coin's name links
-    // out to the chain's explorer (GeckoTerminal's pool page for chains we
-    // haven't mapped).
-    const explorer = explorerUrl(row.network, row.tokenAddress, row.poolAddress);
     const title = row.name ?? row.symbol;
     const hoverColor = stableHoverColor(row.id);
+    const openCoin = useCoinOverlay((state) => state.onOpen);
 
     return (
         // No divider and no fill: the reference's rows sit straight on the
@@ -247,25 +245,33 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
                     )}
                     <ChainBadge
                         network={row.network}
-                        className="absolute -bottom-0.5 -right-0.5 ring-2 ring-background"
+                        className="absolute -bottom-0.5 rounded-full bg-black p-1 -right-0.5 ring-1 p-0 ring-black"
                     />
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
-                    {explorer ? (
-                        <a
-                            href={explorer}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            // after:inset-0 stretches this one link over the
-                            // whole row, so the row is clickable without the
-                            // markup being an anchor.
-                            className={cn(CELL_TEXT, "truncate text-white after:absolute after:inset-0 after:content-['']")}
-                        >
-                            {title}
-                        </a>
-                    ) : (
-                        <span className={cn(CELL_TEXT, "truncate text-white")}>{title}</span>
-                    )}
+                    <button
+                        type="button"
+                        onClick={() => openCoin({
+                            id: row.id,
+                            network: row.network,
+                            tokenAddress: row.tokenAddress,
+                            poolAddress: row.poolAddress,
+                            symbol: row.symbol,
+                            name: row.name,
+                            imageUrl: row.imageUrl,
+                            priceUsd: row.priceUsd,
+                            marketCapUsd: row.marketCapUsd,
+                            liquidityUsd: row.liquidityUsd,
+                            volume24hUsd: row.volume24hUsd,
+                            priceChange24h: row.priceChange24h,
+                            buys24h: row.buys24h,
+                            sells24h: row.sells24h,
+                            txns24h: row.txns24h,
+                        })}
+                        className={cn(CELL_TEXT, "cursor-pointer truncate text-left text-white after:absolute after:inset-0 after:content-['']")}
+                    >
+                        {title}
+                    </button>
                     <span className={cn(CELL_TEXT, "truncate text-zinc-500")}>{row.symbol}</span>
                 </span>
             </span>

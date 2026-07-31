@@ -61,7 +61,7 @@ export function SponsoredCard({ className }: SponsoredCardProps) {
             ref={ref}
             onClick={onClick}
             className={cn(
-                "group cursor-pointer px-4 pt-2.5 pb-3 bg-background border-b border-soft-gray/[0.12] transition-colors hover:bg-zinc-500/[0.04]",
+                "group cursor-pointer border-b border-soft-gray/[0.12] bg-canvas px-4 pt-2.5 pb-3 transition-colors hover:bg-zinc-500/[0.04]",
                 className,
             )}
         >

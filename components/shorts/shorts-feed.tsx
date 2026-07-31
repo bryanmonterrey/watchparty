@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc/client";
 import { ShortVideoCard } from "./short-video-card";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "boneyard-js/react";
+import { ShortsFeedLoading } from "./shorts-feed-loading";
 
 export function ShortsFeed() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -88,44 +88,7 @@ export function ShortsFeed() {
         }
     };
 
-    if (isLoading) {
-        return (
-            <div className="w-full h-full flex items-center justify-center gap-4 py-2 px-4 relative bg-canvas">
-                <div className="absolute inset-0 bg-canvas" />
-                <div className="relative z-10 h-full aspect-[9/16] flex-shrink-0 sm:rounded-2xl overflow-hidden bg-canvas">
-                    <Skeleton name="shorts-video" loading>
-                        <div className="w-full h-full bg-zinc-800/20" />
-                    </Skeleton>
-                    <div className="absolute bottom-0 left-0 w-full p-4 pt-20 flex flex-col justify-end gap-2">
-                        <Skeleton name="shorts-title" loading>
-                            <div className="h-4 w-32 rounded-full bg-zinc-700/30" />
-                        </Skeleton>
-                        <Skeleton name="shorts-desc" loading>
-                            <div className="h-4 w-48 rounded-full bg-zinc-700/30" />
-                        </Skeleton>
-                        <Skeleton name="shorts-meta" loading>
-                            <div className="h-4 w-36 rounded-full bg-zinc-700/30" />
-                        </Skeleton>
-                    </div>
-                </div>
-                <div className="relative z-20 flex flex-col gap-3 items-center justify-end h-full pb-4 shrink-0 px-2 lg:px-4">
-                    <Skeleton name="shorts-avatar" loading>
-                        <div className="w-14 h-14 rounded-full bg-zinc-800" />
-                    </Skeleton>
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="flex flex-col items-center gap-1">
-                            <Skeleton name="shorts-action" loading>
-                                <div className="w-16 h-16 rounded-2xl bg-zinc-800" />
-                            </Skeleton>
-                            <Skeleton name="shorts-count" loading>
-                                <div className="h-2.5 w-8 rounded-full bg-zinc-700/30" />
-                            </Skeleton>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
+    if (isLoading) return <ShortsFeedLoading />;
 
     return (
         <div className="w-full h-full relative group">

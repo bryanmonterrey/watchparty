@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { SearchIcon, PinkStarLogo } from '../icons'
 import { MorphMenuIcon } from '@/components/marketing/morph-menu-icon'
 import { useClipsOverlay } from '@/hooks/use-clips-overlay'
+import { useHomeFeedOverlay } from '@/hooks/use-home-feed-overlay'
+import { useCoinOverlay } from '@/hooks/use-coin-overlay'
 import { CreateMenu } from './create-menu'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
@@ -52,6 +54,16 @@ export function AppHeader2() {
   const { toggleSidebar, state: sidebarState } = useSidebar()
   const clipsOpen = useClipsOverlay((s) => s.open)
   const closeClips = useClipsOverlay((s) => s.onClose)
+  const homeFeedOpen = useHomeFeedOverlay((s) => s.open)
+  const closeHomeFeed = useHomeFeedOverlay((s) => s.onClose)
+  const coinOpen = useCoinOverlay((s) => !!s.coin)
+  const closeCoin = useCoinOverlay((s) => s.onClose)
+  const homeOverlayOpen = clipsOpen || homeFeedOpen || coinOpen
+  const closeHomeOverlay = () => {
+    if (clipsOpen) closeClips()
+    else if (coinOpen) closeCoin()
+    else if (homeFeedOpen) closeHomeFeed()
+  }
   const [mounted, setMounted] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
@@ -125,19 +137,18 @@ export function AppHeader2() {
             and click-outside are handled by Sidebar itself. */}
         {/* Plain trigger + logo on the canvas — no pill, per desktopdesigns. */}
         <div className="flex items-center gap-3 h-11 pointer-events-auto">
-          {/* Doubles as the Clips overlay's close button: while that's open the
-              hamburger path-morphs to an X and the press closes it instead of
-              touching the sidebar. MorphMenuIcon's resting paths are identical to
-              MenuIcon's, so nothing moves when it's shut. */}
+          {/* Home overlays share this close affordance: while one is open the
+              hamburger path-morphs to an X and closes the active surface instead
+              of touching the sidebar. */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={clipsOpen ? closeClips : toggleSidebar}
-            data-sidebar={clipsOpen ? undefined : 'trigger'}
-            aria-label={clipsOpen ? 'Close clips' : 'Toggle sidebar'}
+            onClick={homeOverlayOpen ? closeHomeOverlay : toggleSidebar}
+            data-sidebar={homeOverlayOpen ? undefined : 'trigger'}
+            aria-label={homeOverlayOpen ? 'Close overlay' : 'Toggle sidebar'}
             className="size-10 text-white/80 hover:bg-white/10 hover:text-white"
           >
-            <MorphMenuIcon open={clipsOpen} className="size-8" />
+            <MorphMenuIcon open={homeOverlayOpen} className="size-8" />
           </Button>
           {/* Communities owns the star: it's the home tile at the top of the
               server rail there, directly under this spot — so the header drops
@@ -204,10 +215,9 @@ export function AppHeader2() {
         </div>
       </div>
 
-      {/* SEARCH BAR CENTERED — hidden while the Clips overlay is up: it searches
-          the page underneath, which is covered, so it would only mislead. The
-          menu icon (now an X) and the right-hand cluster stay. */}
-      {showSearch && !clipsOpen && (
+      {/* Search targets the covered page, so all home overlays hide it while
+          leaving the X and right-hand action cluster available. */}
+      {showSearch && !homeOverlayOpen && (
         <div className="relative z-10 flex-[2] flex items-center justify-center">
            <div className="w-full max-w-[560px] pointer-events-auto">
               {isSearchPage ? (

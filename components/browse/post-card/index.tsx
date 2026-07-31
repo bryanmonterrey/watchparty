@@ -302,7 +302,7 @@ export function PostCard({
                     router.push(`/discover/post/${post.id}`);
                 }}
                 className={cn(
-                    "group cursor-pointer px-4 pt-2.5 pb-1.5 transition-colors relative bg-background flex flex-col",
+                    "group relative flex cursor-pointer flex-col bg-canvas px-4 pt-2.5 pb-1.5 transition-colors",
                     connectBottom ? "border-none pb-0" : "border-b border-soft-gray/[0.12]",
                     connectTop ? "pt-3" : "pt-2.5"
                 )}

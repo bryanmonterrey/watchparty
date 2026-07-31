@@ -19,6 +19,8 @@ interface SwapViewProps {
     onBack: () => void;
     walletTokens?: WalletToken[];
     initialInputToken?: Token;
+    initialOutputToken?: Token;
+    showBack?: boolean;
 }
 
 interface QuoteResponse {
@@ -32,7 +34,14 @@ interface QuoteResponse {
     priceImpactPct: number;
 }
 
-export function SwapView({ walletAddress, onBack, walletTokens = [], initialInputToken }: SwapViewProps) {
+export function SwapView({
+    walletAddress,
+    onBack,
+    walletTokens = [],
+    initialInputToken,
+    initialOutputToken,
+    showBack = true,
+}: SwapViewProps) {
     const { connection } = useConnection();
     const { publicKey: adapterPublicKey, sendTransaction } = useWallet();
     const { signAndSubmit: signAndSendCustodialTxFn } = useWalletSigning();
@@ -50,7 +59,7 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
     const publicKey = toPublicKey(activePublicKeyStr);
 
     const [inputToken, setInputToken] = React.useState<Token | null>(initialInputToken ?? null);
-    const [outputToken, setOutputToken] = React.useState<Token | null>(null);
+    const [outputToken, setOutputToken] = React.useState<Token | null>(initialOutputToken ?? null);
 
     // Enrich selected token icons from Helius DAS (overrides CoinGecko logos with on-chain metadata)
     const selectedMints = React.useMemo(
@@ -103,17 +112,31 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
         tradeRoute: "default",
     });
 
-    // Initialize defaults when global token list loads
+    // Initialize whichever side the caller did not prefill. CoinGecko/Jupiter
+    // token lists use wSOL (So...112), not native SOL (So...111).
     React.useEffect(() => {
-        if (jupiterTokens && !inputToken && !outputToken) {
-            // CoinGecko/Jupiter token lists use wSOL (So...112), not native SOL (So...111)
-            const sol = jupiterTokens.find((t: Token) =>
-                t.address === "So11111111111111111111111111111111111111112" ||
-                t.address === "So11111111111111111111111111111111111111111"
-            );
-            const usdc = jupiterTokens.find((t: Token) => t.address === "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-            if (sol) setInputToken(sol);
-            if (usdc) setOutputToken(usdc);
+        if (!jupiterTokens) return;
+        const sol = jupiterTokens.find((token: Token) =>
+            token.address === SOL_WSOL || token.address === SOL_NATIVE
+        );
+        const usdc = jupiterTokens.find((token: Token) => token.address === "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
+        if (!inputToken) {
+            const outputIsSol = outputToken?.address === SOL_WSOL || outputToken?.address === SOL_NATIVE;
+            const nextInput = outputIsSol ? usdc : sol;
+            if (nextInput) setInputToken(nextInput);
+            return;
+        }
+        if (!outputToken) {
+            const inputIsUsdc = inputToken.address === usdc?.address;
+            const nextOutput = inputIsUsdc ? sol : usdc;
+            if (nextOutput) setOutputToken(nextOutput);
+            return;
+        }
+        if (inputToken.address === outputToken.address) {
+            const outputIsSol = outputToken.address === SOL_WSOL || outputToken.address === SOL_NATIVE;
+            const nextInput = outputIsSol ? usdc : sol;
+            if (nextInput) setInputToken(nextInput);
         }
     }, [jupiterTokens, inputToken, outputToken]);
 
@@ -224,9 +247,11 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
         <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center justify-center p-4 mb-2 relative">
-                <Button onClick={onBack} className="absolute left-4 flex items-center gap-2 text-zinc-300 hover:text-white transition-colors bg-transparent border-none shadow-none hover:bg-transparent p-0">
-                    <ArrowLeft className="w-5 h-5" />
-                </Button>
+                {showBack && (
+                    <Button onClick={onBack} className="absolute left-4 flex items-center gap-2 text-zinc-300 hover:text-white transition-colors bg-transparent border-none shadow-none hover:bg-transparent p-0">
+                        <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                )}
                 <span className="text-lg font-semibold capitalize text-zinc-300">Swap</span>
                 <div className="absolute right-4">
                     <SwapSettingsPanel settings={swapSettings} onChange={setSwapSettings} />
