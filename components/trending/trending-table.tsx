@@ -121,7 +121,7 @@ function ChangeCell({ pct }: { pct: number | null }) {
  *  the wallet's swap engine, same as the /trade board), every other chain opens
  *  the pool's venue. A row we can't actually fill would be worse than no cell. */
 function BuyCell({ row, quickBuy, buying }: { row: TrendingRow; quickBuy: QuickBuy; buying: boolean }) {
-    const shared = cn(CELL_TEXT, "text-bleu transition-opacity hover:opacity-80");
+    const shared = cn(CELL_TEXT, "text-twitter2 font-bold transition-opacity hover:opacity-80");
 
     if (row.network === "solana") {
         return (
@@ -355,11 +355,11 @@ export function TrendingTable({ className }: { className?: string }) {
             <div className={cn(GRID, CELL_TEXT, "sticky top-[var(--board-stick,0px)] z-15 w-full bg-canvas px-3 pb-3 pt-4 text-zinc-400")}>
                 {/* Sentence case, capital on the first word only — the one
                     place in the app that isn't all-lowercase, per the author. */}
-                <span>Name</span>
-                <span>Market price</span>
-                <span className="hidden @xl:block">Volume</span>
-                <span className="hidden @3xl:block">Market cap</span>
-                <span>Change</span>
+                <span className="cursor-pointer transition-colors hover:text-twitter2">Name</span>
+                <span className="cursor-pointer transition-colors hover:text-twitter2">Market price</span>
+                <span className="hidden cursor-pointer transition-colors hover:text-twitter2 @xl:block">Volume</span>
+                <span className="hidden cursor-pointer transition-colors hover:text-twitter2 @3xl:block">Market cap</span>
+                <span className="cursor-pointer transition-colors hover:text-twitter2">Change</span>
                 {/* The action columns are self-evident from the rows; a header
                     over them would just be noise. They still need their tracks. */}
                 <span />
