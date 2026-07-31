@@ -87,6 +87,7 @@
     "@vercel/analytics": "^2.0.1",
     "@walletconnect/ethereum-provider": "^2.23.10",
     "@walletconnect/solana-adapter": "^0.0.9",
+    "@wingleeio/mugen": "^0.8.0",
     "better-auth": "1.6.25",
     "better-auth-siws": "^0.1.4",
     "bip322-js": "^3.0.0",

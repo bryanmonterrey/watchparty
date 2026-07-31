@@ -13,6 +13,7 @@ import { COIN_FEED_KINDS, coinFeedEvents, trackedTokens } from "@/db/schema/cont
 import { follows } from "@/db/schema/content/follow";
 import { tokens } from "@/db/schema/content/token";
 import { and, desc, gt, inArray, or, sql, type SQL } from "drizzle-orm";
+import { withCache } from "@/lib/cache";
 
 /** Cursor is `${iso}|${id}` — both halves of the ORDER BY, so it's total. */
 const encodeCursor = (occurredAt: Date, id: string) => `${occurredAt.toISOString()}|${id}`;
@@ -182,16 +183,19 @@ export const coinFeedRouter = router({
             return { count: Math.min(row?.count ?? 0, 99) };
         }),
 
-    /** Coverage stats for the rail's filter panel (per-network tracked counts). */
-    coverage: publicProcedure.query(async () => {
-        const rows = await db
-            .select({
-                network: trackedTokens.network,
-                tracked: sql<number>`count(*)::int`,
-            })
-            .from(trackedTokens)
-            .groupBy(trackedTokens.network)
-            .orderBy(sql`count(*) desc`);
-        return rows;
-    }),
+    /** Coverage stats for the rail's filter panel (per-network tracked counts).
+     *  Global aggregate, changes only when the scanner adds/drops tracked coins
+     *  (minute-scale) — cached 5 min so cold rail mounts skip the Postgres hop. */
+    coverage: publicProcedure.query(() =>
+        withCache("coinfeed:coverage", 300, () =>
+            db
+                .select({
+                    network: trackedTokens.network,
+                    tracked: sql<number>`count(*)::int`,
+                })
+                .from(trackedTokens)
+                .groupBy(trackedTokens.network)
+                .orderBy(sql`count(*) desc`)
+        )
+    ),
 });

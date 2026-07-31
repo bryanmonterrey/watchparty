@@ -1,6 +1,60 @@
 # watchparty — running TODO (handoff)
 
-Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-07-12.
+Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-07-31.
+
+## ✅ Perf pass (2026-07-31, local — pending deploy)
+- **`/api/rpc` caching** (`app/api/rpc/route.ts`): allowlisted read-only Solana/Helius
+  methods cached in Upstash with per-method TTLs (`RPC_*` in `lib/cache.ts`); stores only
+  `result`, replays with the caller's id. send/simulate/blockhash/fees/batches NEVER cached
+  (bypass); upstream errors + null results never cached (skip). `x-rpc-cache` header
+  (hit|miss|bypass|skip) for observability. `HELIUS_RPC_URL` env override added (used by bench).
+- **Feed anon caching** (`server/routers/feed.ts`): signed-out pages of getFeed / getVideoFeed /
+  getShortsFeed cached via local `cacheRows` (superjson envelope inside `withCache` — plain JSON
+  would string-ify Dates; a BARE superjson string gets auto-JSON.parsed by the Upstash client on
+  GET, hence the `{s: ...}` envelope). Keys versioned (`feed:anon:v1:*`, `feed:video:anon:v1:*`,
+  `feed:shorts:anon:v1:*`). TTL.CONTENT_FEED (120s) — was earmarked, now actually used.
+- **`getUserHistory` cached 60s** (`lib/feed-ranker/history.ts`) — was fetched twice per ranked
+  first page (retrieval + rank).
+- **getFeed ranked reads parallelized** — mutes/blocks + candidate pool + OON retrieval now fire
+  in one Promise.all (was 3 serial round trips).
+- **`coinFeed.coverage` cached 5 min** (`server/routers/coinFeed.ts`) — was a Postgres hit per
+  cold rail mount.
+- **Audited, deliberately unchanged:** discover (already cached), trending (batched + indexed;
+  its `chains`/`stats` procedures have ZERO callers — wrap in withCache 60s if ever wired to UI).
+- **Elysia prototype** at `services/rpc-proxy/` (Bun; CACHE_DRIVER=memory|upstash|off, mock
+  upstream, `bun run bench.ts`). Localhost bench (200 req @ 20 conc, cache-hit path): Next dev +
+  Upstash p50 504ms (dev-mode inflated, not prod-representative), Elysia + Upstash p50 43ms,
+  Elysia + in-process Map p50 6.4ms; uncached passthrough ~53ms on both (Helius RTT ≈ 50ms).
+  Takeaway: caching (shipped above) is the real win; Elysia's extra edge is the in-process cache
+  a long-lived Bun process allows (~35ms/hit saved vs Upstash REST) — only worth a new platform
+  if the endpoints prove hot. See "Elysia Bun microservice" in Bigger workstreams.
+
+## 🧵 mugen virtualized lists — evaluation, pilot REVERTED (2026-07-31)
+Owner wants `@wingleeio/mugen` (v0.8.0, still installed) for lists. **Scope reality (mugen's own
+docs):** vertical, text-dominant, structurally-regular rows ONLY — no horizontal/grids, no
+media-of-unknown-height rows, and adopted rows must be REBUILT from its primitives
+(Text/VStack/HStack/Escape; layout via props, NOT Tailwind spacing classes; one Text = one
+font+color, so multi-color inline text isn't expressible). That rules out most signature
+surfaces (video cards, carousels, PostCards, token tables, grids) — "every list" is not the
+right frame. Full text- vs media-dominated surface inventory was audited 2026-07-31 (only
+browse-feed + alerts-rail virtualize today, via broad-infinite-list; community chat =
+highest-pain unvirtualized surface).
+- **Stream-chat pilot built then REVERTED same-day (owner decision: keep the Twitch-style
+  inline colored name+text).** mugen cannot express inline two-color rows (one Text = one
+  font/color); the stacked fallback changed the look and inline made names wrap mid-word.
+  `stream-chat.tsx` restored to HEAD (plain map + force-scroll), `stream-chat-list.tsx`
+  deleted. Learnings (if mugen is revisited for other surfaces): next/font family names must
+  come from the `--font-geist-*` CSS vars for canvas-measurable font strings; ChatIdentity
+  pattern = useMugenState + useMugenEffect with tRPC `profile.card.fetch`; verified
+  stickToBottom/initialScroll/wrap measurement all worked in a headless smoke (200 rows,
+  live appends).
+- **Any future mugen surface must not need inline colored/styled text.** That kills the whole
+  Twitch-style chat family (stream chat, community chat mentions/links/emoji). Remaining
+  candidates: DMs (`message-list.tsx` — bubbles are a mugen recipe; also fix its
+  setInfiniteData-on-non-infinite-query mismatch noted in the audit), notifications rail,
+  comments. NOT for: PostCards/feeds/grids/tables/carousels (media height is out of regime).
+
+
 
 ## ✅ Done (live in prod)
 - **Vercel → Cloudflare** migration: `watchparty.xyz` + `www` live; CI auto-deploy via GitHub Actions (3 workers: app, realtime, cron); Hyperdrive→Supabase; Cloudflare Web Analytics. (deploy is CI-only — local `wrangler deploy` EPIPEs; see `docs/`/memory.)
@@ -188,6 +242,14 @@ Reference clone was reviewed 2026-07-21; patterns worth adopting then:
   own-post menu screenshot is SHIPPED (delete, pin, highlights, disclosure, reply
   privacy, analytics, embed — 58d4c0b + 1af903a).
 - **Realtime/PartyKit migration** — `realtime/` worker + `deploy-realtime` job exist; remaining surfaces: DMs, presence/typing, feeds, live stream chat, Spaces coordination; then delete `lib/supabase/realtime-client.ts`. (See `realtime-video-architecture-direction` memory.)
+- **Elysia Bun microservice for hot stateless endpoints (explored 2026-07-31; skill installed at `.agents/skills/elysiajs`)** —
+  only worth doing if these endpoints prove demonstrably hot (need real traffic numbers first): carve out
+  (1) the `/api/rpc` proxy + Helius webhook ingest (burst traffic, dumb passthrough — ideal candidates) and
+  (2) the `udf`/`pyth-udf` TradingView datafeeds (polled constantly by chart clients)
+  into a standalone Elysia-on-Bun service (Fly.io/Railway/VPS) co-located with the DB or RPC provider.
+  Buys real per-request overhead reduction (Elysia's perf edge is Bun-runtime-only; on CF Workers the
+  framework is NOT the bottleneck — DB + third-party API latency is), but costs an extra platform, deploy
+  pipeline, and a network hop off the edge. Net win only if the endpoints are demonstrably hot.
 - **IVS + Cloudflare video hybrid** with admin toggle — StreamProvider abstraction (ivs + cloudflare-stream), per-stream + global toggle, mirroring `lib/chains/` ChainAdapter pattern.
 
 ## ⚠️ Env-file note (avoid confusion)

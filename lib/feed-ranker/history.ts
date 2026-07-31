@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/db";
 import { feedSignals } from "@/db/schema/content";
 import { eq, desc } from "drizzle-orm";
+import { withCache } from "@/lib/cache";
 import { HISTORY_LENGTH } from "./config";
 import type { HistoryItem } from "./server";
 
@@ -11,6 +12,13 @@ import type { HistoryItem } from "./server";
 // two action entries — which is what the model expects.
 
 export async function getUserHistory(userId: string): Promise<HistoryItem[]> {
+    // Runs twice per ranked first page (once inside retrieveOutOfNetwork, once
+    // inside rankFeedRows) and again across the video/shorts ranked paths —
+    // cache briefly. 60s of staleness matches the 45s rank cache in rank-feed.ts.
+    return withCache(`feedhist:${userId}`, 60, () => queryUserHistory(userId));
+}
+
+async function queryUserHistory(userId: string): Promise<HistoryItem[]> {
     // Pull a generous window of recent signals; collapse to <= HISTORY_LENGTH posts.
     const rows = await db
         .select({

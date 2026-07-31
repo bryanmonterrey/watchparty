@@ -126,4 +126,9 @@ export const TTL = {
     USER_PROFILE: 300,       // 5 min — user profile (customSession + search)
     USER_SEARCH: 60,         // 1 min — user search results
     CONTENT_FEED: 120,       // 2 min — posts feed
+    RPC_ACCOUNT: 10,         // 10 s — account/balance reads
+    RPC_TOKEN_ACCOUNTS: 15,  // 15 s — token accounts by owner/delegate
+    RPC_GPA: 30,             // 30 s — program account scans (expensive upstream)
+    RPC_ASSET: 30,           // 30 s — Helius DAS asset reads
+    RPC_TX: 300,             // 5 min — confirmed transactions are immutable
 } as const;

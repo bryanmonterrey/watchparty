@@ -1,0 +1,13 @@
+{
+  "name": "rpc-proxy-prototype",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "mock": "bun run src/mock-upstream.ts",
+    "bench": "bun run bench.ts"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.38.0",
+    "elysia": "^1.4.0"
+  }
+}

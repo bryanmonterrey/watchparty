@@ -5,15 +5,25 @@ import { posts, user, mutes, blocks, follows } from "@/db/schema";
 import { tokens } from "@/db/schema/content/token";
 import { eq, desc, and, lt, sql, inArray, or, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import superjson from "superjson";
 import { recordSignal, accumulateDwell, ACTION } from "@/lib/feed-ranker/signals";
 import { rankFeedRows } from "@/lib/feed-ranker/rank-feed";
 import { retrieveOutOfNetwork } from "@/lib/feed-ranker/retrieval";
 import { FEED_RANKER_ENABLED } from "@/lib/feed-ranker/config";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { postSelectFields, mapPostRow } from "@/server/lib/post-shape";
+import { withCache, TTL } from "@/lib/cache";
 
 // Candidate pool size sourced for ranking (then re-ranked + paginated client-side).
 const FEED_POOL_SIZE = 200;
+
+// Cache-aside for feed rows: superjson round-trips Dates, so a Redis hit is
+// indistinguishable from a fresh query (plain JSON would string-ify createdAt
+// and break cursor derivation + the client's Date fields). Stored inside an
+// envelope object because the Upstash client auto-JSON.parses GET results —
+// a bare superjson string (itself valid JSON) would come back as an object.
+const cacheRows = <T>(key: string, ttlSeconds: number, fn: () => Promise<T>): Promise<T> =>
+    withCache(key, ttlSeconds, async () => ({ s: superjson.stringify(await fn()) })).then((env) => superjson.parse<T>(env.s));
 
 export const feedRouter = router({
     getFeed: publicProcedure
@@ -46,15 +56,20 @@ export const feedRouter = router({
             if (input.type === "for-you") {
                 let mutedIds = new Set<string>();
                 let blockedIds = new Set<string>();
-
-                if (ctx.user) {
-                    const [mutedRows, blockedRows] = await Promise.all([
-                        db.select({ mutedId: mutes.mutedId }).from(mutes).where(eq(mutes.muterId, ctx.user.id)),
-                        db.select({ blockedId: blocks.blockedId }).from(blocks).where(eq(blocks.blockerId, ctx.user.id)),
-                    ]);
+                const applyMuteRows = ([mutedRows, blockedRows]: [{ mutedId: string }[], { blockedId: string }[]]) => {
                     mutedIds = new Set(mutedRows.map(r => r.mutedId));
                     blockedIds = new Set(blockedRows.map(r => r.blockedId));
-                }
+                };
+
+                // Start mutes/blocks as soon as the viewer is known — the ranked
+                // path below awaits it together with the pool + OON reads so
+                // none of the three serializes behind another.
+                const muteBlockPromise = ctx.user
+                    ? Promise.all([
+                        db.select({ mutedId: mutes.mutedId }).from(mutes).where(eq(mutes.muterId, ctx.user.id)),
+                        db.select({ blockedId: blocks.blockedId }).from(blocks).where(eq(blocks.blockerId, ctx.user.id)),
+                    ])
+                    : null;
 
                 // Ranked path: cursor "r:<anchorISO>:<offset>" pins a candidate pool
                 // (posts as of the anchor time) so pagination is stable while we
@@ -68,36 +83,45 @@ export const feedRouter = router({
                         : new Date();
                     const offset = isRankCursor ? Number(input.cursor!.slice(input.cursor!.lastIndexOf(":") + 1)) : 0;
 
-                    // In-network / recent pool.
-                    const inNetwork = (await baseJoins(
+                    // The pool, OON discovery (corpus ANN) and mutes/blocks are
+                    // independent reads — fire them together; mute filtering and
+                    // dedup stay JS-side where they already were.
+                    const inNetworkPromise = baseJoins(
                         db.select(selectFields).from(posts)
                     ).where(and(
                         eq(posts.status, "published"),
                         eq(posts.visibility, "public"),
                         lt(posts.createdAt, anchor),
                     )).orderBy(desc(posts.createdAt))
-                        .limit(FEED_POOL_SIZE))
-                        .filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
+                        .limit(FEED_POOL_SIZE);
+                    // OON is only merged into the first page.
+                    const oonPromise = offset === 0
+                        ? retrieveOutOfNetwork(ctx.user.id, 100)
+                        : Promise.resolve([]);
 
-                    // Out-of-network discovery (corpus ANN) — only on the first page,
-                    // merged + deduped into the pool. Best-effort: empty on cold-start
-                    // or if retrieval is unavailable.
+                    const [muteBlockRows, inNetworkRaw, oonCandidates] = await Promise.all([
+                        muteBlockPromise!,
+                        inNetworkPromise,
+                        oonPromise,
+                    ]);
+                    applyMuteRows(muteBlockRows);
+
+                    const inNetwork = inNetworkRaw.filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
+
                     let pool = inNetwork;
-                    if (offset === 0) {
-                        const oonIds = (await retrieveOutOfNetwork(ctx.user.id, 100))
-                            .map((c) => c.id)
-                            .filter((id) => !inNetwork.some((p: any) => p.id === id));
-                        if (oonIds.length > 0) {
-                            const extra = (await baseJoins(
-                                db.select(selectFields).from(posts)
-                            ).where(and(
-                                eq(posts.status, "published"),
-                                eq(posts.visibility, "public"),
-                                inArray(posts.id, oonIds),
-                            )))
-                                .filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
-                            pool = [...inNetwork, ...extra];
-                        }
+                    const oonIds = oonCandidates
+                        .map((c) => c.id)
+                        .filter((id) => !inNetwork.some((p: any) => p.id === id));
+                    if (oonIds.length > 0) {
+                        const extra = (await baseJoins(
+                            db.select(selectFields).from(posts)
+                        ).where(and(
+                            eq(posts.status, "published"),
+                            eq(posts.visibility, "public"),
+                            inArray(posts.id, oonIds),
+                        )))
+                            .filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
+                        pool = [...inNetwork, ...extra];
                     }
 
                     const reordered = await rankFeedRows(ctx.user.id, "for-you", pool as any[]);
@@ -111,8 +135,13 @@ export const feedRouter = router({
                 }
 
                 if (!ranked) {
+                    // Signed-in fallback still needs the mute sets (if the ranked
+                    // branch already applied them, re-awaiting the same resolved
+                    // promise just re-applies identical values).
+                    if (muteBlockPromise) applyMuteRows(await muteBlockPromise);
+
                     const cursorDate = input.cursor && !input.cursor.startsWith("r:") ? new Date(input.cursor) : undefined;
-                    const results = await baseJoins(
+                    const fetchPage = () => baseJoins(
                         db.select(selectFields).from(posts)
                     ).where(and(
                         eq(posts.status, "published"),
@@ -120,6 +149,11 @@ export const feedRouter = router({
                         cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
                     )).orderBy(desc(posts.createdAt))
                         .limit(input.limit + 5);
+
+                    // Signed-out visitors all get the same public page — cache it.
+                    const results = ctx.user
+                        ? await fetchPage()
+                        : await cacheRows(`feed:anon:v1:${input.type}:${input.cursor ?? "top"}:${input.limit}`, TTL.CONTENT_FEED, async () => fetchPage());
 
                     const filtered = results.filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
 
@@ -135,7 +169,7 @@ export const feedRouter = router({
                 const followedRows = await db.select({ followingId: follows.followingId })
                     .from(follows)
                     .where(eq(follows.followerId, ctx.user.id));
-                
+
                 const followedIds = followedRows.map(r => r.followingId);
                 if (followedIds.length === 0) return { posts: [], nextCursor: undefined };
 
@@ -196,7 +230,7 @@ export const feedRouter = router({
             const postTokens = alias(tokens, "post_tokens");
             const origTokens = alias(tokens, "orig_tokens");
 
-            const results = await db
+            const fetchPage = () => db
                 .select({
                     id: posts.id,
                     userId: posts.userId,
@@ -297,6 +331,13 @@ export const feedRouter = router({
                 .orderBy(desc(posts.createdAt))
                 .limit(fetchLimit);
 
+            // Signed-out, non-liked pages are viewer-independent (engagement
+            // subqueries key on "") and identical for every visitor — cache
+            // them. Signed-in/ranked/liked pages stay live.
+            const results = !ctx.user && !input.likedOnly
+                ? await cacheRows(`feed:video:anon:v1:${input.category ?? "all"}:${input.cursor ?? "top"}:${input.limit}`, TTL.CONTENT_FEED, async () => fetchPage())
+                : await fetchPage();
+
             // Chronological pagination (used as-is when not ranking; the ranked
             // path re-slices + overrides nextCursor below).
             const hasMore = !rankEligible && results.length > input.limit;
@@ -324,13 +365,13 @@ export const feedRouter = router({
                         repostedBy: { name: s.user.name, username: s.user.username },
                     };
                 }
-                return { 
-                    ...s, 
+                return {
+                    ...s,
                     videoUrl: s.videoUrl!,
                     title: s.title ?? "",
                     description: s.content,
-                    feedKey: null, 
-                    repostedBy: null 
+                    feedKey: null,
+                    repostedBy: null
                 };
             });
 
@@ -378,7 +419,7 @@ export const feedRouter = router({
             const parentPosts = alias(posts, "parent_posts");
             const parentUser = alias(user, "parent_user");
 
-            const results = await db
+            const fetchPage = () => db
                 .select({
                     id: posts.id,
                     userId: posts.userId,
@@ -436,6 +477,12 @@ export const feedRouter = router({
                 .orderBy(desc(posts.createdAt))
                 .limit(fetchLimit);
 
+            // Same rule as the video feed: signed-out pages are
+            // viewer-independent — cache them; signed-in/ranked stay live.
+            const results = !ctx.user
+                ? await cacheRows(`feed:shorts:anon:v1:${input.cursor ?? "top"}:${input.limit}`, TTL.CONTENT_FEED, async () => fetchPage())
+                : await fetchPage();
+
             const hasMore = !rankEligible && results.length > input.limit;
             const rawItems = !rankEligible && results.length > input.limit ? results.slice(0, input.limit) : results;
 
@@ -455,12 +502,12 @@ export const feedRouter = router({
                         parentUserId: null,
                     };
                 }
-                return { 
-                    ...s, 
+                return {
+                    ...s,
                     videoUrl: s.videoUrl!,
                     title: s.title ?? "",
                     description: s.content,
-                    feedKey: null, 
+                    feedKey: null,
                     repostedBy: null,
                     parentUsername: s.parentUsername,
                     parentUserId: s.parentUserId
