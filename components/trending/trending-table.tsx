@@ -9,8 +9,10 @@ import { trpc } from "@/lib/trpc/client";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
+import { stableHoverColor } from "@/lib/stable-hover-color";
 import { explorerUrl, tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
 import type { AppRouter } from "@/server/routers";
+import { Squircle } from "@/components/ui/squircle";
 import { ChainBadge } from "./chain-badge";
 import { useStar } from "./use-starred";
 import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
@@ -213,6 +215,7 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
     // haven't mapped).
     const explorer = explorerUrl(row.network, row.tokenAddress, row.poolAddress);
     const title = row.name ?? row.symbol;
+    const hoverColor = stableHoverColor(row.id);
 
     return (
         // No divider and no fill: the reference's rows sit straight on the
@@ -223,7 +226,11 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
         // `relative` anchors the stretched link below; the row is a div, not an
         // anchor, because buy and star are interactive and nesting those inside
         // an <a> is invalid.
-        <div className={cn(GRID, "group relative z-0 px-3 py-3 transition-colors hover:bg-white/[0.02]")}>
+        <Squircle asChild radius={12} autoEffects={false}>
+        <div
+            style={{ "--row-hover-bg": `color-mix(in oklab, ${hoverColor} 10%, transparent)` } as React.CSSProperties}
+            className={cn(GRID, "group relative z-0 px-3 py-3 transition-colors hover:bg-[var(--row-hover-bg)]")}
+        >
             <span className="flex min-w-0 items-center gap-3">
                 {/* The chain mark rides the coin's icon rather than sitting
                     beside the ticker: this board spans twenty chains and the
@@ -277,6 +284,7 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
 
             <StarCell row={row} />
         </div>
+        </Squircle>
     );
 }
 
