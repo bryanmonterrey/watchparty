@@ -20,6 +20,27 @@ const LOADING_MORE_ROWS = 3;
 // so scrolling at a normal speed never reaches an empty end.
 const PREFETCH_MARGIN = "400px";
 
+// Same stable palette treatment as the legacy trending carousel: visually
+// varied like a random choice, but hashed from the video id so rows never
+// change color across renders.
+const HOVER_PALETTE = [
+    "var(--color-jewel)",
+    "var(--color-soft-pink)",
+    "var(--color-soft-blue)",
+    "var(--color-bleu)",
+    "var(--color-pastel-yellow)",
+    "var(--color-bitcoin-orange)",
+    "var(--color-sharp-gray)",
+    "var(--color-soft-gray)",
+    "var(--color-vice-purple)",
+];
+
+function hoverColorFor(id: string) {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    return HOVER_PALETTE[hash % HOVER_PALETTE.length];
+}
+
 export function HomeRailVideos() {
     // On Liked the feed itself is filtered server-side (see home-feed-context),
     // so this list is just whatever the query returned — no sieving here.
@@ -70,6 +91,7 @@ export function HomeRailVideos() {
                     views={v.views}
                     menu={<HomeRailRowMenu postId={v.id} userId={v.user.id} />}
                     isActive={v.id === active?.id}
+                    hoverColor={hoverColorFor(v.id)}
                     onSelect={() => setActiveId(v.id)}
                 />
             ))}

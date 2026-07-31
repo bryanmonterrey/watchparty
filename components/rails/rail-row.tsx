@@ -34,6 +34,8 @@ interface RailRowProps {
     menu?: React.ReactNode;
     /** Home's picker: the row that's currently the hero. */
     isActive?: boolean;
+    /** Optional home-only hover tint. Other rails keep the neutral shared fill. */
+    hoverColor?: string;
     /** Navigates. Mutually exclusive with onSelect — pass one. */
     href?: string;
     /** Selects in place. */
@@ -49,6 +51,7 @@ export function RailRow({
     views,
     menu,
     isActive,
+    hoverColor,
     href,
     onSelect,
 }: RailRowProps) {
@@ -100,9 +103,14 @@ export function RailRow({
     return (
         <Squircle asChild radius={12} autoEffects={false}>
             <div
+                style={hoverColor ? { "--rail-hover-bg": `color-mix(in oklab, ${hoverColor} 10%, transparent)` } as React.CSSProperties : undefined}
                 className={cn(
                     "flex h-fit w-full flex-col p-2 transition-colors",
-                    isActive ? "bg-sidebar-hover/85" : "hover:bg-sidebar-hover-35/60",
+                    isActive
+                        ? "bg-sidebar-hover/85"
+                        : hoverColor
+                          ? "hover:bg-[var(--rail-hover-bg)]"
+                          : "hover:bg-sidebar-hover-35/60",
                 )}
             >
                 {href ? (
