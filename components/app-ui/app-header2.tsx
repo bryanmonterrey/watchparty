@@ -86,22 +86,16 @@ export function AppHeader2() {
 
   useEffect(() => {
     if (!showScrollBackdrop) return
-    // Capture-phase listener sees scrolls from ANY container (the main
-    // app scroller, discover's independent feed column, etc.), so the header
-    // backdrop reacts regardless of which scroller the page uses — ported
-    // behavior was main-container only.
-    const handler = (e: Event) => {
-      const el = e.target instanceof HTMLElement ? e.target : document.documentElement
-      // Horizontal tab strips also emit `scroll`, but their scrollTop is always
-      // zero. Ignoring non-vertical scrollers prevents a tab-arrow click from
-      // making the header backdrop think the page jumped back to the top.
-      if (el.scrollHeight <= el.clientHeight + 1) return
-      setScrollY(el.scrollTop)
-    }
     const container = document.getElementById('app-scroll-container')
-    setScrollY(container?.scrollTop ?? 0)
-    document.addEventListener('scroll', handler, { passive: true, capture: true })
-    return () => document.removeEventListener('scroll', handler, { capture: true })
+    if (!container) return
+
+    // The app shell owns the page's only vertical scroller. Listening directly
+    // to it keeps horizontal carousels and tab strips from resetting the header
+    // backdrop with their own scrollTop (which is always zero).
+    const syncBackdrop = () => setScrollY(container.scrollTop)
+    syncBackdrop()
+    container.addEventListener('scroll', syncBackdrop, { passive: true })
+    return () => container.removeEventListener('scroll', syncBackdrop)
   }, [pathname, showScrollBackdrop])
 
   return (
