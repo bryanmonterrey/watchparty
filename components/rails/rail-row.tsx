@@ -103,16 +103,18 @@ export function RailRow({
     return (
         <Squircle asChild radius={12} autoEffects={false}>
             <div
-                style={hoverColor ? { "--rail-hover-bg": `color-mix(in oklab, ${hoverColor} 10%, transparent)` } as React.CSSProperties : undefined}
                 className={cn(
-                    "flex h-fit w-full flex-col p-2 transition-colors",
-                    isActive
-                        ? "bg-sidebar-hover/85"
-                        : hoverColor
-                          ? "hover:bg-[var(--rail-hover-bg)]"
-                          : "hover:bg-sidebar-hover-35/60",
+                    "group/rail-hover relative flex h-fit w-full flex-col p-2 transition-colors",
+                    isActive ? "bg-sidebar-hover/85" : !hoverColor && "hover:bg-sidebar-hover-35/60",
                 )}
             >
+                {hoverColor && !isActive && (
+                    <span
+                        aria-hidden
+                        style={{ backgroundColor: hoverColor }}
+                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/rail-hover:opacity-10"
+                    />
+                )}
                 {href ? (
                     <Link href={href} className={target}>
                         {info}

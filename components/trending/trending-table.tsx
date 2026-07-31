@@ -227,10 +227,12 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
         // anchor, because buy and star are interactive and nesting those inside
         // an <a> is invalid.
         <Squircle asChild radius={12} autoEffects={false}>
-        <div
-            style={{ "--row-hover-bg": `color-mix(in oklab, ${hoverColor} 10%, transparent)` } as React.CSSProperties}
-            className={cn(GRID, "group relative z-0 px-3 py-3 transition-colors hover:bg-[var(--row-hover-bg)]")}
-        >
+        <div className={cn(GRID, "group relative z-0 px-3 py-3")}>
+            <span
+                aria-hidden
+                style={{ backgroundColor: hoverColor }}
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-10"
+            />
             <span className="flex min-w-0 items-center gap-3">
                 {/* The chain mark rides the coin's icon rather than sitting
                     beside the ticker: this board spans twenty chains and the
