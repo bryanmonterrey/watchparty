@@ -92,6 +92,10 @@ export function AppHeader2() {
     // behavior was main-container only.
     const handler = (e: Event) => {
       const el = e.target instanceof HTMLElement ? e.target : document.documentElement
+      // Horizontal tab strips also emit `scroll`, but their scrollTop is always
+      // zero. Ignoring non-vertical scrollers prevents a tab-arrow click from
+      // making the header backdrop think the page jumped back to the top.
+      if (el.scrollHeight <= el.clientHeight + 1) return
       setScrollY(el.scrollTop)
     }
     const container = document.getElementById('app-scroll-container')
