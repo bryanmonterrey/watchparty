@@ -80,8 +80,9 @@ export function AppHeader2() {
   // scroll. NOT on /discover: the app shell stacks the fixed header above all
   // page content, so a backdrop there would sit over the feed — the feed must
   // stay unobstructed.
+  const isHomePage = pathname === '/home';
   const isHubPage = pathname === '/settings' || pathname === '/premium';
-  const showScrollBackdrop = isMediaPage || pathname === '/home' || pathname === '/search' || isHubPage;
+  const showScrollBackdrop = isMediaPage || isHomePage || pathname === '/search' || isHubPage;
 
   useEffect(() => {
     if (!showScrollBackdrop) return
@@ -103,9 +104,10 @@ export function AppHeader2() {
     <header
       className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-between px-[var(--header-px)] py-3 pointer-events-none"
     >
-      {/* Scroll backdrop: media pages keep the black scrim over video; /home
-          and /search get a whisper of theme canvas; /settings goes near-solid
-          (85%) so the header reads as a real bar over the scrolled panels.
+      {/* Scroll backdrop: media pages keep the black scrim over video; /search
+          gets a whisper of theme background; /settings goes near-solid (85%).
+          On /home it resolves to the app canvas once scrolled, joining the
+          sticky category and column headers into one uninterrupted surface.
           Other pages have no scroll backdrop at all. */}
       {showScrollBackdrop && (
         <div
@@ -113,7 +115,7 @@ export function AppHeader2() {
           style={{
             backgroundColor: isMediaPage
               ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
-              : `color-mix(in oklab, var(--background) ${Math.min(scrollY / 32, 1) * (isHubPage ? 85 : 20)}%, transparent)`,
+              : `color-mix(in oklab, ${isHomePage ? 'var(--color-canvas)' : 'var(--background)'} ${Math.min(scrollY / 32, 1) * (isHomePage ? 100 : isHubPage ? 85 : 20)}%, transparent)`,
             backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
           }}
         />
