@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 //
 // Two structural notes, both load-bearing:
 //
-// 1. `grid`, not `flex`, on the outer box. Lisse renders the border as an SVG
+// 1. `grid`, not `flex`, on the outer box. Lisse draws the border as an SVG
 //    effect, and when any effect is on it injects a bare `position:relative`
 //    div between this box and the squircled element. That wrapper carries no
 //    classes we can reach, so it has to size itself — and a grid item stretches
@@ -19,17 +19,31 @@ import { cn } from "@/lib/utils";
 //    Under flex the wrapper would take its height from content and the list
 //    would grow the rail instead of scrolling inside it.
 //
-// 2. The border must come from Lisse's effect path (autoEffects, i.e. the
-//    default), NOT from a plain CSS border under `autoEffects={false}`. The
-//    clip-path is inscribed in the border box, so it cuts a CSS border away at
-//    exactly the corners the squircle is for. Letting Lisse extract it means it
-//    gets drawn as a stroke tracing the same curve.
+// 2. The border is an EXPLICIT innerBorder config, not a CSS `border` class.
+//    A CSS border is part of the element's own painting, so the clip-path —
+//    which is inscribed in the border box — cuts it away at exactly the corners
+//    the squircle exists for. autoEffects is supposed to lift a CSS border out
+//    into SVG for you, but it did not here (grokborder is an `oklch(… none …)`
+//    value, which its extractor appears not to parse), and a border that silently
+//    falls back to being clipped is the bug we just fixed. Declaring it removes
+//    the guesswork: Lisse strokes it into the wrapper, which is never clipped.
+//    autoEffects is off for the same reason — one path, no fallback.
 //
 // The caller owns scrolling: pass a child that is `min-h-0 flex-1 overflow-y-auto`.
+
+// --color-grokborder is oklch(0.9924 0 none / 0.08) — a near-white at 8%.
+// Split into hex + opacity because those are the forms Lisse parses reliably.
+const BORDER = { width: 1, color: "#fcfcfc", opacity: 0.08 };
+
 export function RailShell({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
         <div className={cn("grid min-h-0 flex-1", className)}>
-            <Squircle radius={12} className="flex size-full min-h-0 flex-col border border-grokborder">
+            <Squircle
+                radius={12}
+                autoEffects={false}
+                innerBorder={BORDER}
+                className="flex size-full min-h-0 flex-col pb-2"
+            >
                 {children}
             </Squircle>
         </div>
