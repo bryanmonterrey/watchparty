@@ -104,7 +104,14 @@ export function RailRow({
         <Squircle asChild radius={12} autoEffects={false}>
             <div
                 className={cn(
-                    "group/rail-hover relative flex h-fit w-full flex-col p-2 transition-colors",
+                    // cursor-pointer on the WRAPPER, not just the click target
+                    // inside it. The target can't cover the whole row — the
+                    // menu is a real button and can't nest inside a
+                    // button/link — so its p-2 surround and the views/menu line
+                    // were left with a default cursor. The hover fill already
+                    // treats the whole row as one object (it paints inset-0);
+                    // this makes the cursor agree with it.
+                    "group/rail-hover relative flex h-fit w-full cursor-pointer flex-col p-2 transition-colors",
                     isActive ? "bg-sidebar-hover/85" : !hoverColor && "hover:bg-sidebar-hover-35/60",
                 )}
             >

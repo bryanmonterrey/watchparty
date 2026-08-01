@@ -124,7 +124,7 @@ export function HomeCenterColumn() {
                 {focus && active ? (
                     <HomeVideoHeader key={active.id} video={active} action={toggleButton} />
                 ) : (
-                    <div className="flex justify-end">{toggleButton}</div>
+                    <div className="mt-1 flex justify-end">{toggleButton}</div>
                 )}
             </div>
 
