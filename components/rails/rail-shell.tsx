@@ -54,10 +54,10 @@ export function RailShell({ children, className }: { children: React.ReactNode; 
         // rail either.
         <div className={cn("mb-2 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)]", className)}>
             <Squircle
-                radius={24}
+                radius={16}
                 autoEffects={false}
                 innerBorder={BORDER}
-                className="flex size-full bg-canvas/40 backdrop-blur-sm min-h-0 flex-col pb-2"
+                className="flex size-full bg-canvas backdrop-blur-sm min-h-0 flex-col pb-2"
             >
                 {children}
             </Squircle>

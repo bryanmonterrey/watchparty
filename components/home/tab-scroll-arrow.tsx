@@ -27,7 +27,7 @@ export function TabScrollArrow({
             onClick={onClick}
             className={cn(
                 "absolute top-1/2 z-10 grid size-9 -translate-y-1/2 cursor-pointer place-items-center rounded-full",
-                "bg-soft-gray-10 text-zinc-400 backdrop-blur-lg transition-colors hover:bg-sidebar-hover-55 hover:text-white",
+                "bg-canvas text-flexwhite/85 border border-flexwhite/10 backdrop-blur-lg transition-colors hover:bg-sidebar-hover-55 hover:text-white",
                 direction === "left" ? "left-0" : "right-0"
             )}
         >

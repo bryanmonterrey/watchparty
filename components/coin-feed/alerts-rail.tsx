@@ -482,17 +482,6 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 </AnimatePresence>
             </div>
 
-            {/* Inline bar when already parked at the top — no need to float. */}
-            {newCount > 0 && atTop && (
-                <button
-                    type="button"
-                    onClick={loadNewAlerts}
-                    className=" shrink-0 cursor-pointer bg-soft-gray-10 py-2.5 text-[13px] font-bold text-twitter2 transition-colors"
-                >
-                    Show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
-                </button>
-            )}
-
             {/* The list, in the shared bordered/squircled rail shell — the same
                 box home's video rail puts its list in. It wraps the ITEMS only;
                 the tabs above stay outside it.
@@ -502,6 +491,21 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 inner element has a definite height — which BidirectionalList
                 needs, since it sizes its own scroller with height:100%. */}
             <RailShell className="mt-1">
+                {/* Inline bar when already parked at the top — no need to float.
+                    Inside the shell, above the scroller: it belongs to the list
+                    it's offering to extend, so it sits within the same bordered
+                    box rather than floating loose above it. shrink-0 keeps it
+                    off the scroller's flex share. */}
+                {newCount > 0 && atTop && (
+                    <button
+                        type="button"
+                        onClick={loadNewAlerts}
+                        className="shrink-0 cursor-pointer py-2.5 text-[13px] font-bold text-twitter2 transition-colors"
+                    >
+                        Show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
+                    </button>
+                )}
+
                 {/* The error state is for having NOTHING to show — not merely
                     for the query being in an error state.
 
