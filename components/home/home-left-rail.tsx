@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { AlertsRail } from "@/components/coin-feed/alerts-rail";
@@ -36,6 +36,7 @@ const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col border-r border-flexwh
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);
+    const asideRef = useRef<HTMLElement>(null);
 
     // After mount, never during render — the app shell server-renders, and
     // reading localStorage in render would be a hydration mismatch.
@@ -47,6 +48,44 @@ export function HomeLeftRail() {
         }
     }, []);
 
+    // Publish where this rail ENDS so the app header can leave a transparent
+    // column over it (see app-header2's scroll backdrop). The header is fixed
+    // and lives outside the page tree, so it has no other way to know — and the
+    // answer moves when the rail collapses.
+    //
+    // The RIGHT EDGE, not the width. The header is `fixed left-0`, so its
+    // coordinate space starts at the viewport edge, while the rail starts
+    // inset by the page row's px-1. Publishing the width would put the split
+    // 4px left of the rail's actual edge; the edge is already measured from the
+    // same origin the header uses, so the two line up whatever the padding is.
+    //
+    // MEASURED rather than derived from the w-72/w-11 classes: below lg the
+    // aside is `hidden`, whose rect is all zeroes, so the header falls back to
+    // a full-width backdrop without duplicating the breakpoint. The variable is
+    // removed on unmount, so every other route is unaffected.
+    //
+    // The parent is observed too: pinning the app sidebar shifts the inset,
+    // which moves the rail's edge without changing the rail's own width — so a
+    // ResizeObserver on the aside alone would never fire for it.
+    //
+    // Keyed on `collapsed` because the two branches render different elements.
+    useEffect(() => {
+        const el = asideRef.current;
+        if (!el) return;
+        const root = document.documentElement;
+        const sync = () => root.style.setProperty("--home-rail-edge", `${el.getBoundingClientRect().right}px`);
+        sync();
+        const observer = new ResizeObserver(sync);
+        observer.observe(el);
+        if (el.parentElement) observer.observe(el.parentElement);
+        window.addEventListener("resize", sync);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", sync);
+            root.style.removeProperty("--home-rail-edge");
+        };
+    }, [collapsed]);
+
     const set = (next: boolean) => {
         setCollapsed(next);
         try {
@@ -56,7 +95,7 @@ export function HomeLeftRail() {
 
     if (collapsed) {
         return (
-            <aside className="hidden w-11 shrink-0 lg:block">
+            <aside ref={asideRef} className="hidden w-11 shrink-0 lg:block">
                 <div className={INNER}>
                     {/* size-6 and the same padding as the expanded rail's
                         header buttons — collapsing shouldn't resize the control
@@ -75,7 +114,7 @@ export function HomeLeftRail() {
     }
 
     return (
-        <aside className="hidden w-72 shrink-0 lg:block">
+        <aside ref={asideRef} className="hidden w-72 shrink-0 lg:block">
             <div className={`${INNER}`}>
                 <AlertsRail onCollapse={() => set(true)} />
             </div>

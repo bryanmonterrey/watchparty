@@ -120,15 +120,31 @@ export function AppHeader2() {
           sticky category and column headers into one uninterrupted surface.
           Other pages have no scroll backdrop at all. */}
       {showScrollBackdrop && (
-        <div
-          className="absolute inset-0 transition-colors"
-          style={{
-            backgroundColor: isMediaPage
-              ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
-              : `color-mix(in oklab, ${isHomePage ? 'var(--color-canvas)' : 'var(--background)'} ${Math.min(scrollY / 32, 1) * (isHomePage ? 100 : isHubPage ? 85 : 20)}%, transparent)`,
-            backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
-          }}
-        />
+        // Two columns, not one full-width fill. The left one is the width of
+        // home's left rail and stays completely transparent — no colour, no
+        // blur — so the rail and the hero glow behind it read straight through
+        // the header instead of disappearing under it. The right one is the
+        // backdrop as it has always been.
+        //
+        // --home-rail-edge is published by HomeLeftRail, which measures where
+        // its own aside ENDS in viewport coordinates (see the note there) —
+        // this header is `fixed left-0`, so the two share an origin and the
+        // split lands exactly on the rail's edge, page padding included. It is
+        // unset on every other route and below lg, where it falls back to 0px
+        // and this collapses to a single full-width backdrop — so no page but
+        // /home changes.
+        <div className="absolute inset-0 flex">
+          <div className="shrink-0" style={{ width: 'var(--home-rail-edge, 0px)' }} />
+          <div
+            className="flex-1 transition-colors"
+            style={{
+              backgroundColor: isMediaPage
+                ? `rgba(0,0,0,${Math.min(scrollY / 1, 1) * 0.2})`
+                : `color-mix(in oklab, ${isHomePage ? 'var(--color-canvas)' : 'var(--background)'} ${Math.min(scrollY / 32, 1) * (isHomePage ? 100 : isHubPage ? 85 : 20)}%, transparent)`,
+              backdropFilter: `blur(${Math.min(scrollY / (isMediaPage ? 1 : 32), 1) * 24}px)`,
+            }}
+          />
+        </div>
       )}
       {/* Mobile Menu & Logo */}
       <div className="relative z-10 flex-1 flex items-center justify-start">
