@@ -105,6 +105,24 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         },
     );
 
+    // Recover from the error status on our own. Without this it is TERMINAL:
+    // an infinite query stays in `error` until a fetch succeeds, `retry: 3` is
+    // already spent by the time we get here, and `hasNext` goes false while
+    // isError (see the render) so the list stops asking for pages too. The
+    // result was the "couldn't refresh" bar sitting there for the rest of the
+    // session on a single dropped request — and prod drops a small share of
+    // requests on worker memory, so that is a matter of when, not if.
+    //
+    // The interval is deliberately slow: refetch() on an infinite query
+    // refetches EVERY loaded page, so this is not cheap. It unmounts the moment
+    // a fetch succeeds, and the manual retry button is still there for anyone
+    // who does not want to wait.
+    useEffect(() => {
+        if (!isError) return;
+        const id = setInterval(() => void refetch(), 30_000);
+        return () => clearInterval(id);
+    }, [isError, refetch]);
+
     const { data: coverage } = trpc.coinFeed.coverage.useQuery(undefined, { staleTime: 300_000 });
 
     // ── Window state ─────────────────────────────────────────────────────────
