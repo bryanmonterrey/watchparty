@@ -31,9 +31,11 @@ import { cn } from "@/lib/utils";
 //
 // The caller owns scrolling: pass a child that is `min-h-0 flex-1 overflow-y-auto`.
 
-// --color-grokborder is oklch(0.9924 0 none / 0.08) — a near-white at 8%.
-// Split into hex + opacity because those are the forms Lisse parses reliably.
-const BORDER = { width: 1, color: "#fcfcfc", opacity: 0.01 };
+// --flexwhite's dark value (#e7e9ea) at 10%. Kept as hex + opacity rather than
+// a token reference because those are the forms Lisse parses reliably — and
+// note this deliberately does NOT go through the border class remap in
+// globals.css, since it isn't a CSS border at all.
+const BORDER = { width: 1, color: "#e7e9ea", opacity: 0.10 };
 
 export function RailShell({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
@@ -52,10 +54,10 @@ export function RailShell({ children, className }: { children: React.ReactNode; 
         // rail either.
         <div className={cn("mb-2 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)]", className)}>
             <Squircle
-                radius={12}
+                radius={24}
                 autoEffects={false}
                 innerBorder={BORDER}
-                className="flex size-full bg-soft-gray-5 min-h-0 flex-col pb-2"
+                className="flex size-full bg-canvas/40 backdrop-blur-sm min-h-0 flex-col pb-2"
             >
                 {children}
             </Squircle>
