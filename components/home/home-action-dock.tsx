@@ -5,7 +5,6 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeftDoubleIcon, ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { MessagesIcon, Star2Icon } from "@/components/icons";
-import { Hint } from "@/components/ui/hint";
 import { Squircle } from "@/components/ui/squircle";
 import { trpc } from "@/lib/trpc/client";
 
@@ -41,7 +40,7 @@ const INNER = "sticky top-0 flex h-screen flex-col items-center justify-end pb-4
 // than routed around — the whole point of that remap is that borders don't
 // drift per surface.
 const BUTTON =
-    "flex size-15 cursor-pointer items-center justify-center border border-flexwhite/50 bg-canvas text-zinc-300 transition-colors hover:bg-soft-gray-10 hover:text-white";
+    "flex size-15 cursor-pointer items-center justify-center border border-flexwhite/80 hover:border-flexwhite/95 bg-canvas text-zinc-300 transition-colors hover:bg-flexwhite/20 hover:text-white";
 
 const BUTTON_RADIUS = 16;
 
@@ -54,7 +53,7 @@ const BUTTON_RADIUS = 16;
 // Even halo, so no offset: this is a glow, not an elevation cue (the app's
 // rule is no gray/black drop shadows, and a lit edge is the sanctioned way to
 // lift something off the canvas).
-const BUTTON_GLOW = { offsetX: 0, offsetY: 0, blur: 16, spread: 0, color: "#ffffff", opacity: 0.10 };
+const BUTTON_GLOW = { offsetX: 0, offsetY: 0, blur: 6, spread: 0, color: "#ffffff", opacity: 0.17 };
 
 // Positioning context for the unread badge, sized to the button rather than
 // left to shrink-wrap it: Lisse's autoEffects injects a wrapper div between
@@ -125,7 +124,7 @@ export function HomeActionDock() {
     }
 
     return (
-        <aside className="hidden w-18 shrink-0 xl:block">
+        <aside className="hidden px-1 shrink-0 xl:block">
             <div className={`${INNER} gap-2.5`}>
                 <button
                     type="button"
@@ -137,28 +136,23 @@ export function HomeActionDock() {
                 </button>
 
                 {/* TODO: opens the GLM assistant panel — see docs/TODO.md.
-                    Deliberately inert until that surface exists; the tooltip is
-                    what tells you so. */}
-                <Hint label="ask ai · coming soon" placement="left" asChild>
-                    <div className={SLOT}>
-                        <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
-                            <button type="button" aria-label="ask ai" className={BUTTON}>
-                                <Star2Icon className="size-6.5" />
-                            </button>
-                        </Squircle>
-                    </div>
-                </Hint>
+                    Inert until that surface exists. */}
+                <div className={SLOT}>
+                    <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
+                        <button type="button" aria-label="ask ai" className={BUTTON}>
+                            <Star2Icon className="size-6.5" />
+                        </button>
+                    </Squircle>
+                </div>
 
-                <Hint label="messages" placement="left" asChild>
-                    <div className={SLOT}>
-                        <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
-                            <Link href="/messages" aria-label="messages" className={BUTTON}>
-                                <MessagesIcon className="size-7" />
-                            </Link>
-                        </Squircle>
-                        <UnreadBadge count={count} />
-                    </div>
-                </Hint>
+                <div className={SLOT}>
+                    <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
+                        <Link href="/messages" aria-label="messages" className={BUTTON}>
+                            <MessagesIcon className="size-7" />
+                        </Link>
+                    </Squircle>
+                    <UnreadBadge count={count} />
+                </div>
             </div>
         </aside>
     );

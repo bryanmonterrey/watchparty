@@ -92,7 +92,7 @@ export function HomePageSurface() {
     if (feedOpen) return <DiscoverFeedSurface />;
 
     return (
-        <div className="relative flex min-h-screen w-full">
+        <div className="relative flex min-h-screen w-full px-1">
             <HomeLeftRail />
 
             <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5 xl:mr-1.25">
