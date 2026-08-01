@@ -93,24 +93,28 @@ export function RailRow({
     // The menu is a real button, so it CANNOT live inside the row's own
     // button/link — nesting them would be invalid HTML and its clicks would
     // fight the row's. So the click target wraps the thumb and text only, and
-    // the line below it carries the view count and the menu together. With
-    // neither, the result is identical to what this row has always been: a
-    // full-width target with the hover/active fill, just carried by the wrapper
-    // instead of the target itself.
+    // the line below it carries the view count and the menu together.
+    //
+    // That left the row's padding and the views/menu line dead: you had to hit
+    // the thumb or the title for the row to do anything. `after:inset-0` fixes
+    // it without nesting anything — the target grows an invisible pseudo-element
+    // that covers the WRAPPER (its containing block, since the wrapper is
+    // `relative` and the target isn't), so a click anywhere in the row lands on
+    // the real button or link. The pseudo-element carries no content and isn't
+    // focusable, so keyboard and screen-reader behaviour are untouched.
+    //
+    // The extras line is lifted above it — see the z-10 there.
     const hasExtras = !!menu || views != null;
-    const target = cn(RAIL_ROW, "cursor-pointer p-0");
+    const target = cn(RAIL_ROW, "cursor-pointer p-0", "after:absolute after:inset-0 after:content-['']");
 
     return (
         <Squircle asChild radius={12} autoEffects={false}>
             <div
                 className={cn(
-                    // cursor-pointer on the WRAPPER, not just the click target
-                    // inside it. The target can't cover the whole row — the
-                    // menu is a real button and can't nest inside a
-                    // button/link — so its p-2 surround and the views/menu line
-                    // were left with a default cursor. The hover fill already
-                    // treats the whole row as one object (it paints inset-0);
-                    // this makes the cursor agree with it.
+                    // `relative` is what the target's stretched ::after resolves
+                    // against, so it's load-bearing for the row being clickable
+                    // at all — not just a positioning context for the hover
+                    // tint. cursor-pointer matches that whole-row target.
                     "group/rail-hover relative flex h-fit w-full cursor-pointer flex-col p-2 transition-colors",
                     isActive ? "bg-sidebar-hover/85" : !hoverColor && "hover:bg-sidebar-hover-35/60",
                 )}
@@ -133,9 +137,13 @@ export function RailRow({
                 )}
 
                 {/* One line at the end: the view count sits directly left of the
-                    menu, both marks at size-5 so they read as a pair. */}
+                    menu, both marks at size-5 so they read as a pair.
+
+                    relative z-10 lifts this above the target's stretched
+                    ::after — without it the overlay would swallow the menu's
+                    clicks and opening a row's menu would just select the row. */}
                 {hasExtras && (
-                    <div className={cn("flex items-center justify-end gap-1.5", INFO_INDENT)}>
+                    <div className={cn("relative z-10 flex items-center justify-end gap-1.5", INFO_INDENT)}>
                         <ViewsStat
                             views={views}
                             className="text-sm font-medium text-flexwhite/50"
