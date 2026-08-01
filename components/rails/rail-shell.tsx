@@ -37,7 +37,20 @@ const BORDER = { width: 1, color: "#fcfcfc", opacity: 0.08 };
 
 export function RailShell({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn("grid min-h-0 flex-1", className)}>
+        // mb-2 on the OUTER box, not padding on the inner one: both rails are
+        // h-screen sticky columns, so without it the shell's bottom border
+        // lands exactly on the viewport edge and reads as a missing border
+        // rather than a container that ends. The margin lifts the whole
+        // bordered box; the pb-2 below is separate, and only keeps the last row
+        // off the border.
+        // minmax(0,1fr), not the implicit `auto` track: an auto row sizes to
+        // MAX-CONTENT, so the row grew to the whole list's height, the wrapper
+        // grew with it, and the scroller below ended up with an unbounded
+        // flex basis — the rail stopped scrolling entirely. Pinning the track
+        // to the box's own height (0 minimum) is what bounds it. The column
+        // gets the same treatment so a long unbreakable title can't widen the
+        // rail either.
+        <div className={cn("mb-2 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)]", className)}>
             <Squircle
                 radius={12}
                 autoEffects={false}
