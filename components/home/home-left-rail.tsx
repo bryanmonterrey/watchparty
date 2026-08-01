@@ -26,7 +26,13 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 // painted first. The right rail never had the problem because it comes after
 // main. z-10 clears main's subtree while staying well under the app header
 // (z-50) and the overlays.
-const INNER = "sticky top-0 z-10 flex h-screen flex-col md:pt-[calc(var(--header-height)+4px)]";
+// border-r is the column divider, and it lives HERE rather than on the list
+// inside so it runs the full 100svh — past the header clearance above and the
+// list's own bottom margin below — instead of stopping where the list does.
+//
+// h-[100svh] rather than h-screen: identical on desktop, but svh is the stable
+// one and this element's height is now what the divider's length is measured by.
+const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col border-r border-flexwhite/10 md:pt-[calc(var(--header-height)+4px)]";
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);

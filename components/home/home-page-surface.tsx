@@ -11,8 +11,12 @@ import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 
-const RAIL_INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header-height)+2px)]";
-const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-2`;
+const RAIL_INNER = "sticky top-0 flex h-[100svh] flex-col md:pt-[calc(var(--header-height)+2px)]";
+// border-l is the column divider, mirroring the left rail's border-r. It sits
+// on the rail rather than on the list inside so it runs the full 100svh —
+// past the header clearance above and the list's bottom margin below — rather
+// than stopping where the list does.
+const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-2 border-l border-flexwhite/10`;
 
 const BrowseFeed = dynamic(
     () => import("@/components/browse/browse-feed").then((module) => module.BrowseFeed),
