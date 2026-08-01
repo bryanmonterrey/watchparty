@@ -53,7 +53,7 @@ const BUTTON_RADIUS = 16;
 // Even halo, so no offset: this is a glow, not an elevation cue (the app's
 // rule is no gray/black drop shadows, and a lit edge is the sanctioned way to
 // lift something off the canvas).
-const BUTTON_GLOW = { offsetX: 0, offsetY: 0, blur: 5, spread: 0, color: "#ffffff", opacity: 0.19 };
+const BUTTON_GLOW = { offsetX: 0, offsetY: 0, blur: 3, spread: 0, color: "#ffffff", opacity: 0.25 };
 
 // Positioning context for the unread badge, sized to the button rather than
 // left to shrink-wrap it: Lisse's autoEffects injects a wrapper div between

@@ -619,7 +619,11 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
                 <div className={cn(
                     "sticky z-100 flex w-full items-center border-b border-soft-gray/[0.12] bg-canvas",
                     homeTabsOffset
-                        ? "top-12 md:top-[calc(var(--header-height)+3rem)]"
+                        // Home scrolls this feed inside its own container now,
+                        // and that container already starts below the app
+                        // header and the category tabs — so the offset those
+                        // used to need is baked into the scroller's position.
+                        ? "top-0"
                         : headerOffset
                           ? "top-0 md:top-[var(--header-height)]"
                           : "top-0",
@@ -642,7 +646,9 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
                 "sticky z-50 h-0 overflow-visible",
                 showTabs
                     ? homeTabsOffset
-                        ? "top-[100px] md:top-[calc(var(--header-height)+100px)]"
+                        // Same as the tab bar above: measured from the top of
+                        // home's own scroller, so only the tab bar's height.
+                        ? "top-[52px]"
                         : headerOffset
                           ? "top-[52px] md:top-[calc(var(--header-height)+52px)]"
                           : "top-[52px]"

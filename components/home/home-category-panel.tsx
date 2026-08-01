@@ -51,43 +51,36 @@ export function HomeCategoryPanel() {
 
     return (
         <>
-            {/* The tabs pin under the app header once you scroll past them, so
-                the filter for the board stays reachable while you're down in it.
-                Details that matter:
+            {/* The tabs no longer pin, and no longer carry a fill. The centre
+                column is a bounded h-screen box and the board scrolls inside
+                its own container below, so these sit permanently in view with
+                nothing ever passing behind them — which is exactly what let the
+                opaque bg-canvas go. Without it the hero's ambient glow spills
+                down through the strip instead of hitting a flat edge.
 
-                · top matches the header's own height, and the breakpoint mirrors
-                  the centre column's md:mt-[var(--header-height)] — below md the
-                  fixed header is hidden (max-md:hidden), so there's nothing to
-                  offset against.
-                · the tabs and the board's column header use the exact same
-                  opaque canvas fill. That makes the stacked sticky pieces read
-                  as one surface while preventing rows from showing through.
-                · pb-2 rather than mb-2: a margin isn't painted, so the gap under
-                  a stuck bar would be a transparent slot with rows sliding
-                  through it.
-                · z-15 clears the content below and stays under the app header
-                  (z-50). */}
-            {/* h-12 is declared rather than left to the content so the offset
-                below can be exact: the strip is one row of py-1.5 text-lg
-                buttons (28px line box + 12px = 40px) and the arrows are
-                absolute, so 40 + pb-2 = 48px = h-12. Pin it and the number
-                can't drift out from under whatever stacks beneath it. */}
-            <div className="sticky top-0 z-15 h-12 bg-canvas pb-2 md:top-[var(--header-height)]">
+                h-12 stays declared rather than left to the content: the strip is
+                one row of py-1.5 text-lg buttons (28px line box + 12px = 40px)
+                and the arrows are absolute, so 40 + pb-2 = 48px = h-12. */}
+            <div className="h-12 shrink-0 pb-2">
                 <HomeCategoryTabs active={active} onChange={selectTab} />
             </div>
 
-            {/* No fill — everything under the tabs sits straight on the app
-                canvas.
+            {/* The board's own box. It owns the remaining height; whatever it
+                renders owns the scrolling inside that.
 
-                --board-stick is where a child's own sticky header should land:
-                directly under the tabs. TrendingTable reads it (defaulting to 0
-                when nobody sets it, so it stays usable outside home), which
-                keeps home's layout math here instead of baked into a component
-                that isn't home's. Below md the fixed app header is hidden, so
-                the tabs sit at 0 and this is just their height. */}
-            <div className="z-0 flex-1 overflow-clip bg-canvas [--board-stick:3rem] md:[--board-stick:calc(var(--header-height)+3rem)]">
+                --board-stick is 0 now: a child's sticky header pins to the top
+                of ITS scroller, and that scroller already starts below the tabs.
+                The variable stays rather than being deleted so TrendingTable
+                keeps working for any caller that does need an offset. */}
+            <div className="flex min-h-0 flex-1 flex-col [--board-stick:0px]">
                 {active === "Trending Coins" && <TrendingTable />}
-                {active === "Feed" && <BrowseFeed homeTabsOffset />}
+                {/* BrowseFeed renders a list that just grows, so the scroller
+                    is supplied here rather than inside it. */}
+                {active === "Feed" && (
+                    <div className="hidden-scrollbar min-h-0 flex-1 overflow-y-auto">
+                        <BrowseFeed homeTabsOffset />
+                    </div>
+                )}
             </div>
         </>
     );

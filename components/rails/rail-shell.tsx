@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 // The bordered, squircled box a rail's LIST lives in — not its tabs. Home's
 // video rail and the left alerts rail both use it, so the two can't drift.
 //
-// Radius 12 matches RailRow, so a row's hover squircle sits concentrically
-// inside the container's rather than fighting it.
+// Radius 21 against RailRow's 12 — the container's curve reads as the outer
+// one of the pair rather than tracing the same arc as the rows inside it.
 //
 // Two structural notes, both load-bearing:
 //
@@ -52,7 +52,7 @@ export function RailShell({ children, className }: { children: React.ReactNode; 
         // rail either.
         <div className={cn("mb-2 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)]", className)}>
             <Squircle
-                radius={12}
+                radius={21}
                 autoEffects={false}
                 innerBorder={BORDER}
                 className="flex size-full min-h-0 flex-col pb-2"

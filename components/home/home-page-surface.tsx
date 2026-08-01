@@ -11,8 +11,8 @@ import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 
-const RAIL_INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header-height)+4px)]";
-const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-4 pr-1`;
+const RAIL_INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header-height)+2px)]";
+const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-2 pr-1`;
 
 const BrowseFeed = dynamic(
     () => import("@/components/browse/browse-feed").then((module) => module.BrowseFeed),
@@ -95,7 +95,19 @@ export function HomePageSurface() {
         <div className="relative flex min-h-screen w-full px-1">
             <HomeLeftRail />
 
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5 xl:mr-1.25">
+            {/* Sticky h-screen, like the rails either side — the centre column
+                no longer grows the page. Everything above the board (hero,
+                video header, category tabs) is fixed in place and only the
+                board scrolls, inside its own container.
+
+                That containment is what lets the tabs and the board's column
+                labels drop their opaque bg-canvas: nothing passes behind them
+                any more, so the hero's ambient glow paints straight through
+                instead of being cut off by a flat fill.
+
+                pt, not mt: a margin outside a sticky h-screen box would push it
+                past the viewport. Same swap the rails already make. */}
+            <main className="@container/home sticky top-0 flex h-screen min-w-0 flex-1 flex-col md:pt-[var(--header-height)] lg:ml-2.5 xl:mr-1.25">
                 <HomeCenterColumn />
             </main>
 
