@@ -12,6 +12,7 @@ import { staggerPulse } from "@/lib/skeleton-stagger";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
 import { useCoinOverlay } from "@/hooks/use-coin-overlay";
+import { useStuck } from "@/hooks/use-stuck";
 import type { AppRouter } from "@/server/routers";
 import { Squircle } from "@/components/ui/squircle";
 import { ChainBadge } from "./chain-badge";
@@ -338,22 +339,41 @@ export function TrendingTable({ className }: { className?: string }) {
         });
 
     const rows = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
+    const { sentinelRef: labelsSentinel, stuck: labelsStuck } = useStuck();
 
     return (
         // Declares its own container so the grid measures THIS column, not the
         // viewport — home's centre column is narrower than the window by both
         // rails. Square and unpanelled: it sits directly on the column's own
         // fill rather than floating in a card.
-        <div className={cn("@container flex h-full min-h-0 flex-col", className)}>
-            {/* The labels sit ABOVE the scroller now instead of sticking inside
-                it, and that is what lets them carry no fill: rows move in the
-                box below and never pass behind this row, so there is nothing to
-                occlude — home's ambient glow reads straight through.
+        <div className={cn("@container", className)}>
+            {/* The labels pin as the board scrolls under them, so you can still
+                read which column is which a hundred rows down.
 
-                --board-stick is kept as a top offset for anyone who does need
-                one; home sets it to 0 because its scroller already starts in
-                the right place. */}
-            <div className={cn(GRID, CELL_TEXT, "w-full shrink-0 px-3 pb-3 pt-4 text-zinc-500 mt-[var(--board-stick,0px)]")}>
+                --board-stick is supplied by whoever renders the board and says
+                where its header should land — home sets it to sit under the
+                category tabs. Defaults to 0px, so a caller that doesn't set it
+                gets a header that sticks to the top of its scroller, and the
+                board stays usable outside home.
+
+                The canvas fill is applied ONLY while stuck, matching home's
+                category strip above: unstuck there is nothing behind these
+                labels to hide and an opaque bar would cut off the hero's
+                ambient glow; stuck, rows are moving behind them and the fill is
+                what stops them showing through. z-15 keeps the labels over the
+                board rows while remaining beneath the app header. */}
+            {/* h-px, not h-0: a zero-AREA target is an unreliable
+                IntersectionObserver subject. -mb-px cancels it, so it costs no
+                layout. */}
+            <div ref={labelsSentinel} aria-hidden className="h-px -mb-px" />
+            <div
+                className={cn(
+                    GRID,
+                    CELL_TEXT,
+                    "sticky top-[var(--board-stick,0px)] z-15 w-full px-3 pb-3 pt-4 text-zinc-500 transition-colors duration-200",
+                    labelsStuck && "bg-canvas",
+                )}
+            >
                 {/* Sentence case, capital on the first word only — the one
                     place in the app that isn't all-lowercase, per the author. */}
                 <span className="cursor-pointer transition-colors hover:text-twitter2">Name</span>
@@ -367,9 +387,6 @@ export function TrendingTable({ className }: { className?: string }) {
                 <span />
             </div>
 
-            {/* The scroller. Everything that can grow lives in here, so the
-                labels above stay put and the board never grows its column. */}
-            <div className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
             {isError ? (
                 <p className={cn(CELL_TEXT, "py-16 text-center text-zinc-500")}>couldn&apos;t load the board.</p>
             ) : isLoading ? (
@@ -409,7 +426,6 @@ export function TrendingTable({ className }: { className?: string }) {
                     </button>
                 </div>
             )}
-            </div>
         </div>
     );
 }

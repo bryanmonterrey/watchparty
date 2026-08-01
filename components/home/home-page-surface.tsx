@@ -95,19 +95,12 @@ export function HomePageSurface() {
         <div className="relative flex min-h-screen w-full px-1">
             <HomeLeftRail />
 
-            {/* Sticky h-screen, like the rails either side — the centre column
-                no longer grows the page. Everything above the board (hero,
-                video header, category tabs) is fixed in place and only the
-                board scrolls, inside its own container.
-
-                That containment is what lets the tabs and the board's column
-                labels drop their opaque bg-canvas: nothing passes behind them
-                any more, so the hero's ambient glow paints straight through
-                instead of being cut off by a flat fill.
-
-                pt, not mt: a margin outside a sticky h-screen box would push it
-                past the viewport. Same swap the rails already make. */}
-            <main className="@container/home sticky top-0 flex h-screen min-w-0 flex-1 flex-col md:pt-[var(--header-height)] lg:ml-2.5 xl:mr-1.25">
+            {/* Rides the app scroller — the hero scrolls away and the tabs and
+                column labels pin as you go down, which is the point. The fill
+                those bars need while stuck is applied only once they ARE stuck
+                (see useStuck), so unstuck they stay transparent and the hero's
+                ambient glow reads through them. */}
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5 xl:mr-1.25">
                 <HomeCenterColumn />
             </main>
 

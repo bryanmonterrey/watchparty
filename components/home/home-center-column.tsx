@@ -32,19 +32,15 @@ const STORAGE_KEY = "wp:home:focus";
 // below the header; the toggle is inside the header now, so that line is back.
 // A little unused space below the screen is harmless, overflowing is not.
 //
-// The column is a bounded h-screen flex box now (see home-page-surface), so
-// these are flex states rather than min-heights: default the screen is its own
-// 16:9 and nothing more, expanded it takes whatever the column has left once
-// the panel below unmounts.
-//
-// flex-1 WITHOUT min-h-0 is deliberate, and preserves what the old
-// min-height did: a flex item's automatic minimum is its content size, so the
-// screen can grow into the free space but can never be squeezed below its 16:9.
-// On a wide, short window that means it keeps its aspect instead of being
-// crushed — expanding must never make the screen smaller.
-const HERO_BASE = "aspect-video w-full";
-const HERO_EXPANDED = "flex-1";
-const HERO_DEFAULT = "shrink-0";
+// MIN-height over height, and 16:9 always on: expanding must never make the
+// screen SMALLER. On a wide, short window the column's own 16:9 height is
+// taller than what's left of the viewport, so setting height outright shrank
+// the video on the way into focus mode — the opposite of what the toggle
+// promises. As a floor it can only grow it, and both states are real lengths
+// (0 → px) so the transition still runs.
+const HERO_BASE = "aspect-video w-full transition-[min-height] duration-300 ease-out";
+const HERO_EXPANDED = "min-h-[calc(100svh-var(--header-height)-6.5rem)]";
+const HERO_DEFAULT = "min-h-0";
 
 export function HomeCenterColumn() {
     const [focus, setFocus] = useState(false);
@@ -110,7 +106,7 @@ export function HomeCenterColumn() {
                 no matter the DOM order — so the hero, including the ambient
                 glow that deliberately spills past its edges, covers anything in
                 this row unless it's lifted out. */}
-            <div className="relative z-10 flex shrink-0 flex-col pl-1 pr-1">
+            <div className="relative z-10 flex flex-col pl-1 pr-1">
                 {/* Expanding swaps what's under the screen: the header appears
                     and the tabs + their content fold away, so the column reads
                     as one video and its details rather than a feed.
