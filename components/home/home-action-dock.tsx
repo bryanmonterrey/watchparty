@@ -40,7 +40,7 @@ const INNER = "sticky top-0 flex h-screen flex-col items-center justify-end pb-4
 // than routed around — the whole point of that remap is that borders don't
 // drift per surface.
 const BUTTON =
-    "flex size-15 cursor-pointer items-center justify-center border border-flexwhite/80 hover:border-flexwhite/95 bg-canvas text-zinc-300 transition-colors hover:bg-flexwhite/20 hover:text-white";
+    "flex size-15 cursor-pointer items-center justify-center border border-soft-gray-20 hover:border-flexwhite/95 bg-canvas text-zinc-300 transition-colors hover:bg-soft-gray-20 hover:text-white";
 
 const BUTTON_RADIUS = 16;
 
@@ -53,7 +53,7 @@ const BUTTON_RADIUS = 16;
 // Even halo, so no offset: this is a glow, not an elevation cue (the app's
 // rule is no gray/black drop shadows, and a lit edge is the sanctioned way to
 // lift something off the canvas).
-const BUTTON_GLOW = { offsetX: 0, offsetY: 0, blur: 6, spread: 0, color: "#ffffff", opacity: 0.17 };
+const BUTTON_GLOW = { offsetX: 0, offsetY: 0, blur: 5, spread: 0, color: "#ffffff", opacity: 0.19 };
 
 // Positioning context for the unread badge, sized to the button rather than
 // left to shrink-wrap it: Lisse's autoEffects injects a wrapper div between

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { RailRow, RailRowSkeleton } from "@/components/rails/rail-row";
+import { RailShell } from "@/components/rails/rail-shell";
 import { HOME_TAB_LIKED } from "@/components/rails/rail-tabs";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { useHomeFeed } from "./home-feed-context";
@@ -48,51 +49,58 @@ export function HomeRailVideos() {
         return () => observer.disconnect();
     }, [hasMore, loadMore]);
 
+    // The skeleton wears the same shell as the real list — a container that
+    // appears only once the rows land would read as a layout shift.
     if (isLoading) {
         return (
-            <div className="flex flex-col">
-                {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-                    <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
-                ))}
-            </div>
+            <RailShell>
+                <div className="flex flex-col">
+                    {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+                        <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
+                    ))}
+                </div>
+            </RailShell>
         );
     }
 
     // The rail is a fixed-height sticky column, so the list scrolls inside it
-    // rather than growing the page.
+    // rather than growing the page. RailShell owns the height; this element
+    // owns the scrolling.
     return (
-        <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {videos.map((v) => (
-                <RailRow
-                    key={v.id}
-                    thumbnailUrl={v.thumbnailUrl}
-                    isLive={v.isLive}
-                    username={v.user.username}
-                    verifiedTier={v.user.verifiedTier}
-                    title={v.title}
-                    views={v.views}
-                    menu={<HomeRailRowMenu postId={v.id} userId={v.user.id} />}
-                    isActive={v.id === active?.id}
-                    hoverColor={stableHoverColor(v.id)}
-                    onSelect={() => setActiveId(v.id)}
-                />
-            ))}
-
-            {/* Liked is the only tab that can legitimately come back empty — the
-                unfiltered feed is empty only while the first page is in flight,
-                which the skeleton above already covers. */}
-            {onLiked && videos.length === 0 && !isLoadingMore && (
-                <p className="px-1 py-6 text-sm text-zinc-500">nothing liked yet</p>
-            )}
-
-            {isLoadingMore &&
-                Array.from({ length: LOADING_MORE_ROWS }).map((_, i) => (
-                    <RailRowSkeleton key={`more-${i}`} index={i} count={LOADING_MORE_ROWS} />
+        <RailShell>
+            <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
+                {videos.map((v) => (
+                    <RailRow
+                        key={v.id}
+                        thumbnailUrl={v.thumbnailUrl}
+                        isLive={v.isLive}
+                        username={v.user.username}
+                        verifiedTier={v.user.verifiedTier}
+                        title={v.title}
+                        views={v.views}
+                        menu={<HomeRailRowMenu postId={v.id} userId={v.user.id} />}
+                        isActive={v.id === active?.id}
+                        hoverColor={stableHoverColor(v.id)}
+                        onSelect={() => setActiveId(v.id)}
+                    />
                 ))}
 
-            {/* Zero-height tripwire below the last row. Kept mounted only while
-                there's more to fetch, so reaching the cap simply ends the scroll. */}
-            {hasMore && <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />}
-        </div>
+                {/* Liked is the only tab that can legitimately come back empty — the
+                    unfiltered feed is empty only while the first page is in flight,
+                    which the skeleton above already covers. */}
+                {onLiked && videos.length === 0 && !isLoadingMore && (
+                    <p className="px-1 py-6 text-sm text-zinc-500">nothing liked yet</p>
+                )}
+
+                {isLoadingMore &&
+                    Array.from({ length: LOADING_MORE_ROWS }).map((_, i) => (
+                        <RailRowSkeleton key={`more-${i}`} index={i} count={LOADING_MORE_ROWS} />
+                    ))}
+
+                {/* Zero-height tripwire below the last row. Kept mounted only while
+                    there's more to fetch, so reaching the cap simply ends the scroll. */}
+                {hasMore && <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />}
+            </div>
+        </RailShell>
     );
 }

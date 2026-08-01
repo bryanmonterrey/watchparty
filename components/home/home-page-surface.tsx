@@ -99,7 +99,7 @@ export function HomePageSurface() {
                 <HomeCenterColumn />
             </main>
 
-            <aside className="hidden w-75 shrink-0 xl:block">
+            <aside className="hidden w-74 px-1 shrink-0 xl:block">
                 <div className={RAIL_INNER_RIGHT}>
                     <HomeRailTabs />
                     <HomeRailVideos />

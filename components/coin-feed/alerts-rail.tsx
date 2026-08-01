@@ -8,6 +8,7 @@ import { ArrowUp02Icon, ArrowLeftDoubleIcon, AtIcon } from "@hugeicons/core-free
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
+import { RailShell } from "@/components/rails/rail-shell";
 import { AlertRow } from "./alert-row";
 import { AlertListSkeleton } from "./alert-row-skeleton";
 import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
@@ -474,9 +475,15 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 </button>
             )}
 
-            {/* The list. min-h-0 is what lets it actually scroll inside the
-                sticky rail instead of growing the column. */}
-            <div className="mt-1 flex min-h-0 flex-1 flex-col">
+            {/* The list, in the shared bordered/squircled rail shell — the same
+                box home's video rail puts its list in. It wraps the ITEMS only;
+                the tabs above stay outside it.
+
+                RailShell keeps the min-h-0 + flex-1 that lets this scroll
+                inside the sticky rail instead of growing the column, and its
+                inner element has a definite height — which BidirectionalList
+                needs, since it sizes its own scroller with height:100%. */}
+            <RailShell className="mt-1">
                 {/* The error state is for having NOTHING to show — not merely
                     for the query being in an error state.
 
@@ -570,7 +577,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         couldn&apos;t refresh · retry
                     </button>
                 )}
-            </div>
+            </RailShell>
         </div>
     );
 }
