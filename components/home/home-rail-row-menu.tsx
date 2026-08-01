@@ -27,7 +27,7 @@ export function HomeRailRowMenu({ postId, userId }: { postId: string; userId?: s
             onOpenChange={setOpen}
             onClose={() => setOpen(false)}
             triggerClassName={cn(
-                "cursor-pointer rounded-full p-1 text-flexwhite/40 transition-colors hover:bg-white/10 hover:text-white",
+                "cursor-pointer rounded-full p-1 text-flexwhite/90 transition-colors hover:bg-white/10 hover:text-white",
                 open && "text-white",
             )}
             // Matches the engagement mark it sits beside.
