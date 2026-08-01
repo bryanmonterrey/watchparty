@@ -124,7 +124,7 @@ export function HomeActionDock() {
     }
 
     return (
-        <aside className="hidden px-1 shrink-0 xl:block">
+        <aside className="hidden pl-1 shrink-0 xl:block">
             <div className={`${INNER} gap-2.5`}>
                 <button
                     type="button"

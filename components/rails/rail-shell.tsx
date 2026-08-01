@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 // The bordered, squircled box a rail's LIST lives in — not its tabs. Home's
 // video rail and the left alerts rail both use it, so the two can't drift.
 //
-// Radius 21 against RailRow's 12 — the container's curve reads as the outer
-// one of the pair rather than tracing the same arc as the rows inside it.
+// Radius 12 matches RailRow, so a row's hover squircle traces the same arc as
+// the container it sits in.
 //
 // Two structural notes, both load-bearing:
 //
@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 // --color-grokborder is oklch(0.9924 0 none / 0.08) — a near-white at 8%.
 // Split into hex + opacity because those are the forms Lisse parses reliably.
-const BORDER = { width: 1, color: "#fcfcfc", opacity: 0.08 };
+const BORDER = { width: 1, color: "#fcfcfc", opacity: 0.01 };
 
 export function RailShell({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
@@ -52,10 +52,10 @@ export function RailShell({ children, className }: { children: React.ReactNode; 
         // rail either.
         <div className={cn("mb-2 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)]", className)}>
             <Squircle
-                radius={21}
+                radius={12}
                 autoEffects={false}
                 innerBorder={BORDER}
-                className="flex size-full min-h-0 flex-col pb-2"
+                className="flex size-full bg-soft-gray-5 min-h-0 flex-col pb-2"
             >
                 {children}
             </Squircle>

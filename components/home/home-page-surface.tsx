@@ -12,7 +12,7 @@ import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 
 const RAIL_INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header-height)+2px)]";
-const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-2 pr-1`;
+const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-2`;
 
 const BrowseFeed = dynamic(
     () => import("@/components/browse/browse-feed").then((module) => module.BrowseFeed),
@@ -100,11 +100,11 @@ export function HomePageSurface() {
                 those bars need while stuck is applied only once they ARE stuck
                 (see useStuck), so unstuck they stay transparent and the hero's
                 ambient glow reads through them. */}
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5 xl:mr-1.25">
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5 xl:mr-1.5">
                 <HomeCenterColumn />
             </main>
 
-            <aside className="hidden w-74 px-1 shrink-0 xl:block">
+            <aside className="hidden w-74 shrink-0 xl:block">
                 <div className={RAIL_INNER_RIGHT}>
                     <HomeRailTabs />
                     <HomeRailVideos />

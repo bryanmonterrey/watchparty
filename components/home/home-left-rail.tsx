@@ -18,7 +18,15 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 
 // Mirrors the right rail's RAIL_INNER: the rails pin at the scroller's top, so
 // their own padding is what clears the fixed header.
-const INNER = "sticky top-0 flex h-screen flex-col md:pt-[calc(var(--header-height)+4px)]";
+// z-10 is load-bearing, and is why the hero's ambient glow doesn't wash over
+// this rail. `sticky` makes this a POSITIONED element, <main> is positioned
+// too, and both sit at z-index auto — so among them paint order is DOM order,
+// and main (which comes after this rail) drew itself and the glow inside it
+// straight over the top. No background on the rail can fix that; it was being
+// painted first. The right rail never had the problem because it comes after
+// main. z-10 clears main's subtree while staying well under the app header
+// (z-50) and the overlays.
+const INNER = "sticky top-0 z-10 flex h-screen flex-col md:pt-[calc(var(--header-height)+4px)]";
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);
