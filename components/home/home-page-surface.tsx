@@ -7,6 +7,7 @@ import { HomeCenterColumn } from "./home-center-column";
 import { HomeRailTabs } from "./home-rail-tabs";
 import { HomeRailVideos } from "./home-rail-videos";
 import { HomeLeftRail } from "./home-left-rail";
+import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 
@@ -104,6 +105,10 @@ export function HomePageSurface() {
                     <HomeRailVideos />
                 </div>
             </aside>
+
+            {/* 4th column. Its width comes out of <main> (flex-1), so the video
+                rail above keeps its w-75 and only the centre column narrows. */}
+            <HomeActionDock />
 
             <ClipsOverlay />
             <CoinOverlay />

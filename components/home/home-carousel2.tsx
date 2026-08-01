@@ -31,6 +31,19 @@ const HERO_BOX = "h-[45svh] aspect-video  max-w-full";
 // the only offset above it is the column's own header clearance.
 const HERO_WRAP = "w-full ";
 
+// The player's corner radius, carried by the container AND by the media inside
+// it — they have to match, so there's one definition.
+//
+// The duplication is load-bearing, not belt-and-braces. In ambient mode the
+// container CANNOT be overflow-hidden (the glow canvas is injected as the
+// video's sibling and clipping erases the whole effect), so its radius has
+// nothing to clip and the media paints its own square corners on top. That's
+// invisible for a letterboxed source — object-contain keeps it off the corners,
+// so you see the container's rounded bg-muted behind it — and only shows up
+// when the frame fills the box edge to edge. Rounding the media itself is what
+// fixes it without reintroducing a clip.
+const MEDIA_RADIUS = "rounded-xl";
+
 interface CarouselVideo {
     id: string;
     title: string;
@@ -92,7 +105,7 @@ export function HomeCarousel({
                 <Link
                     href={watchHref(v)}
                     aria-label={`Watch ${v.title}`}
-                    className={`group/active relative block rounded-xl bg-muted outline-none ${
+                    className={`group/active relative block ${MEDIA_RADIUS} bg-muted outline-none ${
                         ambient
                             ? "ambient-video-container isolate overflow-visible [contain:none]"
                             : "overflow-hidden"
@@ -106,7 +119,7 @@ export function HomeCarousel({
                                 // eslint-disable-next-line @next/next/no-img-element
                                 // Same fit rule as the <video> below — this is
                                 // the same slot when there's no videoUrl.
-                                <img src={v.thumbnailUrl} alt="" className="absolute inset-0 size-full object-contain" />
+                                <img src={v.thumbnailUrl} alt="" className={`absolute inset-0 size-full object-contain ${MEDIA_RADIUS}`} />
                             )}
                             {chrome && (
                                 <div className="absolute left-4 top-3 z-30 flex items-center gap-2">
@@ -280,7 +293,14 @@ function ActivePanel({ v, chrome = true, ambient = false, onEnded }: { v: Carous
                 // Contain fits the whole frame and leaves bars, which the
                 // ambient glow then fills with a blurred copy of the frame
                 // rather than dead space.
-                className="absolute inset-0 size-full object-contain"
+                //
+                // MEDIA_RADIUS here, not just on the container: see its note —
+                // in ambient mode the container can't clip, so a frame that
+                // fills the box has to round itself. Harmless when letterboxed
+                // (the bars are transparent, so there's nothing at the corners
+                // to round) and it never touches the glow canvas, which is a
+                // sibling and must stay unrounded to spill.
+                className={`absolute inset-0 size-full object-contain ${MEDIA_RADIUS}`}
             >
                 {captionTracks.map((track) => (
                     <track key={track.id} kind="subtitles" src={track.url} srcLang={track.language} label={track.label} />

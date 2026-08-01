@@ -385,13 +385,13 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
-        <div className={cn("flex min-h-0 flex-1 flex-col bg-soft-gray-5 border-grokborder border rounded-lg", className)}>
+        <div className={cn("flex min-h-0 flex-1 flex-col rounded-none", className)}>
             {/* Header: tabs left, controls right. Same treatment as the home
                 right rail's tabs — colour alone carries the active state. */}
             {/* Mentions is an ICON tab, the same way the right rail's star is a
                 tab rather than a heading — and every icon in this row matches
                 that star's size-6 so the header reads as one set of controls. */}
-            <div className="flex shrink-0 items-center px-2">
+            <div className="flex shrink-0 items-center px-1">
                 {(["alerts", "following"] as const).map((t) => (
                     <button
                         key={t}
@@ -399,7 +399,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         onClick={() => switchTab(t)}
                         aria-pressed={tab === t}
                         className={cn(
-                            "cursor-pointer whitespace-nowrap px-1.5 py-1.5 text-sm font-semibold tracking-tight transition-colors",
+                            "cursor-pointer whitespace-nowrap px-1.5 py-1.5 text-[15px] font-semibold tracking-tight transition-colors",
                             tab === t ? "text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >

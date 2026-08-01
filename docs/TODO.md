@@ -117,6 +117,15 @@ Follow-ups (small, whenever):
   `rm -rf .next/dev` regenerates; filter with `grep -v '^\.next/'` meanwhile.
 
 ## 🔜 Loose ends (small)
+- **AI assistant panel behind home's dock button** (2026-08-01). Home now has a 4th column
+  (`components/home/home-action-dock.tsx`) mirroring X's Grok/Chat dock. The messages button
+  is live (routes to `/messages`, real unread badge off `conversation.getUnreadCount`); the
+  **star button is deliberately inert** and its tooltip says "coming soon". Owner's call: it
+  gets a real assistant panel — a new tRPC endpoint streaming from Workers AI
+  (`@cf/zai-org/glm-5.2`, same account API the predictions factory uses in
+  `lib/predictions/factory.ts`), opening as a docked panel anchored above the button rather
+  than a route. When that lands, swap the no-op `<button>` for the panel trigger and drop
+  the "· coming soon" from the tooltip label.
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.

@@ -62,7 +62,7 @@ export function HomeLeftRail() {
 
     return (
         <aside className="hidden w-72 shrink-0 lg:block">
-            <div className={`${INNER} pl-1`}>
+            <div className={`${INNER}`}>
                 <AlertsRail onCollapse={() => set(true)} />
             </div>
         </aside>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Megaphone01Icon, RocketIcon, ChartBreakoutCircleIcon, Bitcoin01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { stableHoverColor } from "@/lib/stable-hover-color";
 import { Squircle } from "@/components/ui/squircle";
 import { TraderStack } from "./trader-stack";
 import { alertHref, formatAge, formatUsd, KIND_META } from "./alert-format";
@@ -144,6 +145,19 @@ export function AlertRow({ event }: { event: AlertEvent }) {
 
     const body = (
         <>
+            {/* Palette hover, same as the video rail's rows (rail-row.tsx): a
+                per-item tint washed over the squircle instead of the neutral
+                fill. Keyed on the event id — the same id the rail dedupes and
+                paginates on — so a row keeps its colour across refetches.
+
+                Positioned, and the content isn't, so it paints over the row as
+                a wash rather than sitting behind the text. That's the shipped
+                look on the video rail; matching it is the point. */}
+            <span
+                aria-hidden
+                style={{ backgroundColor: stableHoverColor(event.id) }}
+                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/alert-hover:opacity-10"
+            />
             <TraderStack traders={event.traders} total={event.traderCount} className="mt-0.5" />
             <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="flex min-w-0 items-center gap-1.5 text-[13px] leading-tight">
@@ -161,9 +175,12 @@ export function AlertRow({ event }: { event: AlertEvent }) {
         </>
     );
 
+    // The neutral hover fill is gone on purpose: the palette tint above
+    // replaces it, exactly as it does on the video rail (there the two are
+    // mutually exclusive via `!hoverColor && hover:bg-…`). `relative` is what
+    // the tint's inset-0 resolves against.
     const className = cn(
-        "flex w-full items-start gap-2.5 px-2 py-2.5 text-left transition-colors",
-        "hover:bg-sidebar-hover-35/60",
+        "group/alert-hover relative flex w-full items-start gap-2.5 px-2 py-2.5 text-left transition-colors",
     );
 
     // No link target (a tracked coin on a chain with no explorer configured):
