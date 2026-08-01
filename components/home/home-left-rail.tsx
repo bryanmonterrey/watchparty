@@ -26,13 +26,17 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 // painted first. The right rail never had the problem because it comes after
 // main. z-10 clears main's subtree while staying well under the app header
 // (z-50) and the overlays.
-// border-r is the column divider, and it lives HERE rather than on the list
-// inside so it runs the full 100svh — past the header clearance above and the
-// list's own bottom margin below — instead of stopping where the list does.
 //
 // h-[100svh] rather than h-screen: identical on desktop, but svh is the stable
-// one and this element's height is now what the divider's length is measured by.
-const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col border-r border-flexwhite/10 md:pt-[calc(var(--header-height)+4px)]";
+// one and this element's height is what the divider's length is measured by.
+const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col md:pt-[calc(var(--header-height)+4px)]";
+
+// Expanded only. border-r is the column divider, and it lives HERE rather than
+// on the list inside so it runs the full 100svh — past the header clearance
+// above and the list's own bottom margin below — instead of stopping where the
+// list does. Collapsed there is no column to divide, just a chevron strip, so
+// the line would read as a stray edge rather than a boundary.
+const INNER_EXPANDED = `${INNER} border-r border-flexwhite/10 px-1.5`;
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);
@@ -115,7 +119,7 @@ export function HomeLeftRail() {
 
     return (
         <aside ref={asideRef} className="hidden w-72 shrink-0 lg:block">
-            <div className={`${INNER}`}>
+            <div className={INNER_EXPANDED}>
                 <AlertsRail onCollapse={() => set(true)} />
             </div>
         </aside>
