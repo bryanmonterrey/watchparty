@@ -116,14 +116,24 @@ export function RailRow({
                     // at all — not just a positioning context for the hover
                     // tint. cursor-pointer matches that whole-row target.
                     "group/rail-hover relative flex h-fit w-full cursor-pointer flex-col p-2 transition-colors",
-                    isActive ? "bg-sidebar-hover/85" : !hoverColor && "hover:bg-sidebar-hover-35/60",
+                    // With a palette colour the overlay below carries BOTH
+                    // states, so no neutral fill here — one painted on top of
+                    // the other would muddy the tint. Rails without one (the
+                    // watch and live lists) keep the neutral pair.
+                    !hoverColor && (isActive ? "bg-sidebar-hover/85" : "hover:bg-sidebar-hover-35/60"),
                 )}
             >
-                {hoverColor && !isActive && (
+                {/* The row's palette tint. Active wears it permanently — the
+                    active row is the hover colour, made to stay — and every
+                    other row fades it in on hover at the same strength. */}
+                {hoverColor && (
                     <span
                         aria-hidden
                         style={{ backgroundColor: hoverColor }}
-                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/rail-hover:opacity-10"
+                        className={cn(
+                            "pointer-events-none absolute inset-0 transition-opacity duration-200",
+                            isActive ? "opacity-10" : "opacity-0 group-hover/rail-hover:opacity-10",
+                        )}
                     />
                 )}
                 {href ? (
