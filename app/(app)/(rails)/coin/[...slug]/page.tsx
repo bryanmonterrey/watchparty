@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { tokens } from "@/db/schema/content";
 import { eq, or } from "drizzle-orm";
 import { TokenProfile } from "@/components/tokens/token-profile";
-import { CoinDetail } from "@/components/home/coin-overlay";
+import { CoinDetail } from "@/components/coins/coin-detail";
 import { resolveCoin } from "@/lib/coins/resolve";
 
 // Coin pages live here, not at the top level. They used to share `/[slug]` with

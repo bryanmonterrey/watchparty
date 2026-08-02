@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
-import { motion } from "motion/react";
+// The coin view — identity + market stats, chart, swap.
+//
+// Rendered by /coin/<address> for any coin that isn't one of our own launches.
+// It used to be the body of a chart overlay that home's board and the alerts
+// rail popped open; the overlay is gone (every one of those surfaces links to
+// the real page now), and this is what survived it.
+//
+// CoinViewData is deliberately the shape lib/coins/resolve returns, so the page
+// hands its result straight in with no mapping.
+
 import { useWallet } from "@solana/wallet-adapter-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Copy01Icon } from "@hugeicons/core-free-icons";
@@ -12,9 +20,29 @@ import type { Token as SwapToken } from "@/components/wallet/wallet-drawer2/view
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { useCoinOverlay, type CoinOverlaySelection } from "@/hooks/use-coin-overlay";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
+
+/** What the view needs. Structurally identical to lib/coins/resolve's
+ *  ResolvedCoin — declared here because that module is server-only and this
+ *  component is not. */
+export type CoinViewData = {
+    id: string;
+    network: string;
+    tokenAddress: string;
+    poolAddress: string;
+    symbol: string;
+    name: string | null;
+    imageUrl: string | null;
+    priceUsd: number | null;
+    marketCapUsd: number | null;
+    liquidityUsd: number | null;
+    volume24hUsd: number | null;
+    priceChange24h: number | null;
+    buys24h: number | null;
+    sells24h: number | null;
+    txns24h: number | null;
+};
 
 function compactUsd(value: number | null) {
     if (value == null || !Number.isFinite(value)) return "—";
@@ -35,7 +63,7 @@ function Stat({ label, value }: { label: string; value: string }) {
     );
 }
 
-function CoinIdentity({ coin }: { coin: CoinOverlaySelection }) {
+function CoinIdentity({ coin }: { coin: CoinViewData }) {
     const explorer = explorerUrl(coin.network, coin.tokenAddress, coin.poolAddress);
 
     return (
@@ -92,7 +120,7 @@ function CoinIdentity({ coin }: { coin: CoinOverlaySelection }) {
     );
 }
 
-function MarketTrades({ coin }: { coin: CoinOverlaySelection }) {
+function MarketTrades({ coin }: { coin: CoinViewData }) {
     const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
         { mint: coin.tokenAddress },
         { enabled: coin.network === "solana", staleTime: 30_000, refetchInterval: 30_000, retry: 1 },
@@ -134,7 +162,7 @@ function MarketTrades({ coin }: { coin: CoinOverlaySelection }) {
     );
 }
 
-function CoinChart({ coin }: { coin: CoinOverlaySelection }) {
+function CoinChart({ coin }: { coin: CoinViewData }) {
     const marketUrl = tradeUrl(coin.network, coin.tokenAddress, coin.poolAddress);
 
     return (
@@ -160,7 +188,7 @@ function CoinChart({ coin }: { coin: CoinOverlaySelection }) {
     );
 }
 
-function CoinSwap({ coin }: { coin: CoinOverlaySelection }) {
+function CoinSwap({ coin }: { coin: CoinViewData }) {
     const { data: session } = useAuthSession();
     const { publicKey } = useWallet();
     const walletAddress = publicKey?.toBase58() || session?.user?.wallet_address || "";
@@ -211,44 +239,13 @@ function CoinSwap({ coin }: { coin: CoinOverlaySelection }) {
     );
 }
 
-export function CoinOverlay() {
-    const coin = useCoinOverlay((state) => state.coin);
-    const onClose = useCoinOverlay((state) => state.onClose);
-
-    useEffect(() => () => onClose(), [onClose]);
-
-    useEffect(() => {
-        if (!coin) return;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onClose();
-        };
-        window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
-    }, [coin, onClose]);
-
-    if (!coin) return null;
-
-    return (
-        <div className="fixed inset-0 z-40 bg-canvas md:pt-[var(--header-height)]">
-            <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="h-full overflow-y-auto overscroll-contain"
-            >
-                <CoinDetail coin={coin} />
-            </motion.div>
-        </div>
-    );
-}
-
 /**
  * The coin view itself — identity + stats, chart, swap — with no shell around
  * it. Exported so /coin/<mint> can render the SAME thing as a page for a coin we
  * did not launch: the overlay and that page show identical data from identical
  * sources, and there is no second implementation to drift.
  */
-export function CoinDetail({ coin }: { coin: CoinOverlaySelection }) {
+export function CoinDetail({ coin }: { coin: CoinViewData }) {
     return (
         <div className="grid min-h-full grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
             <CoinIdentity coin={coin} />

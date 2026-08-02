@@ -10,7 +10,6 @@ import { SearchIcon, PinkStarLogo } from '../icons'
 import { MorphMenuIcon } from '@/components/marketing/morph-menu-icon'
 import { useClipsOverlay } from '@/hooks/use-clips-overlay'
 import { useHomeFeedOverlay } from '@/hooks/use-home-feed-overlay'
-import { useCoinOverlay } from '@/hooks/use-coin-overlay'
 import { CreateMenu } from './create-menu'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
@@ -56,12 +55,12 @@ export function AppHeader2() {
   const closeClips = useClipsOverlay((s) => s.onClose)
   const homeFeedOpen = useHomeFeedOverlay((s) => s.open)
   const closeHomeFeed = useHomeFeedOverlay((s) => s.onClose)
-  const coinOpen = useCoinOverlay((s) => !!s.coin)
-  const closeCoin = useCoinOverlay((s) => s.onClose)
-  const homeOverlayOpen = clipsOpen || homeFeedOpen || coinOpen
+  // The coin overlay used to be a third closable surface here. It's gone —
+  // coins have a real page now, and a page is closed by navigating, not by the
+  // hamburger morphing into an X.
+  const homeOverlayOpen = clipsOpen || homeFeedOpen
   const closeHomeOverlay = () => {
     if (clipsOpen) closeClips()
-    else if (coinOpen) closeCoin()
     else if (homeFeedOpen) closeHomeFeed()
   }
   const [mounted, setMounted] = useState(false)

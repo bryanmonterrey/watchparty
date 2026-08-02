@@ -5,7 +5,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Megaphone01Icon, RocketIcon, ChartBreakoutCircleIcon, Bitcoin01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { stableHoverColor } from "@/lib/stable-hover-color";
-import { useCoinOverlay } from "@/hooks/use-coin-overlay";
 import { Squircle } from "@/components/ui/squircle";
 import { TraderStack } from "./trader-stack";
 import { alertHref, formatAge, formatUsd, KIND_META } from "./alert-format";
@@ -156,7 +155,6 @@ function Subline({ event }: { event: AlertEvent }) {
 
 export function AlertRow({ event }: { event: AlertEvent }) {
     const target = alertHref(event);
-    const openCoin = useCoinOverlay((state) => state.onOpen);
 
     const body = (
         <>
@@ -210,45 +208,22 @@ export function AlertRow({ event }: { event: AlertEvent }) {
         "border-b border-white/[0.06] last:border-b-0",
     );
 
-    // A coin we can chart opens the OVERLAY rather than navigating. Pressing an
-    // alert to be thrown onto a full page loses the rail you were reading, and
-    // the overlay is what home's trending board already does with a coin — same
-    // gesture, same surface, wherever you press it.
+    // A coin we can chart goes to its PAGE, chain-qualified. The chart overlay
+    // this used to open is gone; /coin resolves any coin on any chain now, so
+    // there's a real page to send people to.
     //
-    // The chart runs off the mint (TokenTradingViewChart takes `mint`), which is
-    // the one coin field an alert always carries, so tokenAddress is the whole
-    // requirement. The market fields the board fills in aren't in the alert
-    // feed's SELECTION — the overlay renders them as em-dashes and its own
-    // queries fill the rest — and poolAddress only feeds the explorer/trade
-    // links, which both fall back to the token when it's absent.
+    // /coin/<network>/<address> rather than the bare address: the alert feed
+    // spans every chain we track and the same address can exist on several, so
+    // naming the chain skips resolution entirely.
     if (event.tokenAddress) {
         return (
             <Squircle asChild radius={12} autoEffects={false}>
-                <button
-                    type="button"
-                    onClick={() =>
-                        openCoin({
-                            id: event.id,
-                            network: event.network,
-                            tokenAddress: event.tokenAddress!,
-                            poolAddress: "",
-                            symbol: event.symbol ?? "",
-                            name: null,
-                            imageUrl: event.tokenImageUrl ?? null,
-                            priceUsd: null,
-                            marketCapUsd: event.marketCapUsd ?? null,
-                            liquidityUsd: null,
-                            volume24hUsd: null,
-                            priceChange24h: null,
-                            buys24h: null,
-                            sells24h: null,
-                            txns24h: null,
-                        })
-                    }
+                <Link
+                    href={`/coin/${event.network}/${event.tokenAddress}`}
                     className={cn(className, "cursor-pointer")}
                 >
                     {body}
-                </button>
+                </Link>
             </Squircle>
         );
     }
