@@ -21,11 +21,6 @@ const BrowseFeed = dynamic(
     { ssr: false, loading: () => <FeedSurfaceLoading /> },
 );
 
-const CoinOverlay = dynamic(
-    () => import("@/components/home/coin-overlay").then((module) => module.CoinOverlay),
-    { ssr: false },
-);
-
 function FeedSurfaceLoading() {
     return (
         <div className="flex flex-col">
@@ -125,7 +120,6 @@ export function HomePageSurface() {
             <HomeActionDock />
 
             <ClipsOverlay />
-            <CoinOverlay />
         </div>
     );
 }

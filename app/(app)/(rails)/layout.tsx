@@ -1,5 +1,6 @@
 import React from "react";
 import { HomeLeftRail } from "@/components/home/home-left-rail";
+import { CoinOverlayMount } from "@/components/home/coin-overlay-mount";
 
 // The coin alerts rail, hoisted out of the pages that used to each mount their
 // own. Everything under this group — /home, /feed, /coin/<mint> — gets the same
@@ -21,6 +22,11 @@ export default function RailsLayout({ children }: { children: React.ReactNode })
             {/* min-w-0 so a wide child (the token page's grid, the feed's
                 columns) shrinks instead of pushing the rail off-screen. */}
             <div className="flex min-w-0 flex-1">{children}</div>
+
+            {/* The overlay the rail's rows (and home's trending board) open.
+                Mounted beside the rail rather than inside a page, so every route
+                that can raise a coin can also show one. */}
+            <CoinOverlayMount />
         </div>
     );
 }
