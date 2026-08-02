@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { cn } from "@/lib/utils";
 import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { AlertsRail } from "@/components/coin-feed/alerts-rail";
 
@@ -29,8 +31,8 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 //
 // h-[100svh] rather than h-screen: identical on desktop, but svh is the stable
 // one and this element's height is what the divider's length is measured by.
-// One wrapper for both states — collapsing empties the rail, it doesn't resize
-// it, so the geometry is identical either way.
+// One wrapper for every state: collapsing changes the aside's WIDTH (and only
+// on some routes — see keepsWidth), never this element's padding or pinning.
 //
 // No divider: the alerts list carries its own outline (see RailShell's
 // `bordered`), and a full-height rule beside a box that stops short of the
@@ -39,6 +41,7 @@ const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col px-1.5 md:pt-[calc(var
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);
+    const pathname = usePathname();
 
     // After mount, never during render — the app shell server-renders, and
     // reading localStorage in render would be a hydration mismatch.
@@ -57,23 +60,36 @@ export function HomeLeftRail() {
         } catch { /* not worth failing the toggle over */ }
     };
 
-    // Collapsed keeps the COLUMN — same w-72, same padding, just emptied down to
-    // the expand control. It used to shrink to a w-11 strip, which meant every
-    // other column on the page slid sideways to fill the 244px it gave back;
-    // collapsing is for quieting the alert feed, not for rearranging the page
-    // around it. Nothing outside this aside moves now.
+    // Collapsing behaves differently on /feed, and it has to.
+    //
+    // Home and the token page give the reclaimed 244px to a column that can use
+    // it — home's centre is flex-1 and simply widens. The feed's column is
+    // capped at a 628px reading measure, so it can't grow into the space; the
+    // whole row just slid sideways instead, which is what "collapsing doesn't
+    // move other columns" was about. There the rail holds its width and empties
+    // to the expand control, and nothing outside this aside moves.
+    //
+    // Read from the pathname rather than taken as a prop because the rail is
+    // mounted ONCE, by (rails)/layout.tsx, for all three routes — there's no
+    // per-page call site left to pass a flag from.
+    const keepsWidth = pathname?.startsWith("/feed") ?? false;
+
     if (collapsed) {
         return (
-            <aside className="hidden w-72 shrink-0 lg:block">
+            <aside className={cn("hidden shrink-0 lg:block", keepsWidth ? "w-72" : "w-11")}>
                 <div className={INNER}>
-                    {/* self-end puts this exactly where the collapse chevron it
-                        replaces sat — the right end of the rail's header row —
-                        so the control doesn't jump when you toggle it. */}
+                    {/* Holding the column, the chevron sits where the collapse
+                        control it replaces sat — the right end of the header row
+                        — so it doesn't jump under the cursor. In the narrow
+                        strip there's only one place for it. */}
                     <button
                         type="button"
                         onClick={() => set(false)}
                         aria-label="expand alerts rail"
-                        className="flex cursor-pointer items-center self-end px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
+                        className={cn(
+                            "flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white",
+                            keepsWidth ? "self-end" : "mx-auto",
+                        )}
                     >
                         <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
                     </button>
