@@ -39,7 +39,13 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     with home's centre column at every size home's rail exists. */}
                 <div aria-hidden className="hidden w-72 shrink-0 lg:block" />
 
-                <main className="relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5">
+                {/* No top margin, deliberately — home's centre column clears the
+                    fixed header with md:mt-[var(--header-height)], but the feed
+                    doesn't want that: its column is z-100, ABOVE the header
+                    (z-50), so the tab bar sits flush at top-0 and the header
+                    never covers it. Copying home's margin here parked the tabs a
+                    header's height down the page on arrival. */}
+                <main className="relative flex min-w-0 flex-1 flex-col lg:ml-2.5">
                     {/* The feed column keeps its own measure and edges — the
                         frame around it changed, the column didn't. */}
                     <div className="relative z-100 mx-auto min-h-dvh w-full max-w-[628px] border-soft-gray/[0.12] lg:border-x">
@@ -65,7 +71,11 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     DiscoverRightRail draws at 368px and centres in what's
                     left. */}
                 <aside className="sticky bottom-0 hidden w-96 shrink-0 self-end xl:block">
-                    <div className="flex justify-center pt-[82px]">
+                    {/* pr shifts the rail left inside its slot rather than the
+                        slot getting wider — widening the aside would take the
+                        space out of the feed column, which is already flex-1
+                        and tight at xl. */}
+                    <div className="flex justify-center pr-8 pt-[82px]">
                         <DiscoverRightRail />
                     </div>
                 </aside>
