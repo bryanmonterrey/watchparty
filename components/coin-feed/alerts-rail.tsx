@@ -71,7 +71,11 @@ function dedupeNewestFirst(items: AlertEvent[]): AlertEvent[] {
 
 // Tab names match the router's `scope` values exactly, so the query input is a
 // pass-through rather than a mapping.
-type RailTab = "alerts" | "following" | "mentions";
+//
+// "following" is gone from the rail. The router still accepts it as a scope —
+// only the tab that selected it was removed — so putting it back is adding the
+// label to the row below, nothing more.
+type RailTab = "alerts" | "mentions";
 
 export function AlertsRail({ className, onCollapse }: { className?: string; onCollapse?: () => void }) {
     const [filters, setFilters] = useState<AlertFilters>(DEFAULT_FILTERS);
@@ -411,7 +415,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 tab rather than a heading — and every icon in this row matches
                 that star's size-6 so the header reads as one set of controls. */}
             <div className="flex shrink-0 items-center px-1">
-                {(["alerts", "following"] as const).map((t) => (
+                {(["alerts"] as const).map((t) => (
                     <button
                         key={t}
                         type="button"
@@ -494,7 +498,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 list well clear of the bottom of the screen. Scoped here rather
                 than changed in the shell — the video rail still wants to run
                 near the bottom edge. */}
-            <RailShell className="mt-1 mb-36" radius={25} bordered>
+            <RailShell className="mt-1 mb-36" radius={16} bordered>
                 {/* Inline bar when already parked at the top — no need to float.
                     Inside the shell, above the scroller: it belongs to the list
                     it's offering to extend, so it sits within the same bordered
@@ -536,16 +540,14 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 ) : windowItems.length === 0 ? (
                     <div className="px-3 py-10 text-center">
                         <p className="text-[13px] font-bold text-zinc-400">
-                            {tab === "mentions" ? "no mentions yet" : tab === "following" ? "nothing from your follows" : "no alerts yet"}
+                            {tab === "mentions" ? "no mentions yet" : "no alerts yet"}
                         </p>
                         <p className="mt-1 text-[12px] text-zinc-600">
                             {summary
                                 ? "nothing matches these filters."
                                 : tab === "mentions"
                                   ? "alerts on your coins and your trades land here."
-                                  : tab === "following"
-                                    ? "activity from accounts you follow lands here."
-                                    : "trader clusters, callouts and predictions land here."}
+                                  : "trader clusters, callouts and predictions land here."}
                         </p>
                     </div>
                 ) : (
