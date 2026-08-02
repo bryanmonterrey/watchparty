@@ -438,7 +438,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         onClick={() => switchTab(t)}
                         aria-pressed={tab === t}
                         className={cn(
-                            "cursor-pointer whitespace-nowrap px-1.5 py-1.5 text-[15px] font-semibold tracking-tight transition-colors",
+                            "cursor-pointer whitespace-nowrap px-2 py-2 text-[15px] font-semibold tracking-tight transition-colors",
                             tab === t ? "text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >

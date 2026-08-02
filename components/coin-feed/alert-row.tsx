@@ -33,8 +33,8 @@ function KindIcon({ kind }: { kind: AlertEvent["kind"] }) {
         : kind === "launch" ? RocketIcon
         : Bitcoin01Icon;
     return (
-        <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-white/8">
-            <HugeiconsIcon icon={icon} className="size-2.5 text-zinc-400" strokeWidth={2.5} />
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/8">
+            <HugeiconsIcon icon={icon} className="size-3.5 text-zinc-400" strokeWidth={2.5} />
         </span>
     );
 }
@@ -47,7 +47,7 @@ function CoinMark({ event }: { event: AlertEvent }) {
                 src={event.tokenImageUrl}
                 alt=""
                 loading="lazy"
-                className="size-4.5 shrink-0 rounded-full object-cover"
+                className="size-6 shrink-0 rounded-full object-cover"
             />
         );
     }
@@ -58,7 +58,10 @@ function CoinMark({ event }: { event: AlertEvent }) {
 function Headline({ event }: { event: AlertEvent }) {
     const meta = KIND_META[event.kind];
     const badge = meta.badge ? (
-        <span className={cn("shrink-0 rounded px-1 py-px text-[11px] font-bold leading-[15px]", TONE_BADGE[meta.tone])}>
+        // Sized to sit on the 15px headline as a peer rather than a footnote —
+        // in the designs the buy/sell chip is nearly as tall as the text beside
+        // it, which is what makes the line scan as "N traders BUY $x".
+        <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[13px] font-bold leading-[16px]", TONE_BADGE[meta.tone])}>
             {meta.badge}
         </span>
     ) : null;
@@ -125,20 +128,24 @@ function Subline({ event }: { event: AlertEvent }) {
         );
     }
 
-    // "SYMBOL · $612K mc" rather than "SYMBOL at $612K MC". Two filler words and
-    // a gap each cost real width in a 276px column, and the middot carries the
-    // same separation. The symbol truncates instead of shrink-0 so a long ticker
-    // gives way rather than pushing the cap out of the row.
+    // "SYMBOL at $612K MC", per the alert designs — the filler words are what
+    // make the line read as a sentence rather than a data row, and they're
+    // dimmed so the symbol and the number still carry it. The symbol wears a
+    // dotted underline, which is the design's cue that it's the thing you click.
+    //
+    // The symbol truncates instead of shrink-0, so a long ticker gives way
+    // rather than pushing the market cap out of the row.
     return (
         <span className="flex min-w-0 items-center gap-1.5">
             <CoinMark event={event} />
-            <span className="truncate font-bold text-white">{event.symbol}</span>
+            <span className="truncate font-bold text-white underline decoration-zinc-600 decoration-dotted underline-offset-4">
+                {event.symbol}
+            </span>
             {event.marketCapUsd != null && (
                 <>
-                    <span className="shrink-0 text-zinc-600">·</span>
-                    <span className="shrink-0 font-bold tabular-nums text-zinc-400">
-                        {formatUsd(event.marketCapUsd)} mc
-                    </span>
+                    <span className="shrink-0 text-zinc-500">at</span>
+                    <span className="shrink-0 font-bold tabular-nums text-white">{formatUsd(event.marketCapUsd)}</span>
+                    <span className="shrink-0 text-zinc-500">MC</span>
                 </>
             )}
         </span>
@@ -164,16 +171,19 @@ export function AlertRow({ event }: { event: AlertEvent }) {
                 className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/alert-hover:opacity-10"
             />
             <TraderStack traders={event.traders} total={event.traderCount} className="mt-0.5" />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="flex min-w-0 items-center gap-1 text-[13px] leading-tight">
+            {/* 15px both lines, matching the designs — the rail is ~280px of
+                usable width there too, so it fits. gap-1.5 between them; the
+                two lines are one thought but shouldn't run together. */}
+            <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <span className="flex min-w-0 items-center gap-1.5 text-[15px] leading-tight">
                     <Headline event={event} />
                     {/* ml-auto, not a fixed column: the headline's own width
                         varies a lot and the age should hug the right edge. */}
-                    <span className="ml-auto shrink-0 pl-1.5 text-[12px] font-medium tabular-nums text-zinc-600">
+                    <span className="ml-auto shrink-0 pl-1.5 text-[13px] font-medium tabular-nums text-zinc-500">
                         {formatAge(event.occurredAt)}
                     </span>
                 </span>
-                <span className="flex min-w-0 items-center text-[13px] leading-tight">
+                <span className="flex min-w-0 items-center text-[15px] leading-tight">
                     <Subline event={event} />
                 </span>
             </span>
@@ -184,11 +194,16 @@ export function AlertRow({ event }: { event: AlertEvent }) {
     // replaces it, exactly as it does on the video rail (there the two are
     // mutually exclusive via `!hoverColor && hover:bg-…`). `relative` is what
     // the tint's inset-0 resolves against.
-    // px-3, not px-2: the list sits in a bordered box with a 25px radius now, so
-    // content that ran to px-2 was almost touching the outline and cutting the
-    // corner. `relative` is what the tint's inset-0 resolves against.
+    // A ruled list, per the designs: every row carries a divider and enough
+    // vertical room that the two lines read as one block. last:border-b-0 so the
+    // final row doesn't draw a line onto the shell's own bottom edge.
+    //
+    // px-3, not px-2: the list sits in a bordered box with a 25px radius, and
+    // content at px-2 was almost touching the outline and cutting the corner.
+    // `relative` is what the hover tint's inset-0 resolves against.
     const className = cn(
-        "group/alert-hover relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors",
+        "group/alert-hover relative flex w-full items-start gap-2.5 px-3 py-3.5 text-left transition-colors",
+        "border-b border-white/[0.06] last:border-b-0",
     );
 
     // No link target (a tracked coin on a chain with no explorer configured):
