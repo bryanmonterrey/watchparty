@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeftDoubleIcon, ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
-import { MessagesIcon, Star2Icon } from "@/components/icons";
+import { BookmarkIcon, MessagesIcon, Star2Icon } from "@/components/icons";
 import { Squircle } from "@/components/ui/squircle";
 import { trpc } from "@/lib/trpc/client";
 
@@ -134,6 +134,20 @@ export function HomeActionDock() {
                 >
                     <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
                 </button>
+
+                {/* Bookmarks. Its only entry point used to be the discover
+                    rail's user chip, which stopped rendering when /feed took
+                    home's frame — the route stayed reachable but nothing linked
+                    to it. It belongs here rather than back in a rail: the dock
+                    is the app-wide gutter, so it's the same one click from home
+                    and from the feed. */}
+                <div className={SLOT}>
+                    <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
+                        <Link href="/feed/bookmarks" aria-label="bookmarks" className={BUTTON}>
+                            <BookmarkIcon className="size-6" />
+                        </Link>
+                    </Squircle>
+                </div>
 
                 {/* TODO: opens the GLM assistant panel — see docs/TODO.md.
                     Inert until that surface exists. */}
