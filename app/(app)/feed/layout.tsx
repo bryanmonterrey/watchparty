@@ -50,12 +50,22 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                 {/* `sticky bottom-0` — scrolls up with the page, then pins once
                     its bottom edge reaches the viewport bottom, so a rail taller
                     than the viewport reveals its full height as you scroll
-                    instead of freezing at the top. w-96 rather than a flex
-                    share: the centre column is flex-1 now, so an unsized gutter
-                    would fight it for width. DiscoverRightRail draws at 368px
-                    and centres in what's left. */}
-                <aside className="hidden w-96 shrink-0 self-end xl:block">
-                    <div className="sticky bottom-0 flex justify-center pt-[82px]">
+                    instead of freezing at the top.
+
+                    The sticky belongs on the ASIDE, not on the div inside it.
+                    Sticky resolves against its containing block, and `self-end`
+                    makes the aside only as tall as its content — so an inner
+                    sticky has no range at all, and the rail just sat where it
+                    fell: the bottom of a min-h-screen row, below the fold. On
+                    the aside the containing block is the tall page row, which is
+                    the range it needs.
+
+                    w-96 rather than a flex share: the centre column is flex-1
+                    now, so an unsized gutter would fight it for width.
+                    DiscoverRightRail draws at 368px and centres in what's
+                    left. */}
+                <aside className="sticky bottom-0 hidden w-96 shrink-0 self-end xl:block">
+                    <div className="flex justify-center pt-[82px]">
                         <DiscoverRightRail />
                     </div>
                 </aside>
