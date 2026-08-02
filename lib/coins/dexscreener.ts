@@ -70,6 +70,20 @@ const num = (v: unknown): number | null => {
 };
 
 /**
+ * Lower-case EVM addresses, leave everything else alone.
+ *
+ * Verified against a live response: Dexscreener returns EVM addresses
+ * CHECKSUMMED (`0xC02aaA39…`) while our tables hold what GeckoTerminal gave us,
+ * which is lower-case. Storing one and looking up the other silently misses.
+ *
+ * The `0x` guard is the whole point — Solana mints are base58 and case is
+ * MEANINGFUL there, so a blanket toLowerCase() would corrupt them.
+ */
+export function normalizeAddress(address: string): string {
+    return /^0x[0-9a-fA-F]{40}$/.test(address) ? address.toLowerCase() : address;
+}
+
+/**
  * Every pair Dexscreener knows for a token address, across every chain,
  * DEEPEST LIQUIDITY FIRST.
  *
@@ -91,6 +105,8 @@ export async function fetchTokenPairs(address: string): Promise<DexPair[]> {
         return [];
     }
 
+    const wanted = normalizeAddress(address).toLowerCase();
+
     const out: DexPair[] = [];
     for (const p of json?.pairs ?? []) {
         const tokenAddress = p.baseToken?.address;
@@ -101,12 +117,16 @@ export async function fetchTokenPairs(address: string): Promise<DexPair[]> {
         // The queried address must be the pair's BASE token. Dexscreener returns
         // pairs where it's the quote side too (every SOL pair, say), and those
         // describe a different coin entirely.
-        if (tokenAddress.toLowerCase() !== address.toLowerCase()) continue;
+        //
+        // Compared case-insensitively because the response is checksummed and
+        // the query usually isn't; STORED via normalizeAddress so what we write
+        // matches what the rest of our tables hold.
+        if (tokenAddress.toLowerCase() !== wanted) continue;
 
         out.push({
             network: CHAIN_TO_NETWORK[p.chainId] ?? p.chainId,
             poolAddress,
-            tokenAddress,
+            tokenAddress: normalizeAddress(tokenAddress),
             dexId: p.dexId ?? null,
             symbol: symbol.toUpperCase(),
             name: p.baseToken?.name ?? null,
@@ -120,6 +140,13 @@ export async function fetchTokenPairs(address: string): Promise<DexPair[]> {
             sells24h: p.txns?.h24?.sells ?? null,
         });
     }
+
+    // `info` (and so the logo) is present on only a minority of pairs — 8 of 30
+    // on the live response I checked. They all describe the SAME token, so one
+    // pair's image is every pair's image; without this the coin usually renders
+    // logoless purely because its deepest pool happened to lack the block.
+    const image = out.find((p) => p.imageUrl)?.imageUrl ?? null;
+    if (image) for (const p of out) p.imageUrl ??= image;
 
     return out.sort((a, b) => (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0));
 }

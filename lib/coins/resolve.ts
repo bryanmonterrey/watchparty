@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { coinIndex } from "@/db/schema/content/coin-index";
-import { fetchTokenPairs } from "@/lib/coins/dexscreener";
+import { fetchTokenPairs, normalizeAddress } from "@/lib/coins/dexscreener";
 
 /** What /coin/<address> needs to render a coin we did not launch. Deliberately
  *  the same shape the chart overlay takes, so one view serves both. */
@@ -51,13 +51,27 @@ const txns = (buys: number | null, sells: number | null) =>
  * Returns null only when Dexscreener has never heard of the address either, at
  * which point the page really is a 404.
  */
-export async function resolveCoin(address: string, network?: string): Promise<ResolvedCoin | null> {
+export async function resolveCoin(raw: string, network?: string): Promise<ResolvedCoin | null> {
+    // EVM addresses arrive checksummed from Dexscreener, from a copy/paste out
+    // of Etherscan, or from a shared link — while every table here stores the
+    // lower-case form GeckoTerminal gave us. Normalising the INPUT is what makes
+    // /coin/0xC02aaA39… find the same row as /coin/0xc02aaa39…. Solana mints are
+    // base58 and pass through untouched; see normalizeAddress.
+    //
+    // Both forms are still tried below: `id` columns are `${network}:${address}`
+    // and a couple of older rows may have been written before this existed.
+    const address = normalizeAddress(raw);
+
     const onNetwork = <T extends { network: unknown }>(col: T) =>
         network ? eq(col.network as never, network) : undefined;
 
     const trending = await db.query.trendingCoins.findFirst({
         where: and(
-            or(eq(trendingCoins.tokenAddress, address), eq(trendingCoins.id, address)),
+            or(
+                eq(trendingCoins.tokenAddress, address),
+                eq(trendingCoins.id, address),
+                eq(trendingCoins.id, raw),
+            ),
             onNetwork(trendingCoins),
         ),
     });
@@ -83,7 +97,11 @@ export async function resolveCoin(address: string, network?: string): Promise<Re
 
     const tracked = await db.query.trackedTokens.findFirst({
         where: and(
-            or(eq(trackedTokens.tokenAddress, address), eq(trackedTokens.id, address)),
+            or(
+                eq(trackedTokens.tokenAddress, address),
+                eq(trackedTokens.id, address),
+                eq(trackedTokens.id, raw),
+            ),
             onNetwork(trackedTokens),
         ),
     });
@@ -112,7 +130,11 @@ export async function resolveCoin(address: string, network?: string): Promise<Re
 
     const indexed = await db.query.coinIndex.findFirst({
         where: and(
-            or(eq(coinIndex.tokenAddress, address), eq(coinIndex.id, address)),
+            or(
+                eq(coinIndex.tokenAddress, address),
+                eq(coinIndex.id, address),
+                eq(coinIndex.id, raw),
+            ),
             onNetwork(coinIndex),
         ),
     });

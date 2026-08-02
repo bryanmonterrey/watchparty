@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -11,7 +12,6 @@ import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
-import { useCoinOverlay } from "@/hooks/use-coin-overlay";
 import { useStuck } from "@/hooks/use-stuck";
 import type { AppRouter } from "@/server/routers";
 import { Squircle } from "@/components/ui/squircle";
@@ -214,7 +214,6 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
 }) {
     const title = row.name ?? row.symbol;
     const hoverColor = stableHoverColor(row.id);
-    const openCoin = useCoinOverlay((state) => state.onOpen);
 
     return (
         // No divider and no fill: the reference's rows sit straight on the
@@ -250,29 +249,25 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
                     />
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
-                    <button
-                        type="button"
-                        onClick={() => openCoin({
-                            id: row.id,
-                            network: row.network,
-                            tokenAddress: row.tokenAddress,
-                            poolAddress: row.poolAddress,
-                            symbol: row.symbol,
-                            name: row.name,
-                            imageUrl: row.imageUrl,
-                            priceUsd: row.priceUsd,
-                            marketCapUsd: row.marketCapUsd,
-                            liquidityUsd: row.liquidityUsd,
-                            volume24hUsd: row.volume24hUsd,
-                            priceChange24h: row.priceChange24h,
-                            buys24h: row.buys24h,
-                            sells24h: row.sells24h,
-                            txns24h: row.txns24h,
-                        })}
+                    {/* The coin PAGE, not the overlay. It used to open the
+                        overlay because /coin/<mint> resolved only against the
+                        `tokens` table and 404'd for a coin we hadn't launched —
+                        which was every row on this board. The page reads any
+                        coin on any chain now, so a row can just be a link.
+
+                        Chain-qualified: this board spans twenty chains and the
+                        same address exists on several of them, so naming the
+                        chain skips the resolution step entirely.
+
+                        after:inset-0 stretches the link over the whole row —
+                        the row is a div, not an anchor, because buy and star are
+                        interactive and can't nest inside one. */}
+                    <Link
+                        href={`/coin/${row.network}/${row.tokenAddress}`}
                         className={cn(CELL_TEXT, "cursor-pointer truncate text-left text-white after:absolute after:inset-0 after:content-['']")}
                     >
                         {title}
-                    </button>
+                    </Link>
                     <span className={cn(CELL_TEXT, "truncate text-zinc-500")}>{row.symbol}</span>
                 </span>
             </span>
