@@ -55,13 +55,17 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                 {/* No ml — the feed begins exactly where the left column ends,
                     which is the spacer's edge. Home's centre column has no left
                     margin either, so the two pages share the same vertical. */}
-                <main className="relative flex min-w-0 flex-1 flex-col">
-                    {/* Left-aligned, NOT mx-auto. Centred, the column floated in
-                        whatever width was left over, so where it began moved
-                        with the window and never lined up with anything. Anchored
-                        to the start it begins on the spacer's edge — the same
-                        vertical home's left column ends on. */}
-                    <div className="relative z-100 min-h-dvh w-full max-w-[628px] border-soft-gray/[0.12] lg:border-x">
+                {/* NOT flex-1. Growing, this swallowed every spare pixel and
+                    pushed the rail out to the far right; the feed never moved
+                    (it's anchored to the start) so all that width showed up as a
+                    gap between the two. Sized to the column instead, with the
+                    slack handed to the rail's mr-auto below — the feed keeps its
+                    position and the rail comes to sit beside it.
+
+                    The max-w moves up here from the child for the same reason:
+                    it's what stops main growing, so it has to be main's. */}
+                <main className="relative flex w-full min-w-0 max-w-[628px] flex-col">
+                    <div className="relative z-100 min-h-dvh w-full border-soft-gray/[0.12] lg:border-x">
                         {children}
                     </div>
                 </main>
@@ -79,16 +83,16 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     the aside the containing block is the tall page row, which is
                     the range it needs.
 
-                    w-96 rather than a flex share: the centre column is flex-1
-                    now, so an unsized gutter would fight it for width.
-                    DiscoverRightRail draws at 368px and centres in what's
-                    left. */}
-                <aside className="sticky bottom-0 hidden w-96 shrink-0 self-end xl:block">
-                    {/* pr shifts the rail left inside its slot rather than the
-                        slot getting wider — widening the aside would take the
-                        space out of the feed column, which is already flex-1
-                        and tight at xl. */}
-                    <div className="flex justify-center pr-8 pt-[82px]">
+                    ml-6 is the gap from the feed — 24px, measured off the
+                    column's edge rather than left to whatever width happened to
+                    be spare. mr-auto is what makes that hold: it hands the row's
+                    slack to the space on the rail's RIGHT, so a wider window
+                    pushes the dock out rather than prising these two apart. */}
+                <aside className="sticky bottom-0 ml-6 mr-auto hidden w-96 shrink-0 self-end xl:block">
+                    {/* justify-start, so the rail sits at the left edge of its
+                        slot — the ml-6 above is then the whole distance from the
+                        feed, with nothing else adding to it. */}
+                    <div className="flex justify-start pt-[82px]">
                         <DiscoverRightRail />
                     </div>
                 </aside>
