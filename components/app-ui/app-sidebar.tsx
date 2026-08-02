@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 import {
+    BrowseIcon,
     CreateIcon,
     HomeIcon,
     MessagesIcon,
@@ -70,9 +71,11 @@ const items = [
         url: "/home",
         icon: HomeIcon,
     },
-    // Discover is pulled from the nav for now, same as Shorts below: the route
-    // (app/(app)/feed) is untouched and still reachable directly — put the
-    // entry back here to restore it.
+    {
+        title: "Feed",
+        url: "/feed",
+        icon: BrowseIcon,
+    },
     {
         title: "Search",
         url: "/search",
@@ -157,7 +160,7 @@ export function AppSidebar() {
                 utils.content.getVideoFeed.prefetchInfinite({ limit: 36 })
                 utils.content.getVideoFeed.prefetchInfinite({ limit: 4, category: "IRL" })
                 break
-            case "Discover":
+            case "Feed":
                 utils.content.getFeed.prefetchInfinite({ type: "for-you", limit: 20 })
                 break
             case "Trade":

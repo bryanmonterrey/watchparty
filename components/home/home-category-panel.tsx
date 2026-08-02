@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import { HomeCategoryTabs, HOME_TABS } from "./home-category-tabs";
 import { TrendingTable } from "@/components/trending/trending-table";
-import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 import { useStuck } from "@/hooks/use-stuck";
 import { cn } from "@/lib/utils";
 
@@ -15,42 +13,17 @@ import { cn } from "@/lib/utils";
 // in the page: a full gap above the tabs (bare canvas under the screen) and
 // half that below, since the tabs belong to the row they filter.
 //
-const BrowseFeed = dynamic(
-    () => import("@/components/browse/browse-feed").then((module) => module.BrowseFeed),
-    { ssr: false, loading: () => <FeedPanelLoading /> },
-);
-
-function FeedPanelLoading() {
-    return (
-        <div className="flex flex-col">
-            {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="border-b border-soft-gray/10 p-4">
-                    <div className="flex gap-3">
-                        <div className="size-11 rounded-full shimmer-skeleton" />
-                        <div className="flex-1 space-y-3">
-                            <div className="h-3.5 w-2/5 rounded-full shimmer-skeleton" />
-                            <div className="h-3.5 w-4/5 rounded-full shimmer-skeleton" />
-                            {index % 2 === 1 && <div className="aspect-video w-full rounded-xl shimmer-skeleton" />}
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
+// The lazy BrowseFeed that used to render under the Feed tab is gone with the
+// tab — the feed is /feed now, so home no longer pulls that chunk at all.
 
 export function HomeCategoryPanel() {
     const [active, setActive] = useState(HOME_TABS[0]);
-    const openFeed = useHomeFeedOverlay((state) => state.onOpen);
     const { sentinelRef: tabsSentinel, stuck: tabsStuck } = useStuck();
 
-    const selectTab = (tab: string) => {
-        if (tab === "Feed" && active === "Feed") {
-            openFeed();
-            return;
-        }
-        setActive(tab);
-    };
+    // Every tab is now just a selection. The Feed tab used to be the exception —
+    // clicking it while already active opened the feed overlay — but the feed is
+    // its own route now, so there's nothing to special-case.
+    const selectTab = (tab: string) => setActive(tab);
 
     return (
         <>
@@ -102,7 +75,6 @@ export function HomeCategoryPanel() {
                 the tabs sit at 0 and this is just their height. */}
             <div className="z-0 flex-1 overflow-clip [--board-stick:3rem] md:[--board-stick:calc(var(--header-height)+3rem)]">
                 {active === "Trending Coins" && <TrendingTable />}
-                {active === "Feed" && <BrowseFeed homeTabsOffset />}
             </div>
         </>
     );

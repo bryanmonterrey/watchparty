@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { MaximizeIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { useEdgeScroll } from "@/hooks/use-edge-scroll";
 import { TabScrollArrow } from "./tab-scroll-arrow";
@@ -12,9 +11,10 @@ import { TabScrollArrow } from "./tab-scroll-arrow";
 //
 // Controlled when given `active`/`onChange` (home lifts the selection so the
 // panel below can render for it), uncontrolled otherwise.
+// No "Feed" here any more — the feed is its own destination at /feed, in the
+// sidebar under Home, rather than a tab that opened an overlay on this page.
 export const HOME_TABS = [
     "Trending Coins",
-    "Feed",
     "Just Chatting",
     "IRL",
     "Podcasts",
@@ -60,7 +60,6 @@ export function HomeCategoryTabs({
                         type="button"
                         onClick={() => setActive(tab)}
                         aria-pressed={active === tab}
-                        aria-haspopup={tab === "Feed" && active === tab ? "dialog" : undefined}
                         // No fill behind the active tab — colour alone carries
                         // it. The padding stays for hit area even though nothing
                         // paints it, and is what spaces the labels apart.
@@ -70,7 +69,6 @@ export function HomeCategoryTabs({
                         )}
                     >
                         {tab}
-                        {tab === "Feed" && active === tab && <MaximizeIcon className="size-5 shrink-0" />}
                     </button>
                 ))}
             </div>

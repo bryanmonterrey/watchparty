@@ -1,16 +1,20 @@
 import React from "react";
 import { DiscoverScrollBackdrop } from "@/components/browse/discover-scroll-backdrop";
 import { DiscoverRightRail } from "@/components/browse/discover-right-rail";
-import { HomeLeftRail } from "@/components/home/home-left-rail";
 import { HomeActionDock } from "@/components/home/home-action-dock";
 
-// /feed (formerly /discover) in HOME'S column frame, so the two read as the
-// same app rather than two layouts that happen to share a header: the coin
-// alerts rail on the left, the feed starting at its edge, a right rail, and the
-// action dock in the far gutter — the same four columns home runs.
+// /feed (formerly /discover) in HOME'S column frame: the feed column starts
+// where home's first column ends, a right rail, and home's action dock in the
+// far gutter.
 //
-// The left rail is home's HomeLeftRail (coin alerts), which REPLACES the old
-// DiscoverRail. That rail is no longer rendered anywhere; see the note in the
+// The left column is EMPTY — a spacer the width of home's alerts rail, not the
+// rail itself. Coin alerts are home's, and putting them here would have made
+// the feed a second home; the spacer keeps the feed starting on the same
+// vertical as home's centre column so switching between the two doesn't shift
+// the content sideways. Drop the spacer and the feed re-centres itself in the
+// wider row (the column is mx-auto), which is the other reasonable answer.
+//
+// The old DiscoverRail is no longer rendered anywhere; see the note in the
 // commit about the Post button and Bookmarks entry it used to carry.
 //
 // Single native scroll, as before: the whole row scrolls via the app's
@@ -30,7 +34,10 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
             {/* Mirrors home-page-surface's row: px-1, rails either side of a
                 flex-1 centre, dock last. */}
             <div className="relative flex min-h-screen w-full px-1">
-                <HomeLeftRail />
+                {/* w-72 matches HomeLeftRail's expanded width, and lg:block
+                    matches the breakpoint it appears at, so the feed lines up
+                    with home's centre column at every size home's rail exists. */}
+                <div aria-hidden className="hidden w-72 shrink-0 lg:block" />
 
                 <main className="relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5">
                     {/* The feed column keeps its own measure and edges — the
