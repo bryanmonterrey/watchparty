@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getUdfBars, SUPPORTED_RESOLUTIONS } from "@/lib/tokens/udf-datafeed";
+import { getUdfBars, parseSymbol, SUPPORTED_RESOLUTIONS } from "@/lib/tokens/udf-datafeed";
 
 // UDF (Universal Data Feed) REST server for the TradingView Charting Library.
 // `Datafeeds.UDFCompatibleDatafeed("/api/udf")` calls:
@@ -47,7 +47,11 @@ export async function GET(
             const symbol = q.get("symbol") ?? "";
             const ticker = symbol;
             // Drafts show their ticker as-is; live mints get the truncated form.
-            const display = isDraftSymbol(symbol) ? symbol.slice(DRAFT_PREFIX.length) : symbol;
+            // Symbols carry the chain (`base:0x…`); the ticker shown should be
+            // the address, not the routing prefix.
+            const display = isDraftSymbol(symbol)
+                ? symbol.slice(DRAFT_PREFIX.length)
+                : parseSymbol(symbol).address;
             const name = display.length > 10 ? `${display.slice(0, 4)}…${display.slice(-4)}` : display;
             return json({
                 name,

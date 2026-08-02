@@ -61,10 +61,14 @@ interface TokenTradingViewChartProps {
     mint?: string | null;
     /** Ticker — labels a draft's empty ("No data here") chart when there's no mint. */
     ticker?: string;
+    /** Chain the mint lives on. Every chain GeckoTerminal indexes charts; the
+     *  network rides in the symbol (see the datafeed's parseSymbol). Defaults to
+     *  Solana so existing callers keep working. */
+    network?: string;
     className?: string;
 }
 
-export function TokenTradingViewChart({ mint, ticker, className }: TokenTradingViewChartProps) {
+export function TokenTradingViewChart({ mint, ticker, network = "solana", className }: TokenTradingViewChartProps) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const widgetRef = React.useRef<TradingViewWidgetInstance | null>(null);
     const [state, setState] = React.useState<LoadState>("loading");
@@ -73,7 +77,11 @@ export function TokenTradingViewChart({ mint, ticker, className }: TokenTradingV
     // `draft-<ticker>` symbol the UDF server answers with no_data, so the widget
     // shows its native "No data here" state (like pump.fun) until first buy.
     const isDraft = !mint;
-    const symbol = mint || (ticker ? `draft-${ticker.replace(/[^a-zA-Z0-9]/g, "") || "TOKEN"}` : null);
+    const symbol = mint
+        ? `${network}:${mint}`
+        : ticker
+          ? `draft-${ticker.replace(/[^a-zA-Z0-9]/g, "") || "TOKEN"}`
+          : null;
 
     React.useEffect(() => {
         if (!symbol) return; // no mint and no ticker — nothing to chart

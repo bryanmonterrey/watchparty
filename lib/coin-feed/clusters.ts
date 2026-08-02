@@ -11,12 +11,11 @@
 
 import { db } from "@/db";
 import { coinFeedEvents, trackedTokens, type CoinFeedTrader, type NewCoinFeedEvent } from "@/db/schema/content/coin-feed";
-import { linkedWallets } from "@/db/schema/auth/linked-wallets";
-import { walletAddresses } from "@/db/schema/auth/wallet-addresses";
-import { user } from "@/db/schema/auth/user";
 import { eq, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { CallBudget, fetchPoolTrades, type PoolTrade } from "./geckoterminal";
+// Shared with the coin page's trades table — see lib/coins/resolve-traders.
+import { resolveTraders } from "@/lib/coins/resolve-traders";
 
 // ── Tuning ───────────────────────────────────────────────────────────────────
 // These are the knobs that decide whether the rail feels alive or noisy. They
@@ -67,56 +66,6 @@ function marketCapAt(token: ScannableToken, priceUsd: number | null): number | n
     if (priceUsd == null || token.priceUsd == null || token.priceUsd <= 0 || priceUsd <= 0) return cap;
     const scaled = cap * (priceUsd / token.priceUsd);
     return Number.isFinite(scaled) && scaled > 0 ? scaled : cap;
-}
-
-/**
- * Map wallet addresses back to watchparty accounts so the avatar stack shows
- * real faces for our own users. Checks both wallet tables: linked_wallets (the
- * Swig wallet + linked Solana extensions) and wallet_addresses (the derived
- * per-chain-kind addresses). Unknown wallets stay address-only — and the
- * address is never rendered, only used as the avatar's stable seed.
- */
-async function resolveTraders(addresses: string[]): Promise<Map<string, CoinFeedTrader>> {
-    const out = new Map<string, CoinFeedTrader>();
-    for (const a of addresses) out.set(a, { address: a });
-    if (addresses.length === 0) return out;
-
-    try {
-        const [linked, derived] = await Promise.all([
-            db
-                .select({
-                    address: linkedWallets.address,
-                    userId: user.id,
-                    username: user.username,
-                    avatarUrl: user.avatar_url,
-                })
-                .from(linkedWallets)
-                .innerJoin(user, eq(user.id, linkedWallets.user_id))
-                .where(inArray(linkedWallets.address, addresses)),
-            db
-                .select({
-                    address: walletAddresses.address,
-                    userId: user.id,
-                    username: user.username,
-                    avatarUrl: user.avatar_url,
-                })
-                .from(walletAddresses)
-                .innerJoin(user, eq(user.id, walletAddresses.user_id))
-                .where(inArray(walletAddresses.address, addresses)),
-        ]);
-
-        for (const row of [...linked, ...derived]) {
-            out.set(row.address, {
-                address: row.address,
-                userId: row.userId,
-                username: row.username,
-                avatarUrl: row.avatarUrl,
-            });
-        }
-    } catch {
-        // Identity is a nicety — a failed lookup must not drop the alert.
-    }
-    return out;
 }
 
 type Window = {

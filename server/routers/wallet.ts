@@ -16,6 +16,7 @@ async function serverConnection() {
     const { createServerConnection } = await import("@/lib/solana/server-connection");
     return createServerConnection();
 }
+import { resolveTraders } from "@/lib/coins/resolve-traders";
 import { withCache, withSwrCache, invalidateCache, redis, TTL } from "@/lib/cache";
 import { db } from "@/db";
 import { trades } from "@/db/schema/content";
@@ -3339,6 +3340,16 @@ export const walletRouter = router({
                     const json = await res.json();
                     const rows: { attributes: Record<string, string | number> }[] = json.data ?? [];
 
+                    // Resolve wallets to watchparty accounts in ONE batched
+                    // lookup, so the table can show a person instead of an
+                    // address wherever we know one. This is the thing a pure
+                    // market board can't do — everyone else has only the
+                    // address.
+                    const addresses = Array.from(
+                        new Set(rows.map((r) => String(r.attributes.tx_from_address ?? "")).filter(Boolean)),
+                    );
+                    const identities = await resolveTraders(addresses);
+
                     return rows.map((row) => {
                         const a = row.attributes;
                         const fromAddr = String(a.from_token_address ?? "");
@@ -3350,8 +3361,13 @@ export const walletRouter = router({
                             ? Number(a.to_token_amount ?? 0)
                             : Number(a.from_token_amount ?? 0);
 
+                        const account = String(a.tx_from_address ?? "");
+                        const who = identities.get(account);
+
                         return {
-                            account: String(a.tx_from_address ?? ""),
+                            account,
+                            username: who?.username ?? null,
+                            avatarUrl: who?.avatarUrl ?? null,
                             isBuy,
                             usdValue: Number(a.volume_in_usd ?? 0),
                             tokenAmount,

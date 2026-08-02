@@ -1,7 +1,8 @@
 // GeckoTerminal-backed UDF (Universal Data Feed) helpers for the TradingView
 // Charting Library. The library's bundled `Datafeeds.UDFCompatibleDatafeed`
 // hits a REST server implementing /config, /symbols, /history (+ /time). These
-// helpers implement the OHLCV side of that contract for a Solana mint.
+// helpers implement the OHLCV side of that contract for ANY chain GeckoTerminal
+// indexes — the symbol carries the network (see parseSymbol).
 //
 // We resolve a mint -> best GeckoTerminal pool (cached 1h), then pull OHLCV for
 // the requested resolution + time window. Mirrors the logic in
@@ -10,8 +11,29 @@
 
 import { withCache, TTL } from "@/lib/cache";
 
-const GT = "https://api.geckoterminal.com/api/v2/networks/solana";
+const GT = "https://api.geckoterminal.com/api/v2/networks";
 const GT_HEADERS = { Accept: "application/json;version=20230302" };
+
+/** Default chain for a bare address — every link written before the chart went
+ *  multi-chain carries one, and they must keep working. */
+const DEFAULT_NETWORK = "solana";
+
+/**
+ * Symbols are `network:address` — "base:0x…", "polygon_pos:0x…".
+ *
+ * The chart used to be Solana-only because this module hardcoded
+ * /networks/solana; GeckoTerminal indexes every chain it tracks, so the network
+ * just had to become part of the symbol. A bare address (no colon) is Solana,
+ * which is what every existing link and stored layout contains.
+ *
+ * Split on the FIRST colon only: network slugs are colon-free but addresses
+ * shouldn't be assumed to be.
+ */
+export function parseSymbol(symbol: string): { network: string; address: string } {
+    const i = symbol.indexOf(":");
+    if (i === -1) return { network: DEFAULT_NETWORK, address: symbol };
+    return { network: symbol.slice(0, i) || DEFAULT_NETWORK, address: symbol.slice(i + 1) };
+}
 
 // TradingView resolution string -> GeckoTerminal [unit, aggregate, barSeconds].
 // GeckoTerminal supports minute:{1,5,15}, hour:{1,4,12}, day:{1}.
@@ -35,11 +57,11 @@ interface PoolInfo {
     tokenSide: "base" | "quote";
 }
 
-export async function resolvePool(mint: string): Promise<PoolInfo | null> {
+export async function resolvePool(mint: string, network = DEFAULT_NETWORK): Promise<PoolInfo | null> {
     try {
-        return await withCache(`gt:pool:${mint}`, TTL.CHART_POOL, async () => {
+        return await withCache(`gt:pool:v2:${network}:${mint}`, TTL.CHART_POOL, async () => {
             const res = await fetch(
-                `${GT}/tokens/${mint}/pools?sort=h24_volume_usd_liquidity_desc&limit=1`,
+                `${GT}/${network}/tokens/${mint}/pools?sort=h24_volume_usd_liquidity_desc&limit=1`,
                 { headers: GT_HEADERS, signal: AbortSignal.timeout(8000) },
             );
             if (!res.ok) throw new Error(`pools ${res.status}`);
@@ -73,7 +95,7 @@ export interface UdfBars {
  * resolution, returning the UDF /history response shape.
  */
 export async function getUdfBars(
-    rawMint: string,
+    rawSymbol: string,
     resolution: string,
     from: number,
     to: number,
@@ -82,10 +104,11 @@ export async function getUdfBars(
     const cfg = RESOLUTION_MAP[resolution] ?? RESOLUTION_MAP["60"];
     const [unit, aggregate, barSeconds] = cfg;
 
+    const { network, address } = parseSymbol(rawSymbol);
     // Native SOL isn't indexed by GeckoTerminal — remap to wSOL.
-    const mint = rawMint === "So11111111111111111111111111111111111111111" ? WSOL : rawMint;
+    const mint = address === "So11111111111111111111111111111111111111111" ? WSOL : address;
 
-    const pool = await resolvePool(mint);
+    const pool = await resolvePool(mint, network);
     if (!pool) return { s: "no_data" };
 
     // GeckoTerminal returns up to `limit` candles ending at before_timestamp.
@@ -107,10 +130,10 @@ export async function getUdfBars(
     // just as badly.
     const bucketedTo = Math.floor(to / TTL.CHART_OHLCV) * TTL.CHART_OHLCV;
     const bucketedLimit = Math.min(1000, Math.ceil(limit / 100) * 100);
-    const key = `udf:v2:${mint}:${resolution}:${bucketedTo}:${bucketedLimit}`;
+    const key = `udf:v3:${network}:${mint}:${resolution}:${bucketedTo}:${bucketedLimit}`;
     try {
         return await withCache(key, TTL.CHART_OHLCV, async () => {
-            const url = new URL(`${GT}/pools/${pool.address}/ohlcv/${unit}`);
+            const url = new URL(`${GT}/${network}/pools/${pool.address}/ohlcv/${unit}`);
             url.searchParams.set("aggregate", String(aggregate));
             url.searchParams.set("limit", String(bucketedLimit));
             url.searchParams.set("currency", "usd");

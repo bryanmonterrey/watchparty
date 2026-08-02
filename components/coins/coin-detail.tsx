@@ -16,6 +16,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Copy01Icon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import { ChainBadge } from "@/components/trending/chain-badge";
+import { PinkStarLogo } from "@/components/icons";
+import { stableHoverColor } from "@/lib/stable-hover-color";
 import { SwapView } from "@/components/wallet/wallet-drawer2/views/swap/swap-view";
 import type { Token as SwapToken } from "@/components/wallet/wallet-drawer2/views/swap/token-selector-modal";
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
@@ -168,142 +170,234 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
     );
 }
 
-/** Relative age, compact — "2m", "4h", "3d". The reference's rows lead with
- *  how recent a trade is, and a full timestamp is noise at that density. */
-function ago(ts: number) {
-    const secs = Math.max(0, Math.floor(Date.now() / 1000) - ts);
-    if (secs < 60) return `${secs}s`;
-    if (secs < 3600) return `${Math.floor(secs / 60)}m`;
-    if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
-    return `${Math.floor(secs / 86400)}d`;
-}
-
 const compactAmount = (n: number) =>
     new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 }).format(n);
 
 /**
- * The table under the chart: a tab row, column labels, then rows.
+ * The swap column's cards — the alerts list's hairline (#18181B, the same
+ * RAIL_BORDER value that box carries) and NO fill.
  *
- * SWAPS is the only tab with data behind it. Holders — position, PnL, average
- * entry — is the shape the reference shows, but every one of those columns
- * needs per-wallet cost basis, which means indexing every transfer of the mint.
- * We don't have that, and inventing the columns with blanks would be worse than
- * saying so, so the tab states it plainly rather than rendering an empty grid.
+ * Transparent rather than soft-gray-5: the column already sits on the page's
+ * canvas, and a second surface colour behind an outlined card reads as two
+ * boxes stacked. The outline alone is the card.
+ */
+const SWAP_CARD = "rounded-2xl border border-[#18181B] bg-transparent";
+
+type TraderRow = {
+    account: string;
+    username: string | null;
+    avatarUrl: string | null;
+    /** Net tokens held from the swaps in view: bought minus sold. */
+    position: number;
+    /** Volume-weighted average price of their BUYS in the window. */
+    avgEntry: number | null;
+    positionUsd: number | null;
+    pnlUsd: number | null;
+    pnlPct: number | null;
+};
+
+/**
+ * Fold the raw swap feed into one row per trader.
+ *
+ * IMPORTANT, and the table says so too: this is derived from the swaps GT
+ * returns — roughly the last 24 hours — not from chain history. Someone who
+ * bought a week ago and hasn't traded since simply isn't here, and a position
+ * shown is what they moved in the window, not what they hold. A true holders
+ * table needs every transfer of the mint indexed and each wallet's cost basis
+ * reconstructed; that's a backend project, not a fold over this array.
+ */
+function foldTraders(
+    trades: {
+        account: string;
+        username: string | null;
+        avatarUrl: string | null;
+        isBuy: boolean;
+        usdValue: number;
+        tokenAmount: number;
+    }[],
+    priceUsd: number | null,
+): TraderRow[] {
+    const byTrader = new Map<string, TraderRow & { buyTokens: number; buyUsd: number }>();
+
+    for (const t of trades) {
+        if (!t.account) continue;
+        let row = byTrader.get(t.account);
+        if (!row) {
+            row = {
+                account: t.account,
+                username: t.username,
+                avatarUrl: t.avatarUrl,
+                position: 0,
+                avgEntry: null,
+                positionUsd: null,
+                pnlUsd: null,
+                pnlPct: null,
+                buyTokens: 0,
+                buyUsd: 0,
+            };
+            byTrader.set(t.account, row);
+        }
+        row.position += t.isBuy ? t.tokenAmount : -t.tokenAmount;
+        if (t.isBuy) {
+            row.buyTokens += t.tokenAmount;
+            row.buyUsd += t.usdValue;
+        }
+    }
+
+    const rows: TraderRow[] = [];
+    for (const row of byTrader.values()) {
+        const avgEntry = row.buyTokens > 0 ? row.buyUsd / row.buyTokens : null;
+        const positionUsd = priceUsd != null ? row.position * priceUsd : null;
+        // Only meaningful while they're still net long — a closed or short
+        // position has no unrealised PnL to quote against an entry price.
+        const pnlUsd =
+            avgEntry != null && priceUsd != null && row.position > 0
+                ? row.position * (priceUsd - avgEntry)
+                : null;
+        rows.push({
+            ...row,
+            avgEntry,
+            positionUsd,
+            pnlUsd,
+            pnlPct: avgEntry != null && priceUsd != null && row.position > 0
+                ? ((priceUsd - avgEntry) / avgEntry) * 100
+                : null,
+        });
+    }
+
+    return rows.sort((a, b) => Math.abs(b.positionUsd ?? 0) - Math.abs(a.positionUsd ?? 0));
+}
+
+/**
+ * The table under the chart — one row per trader, per the reference's shape.
+ *
+ * Columns: Trader · Position · PnL · Avg entry · $ (theses).
+ *
+ * The tab row that was here went with the Type column: with holder-shaped
+ * columns, a list of individual swaps and a list of traders aren't two views of
+ * one table, and pretending otherwise made both worse.
  */
 function CoinTable({ coin }: { coin: CoinViewData }) {
-    const [tab, setTab] = React.useState<"swaps" | "holders">("swaps");
     const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
         { mint: coin.tokenAddress },
         { enabled: coin.network === "solana", staleTime: 30_000, refetchInterval: 30_000, retry: 1 },
     );
 
-    // One definition for the header and every row, so the columns can't drift.
-    const GRID = "grid grid-cols-[64px_minmax(0,1fr)_110px_110px_64px] items-center gap-3 px-4";
+    const rows = React.useMemo(() => foldTraders(trades, coin.priceUsd), [trades, coin.priceUsd]);
+
+    // One definition for the header and every row, so columns can't drift.
+    const GRID =
+        "grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_56px] items-center gap-3 px-4";
 
     return (
         <section className="flex min-w-0 flex-col">
-            <div className="flex items-center gap-5 px-4 pb-3 pt-4">
-                {(["swaps", "holders"] as const).map((t) => (
-                    <button
-                        key={t}
-                        type="button"
-                        onClick={() => setTab(t)}
-                        aria-pressed={tab === t}
-                        className={cn(
-                            "cursor-pointer text-[15px] font-bold capitalize transition-colors",
-                            tab === t ? "text-white" : "text-zinc-600 hover:text-zinc-300",
-                        )}
-                    >
-                        {t}
-                    </button>
-                ))}
+            <div className={cn(GRID, "pb-2 pt-4 text-[13px] font-medium text-zinc-600")}>
+                <span>Trader</span>
+                <span>Position</span>
+                <span>PnL</span>
+                <span>Avg entry</span>
+                <span className="text-right">$</span>
             </div>
 
-            {tab === "holders" ? (
+            {coin.network !== "solana" ? (
                 <p className="px-4 pb-8 text-sm text-zinc-500">
-                    Holder positions need per-wallet cost basis — every transfer of the mint indexed.
-                    Not tracked yet.
+                    Trader activity is read from the Solana pool. Open the market venue for {chainLabel(coin.network)}.
                 </p>
-            ) : coin.network !== "solana" ? (
-                <p className="px-4 pb-8 text-sm text-zinc-500">
-                    Swaps are read from the Solana pool. Open the market venue for {chainLabel(coin.network)}.
-                </p>
+            ) : isLoading ? (
+                <div className="space-y-1 px-4 pb-5">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="h-12 rounded-lg shimmer-skeleton" />
+                    ))}
+                </div>
+            ) : rows.length === 0 ? (
+                <p className="px-4 pb-8 text-sm text-zinc-500">No trader activity yet.</p>
             ) : (
-                <>
-                    <div className={cn(GRID, "pb-2 text-[13px] font-medium text-zinc-600")}>
-                        <span>Type</span>
-                        <span>Trader</span>
-                        <span className="text-right">Amount</span>
-                        <span className="text-right">Value</span>
-                        <span className="text-right">Age</span>
-                    </div>
+                <div className="pb-4">
+                    {rows.slice(0, 25).map((row) => {
+                        const up = (row.pnlUsd ?? 0) >= 0;
+                        return (
+                            <div key={row.account} className={cn(GRID, "py-2.5 text-[14px] transition-colors hover:bg-white/[0.03]")}>
+                                {/* A PERSON where the wallet belongs to one. Every
+                                    other market board shows an address here,
+                                    because an address is all they have. The
+                                    fallback is the alerts rail's treatment — a
+                                    seeded circle with the brand star, never a
+                                    letter — and addresses are never rendered in
+                                    full. */}
+                                <span className="flex min-w-0 items-center gap-2">
+                                    <span
+                                        className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                        style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
+                                    >
+                                        {row.avatarUrl ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={row.avatarUrl} alt="" loading="lazy" className="size-full object-cover" />
+                                        ) : (
+                                            <PinkStarLogo className="size-[58%]" />
+                                        )}
+                                    </span>
+                                    <span className={cn("truncate font-bold", row.username ? "text-white" : "text-zinc-400")}>
+                                        {row.username ?? `${row.account.slice(0, 4)}…${row.account.slice(-4)}`}
+                                    </span>
+                                </span>
 
-                    {isLoading ? (
-                        <div className="space-y-1 px-4 pb-5">
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <div key={i} className="h-11 rounded-lg shimmer-skeleton" />
-                            ))}
-                        </div>
-                    ) : trades.length === 0 ? (
-                        <p className="px-4 pb-8 text-sm text-zinc-500">No recent trades.</p>
-                    ) : (
-                        <div className="pb-4">
-                            {trades.slice(0, 25).map((trade, i) => (
-                                <a
-                                    key={trade.txHash || i}
-                                    href={`https://solscan.io/tx/${trade.txHash}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={cn(GRID, "py-2.5 text-[14px] transition-colors hover:bg-white/[0.03]")}
-                                >
-                                    <span className={cn("font-bold", trade.isBuy ? "text-lantern" : "text-pastelred")}>
-                                        {trade.isBuy ? "Buy" : "Sell"}
+                                <span className="flex min-w-0 flex-col">
+                                    <span className="truncate font-bold tabular-nums text-white">
+                                        {row.positionUsd == null ? "—" : compactUsd(row.positionUsd)}
                                     </span>
-                                    {/* Wallet addresses are never rendered in full
-                                        (project rule) — truncated is identity
-                                        enough to tell two traders apart. */}
-                                    <span className="truncate font-medium text-zinc-300">
-                                        {trade.account.slice(0, 4)}…{trade.account.slice(-4)}
+                                    <span className="truncate text-[12px] font-medium tabular-nums text-zinc-500">
+                                        {compactAmount(row.position)} {coin.symbol}
                                     </span>
-                                    <span className="text-right font-medium tabular-nums text-zinc-400">
-                                        {compactAmount(trade.tokenAmount)}
+                                </span>
+
+                                <span className="flex min-w-0 flex-col">
+                                    <span className={cn("truncate font-bold tabular-nums", row.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred")}>
+                                        {row.pnlUsd == null ? "—" : `${up ? "+" : "−"}${compactUsd(Math.abs(row.pnlUsd))}`}
                                     </span>
-                                    <span className="text-right font-bold tabular-nums text-white">
-                                        {compactUsd(trade.usdValue)}
-                                    </span>
-                                    <span className="text-right font-medium tabular-nums text-zinc-600">
-                                        {trade.ts ? ago(trade.ts) : "—"}
-                                    </span>
-                                </a>
-                            ))}
-                        </div>
-                    )}
-                </>
+                                    {row.pnlPct != null && (
+                                        <span className={cn("truncate text-[12px] font-medium tabular-nums", up ? "text-lantern" : "text-pastelred")}>
+                                            {up ? "▲" : "▼"} {Math.abs(row.pnlPct).toFixed(2)}%
+                                        </span>
+                                    )}
+                                </span>
+
+                                <span className="truncate font-bold tabular-nums text-white">
+                                    {row.avgEntry == null ? "—" : compactUsd(row.avgEntry)}
+                                </span>
+
+                                {/* Theses — posts mentioning the coin's cashtag.
+                                    Not wired yet; the column is here because it's
+                                    the differentiated one and the shape should
+                                    exist before the data lands. */}
+                                <span className="text-right font-medium tabular-nums text-zinc-600">—</span>
+                            </div>
+                        );
+                    })}
+
+                    <p className="px-4 pt-3 text-[12px] text-zinc-600">
+                        From swaps in the last 24h — not full chain history.
+                    </p>
+                </div>
             )}
         </section>
     );
 }
 
 function CoinChart({ coin }: { coin: CoinViewData }) {
-    const marketUrl = tradeUrl(coin.network, coin.tokenAddress, coin.poolAddress);
-
     return (
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {/* EVERY chain, not just Solana. GeckoTerminal indexes them all —
+                the datafeed was hardcoded to /networks/solana, so the network
+                now rides in the symbol (`base:0x…`) and this renders whatever
+                the coin is on. The "open the market venue" fallback that used
+                to stand in for non-Solana chains is gone with it. */}
             <div className="h-[min(64vh,720px)] min-h-[420px] flex-1 bg-black">
-                {coin.network === "solana" ? (
-                    <TokenTradingViewChart mint={coin.tokenAddress} ticker={coin.symbol} className="h-full w-full" />
-                ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-                        <p className="text-lg font-semibold text-white">Chart available on {chainLabel(coin.network)}</p>
-                        <p className="max-w-md text-sm text-zinc-500">The in-app chart currently supports Solana markets. Open the live pool for this network’s candles and depth.</p>
-                        {marketUrl && (
-                            <a href={marketUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-black hover:bg-white/85">
-                                Open market
-                                <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4" strokeWidth={2} />
-                            </a>
-                        )}
-                    </div>
-                )}
+                <TokenTradingViewChart
+                    mint={coin.tokenAddress}
+                    ticker={coin.symbol}
+                    network={coin.network}
+                    className="h-full w-full"
+                />
             </div>
             <CoinTable coin={coin} />
         </main>
@@ -328,17 +422,21 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
         logoURI: tokenMetadata.logoURI || coin.imageUrl || undefined,
     } : null;
 
+    // The cards below carry the same hairline the alerts list does
+    // (RAIL_BORDER, #18181B) with no fill of their own, so each reads as an
+    // outlined card on the page rather than a second surface colour. See
+    // SWAP_CARD.
     return (
         <aside className="p-4">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 {coin.network !== "solana" ? (
-                    <div className="rounded-2xl bg-soft-gray-5 p-5">
+                    <div className={SWAP_CARD + " p-5"}>
                         <h3 className="text-lg font-bold text-white">Trade {coin.symbol}</h3>
                         <p className="mt-2 text-sm leading-relaxed text-zinc-500">In-app swaps currently route through Jupiter on Solana. Use the live venue for {chainLabel(coin.network)}.</p>
                         {marketUrl && <Button asChild className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85"><a href={marketUrl} target="_blank" rel="noopener noreferrer">Open market</a></Button>}
                     </div>
                 ) : !walletAddress ? (
-                    <div className="rounded-2xl bg-soft-gray-5 p-5">
+                    <div className={SWAP_CARD + " p-5"}>
                         <h3 className="text-lg font-bold text-white">Swap {coin.symbol}</h3>
                         <p className="mt-2 text-sm text-zinc-500">Connect or unlock your wallet to trade this coin through Jupiter.</p>
                         <Button onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))} className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85">Open wallet</Button>
@@ -346,13 +444,13 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
                 ) : isLoading ? (
                     <div className="h-[430px] rounded-2xl shimmer-skeleton" />
                 ) : !outputToken ? (
-                    <div className="rounded-2xl bg-soft-gray-5 p-5">
+                    <div className={SWAP_CARD + " p-5"}>
                         <h3 className="text-lg font-bold text-white">Swap unavailable</h3>
                         <p className="mt-2 text-sm leading-relaxed text-zinc-500">This coin is not available from the current Jupiter token metadata source.</p>
                         {marketUrl && <Button asChild className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85"><a href={marketUrl} target="_blank" rel="noopener noreferrer">Open market</a></Button>}
                     </div>
                 ) : (
-                    <div className="overflow-hidden rounded-2xl bg-soft-gray-5">
+                    <div className={SWAP_CARD + " overflow-hidden"}>
                         <SwapView key={coin.id} walletAddress={walletAddress} onBack={() => {}} initialOutputToken={outputToken} showBack={false} />
                     </div>
                 )}
