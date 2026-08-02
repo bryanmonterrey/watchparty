@@ -8,7 +8,8 @@ import { ArrowUp02Icon, ArrowLeftDoubleIcon, AtIcon } from "@hugeicons/core-free
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
-import { RailShell } from "@/components/rails/rail-shell";
+import { RailShell, RAIL_BORDER } from "@/components/rails/rail-shell";
+import { Squircle } from "@/components/ui/squircle";
 import { AlertRow } from "./alert-row";
 import { AlertListSkeleton } from "./alert-row-skeleton";
 import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
@@ -413,8 +414,23 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 right rail's tabs — colour alone carries the active state. */}
             {/* Mentions is an ICON tab, the same way the right rail's star is a
                 tab rather than a heading — and every icon in this row matches
-                that star's size-6 so the header reads as one set of controls. */}
-            <div className="flex shrink-0 items-center px-1">
+                that star's size-6 so the header reads as one set of controls.
+
+                The header has its own bordered box, rounded 16 on the TOP
+                corners and square on the bottom, meeting the list below (which
+                squares its top to match) so the two read as one panel.
+
+                shrink-0 lives on this outer div rather than on the Squircle:
+                declaring an innerBorder makes Lisse inject a wrapper between
+                them, and that wrapper — not the Squircle — is the flex item, so
+                a shrink-0 on the inside would never reach the rail's column. */}
+            <div className="shrink-0">
+            <Squircle
+                radius={{ topLeft: 16, topRight: 16 }}
+                autoEffects={false}
+                innerBorder={RAIL_BORDER}
+                className="flex items-center px-1"
+            >
                 {(["alerts"] as const).map((t) => (
                     <button
                         key={t}
@@ -455,6 +471,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         </button>
                     )}
                 </div>
+            </Squircle>
             </div>
 
             {summary && <p className="shrink-0 truncate px-2 pt-0.5 text-[11px] text-zinc-600">{summary}</p>}
@@ -498,7 +515,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 list well clear of the bottom of the screen. Scoped here rather
                 than changed in the shell — the video rail still wants to run
                 near the bottom edge. */}
-            <RailShell className="mb-36" radius={16} bordered>
+            <RailShell className="mb-16" radius={{ bottomLeft: 16, bottomRight: 16 }} bordered>
                 {/* Inline bar when already parked at the top — no need to float.
                     Inside the shell, above the scroller: it belongs to the list
                     it's offering to extend, so it sits within the same bordered

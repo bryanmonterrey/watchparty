@@ -1,6 +1,6 @@
 "use client";
 
-import { Squircle } from "@/components/ui/squircle";
+import { Squircle, type SquircleCorners } from "@/components/ui/squircle";
 import { cn } from "@/lib/utils";
 
 // The box a rail's LIST lives in — not its tabs. Home's video rail and the left
@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 // it gets cut away at exactly the corners the squircle exists for. Declaring it
 // as a Lisse effect instead means it's stroked into the wrapper Lisse injects,
 // which is never clipped, and traces the same curve.
-const BORDER = { width: 1, color: "#e7e9ea", opacity: 0.1 };
+export const RAIL_BORDER = { width: 1, color: "#e7e9ea", opacity: 0.1 };
 
 export function RailShell({
     children,
@@ -40,8 +40,9 @@ export function RailShell({
 }: {
     children: React.ReactNode;
     className?: string;
-    /** Corner radius of the list box. */
-    radius?: number;
+    /** Corner radius of the list box. An object rounds only the corners named —
+     *  the alerts rail squares its top so the tab box above joins onto it. */
+    radius?: number | SquircleCorners;
     /** Outline the box. Off by default — only the alerts rail wants it. */
     bordered?: boolean;
 }) {
@@ -54,7 +55,7 @@ export function RailShell({
             <Squircle
                 radius={radius}
                 autoEffects={false}
-                innerBorder={bordered ? BORDER : undefined}
+                innerBorder={bordered ? RAIL_BORDER : undefined}
                 className="flex size-full min-h-0 flex-col pb-2"
             >
                 {children}
