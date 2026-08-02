@@ -498,7 +498,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 list well clear of the bottom of the screen. Scoped here rather
                 than changed in the shell — the video rail still wants to run
                 near the bottom edge. */}
-            <RailShell className="mt-1 mb-36" radius={16} bordered>
+            <RailShell className="mb-36" radius={16} bordered>
                 {/* Inline bar when already parked at the top — no need to float.
                     Inside the shell, above the scroller: it belongs to the list
                     it's offering to extend, so it sits within the same bordered
