@@ -34,9 +34,16 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
             {/* Mirrors home-page-surface's row: px-1, rails either side of a
                 flex-1 centre, dock last. */}
             <div className="relative flex min-h-screen w-full px-1">
-                {/* w-72 matches HomeLeftRail's expanded width, and lg:block
-                    matches the breakpoint it appears at, so the feed lines up
-                    with home's centre column at every size home's rail exists. */}
+                {/* The offset that puts the feed's left edge exactly where
+                    home's left column ends: w-72 is HomeLeftRail's expanded
+                    width and lg:block is the breakpoint it appears at, and this
+                    row shares home's px-1 — so the spacer's right edge lands on
+                    the same x as the rail's.
+
+                    Fixed at the EXPANDED width on purpose. Home's rail collapses
+                    to w-11, but that's a per-visit toggle stored in
+                    localStorage; tracking it here would make the feed's left
+                    edge move depending on what you last did on another page. */}
                 <div aria-hidden className="hidden w-72 shrink-0 lg:block" />
 
                 {/* No top margin, deliberately — home's centre column clears the
@@ -45,10 +52,17 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     (z-50), so the tab bar sits flush at top-0 and the header
                     never covers it. Copying home's margin here parked the tabs a
                     header's height down the page on arrival. */}
-                <main className="relative flex min-w-0 flex-1 flex-col lg:ml-2.5">
-                    {/* The feed column keeps its own measure and edges — the
-                        frame around it changed, the column didn't. */}
-                    <div className="relative z-100 mx-auto min-h-dvh w-full max-w-[628px] border-soft-gray/[0.12] lg:border-x">
+                {/* No ml here. Home's centre column carries lg:ml-2.5, which
+                    starts its content 10px PAST the rail — the feed is meant to
+                    begin exactly where the left column ends, so it starts at the
+                    spacer's edge instead. */}
+                <main className="relative flex min-w-0 flex-1 flex-col">
+                    {/* Left-aligned, NOT mx-auto. Centred, the column floated in
+                        whatever width was left over, so where it began moved
+                        with the window and never lined up with anything. Anchored
+                        to the start it begins on the spacer's edge — the same
+                        vertical home's left column ends on. */}
+                    <div className="relative z-100 min-h-dvh w-full max-w-[628px] border-soft-gray/[0.12] lg:border-x">
                         {children}
                     </div>
                 </main>
