@@ -135,6 +135,21 @@ export function HomeActionDock() {
                     <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
                 </button>
 
+                {/* AI is the first button under the chevron — the top of the
+                    stack on every page this dock renders on, which is home and
+                    /feed. Order lives here, in the shared component, so the two
+                    can't disagree.
+
+                    TODO: opens the GLM assistant panel — see docs/TODO.md.
+                    Inert until that surface exists. */}
+                <div className={SLOT}>
+                    <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
+                        <button type="button" aria-label="ask ai" className={BUTTON}>
+                            <Star2Icon className="size-6.5" />
+                        </button>
+                    </Squircle>
+                </div>
+
                 {/* Bookmarks. Its only entry point used to be the discover
                     rail's user chip, which stopped rendering when /feed took
                     home's frame — the route stayed reachable but nothing linked
@@ -146,16 +161,6 @@ export function HomeActionDock() {
                         <Link href="/feed/bookmarks" aria-label="bookmarks" className={BUTTON}>
                             <BookmarkIcon className="size-6" />
                         </Link>
-                    </Squircle>
-                </div>
-
-                {/* TODO: opens the GLM assistant panel — see docs/TODO.md.
-                    Inert until that surface exists. */}
-                <div className={SLOT}>
-                    <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
-                        <button type="button" aria-label="ask ai" className={BUTTON}>
-                            <Star2Icon className="size-6.5" />
-                        </button>
                     </Squircle>
                 </div>
 
