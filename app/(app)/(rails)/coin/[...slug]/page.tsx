@@ -96,9 +96,8 @@ export default async function CoinPage({ params }: Params) {
     const coin = await getCoin(parsed.address, parsed.network);
     if (!coin) notFound();
 
-    return (
-        <div className="w-full min-w-0 pt-header">
-            <CoinDetail coin={coin} />
-        </div>
-    );
+    // No pt-header wrapper: the dock inside CoinDetail is a sticky h-screen
+    // column, and offsetting it pushes its bottom that far past the viewport.
+    // The clearance lives on the content column instead.
+    return <CoinDetail coin={coin} />;
 }

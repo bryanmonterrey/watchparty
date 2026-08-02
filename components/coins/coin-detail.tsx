@@ -23,6 +23,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
+import { HomeActionDock } from "@/components/home/home-action-dock";
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
  *  ResolvedCoin — declared here because that module is server-only and this
@@ -241,8 +242,8 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
     } : null;
 
     return (
-        <aside className="p-4 xl:border-l xl:border-soft-gray/10">
-            <div className="xl:sticky xl:top-0">
+        <aside className="p-4 @4xl/coin:border-l @4xl/coin:border-soft-gray/10">
+            <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 {coin.network !== "solana" ? (
                     <div className="rounded-2xl bg-soft-gray-5 p-5">
                         <h3 className="text-lg font-bold text-white">Trade {coin.symbol}</h3>
@@ -274,26 +275,40 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
 }
 
 /**
- * The coin view — a header, the chart under it, and the swap panel beside both.
+ * The coin view: alerts rail (from the route group) | header + chart | swap |
+ * action dock — the same four columns home and /feed run.
  *
- * TWO columns, not three. The header used to be a 280px identity SIDEBAR with
- * the stats stacked down it, which spent a fifth of the page on six numbers and
- * took that width from the chart. Identity and stats belong in a bar; the
- * surface belongs to the chart.
+ * TWO things about the grid are load-bearing:
  *
- * @container/coin rather than viewport breakpoints: this renders inside a
- * column that's already narrowed by the alerts rail and the action dock, so
- * `xl:` here would measure width this component doesn't own.
+ * 1. `@container/coin` sits on a WRAPPER, not on the grid itself. An element
+ *    cannot respond to its own container query, so declaring the container and
+ *    the `@4xl:grid-cols-…` on one element left it permanently at grid-cols-1 —
+ *    the swap panel stacked under the chart and the page looked like it had no
+ *    right column at all.
+ *
+ * 2. Container queries rather than viewport ones, because this column is
+ *    already narrowed by the alerts rail and the dock — `xl:` would measure
+ *    width this component doesn't own and split at the wrong moment.
+ *
+ * The dock is a sibling of the whole grid, so it stays a full-height gutter on
+ * the right rather than becoming a grid cell.
  */
 export function CoinDetail({ coin }: { coin: CoinViewData }) {
     return (
-        <div className="@container/coin grid min-h-full grid-cols-1 @5xl/coin:grid-cols-[minmax(0,1fr)_360px]">
-            {/* Header + chart are one column; the swap panel is the other. */}
-            <div className="flex min-w-0 flex-col">
-                <CoinHeader coin={coin} />
-                <CoinChart coin={coin} />
+        <div className="flex w-full min-w-0">
+            <div className="@container/coin min-w-0 flex-1 pt-header">
+                <div className="grid min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_360px]">
+                    {/* Header and chart are one column — the header spans the
+                        chart's width and nothing else. */}
+                    <div className="flex min-w-0 flex-col">
+                        <CoinHeader coin={coin} />
+                        <CoinChart coin={coin} />
+                    </div>
+                    <CoinSwap coin={coin} />
+                </div>
             </div>
-            <CoinSwap coin={coin} />
+
+            <HomeActionDock />
         </div>
     );
 }
