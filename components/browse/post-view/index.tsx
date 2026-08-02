@@ -244,7 +244,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                         {(post as any).replyToId && (post as any).parentUserId && (
                             <div
                                 className="px-4 relative group/parent cursor-pointer hover:bg-white/[0.02] transition-colors pb-1 pt-3"
-                                onClick={() => router.push(`/discover/post/${(post as any).replyToId}`)}
+                                onClick={() => router.push(`/feed/post/${(post as any).replyToId}`)}
                             >
                                 {/* Connector line */}
                                 <div className="absolute left-[39.5px] top-8 -bottom-6 w-0.5 bg-zinc-700/50 z-20" />

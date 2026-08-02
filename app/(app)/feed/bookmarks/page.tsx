@@ -15,7 +15,7 @@ export default function BookmarksPage() {
             <div className="flex flex-row items-center justify-start gap-5 backdrop-blur-sm w-full bg-black/40 sticky top-0 z-100 border-b border-flexborder">
                 <div className="flex h-full">
                     <Link
-                        href="/discover"
+                        href="/feed"
                         className="px-4 cursor-pointer h-13 flex items-center justify-center text-zinc-100 hover:text-zinc-300 hover:bg-zinc-500/20 transition-colors"
                     >
                         <ChevronLeft className="w-7 h-7" />

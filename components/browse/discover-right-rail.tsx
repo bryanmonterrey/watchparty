@@ -176,7 +176,7 @@ function WhoToFollowCard() {
 // ── What's happening (GLM coin news) ────────────────────────────────────────
 function TrendRow({ title, meta, ticker, tokenAddress }: { title: string; meta: string; ticker?: string; tokenAddress?: string | null }) {
     // Deep-link to the coin when we know it, else search for the ticker.
-    const href = tokenAddress ? `/coin/${tokenAddress}` : ticker ? `/discover/search?q=${encodeURIComponent("$" + ticker)}` : "/trade";
+    const href = tokenAddress ? `/coin/${tokenAddress}` : ticker ? `/feed/search?q=${encodeURIComponent("$" + ticker)}` : "/trade";
     return (
         <Link href={href} className="block w-full px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]">
             <p className="text-[14px] text-muted-foreground">{meta}</p>

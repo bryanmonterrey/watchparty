@@ -38,7 +38,7 @@ export function ProfileMediaGrid({ userId, isOwner }: { userId: string; isOwner:
             {items.map((item) => (
                 <Link
                     key={item.id}
-                    href={`/discover/post/${item.id}`}
+                    href={`/feed/post/${item.id}`}
                     className="group relative aspect-square overflow-hidden bg-zinc-900"
                 >
                     <img

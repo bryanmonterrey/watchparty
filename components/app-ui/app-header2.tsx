@@ -68,7 +68,7 @@ export function AppHeader2() {
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
 
-  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'discover', 'notifications'];
+  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'feed', 'notifications'];
   const segments = pathname.split('/');
   const firstSegment = segments[1] ?? '';
 
@@ -89,7 +89,7 @@ export function AppHeader2() {
   const isMediaPage = isWatchPage || isTokenPage;
   // The scroll-in backdrop exists on media-style pages (watch/token), the /home
   // feed, /search, and /settings; everywhere else the header stays as-is on
-  // scroll. NOT on /discover: the app shell stacks the fixed header above all
+  // scroll. NOT on /feed: the app shell stacks the fixed header above all
   // page content, so a backdrop there would sit over the feed — the feed must
   // stay unobstructed.
   const isHomePage = pathname === '/home';
@@ -218,9 +218,9 @@ export function AppHeader2() {
           {firstSegment === 'messages' && <MessagesNav />}
           {/* Discover search lives in the header (right of the logo), not in the
               feed tab bar. */}
-          {firstSegment === 'discover' && (
+          {firstSegment === 'feed' && (
             <Link
-              href="/discover/search"
+              href="/feed/search"
               aria-label="Search"
               className="flex size-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
             >

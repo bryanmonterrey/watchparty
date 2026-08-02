@@ -71,7 +71,7 @@ const items = [
         icon: HomeIcon,
     },
     // Discover is pulled from the nav for now, same as Shorts below: the route
-    // (app/(app)/discover) is untouched and still reachable directly — put the
+    // (app/(app)/feed) is untouched and still reachable directly — put the
     // entry back here to restore it.
     {
         title: "Search",

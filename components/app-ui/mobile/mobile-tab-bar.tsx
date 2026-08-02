@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 // Fixed, only below md; AppContainer reserves clearance via max-md:pb-28.
 const TABS = [
     { href: "/home", icon: House, label: "Home" },
-    { href: "/discover", icon: Compass, label: "Discover" },
+    { href: "/feed", icon: Compass, label: "Feed" },
     { href: "/search", icon: Search, label: "Search" },
     { href: "/trade", icon: ChartCandlestick, label: "Trade" },
     { href: "/messages", icon: Mail, label: "Messages" },

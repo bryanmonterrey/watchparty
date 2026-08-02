@@ -16,7 +16,7 @@ export function BookmarkToast({ id }: { id: string | number }) {
             >
                 <span>Bookmarked</span>
                 <button
-                    onClick={() => { toast.dismiss(id); window.location.assign("/discover?tab=bookmarks"); }}
+                    onClick={() => { toast.dismiss(id); window.location.assign("/feed?tab=bookmarks"); }}
                     className="font-bold text-white whitespace-nowrap"
                 >
                     View bookmarks

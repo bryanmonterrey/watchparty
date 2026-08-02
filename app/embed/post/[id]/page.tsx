@@ -52,7 +52,7 @@ export default async function EmbedPostPage({ params }: { params: Promise<{ id: 
         ?? (post.media ?? []).find((m) => m.type === "image")?.url
         ?? null;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://watchparty.xyz";
-    const postUrl = `${appUrl}/discover/post/${post.id}`;
+    const postUrl = `${appUrl}/feed/post/${post.id}`;
     const date = post.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
     return (

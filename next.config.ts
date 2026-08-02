@@ -41,6 +41,15 @@ const nextConfig: NextConfig = {
     // and an identical bundle — not worth putting an experimental flag in the
     // deploy path and losing every typescript-eslint rule. Revisit together.
   },
+  // /discover became /feed. Permanent, and :path* so the whole subtree comes
+  // with it — /discover/post/<id> is the canonical share URL for every post
+  // ever shared, and those links live in other people's messages and timelines.
+  async redirects() {
+    return [
+      { source: "/discover", destination: "/feed", permanent: true },
+      { source: "/discover/:path*", destination: "/feed/:path*", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

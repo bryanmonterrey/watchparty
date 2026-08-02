@@ -65,7 +65,7 @@ export function DiscoverRail() {
                     items={[
                         {
                             key: "bookmarks",
-                            href: "/discover/bookmarks",
+                            href: "/feed/bookmarks",
                             className: "gap-2 cursor-pointer",
                             label: (
                                 <>

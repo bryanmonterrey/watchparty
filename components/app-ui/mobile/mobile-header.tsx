@@ -21,7 +21,7 @@ function HeaderActions() {
 
     return (
         <div className="flex items-center gap-4">
-            <Link href="/discover?compose=1" aria-label="Create">
+            <Link href="/feed?compose=1" aria-label="Create">
                 <Plus className="size-7" />
             </Link>
             <Link href="/notifications" aria-label="Notifications" className="relative">
@@ -50,7 +50,7 @@ export function MobileHeader() {
         pathname.startsWith("/messages") ? "Messages" :
         pathname.startsWith("/trade") ? "Trade" :
         null;
-    const isDiscover = pathname.startsWith("/discover");
+    const isDiscover = pathname.startsWith("/feed");
 
     return (
         <header
