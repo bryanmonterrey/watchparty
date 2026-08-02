@@ -426,10 +426,10 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 a shrink-0 on the inside would never reach the rail's column. */}
             <div className="shrink-0">
             <Squircle
-                radius={{ topLeft: 16, topRight: 16 }}
+                radius={{ topLeft: 25, topRight: 25 }}
                 autoEffects={false}
                 innerBorder={RAIL_BORDER}
-                className="flex bg-sidebar-hover-50 items-center px-1"
+                className="flex bg-sidebar-hover-50 items-center px-2"
             >
                 {(["alerts"] as const).map((t) => (
                     <button
@@ -515,7 +515,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 list well clear of the bottom of the screen. Scoped here rather
                 than changed in the shell — the video rail still wants to run
                 near the bottom edge. */}
-            <RailShell className="mb-16" radius={{ bottomLeft: 16, bottomRight: 16 }} bordered>
+            <RailShell className="mb-16" radius={{ bottomLeft: 25, bottomRight: 25 }} bordered>
                 {/* Inline bar when already parked at the top — no need to float.
                     Inside the shell, above the scroller: it belongs to the list
                     it's offering to extend, so it sits within the same bordered

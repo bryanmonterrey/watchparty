@@ -29,12 +29,13 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 //
 // h-[100svh] rather than h-screen: identical on desktop, but svh is the stable
 // one and this element's height is what the divider's length is measured by.
-const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col md:pt-[calc(var(--header-height)+4px)]";
-
-// Expanded only. No divider — the alerts list carries its own outline now (see
-// RailShell's `bordered`), and a full-height rule beside a box that stops short
-// of the bottom read as a line running off on its own.
-const INNER_EXPANDED = `${INNER} px-1.5`;
+// One wrapper for both states — collapsing empties the rail, it doesn't resize
+// it, so the geometry is identical either way.
+//
+// No divider: the alerts list carries its own outline (see RailShell's
+// `bordered`), and a full-height rule beside a box that stops short of the
+// bottom read as a line running off on its own.
+const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col px-1.5 md:pt-[calc(var(--header-height)+4px)]";
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);
@@ -56,18 +57,23 @@ export function HomeLeftRail() {
         } catch { /* not worth failing the toggle over */ }
     };
 
+    // Collapsed keeps the COLUMN — same w-72, same padding, just emptied down to
+    // the expand control. It used to shrink to a w-11 strip, which meant every
+    // other column on the page slid sideways to fill the 244px it gave back;
+    // collapsing is for quieting the alert feed, not for rearranging the page
+    // around it. Nothing outside this aside moves now.
     if (collapsed) {
         return (
-            <aside className="hidden w-11 shrink-0 lg:block">
+            <aside className="hidden w-72 shrink-0 lg:block">
                 <div className={INNER}>
-                    {/* size-6 and the same padding as the expanded rail's
-                        header buttons — collapsing shouldn't resize the control
-                        you just clicked. */}
+                    {/* self-end puts this exactly where the collapse chevron it
+                        replaces sat — the right end of the rail's header row —
+                        so the control doesn't jump when you toggle it. */}
                     <button
                         type="button"
                         onClick={() => set(false)}
                         aria-label="expand alerts rail"
-                        className="mx-auto flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
+                        className="flex cursor-pointer items-center self-end px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
                     >
                         <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
                     </button>
@@ -78,7 +84,7 @@ export function HomeLeftRail() {
 
     return (
         <aside className="hidden w-72 shrink-0 lg:block">
-            <div className={INNER_EXPANDED}>
+            <div className={INNER}>
                 <AlertsRail onCollapse={() => set(true)} />
             </div>
         </aside>
