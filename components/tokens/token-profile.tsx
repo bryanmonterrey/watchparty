@@ -33,7 +33,11 @@ export function TokenProfile({ token }: TokenProfileProps) {
     const holderCount = token.holderCount ?? 0
 
     return (
-        <div className="w-full px-4 mx-auto p-2 pt-header flex flex-col gap-6 text-zinc-100 min-h-screen">
+        // min-w-0: this is a flex child of (rails)/layout.tsx's row now, and its
+        // grid below holds long unbreakable strings (mints, prices). Without it
+        // the grid's max-content width wins and the page pushes the alerts rail
+        // off-screen instead of narrowing.
+        <div className="w-full min-w-0 px-4 mx-auto p-2 pt-header flex flex-col gap-6 text-zinc-100 min-h-screen">
             <div className="grid grid-cols-1 lg:grid-cols-10 items-start gap-3">
                 
                 {/* Left Column */}

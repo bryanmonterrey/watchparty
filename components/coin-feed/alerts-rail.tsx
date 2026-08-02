@@ -429,7 +429,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 radius={{ topLeft: 16, topRight: 16 }}
                 autoEffects={false}
                 innerBorder={RAIL_BORDER}
-                className="flex items-center px-1"
+                className="flex bg-sidebar-hover-50 items-center px-1"
             >
                 {(["alerts"] as const).map((t) => (
                     <button
@@ -525,7 +525,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                     <button
                         type="button"
                         onClick={loadNewAlerts}
-                        className="shrink-0 cursor-pointer py-2.5 text-[13px] font-bold text-twitter2 transition-colors"
+                        className="shrink-0 cursor-pointer bg-canvas border-b border-sidebar-hover py-2.5 text-[13px] font-medium text-twitter2 transition-colors"
                     >
                         Show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
                     </button>

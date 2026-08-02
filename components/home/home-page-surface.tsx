@@ -6,7 +6,6 @@ import { motion } from "motion/react";
 import { HomeCenterColumn } from "./home-center-column";
 import { HomeRailTabs } from "./home-rail-tabs";
 import { HomeRailVideos } from "./home-rail-videos";
-import { HomeLeftRail } from "./home-left-rail";
 import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
@@ -95,9 +94,11 @@ export function HomePageSurface() {
     if (feedOpen) return <DiscoverFeedSurface />;
 
     return (
-        <div className="relative flex min-h-screen w-full px-1">
-            <HomeLeftRail />
-
+        // The alerts rail and the row's px-1 live in (rails)/layout.tsx now —
+        // /home, /feed and the token page all mount it from there. What's left
+        // here is home's own columns, which sit in the space the layout gives
+        // this page.
+        <div className="relative flex min-h-screen w-full min-w-0">
             {/* Rides the app scroller — the hero scrolls away and the tabs and
                 column labels pin as you go down, which is the point. The fill
                 those bars need while stuck is applied only once they ARE stuck

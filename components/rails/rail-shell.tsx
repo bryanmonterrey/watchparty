@@ -24,13 +24,15 @@ import { cn } from "@/lib/utils";
 //
 // The caller owns scrolling: pass a child that is `min-h-0 flex-1 overflow-y-auto`.
 
-// flexwhite's dark value (#e7e9ea) at 10% — i.e. what `border-flexwhite/10`
-// would resolve to if it survived, which it doesn't: a CSS border is part of the
-// element's own painting, and the clip-path is inscribed in the border box, so
-// it gets cut away at exactly the corners the squircle exists for. Declaring it
-// as a Lisse effect instead means it's stroked into the wrapper Lisse injects,
-// which is never clipped, and traces the same curve.
-export const RAIL_BORDER = { width: 1, color: "#e7e9ea", opacity: 0.1 };
+// A solid hairline (#18181B — sidebar-hover's value), shared by the list box
+// and the tab box above it so the two can't drift apart.
+//
+// Declared as a Lisse effect rather than a CSS `border` class, because a CSS
+// border is part of the element's own painting and the clip-path is inscribed
+// in the border box — it gets cut away at exactly the corners the squircle
+// exists for. As an effect it's stroked into the wrapper Lisse injects, which
+// is never clipped, and traces the same curve.
+export const RAIL_BORDER = { width: 1, color: "#18181B", opacity: 1 };
 
 export function RailShell({
     children,
