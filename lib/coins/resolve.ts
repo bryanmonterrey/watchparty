@@ -1,14 +1,14 @@
 import "server-only";
 
-import { eq, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
-import { withCache } from "@/lib/cache";
-import { CallBudget, searchPools } from "@/lib/coin-feed/geckoterminal";
+import { coinIndex } from "@/db/schema/content/coin-index";
+import { fetchTokenPairs } from "@/lib/coins/dexscreener";
 
-/** What /coin/<mint> needs to render a coin we did not launch. Deliberately the
- *  same shape the chart overlay takes, so one view serves both. */
+/** What /coin/<address> needs to render a coin we did not launch. Deliberately
+ *  the same shape the chart overlay takes, so one view serves both. */
 export type ResolvedCoin = {
     id: string;
     network: string;
@@ -27,34 +27,39 @@ export type ResolvedCoin = {
     txns24h: number | null;
 };
 
-// GeckoTerminal's free tier is ~30 calls/MINUTE for the whole app, and two
-// per-minute crons already draw on it. A page request therefore gets a budget of
-// exactly one call, and the answer is cached hard: a coin page that missed the
-// cache on every view could starve the alert feed's own quota within a minute of
-// traffic.
-const PAGE_BUDGET = 1;
-/** Long enough that a coin doing the rounds costs one upstream call, short
- *  enough that a new listing appears within the hour. The view's own live
- *  queries (chart, trades) are what stay fresh — this is identity + a snapshot. */
-const TTL_SECONDS = 900;
+const txns = (buys: number | null, sells: number | null) =>
+    buys != null || sells != null ? (buys ?? 0) + (sells ?? 0) : null;
 
 /**
  * Resolve ANY coin address, on any chain, to something the coin page can show.
  *
- * Three sources, cheapest first:
- *   1. `trending_coins` — the board's own rows, complete market snapshot.
- *   2. `tracked_tokens` — everything the alert feed watches. Thinner (no
- *      volume/txn columns), but it is a coin we already know.
- *   3. GeckoTerminal — anything else in the world. `/search/pools` is the only
- *      lookup that takes a bare address with no chain, which is exactly the
- *      shape of a /coin/<mint> URL.
+ * Four sources, cheapest first — the first three are ours, the fourth is the
+ * only one that costs an upstream call:
  *
- * Returns null only when GT has never heard of the address either — at which
- * point the page really is a 404.
+ *   1. `trending_coins`  — the board's rows, complete market snapshot.
+ *   2. `tracked_tokens`  — everything the alert feed watches.
+ *   3. `coin_index`      — coins someone resolved here before. This is what
+ *                          makes an unknown coin a ONE-TIME cost rather than a
+ *                          recurring one: an address's chain and deepest pool
+ *                          don't change, so the answer is written down.
+ *   4. Dexscreener       — anything else in the world, then written to (3).
+ *
+ * `network` narrows the search when the URL carries a chain, which is the only
+ * case where an address is genuinely ambiguous — the same address can exist on
+ * several chains.
+ *
+ * Returns null only when Dexscreener has never heard of the address either, at
+ * which point the page really is a 404.
  */
-export async function resolveCoin(mint: string): Promise<ResolvedCoin | null> {
+export async function resolveCoin(address: string, network?: string): Promise<ResolvedCoin | null> {
+    const onNetwork = <T extends { network: unknown }>(col: T) =>
+        network ? eq(col.network as never, network) : undefined;
+
     const trending = await db.query.trendingCoins.findFirst({
-        where: or(eq(trendingCoins.tokenAddress, mint), eq(trendingCoins.id, mint)),
+        where: and(
+            or(eq(trendingCoins.tokenAddress, address), eq(trendingCoins.id, address)),
+            onNetwork(trendingCoins),
+        ),
     });
     if (trending) {
         return {
@@ -77,12 +82,15 @@ export async function resolveCoin(mint: string): Promise<ResolvedCoin | null> {
     }
 
     const tracked = await db.query.trackedTokens.findFirst({
-        where: or(eq(trackedTokens.tokenAddress, mint), eq(trackedTokens.id, mint)),
+        where: and(
+            or(eq(trackedTokens.tokenAddress, address), eq(trackedTokens.id, address)),
+            onNetwork(trackedTokens),
+        ),
     });
     if (tracked) {
-        // The watch list carries the same cached market columns as the board,
-        // minus the per-side transaction counts — those are a trending-only
-        // sync. They stay null and render as em-dashes rather than being faked.
+        // Same cached market columns as the board, minus the per-side txn
+        // counts — those are a trending-only sync. They stay null and render as
+        // em-dashes rather than being faked.
         return {
             id: tracked.id,
             network: tracked.network,
@@ -102,36 +110,101 @@ export async function resolveCoin(mint: string): Promise<ResolvedCoin | null> {
         };
     }
 
-    // Cached on the ADDRESS, including misses — an address that isn't a coin is
-    // the cheapest thing to get hammered with (a crawler, a bad link), and
-    // re-asking GT every time is what would trip the rate limit.
-    return withCache(`coin:resolve:v1:${mint}`, TTL_SECONDS, async () => {
-        const pools = await searchPools(mint, new CallBudget(PAGE_BUDGET));
-        // searchPools matches on symbols and names too, so require the address
-        // to be the pool's BASE token — otherwise "SOL" as a query would resolve
-        // to whatever pool GT ranked first.
-        const pool = pools.find((p) => p.tokenAddress.toLowerCase() === mint.toLowerCase());
-        if (!pool) return null;
-
-        return {
-            id: `${pool.network}:${pool.tokenAddress}`,
-            network: pool.network,
-            tokenAddress: pool.tokenAddress,
-            poolAddress: pool.poolAddress,
-            symbol: pool.symbol,
-            name: pool.name,
-            imageUrl: pool.imageUrl,
-            priceUsd: pool.priceUsd,
-            marketCapUsd: pool.marketCapUsd,
-            liquidityUsd: pool.liquidityUsd,
-            volume24hUsd: pool.volume24hUsd,
-            priceChange24h: pool.priceChange24h,
-            buys24h: pool.buys24h,
-            sells24h: pool.sells24h,
-            txns24h:
-                pool.buys24h != null || pool.sells24h != null
-                    ? (pool.buys24h ?? 0) + (pool.sells24h ?? 0)
-                    : null,
-        };
+    const indexed = await db.query.coinIndex.findFirst({
+        where: and(
+            or(eq(coinIndex.tokenAddress, address), eq(coinIndex.id, address)),
+            onNetwork(coinIndex),
+        ),
     });
+    if (indexed) {
+        return {
+            id: indexed.id,
+            network: indexed.network,
+            tokenAddress: indexed.tokenAddress,
+            poolAddress: indexed.poolAddress,
+            symbol: indexed.symbol,
+            name: indexed.name,
+            imageUrl: indexed.imageUrl,
+            priceUsd: indexed.priceUsd,
+            marketCapUsd: indexed.marketCapUsd,
+            liquidityUsd: indexed.liquidityUsd,
+            volume24hUsd: indexed.volume24hUsd,
+            priceChange24h: indexed.priceChange24h,
+            buys24h: indexed.buys24h,
+            sells24h: indexed.sells24h,
+            txns24h: txns(indexed.buys24h, indexed.sells24h),
+        };
+    }
+
+    // Upstream. Dexscreener rather than GeckoTerminal: it answers a bare address
+    // WITH the chain, and its limits are per-IP and in the hundreds/min, where
+    // GT's free tier is ~30/min for the whole app and two per-minute crons
+    // already draw on it. A page must not spend the alert feed's budget.
+    const pairs = await fetchTokenPairs(address);
+    const pair = network ? pairs.find((p) => p.network === network) : pairs[0];
+    if (!pair) return null;
+
+    const id = `${pair.network}:${pair.tokenAddress}`;
+
+    // Write it down. Not fatal if it fails — the page can render from what we
+    // already have in hand, and the next visit simply resolves again.
+    try {
+        await db
+            .insert(coinIndex)
+            .values({
+                id,
+                network: pair.network,
+                tokenAddress: pair.tokenAddress,
+                poolAddress: pair.poolAddress,
+                dexId: pair.dexId,
+                symbol: pair.symbol,
+                name: pair.name,
+                imageUrl: pair.imageUrl,
+                priceUsd: pair.priceUsd,
+                marketCapUsd: pair.marketCapUsd,
+                liquidityUsd: pair.liquidityUsd,
+                volume24hUsd: pair.volume24hUsd,
+                priceChange24h: pair.priceChange24h,
+                buys24h: pair.buys24h,
+                sells24h: pair.sells24h,
+                source: "dexscreener",
+            })
+            .onConflictDoUpdate({
+                target: coinIndex.id,
+                set: {
+                    poolAddress: pair.poolAddress,
+                    symbol: pair.symbol,
+                    name: pair.name,
+                    imageUrl: pair.imageUrl,
+                    priceUsd: pair.priceUsd,
+                    marketCapUsd: pair.marketCapUsd,
+                    liquidityUsd: pair.liquidityUsd,
+                    volume24hUsd: pair.volume24hUsd,
+                    priceChange24h: pair.priceChange24h,
+                    buys24h: pair.buys24h,
+                    sells24h: pair.sells24h,
+                    resolvedAt: new Date(),
+                },
+            });
+    } catch {
+        // index write failed — serve the coin anyway
+    }
+
+    return {
+        id,
+        network: pair.network,
+        tokenAddress: pair.tokenAddress,
+        poolAddress: pair.poolAddress,
+        symbol: pair.symbol,
+        name: pair.name,
+        imageUrl: pair.imageUrl,
+        priceUsd: pair.priceUsd,
+        marketCapUsd: pair.marketCapUsd,
+        liquidityUsd: pair.liquidityUsd,
+        volume24hUsd: pair.volume24hUsd,
+        priceChange24h: pair.priceChange24h,
+        buys24h: pair.buys24h,
+        sells24h: pair.sells24h,
+        txns24h: txns(pair.buys24h, pair.sells24h),
+    };
 }

@@ -33,3 +33,4 @@ export * from "./copy";
 export * from "./copy-order";
 export * from "./coin-feed";
 export * from "./trending";
+export * from "./coin-index";
