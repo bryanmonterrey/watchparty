@@ -20,6 +20,7 @@ import type { Token as SwapToken } from "@/components/wallet/wallet-drawer2/view
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
 
@@ -54,69 +55,102 @@ function compactUsd(value: number | null) {
     }).format(value);
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** One cell in the header's stat strip. Label above, value below — the strip is
+ *  a row of these, which is what lets it scan horizontally instead of being a
+ *  list you read top to bottom. */
+function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
     return (
-        <div className="flex items-center justify-between gap-4 border-b border-soft-gray/10 py-3 last:border-0">
-            <span className="text-sm font-medium text-zinc-500">{label}</span>
-            <span className="text-right text-sm font-semibold tabular-nums text-zinc-200">{value}</span>
+        <div className="flex min-w-0 shrink-0 flex-col justify-center border-l border-soft-gray/10 px-4 py-2 first:border-l-0 first:pl-0">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+            <span className={cn("truncate text-[15px] font-bold tabular-nums", tone ?? "text-white")}>{value}</span>
         </div>
     );
 }
 
-function CoinIdentity({ coin }: { coin: CoinViewData }) {
+/**
+ * The coin's header — identity on the left, a horizontal strip of market stats
+ * beside it, spanning the full width above the chart.
+ *
+ * A HEADER, not a column. It used to be a 280px sidebar with the stats stacked
+ * vertically down it, which cost the chart a fifth of the page to show six
+ * numbers — and the chart is the thing anyone came for. Every board that does
+ * this well (Dexscreener, Birdeye, GMGN) puts identity and stats in a bar and
+ * gives the rest of the surface to the chart.
+ *
+ * The strip scrolls horizontally rather than wrapping: at a narrow width a
+ * wrapped strip pushes the chart down the page, and these read as one row.
+ */
+function CoinHeader({ coin }: { coin: CoinViewData }) {
     const explorer = explorerUrl(coin.network, coin.tokenAddress, coin.poolAddress);
+    const up = coin.priceChange24h != null && coin.priceChange24h >= 0;
 
     return (
-        <aside className="border-b border-soft-gray/10 p-5 xl:border-b-0 xl:border-r">
-            <div className="xl:sticky xl:top-0">
-                <div className="flex items-center gap-3">
-                    <div className="relative size-13 shrink-0">
-                        {coin.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={coin.imageUrl} alt="" className="size-full rounded-full object-cover" />
-                        ) : (
-                            <div className="size-full rounded-full bg-soft-gray-10" />
+        <header className="flex min-w-0 flex-col gap-3 border-b border-soft-gray/10 px-4 py-3 @3xl/coin:flex-row @3xl/coin:items-center @3xl/coin:gap-5">
+            {/* Identity. shrink-0 so the stat strip gives way first — the coin's
+                own name is the last thing that should be squeezed. */}
+            <div className="flex min-w-0 shrink-0 items-center gap-3">
+                <div className="relative size-10 shrink-0">
+                    {coin.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={coin.imageUrl} alt="" className="size-full rounded-full object-cover" />
+                    ) : (
+                        <div className="size-full rounded-full bg-soft-gray-10" />
+                    )}
+                    <ChainBadge network={coin.network} className="absolute -bottom-1 -right-1 rounded-full bg-black p-1 ring-1 ring-black" />
+                </div>
+                <div className="min-w-0">
+                    <h1 className="truncate text-lg font-bold tracking-tight text-white">{coin.symbol}</h1>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-[13px] font-medium text-zinc-500">
+                            {coin.name ?? chainLabel(coin.network)}
+                        </span>
+                        {/* The address belongs up here next to the name, as a
+                            copy affordance — it was a full-width button at the
+                            bottom of the old sidebar, which is a lot of room for
+                            a string nobody reads. */}
+                        <button
+                            type="button"
+                            onClick={() => void navigator.clipboard.writeText(coin.tokenAddress)}
+                            aria-label="copy token address"
+                            className="flex shrink-0 cursor-pointer items-center gap-1 text-[13px] font-medium text-zinc-600 transition-colors hover:text-white"
+                        >
+                            <span className="hidden @xl/coin:inline">
+                                {coin.tokenAddress.slice(0, 4)}…{coin.tokenAddress.slice(-4)}
+                            </span>
+                            <HugeiconsIcon icon={Copy01Icon} className="size-3.5" strokeWidth={2} />
+                        </button>
+                        {explorer && (
+                            <a
+                                href={explorer}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="view on explorer"
+                                className="shrink-0 text-zinc-600 transition-colors hover:text-white"
+                            >
+                                <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" strokeWidth={2} />
+                            </a>
                         )}
-                        <ChainBadge network={coin.network} className="absolute -bottom-1 -right-1 rounded-full bg-black p-1 ring-1 ring-black" />
-                    </div>
-                    <div className="min-w-0">
-                        <h2 className="truncate text-xl font-bold tracking-tight text-white">{coin.name ?? coin.symbol}</h2>
-                        <p className="text-sm font-semibold text-zinc-500">{coin.symbol} · {chainLabel(coin.network)}</p>
                     </div>
                 </div>
-
-                <div className="mt-6">
-                    <p className="text-3xl font-semibold tracking-tight tabular-nums text-white">{compactUsd(coin.priceUsd)}</p>
-                    <p className={coin.priceChange24h != null && coin.priceChange24h >= 0 ? "mt-1 text-sm font-bold text-lantern" : "mt-1 text-sm font-bold text-pastelred"}>
-                        {coin.priceChange24h == null ? "—" : `${coin.priceChange24h >= 0 ? "+" : ""}${coin.priceChange24h.toFixed(2)}% 24h`}
-                    </p>
-                </div>
-
-                <div className="mt-6">
-                    <Stat label="Market cap" value={compactUsd(coin.marketCapUsd)} />
-                    <Stat label="Liquidity" value={compactUsd(coin.liquidityUsd)} />
-                    <Stat label="24h volume" value={compactUsd(coin.volume24hUsd)} />
-                    <Stat label="Transactions" value={coin.txns24h?.toLocaleString() ?? "—"} />
-                    <Stat label="Buys / sells" value={`${coin.buys24h?.toLocaleString() ?? "—"} / ${coin.sells24h?.toLocaleString() ?? "—"}`} />
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText(coin.tokenAddress)}
-                    className="mt-5 flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl bg-soft-gray-5 px-3 py-3 text-left text-xs font-medium text-zinc-400 transition-colors hover:text-white"
-                >
-                    <span className="truncate">{coin.tokenAddress}</span>
-                    <HugeiconsIcon icon={Copy01Icon} className="size-4 shrink-0" strokeWidth={2} />
-                </button>
-
-                {explorer && (
-                    <a href={explorer} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-twitter2 hover:text-white">
-                        View explorer
-                        <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4" strokeWidth={2} />
-                    </a>
-                )}
             </div>
-        </aside>
+
+            <div className="hidden-scrollbar -mx-1 flex min-w-0 items-stretch overflow-x-auto px-1">
+                <Stat label="Price" value={compactUsd(coin.priceUsd)} />
+                <Stat
+                    label="24h"
+                    value={coin.priceChange24h == null ? "—" : `${up ? "+" : ""}${coin.priceChange24h.toFixed(2)}%`}
+                    tone={coin.priceChange24h == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred"}
+                />
+                <Stat label="Market cap" value={compactUsd(coin.marketCapUsd)} />
+                <Stat label="Liquidity" value={compactUsd(coin.liquidityUsd)} />
+                <Stat label="24h vol" value={compactUsd(coin.volume24hUsd)} />
+                <Stat label="Txns" value={coin.txns24h?.toLocaleString() ?? "—"} />
+                <Stat
+                    label="Buys / sells"
+                    value={`${coin.buys24h?.toLocaleString() ?? "—"} / ${coin.sells24h?.toLocaleString() ?? "—"}`}
+                />
+            </div>
+        </header>
     );
 }
 
@@ -166,8 +200,8 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
     const marketUrl = tradeUrl(coin.network, coin.tokenAddress, coin.poolAddress);
 
     return (
-        <main className="min-w-0 border-b border-soft-gray/10 xl:border-b-0">
-            <div className="h-[min(58vh,620px)] min-h-[420px] bg-black">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="h-[min(64vh,720px)] min-h-[420px] flex-1 bg-black">
                 {coin.network === "solana" ? (
                     <TokenTradingViewChart mint={coin.tokenAddress} ticker={coin.symbol} className="h-full w-full" />
                 ) : (
@@ -240,16 +274,25 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
 }
 
 /**
- * The coin view itself — identity + stats, chart, swap — with no shell around
- * it. Exported so /coin/<mint> can render the SAME thing as a page for a coin we
- * did not launch: the overlay and that page show identical data from identical
- * sources, and there is no second implementation to drift.
+ * The coin view — a header, the chart under it, and the swap panel beside both.
+ *
+ * TWO columns, not three. The header used to be a 280px identity SIDEBAR with
+ * the stats stacked down it, which spent a fifth of the page on six numbers and
+ * took that width from the chart. Identity and stats belong in a bar; the
+ * surface belongs to the chart.
+ *
+ * @container/coin rather than viewport breakpoints: this renders inside a
+ * column that's already narrowed by the alerts rail and the action dock, so
+ * `xl:` here would measure width this component doesn't own.
  */
 export function CoinDetail({ coin }: { coin: CoinViewData }) {
     return (
-        <div className="grid min-h-full grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-            <CoinIdentity coin={coin} />
-            <CoinChart coin={coin} />
+        <div className="@container/coin grid min-h-full grid-cols-1 @5xl/coin:grid-cols-[minmax(0,1fr)_360px]">
+            {/* Header + chart are one column; the swap panel is the other. */}
+            <div className="flex min-w-0 flex-col">
+                <CoinHeader coin={coin} />
+                <CoinChart coin={coin} />
+            </div>
             <CoinSwap coin={coin} />
         </div>
     );
