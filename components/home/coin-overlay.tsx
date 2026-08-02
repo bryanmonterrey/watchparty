@@ -236,12 +236,24 @@ export function CoinOverlay() {
                 transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 className="h-full overflow-y-auto overscroll-contain"
             >
-                <div className="grid min-h-full grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-                    <CoinIdentity coin={coin} />
-                    <CoinChart coin={coin} />
-                    <CoinSwap coin={coin} />
-                </div>
+                <CoinDetail coin={coin} />
             </motion.div>
+        </div>
+    );
+}
+
+/**
+ * The coin view itself — identity + stats, chart, swap — with no shell around
+ * it. Exported so /coin/<mint> can render the SAME thing as a page for a coin we
+ * did not launch: the overlay and that page show identical data from identical
+ * sources, and there is no second implementation to drift.
+ */
+export function CoinDetail({ coin }: { coin: CoinOverlaySelection }) {
+    return (
+        <div className="grid min-h-full grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+            <CoinIdentity coin={coin} />
+            <CoinChart coin={coin} />
+            <CoinSwap coin={coin} />
         </div>
     );
 }

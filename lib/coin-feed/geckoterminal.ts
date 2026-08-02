@@ -188,6 +188,45 @@ function parsePools(json: { data?: GtPoolRaw[]; included?: GtIncluded[] }, netwo
     return out;
 }
 
+/**
+ * Every pool GT knows for a token address, ACROSS networks.
+ *
+ * This is what makes /coin/<mint> resolve a coin we've never tracked: the URL
+ * carries a bare address and no chain, and `/search/pools` is the only endpoint
+ * that will take one and answer without being told where to look.
+ *
+ * The network comes back inside each pool's id (`solana_<pool>`, `base_<pool>`)
+ * rather than as a field, so it's split off there and passed to the shared
+ * parser — which otherwise wants a network it can't know here.
+ *
+ * Results are returned BEST-LIQUIDITY-FIRST. A token usually has several pools
+ * and GT's own order isn't liquidity-ranked; the deepest one is the one whose
+ * price and chart are worth showing.
+ */
+export async function searchPools(query: string, budget: CallBudget): Promise<DiscoveredPool[]> {
+    const json = await gt<{ data?: GtPoolRaw[]; included?: GtIncluded[] }>(
+        `/search/pools?query=${encodeURIComponent(query)}&include=base_token,dex`,
+        budget,
+    );
+    if (!json) return [];
+
+    // Group by network so the shared parser can run per-network, then flatten.
+    const byNetwork = new Map<string, GtPoolRaw[]>();
+    for (const pool of json.data ?? []) {
+        const network = pool.id?.split("_")[0];
+        if (!network) continue;
+        const bucket = byNetwork.get(network);
+        if (bucket) bucket.push(pool);
+        else byNetwork.set(network, [pool]);
+    }
+
+    const out: DiscoveredPool[] = [];
+    for (const [network, pools] of byNetwork) {
+        out.push(...parsePools({ data: pools, included: json.included }, network));
+    }
+    return out.sort((a, b) => (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0));
+}
+
 /** Trending pools on a network — the main discovery source for "good coins". */
 export async function fetchTrendingPools(network: string, budget: CallBudget, page = 1): Promise<DiscoveredPool[]> {
     const json = await gt<{ data?: GtPoolRaw[]; included?: GtIncluded[] }>(
