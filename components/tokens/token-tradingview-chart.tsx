@@ -15,8 +15,18 @@ import { TokenCandlestickChart } from "./token-candlestick-chart";
 const LIBRARY_SCRIPT = "/charting_library/charting_library.standalone.js";
 const DATAFEED_SCRIPT = "/datafeeds/udf/dist/bundle.js";
 
-const UP = "#00ED89"; // lantern
-const DOWN = "#FF746C"; // pastelred
+// The app's own palette, spelled out because the library takes hex, not CSS
+// vars — it renders into an iframe that our stylesheet doesn't reach.
+const UP = "#00ED89";      // lantern
+const DOWN = "#FF746C";    // pastelred
+const CANVAS = "#080808";  // --color-canvas, the app background
+const HAIRLINE = "#18181B"; // sidebar-hover, the app's grid/divider weight
+const TEXT = "#7F878E";    // pastelgray, the app's muted label colour
+const MUTED = "#3F3F46";   // zinc-700 — the loading spinner, deliberately
+                           // neutral. It used to run twitter2 blue, which is a
+                           // royal-blue ring on an otherwise black chart and the
+                           // most eye-catching thing on the page while nothing
+                           // has loaded.
 
 type LoadState = "loading" | "ready" | "missing";
 
@@ -100,17 +110,47 @@ export function TokenTradingViewChart({ mint, ticker, className }: TokenTradingV
                 timezone: "Etc/UTC",
                 disabled_features: ["header_symbol_search", "symbol_search_hot_key", "header_compare"],
                 enabled_features: ["hide_left_toolbar_by_default"],
-                loading_screen: { backgroundColor: "transparent" },
+                // The library renders in its own iframe, so none of the app's
+                // CSS reaches it — every colour has to be handed over
+                // explicitly. These are the app's tokens, not TradingView's
+                // dark defaults, which run blue-grey and read as a foreign
+                // widget dropped into the page.
+                // Relative, per the library's own docs ("a path to the static folder") —
+                // it resolves against library_path. An absolute path is accepted too,
+                // but relative is the documented form and can't drift if the
+                // library ever moves.
+                custom_css_url: "watchparty.css",
                 overrides: {
-                    "paneProperties.background": "#0a0a0a",
+                    "paneProperties.background": CANVAS,
                     "paneProperties.backgroundType": "solid",
+                    "paneProperties.vertGridProperties.color": HAIRLINE,
+                    "paneProperties.horzGridProperties.color": HAIRLINE,
+                    "paneProperties.crossHairProperties.color": TEXT,
+                    "paneProperties.legendProperties.showVolume": true,
+
+                    "scalesProperties.backgroundColor": CANVAS,
+                    "scalesProperties.lineColor": HAIRLINE,
+                    "scalesProperties.textColor": TEXT,
+                    "scalesProperties.fontSize": 11,
+
                     "mainSeriesProperties.candleStyle.upColor": UP,
                     "mainSeriesProperties.candleStyle.downColor": DOWN,
                     "mainSeriesProperties.candleStyle.wickUpColor": UP,
                     "mainSeriesProperties.candleStyle.wickDownColor": DOWN,
                     "mainSeriesProperties.candleStyle.borderUpColor": UP,
                     "mainSeriesProperties.candleStyle.borderDownColor": DOWN,
+
+                    // Volume rides the same two colours at low alpha so it reads
+                    // as context under the candles rather than a second series
+                    // competing with them.
+                    "volumePaneSize": "medium",
                 },
+                studies_overrides: {
+                    "volume.volume.color.0": DOWN,
+                    "volume.volume.color.1": UP,
+                    "volume.volume.transparency": 75,
+                },
+                loading_screen: { backgroundColor: CANVAS, foregroundColor: MUTED },
             });
             widgetRef.current = widget;
             widget.onChartReady(() => {

@@ -71,9 +71,15 @@ export function AppHeader2() {
   const segments = pathname.split('/');
   const firstSegment = segments[1] ?? '';
 
+  // Coin pages get the search bar explicitly, by SEGMENT rather than by length.
+  // The length test below assumed /coin/<mint> at three segments; the route is a
+  // catch-all now and a chain-qualified /coin/<chain>/<address> is four, which
+  // silently dropped the bar on exactly the pages people search from.
+  const isCoinPath = firstSegment === 'coin';
   const showSearch = pathname === '/' ||
                      pathname === '/trade' ||
                      pathname === '/search' ||
+                     isCoinPath ||
                      ((segments.length === 2 || segments.length === 3) && !PROTECTED_FIRST_SEGMENTS.includes(firstSegment));
 
   // `/coin/<mint>` is excluded from isWatchPage explicitly: it's three segments
@@ -84,7 +90,7 @@ export function AppHeader2() {
   // Coins live at /coin/<mint> now. This used to be `segments.length === 2 &&
   // firstSegment.length >= 21` — guessing "is this a mint address?" from string
   // length, back when a coin and a username shared the top-level namespace.
-  const isTokenPage = firstSegment === 'coin';
+  const isTokenPage = isCoinPath;
   const isMediaPage = isWatchPage || isTokenPage;
   // The scroll-in backdrop exists on media-style pages (watch/token), the /home
   // feed, /search, and /settings; everywhere else the header stays as-is on

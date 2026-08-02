@@ -93,15 +93,29 @@ export async function getUdfBars(
     const span = Math.max(countBack ?? 0, Math.ceil((to - from) / barSeconds) + 1);
     const limit = Math.min(1000, Math.max(1, span));
 
-    const key = `udf:${mint}:${resolution}:${to}:${limit}`;
+    // BUCKET the key. `to` is a live timestamp — the widget passes `now`, so a
+    // raw key changed on every request and the cache never hit once: every
+    // chart load went straight to GeckoTerminal, whose free tier is ~30
+    // calls/min for the whole app with two crons already on it. The result was
+    // a permanent `{"s":"error","errmsg":"ohlcv 429"}` and a chart stuck on its
+    // loading screen.
+    //
+    // Rounding `to` down to the TTL means every viewer inside one window shares
+    // a key, so a coin costs one upstream call per window no matter how many
+    // people have it open. `limit` is rounded up to a coarse step for the same
+    // reason — it's derived from from/to and would otherwise fragment the key
+    // just as badly.
+    const bucketedTo = Math.floor(to / TTL.CHART_OHLCV) * TTL.CHART_OHLCV;
+    const bucketedLimit = Math.min(1000, Math.ceil(limit / 100) * 100);
+    const key = `udf:v2:${mint}:${resolution}:${bucketedTo}:${bucketedLimit}`;
     try {
         return await withCache(key, TTL.CHART_OHLCV, async () => {
             const url = new URL(`${GT}/pools/${pool.address}/ohlcv/${unit}`);
             url.searchParams.set("aggregate", String(aggregate));
-            url.searchParams.set("limit", String(limit));
+            url.searchParams.set("limit", String(bucketedLimit));
             url.searchParams.set("currency", "usd");
             url.searchParams.set("token", pool.tokenSide);
-            url.searchParams.set("before_timestamp", String(to));
+            url.searchParams.set("before_timestamp", String(bucketedTo));
 
             const res = await fetch(url.toString(), {
                 headers: GT_HEADERS,
@@ -133,6 +147,12 @@ export async function getUdfBars(
             } as UdfBars;
         });
     } catch (err) {
-        return { s: "error", errmsg: err instanceof Error ? err.message : "fetch failed" };
+        // no_data, not error. The widget treats `s: "error"` as a reason to sit
+        // on its loading screen indefinitely, so an upstream blip read to the
+        // user as "the chart is broken forever". no_data resolves the load and
+        // shows the library's own empty state, which is honest and recoverable
+        // — the next request inside a fresh bucket refills the cache.
+        console.error("[udf] ohlcv failed:", err instanceof Error ? err.message : err);
+        return { s: "no_data" };
     }
 }

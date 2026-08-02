@@ -1,0 +1,79 @@
+/* watchparty theming for the TradingView Charting Library (v32).
+ *
+ * Loaded through the widget's `custom_css_url`, which the library injects INTO
+ * its own iframe — that's why the app's stylesheet can't do this job and the
+ * colours have to be declared here.
+ *
+ * Every selector below is a DOCUMENTED --tv-color-* custom property, which v32
+ * exposes precisely so the UI can be themed. An earlier version of this file
+ * targeted hashed class names (`.button-1SNzsPRP`) instead: those hashes are
+ * regenerated per library build, so they matched nothing here and would have
+ * broken again on the next upgrade even if they had.
+ *
+ * Division of labour:
+ *   - this file            the UI around the chart (toolbars, menus, dialogs)
+ *   - `overrides`          the chart canvas (panes, scales, series)
+ *   - `studies_overrides`  built-in studies (volume)
+ *
+ * App tokens, as literals — our CSS variables live on the app document, not in
+ * this iframe:
+ *   #080808  canvas         app background
+ *   #0C0C0C  soft-gray-5    raised surface
+ *   #18181B  sidebar-hover  hairline / divider
+ *   #242425  soft-gray-15   hover fill
+ *   #7F878E  pastelgray     muted label
+ *   #F1F1F1  white2         primary text
+ *   #358efc  twitter2       accent (active state only)
+ */
+
+:root {
+    /* Surfaces */
+    --tv-color-platform-background: #080808;
+    --tv-color-pane-background: #080808;
+    --tv-color-popup-background: #0c0c0c;
+
+    /* Toolbar buttons — the interval, indicators and settings row. */
+    --tv-color-toolbar-button-background-hover: #18181b;
+    --tv-color-toolbar-button-background-expanded: #18181b;
+    --tv-color-toolbar-button-background-active: #242425;
+    --tv-color-toolbar-button-background-active-hover: #2f2f31;
+    --tv-color-toolbar-button-background-clicked: #242425;
+    --tv-color-toolbar-button-text: #7f878e;
+    --tv-color-toolbar-button-text-hover: #f1f1f1;
+    --tv-color-toolbar-button-text-active: #f1f1f1;
+    --tv-color-toolbar-button-text-active-hover: #ffffff;
+    --tv-color-toolbar-button-text-clicked: #ffffff;
+    --tv-color-toolbar-divider-background: #18181b;
+    --tv-color-toolbar-toggle-button-background-active: #358efc;
+    --tv-color-toolbar-toggle-button-background-active-hover: #2f7fe0;
+    --tv-color-toolbar-save-layout-loader: #358efc;
+
+    /* Menus and dropdowns. */
+    --tv-color-popup-element-text: #f1f1f1;
+    --tv-color-popup-element-text-hover: #ffffff;
+    --tv-color-popup-element-background-hover: #18181b;
+    --tv-color-popup-element-divider-background: #18181b;
+    --tv-color-popup-element-secondary-text: #7f878e;
+    --tv-color-popup-element-hint-text: #7f878e;
+    --tv-color-popup-element-text-active: #ffffff;
+    --tv-color-popup-element-background-active: #358efc;
+    --tv-color-popup-element-toolbox-text: #7f878e;
+    --tv-color-popup-element-toolbox-text-hover: #f1f1f1;
+    --tv-color-popup-element-toolbox-text-active-hover: #ffffff;
+    --tv-color-popup-element-toolbox-background-hover: #18181b;
+    --tv-color-popup-element-toolbox-background-active-hover: #242425;
+
+    /* Dialogs. */
+    --tv-color-dialog-header-text: #f1f1f1;
+    --tv-color-dialog-header-separator: #18181b;
+
+    /* Lists — symbol pickers, indicator lists. */
+    --tv-color-item-active-text: #ffffff;
+    --tv-color-list-item-button-background: #18181b;
+    --tv-color-selected-list-item-button-background: #242425;
+    --tv-color-selected-list-item-button-text: #ffffff;
+
+    /* Misc chrome. */
+    --tv-color-scrollbar-thumb-background: #242425;
+    --tv-color-bar-mark-background-color: #18181b;
+}

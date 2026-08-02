@@ -56,41 +56,46 @@ function compactUsd(value: number | null) {
     }).format(value);
 }
 
-/** One cell in the header's stat strip. Label above, value below — the strip is
- *  a row of these, which is what lets it scan horizontally instead of being a
- *  list you read top to bottom. */
+/**
+ * One stat, as a discrete rounded box.
+ *
+ * Boxes rather than the divider-separated cells this used to be: in the
+ * reference each stat is its own tile, which is what lets the strip read as a
+ * row of facts instead of a table header. Label above, value below.
+ */
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
     return (
-        <div className="flex min-w-0 shrink-0 flex-col justify-center border-l border-soft-gray/10 px-4 py-2 first:border-l-0 first:pl-0">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+        <div className="flex min-w-0 shrink-0 flex-col justify-center rounded-xl border border-flexwhite/10 bg-soft-gray-5 px-3.5 py-2">
+            <span className="whitespace-nowrap text-[11px] font-medium text-zinc-500">{label}</span>
             <span className={cn("truncate text-[15px] font-bold tabular-nums", tone ?? "text-white")}>{value}</span>
         </div>
     );
 }
 
 /**
- * The coin's header — identity on the left, a horizontal strip of market stats
- * beside it, spanning the full width above the chart.
+ * The coin's header — identity, then market cap, then a strip of stat tiles.
  *
  * A HEADER, not a column. It used to be a 280px sidebar with the stats stacked
- * vertically down it, which cost the chart a fifth of the page to show six
- * numbers — and the chart is the thing anyone came for. Every board that does
- * this well (Dexscreener, Birdeye, GMGN) puts identity and stats in a bar and
- * gives the rest of the surface to the chart.
+ * down it, which cost the chart a fifth of the page to show six numbers — and
+ * the chart is the thing anyone came for.
  *
- * The strip scrolls horizontally rather than wrapping: at a narrow width a
- * wrapped strip pushes the chart down the page, and these read as one row.
+ * Market cap sits OUTSIDE the tiles and larger: it's the number this kind of
+ * page is actually read for, and the reference gives it the same emphasis. The
+ * rest are peers in tiles beside it.
+ *
+ * The strip scrolls horizontally rather than wrapping — wrapped, it pushes the
+ * chart down the page, and these read as one row.
  */
 function CoinHeader({ coin }: { coin: CoinViewData }) {
     const explorer = explorerUrl(coin.network, coin.tokenAddress, coin.poolAddress);
     const up = coin.priceChange24h != null && coin.priceChange24h >= 0;
 
     return (
-        <header className="flex min-w-0 flex-col gap-3 border-b border-soft-gray/10 px-4 py-3 @3xl/coin:flex-row @3xl/coin:items-center @3xl/coin:gap-5">
+        <header className="flex min-w-0 flex-col gap-3 border-b border-soft-gray/10 px-4 py-3 @3xl/coin:flex-row @3xl/coin:items-center @3xl/coin:gap-6">
             {/* Identity. shrink-0 so the stat strip gives way first — the coin's
                 own name is the last thing that should be squeezed. */}
             <div className="flex min-w-0 shrink-0 items-center gap-3">
-                <div className="relative size-10 shrink-0">
+                <div className="relative size-11 shrink-0">
                     {coin.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={coin.imageUrl} alt="" className="size-full rounded-full object-cover" />
@@ -100,15 +105,15 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                     <ChainBadge network={coin.network} className="absolute -bottom-1 -right-1 rounded-full bg-black p-1 ring-1 ring-black" />
                 </div>
                 <div className="min-w-0">
-                    <h1 className="truncate text-lg font-bold tracking-tight text-white">{coin.symbol}</h1>
-                    <div className="flex min-w-0 items-center gap-1.5">
+                    <h1 className="truncate text-xl font-bold tracking-tight text-white">{coin.symbol}</h1>
+                    <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[13px] font-medium text-zinc-500">
                             {coin.name ?? chainLabel(coin.network)}
                         </span>
-                        {/* The address belongs up here next to the name, as a
-                            copy affordance — it was a full-width button at the
-                            bottom of the old sidebar, which is a lot of room for
-                            a string nobody reads. */}
+                        {/* The address sits next to the name as a copy
+                            affordance — it was a full-width button at the bottom
+                            of the old sidebar, which is a lot of room for a
+                            string nobody reads in full. */}
                         <button
                             type="button"
                             onClick={() => void navigator.clipboard.writeText(coin.tokenAddress)}
@@ -116,7 +121,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                             className="flex shrink-0 cursor-pointer items-center gap-1 text-[13px] font-medium text-zinc-600 transition-colors hover:text-white"
                         >
                             <span className="hidden @xl/coin:inline">
-                                {coin.tokenAddress.slice(0, 4)}…{coin.tokenAddress.slice(-4)}
+                                {coin.tokenAddress.slice(0, 5)}…{coin.tokenAddress.slice(-5)}
                             </span>
                             <HugeiconsIcon icon={Copy01Icon} className="size-3.5" strokeWidth={2} />
                         </button>
@@ -135,16 +140,23 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                 </div>
             </div>
 
-            <div className="hidden-scrollbar -mx-1 flex min-w-0 items-stretch overflow-x-auto px-1">
+            <div className="hidden-scrollbar -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 py-0.5">
+                {/* Market cap leads, untiled and larger — the headline number. */}
+                <div className="flex shrink-0 flex-col justify-center pr-2">
+                    <span className="whitespace-nowrap text-[11px] font-medium text-zinc-500">Market cap</span>
+                    <span className="text-xl font-bold tabular-nums leading-tight text-white">
+                        {compactUsd(coin.marketCapUsd)}
+                    </span>
+                </div>
+
                 <Stat label="Price" value={compactUsd(coin.priceUsd)} />
                 <Stat
-                    label="24h"
-                    value={coin.priceChange24h == null ? "—" : `${up ? "+" : ""}${coin.priceChange24h.toFixed(2)}%`}
+                    label="24H change"
+                    value={coin.priceChange24h == null ? "—" : `${up ? "▲" : "▼"} ${Math.abs(coin.priceChange24h).toFixed(2)}%`}
                     tone={coin.priceChange24h == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred"}
                 />
-                <Stat label="Market cap" value={compactUsd(coin.marketCapUsd)} />
+                <Stat label="24H Vol." value={compactUsd(coin.volume24hUsd)} />
                 <Stat label="Liquidity" value={compactUsd(coin.liquidityUsd)} />
-                <Stat label="24h vol" value={compactUsd(coin.volume24hUsd)} />
                 <Stat label="Txns" value={coin.txns24h?.toLocaleString() ?? "—"} />
                 <Stat
                     label="Buys / sells"

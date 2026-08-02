@@ -19,6 +19,10 @@ interface TradingViewWidgetOptions {
     enabled_features?: string[];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     overrides?: Record<string, any>;
+    /** Defaults for built-in studies. Separate from `overrides`, which only
+     *  reaches the chart itself — volume's colours live here. */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    studies_overrides?: Record<string, any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     loading_screen?: Record<string, any>;
     custom_css_url?: string;
