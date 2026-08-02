@@ -36,15 +36,15 @@ export function FeedTab({ label, isActive, onClick, suffix, className }: FeedTab
                     <motion.span
                         layoutId="feed-tab-pill"
                         transition={{ type: "spring", stiffness: 550, damping: 45 }}
-                        className="absolute inset-0 rounded-full bg-twitter/40"
+                        className="absolute inset-0 rounded-full bg-twitter/15"
                     />
                 )}
                 {/* Above the pill: it's absolutely positioned, so without a
                     positioned label the fill would paint over the text. */}
                 <span
                     className={cn(
-                        "relative text-[15px] font-bold transition-colors",
-                        isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300",
+                        "relative text-[15px] font-semibold transition-colors",
+                        isActive ? "text-twitter2" : "text-zinc-500 group-hover:text-zinc-300",
                     )}
                 >
                     {label}

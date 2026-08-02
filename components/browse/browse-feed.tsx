@@ -617,7 +617,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
                 them. */}
             {showTabs && (
                 <div className={cn(
-                    "sticky z-100 flex w-full items-center border-b border-soft-gray/[0.12] bg-canvas",
+                    "sticky z-100 flex w-full items-center bg-canvas",
                     homeTabsOffset
                         ? "top-12 md:top-[calc(var(--header-height)+3rem)]"
                         : headerOffset
@@ -675,7 +675,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
                 composer is hidden this stays as a zero-height sentinel in the
                 same spot rather than dropping out, which would leave the
                 observer unattached and the pill permanently suppressed. */}
-            <div ref={composerRef}>
+            <div ref={composerRef} className="pl-0 pr-36">
                 {showComposer && <PostComposer />}
             </div>
 
