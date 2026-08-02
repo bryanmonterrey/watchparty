@@ -9,7 +9,7 @@
 // `server/routers/wallet.ts` getChartData, but range-based (from/to) as UDF
 // requires, instead of a fixed timeframe enum.
 
-import { withCache, TTL } from "@/lib/cache";
+import { withCache, withSwrCache, TTL } from "@/lib/cache";
 
 const GT = "https://api.geckoterminal.com/api/v2/networks";
 const GT_HEADERS = { Accept: "application/json;version=20230302" };
@@ -17,6 +17,18 @@ const GT_HEADERS = { Accept: "application/json;version=20230302" };
 /** Default chain for a bare address — every link written before the chart went
  *  multi-chain carries one, and they must keep working. */
 const DEFAULT_NETWORK = "solana";
+
+/** How long a bar payload stays SERVEABLE past its fresh window. Long, on
+ *  purpose: the alternative when upstream refuses us is a blank chart. */
+const CHART_OHLCV_STALE = 60 * 60 * 6;
+
+/** The window genuinely held no candles — distinct from "upstream refused",
+ *  which must not be cached. Carries the library's page-back hint. */
+class EmptyWindow extends Error {
+    constructor(readonly nextTime?: number) {
+        super("no candles in window");
+    }
+}
 
 /**
  * Symbols are `network:address` — "base:0x…", "polygon_pos:0x…".
@@ -132,7 +144,13 @@ export async function getUdfBars(
     const bucketedLimit = Math.min(1000, Math.ceil(limit / 100) * 100);
     const key = `udf:v3:${network}:${mint}:${resolution}:${bucketedTo}:${bucketedLimit}`;
     try {
-        return await withCache(key, TTL.CHART_OHLCV, async () => {
+        // SWR, not plain cache. The Worker's egress is a shared Cloudflare
+        // address and GeckoTerminal rate-limits by IP, so a cold key on prod
+        // frequently CANNOT be filled — which is why charts went blank while
+        // the same call succeeded from a laptop. Serving the last good bars,
+        // even minutes old, beats an empty chart; only a true first-ever miss
+        // blocks on upstream.
+        return await withSwrCache(key, TTL.CHART_OHLCV, CHART_OHLCV_STALE, async () => {
             const url = new URL(`${GT}/${network}/pools/${pool.address}/ohlcv/${unit}`);
             url.searchParams.set("aggregate", String(aggregate));
             url.searchParams.set("limit", String(bucketedLimit));
@@ -154,9 +172,13 @@ export async function getUdfBars(
                 .sort((a, b) => a[0] - b[0]);
 
             if (sorted.length === 0) {
-                // Signal there may be older data before `from` so the library can page back.
+                // THROW rather than return. A cached "no_data" is indistinguishable
+                // from a cached refusal, and caching it makes one bad response
+                // blank the chart for the rest of the window. The catch below
+                // turns it back into a no_data for the widget without writing it
+                // to Redis.
                 const oldest = rows.length ? Math.min(...rows.map((r) => r[0])) : undefined;
-                return oldest && oldest < from ? { s: "no_data", nextTime: oldest } : { s: "no_data" };
+                throw new EmptyWindow(oldest && oldest < from ? oldest : undefined);
             }
 
             return {
@@ -170,12 +192,17 @@ export async function getUdfBars(
             } as UdfBars;
         });
     } catch (err) {
-        // no_data, not error. The widget treats `s: "error"` as a reason to sit
-        // on its loading screen indefinitely, so an upstream blip read to the
-        // user as "the chart is broken forever". no_data resolves the load and
-        // shows the library's own empty state, which is honest and recoverable
-        // — the next request inside a fresh bucket refills the cache.
-        console.error("[udf] ohlcv failed:", err instanceof Error ? err.message : err);
-        return { s: "no_data" };
+        // The widget treats `s: "error"` as a reason to sit on its loading
+        // screen indefinitely, so an upstream blip read to the user as "broken
+        // forever". no_data resolves the load and shows the library's own empty
+        // state instead — but the REASON still travels, in errmsg, because
+        // swallowing it is what made a rate-limited upstream look like a coin
+        // with no trades.
+        if (err instanceof EmptyWindow) {
+            return err.nextTime ? { s: "no_data", nextTime: err.nextTime } : { s: "no_data" };
+        }
+        const reason = err instanceof Error ? err.message : "fetch failed";
+        console.error("[udf] ohlcv failed:", reason);
+        return { s: "no_data", errmsg: reason };
     }
 }

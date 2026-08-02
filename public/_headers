@@ -1,3 +1,17 @@
 # Long-cache immutable Next.js build assets (hashed filenames)
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
+
+# TradingView Charting Library — 2,147 content-hashed chunks the widget
+# lazy-loads at runtime. They shipped as `max-age=0, must-revalidate`, so the
+# browser round-tripped EVERY chunk on EVERY chart open; that, not the data, is
+# why the chart took seconds to appear. The filenames carry a content hash, so
+# they're immutable by construction and a new build produces new names.
+/charting_library/bundles/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/charting_library/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/datafeeds/*
+  Cache-Control: public, max-age=31536000, immutable
