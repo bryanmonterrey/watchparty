@@ -33,8 +33,8 @@ function KindIcon({ kind }: { kind: AlertEvent["kind"] }) {
         : kind === "launch" ? RocketIcon
         : Bitcoin01Icon;
     return (
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/8">
-            <HugeiconsIcon icon={icon} className="size-3.5 text-zinc-400" strokeWidth={2.5} />
+        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-white/8">
+            <HugeiconsIcon icon={icon} className="size-2.5 text-zinc-400" strokeWidth={2.5} />
         </span>
     );
 }
@@ -47,7 +47,7 @@ function CoinMark({ event }: { event: AlertEvent }) {
                 src={event.tokenImageUrl}
                 alt=""
                 loading="lazy"
-                className="size-6 shrink-0 rounded-full object-cover"
+                className="size-4 shrink-0 rounded-full object-cover"
             />
         );
     }
@@ -58,9 +58,9 @@ function CoinMark({ event }: { event: AlertEvent }) {
 function Headline({ event }: { event: AlertEvent }) {
     const meta = KIND_META[event.kind];
     const badge = meta.badge ? (
-        // Sized to sit on the 15px headline as a peer rather than a footnote —
-        // in the designs the buy/sell chip is nearly as tall as the text beside
-        // it, which is what makes the line scan as "N traders BUY $x".
+        // Nearly as tall as the 13px text beside it, per the designs — that is
+        // what makes the line scan as "N traders BUY $x" rather than reading the
+        // chip as a footnote.
         <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[13px] font-bold leading-[16px]", TONE_BADGE[meta.tone])}>
             {meta.badge}
         </span>
@@ -171,11 +171,12 @@ export function AlertRow({ event }: { event: AlertEvent }) {
                 className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/alert-hover:opacity-10"
             />
             <TraderStack traders={event.traders} total={event.traderCount} className="mt-0.5" />
-            {/* 15px both lines, matching the designs — the rail is ~280px of
-                usable width there too, so it fits. gap-1.5 between them; the
-                two lines are one thought but shouldn't run together. */}
+            {/* 13px both lines, measured off the designs against the row's own
+                content width — an earlier pass read that screenshot at the wrong
+                scale and landed on 15. gap-1.5 between them; the two lines are
+                one thought but shouldn't run together. */}
             <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <span className="flex min-w-0 items-center gap-1.5 text-[15px] leading-tight">
+                <span className="flex min-w-0 items-center gap-1.5 text-[13px] leading-tight">
                     <Headline event={event} />
                     {/* ml-auto, not a fixed column: the headline's own width
                         varies a lot and the age should hug the right edge. */}
@@ -183,7 +184,7 @@ export function AlertRow({ event }: { event: AlertEvent }) {
                         {formatAge(event.occurredAt)}
                     </span>
                 </span>
-                <span className="flex min-w-0 items-center text-[15px] leading-tight">
+                <span className="flex min-w-0 items-center text-[13px] leading-tight">
                     <Subline event={event} />
                 </span>
             </span>
@@ -202,7 +203,7 @@ export function AlertRow({ event }: { event: AlertEvent }) {
     // content at px-2 was almost touching the outline and cutting the corner.
     // `relative` is what the hover tint's inset-0 resolves against.
     const className = cn(
-        "group/alert-hover relative flex w-full items-start gap-2.5 px-3 py-3.5 text-left transition-colors",
+        "group/alert-hover relative flex w-full items-start gap-2.5 px-3 py-3 text-left transition-colors",
         "border-b border-white/[0.06] last:border-b-0",
     );
 
