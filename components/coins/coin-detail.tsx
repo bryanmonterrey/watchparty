@@ -10,6 +10,7 @@
 // CoinViewData is deliberately the shape lib/coins/resolve returns, so the page
 // hands its result straight in with no mapping.
 
+import * as React from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Copy01Icon } from "@hugeicons/core-free-icons";
@@ -91,7 +92,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
     const up = coin.priceChange24h != null && coin.priceChange24h >= 0;
 
     return (
-        <header className="flex min-w-0 flex-col gap-3 border-b border-soft-gray/10 px-4 py-3 @3xl/coin:flex-row @3xl/coin:items-center @3xl/coin:gap-6">
+        <header className="flex min-w-0 flex-col gap-3 px-4 py-3 @3xl/coin:flex-row @3xl/coin:items-center @3xl/coin:gap-6">
             {/* Identity. shrink-0 so the stat strip gives way first — the coin's
                 own name is the last thing that should be squeezed. */}
             <div className="flex min-w-0 shrink-0 items-center gap-3">
@@ -167,43 +168,117 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
     );
 }
 
-function MarketTrades({ coin }: { coin: CoinViewData }) {
+/** Relative age, compact — "2m", "4h", "3d". The reference's rows lead with
+ *  how recent a trade is, and a full timestamp is noise at that density. */
+function ago(ts: number) {
+    const secs = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+    if (secs < 60) return `${secs}s`;
+    if (secs < 3600) return `${Math.floor(secs / 60)}m`;
+    if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
+    return `${Math.floor(secs / 86400)}d`;
+}
+
+const compactAmount = (n: number) =>
+    new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 }).format(n);
+
+/**
+ * The table under the chart: a tab row, column labels, then rows.
+ *
+ * SWAPS is the only tab with data behind it. Holders — position, PnL, average
+ * entry — is the shape the reference shows, but every one of those columns
+ * needs per-wallet cost basis, which means indexing every transfer of the mint.
+ * We don't have that, and inventing the columns with blanks would be worse than
+ * saying so, so the tab states it plainly rather than rendering an empty grid.
+ */
+function CoinTable({ coin }: { coin: CoinViewData }) {
+    const [tab, setTab] = React.useState<"swaps" | "holders">("swaps");
     const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
         { mint: coin.tokenAddress },
         { enabled: coin.network === "solana", staleTime: 30_000, refetchInterval: 30_000, retry: 1 },
     );
 
+    // One definition for the header and every row, so the columns can't drift.
+    const GRID = "grid grid-cols-[64px_minmax(0,1fr)_110px_110px_64px] items-center gap-3 px-4";
+
     return (
-        <section className="border-t border-soft-gray/10">
-            <div className="flex items-center justify-between px-5 py-4">
-                <h3 className="text-base font-bold text-white">Recent transactions</h3>
-                <span className="text-xs font-medium text-zinc-600">live market trades</span>
+        <section className="flex min-w-0 flex-col">
+            <div className="flex items-center gap-5 px-4 pb-3 pt-4">
+                {(["swaps", "holders"] as const).map((t) => (
+                    <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTab(t)}
+                        aria-pressed={tab === t}
+                        className={cn(
+                            "cursor-pointer text-[15px] font-bold capitalize transition-colors",
+                            tab === t ? "text-white" : "text-zinc-600 hover:text-zinc-300",
+                        )}
+                    >
+                        {t}
+                    </button>
+                ))}
             </div>
-            {coin.network !== "solana" ? (
-                <p className="px-5 pb-8 text-sm text-zinc-500">On-chain transactions for {chainLabel(coin.network)} open on the external market venue.</p>
-            ) : isLoading ? (
-                <div className="space-y-px px-5 pb-5">
-                    {Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-11 rounded-lg shimmer-skeleton" />)}
-                </div>
-            ) : trades.length === 0 ? (
-                <p className="px-5 pb-8 text-sm text-zinc-500">No recent trades.</p>
+
+            {tab === "holders" ? (
+                <p className="px-4 pb-8 text-sm text-zinc-500">
+                    Holder positions need per-wallet cost basis — every transfer of the mint indexed.
+                    Not tracked yet.
+                </p>
+            ) : coin.network !== "solana" ? (
+                <p className="px-4 pb-8 text-sm text-zinc-500">
+                    Swaps are read from the Solana pool. Open the market venue for {chainLabel(coin.network)}.
+                </p>
             ) : (
-                <div className="divide-y divide-soft-gray/10">
-                    {trades.slice(0, 12).map((trade, index) => (
-                        <a
-                            key={trade.txHash || index}
-                            href={`https://solscan.io/tx/${trade.txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="grid grid-cols-[80px_1fr_1fr_auto] items-center gap-3 px-5 py-3 text-sm transition-colors hover:bg-white/2"
-                        >
-                            <span className={trade.isBuy ? "font-bold text-lantern" : "font-bold text-pastelred"}>{trade.isBuy ? "Buy" : "Sell"}</span>
-                            <span className="truncate text-zinc-400">{trade.account}</span>
-                            <span className="text-right font-semibold tabular-nums text-zinc-200">{compactUsd(trade.usdValue)}</span>
-                            <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-4 text-zinc-600" strokeWidth={2} />
-                        </a>
-                    ))}
-                </div>
+                <>
+                    <div className={cn(GRID, "pb-2 text-[13px] font-medium text-zinc-600")}>
+                        <span>Type</span>
+                        <span>Trader</span>
+                        <span className="text-right">Amount</span>
+                        <span className="text-right">Value</span>
+                        <span className="text-right">Age</span>
+                    </div>
+
+                    {isLoading ? (
+                        <div className="space-y-1 px-4 pb-5">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="h-11 rounded-lg shimmer-skeleton" />
+                            ))}
+                        </div>
+                    ) : trades.length === 0 ? (
+                        <p className="px-4 pb-8 text-sm text-zinc-500">No recent trades.</p>
+                    ) : (
+                        <div className="pb-4">
+                            {trades.slice(0, 25).map((trade, i) => (
+                                <a
+                                    key={trade.txHash || i}
+                                    href={`https://solscan.io/tx/${trade.txHash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={cn(GRID, "py-2.5 text-[14px] transition-colors hover:bg-white/[0.03]")}
+                                >
+                                    <span className={cn("font-bold", trade.isBuy ? "text-lantern" : "text-pastelred")}>
+                                        {trade.isBuy ? "Buy" : "Sell"}
+                                    </span>
+                                    {/* Wallet addresses are never rendered in full
+                                        (project rule) — truncated is identity
+                                        enough to tell two traders apart. */}
+                                    <span className="truncate font-medium text-zinc-300">
+                                        {trade.account.slice(0, 4)}…{trade.account.slice(-4)}
+                                    </span>
+                                    <span className="text-right font-medium tabular-nums text-zinc-400">
+                                        {compactAmount(trade.tokenAmount)}
+                                    </span>
+                                    <span className="text-right font-bold tabular-nums text-white">
+                                        {compactUsd(trade.usdValue)}
+                                    </span>
+                                    <span className="text-right font-medium tabular-nums text-zinc-600">
+                                        {trade.ts ? ago(trade.ts) : "—"}
+                                    </span>
+                                </a>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
         </section>
     );
@@ -230,7 +305,7 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
                     </div>
                 )}
             </div>
-            <MarketTrades coin={coin} />
+            <CoinTable coin={coin} />
         </main>
     );
 }
@@ -254,7 +329,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
     } : null;
 
     return (
-        <aside className="p-4 @4xl/coin:border-l @4xl/coin:border-soft-gray/10">
+        <aside className="p-4">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 {coin.network !== "solana" ? (
                     <div className="rounded-2xl bg-soft-gray-5 p-5">
