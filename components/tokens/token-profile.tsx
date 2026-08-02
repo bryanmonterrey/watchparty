@@ -13,6 +13,7 @@ import { TokenBondingCurve } from "./token-bonding-curve"
 import { TokenChatCard } from "./token-chat-card"
 import { TokenNotifiedBanner } from "./token-notified-banner"
 import { TokenHoldersTable } from "./token-holders-table"
+import { HomeActionDock } from "@/components/home/home-action-dock"
 
 interface TokenProfileProps {
     token: Token & {
@@ -33,15 +34,24 @@ export function TokenProfile({ token }: TokenProfileProps) {
     const holderCount = token.holderCount ?? 0
 
     return (
-        // min-w-0: this is a flex child of (rails)/layout.tsx's row now, and its
-        // grid below holds long unbreakable strings (mints, prices). Without it
-        // the grid's max-content width wins and the page pushes the alerts rail
-        // off-screen instead of narrowing.
-        <div className="w-full min-w-0 px-4 mx-auto p-2 pt-header flex flex-col gap-6 text-zinc-100 min-h-screen">
-            <div className="grid grid-cols-1 lg:grid-cols-10 items-start gap-3">
-                
-                {/* Left Column */}
-                <div className="lg:col-span-7 flex flex-col gap-3">
+        // The token page's own columns, in home's frame: the alerts rail comes
+        // from (rails)/layout.tsx, this supplies the middle (chart, stats,
+        // holders/trades), the swap panel as a right rail, and the action dock
+        // in the far gutter — four columns, same as home and /feed.
+        //
+        // A flex ROW at lg, stacked below it. The 10-column grid this replaces
+        // couldn't do that job any more: the page no longer owns the full
+        // viewport (the rail takes its share), so proportional columns sized off
+        // the wrong box. Stacking rather than hiding keeps the swap panel on one
+        // mount — rendering it twice for two breakpoints would double its
+        // queries.
+        //
+        // min-w-0 throughout: this subtree holds long unbreakable strings (mints,
+        // prices), and without it their max-content width wins and the page
+        // shoves the alerts rail off-screen instead of narrowing.
+        <div className="flex w-full min-w-0 flex-col text-zinc-100 min-h-screen lg:flex-row">
+            <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pt-header">
+                <div className="flex min-w-0 flex-col gap-3">
                     <TokenHeader token={token} />               
                     <TokenMarketOverview token={token} />
                     <TokenStatsGrid token={token} />
@@ -93,9 +103,18 @@ export function TokenProfile({ token }: TokenProfileProps) {
                         </div>
                     </div>
                 </div>
+            </main>
 
-                {/* Right Column */}
-                <div className="lg:col-span-3 flex flex-col gap-3">
+            {/* Right rail: the swap panel and what hangs off it. At lg+ it pins
+                and scrolls inside itself, the same way home's rails do — the
+                trade panel is the thing you keep reaching for while reading the
+                chart and trades, so it shouldn't scroll away with them.
+
+                Below lg the row stacks, and this becomes a full-width block
+                under the main content — sticky and the fixed height are scoped
+                to lg for that reason. */}
+            <aside className="w-full shrink-0 px-3 pb-6 lg:w-96 lg:px-0 lg:pb-0 lg:pr-3">
+                <div className="hidden-scrollbar flex flex-col gap-3 lg:sticky lg:top-0 lg:h-[100svh] lg:overflow-y-auto lg:pb-2 lg:pt-[calc(var(--header-height)+2px)]">
                     <TokenSwapCard
                         token={token}
                         creatorWallet={token.creator.wallet_address ?? null}
@@ -105,7 +124,10 @@ export function TokenProfile({ token }: TokenProfileProps) {
                     <TokenChatCard token={token} creatorUsername={token.creator.username} />
                     <TokenNotifiedBanner tokenId={token.id} />
                 </div>
-            </div>
+            </aside>
+
+            {/* Home's 4th column — same dock, same order, same collapse state. */}
+            <HomeActionDock />
         </div>
     )
 }
