@@ -103,7 +103,12 @@ export function HomePageSurface() {
                 those bars need while stuck is applied only once they ARE stuck
                 (see useStuck), so unstuck they stay transparent and the hero's
                 ambient glow reads through them. */}
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)]">
+            {/* xl:pr-3 opens the gap between this column and the video rail.
+                Scoped to xl because that's the only size the rail exists at —
+                below it the padding would just inset the column against nothing.
+                Padding rather than a narrower column: the hero and everything
+                under it size off <main>, so this pulls them all in together. */}
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] xl:pr-3">
                 <HomeCenterColumn />
             </main>
 
