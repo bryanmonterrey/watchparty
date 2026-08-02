@@ -52,10 +52,9 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     (z-50), so the tab bar sits flush at top-0 and the header
                     never covers it. Copying home's margin here parked the tabs a
                     header's height down the page on arrival. */}
-                {/* No ml here. Home's centre column carries lg:ml-2.5, which
-                    starts its content 10px PAST the rail — the feed is meant to
-                    begin exactly where the left column ends, so it starts at the
-                    spacer's edge instead. */}
+                {/* No ml — the feed begins exactly where the left column ends,
+                    which is the spacer's edge. Home's centre column has no left
+                    margin either, so the two pages share the same vertical. */}
                 <main className="relative flex min-w-0 flex-1 flex-col">
                     {/* Left-aligned, NOT mx-auto. Centred, the column floated in
                         whatever width was left over, so where it began moved

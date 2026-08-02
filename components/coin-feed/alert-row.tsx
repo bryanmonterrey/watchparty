@@ -125,15 +125,20 @@ function Subline({ event }: { event: AlertEvent }) {
         );
     }
 
+    // "SYMBOL · $612K mc" rather than "SYMBOL at $612K MC". Two filler words and
+    // a gap each cost real width in a 276px column, and the middot carries the
+    // same separation. The symbol truncates instead of shrink-0 so a long ticker
+    // gives way rather than pushing the cap out of the row.
     return (
         <span className="flex min-w-0 items-center gap-1.5">
             <CoinMark event={event} />
-            <span className="shrink-0 font-bold text-white">{event.symbol}</span>
+            <span className="truncate font-bold text-white">{event.symbol}</span>
             {event.marketCapUsd != null && (
                 <>
-                    <span className="shrink-0 text-zinc-500">at</span>
-                    <span className="shrink-0 font-bold tabular-nums text-zinc-200">{formatUsd(event.marketCapUsd)}</span>
-                    <span className="shrink-0 text-zinc-500">mc</span>
+                    <span className="shrink-0 text-zinc-600">·</span>
+                    <span className="shrink-0 font-bold tabular-nums text-zinc-400">
+                        {formatUsd(event.marketCapUsd)} mc
+                    </span>
                 </>
             )}
         </span>
@@ -159,12 +164,12 @@ export function AlertRow({ event }: { event: AlertEvent }) {
                 className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/alert-hover:opacity-10"
             />
             <TraderStack traders={event.traders} total={event.traderCount} className="mt-0.5" />
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex min-w-0 items-center gap-1.5 text-[13px] leading-tight">
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex min-w-0 items-center gap-1 text-[13px] leading-tight">
                     <Headline event={event} />
                     {/* ml-auto, not a fixed column: the headline's own width
                         varies a lot and the age should hug the right edge. */}
-                    <span className="ml-auto shrink-0 pl-1 text-[12px] font-medium tabular-nums text-zinc-500">
+                    <span className="ml-auto shrink-0 pl-1.5 text-[12px] font-medium tabular-nums text-zinc-600">
                         {formatAge(event.occurredAt)}
                     </span>
                 </span>
@@ -179,8 +184,11 @@ export function AlertRow({ event }: { event: AlertEvent }) {
     // replaces it, exactly as it does on the video rail (there the two are
     // mutually exclusive via `!hoverColor && hover:bg-…`). `relative` is what
     // the tint's inset-0 resolves against.
+    // px-3, not px-2: the list sits in a bordered box with a 25px radius now, so
+    // content that ran to px-2 was almost touching the outline and cutting the
+    // corner. `relative` is what the tint's inset-0 resolves against.
     const className = cn(
-        "group/alert-hover relative flex w-full items-start gap-2.5 px-2 py-2.5 text-left transition-colors",
+        "group/alert-hover relative flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors",
     );
 
     // No link target (a tracked coin on a chain with no explorer configured):

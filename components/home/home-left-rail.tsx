@@ -31,12 +31,10 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 // one and this element's height is what the divider's length is measured by.
 const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col md:pt-[calc(var(--header-height)+4px)]";
 
-// Expanded only. border-r is the column divider, and it lives HERE rather than
-// on the list inside so it runs the full 100svh — past the header clearance
-// above and the list's own bottom margin below — instead of stopping where the
-// list does. Collapsed there is no column to divide, just a chevron strip, so
-// the line would read as a stray edge rather than a boundary.
-const INNER_EXPANDED = `${INNER} border-r border-flexwhite/10 px-1.5`;
+// Expanded only. No divider — the alerts list carries its own outline now (see
+// RailShell's `bordered`), and a full-height rule beside a box that stops short
+// of the bottom read as a line running off on its own.
+const INNER_EXPANDED = `${INNER} px-1.5`;
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);

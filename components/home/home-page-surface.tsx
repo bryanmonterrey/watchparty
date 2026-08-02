@@ -103,7 +103,7 @@ export function HomePageSurface() {
                 those bars need while stuck is applied only once they ARE stuck
                 (see useStuck), so unstuck they stay transparent and the hero's
                 ambient glow reads through them. */}
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] lg:ml-2.5 xl:mr-1.5">
+            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)]">
                 <HomeCenterColumn />
             </main>
 
