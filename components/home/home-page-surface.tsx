@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { motion } from "motion/react";
 import { HomeCenterColumn } from "./home-center-column";
 import { HomeRailVideos } from "./home-rail-videos";
-import { HomeRailNews } from "./home-rail-news";
+import { NewsCard } from "@/components/browse/discover-right-rail";
 import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
@@ -14,15 +14,10 @@ const RAIL_INNER = "sticky top-0 flex h-[100svh] flex-col md:pt-[calc(var(--head
 // No divider on this side — the left rail carries the only one (border-r, see
 // home-left-rail), and it sits on the rail rather than on the list inside so it
 // runs the full 100svh rather than stopping where the list does.
-// pb-20 is the rail's bottom breathing room, and it lives on the COLUMN rather
-// than on a card. It was the video card's mb-20, which worked while that card
-// was the last thing in the column — with the news card under it that 80px
-// became a gap in the MIDDLE of the stack instead. On the column it's the same
-// 80px at the bottom, and it survives the news card self-hiding when its
-// upstream returns nothing.
-//
-// gap-3 spaces the two cards; each card's own margin is now just its own.
-const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-3 pb-20`;
+// Unchanged from before the news card existed: sticky, h-[100svh], the video
+// list scrolling inside it. The news card sits AFTER this box in the column
+// rather than inside it — see the aside.
+const RAIL_INNER_RIGHT = RAIL_INNER;
 
 const BrowseFeed = dynamic(
     () => import("@/components/browse/browse-feed").then((module) => module.BrowseFeed),
@@ -144,17 +139,22 @@ export function HomePageSurface() {
             <aside className="ml-7 mr-auto hidden w-96 shrink-0 xl:block">
                 {/* Tabs are no longer a sibling here — they're the card's header,
                     inside HomeRailVideos' RailShell, so the rail reads as one
-                    outlined box the way the alerts rail does.
-
-                    Two cards now. The column is a fixed h-[100svh], so the video
-                    card takes flex-1 (its list scrolls inside it) and the news
-                    card below is flex-none at its natural height — both stay on
-                    screen instead of the second one falling past the fold.
-                    Neither carries a width: they inherit the aside's w-96, so
-                    "same width as the video rail" holds by construction. */}
+                    outlined box the way the alerts rail does. */}
+                {/* THE VIDEO RAIL KEEPS ITS OWN VIEWPORT-HEIGHT BOX. The news
+                    card goes after it, not inside it: sharing the h-[100svh]
+                    between the two shortened the video card, which was backwards
+                    — the COLUMN is what should grow. The aside is now taller
+                    than the viewport and the card below scrolls into view, while
+                    the rail above is exactly the size it always was. */}
                 <div className={RAIL_INNER_RIGHT}>
                     <HomeRailVideos />
-                    <HomeRailNews />
+                </div>
+
+                {/* The feed right rail's card itself, not a lookalike — see the
+                    export note on NewsCard. It inherits the aside's w-96, so it
+                    matches the rail above it by construction. */}
+                <div className="pb-20">
+                    <NewsCard />
                 </div>
             </aside>
 

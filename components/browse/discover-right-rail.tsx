@@ -301,7 +301,10 @@ function TrendRow({ title, meta, ticker, tokenAddress }: { title: string; meta: 
     );
 }
 
-function NewsCard() {
+// Exported: home's right column renders this same card under its video rail.
+// Shared rather than reimplemented so the two can't drift — a lookalike built on
+// RailShell was visibly a different card.
+export function NewsCard() {
     const { data, isLoading } = trpc.discover.trending.useQuery({ limit: 5 }, { staleTime: 300_000 });
     const forceLoading = useForceLoading();
     if (isLoading || forceLoading) {
