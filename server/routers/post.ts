@@ -66,6 +66,13 @@ export const postRouter = router({
                     origCreatedAt: origPosts.createdAt,
                     origTicker: origPosts.ticker,
                     origTokenImage: origPosts.token_image,
+                    // Selected alongside the other orig* token fields so a
+                    // repost's badge can say whether the ORIGINAL coin is live.
+                    // Without it this branch returned ticker + image and no
+                    // status, so the pill had to assume "draft" on every repost.
+                    // post-shape.ts already carries origTokenStatus for exactly
+                    // this reason.
+                    origTokenStatus: origPosts.tokenStatus,
                     origVideoUrl: origPosts.videoUrl,
                     origLinkPreview: origPosts.linkPreview,
                     origUserName: origUser.name,
@@ -145,6 +152,7 @@ export const postRouter = router({
                     createdAt: row.createdAt,
                     originalCreatedAt: row.origCreatedAt,
                     ticker: row.origTicker ?? null,
+                    tokenStatus: row.origTokenStatus ?? null,
                     audience: row.origAudience,
                     replyPrivacy: row.origReplyPrivacy,
                     repostOfId: null,

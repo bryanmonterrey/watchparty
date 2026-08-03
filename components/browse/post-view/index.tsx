@@ -14,8 +14,7 @@ import {
     HeartFilledIcon,
     BookmarkIcon,
     BookmarkFilledIcon,
-    LinkIcon,
-    GeminiIcon
+    LinkIcon
 } from "@/components/icons";
 import { MediaGrid } from "@/components/browse/media-grid";
 import { FeedVideoPlayer } from "@/components/video/feed-video-player";
@@ -24,6 +23,7 @@ import { PollDisplay } from "@/components/browse/poll-display";
 import { PostCardSkeleton } from "../post-card-skeleton";
 import { QuotedPostView } from "../post-card/quoted-post-view";
 import { PostOptionsMenu } from "../post-card/post-options-menu";
+import { PostTickerPill } from "../post-card/post-ticker-pill";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { CommentSection } from "../comment-section";
 import { ActionButton } from "../post-card/action-button";
@@ -330,10 +330,19 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                 {session?.user?.id !== post.user.id && (
                                     <SubscribeButton creatorId={post.user.id} creatorName={post.user.name || post.user.username || "Creator"} />
                                 )}
-                                <div className="flex items-center gap-0.5">
-                                    <button className="text-white2 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors">
-                                        <GeminiIcon className="w-5 h-5" />
-                                    </button>
+                                <div className="flex items-center gap-1">
+                                    {/* The coin badge, in the slot the Gemini
+                                        spark used to hold — same move as the feed
+                                        card's header row. `md` here: this row is
+                                        built a step up (w-5 icons, p-2 buttons). */}
+                                    {post.ticker && (
+                                        <PostTickerPill
+                                            ticker={post.ticker}
+                                            tokenStatus={post.tokenStatus}
+                                            tokenImage={post.token_image}
+                                            size="md"
+                                        />
+                                    )}
                                     <PostOptionsMenu
                                         postId={post.id}
                                         userId={post.user.id}
@@ -537,14 +546,26 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                             <div className="flex items-center gap-1">
                                                 <span className="font-bold text-zinc-100">{post.user.name || ""}</span>
                                                 {post.user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
-                                                <GeminiIcon className="w-4 h-4 text-zinc-500 shrink-0" />
                                             </div>
                                             <span className="text-zinc-500 text-[15px]">@{post.user.username || "user"}</span>
                                         </div>
                                     </div>
-                                    <button className="text-zinc-500 hover:text-zinc-100 hover:bg-white/10 p-2 rounded-full transition-colors">
-                                        <MoreHorizontal className="w-5 h-5" />
-                                    </button>
+                                    {/* Badge + dots, mirroring the author row
+                                        above. The Gemini spark that sat inline
+                                        with the name is gone. */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {post.ticker && (
+                                            <PostTickerPill
+                                                ticker={post.ticker}
+                                                tokenStatus={post.tokenStatus}
+                                                tokenImage={post.token_image}
+                                                size="md"
+                                            />
+                                        )}
+                                        <button className="text-zinc-500 hover:text-zinc-100 hover:bg-white/10 p-2 rounded-full transition-colors">
+                                            <MoreHorizontal className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {post.content && (

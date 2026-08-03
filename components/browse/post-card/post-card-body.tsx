@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { CreateIcon, BubbleIcon, RetweetIcon, HeartIcon, HeartFilledIcon, BookmarkIcon, BookmarkFilledIcon, BarsIcon, LinkIcon, VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, GeminiIcon } from "@/components/icons";
+import { CreateIcon, BubbleIcon, RetweetIcon, HeartIcon, HeartFilledIcon, BookmarkIcon, BookmarkFilledIcon, BarsIcon, LinkIcon, VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
+import { PostTickerPill } from "./post-ticker-pill";
 import { MediaGrid } from "@/components/browse/media-grid";
 import { FeedVideoPlayer } from "@/components/video/feed-video-player";
 import { PollDisplay } from "@/components/browse/poll-display";
@@ -154,14 +155,26 @@ export function PostCardBody({
                                                 {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="w-4 h-4 shrink-0" />}
                                                 {user.verifiedTier === "business" && <BusinessBadgeIcon className="w-4 h-4 shrink-0" />}
                                                 {user.verifiedTier === "government" && <GovBadgeIcon className="w-4 h-4 shrink-0" />}
-                                                <GeminiIcon className="w-4 h-4 text-zinc-500 shrink-0" />
                                             </div>
                                             <span className="text-zinc-500 text-[15px]">@{user.username || "user"}</span>
                                         </div>
                                     </div>
-                                    <button className="text-zinc-500 hover:text-zinc-100 hover:bg-white/10 p-2 rounded-full transition-colors">
-                                        <MoreHorizontal className="w-5 h-5" />
-                                    </button>
+                                    {/* Badge + dots, same as the card header and
+                                        the post detail. The Gemini spark that sat
+                                        inline with the name is gone. */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        {post.ticker && (
+                                            <PostTickerPill
+                                                ticker={post.ticker}
+                                                tokenStatus={post.tokenStatus}
+                                                tokenImage={post.token_image}
+                                                size="md"
+                                            />
+                                        )}
+                                        <button className="text-zinc-500 hover:text-zinc-100 hover:bg-white/10 p-2 rounded-full transition-colors">
+                                            <MoreHorizontal className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {content && (
