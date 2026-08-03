@@ -32,23 +32,32 @@ if (!key) {
 const limit = Number(process.argv[2] ?? 15);
 
 const list = await fetch(`https://api.helius.xyz/v0/webhooks?api-key=${key}`).then((r) => r.json());
-const hook = (Array.isArray(list) ? list : []).find((w) => String(w.webhookURL || "").includes("helius-trades"));
-if (!hook) {
+const stub = (Array.isArray(list) ? list : []).find((w) => String(w.webhookURL || "").includes("helius-trades"));
+if (!stub) {
     console.error("No webhook whose URL contains 'helius-trades'.");
     process.exit(1);
 }
 
-console.log(`webhook ${hook.webhookID} currently watching ${hook.accountAddresses?.length ?? 0} addresses`);
+// The LIST endpoint omits accountAddresses — every webhook comes back looking
+// like it watches 0. Reading the count from there made this script believe the
+// flood was already stopped, PUT an empty list, and fail with "At least one
+// account address is required" while 313 pools kept firing. Fetch the webhook
+// by ID; that response carries the real list.
+const hook = await fetch(`https://api.helius.xyz/v0/webhooks/${stub.webhookID}?api-key=${key}`).then((r) => r.json());
+const current = hook.accountAddresses ?? [];
+console.log(`webhook ${stub.webhookID} currently watching ${current.length} addresses`);
 
-const keep = (hook.accountAddresses ?? []).slice(0, limit);
-const res = await fetch(`https://api.helius.xyz/v0/webhooks/${hook.webhookID}?api-key=${key}`, {
+// Helius rejects an empty list, so "pause" means keep exactly one — a single
+// pool is a trickle, and it keeps the webhook alive to be re-widened later.
+const keep = current.slice(0, Math.max(1, limit));
+const res = await fetch(`https://api.helius.xyz/v0/webhooks/${stub.webhookID}?api-key=${key}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-        webhookURL: hook.webhookURL,
-        transactionTypes: hook.transactionTypes,
+        webhookURL: hook.webhookURL ?? stub.webhookURL,
+        transactionTypes: hook.transactionTypes ?? stub.transactionTypes,
         accountAddresses: keep,
-        webhookType: hook.webhookType,
+        webhookType: hook.webhookType ?? stub.webhookType,
         ...(hook.authHeader ? { authHeader: hook.authHeader } : {}),
     }),
 });
