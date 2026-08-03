@@ -103,7 +103,11 @@
 }
 
 .dark {
-  --background: oklch(0% 0 0);
+  /* #050505, matching --color-canvas exactly. It was oklch(0% 0 0) — pure
+     black — which read as a different surface anywhere a bg-background panel
+     met a bg-canvas one. Same value now, so the seam disappears.
+     Light mode's --background is untouched. */
+  --background: #050505;
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -216,17 +220,19 @@
      and the fixed header read this, or the header's controls would sit at the
      screen edges while the content sat centred. */
   --app-max-width: 1536px;
-  --color-canvas: #080808;
+  /* #050505 — kept identical to .dark's --background above, so bg-canvas and
+     bg-background are interchangeable and never show a seam where they meet. */
+  --color-canvas: #050505;
   /* Sidebar menu-item hover pill (the `before:` capsule behind each item).
      Flat and opaque on purpose. It was zinc-900 on the nav items and
-     zinc-800/50 on the More trigger — over the sidebar's #080808 that blend
+     zinc-800/50 on the More trigger — over the sidebar's canvas that blend
      composites to #181819, i.e. the same colour, just expressed as alpha. One
      value now, so both read identically and neither shifts if what sits behind
      the sidebar ever changes. */
   --color-sidebar-hover: #18181B;
   /* Opaque steps of the same colour, for surfaces that were reaching for
      bg-sidebar-hover/<n>. Each is #18181B at that alpha already composited
-     over #080808 — the app canvas, i.e. bg-panel's white 3% over the black
+     over the app canvas (--color-canvas), i.e. bg-panel's white 3% over the black
      shell, which is the same value the sidebar paints flat.
 
      Flat means they hold their colour anywhere, instead of darkening over a
@@ -309,7 +315,7 @@
   --color-soft-gray-15: #242425;
   --color-soft-gray-20: #303131;
   /* The skeleton fill — same idea, one surface further along: the flat hex
-     that soft-gray 5% collapses to over the APP CANVAS (#080808, i.e.
+     that soft-gray 5% collapses to over the APP CANVAS (--color-canvas, i.e.
      bg-panel's white 3% over black), not over pure black like soft-gray-5.
      Opaque on purpose: the fill used to be translucent, so overlapping
      skeletons (the alert rail's -space-x-2 avatar cluster) showed through

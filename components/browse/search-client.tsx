@@ -18,17 +18,14 @@ export function SearchClient() {
         router.back();
     }, [router]);
 
-    const handleClear = useCallback(() => {
-        setQuery("");
-    }, [setQuery]);
-
+    // No onClear: the bar is GlobalSearch now, and its own clear button reports
+    // through onSearch("") — the same path every keystroke takes.
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col min-h-screen bg-canvas">
             <SearchHeader
                 value={query}
                 onChange={setQuery}
                 onBack={handleBack}
-                onClear={handleClear}
                 placeholder="Search"
             />
             <SearchResultsView query={query} />

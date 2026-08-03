@@ -110,9 +110,11 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-background">
-            {/* Tab Bar */}
-            <div className="sticky top-[52px] z-20 bg-background/80 backdrop-blur-md border-b border-border/40">
+        <div className="flex flex-col min-h-screen bg-canvas">
+            {/* Tab Bar. bg-canvas here too — bg-background is pure black in dark
+                mode, so the sticky strip used to sit a shade darker than the
+                page it scrolls over. */}
+            <div className="sticky top-[52px] z-20 bg-canvas/80 backdrop-blur-md border-b border-border/40">
                 <div className="flex overflow-x-auto scrollbar-none no-scrollbar px-1">
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab.id;

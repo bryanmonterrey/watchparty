@@ -9,7 +9,9 @@ export const metadata: Metadata = {
 
 export default function DiscoverSearchPage() {
     return (
-        <div className="w-full min-h-svh relative bg-background">
+        // bg-canvas (#080808), not bg-background — in dark mode --background is
+        // pure black, which read as a different surface from the rest of the app.
+        <div className="w-full min-h-svh relative bg-canvas">
             <SearchClient />
         </div>
     );

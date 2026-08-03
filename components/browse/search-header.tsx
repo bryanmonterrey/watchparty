@@ -1,21 +1,32 @@
 "use client";
 
-import { ChevronLeft, MoreHorizontal, X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-import { SearchIcon } from "@/components/icons";
-import { cn } from "@/lib/utils";
+import { ChevronLeft, MoreHorizontal } from "lucide-react";
+import { GlobalSearch } from "@/components/app-ui/global-search2";
 
 interface SearchHeaderProps {
     value: string;
     onChange: (value: string) => void;
     onBack: () => void;
-    onClear: () => void;
     placeholder?: string;
 }
 
-export function SearchHeader({ value, onChange, onBack, onClear, placeholder = "Search" }: SearchHeaderProps) {
+// /feed/search's header. The bar is THE GLOBAL SEARCH COMPONENT, not a copy of
+// its styling — this used to be a hand-rolled input (h-[52px], bg-zinc-500/35,
+// text-[18px], a paramount focus ring) that had drifted into looking like a
+// different control from the one in the app header. Reusing it is the only way
+// the two stay identical, and it brings the header bar's behaviour with it:
+// search history, the clear button, the submit affordance, the focus ring.
+//
+// showDropdown={false} because this page renders its results below the bar; the
+// suggestion panel would cover them. GlobalSearch supports that case directly
+// (it resets its own focus ring on outside click when the panel is off).
+//
+// onSearch fires on every keystroke AND on submit AND on clear, which is
+// exactly the contract `onChange` wants — so there's no separate clear handler
+// here any more.
+export function SearchHeader({ value, onChange, onBack, placeholder = "Search" }: SearchHeaderProps) {
     return (
-        <div className="flex w-full items-center justify-between h-13 bg-black/60 backdrop-blur-xl space-x-3 sticky top-0 z-[100]">
+        <div className="sticky top-0 z-[100] flex h-13 w-full items-center justify-between gap-3 bg-canvas/60 backdrop-blur-xl">
             <button
                 onClick={onBack}
                 className="h-13 hover:bg-white/10 px-4 transition-colors cursor-pointer text-zinc-100"
@@ -23,37 +34,17 @@ export function SearchHeader({ value, onChange, onBack, onClear, placeholder = "
                 <ChevronLeft className="w-7 h-7" />
             </button>
 
-            <div className="flex-1 mt-2">
-                <div className={cn(
-                    "relative flex h-[52px] items-center backdrop-blur-xl inner-shadow inner-shadow-blur-sm inner-shadow-white/50 bg-zinc-500/35 rounded-full transition-colors",
-                    "focus-within:ring-2 focus-within:ring-paramount"
-                )}>
-                    <SearchIcon className="absolute left-4 w-[20px] h-[20px] text-zinc-400 pointer-events-none" />
-                    <input
-                        type="text"
-                        value={value}
-                        onChange={e => onChange(e.target.value)}
-                        placeholder={placeholder}
-                        autoFocus
-                        className="w-full bg-transparent pl-11 pr-10 py-2.5 text-[18px] font-medium text-white placeholder:text-flexwhite/85 focus:outline-none"
-                    />
-                    <AnimatePresence>
-                        {value.length > 0 && (
-                            <motion.button
-                                type="button"
-                                onClick={onClear}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.8 }}
-                                transition={{ duration: 0.125 }}
-                                className="absolute right-3 p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </div>
+            {/* flex-1 merges onto GlobalSearch's own `w-full max-w-[600px]`, so
+                the bar fills the gap between the two buttons but still stops at
+                the same 600px the header's copy does. */}
+            <GlobalSearch
+                initialValue={value}
+                onSearch={onChange}
+                placeholder={placeholder}
+                showDropdown={false}
+                autoFocus
+                className="flex-1"
+            />
 
             <div className="relative flex items-center justify-center gap-1">
                 <button className="p-2 px-4 h-13 hover:bg-white/10 transition-colors cursor-pointer text-zinc-100">
