@@ -113,8 +113,18 @@ export function HomePageSurface() {
 
                 The hero and everything under it size off <main>, so this narrows
                 them together — which is the point; they now match the feed's
-                column rather than running as wide as the window allows. */}
-            <main className="@container/home relative flex w-full ml-7 min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)]">
+                column rather than running as wide as the window allows.
+
+                COLLAPSING THE ALERTS RAIL RAISES THE CAP, by exactly what the
+                rail gives up: w-72 (288px) -> w-11 (44px) is 244px, and
+                628 + 244 = 872. That keeps the right rail planted — the column
+                absorbs the reclaimed space instead of the whole row sliding left
+                into it, which is what a fixed cap did (the rail's own comment
+                warns about this; it assumed home's centre was still flex-1).
+
+                A cap swap rather than flex-1, so the column is the feed's 628px
+                at rest and only ever grows by the exact amount on offer. */}
+            <main className="@container/home relative flex w-full ml-7 min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)] group-has-[[data-rail-collapsed=true]]/rails:max-w-[872px]">
                 <HomeCenterColumn />
             </main>
 

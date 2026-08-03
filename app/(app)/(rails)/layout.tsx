@@ -16,7 +16,12 @@ import { HomeLeftRail } from "@/components/home/home-left-rail";
 // its column/right-rail/dock, the token page its grid.
 export default function RailsLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="relative flex min-h-screen w-full px-1">
+        // group/rails so a page's centre column can react to the rail being
+        // collapsed without the state being lifted anywhere: the rail marks
+        // itself data-rail-collapsed, and a descendant reads it with
+        // group-has-[[data-rail-collapsed=true]]. The row is the nearest common
+        // ancestor, which is why the group lives here.
+        <div className="group/rails relative flex min-h-screen w-full px-1">
             <HomeLeftRail />
             {/* min-w-0 so a wide child (the token page's grid, the feed's
                 columns) shrinks instead of pushing the rail off-screen. */}

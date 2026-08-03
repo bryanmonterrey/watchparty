@@ -63,11 +63,16 @@ export function HomeLeftRail() {
     // Collapsing behaves differently on /feed, and it has to.
     //
     // Home and the token page give the reclaimed 244px to a column that can use
-    // it — home's centre is flex-1 and simply widens. The feed's column is
-    // capped at a 628px reading measure, so it can't grow into the space; the
-    // whole row just slid sideways instead, which is what "collapsing doesn't
-    // move other columns" was about. There the rail holds its width and empties
-    // to the expand control, and nothing outside this aside moves.
+    // it. Home's centre is NOT flex-1 any more — it's the feed's 628px measure —
+    // so it takes the space by raising its cap to 872 (628 + 244) off the
+    // data-rail-collapsed attribute below, which comes to the same thing: the
+    // column widens and the right rail doesn't move.
+    //
+    // The feed's column can't do that: it IS the 628px reading measure, at every
+    // width, so there's nothing for it to grow into and the whole row just slid
+    // sideways instead — which is what "collapsing doesn't move other columns"
+    // was about. There the rail holds its width and empties to the expand
+    // control, and nothing outside this aside moves.
     //
     // Read from the pathname rather than taken as a prop because the rail is
     // mounted ONCE, by (rails)/layout.tsx, for all three routes — there's no
@@ -76,7 +81,17 @@ export function HomeLeftRail() {
 
     if (collapsed) {
         return (
-            <aside className={cn("hidden shrink-0 lg:block", keepsWidth ? "w-72" : "w-11")}>
+            // data-rail-collapsed is read by the CENTRE COLUMN, not by anything
+            // in here: home's main widens by exactly the 244px this gives up
+            // (group-has-[[data-rail-collapsed=true]] in home-page-surface), so
+            // the right rail keeps its absolute position instead of sliding left
+            // with the column. An attribute rather than lifted state because the
+            // rail mounts once in (rails)/layout.tsx and the column is a
+            // descendant of the same row — CSS can see it without a store.
+            <aside
+                data-rail-collapsed={keepsWidth ? "false" : "true"}
+                className={cn("hidden shrink-0 lg:block", keepsWidth ? "w-72" : "w-11")}
+            >
                 <div className={INNER}>
                     {/* Holding the column, the chevron sits where the collapse
                         control it replaces sat — the right end of the header row
