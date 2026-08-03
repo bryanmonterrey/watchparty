@@ -11,11 +11,13 @@
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { trendingCoins } from "@/db/schema/content/trending";
-import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { heliusApiKey } from "@/lib/wallet/assets-webhook";
 
 const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before sharding
+// Watched DISPLAY pools. Small on purpose — see the note at the query below;
+// this bounds webhook DELIVERY RATE, which is what actually broke production.
+const MAX_DISPLAY_POOLS = 15;
 
 export async function syncTradesWebhook(): Promise<{ webhookID: string; watching: number; created: boolean }> {
     const apiKey = heliusApiKey();
@@ -28,30 +30,28 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
         .from(tokens)
         .where(and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress)));
 
-    // ALSO watch the coins we merely DISPLAY, not just the ones we launched.
-    // Without this the live tape covered watchparty tokens only, and every
-    // trending coin — which is most of what anyone actually opens — fell back
-    // to polling. Solana only: Helius sees no other chain.
+    // ALSO watch the coins we merely DISPLAY, so the live tape covers what
+    // people actually open and not just tokens we launched.
     //
-    // Volume is not a concern. These are hundreds of pools against a 90k
-    // ceiling, and Helius bills per delivery, not per watched address.
-    const [trending, tracked] = await Promise.all([
-        db
-            .select({ poolAddress: trendingCoins.poolAddress })
-            .from(trendingCoins)
-            .where(eq(trendingCoins.network, "solana")),
-        db
-            .select({ poolAddress: trackedTokens.poolAddress })
-            .from(trackedTokens)
-            .where(eq(trackedTokens.network, "solana")),
-    ]);
+    // HARD CAP, learned the hard way. An earlier version registered every
+    // trending + tracked Solana pool — 313 of them — and the receiver went to
+    // ~32 requests per SECOND. Each delivery ran Drizzle queries against a
+    // 15-connection pool, which exhausted it, threw "Worker exceeded memory
+    // limit", and degraded unrelated parts of the site. Pool COUNT is not the
+    // cost; pool ACTIVITY is, and trending pools are by definition the busiest
+    // on the chain. The 90k address ceiling is irrelevant next to that.
+    //
+    // So: only the top of the board, ordered by rank. Anything below that is
+    // served by the (still correct, still cached) polling path.
+    const trending = await db
+        .select({ poolAddress: trendingCoins.poolAddress })
+        .from(trendingCoins)
+        .where(eq(trendingCoins.network, "solana"))
+        .orderBy(trendingCoins.rank)
+        .limit(MAX_DISPLAY_POOLS);
 
     const accountAddresses = [
-        ...new Set(
-            [...rows, ...trending, ...tracked]
-                .map((r) => r.poolAddress)
-                .filter(Boolean) as string[],
-        ),
+        ...new Set([...rows, ...trending].map((r) => r.poolAddress).filter(Boolean) as string[]),
     ].slice(0, MAX_ADDRESSES);
     if (!accountAddresses.length) {
         return { webhookID: "", watching: 0, created: false }; // nothing launched yet

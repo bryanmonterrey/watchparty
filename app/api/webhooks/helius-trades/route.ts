@@ -77,17 +77,27 @@ export async function POST(req: NextRequest) {
         ))
         .limit(MAX_TOKENS_PER_CALL);
 
-    // Pools we only DISPLAY (trending / tracked) are registered on the same
-    // webhook but have no `tokens` row, so they'd arrive and be dropped. They
-    // get a tape but no market-row sync — syncMarketData below is for tokens we
-    // launched and own the pricing model for.
-    const displayPools = await db
-        .select({ poolAddress: trendingCoins.poolAddress, tokenAddress: trendingCoins.tokenAddress })
-        .from(trendingCoins)
-        .where(and(eq(trendingCoins.network, "solana"), inArray(trendingCoins.poolAddress, candidates)))
-        .limit(50);
+    // Pools we only DISPLAY (trending) are registered on the same webhook but
+    // have no `tokens` row, so they'd arrive and be dropped. They get a tape but
+    // no market-row sync — syncMarketData is for tokens we own the pricing
+    // model for.
+    //
+    // CACHED, not queried per delivery. This endpoint runs at tens of requests
+    // per SECOND on an active board, and a per-delivery query here exhausted the
+    // 15-connection pool and took out unrelated pages. The trending board only
+    // changes on its own sync, so a 60s cache is free accuracy-wise and turns
+    // the hot path into zero database reads.
+    const displayPools = await withCache("helius-trades:display-pools", 60, async () =>
+        db
+            .select({ poolAddress: trendingCoins.poolAddress, tokenAddress: trendingCoins.tokenAddress })
+            .from(trendingCoins)
+            .where(eq(trendingCoins.network, "solana"))
+            .orderBy(trendingCoins.rank)
+            .limit(50),
+    );
+    const displayHits = displayPools.filter((p) => p.poolAddress && touched.has(p.poolAddress));
 
-    if (rows.length === 0 && displayPools.length === 0) {
+    if (rows.length === 0 && displayHits.length === 0) {
         return NextResponse.json({ ok: true, synced: 0 });
     }
 
@@ -104,7 +114,7 @@ export async function POST(req: NextRequest) {
                 poolsByAddress.set(r.poolAddress, { network: "solana", tokenAddress: r.tokenAddress });
             }
         }
-        for (const p of displayPools) {
+        for (const p of displayHits) {
             if (p.poolAddress && p.tokenAddress && !poolsByAddress.has(p.poolAddress)) {
                 poolsByAddress.set(p.poolAddress, { network: "solana", tokenAddress: p.tokenAddress });
             }
