@@ -378,16 +378,16 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
         <section className="flex min-w-0 flex-col">
             {/* Tab row. Divided by hairlines rather than spacing — the reference
                 reads as one control, not three separate links. */}
-            <div className="flex min-w-0 items-center justify-between gap-4 border-b border-flexwhite/10 px-4 py-3">
+            <div className="flex min-w-0 items-center justify-between gap-4 border-b border-flexwhite/10 px-5 py-4">
                 <div className="flex min-w-0 items-center">
                     {TABS.map((t, i) => (
                         <React.Fragment key={t.id}>
-                            {i > 0 && <span className="mx-3 h-4 w-px shrink-0 bg-flexwhite/10" />}
+                            {i > 0 && <span className="mx-4 h-5 w-px shrink-0 bg-flexwhite/10" />}
                             <button
                                 type="button"
                                 onClick={() => setTab(t.id)}
                                 className={cn(
-                                    "cursor-pointer whitespace-nowrap text-[15px] font-bold transition-colors",
+                                    "cursor-pointer whitespace-nowrap text-[17px] font-bold transition-colors",
                                     tab === t.id ? "text-white" : "text-zinc-600 hover:text-zinc-400",
                                 )}
                             >
@@ -403,12 +403,12 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 </div>
             </div>
 
-            <div className={cn(GRID, "border-b border-flexwhite/10 text-[13px] font-medium text-zinc-600")}>
-                <span className="border-r border-flexwhite/10 px-4 py-2.5">Trader</span>
-                <span className="px-4 py-2.5">Position</span>
-                <span className="px-4 py-2.5">PnL</span>
-                <span className="px-4 py-2.5">Avg. entry</span>
-                <span className="px-4 py-2.5">$mentions</span>
+            <div className={cn(GRID, "border-b border-flexwhite/10 text-[15px] font-normal text-zinc-500")}>
+                <span className="border-r border-flexwhite/10 px-5 py-3">Trader</span>
+                <span className="px-5 py-3">Position</span>
+                <span className="px-5 py-3">PnL</span>
+                <span className="px-5 py-3">Avg. entry</span>
+                <span className="px-5 py-3">$mentions</span>
             </div>
 
             {coin.network !== "solana" ? (
@@ -442,16 +442,16 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                         return (
                             <div
                                 key={row.account}
-                                className={cn(GRID, "border-b border-flexwhite/[0.06] text-[14px] transition-colors hover:bg-white/[0.02]")}
+                                className={cn(GRID, "text-[15px] transition-colors hover:bg-white/[0.02]")}
                             >
                                 {/* A PERSON where the wallet belongs to one. The
                                     fallback is the alerts rail's treatment — a
                                     seeded circle with the brand star, never a
                                     letter — and addresses are never rendered in
                                     full. */}
-                                <span className="flex min-w-0 items-center gap-3 self-stretch border-r border-flexwhite/10 px-4 py-3">
+                                <span className="flex min-w-0 items-center gap-3 self-stretch border-r border-flexwhite/10 px-5 py-3.5">
                                     <span
-                                        className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                        className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full"
                                         style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
                                     >
                                         {row.avatarUrl ? (
@@ -466,7 +466,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                             {row.username ?? `${row.account.slice(0, 4)}…${row.account.slice(-4)}`}
                                         </span>
                                         {hold && (
-                                            <span className="flex min-w-0 items-center gap-1 text-[12px] font-medium text-zinc-600">
+                                            <span className="flex min-w-0 items-center gap-1 text-[13px] font-medium text-zinc-600">
                                                 <HugeiconsIcon icon={Clock01Icon} className="size-3 shrink-0" strokeWidth={2} />
                                                 <span className="truncate">{hold} avg. hold</span>
                                             </span>
@@ -474,21 +474,21 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     </span>
                                 </span>
 
-                                <span className="flex min-w-0 flex-col px-4 py-3">
+                                <span className="flex min-w-0 flex-col px-5 py-3.5">
                                     <span className="truncate font-bold tabular-nums text-white">
                                         {row.positionUsd == null ? "—" : compactUsd(row.positionUsd)}
                                     </span>
-                                    <span className="truncate text-[12px] font-medium tabular-nums text-zinc-600">
+                                    <span className="truncate text-[13px] font-medium tabular-nums text-zinc-600">
                                         {compactAmount(row.position)} {coin.symbol}
                                     </span>
                                 </span>
 
-                                <span className="flex min-w-0 flex-col px-4 py-3">
+                                <span className="flex min-w-0 flex-col px-5 py-3.5">
                                     <span className={cn("truncate font-bold tabular-nums", row.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred")}>
                                         {row.pnlUsd == null ? "—" : `${up ? "+" : "−"}${compactUsd(Math.abs(row.pnlUsd))}`}
                                     </span>
                                     {row.pnlPct != null && (
-                                        <span className={cn("truncate text-[12px] font-medium tabular-nums", up ? "text-lantern" : "text-pastelred")}>
+                                        <span className={cn("truncate text-[13px] font-medium tabular-nums", up ? "text-lantern" : "text-pastelred")}>
                                             {up ? "▲" : "▼"} {Math.abs(row.pnlPct).toFixed(2)}%
                                         </span>
                                     )}
@@ -497,7 +497,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                 {/* Entry as MARKET CAP over price: on a memecoin
                                     "$10.2M MC" is the comparison people actually
                                     make, and $0.0102 alone says nothing. */}
-                                <span className="flex min-w-0 flex-col px-4 py-3">
+                                <span className="flex min-w-0 flex-col px-5 py-3.5">
                                     <span className="truncate font-bold tabular-nums text-white">
                                         {entryMc == null ? (
                                             row.avgEntry == null ? "—" : compactUsd(row.avgEntry)
@@ -508,7 +508,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                         )}
                                     </span>
                                     {entryMc != null && row.avgEntry != null && (
-                                        <span className="truncate text-[12px] font-medium tabular-nums text-zinc-600">
+                                        <span className="truncate text-[13px] font-medium tabular-nums text-zinc-600">
                                             {compactUsd(row.avgEntry)}
                                         </span>
                                     )}
@@ -520,7 +520,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     differentiates this board, and the empty
                                     state should read as an absent post rather
                                     than a broken cell. */}
-                                <span className="flex min-w-0 items-center gap-3 px-4 py-3">
+                                <span className="flex min-w-0 items-center gap-3 px-5 py-3.5">
                                     <span className="flex shrink-0 flex-col items-center text-zinc-700">
                                         <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
                                         <span className="text-[11px] font-medium tabular-nums">—</span>
