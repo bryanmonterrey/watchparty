@@ -10,13 +10,16 @@ import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 
-const RAIL_INNER = "sticky top-0 flex h-[100svh] flex-col md:pt-[calc(var(--header-height)+2px)]";
+const RAIL_INNER = "flex h-[100svh] flex-col md:pt-[calc(var(--header-height)+2px)]";
 // No divider on this side — the left rail carries the only one (border-r, see
 // home-left-rail), and it sits on the rail rather than on the list inside so it
 // runs the full 100svh rather than stopping where the list does.
-// Unchanged from before the news card existed: sticky, h-[100svh], the video
-// list scrolling inside it. The news card sits AFTER this box in the column
-// rather than inside it — see the aside.
+//
+// SAME HEIGHT AS IT ALWAYS WAS (h-[100svh]) but NO LONGER `sticky top-0`, which
+// is what makes the card underneath reachable at all. A sticky box this tall
+// covers the whole viewport, and being positioned it paints ABOVE a plain
+// sibling — so the news card scrolled up behind it and was never visible. The
+// column scrolls as a unit now: rail first at its full height, card after it.
 const RAIL_INNER_RIGHT = RAIL_INNER;
 
 const BrowseFeed = dynamic(
@@ -136,16 +139,30 @@ export function HomePageSurface() {
                 which is what the old xl:pr-3 padding did. mr-auto is what makes
                 it hold: the row's slack goes to the rail's RIGHT, so a wider
                 window pushes the dock out instead of prising these two apart. */}
-            <aside className="ml-7 mr-auto hidden w-96 shrink-0 xl:block">
+            {/* SCROLLS LIKE THE FEED'S THIRD COLUMN — same `sticky bottom-0`
+                + `self-end` the feed layout uses, and for the reason it
+                documents: the column scrolls up with the page, then pins once
+                its bottom edge reaches the viewport bottom, so a column TALLER
+                than the viewport reveals its full height as you scroll instead
+                of freezing at the top.
+
+                The sticky belongs on the ASIDE, not on the box inside it.
+                self-end makes the aside only as tall as its content, so an inner
+                sticky has no range to travel; on the aside the containing block
+                is the tall page row, which is the range it needs. That's exactly
+                what was wrong a moment ago — an inner `sticky top-0` at
+                h-[100svh] covered the viewport and, being positioned, painted
+                over the news card, so the card could never be reached. */}
+            <aside className="sticky bottom-0 ml-7 mr-auto hidden w-96 shrink-0 self-end xl:block">
                 {/* Tabs are no longer a sibling here — they're the card's header,
                     inside HomeRailVideos' RailShell, so the rail reads as one
                     outlined box the way the alerts rail does. */}
-                {/* THE VIDEO RAIL KEEPS ITS OWN VIEWPORT-HEIGHT BOX. The news
-                    card goes after it, not inside it: sharing the h-[100svh]
-                    between the two shortened the video card, which was backwards
-                    — the COLUMN is what should grow. The aside is now taller
-                    than the viewport and the card below scrolls into view, while
-                    the rail above is exactly the size it always was. */}
+                {/* THE VIDEO RAIL KEEPS ITS OWN VIEWPORT-HEIGHT BOX, at exactly
+                    the height it has always had. The news card goes after it,
+                    not inside it: sharing the h-[100svh] between the two
+                    shortened the rail, which was backwards — the COLUMN is what
+                    grows. The aside is taller than the viewport now and scrolls
+                    as a unit, which is what brings the card into view. */}
                 <div className={RAIL_INNER_RIGHT}>
                     <HomeRailVideos />
                 </div>
