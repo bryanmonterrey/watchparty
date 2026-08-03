@@ -13,19 +13,18 @@ import { TabScrollArrow } from "./tab-scroll-arrow";
 // panel below can render for it), uncontrolled otherwise.
 // No "Feed" here any more — the feed is its own destination at /feed, in the
 // sidebar under Home, rather than a tab that opened an overlay on this page.
+//
+// TWO TABS. This was nine — Just Chatting, IRL, Podcasts, Streamers, Traders,
+// Predictions, Music and View all — but only Trending Coins ever rendered
+// anything (see home-category-panel: it's the single branch under the strip).
+// The other eight selected and showed an empty column, so cutting them removes
+// dead ends rather than features.
+//
+// Recommended has no content wired yet either, exactly like the eight it
+// replaces; it's a destination to build against, not a working tab.
 export const HOME_TABS = [
     "Trending Coins",
-    "Just Chatting",
-    "IRL",
-    "Podcasts",
-    "Streamers",
-    "Traders",
-    "Predictions",
-    "Music",
-    // Sits in the row as an ordinary tab for now, so it selects like the rest.
-    // It reads as an action rather than a category, so pull it out of this list
-    // when there is something for it to open.
-    "View all",
+    "Recommended",
 ];
 
 export function HomeCategoryTabs({
