@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { RailShell } from "@/components/rails/rail-shell";
+import { RailScrollbar } from "@/components/rails/rail-scrollbar";
 import { AlertRow } from "./alert-row";
 import { AlertListSkeleton } from "./alert-row-skeleton";
 import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
@@ -607,6 +608,12 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                             !atLoadedEnd || (!!hasNextPage && !isError && !isFetchNextPageError);
 
                         return (
+                            // relative wraps the list so the indicator has a
+                            // positioning context — BidirectionalList owns the
+                            // scroll element itself, so there's nothing inside
+                            // it to hang this off.
+                            <div className="relative flex min-h-0 flex-1 flex-col">
+                            <RailScrollbar getScroller={() => listRef.current?.scrollViewRef.current ?? null} />
                             <BidirectionalList<AlertEvent>
                                 key={listKey}
                                 ref={listRef}
@@ -628,6 +635,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                                     </div>
                                 }
                             />
+                            </div>
                         );
                     })()
                 )}

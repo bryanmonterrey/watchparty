@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { RailRow, RailRowSkeleton } from "@/components/rails/rail-row";
 import { RailShell } from "@/components/rails/rail-shell";
+import { RailScrollbar } from "@/components/rails/rail-scrollbar";
 import { HOME_TAB_LIKED } from "@/components/rails/rail-tabs";
 import { HomeRailTabs } from "./home-rail-tabs";
 import { cn } from "@/lib/utils";
@@ -115,6 +116,10 @@ export function HomeRailVideos() {
     // owns the scrolling.
     return (
         <RailShell className={CARD_MB} radius={25} bordered header={cardHeader}>
+            {/* relative is the scrollbar's positioning context; it's absolute
+                against this, not against the scroller (whose own box scrolls). */}
+            <div className="relative flex min-h-0 flex-1 flex-col">
+            <RailScrollbar getScroller={() => scrollRef.current} />
             <div ref={scrollRef} className={cn("hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto", CARD_PX)}>
                 {videos.map((v) => (
                     <RailRow
@@ -147,6 +152,7 @@ export function HomeRailVideos() {
                 {/* Zero-height tripwire below the last row. Kept mounted only while
                     there's more to fetch, so reaching the cap simply ends the scroll. */}
                 {hasMore && <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />}
+            </div>
             </div>
         </RailShell>
     );
