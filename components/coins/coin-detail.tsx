@@ -13,7 +13,7 @@
 import * as React from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpRight01Icon, Copy01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon, Clock01Icon, Copy01Icon, FavouriteIcon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import { ChainBadge } from "@/components/trending/chain-badge";
 import { PinkStarLogo } from "@/components/icons";
@@ -194,6 +194,9 @@ type TraderRow = {
     positionUsd: number | null;
     pnlUsd: number | null;
     pnlPct: number | null;
+    /** Unix seconds of their EARLIEST buy in the window — drives "avg. hold".
+     *  Null when we only saw them sell. */
+    firstBuyTs: number | null;
 };
 
 /**
@@ -206,6 +209,34 @@ type TraderRow = {
  * table needs every transfer of the mint indexed and each wallet's cost basis
  * reconstructed; that's a backend project, not a fold over this array.
  */
+
+/** "1d 15h", "7d 1h", "3h 20m" — the reference's avg-hold format. Coarse on
+ *  purpose: two units, largest first, no seconds. */
+function holdLabel(sinceTs: number | null): string | null {
+    if (!sinceTs) return null;
+    const secs = Math.max(0, Math.floor(Date.now() / 1000) - sinceTs);
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+}
+
+/** Market cap at a trader's average entry.
+ *
+ *  The reference shows entry as "$10.2M MC" with the raw price beneath, because
+ *  on a memecoin the market cap you bought at is the meaningful comparison and a
+ *  price like $0.0102 tells you nothing on its own. Supply is inferred from the
+ *  coin's own marketCap/price rather than fetched — the two are already in view
+ *  and their ratio IS circulating supply. */
+function entryMarketCap(avgEntry: number | null, coin: CoinViewData): number | null {
+    if (avgEntry == null || !coin.marketCapUsd || !coin.priceUsd) return null;
+    const supply = coin.marketCapUsd / coin.priceUsd;
+    if (!Number.isFinite(supply) || supply <= 0) return null;
+    return avgEntry * supply;
+}
+
 function foldTraders(
     trades: {
         account: string;
@@ -214,6 +245,7 @@ function foldTraders(
         isBuy: boolean;
         usdValue: number;
         tokenAmount: number;
+        ts: number;
     }[],
     priceUsd: number | null,
 ): TraderRow[] {
@@ -234,6 +266,7 @@ function foldTraders(
                 pnlPct: null,
                 buyTokens: 0,
                 buyUsd: 0,
+                firstBuyTs: null,
             };
             byTrader.set(t.account, row);
         }
@@ -241,6 +274,9 @@ function foldTraders(
         if (t.isBuy) {
             row.buyTokens += t.tokenAmount;
             row.buyUsd += t.usdValue;
+            // Earliest buy, not latest: "avg. hold" is how long they've been in,
+            // so it's measured from when the position was opened.
+            if (t.ts && (row.firstBuyTs == null || t.ts < row.firstBuyTs)) row.firstBuyTs = t.ts;
         }
     }
 
@@ -277,56 +313,125 @@ function foldTraders(
  * columns, a list of individual swaps and a list of traders aren't two views of
  * one table, and pretending otherwise made both worse.
  */
+type TableTab = "holders" | "swaps" | "thesis";
+
+/**
+ * The trader board under the chart, modelled on Fomo's.
+ *
+ * Anatomy that matters, top to bottom:
+ *
+ *  - A TAB ROW (Holders / Swaps / Thesis) with its own filter toggles, not just
+ *    column headings. The board answers three different questions off one data
+ *    set and the tabs are how you pick.
+ *  - Trader is a PERSON and is fenced off by a vertical rule: avatar, name, and
+ *    how long they have held. Every other market board prints an address here
+ *    because an address is all it has.
+ *  - Every numeric cell is TWO lines — the headline figure and the thing that
+ *    gives it meaning: position in dollars over the token amount, PnL in dollars
+ *    over the percentage, entry market cap over entry price.
+ *  - Thesis carries a like count, because it is a post, not a note.
+ */
 function CoinTable({ coin }: { coin: CoinViewData }) {
+    const [tab, setTab] = React.useState<TableTab>("holders");
+    const [thesisOnly, setThesisOnly] = React.useState(false);
+    const [friendsOnly, setFriendsOnly] = React.useState(false);
+
     const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
         { mint: coin.tokenAddress },
-        { enabled: coin.network === "solana", staleTime: 30_000, refetchInterval: 30_000, retry: 1 },
+        { enabled: coin.network === "solana", staleTime: 30_000, refetchInterval: 60_000, retry: 1 },
     );
 
     const rows = React.useMemo(() => foldTraders(trades, coin.priceUsd), [trades, coin.priceUsd]);
 
-    // One definition for the header and every row, so columns can't drift.
+    // Trader is fenced by a rule, so it owns a fixed column and the numbers
+    // share what's left. One definition for header and rows so they can't drift.
     const GRID =
-        "grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_56px] items-center gap-3 px-4";
+        "grid grid-cols-[minmax(180px,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] items-center";
+
+    const TABS: { id: TableTab; label: string }[] = [
+        { id: "holders", label: "Holders" },
+        { id: "swaps", label: "Swaps" },
+        { id: "thesis", label: `Thesis (${rows.length})` },
+    ];
 
     return (
         <section className="flex min-w-0 flex-col">
-            <div className={cn(GRID, "pb-2 pt-4 text-[13px] font-medium text-zinc-600")}>
-                <span>Trader</span>
-                <span>Position</span>
-                <span>PnL</span>
-                <span>Avg entry</span>
-                <span className="text-right">$</span>
+            {/* Tab row. Divided by hairlines rather than spacing — the reference
+                reads as one control, not three separate links. */}
+            <div className="flex min-w-0 items-center justify-between gap-4 border-b border-flexwhite/10 px-4 py-3">
+                <div className="flex min-w-0 items-center">
+                    {TABS.map((t, i) => (
+                        <React.Fragment key={t.id}>
+                            {i > 0 && <span className="mx-3 h-4 w-px shrink-0 bg-flexwhite/10" />}
+                            <button
+                                type="button"
+                                onClick={() => setTab(t.id)}
+                                className={cn(
+                                    "cursor-pointer whitespace-nowrap text-[15px] font-bold transition-colors",
+                                    tab === t.id ? "text-white" : "text-zinc-600 hover:text-zinc-400",
+                                )}
+                            >
+                                {t.label}
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-4">
+                    <Toggle checked={thesisOnly} onChange={setThesisOnly} label="Thesis only" />
+                    <Toggle checked={friendsOnly} onChange={setFriendsOnly} label="Friends only" />
+                </div>
+            </div>
+
+            <div className={cn(GRID, "border-b border-flexwhite/10 text-[13px] font-medium text-zinc-600")}>
+                <span className="border-r border-flexwhite/10 px-4 py-2.5">Trader</span>
+                <span className="px-4 py-2.5">Position</span>
+                <span className="px-4 py-2.5">PnL</span>
+                <span className="px-4 py-2.5">Avg. entry</span>
+                <span className="px-4 py-2.5">Thesis</span>
             </div>
 
             {coin.network !== "solana" ? (
-                <p className="px-4 pb-8 text-sm text-zinc-500">
+                <p className="px-4 py-6 text-sm text-zinc-500">
                     Trader activity is read from the Solana pool. Open the market venue for {chainLabel(coin.network)}.
                 </p>
             ) : isLoading ? (
-                <div className="space-y-1 px-4 pb-5">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="h-12 rounded-lg shimmer-skeleton" />
+                <div className="space-y-px">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className={cn(GRID, "h-[68px]")}>
+                            <div className="flex items-center gap-3 border-r border-flexwhite/10 px-4">
+                                <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
+                                <div className="h-3.5 w-24 rounded shimmer-skeleton" />
+                            </div>
+                            {[0, 1, 2, 3].map((c) => (
+                                <div key={c} className="px-4">
+                                    <div className="h-3.5 w-20 rounded shimmer-skeleton" />
+                                </div>
+                            ))}
+                        </div>
                     ))}
                 </div>
             ) : rows.length === 0 ? (
-                <p className="px-4 pb-8 text-sm text-zinc-500">No trader activity yet.</p>
+                <p className="px-4 py-6 text-sm text-zinc-500">No trader activity yet.</p>
             ) : (
-                <div className="pb-4">
+                <div>
                     {rows.slice(0, 25).map((row) => {
                         const up = (row.pnlUsd ?? 0) >= 0;
+                        const hold = holdLabel(row.firstBuyTs);
+                        const entryMc = entryMarketCap(row.avgEntry, coin);
                         return (
-                            <div key={row.account} className={cn(GRID, "py-2.5 text-[14px] transition-colors hover:bg-white/[0.03]")}>
-                                {/* A PERSON where the wallet belongs to one. Every
-                                    other market board shows an address here,
-                                    because an address is all they have. The
+                            <div
+                                key={row.account}
+                                className={cn(GRID, "border-b border-flexwhite/[0.06] text-[14px] transition-colors hover:bg-white/[0.02]")}
+                            >
+                                {/* A PERSON where the wallet belongs to one. The
                                     fallback is the alerts rail's treatment — a
                                     seeded circle with the brand star, never a
                                     letter — and addresses are never rendered in
                                     full. */}
-                                <span className="flex min-w-0 items-center gap-2">
+                                <span className="flex min-w-0 items-center gap-3 self-stretch border-r border-flexwhite/10 px-4 py-3">
                                     <span
-                                        className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                        className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
                                         style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
                                     >
                                         {row.avatarUrl ? (
@@ -336,21 +441,29 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                             <PinkStarLogo className="size-[58%]" />
                                         )}
                                     </span>
-                                    <span className={cn("truncate font-bold", row.username ? "text-white" : "text-zinc-400")}>
-                                        {row.username ?? `${row.account.slice(0, 4)}…${row.account.slice(-4)}`}
+                                    <span className="flex min-w-0 flex-col">
+                                        <span className={cn("truncate font-bold", row.username ? "text-white" : "text-zinc-400")}>
+                                            {row.username ?? `${row.account.slice(0, 4)}…${row.account.slice(-4)}`}
+                                        </span>
+                                        {hold && (
+                                            <span className="flex min-w-0 items-center gap-1 text-[12px] font-medium text-zinc-600">
+                                                <HugeiconsIcon icon={Clock01Icon} className="size-3 shrink-0" strokeWidth={2} />
+                                                <span className="truncate">{hold} avg. hold</span>
+                                            </span>
+                                        )}
                                     </span>
                                 </span>
 
-                                <span className="flex min-w-0 flex-col">
+                                <span className="flex min-w-0 flex-col px-4 py-3">
                                     <span className="truncate font-bold tabular-nums text-white">
                                         {row.positionUsd == null ? "—" : compactUsd(row.positionUsd)}
                                     </span>
-                                    <span className="truncate text-[12px] font-medium tabular-nums text-zinc-500">
+                                    <span className="truncate text-[12px] font-medium tabular-nums text-zinc-600">
                                         {compactAmount(row.position)} {coin.symbol}
                                     </span>
                                 </span>
 
-                                <span className="flex min-w-0 flex-col">
+                                <span className="flex min-w-0 flex-col px-4 py-3">
                                     <span className={cn("truncate font-bold tabular-nums", row.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred")}>
                                         {row.pnlUsd == null ? "—" : `${up ? "+" : "−"}${compactUsd(Math.abs(row.pnlUsd))}`}
                                     </span>
@@ -361,25 +474,73 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     )}
                                 </span>
 
-                                <span className="truncate font-bold tabular-nums text-white">
-                                    {row.avgEntry == null ? "—" : compactUsd(row.avgEntry)}
+                                {/* Entry as MARKET CAP over price: on a memecoin
+                                    "$10.2M MC" is the comparison people actually
+                                    make, and $0.0102 alone says nothing. */}
+                                <span className="flex min-w-0 flex-col px-4 py-3">
+                                    <span className="truncate font-bold tabular-nums text-white">
+                                        {entryMc == null ? (
+                                            row.avgEntry == null ? "—" : compactUsd(row.avgEntry)
+                                        ) : (
+                                            <>
+                                                {compactUsd(entryMc)} <span className="font-medium text-zinc-600">MC</span>
+                                            </>
+                                        )}
+                                    </span>
+                                    {entryMc != null && row.avgEntry != null && (
+                                        <span className="truncate text-[12px] font-medium tabular-nums text-zinc-600">
+                                            {compactUsd(row.avgEntry)}
+                                        </span>
+                                    )}
                                 </span>
 
                                 {/* Theses — posts mentioning the coin's cashtag.
-                                    Not wired yet; the column is here because it's
-                                    the differentiated one and the shape should
-                                    exist before the data lands. */}
-                                <span className="text-right font-medium tabular-nums text-zinc-600">—</span>
+                                    Not wired to a query yet; the shape is here
+                                    because it's the column that differentiates
+                                    this board, and the empty state should look
+                                    like an absent post rather than a broken cell. */}
+                                <span className="flex min-w-0 items-center gap-3 px-4 py-3">
+                                    <span className="flex shrink-0 flex-col items-center text-zinc-700">
+                                        <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
+                                        <span className="text-[11px] font-medium tabular-nums">—</span>
+                                    </span>
+                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">No thesis yet</span>
+                                </span>
                             </div>
                         );
                     })}
 
-                    <p className="px-4 pt-3 text-[12px] text-zinc-600">
+                    <p className="px-4 py-3 text-[12px] text-zinc-600">
                         From swaps in the last 24h — not full chain history.
                     </p>
                 </div>
             )}
         </section>
+    );
+}
+
+/** The reference's square filter toggles — a checkbox, not a switch. */
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+    return (
+        <button
+            type="button"
+            onClick={() => onChange(!checked)}
+            className="flex cursor-pointer items-center gap-2 text-[13px] font-medium text-zinc-500 transition-colors hover:text-zinc-300"
+        >
+            <span
+                className={cn(
+                    "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+                    checked ? "border-lantern bg-lantern" : "border-flexwhite/20",
+                )}
+            >
+                {checked && (
+                    <svg viewBox="0 0 10 8" className="size-2.5 text-black" fill="none">
+                        <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                )}
+            </span>
+            {label}
+        </button>
     );
 }
 
@@ -429,10 +590,13 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
     // (RAIL_BORDER, #18181B) with no fill of their own, so each reads as an
     // outlined card on the page rather than a second surface colour. See
     // SWAP_CARD.
+    // pr-1 pulls the swap card up close to the action dock, which is a sibling
+    // of the grid. p-4 still holds the other three sides — the left one is the
+    // gap against the chart column.
+    //
+    // A `//` comment, NOT `{/* */}`: a JSX comment directly after `return (`
+    // parses as an object literal and fails the Turbopack build (see CLAUDE.md).
     return (
-        {/* pr-1 pulls the swap card up close to the action dock, which is a
-            sibling of the grid. p-4 still holds the other three sides — the
-            left one is the gap against the chart column. */}
         <aside className="p-4 pr-1">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 {coin.network !== "solana" ? (
