@@ -101,10 +101,13 @@ async function readTier(
     // Roll up. open/close are the FIRST/LAST bar of each bucket by time, which
     // is what makes this a candle rather than a summary — hence the ordered
     // aggregates rather than min/max on o and c.
+    // Aliased `bucket_ts` rather than `ts` purely to keep the output name
+    // distinct from the input column. Both forms execute fine — verified
+    // against the live table — so this is readability, not a fix.
     const bucket = sql<number>`(${coinCandles.ts} / ${span}) * ${span}`;
     const rows = await db
         .select({
-            ts: sql<number>`${bucket}`.as("ts"),
+            ts: sql<number>`${bucket}`.as("bucket_ts"),
             o: sql<number>`(array_agg(${coinCandles.o} ORDER BY ${coinCandles.ts} ASC))[1]`,
             h: sql<number>`max(${coinCandles.h})`,
             l: sql<number>`min(${coinCandles.l})`,

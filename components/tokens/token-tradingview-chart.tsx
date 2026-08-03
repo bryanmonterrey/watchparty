@@ -31,6 +31,24 @@ const MUTED = "#3F3F46";   // zinc-700 — the loading spinner, deliberately
 
 type LoadState = "loading" | "ready" | "missing";
 
+/** Report a client-side chart failure into the server log, so it shows up in
+ *  `wrangler tail` alongside the [udf] traces. The coin page is auth-gated and
+ *  can't be driven from a script, so this is the only way the browser half of a
+ *  blank chart becomes visible without asking someone to read devtools aloud. */
+function reportChartFailure(tag: string, detail: Record<string, unknown>) {
+    try {
+        const body = JSON.stringify({ tag, detail });
+        // sendBeacon survives the page being navigated away from mid-report,
+        // which a plain fetch does not.
+        if (navigator.sendBeacon?.("/api/client-log", new Blob([body], { type: "application/json" }))) return;
+        void fetch("/api/client-log", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true });
+    } catch {
+        /* diagnostics must never break the page */
+    }
+}
+
+
+
 export function loadScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
@@ -150,6 +168,7 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
                 // upstream — so a library problem presents as a chart that
                 // loads forever, and looks identical to a data problem.
                 console.error("[tv] library scripts failed to load:", err);
+                reportChartFailure("tv-scripts", { err: String(err).slice(0, 200), symbol });
                 if (!cancelled) setState("missing");
                 return;
             }
@@ -157,13 +176,16 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
             if (!window.TradingView?.widget || !window.Datafeeds?.UDFCompatibleDatafeed || !containerRef.current) {
                 // Name the exact precondition rather than collapsing four very
                 // different failures into one silent fallback.
-                console.error("[tv] cannot mount widget:", {
+                const why = {
                     TradingView: !!window.TradingView,
                     widget: !!window.TradingView?.widget,
                     Datafeeds: !!window.Datafeeds,
                     UDFCompatibleDatafeed: !!window.Datafeeds?.UDFCompatibleDatafeed,
                     container: !!containerRef.current,
-                });
+                    symbol,
+                };
+                console.error("[tv] cannot mount widget:", why);
+                reportChartFailure("tv-mount", why);
                 setState("missing");
                 return;
             }
