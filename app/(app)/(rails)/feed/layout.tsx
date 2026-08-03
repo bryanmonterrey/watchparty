@@ -79,7 +79,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
                     be spare. mr-auto is what makes that hold: it hands the row's
                     slack to the space on the rail's RIGHT, so a wider window
                     pushes the dock out rather than prising these two apart. */}
-                <aside className="sticky bottom-0 ml-6 mr-auto hidden w-96 shrink-0 self-end xl:block">
+                <aside className="sticky bottom-0 ml-7 mr-auto hidden w-96 shrink-0 self-end xl:block">
                     {/* justify-start, so the rail sits at the left edge of its
                         slot — the ml-6 above is then the whole distance from the
                         feed, with nothing else adding to it. */}
