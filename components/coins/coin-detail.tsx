@@ -430,9 +430,10 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
     // outlined card on the page rather than a second surface colour. See
     // SWAP_CARD.
     return (
-        {/* pr-0 runs the swap card flush to the action dock, which is a sibling
-            of the grid. p-4 still holds the other three sides. */}
-        <aside className="p-4 pr-0">
+        {/* pr-1 pulls the swap card up close to the action dock, which is a
+            sibling of the grid. p-4 still holds the other three sides — the
+            left one is the gap against the chart column. */}
+        <aside className="p-4 pr-1">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 {coin.network !== "solana" ? (
                     <div className={SWAP_CARD + " p-5"}>
