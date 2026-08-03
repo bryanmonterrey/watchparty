@@ -33,12 +33,13 @@ const PREFETCH_MARGIN = "400px";
 // and its own squircled hover fill, so without this the fill ran into the
 // card's border on both edges; with it the rows sit inside the box.
 //
-// mb-20 rather than RailShell's default mb-2. This is a sticky h-[100svh]
-// column, so the card's bottom edge is the viewport's — a 2px lift read as the
-// box being cut off rather than ending. (The alerts rail uses mb-7 for the same
-// reason; this one sits lower and wants more.)
+// mb-0, because the card no longer owns the rail's bottom spacing. The 80px
+// that used to live here as mb-20 moved to the COLUMN (pb-20 in
+// home-page-surface) once the news card landed underneath: as a margin on this
+// card it would have been a gap in the middle of the stack rather than a lift
+// off the viewport. The gap between the two cards is the column's gap-3.
 const CARD_PX = "px-2";
-const CARD_MB = "mb-20";
+const CARD_MB = "mb-0";
 // The TABS' own box, deliberately not the same inset as the rows below them.
 // px-3 sets them in a notch further than the scroller's px-2, and pb-2 is the
 // gap down to the first row — the tabs used to sit on pt-2.5 with nothing under
