@@ -137,6 +137,35 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
 - **Reused production DB (dev == prod):** dev runs against the **same** Supabase DB as production, so any schema change hits live data immediately. **Additive, nullable changes are OK** (e.g. `ADD COLUMN ... text` — safe and reversible); apply them deliberately and prefer manual SQL committed under `db/` (see `db/affiliate-column.sql`, `db/feed-indexes.sql`) so the change is reviewable. **Avoid destructive migrations and `drizzle-kit push`**, which can clobber the auth tables ported verbatim from the old app. Keep `db/schema/auth` in sync with the DB by hand.
 - **Squircle corners: use Lisse (`@lisse/react`), opt-in per element.** The old `tailwindcss-corner-shape` was removed — it used the CSS `corner-shape` property which is **Chrome-only** (broken in Safari) and forced squircle onto *every* `rounded-*` (so even pills got squircled). Lisse uses SVG `clip-path` (works in Safari/Firefox/Chrome). Apply via the `components/ui/squircle.tsx` helper: `<Squircle asChild radius={20}><button className="…">…</button></Squircle>` — and do NOT add `rounded-*` to a squircled element (redundant under clip-path). **Pills (Connect Wallet, Complete, Create) stay plain `rounded-full` with NO `<Squircle>`.**
 
+## Query gotcha: never interpolate a JS `Date` into a `sql` template
+
+```ts
+sql`${table.someAt} < ${aDate}`          // ✗ 500s in production, fine locally
+lt(table.someAt, aDate)                  // ✓
+sql`... raw_alias.some_at > ${aDate.toISOString()}::timestamptz`  // ✓ when there's no column to type against
+```
+
+A value interpolated into `` sql`` `` carries **no column**, so drizzle has no
+encoder to apply and passes the `Date` straight to postgres.js. On Workers that
+throws `TypeError [ERR_INVALID_ARG_TYPE]: The "string" argument must be of type
+string or an instance of Buffer or ArrayBuffer. Received an instance of Date`.
+`lt()`/`gt()`/`eq()` take the column, so drizzle maps the Date through the
+timestamptz encoder and sends a string.
+
+**It works under `next dev` and fails only on the deployed worker** (Node's
+Buffer accepts it, workerd's polyfill doesn't), so nothing local catches it —
+and drizzle reports only `Failed query: <sql>`, hiding the real message on
+`.cause`. When a query fails in production for no visible reason, log
+`err.cause`, not the error.
+
+This cost a day of "/feed is broken and the app is 10x slower" (2026-08-03):
+`coinFeed.list`'s cursor made **every page past the first** 500, page 1 has no
+cursor so the rail always painted, and the guard meant to stop paginating
+against a failing query checked `isError` — which stays false on an infinite
+query while any page is good. The list re-requested the same cursor forever, on
+every route in the `(rails)` group. Reply pagination (`comment.ts`) had the
+identical bug, silently.
+
 ## Auth / better-auth dependency gotchas
 
 The auth stack is sensitive to transitive versions. Two non-obvious pins/fixes were required to get it compiling and running:
