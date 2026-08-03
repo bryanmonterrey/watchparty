@@ -43,7 +43,18 @@ export const HOME_TAB_CLIPS = "Clips";
  * to swap in the live-streams query.
  */
 export const HOME_TAB_ONLINE = "Online";
-export const HOME_RAIL_TABS = [RAIL_ICON_TAB, HOME_TAB_ONLINE, HOME_TAB_CLIPS, HOME_TAB_LIKED, "New", "Upcoming"];
+// "IRL" spelled as an acronym, which is how this codebase already writes it
+// (the category on the home carousels, the search section header).
+export const HOME_TAB_IRL = "IRL";
+export const HOME_RAIL_TABS = [
+    RAIL_ICON_TAB,
+    HOME_TAB_ONLINE,
+    HOME_TAB_CLIPS,
+    HOME_TAB_IRL,
+    HOME_TAB_LIKED,
+    "New",
+    "Upcoming",
+];
 
 export function RailTabs({
     tabs = RAIL_TABS,
@@ -76,7 +87,7 @@ export function RailTabs({
                             // No fill — colour alone carries the active state,
                             // same as the category tabs.
                             className={cn(
-                                "flex shrink-0 cursor-pointer items-center whitespace-nowrap px-1.5 py-1.5 text-base font-semibold transition-colors",
+                                "flex shrink-0 cursor-pointer items-center whitespace-nowrap px-1.5 py-1.5 text-base font-medium transition-colors",
                                 active === tab ? "text-white" : "text-zinc-500 hover:text-white",
                             )}
                         >
