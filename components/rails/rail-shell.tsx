@@ -39,6 +39,7 @@ export function RailShell({
     className,
     radius = 16,
     bordered = false,
+    header,
 }: {
     children: React.ReactNode;
     className?: string;
@@ -47,6 +48,18 @@ export function RailShell({
     radius?: number | SquircleCorners;
     /** Outline the box. Off by default — only the alerts rail wants it. */
     bordered?: boolean;
+    /**
+     * Pinned content above the scroller, INSIDE the same outline — the alerts
+     * rail's tabs.
+     *
+     * A slot rather than a second box stacked on top, because Lisse's
+     * BorderConfig strokes the whole path and offers no per-side control. Two
+     * bordered boxes that meet therefore draw two hairlines, and the seam
+     * between them cannot be removed from the outside: overlapping them by a
+     * pixel only collapses the pair into one line, it doesn't delete it. One
+     * Squircle with the header inside it has no internal edge to show.
+     */
+    header?: React.ReactNode;
 }) {
     return (
         // mb-2 lifts the box off the bottom of the screen — both rails are
@@ -60,6 +73,9 @@ export function RailShell({
                 innerBorder={bordered ? RAIL_BORDER : undefined}
                 className="flex size-full min-h-0 flex-col pb-2"
             >
+                {/* shrink-0: the header is fixed furniture, the scroller below
+                    takes the remaining height. */}
+                {header && <div className="shrink-0">{header}</div>}
                 {children}
             </Squircle>
         </div>

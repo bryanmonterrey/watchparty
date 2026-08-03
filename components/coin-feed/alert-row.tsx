@@ -139,13 +139,13 @@ function Subline({ event }: { event: AlertEvent }) {
     return (
         <span className="flex min-w-0 items-center gap-1.5">
             <CoinMark event={event} />
-            <span className="truncate font-bold text-white underline decoration-zinc-600 decoration-dotted underline-offset-4">
+            <span className="truncate font-medium text-white underline decoration-zinc-600 decoration-dotted underline-offset-4">
                 {event.symbol}
             </span>
             {event.marketCapUsd != null && (
                 <>
                     <span className="shrink-0 text-zinc-500">at</span>
-                    <span className="shrink-0 font-bold tabular-nums text-white">{formatUsd(event.marketCapUsd)}</span>
+                    <span className="shrink-0 font-medium tabular-nums text-white">{formatUsd(event.marketCapUsd)}</span>
                     <span className="shrink-0 text-zinc-500">MC</span>
                 </>
             )}

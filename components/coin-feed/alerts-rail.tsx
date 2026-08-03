@@ -8,8 +8,7 @@ import { ArrowUp02Icon, ArrowLeftDoubleIcon, AtIcon } from "@hugeicons/core-free
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
-import { RailShell, RAIL_BORDER } from "@/components/rails/rail-shell";
-import { Squircle } from "@/components/ui/squircle";
+import { RailShell } from "@/components/rails/rail-shell";
 import { AlertRow } from "./alert-row";
 import { AlertListSkeleton } from "./alert-row-skeleton";
 import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
@@ -407,30 +406,22 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
 
     const summary = activeFilterSummary(filters);
 
-    // ── Render ───────────────────────────────────────────────────────────────
-    return (
-        <div className={cn("flex min-h-0 flex-1 flex-col rounded-none", className)}>
-            {/* Header: tabs left, controls right. Same treatment as the home
-                right rail's tabs — colour alone carries the active state. */}
-            {/* Mentions is an ICON tab, the same way the right rail's star is a
-                tab rather than a heading — and every icon in this row matches
-                that star's size-6 so the header reads as one set of controls.
-
-                The header has its own bordered box, rounded 16 on the TOP
-                corners and square on the bottom, meeting the list below (which
-                squares its top to match) so the two read as one panel.
-
-                shrink-0 lives on this outer div rather than on the Squircle:
-                declaring an innerBorder makes Lisse inject a wrapper between
-                them, and that wrapper — not the Squircle — is the flex item, so
-                a shrink-0 on the inside would never reach the rail's column. */}
-            <div className="shrink-0">
-            <Squircle
-                radius={{ topLeft: 25, topRight: 25 }}
-                autoEffects={false}
-                innerBorder={RAIL_BORDER}
-                className="flex pt-2 items-center px-2"
-            >
+    // Tabs left, controls right — colour alone carries the active state, same as
+    // the home right rail. Mentions is an ICON tab, and every icon here matches
+    // that rail's star at size-6 so the row reads as one set of controls.
+    //
+    // A PLAIN ROW now, handed to RailShell as its `header`. It used to be its own
+    // bordered Squircle sitting on top of the list's, and that is what drew the
+    // line under the tabs: Lisse strokes the whole path with no per-side option,
+    // so two boxes that meet draw two hairlines. Overlapping them by a pixel only
+    // merged the pair into one — it couldn't remove it. Inside one Squircle there
+    // is no internal edge to draw.
+    //
+    // `//`, not `{/* */}` — a JSX comment straight after `(` parses as an object
+    // literal and fails the Turbopack build (CLAUDE.md).
+    const railHeader = (
+        <>
+        <div className="flex items-center px-2 pt-2">
                 {(["alerts"] as const).map((t) => (
                     <button
                         key={t}
@@ -471,10 +462,16 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         </button>
                     )}
                 </div>
-            </Squircle>
-            </div>
+        </div>
+        {/* The active-filter summary belongs to the header, not to the list —
+            it describes what the list is showing. */}
+        {summary && <p className="truncate px-2 pt-0.5 text-[11px] text-zinc-600">{summary}</p>}
+        </>
+    );
 
-            {summary && <p className="shrink-0 truncate px-2 pt-0.5 text-[11px] text-zinc-600">{summary}</p>}
+    // ── Render ───────────────────────────────────────────────────────────────
+    return (
+        <div className={cn("flex min-h-0 flex-1 flex-col rounded-none", className)}>
 
             {/* "n new" pill. h-0 wrapper so it floats over the list instead of
                 pushing it down — a pill that reflows the feed would move the row
@@ -511,18 +508,16 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 inside the sticky rail instead of growing the column, and its
                 inner element has a definite height — which BidirectionalList
                 needs, since it sizes its own scroller with height:100%. */}
-            {/* mb-36 overrides RailShell's own mb-2 (cn is twMerge), lifting the
-                list well clear of the bottom of the screen. Scoped here rather
-                than changed in the shell — the video rail still wants to run
-                near the bottom edge. */}
-            {/* -mt-px collapses the seam under the tabs. The header box and this
-                one are separate Squircles that meet, and Lisse's BorderConfig
-                strokes the WHOLE path — there's no per-side option — so each was
-                drawing its own hairline and the two stacked into a visible
-                double rule below the tabs. Pulling the list up one pixel hides
-                the header's bottom edge behind this box's top edge, so the two
-                read as one continuous panel. */}
-            <RailShell className="-mt-px mb-7" radius={{ bottomLeft: 25, bottomRight: 25 }} bordered>
+            {/* mb-7 overrides RailShell's own mb-2 (cn is twMerge), lifting the
+                list clear of the bottom of the screen. Scoped here rather than
+                changed in the shell — the video rail still wants to run near the
+                bottom edge.
+
+                radius 25 on ALL corners now, and the tabs ride inside as
+                `header`. Previously the tabs were their own top-rounded box and
+                this was bottom-rounded, which is what put a rule under the tabs
+                — see the header prop's note in rail-shell. */}
+            <RailShell className="mb-7" radius={25} bordered header={railHeader}>
                 {/* Inline bar when already parked at the top — no need to float.
                     Inside the shell, above the scroller: it belongs to the list
                     it's offering to extend, so it sits within the same bordered
