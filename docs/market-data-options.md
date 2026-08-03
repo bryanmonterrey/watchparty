@@ -106,25 +106,56 @@ What Dexscreener actually does. No per-coin quota ever; cost scales with
 - **Verdict:** the endgame, not the starting point. Solana-only until the EVM
   indexer exists, and that's real work.
 
+## The credit math — RPS is not the constraint
+
+Rate limits are a **burst** ceiling. The **monthly credit cap** is what actually
+governs, and it rules out polling as a liveness strategy on any metered plan.
+
+Mobula Start-up's 125k credits/month works out to ~4,100/day, ~2.9/minute.
+Assuming 1 request = 1 credit (**unverified — their docs don't state the
+weighting; ask before paying**):
+
+| usage | calls/day | fits 125k/mo? |
+| --- | --- | --- |
+| on-demand chart opens, 1 call each | ~4,100 | yes, comfortably |
+| polling ONE coin every 30s | 2,880 | ~70% of the month on a single coin |
+| polling a visible coin every 2s | 43,200 | burns the month in 3 days |
+
+Even Growth's 1.25M/month is only ~28 calls/minute averaged out. That's the
+tell: **you cannot poll your way to live on a metered plan at any tier.** The
+websockets bundled at Growth are the mechanism for liveness; credits are for
+history. Any plan that reads "poll the visible coin every 2s over our own
+Realtime" is wrong, and an earlier draft of this doc said exactly that.
+
 ## Recommendation
 
-**Mobula Start-up ($50/mo), on-demand rather than pre-synced.**
+Split the two jobs, because they have different cost shapes.
 
-- Covers 50+ chains, which is the actual "every chain" requirement.
-- 30 RPS is ~15× GT's measured keyless ceiling, and 125k credits/month is far
-  more than on-demand chart opens will consume.
-- Cheapest entry that isn't crippled: Codex's equivalent is $350, CoinGecko's
-  free tier can't do on-chain at all.
+**Coverage + history → Mobula Start-up ($50/mo).**
+50+ chains, one call per chart open, stored into `coin_candles` and never
+fetched twice. This is what fixes "charts never load," on every chain. Cheapest
+entry that isn't crippled: Codex is $350, CoinGecko's free tier can't do
+on-chain at all.
 
-**Skip the $400 websocket tier at first.** We already own the fan-out half —
-Supabase Realtime is live on `coin_candles` (Phase 2). Polling *only the coins
-currently on screen* at 30 RPS and pushing over our own Realtime gets live
-charts without the provider's WSS. Concurrent viewers bound the cost, not the
-size of the coin universe. Upgrade to Growth only when that stops holding.
+**Liveness → Helius, not a metered provider.**
+Solana is the bulk of the volume, the webhook infrastructure is already wired
+(`lib/helius/webhook.ts`) and already paid for, and it is **push-based, so it
+costs nothing per update**. Swap events land, we build bars, Supabase Realtime
+fans them out. That is genuinely live, and it never touches the credit budget.
 
-**Then Helius for Solana ticks.** Solana is the bulk of volume and the webhook
-infrastructure is already paid for and wired — moving Solana off the metered
-provider protects the credit budget for the long tail of EVM chains.
+The result is dexscreener-feel on Solana, fast-loading charts everywhere else,
+for $50/mo. EVM liveness stays polled-and-slow until it's worth either Mobula
+Growth ($400, WSS) or an EVM log indexer.
+
+### Sequencing
+
+1. Mobula Start-up key → adapter behind the existing `gtBase()`/`gtHeaders()`
+   seam, so callers don't change.
+2. On-demand backfill on chart open, stored to `coin_candles`.
+3. Helius swap ingest → candles → Supabase Realtime. This is what makes it feel
+   live, and it's the step that does NOT scale with spend.
+4. EVM: reassess. Growth's WSS vs. our own log indexer, decided by how much EVM
+   traffic actually shows up.
 
 ### Sequencing
 
