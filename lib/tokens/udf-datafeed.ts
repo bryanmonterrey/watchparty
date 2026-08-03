@@ -11,8 +11,11 @@
 
 import { withCache, withSwrCache, TTL } from "@/lib/cache";
 
-const GT = "https://api.geckoterminal.com/api/v2/networks";
-const GT_HEADERS = { Accept: "application/json;version=20230302" };
+import { gtBase, gtHeaders } from "@/lib/coins/gecko-endpoint";
+import { readCandles } from "@/lib/coins/candles";
+
+/** GT-shaped paths hang off `/networks`. */
+const GT = () => `${gtBase()}/networks`;
 
 /** Default chain for a bare address — every link written before the chart went
  *  multi-chain carries one, and they must keep working. */
@@ -73,8 +76,8 @@ export async function resolvePool(mint: string, network = DEFAULT_NETWORK): Prom
     try {
         return await withCache(`gt:pool:v2:${network}:${mint}`, TTL.CHART_POOL, async () => {
             const res = await fetch(
-                `${GT}/${network}/tokens/${mint}/pools?sort=h24_volume_usd_liquidity_desc&limit=1`,
-                { headers: GT_HEADERS, signal: AbortSignal.timeout(8000) },
+                `${GT()}/${network}/tokens/${mint}/pools?sort=h24_volume_usd_liquidity_desc&limit=1`,
+                { headers: gtHeaders(), signal: AbortSignal.timeout(8000) },
             );
             if (!res.ok) throw new Error(`pools ${res.status}`);
             const json = await res.json();
@@ -123,6 +126,32 @@ export async function getUdfBars(
     const pool = await resolvePool(mint, network);
     if (!pool) return { s: "no_data" };
 
+    // OUR DATABASE FIRST. This is the whole point of coin_candles: a chart read
+    // must not depend on an upstream that rate-limits our egress. Anything the
+    // sync has already stored is served from Postgres and never touches GT.
+    //
+    // Falls through to the live fetch below only when the series isn't stored
+    // yet — a coin nobody has charted before. Once the sync has seen it, this
+    // is the only branch that runs.
+    try {
+        const stored = await readCandles(network, pool.address, resolution, from, to);
+        if (stored.length > 0) {
+            return {
+                s: "ok",
+                t: stored.map((b) => b.ts),
+                o: stored.map((b) => b.o),
+                h: stored.map((b) => b.h),
+                l: stored.map((b) => b.l),
+                c: stored.map((b) => b.c),
+                v: stored.map((b) => b.v ?? 0),
+            };
+        }
+    } catch (err) {
+        // A database problem must not take the chart down when the upstream
+        // path still works — fall through rather than fail.
+        console.error("[udf] candle read failed:", err instanceof Error ? err.message : err);
+    }
+
     // GeckoTerminal returns up to `limit` candles ending at before_timestamp.
     // Ask for enough to cover the window (capped at GT's 1000 max).
     const span = Math.max(countBack ?? 0, Math.ceil((to - from) / barSeconds) + 1);
@@ -151,7 +180,7 @@ export async function getUdfBars(
         // even minutes old, beats an empty chart; only a true first-ever miss
         // blocks on upstream.
         return await withSwrCache(key, TTL.CHART_OHLCV, CHART_OHLCV_STALE, async () => {
-            const url = new URL(`${GT}/${network}/pools/${pool.address}/ohlcv/${unit}`);
+            const url = new URL(`${GT()}/${network}/pools/${pool.address}/ohlcv/${unit}`);
             url.searchParams.set("aggregate", String(aggregate));
             url.searchParams.set("limit", String(bucketedLimit));
             url.searchParams.set("currency", "usd");
@@ -159,7 +188,7 @@ export async function getUdfBars(
             url.searchParams.set("before_timestamp", String(bucketedTo));
 
             const res = await fetch(url.toString(), {
-                headers: GT_HEADERS,
+                headers: gtHeaders(),
                 signal: AbortSignal.timeout(8000),
             });
             if (!res.ok) throw new Error(`ohlcv ${res.status}`);

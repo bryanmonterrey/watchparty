@@ -17,6 +17,7 @@ async function serverConnection() {
     return createServerConnection();
 }
 import { resolveTraders } from "@/lib/coins/resolve-traders";
+import { gtBase, gtHeaders } from "@/lib/coins/gecko-endpoint";
 import { withCache, withSwrCache, invalidateCache, redis, TTL } from "@/lib/cache";
 import { db } from "@/db";
 import { trades } from "@/db/schema/content";
@@ -3192,7 +3193,7 @@ export const walletRouter = router({
     getChartData: protectedProcedure
         .input(z.object({ mint: z.string(), timeframe: z.string() }))
         .query(async ({ input }) => {
-            const GT = "https://api.geckoterminal.com/api/v2/networks/solana";
+            const GT = `${gtBase()}/networks/solana`;
             const gtHeaders = { Accept: "application/json;version=20230302" };
 
             // [unit, aggregate, limit]
@@ -3325,7 +3326,7 @@ export const walletRouter = router({
     getTokenTrades: protectedProcedure
         .input(z.object({ mint: z.string() }))
         .query(async ({ input }) => {
-            const GT = "https://api.geckoterminal.com/api/v2/networks/solana";
+            const GT = `${gtBase()}/networks/solana`;
             const gtHeaders = { Accept: "application/json;version=20230302" };
             try {
                 return await withCache(`gt:trades:${input.mint}`, 30, async () => {

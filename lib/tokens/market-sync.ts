@@ -14,7 +14,9 @@ import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { maybePriceAlert, migrationAlert } from "@/lib/push/token-alerts";
 import { emitMigrationEvent } from "@/lib/coin-feed/emit";
 
-const GT = "https://api.geckoterminal.com/api/v2/networks/solana";
+import { gtBase, gtHeaders } from "@/lib/coins/gecko-endpoint";
+
+const GT = () => `${gtBase()}/networks/solana`;
 const GT_HEADERS = { Accept: "application/json;version=20230302" };
 const GT_BATCH = 30; // GT multi-pool cap
 
@@ -57,7 +59,7 @@ export async function syncMarketData(rows: SyncableToken[]): Promise<number> {
         const chunk = rows.slice(i, i + GT_BATCH);
         try {
             const res = await fetch(
-                `${GT}/pools/multi/${chunk.map((r) => r.poolAddress).join(",")}`,
+                `${GT()}/pools/multi/${chunk.map((r) => r.poolAddress).join(",")}`,
                 { headers: GT_HEADERS, signal: AbortSignal.timeout(10000) },
             );
             if (!res.ok) continue;

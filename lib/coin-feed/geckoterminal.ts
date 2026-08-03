@@ -11,8 +11,8 @@
 // Free tier, no key, ~30 calls/min. Every caller here goes through `gt()` so
 // the call budget is enforced in ONE place — see CallBudget.
 
-const BASE = "https://api.geckoterminal.com/api/v2";
-const HEADERS = { Accept: "application/json;version=20230302" };
+// Endpoint + auth live in one place — see lib/coins/gecko-endpoint.
+import { gtBase, gtHeaders } from "@/lib/coins/gecko-endpoint";
 const TIMEOUT_MS = 10_000;
 
 // GeckoTerminal's free tier is ~30 calls/min for the WHOLE APP, and two
@@ -58,8 +58,8 @@ const num = (v: unknown): number | null => {
 async function gt<T>(path: string, budget: CallBudget): Promise<T | null> {
     if (!budget.take()) return null;
     try {
-        const res = await fetch(`${BASE}${path}`, {
-            headers: HEADERS,
+        const res = await fetch(`${gtBase()}${path}`, {
+            headers: gtHeaders(),
             signal: AbortSignal.timeout(TIMEOUT_MS),
         });
         if (res.status === 429) {
