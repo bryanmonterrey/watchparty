@@ -117,7 +117,7 @@ export function AppHeader2() {
 
   return (
     <header
-      className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-between px-[var(--header-px)] py-3 pointer-events-none"
+      className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-center px-[var(--header-px)] py-3 pointer-events-none"
     >
       {/* Scroll backdrop: media pages keep the black scrim over video; /search
           gets a whisper of theme background; /settings goes near-solid (85%).
@@ -135,6 +135,13 @@ export function AppHeader2() {
           }}
         />
       )}
+      {/* The controls are capped to --app-max-width and centred, matching the
+          app scroller (see AppContainer). Without this the logo and wallet sit
+          at the screen edges on an ultra-wide display while the page content
+          sits in a centred column — the header would visibly not belong to the
+          page under it. The backdrop above is deliberately OUTSIDE this wrapper,
+          so the bar itself still spans the full viewport. */}
+      <div className="mx-auto flex w-full max-w-(--app-max-width) items-center justify-between">
       {/* Mobile Menu & Logo */}
       <div className="relative z-10 flex-1 flex items-center justify-start">
         {/* Trigger + logo, desktop too (per desktopdesigns/*.svg): pressing
@@ -276,6 +283,7 @@ export function AppHeader2() {
           <ThemeSelect />
         </div>
         </div>
+      </div>
       </div>
     </header>
   )

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { subscribeCandles, type LiveBar } from "@/lib/coins/candle-stream";
 import { TokenCandlestickChart } from "./token-candlestick-chart";
 
 // TradingView Charting Library wrapper — the pump.fun-style candlestick chart.
@@ -56,6 +57,49 @@ export function loadScript(src: string): Promise<void> {
     });
 }
 
+
+/**
+ * A UDF datafeed whose history is REST and whose realtime is a push
+ * subscription.
+ *
+ * Without a pool we can't filter a Realtime channel, so the plain UDF datafeed
+ * (and its poll) is returned untouched — a chart that works on a slower refresh
+ * beats no chart.
+ */
+function makeDatafeed(network: string, poolAddress?: string | null) {
+    // Narrowed here rather than relying on the caller's guard: this function is
+    // module-scope, so TypeScript can't see that the effect already checked
+    // window.Datafeeds before calling. The throw is unreachable in practice —
+    // the caller sets state "missing" and returns when the scripts didn't load.
+    const Datafeeds = window.Datafeeds;
+    if (!Datafeeds) throw new Error("charting library datafeed not loaded");
+
+    const base = new Datafeeds.UDFCompatibleDatafeed("/api/udf", 30_000);
+    if (!poolAddress) return base;
+
+    const subs = new Map<string, () => void>();
+
+    // Object.create keeps every method the library might call, including ones
+    // added by future versions, and overrides only the two we're replacing.
+    const feed = Object.create(base);
+
+    feed.subscribeBars = (
+        symbolInfo: unknown,
+        resolution: string,
+        onTick: (bar: LiveBar) => void,
+        listenerGuid: string,
+    ) => {
+        subs.set(listenerGuid, subscribeCandles(network, poolAddress, resolution, onTick));
+    };
+
+    feed.unsubscribeBars = (listenerGuid: string) => {
+        subs.get(listenerGuid)?.();
+        subs.delete(listenerGuid);
+    };
+
+    return feed;
+}
+
 interface TokenTradingViewChartProps {
     /** Solana mint address; null/undefined for pre-launch drafts. */
     mint?: string | null;
@@ -65,10 +109,14 @@ interface TokenTradingViewChartProps {
      *  network rides in the symbol (see the datafeed's parseSymbol). Defaults to
      *  Solana so existing callers keep working. */
     network?: string;
+    /** Pool the candles belong to. Supplying it turns on LIVE bars — the chart
+     *  subscribes to coin_candles over Realtime instead of polling. Without it
+     *  the widget falls back to its own 30s refresh. */
+    poolAddress?: string | null;
     className?: string;
 }
 
-export function TokenTradingViewChart({ mint, ticker, network = "solana", className }: TokenTradingViewChartProps) {
+export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAddress, className }: TokenTradingViewChartProps) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const widgetRef = React.useRef<TradingViewWidgetInstance | null>(null);
     const [state, setState] = React.useState<LoadState>("loading");
@@ -110,7 +158,16 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", classN
                 symbol,
                 interval: "60",
                 container: containerRef.current,
-                datafeed: new window.Datafeeds.UDFCompatibleDatafeed("/api/udf", 30_000),
+                // LIVE BARS. The UDF datafeed's own realtime hook is a poll —
+                // the second argument is its interval. Wrapping it lets
+                // history keep coming from /api/udf while subscribeBars comes
+                // from Supabase Realtime instead, so an open chart advances the
+                // moment the sync writes a candle.
+                //
+                // Delegation by prototype rather than by hand: the library calls
+                // a dozen methods on a datafeed and listing them here would
+                // break silently whenever it added one.
+                datafeed: makeDatafeed(network, poolAddress),
                 library_path: "/charting_library/",
                 locale: "en",
                 theme: "dark",

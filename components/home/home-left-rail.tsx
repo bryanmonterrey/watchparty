@@ -37,7 +37,7 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 // No divider: the alerts list carries its own outline (see RailShell's
 // `bordered`), and a full-height rule beside a box that stops short of the
 // bottom read as a line running off on its own.
-const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col px-1.5 md:pt-[calc(var(--header-height)+4px)]";
+const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col pl-3 md:pt-[calc(var(--header-height))]";
 
 export function HomeLeftRail() {
     const [collapsed, setCollapsed] = useState(false);

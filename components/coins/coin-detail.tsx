@@ -396,6 +396,9 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
                     mint={coin.tokenAddress}
                     ticker={coin.symbol}
                     network={coin.network}
+                    // Turns on live bars — the chart subscribes to this pool's
+                    // candles instead of polling. See lib/coins/candle-stream.
+                    poolAddress={coin.poolAddress}
                     className="h-full w-full"
                 />
             </div>

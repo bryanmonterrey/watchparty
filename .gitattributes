@@ -1,0 +1,29 @@
+# Normalise line endings so a Mac <-> Windows move doesn't rewrite the tree.
+#
+# Without this, Git on Windows checks files out as CRLF and commits them back
+# changed, which shows up as thousands of phantom modifications. That matters
+# more here than in most repos: public/charting_library alone is ~2,100 vendored
+# files, and public/datafeeds another bundle — a CRLF pass over those is both a
+# huge diff and a risk to files nobody should be editing.
+* text=auto eol=lf
+
+# Vendored, minified, or hashed — never touch these.
+public/charting_library/** -text -diff
+public/datafeeds/**        -text -diff
+
+# Binary assets: no EOL conversion, no diffing.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.mp4  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.pdf  binary
+
+# Lockfiles: keep them stable and out of diffs.
+bun.lock -diff

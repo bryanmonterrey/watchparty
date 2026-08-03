@@ -23,7 +23,10 @@ export const AppContainer = ({
       style={{ viewTransitionName: "page-content" }}
       initial={false}
     >
-      {children}
+      {/* The cap lives on an inner wrapper, not the scroller: the scroller owns
+          the page background and the scrollbar, and both should still run the
+          full width. Only the CONTENT is centred. */}
+      <div className="mx-auto w-full max-w-(--app-max-width)">{children}</div>
     </motion.div>
   );
 };

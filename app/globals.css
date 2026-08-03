@@ -208,6 +208,14 @@
      Flat rather than theme-aware, like --color-sidebar-hover below: these
      surfaces were hardcoded hexes before this token existed, so a light-mode
      value here would silently change what they render. */
+  /* Widest the app ever draws. Ultra-wide screens get letterboxed rather than
+     stretching every column to the glass.
+     1536px = Tailwind's 2xl. NOT xl (1280): /feed's columns already sum to
+     ~1368px (rail 288 + feed 628 + gap 24 + right rail 384 + dock ~68), so an
+     xl cap would squeeze a layout that's at its minimum. Both the app scroller
+     and the fixed header read this, or the header's controls would sit at the
+     screen edges while the content sat centred. */
+  --app-max-width: 1536px;
   --color-canvas: #080808;
   /* Sidebar menu-item hover pill (the `before:` capsule behind each item).
      Flat and opaque on purpose. It was zinc-900 on the nav items and
