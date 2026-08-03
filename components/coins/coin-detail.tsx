@@ -487,7 +487,9 @@ export function CoinDetail({ coin }: { coin: CoinViewData }) {
     return (
         <div className="flex w-full min-w-0">
             <div className="ml-5 @container/coin min-w-0 flex-1 pt-header">
-                <div className="grid min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_360px]">
+                {/* Gap only in the two-column state — stacked, the swap card's
+                    own p-4 already separates it from the chart. */}
+                <div className="grid min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_360px] @4xl/coin:gap-3">
                     {/* Header and chart are one column — the header spans the
                         chart's width and nothing else. */}
                     <div className="flex min-w-0 flex-col">
