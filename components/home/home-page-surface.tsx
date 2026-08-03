@@ -170,8 +170,16 @@ export function HomePageSurface() {
                 {/* The feed right rail's card itself, not a lookalike — see the
                     export note on NewsCard. It inherits the aside's w-96, so it
                     matches the rail above it by construction. */}
-                <div className="pb-20">
+                <div className="flex flex-col pb-8">
                     <NewsCard />
+                    {/* The SAME h-[50svh] tail the feed's rail ends with
+                        (discover-right-rail). It's what carries that column past
+                        the bottom of the viewport and gives `sticky bottom-0`
+                        something to travel through — without it the column
+                        cleared the fold by only the card's height plus pb-20,
+                        so there was barely any scroll to feel. Transparent and
+                        shrink-0: pure range, it paints nothing. */}
+                    <div aria-hidden className="h-[50svh] w-full shrink-0 bg-transparent" />
                 </div>
             </aside>
 
