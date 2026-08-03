@@ -33,7 +33,25 @@ export async function GET(
                 supported_resolutions: SUPPORTED_RESOLUTIONS,
                 supports_group_request: false,
                 supports_marks: false,
-                supports_search: false,
+                // MUST be true. `supports_search: false` together with
+                // `supports_group_request: false` is the one combination
+                // UDFCompatibleDatafeed refuses: it throws "Unsupported datafeed
+                // configuration. Must either support search, or support group
+                // request" from its constructor, before requesting /symbols or
+                // /history. That is why no chart has EVER rendered — the widget
+                // died on /config every time, which looked identical to a data
+                // problem and sent several rounds of debugging at the data.
+                //
+                // The two flags describe how the datafeed resolves symbols:
+                // group_request means "hand me every symbol up front", search
+                // means "I'll resolve them one at a time via /symbols". We serve
+                // /symbols per-symbol, so search is the accurate answer — and
+                // there are billions of tokens, so group request could never be.
+                //
+                // Independent of the widget's `header_symbol_search` feature
+                // flag, which only hides the search UI. This is a datafeed
+                // capability, not a piece of chrome.
+                supports_search: true,
                 supports_timescale_marks: false,
                 supports_time: true,
             });
@@ -42,6 +60,15 @@ export async function GET(
             return new NextResponse(String(Math.floor(Date.now() / 1000)), {
                 headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
             });
+
+        // Declaring supports_search means the library may call /search. It
+        // won't here — header_symbol_search is disabled and the symbol is always
+        // supplied by the page — but an unhandled route would 404, and a 404 on
+        // a declared capability is exactly the kind of thing that surfaces much
+        // later as an unexplained failure. An empty array is a valid "no
+        // matches" and costs nothing.
+        case "search":
+            return json([]);
 
         case "symbols": {
             const symbol = q.get("symbol") ?? "";
