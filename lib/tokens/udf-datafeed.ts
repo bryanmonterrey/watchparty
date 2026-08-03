@@ -151,6 +151,16 @@ export async function getUdfBars(
     // actually need a pool, and each checks for one.
     const pool = await resolvePool(mint, network);
 
+    // One structured line per request, greppable in `wrangler tail`. Which of
+    // the three sources answered is the single most useful fact when a chart
+    // is blank, and it was previously invisible from the server side — every
+    // diagnosis so far has come from curling endpoints and guessing.
+    const t0 = Date.now();
+    const trace = (source: string, bars: number, extra?: string) =>
+        console.log(
+            `[udf] ${network}:${mint.slice(0, 8)} res=${resolution} src=${source} bars=${bars} pool=${pool ? "y" : "n"} mobula=${mobulaEnabled() ? "on" : "off"} ms=${Date.now() - t0}${extra ? ` ${extra}` : ""}`,
+        );
+
     // OUR DATABASE FIRST. This is the whole point of coin_candles: a chart read
     // must not depend on an upstream that rate-limits our egress. Anything the
     // sync has already stored is served from Postgres and never touches GT.
@@ -162,6 +172,7 @@ export async function getUdfBars(
         try {
             const stored = await readCandles(network, pool.address, resolution, from, to);
             if (stored.length > 0) {
+                trace("db", stored.length);
                 return {
                     s: "ok",
                     t: stored.map((b) => b.ts),
@@ -199,6 +210,7 @@ export async function getUdfBars(
                 // second is a real answer — see EmptyWindow's note below.
                 if (!bars) throw new Error("mobula unsupported");
                 if (bars.length === 0) throw new EmptyWindow();
+                trace("mobula", bars.length);
 
                 // Persist so the next viewer is served from Postgres for free.
                 // Needs a pool, since that's the table's key — when we don't
@@ -223,13 +235,19 @@ export async function getUdfBars(
                 } as UdfBars;
             });
         } catch (err) {
-            if (err instanceof EmptyWindow) return { s: "no_data" };
+            if (err instanceof EmptyWindow) {
+                trace("mobula", 0, "empty");
+                return { s: "no_data" };
+            }
             // Anything else: fall through to GT rather than fail the chart.
-            console.error("[udf] mobula failed:", err instanceof Error ? err.message : err);
+            trace("mobula", 0, `ERR=${err instanceof Error ? err.message : String(err)}`);
         }
     }
 
-    if (!pool) return { s: "no_data" };
+    if (!pool) {
+        trace("none", 0, "no-pool");
+        return { s: "no_data" };
+    }
 
     // GeckoTerminal returns up to `limit` candles ending at before_timestamp.
     // Ask for enough to cover the window (capped at GT's 1000 max).
@@ -289,6 +307,7 @@ export async function getUdfBars(
                 throw new EmptyWindow(oldest && oldest < from ? oldest : undefined);
             }
 
+            trace("gt", sorted.length);
             return {
                 s: "ok",
                 t: sorted.map((r) => r[0]),
@@ -310,7 +329,7 @@ export async function getUdfBars(
             return err.nextTime ? { s: "no_data", nextTime: err.nextTime } : { s: "no_data" };
         }
         const reason = err instanceof Error ? err.message : "fetch failed";
-        console.error("[udf] ohlcv failed:", reason);
+        trace("gt", 0, `ERR=${reason}`);
         return { s: "no_data", errmsg: reason };
     }
 }
