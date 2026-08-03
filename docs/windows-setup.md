@@ -48,8 +48,8 @@ git clone <repo> watchparty
 cd watchparty
 bun install
 
-# 3. Env — copy .env and .env.production from the Mac. They are gitignored and
-#    contain live secrets, so move them over a secure channel, not a repo.
+# 3. Secrets — see below. In Git Bash, from the repo root:
+#    ./scripts/restore-secrets.sh "/d/watchparty-secrets-YYYYMMDD.tar.gz.enc"
 
 # 4. Verify
 bun run typecheck    # empty output = pass
@@ -59,11 +59,43 @@ bun dev              # http://localhost:3001
 Port **3001** is not optional — the OAuth callback URLs and `NEXT_PUBLIC_AUTH_URL`
 in `.env` point there.
 
+## Moving the secrets
+
+A clone gets you none of them — everything sensitive is gitignored, which is the
+point. Ten paths matter: the five `.env*` files, `.dev.vars`, `.cf-secrets.json`,
+`.mcp.json`, `.treasury-keys/`, and `.wallet-backups/`.
+
+On the Mac, with the USB drive plugged in:
+
+```bash
+./scripts/backup-secrets.sh          # auto-detects the drive; prompts for a passphrase
+```
+
+That writes one AES-256 archive and verifies it by reading it back off the drive.
+On Windows, open **Git Bash** in the repo (it ships `openssl` and `tar`, so
+nothing needs installing — check with `openssl version`) and run:
+
+```bash
+./scripts/restore-secrets.sh "/d/watchparty-secrets-YYYYMMDD.tar.gz.enc"
+```
+
+`/d/` is Git Bash's spelling of `D:\`. Restore refuses to overwrite a secret that
+already exists, so it can't quietly clobber a `.env` you edited on this machine.
+
+**The archive is encrypted because the USB isn't.** A stick formatted FAT32 or
+exFAT has no permissions and no encryption — `chmod 600` on it does nothing, and
+any machine it's plugged into can read it. `.treasury-keys/` holds Solana keys
+that control real funds, so treat the passphrase as a wallet passphrase. Don't
+store it on the same drive.
+
 ## Things that will still differ
 
-- **The `.treasury-keys/` directory** is gitignored and machine-local. If you
-  sign treasury operations from the Mac, those keys don't travel with the clone;
-  see `docs/treasury-security.md`.
+- **The `.treasury-keys/` directory** is gitignored and machine-local. Per
+  `CLAUDE.md` the keys are meant to be backed up and then deleted from the
+  working machine; `docs/treasury-security.md` has the policy.
+- **Gitignored design assets** (`docs/` icon packs, screenshots, reference PNGs)
+  don't travel with a clone either. They aren't secret — copy them across
+  plainly if you want them, or leave them on the Mac.
 - **Deploys are CI-only** (GitHub Actions). Don't try `wrangler` uploads from
   either machine — local uploads EPIPE, which is why CI owns it.
 - **The DB is shared and is production.** Both machines point at the same
