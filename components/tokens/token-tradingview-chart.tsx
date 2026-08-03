@@ -144,12 +144,26 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
         (async () => {
             try {
                 await Promise.all([loadScript(LIBRARY_SCRIPT), loadScript(DATAFEED_SCRIPT)]);
-            } catch {
+            } catch (err) {
+                // Say WHICH script died. "missing" silently swaps in the old
+                // lightweight-charts renderer, which polls a rate-limited
+                // upstream — so a library problem presents as a chart that
+                // loads forever, and looks identical to a data problem.
+                console.error("[tv] library scripts failed to load:", err);
                 if (!cancelled) setState("missing");
                 return;
             }
             if (cancelled) return;
             if (!window.TradingView?.widget || !window.Datafeeds?.UDFCompatibleDatafeed || !containerRef.current) {
+                // Name the exact precondition rather than collapsing four very
+                // different failures into one silent fallback.
+                console.error("[tv] cannot mount widget:", {
+                    TradingView: !!window.TradingView,
+                    widget: !!window.TradingView?.widget,
+                    Datafeeds: !!window.Datafeeds,
+                    UDFCompatibleDatafeed: !!window.Datafeeds?.UDFCompatibleDatafeed,
+                    container: !!containerRef.current,
+                });
                 setState("missing");
                 return;
             }
