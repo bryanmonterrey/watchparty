@@ -99,24 +99,40 @@ export function HomePageSurface() {
                 those bars need while stuck is applied only once they ARE stuck
                 (see useStuck), so unstuck they stay transparent and the hero's
                 ambient glow reads through them. */}
-            {/* xl:pr-3 opens the gap between this column and the video rail.
-                Scoped to xl because that's the only size the rail exists at —
-                below it the padding would just inset the column against nothing.
-                Padding rather than a narrower column: the hero and everything
-                under it size off <main>, so this pulls them all in together. */}
-            <main className="@container/home relative flex min-w-0 flex-1 flex-col md:mt-[var(--header-height)] pl-3 xl:pr-3">
+            {/* THE FEED'S GEOMETRY, to the pixel — same ml-7, same 628px column,
+                same 28px gap, same w-96 rail. /home and /feed sit under the same
+                alerts rail and users move between them constantly, so the centre
+                column has to stay on the same vertical when they do.
+
+                NOT flex-1, for the reason the feed layout documents: growing, it
+                swallows every spare pixel and pushes the rail out to the far
+                right while the column itself never moves (it's anchored to the
+                start), so the slack all shows up as a gap between the two. Sized
+                to the column instead, with the slack handed to the rail's
+                mr-auto below.
+
+                The hero and everything under it size off <main>, so this narrows
+                them together — which is the point; they now match the feed's
+                column rather than running as wide as the window allows. */}
+            <main className="@container/home relative flex w-full ml-7 min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)]">
                 <HomeCenterColumn />
             </main>
 
-            <aside className="hidden w-74 shrink-0 xl:block">
+            {/* ml-7 is the gap from the centre column — measured off the column's
+                edge rather than left to whatever width happened to be spare,
+                which is what the old xl:pr-3 padding did. mr-auto is what makes
+                it hold: the row's slack goes to the rail's RIGHT, so a wider
+                window pushes the dock out instead of prising these two apart. */}
+            <aside className="ml-7 mr-auto hidden w-96 shrink-0 xl:block">
                 <div className={RAIL_INNER_RIGHT}>
                     <HomeRailTabs />
                     <HomeRailVideos />
                 </div>
             </aside>
 
-            {/* 4th column. Its width comes out of <main> (flex-1), so the video
-                rail above keeps its w-75 and only the centre column narrows. */}
+            {/* 4th column, same as the feed's. The slack now sits to its left
+                (the rail's mr-auto), so widening the window moves the dock out
+                rather than stretching the centre column. */}
             <HomeActionDock />
 
             <ClipsOverlay />

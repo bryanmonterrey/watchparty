@@ -13,9 +13,12 @@ import { trpc } from "@/lib/trpc/client";
 // viewport.
 //
 // It's a real column, not a `fixed` overlay, on purpose — the buttons sit in
-// the flex row so they can never land on top of the rail's content, and the
-// width they take comes out of the centre column (which is `flex-1`) while the
-// video rail keeps its w-75.
+// the flex row so they can never land on top of the rail's content.
+//
+// The centre column is a fixed 628px now (it matches /feed), so this no longer
+// takes its width out of a flex-1 centre. The row's slack lives in the video
+// rail's mr-auto, i.e. in the space to this dock's LEFT — widening the window
+// pushes the dock outward and leaves the column and rail where they are.
 //
 // Sticky rather than fixed for the same reason as the two rails: the page
 // scrolls inside #app-scroll-container, so `fixed` would anchor to the window
