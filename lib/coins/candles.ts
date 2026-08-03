@@ -85,7 +85,17 @@ async function readTier(
             .where(where)
             .orderBy(asc(coinCandles.ts))
             .limit(limit);
-        return rows;
+        // Drizzle's bigint `mode: "number"` already converts here, unlike the
+        // raw-SQL branch below. Coerced anyway so both paths are provably the
+        // same shape — the widget rejects string times without saying so.
+        return rows.map((r) => ({
+            ts: Number(r.ts),
+            o: Number(r.o),
+            h: Number(r.h),
+            l: Number(r.l),
+            c: Number(r.c),
+            v: r.v === null ? null : Number(r.v),
+        }));
     }
 
     // Roll up. open/close are the FIRST/LAST bar of each bucket by time, which
@@ -107,7 +117,24 @@ async function readTier(
         .orderBy(sql`1 asc`)
         .limit(limit);
 
-    return rows;
+    // COERCE. `sql<number>` is a TypeScript assertion, not a runtime cast — it
+    // tells the compiler what to expect and does nothing to the value. The
+    // column-selection branch above goes through Drizzle's bigint
+    // `mode: "number"` and really does arrive as a number, but nothing maps
+    // these raw expressions, and postgres.js hands bigint back as a STRING.
+    //
+    // That shipped a chart stuck on its loading spinner: /history answered
+    // `{"s":"ok","t":["1785279600",...]}` and the TradingView widget silently
+    // refuses string times, so it never resolved the load. tsc cannot catch
+    // this — the assertion is exactly what makes the lie type-check.
+    return rows.map((r) => ({
+        ts: Number(r.ts),
+        o: Number(r.o),
+        h: Number(r.h),
+        l: Number(r.l),
+        c: Number(r.c),
+        v: r.v === null || r.v === undefined ? null : Number(r.v),
+    }));
 }
 
 /** Newest stored bar for a series, or null — the sync's incremental cursor. */
