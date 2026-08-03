@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { trendingCoins } from "@/db/schema/content/trending";
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
 import { syncMarketData, syncCurveProgress, type SyncableToken } from "@/lib/tokens/market-sync";
 import { recordSwaps, type HeliusSwapEvent } from "@/lib/coins/record-swaps";
@@ -54,28 +54,35 @@ export async function POST(req: NextRequest) {
     }
     if (touched.size === 0) return NextResponse.json({ ok: true, synced: 0 });
 
-    // Cap the candidate list — a pathological batch shouldn't build a huge
-    // IN clause. Watched pools are a tiny fraction of accounts in any tx.
-    const candidates = [...touched].slice(0, 2000);
-
-    const rows = await db
-        .select({
-            id: tokens.id,
-            poolAddress: tokens.poolAddress,
-            phase: tokens.phase,
-            tokenAddress: tokens.tokenAddress,
-            name: tokens.name,
-            ticker: tokens.ticker,
-            lastAlertPriceUsd: tokens.lastAlertPriceUsd,
-            lastAlertAt: tokens.lastAlertAt,
-        })
-        .from(tokens)
-        .where(and(
-            eq(tokens.status, "live"),
-            isNotNull(tokens.poolAddress),
-            inArray(tokens.poolAddress, candidates),
-        ))
-        .limit(MAX_TOKENS_PER_CALL);
+    // CACHED, then filtered in memory — the same treatment displayPools got,
+    // and for the same reason. Capping registration at 15 pools was not enough
+    // on its own: this query still ran on EVERY delivery, and 15 trending pools
+    // deliver fast enough to exhaust the 15-connection pool by themselves. When
+    // it does, unrelated server renders fail too — a coin page reads the
+    // database during render, so users saw "An error occurred in the Server
+    // Components render" that had nothing to do with the coin page.
+    //
+    // Live tokens are the ones WE launched, so this list is small and changes
+    // only when one launches. Caching it for 60s makes the hot path do no reads
+    // at all; the only database work left per delivery is the tape insert.
+    const liveTokens = await withCache("helius-trades:live-tokens", 60, async () =>
+        db
+            .select({
+                id: tokens.id,
+                poolAddress: tokens.poolAddress,
+                phase: tokens.phase,
+                tokenAddress: tokens.tokenAddress,
+                name: tokens.name,
+                ticker: tokens.ticker,
+                lastAlertPriceUsd: tokens.lastAlertPriceUsd,
+                lastAlertAt: tokens.lastAlertAt,
+            })
+            .from(tokens)
+            .where(and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress))),
+    );
+    const rows = liveTokens
+        .filter((t) => t.poolAddress && touched.has(t.poolAddress))
+        .slice(0, MAX_TOKENS_PER_CALL);
 
     // Pools we only DISPLAY (trending) are registered on the same webhook but
     // have no `tokens` row, so they'd arrive and be dropped. They get a tape but
