@@ -10,6 +10,8 @@
 // Re-synced on token launch and by the daily cron.
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
+import { trendingCoins } from "@/db/schema/content/trending";
+import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { heliusApiKey } from "@/lib/wallet/assets-webhook";
 
@@ -26,7 +28,31 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
         .from(tokens)
         .where(and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress)));
 
-    const accountAddresses = [...new Set(rows.map((r) => r.poolAddress).filter(Boolean) as string[])].slice(0, MAX_ADDRESSES);
+    // ALSO watch the coins we merely DISPLAY, not just the ones we launched.
+    // Without this the live tape covered watchparty tokens only, and every
+    // trending coin — which is most of what anyone actually opens — fell back
+    // to polling. Solana only: Helius sees no other chain.
+    //
+    // Volume is not a concern. These are hundreds of pools against a 90k
+    // ceiling, and Helius bills per delivery, not per watched address.
+    const [trending, tracked] = await Promise.all([
+        db
+            .select({ poolAddress: trendingCoins.poolAddress })
+            .from(trendingCoins)
+            .where(eq(trendingCoins.network, "solana")),
+        db
+            .select({ poolAddress: trackedTokens.poolAddress })
+            .from(trackedTokens)
+            .where(eq(trackedTokens.network, "solana")),
+    ]);
+
+    const accountAddresses = [
+        ...new Set(
+            [...rows, ...trending, ...tracked]
+                .map((r) => r.poolAddress)
+                .filter(Boolean) as string[],
+        ),
+    ].slice(0, MAX_ADDRESSES);
     if (!accountAddresses.length) {
         return { webhookID: "", watching: 0, created: false }; // nothing launched yet
     }

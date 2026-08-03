@@ -1,24 +1,50 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Copy01Icon, Tick02Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons"
 import { formatDistanceToNowStrict } from "date-fns"
 import { Token } from "@/db/schema/content"
 import { Switch } from "@/components/ui/switch"
 import { trpc } from "@/lib/trpc/client"
+import { subscribeTrades, type LiveTrade } from "@/lib/coins/trade-stream"
 
 export function TokenTradesTable({ token }: { token: Token }) {
     const [filterSize, setFilterSize] = useState(false)
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
+    // Initial page of the tape. The poll is now a SELF-HEAL, not the source of
+    // perceived liveness — new swaps arrive over the subscription below within
+    // a second or two, and this only backfills identities and anything the
+    // socket missed while the tab was backgrounded.
     const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
         { mint: token.tokenAddress! },
-        { enabled: !!token.tokenAddress, staleTime: 30_000, refetchInterval: 30_000, retry: 1 }
+        { enabled: !!token.tokenAddress, staleTime: 30_000, refetchInterval: 60_000, retry: 1 }
     )
 
+    // Swaps that landed since the last fetch, newest first.
+    const [live, setLive] = useState<LiveTrade[]>([])
+
+    useEffect(() => {
+        if (!token.tokenAddress) return
+        // Clear on token change, or the previous coin's tape bleeds into this one.
+        setLive([])
+        return subscribeTrades("solana", token.tokenAddress, (t) => {
+            // Cap the buffer: a hot pool can print faster than anyone reads, and
+            // an unbounded array would grow for as long as the tab is open.
+            setLive((prev) => (prev.some((p) => p.txHash === t.txHash) ? prev : [t, ...prev].slice(0, 100)))
+        })
+    }, [token.tokenAddress])
+
+    // Merge, preferring the FETCHED row when both exist: it carries the
+    // username and avatar that the stream deliberately doesn't look up.
+    const merged = useMemo(() => {
+        const seen = new Set(trades.map((t) => t.txHash))
+        return [...live.filter((t) => !seen.has(t.txHash)), ...trades]
+    }, [live, trades])
+
     // "Filter by size" = trades worth more than $100.
-    const filteredTrades = filterSize ? trades.filter((t) => t.usdValue >= 100) : trades
+    const filteredTrades = filterSize ? merged.filter((t) => t.usdValue >= 100) : merged
 
     const copyToClipboard = (address: string, index: number) => {
         navigator.clipboard.writeText(address)

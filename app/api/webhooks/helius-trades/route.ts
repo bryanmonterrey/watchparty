@@ -8,13 +8,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
+import { trendingCoins } from "@/db/schema/content/trending";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
 import { syncMarketData, syncCurveProgress, type SyncableToken } from "@/lib/tokens/market-sync";
+import { recordSwaps, type HeliusSwapEvent } from "@/lib/coins/record-swaps";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+// Only the fields this route reads directly; the swap payload is typed by
+// HeliusSwapEvent, which recordSwaps consumes.
 type HeliusEvent = {
     signature?: string;
     accountData?: { account?: string }[];
@@ -72,7 +76,45 @@ export async function POST(req: NextRequest) {
             inArray(tokens.poolAddress, candidates),
         ))
         .limit(MAX_TOKENS_PER_CALL);
-    if (rows.length === 0) return NextResponse.json({ ok: true, synced: 0 });
+
+    // Pools we only DISPLAY (trending / tracked) are registered on the same
+    // webhook but have no `tokens` row, so they'd arrive and be dropped. They
+    // get a tape but no market-row sync — syncMarketData below is for tokens we
+    // launched and own the pricing model for.
+    const displayPools = await db
+        .select({ poolAddress: trendingCoins.poolAddress, tokenAddress: trendingCoins.tokenAddress })
+        .from(trendingCoins)
+        .where(and(eq(trendingCoins.network, "solana"), inArray(trendingCoins.poolAddress, candidates)))
+        .limit(50);
+
+    if (rows.length === 0 && displayPools.length === 0) {
+        return NextResponse.json({ ok: true, synced: 0 });
+    }
+
+    // RECORD THE TAPE — deliberately before, and outside, the throttle below.
+    // That throttle exists to avoid re-syncing a hot token's price row more
+    // than once every few seconds; individual swaps are the opposite case, and
+    // dropping them is exactly what left the transactions table with nothing to
+    // show but a 30s poll of a rate-limited upstream. Every swap gets written.
+    let recorded = 0;
+    try {
+        const poolsByAddress = new Map<string, { network: string; tokenAddress: string }>();
+        for (const r of rows) {
+            if (r.poolAddress && r.tokenAddress) {
+                poolsByAddress.set(r.poolAddress, { network: "solana", tokenAddress: r.tokenAddress });
+            }
+        }
+        for (const p of displayPools) {
+            if (p.poolAddress && p.tokenAddress && !poolsByAddress.has(p.poolAddress)) {
+                poolsByAddress.set(p.poolAddress, { network: "solana", tokenAddress: p.tokenAddress });
+            }
+        }
+        recorded = await recordSwaps(events as HeliusSwapEvent[], poolsByAddress);
+    } catch (err) {
+        // The tape is additive. If it fails, the price sync below must still
+        // run — that's the path that keeps headline numbers correct.
+        console.error("[helius-trades] recordSwaps failed:", err instanceof Error ? err.message : err);
+    }
 
     // Per-token claim throttle (same identity trick as trade.syncToken).
     const toSync: SyncableToken[] = [];
@@ -81,10 +123,10 @@ export async function POST(req: NextRequest) {
         const winner = await withCache(`token:sync-req:${row.id}`, THROTTLE_SECONDS, async () => claim);
         if (winner === claim) toSync.push({ ...row, poolAddress: row.poolAddress! });
     }
-    if (toSync.length === 0) return NextResponse.json({ ok: true, synced: 0, throttled: rows.length });
+    if (toSync.length === 0) return NextResponse.json({ ok: true, synced: 0, recorded, throttled: rows.length });
 
     const synced = await syncMarketData(toSync);
     await syncCurveProgress(toSync);
 
-    return NextResponse.json({ ok: true, synced });
+    return NextResponse.json({ ok: true, synced, recorded });
 }
