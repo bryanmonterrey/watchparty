@@ -184,7 +184,7 @@ const compactAmount = (n: number) =>
  * canvas, and a second surface colour behind an outlined card reads as two
  * boxes stacked. The outline alone is the card.
  */
-const SWAP_CARD = "rounded-[25px] border border-[#18181B] bg-transparent";
+const SWAP_CARD = "rounded-[25px] border border-soft-gray/12 bg-transparent";
 
 type TraderRow = {
     account: string;
@@ -377,24 +377,27 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     ];
 
     return (
-        <section className="flex min-w-0 flex-col">
+        <section className="flex min-w-0 flex-col px-4 pb-4">
+        {/* ONE box around the whole board — header, column headings and rows.
+            Not a squircle on the header alone: two stroked paths that meet draw
+            two hairlines and the seam between them can't be removed (the alerts
+            rail learned this the hard way — see RailShell's `header` prop). With
+            one path, the divider under the tabs is an ordinary internal
+            border-b, which is exactly what it should be.
+
+            RAIL_BORDER is imported rather than re-typed so this hairline and the
+            alerts rail's are literally the same value. */}
+        <Squircle
+            radius={25}
+            autoEffects={false}
+            innerBorder={RAIL_BORDER}
+            className="flex min-w-0 flex-col overflow-hidden"
+        >
             {/* Tab row. Divided by hairlines rather than spacing — the reference
                 reads as one control, not three separate links. */}
-            {/* No fill — the header is an OUTLINED box, not a raised one, and it
-                carries RAIL_BORDER so its hairline is literally the same value
-                the alerts rail draws (one constant, so the two can't drift).
-
-                Squircled via Lisse rather than `rounded-*`: the border is
-                declared as an effect and stroked into the wrapper Lisse injects,
-                because a CSS border sits inside the border box and the clip-path
-                would cut it away at exactly the corners the squircle exists for.
-                No border-b either — the stroke already closes all four sides. */}
-            <Squircle
-                radius={25}
-                autoEffects={false}
-                innerBorder={RAIL_BORDER}
-                className="flex min-w-0 items-center justify-between gap-4 px-5 py-4"
-            >
+            {/* No fill — an internal row of the box above, divided from the
+                table by an ordinary border-b. */}
+            <div className="flex min-w-0 items-center justify-between gap-4 border-b border-flexwhite/10 px-5 py-4">
                 <div className="flex min-w-0 items-center">
                     {TABS.map((t, i) => (
                         <React.Fragment key={t.id}>
@@ -417,7 +420,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                     <Toggle checked={mentionsOnly} onChange={setMentionsOnly} label="$mentions only" />
                     <Toggle checked={friendsOnly} onChange={setFriendsOnly} label="Friends only" />
                 </div>
-            </Squircle>
+            </div>
 
             <div className={cn(GRID, "border-b border-flexwhite/10 text-[15px] font-normal text-zinc-500")}>
                 <span className="border-r border-flexwhite/10 px-5 py-3">Trader</span>
@@ -552,6 +555,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                     </p>
                 </div>
             )}
+        </Squircle>
         </section>
     );
 }
@@ -589,7 +593,7 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
                 now rides in the symbol (`base:0x…`) and this renders whatever
                 the coin is on. The "open the market venue" fallback that used
                 to stand in for non-Solana chains is gone with it. */}
-            <div className="h-[min(64vh,720px)] min-h-[420px] flex-1 bg-black">
+            <div className="h-[min(64vh,720px)] min-h-[420px] flex-1 bg-canvas">
                 <TokenTradingViewChart
                     mint={coin.tokenAddress}
                     ticker={coin.symbol}
@@ -634,7 +638,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
     // A `//` comment, NOT `{/* */}`: a JSX comment directly after `return (`
     // parses as an object literal and fails the Turbopack build (see CLAUDE.md).
     return (
-        <aside className="p-4 pr-1">
+        <aside className="p-4 pr-0">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 {coin.network !== "solana" ? (
                     <div className={SWAP_CARD + " p-5"}>
