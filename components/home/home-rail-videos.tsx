@@ -5,6 +5,7 @@ import { RailRow, RailRowSkeleton } from "@/components/rails/rail-row";
 import { RailShell } from "@/components/rails/rail-shell";
 import { HOME_TAB_LIKED } from "@/components/rails/rail-tabs";
 import { HomeRailTabs } from "./home-rail-tabs";
+import { cn } from "@/lib/utils";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { useHomeFeed } from "./home-feed-context";
 import { HomeRailRowMenu } from "./home-rail-row-menu";
@@ -23,6 +24,25 @@ const LOADING_MORE_ROWS = 3;
 // so scrolling at a normal speed never reaches an empty end.
 const PREFETCH_MARGIN = "400px";
 
+// ── Card spacing ────────────────────────────────────────────────────────────
+// Shared by the real list and the skeleton so the two can't drift — the whole
+// point of the skeleton wearing the real chrome is that nothing shifts when the
+// rows arrive.
+//
+// px-2 insets the content off the outline. RailRow already carries its own p-2
+// and its own squircled hover fill, so without this the fill ran into the
+// card's border on both edges; with it the rows sit inside the box.
+//
+// mb-20 rather than RailShell's default mb-2. This is a sticky h-[100svh]
+// column, so the card's bottom edge is the viewport's — a 2px lift read as the
+// box being cut off rather than ending. (The alerts rail uses mb-7 for the same
+// reason; this one sits lower and wants more.)
+const CARD_PX = "px-2";
+const CARD_MB = "mb-20";
+// pt-2.5 above the tabs, matching the px so the header is inset from the
+// outline on three sides rather than just the two.
+const CARD_HEADER_PAD = "px-2 pt-2.5";
+
 
 
 export function HomeRailVideos() {
@@ -33,6 +53,14 @@ export function HomeRailVideos() {
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
+
+    // One header for both branches below, so the skeleton and the real list
+    // present an identical card.
+    const cardHeader = (
+        <div className={CARD_HEADER_PAD}>
+            <HomeRailTabs />
+        </div>
+    );
 
     // Infinite scroll. The observer's root is the rail itself, not the viewport:
     // this list scrolls inside a fixed-height sticky column, so a viewport-rooted
@@ -65,8 +93,8 @@ export function HomeRailVideos() {
     // appears only once the rows land would read as a layout shift.
     if (isLoading) {
         return (
-            <RailShell radius={25} bordered header={<HomeRailTabs />}>
-                <div className="flex flex-col">
+            <RailShell className={CARD_MB} radius={25} bordered header={cardHeader}>
+                <div className={cn("flex flex-col", CARD_PX)}>
                     {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
                         <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
                     ))}
@@ -79,8 +107,8 @@ export function HomeRailVideos() {
     // rather than growing the page. RailShell owns the height; this element
     // owns the scrolling.
     return (
-        <RailShell radius={25} bordered header={<HomeRailTabs />}>
-            <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <RailShell className={CARD_MB} radius={25} bordered header={cardHeader}>
+            <div ref={scrollRef} className={cn("hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto", CARD_PX)}>
                 {videos.map((v) => (
                     <RailRow
                         key={v.id}
