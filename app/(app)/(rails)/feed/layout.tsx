@@ -55,7 +55,7 @@ export default function FeedLayout({ children }: { children: React.ReactNode }) 
 
                     The max-w moves up here from the child for the same reason:
                     it's what stops main growing, so it has to be main's. */}
-                <main className="relative flex w-full min-w-0 max-w-[628px] flex-col">
+                <main className="relative flex w-full ml-4 min-w-0 max-w-[628px] flex-col">
                     <div className="relative z-100 min-h-dvh w-full border-soft-gray/[0.12] lg:border-x">
                         {children}
                     </div>
