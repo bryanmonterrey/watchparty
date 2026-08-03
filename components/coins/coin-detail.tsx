@@ -313,27 +313,28 @@ function foldTraders(
  * columns, a list of individual swaps and a list of traders aren't two views of
  * one table, and pretending otherwise made both worse.
  */
-type TableTab = "holders" | "swaps" | "thesis";
+type TableTab = "holders" | "swaps" | "mentions";
 
 /**
  * The trader board under the chart, modelled on Fomo's.
  *
  * Anatomy that matters, top to bottom:
  *
- *  - A TAB ROW (Holders / Swaps / Thesis) with its own filter toggles, not just
- *    column headings. The board answers three different questions off one data
- *    set and the tabs are how you pick.
+ *  - A TAB ROW (Holders / Swaps / $mentions) with its own filter toggles, not
+ *    just column headings. The board answers three different questions off one
+ *    data set and the tabs are how you pick.
  *  - Trader is a PERSON and is fenced off by a vertical rule: avatar, name, and
  *    how long they have held. Every other market board prints an address here
  *    because an address is all it has.
  *  - Every numeric cell is TWO lines — the headline figure and the thing that
  *    gives it meaning: position in dollars over the token amount, PnL in dollars
  *    over the percentage, entry market cap over entry price.
- *  - Thesis carries a like count, because it is a post, not a note.
+ *  - $mentions carries a like count, because a mention IS a post — a cashtag
+ *    post about this coin — not a note someone typed into a field.
  */
 function CoinTable({ coin }: { coin: CoinViewData }) {
     const [tab, setTab] = React.useState<TableTab>("holders");
-    const [thesisOnly, setThesisOnly] = React.useState(false);
+    const [mentionsOnly, setMentionsOnly] = React.useState(false);
     const [friendsOnly, setFriendsOnly] = React.useState(false);
 
     const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
@@ -351,7 +352,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     const TABS: { id: TableTab; label: string }[] = [
         { id: "holders", label: "Holders" },
         { id: "swaps", label: "Swaps" },
-        { id: "thesis", label: `Thesis (${rows.length})` },
+        { id: "mentions", label: `$mentions (${rows.length})` },
     ];
 
     return (
@@ -378,7 +379,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-4">
-                    <Toggle checked={thesisOnly} onChange={setThesisOnly} label="Thesis only" />
+                    <Toggle checked={mentionsOnly} onChange={setMentionsOnly} label="$mentions only" />
                     <Toggle checked={friendsOnly} onChange={setFriendsOnly} label="Friends only" />
                 </div>
             </div>
@@ -388,7 +389,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 <span className="px-4 py-2.5">Position</span>
                 <span className="px-4 py-2.5">PnL</span>
                 <span className="px-4 py-2.5">Avg. entry</span>
-                <span className="px-4 py-2.5">Thesis</span>
+                <span className="px-4 py-2.5">$mentions</span>
             </div>
 
             {coin.network !== "solana" ? (
@@ -494,17 +495,18 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     )}
                                 </span>
 
-                                {/* Theses — posts mentioning the coin's cashtag.
-                                    Not wired to a query yet; the shape is here
-                                    because it's the column that differentiates
-                                    this board, and the empty state should look
-                                    like an absent post rather than a broken cell. */}
+                                {/* $mentions — posts carrying this coin's
+                                    cashtag. Not wired to a query yet; the shape
+                                    is here because it's the column that
+                                    differentiates this board, and the empty
+                                    state should read as an absent post rather
+                                    than a broken cell. */}
                                 <span className="flex min-w-0 items-center gap-3 px-4 py-3">
                                     <span className="flex shrink-0 flex-col items-center text-zinc-700">
                                         <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
                                         <span className="text-[11px] font-medium tabular-nums">—</span>
                                     </span>
-                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">No thesis yet</span>
+                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">no $mentions yet</span>
                                 </span>
                             </div>
                         );
