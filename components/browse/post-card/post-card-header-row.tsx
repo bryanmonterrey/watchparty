@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MoreHorizontal } from "lucide-react";
-import { GeminiIcon, VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
+import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { PostOptionsMenu } from "./post-options-menu";
 import { formatRelativeTime } from "@/lib/date-utils";
 import { UserHoverCard } from "../user-hover-card";
@@ -26,7 +26,7 @@ export function PostCardHeaderRow({
     setIsHidden,
 }: PostCardHeaderRowProps) {
     const router = useRouter();
-    const { user, createdAt, originalCreatedAt, ticker, tokenStatus, isPinned } = post;
+    const { user, createdAt, originalCreatedAt, ticker, tokenStatus, token_image, isPinned } = post;
     const displayCreatedAt = originalCreatedAt ?? createdAt;
 
     return (
@@ -71,25 +71,58 @@ export function PostCardHeaderRow({
                 <span className="text-postgray text-[15px] whitespace-nowrap">
                     {displayCreatedAt ? formatRelativeTime(new Date(displayCreatedAt).toISOString()) : "Just now"}
                 </span>
-                {ticker && (
-                    <button className={cn(
-                        "text-xs cursor-pointer font-black tracking-tighter px-2 py-1 rounded-full transition-colors active:scale-95",
-                        tokenStatus === "live"
-                            ? "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
-                            : "bg-zinc-700/40 text-zinc-400 hover:bg-zinc-700/60"
-                    )}>
-                        ${ticker}
-                    </button>
-                )}
             </div>
 
-            {/* Actions (Gemini + Options). -mr-1.5 matches the bottom action bar's
-                right inset so the More button aligns vertically above Share, and
-                Gemini above Bookmark. */}
-            <div className="flex items-center shrink-0 gap-0.5 -mr-1.5">
-                <button className="text-postgray hover:bg-twitter2/[12%] cursor-pointer hover:text-zinc-100 p-1.5 rounded-full transition-colors">
-                    <GeminiIcon className="w-[18px] h-[18px]" />
-                </button>
+            {/* Actions (ticker pill + Options). -mr-1.5 matches the bottom action
+                bar's right inset so the More button aligns vertically above Share.
+                The Gemini spark that used to sit here is gone; the pill took its
+                slot, which is why the badge now reads against the dots rather
+                than trailing the timestamp. */}
+            <div className="flex items-center shrink-0 gap-1 -mr-1.5">
+                {/* ── TICKER PILL ──────────────────────────────────────────────
+                    Anatomy borrowed from TokenInlineChip (components/tokens/
+                    token-inline-chip.tsx): image on the left, $TICKER on the
+                    right, both inside one rounded-full. Scaled down for the
+                    header row — that chip is h-9, which would out-measure the
+                    18px dots button next to it; h-7 with a size-5 mark keeps the
+                    two the same optical height.
+
+                    pl-1 pr-2.5: the image sits nearly flush with the pill's left
+                    edge while the text keeps a normal inset, so the mark reads as
+                    part of the pill instead of a circle with a gap around it.
+
+                    Colour still carries token status — emerald once live, muted
+                    zinc while it's a draft.
+
+                    No image is a plain tinted disc, NOT a letter fallback. */}
+                {ticker && (
+                    <button
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                            "flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-full pl-1 pr-2.5 transition-colors active:scale-95",
+                            tokenStatus === "live"
+                                ? "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                                : "bg-zinc-700/40 text-zinc-400 hover:bg-zinc-700/60",
+                        )}
+                    >
+                        {token_image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                                src={token_image}
+                                alt=""
+                                className="size-5 shrink-0 rounded-full object-cover"
+                            />
+                        ) : (
+                            <span
+                                className={cn(
+                                    "size-5 shrink-0 rounded-full",
+                                    tokenStatus === "live" ? "bg-emerald-500/30" : "bg-zinc-600/50",
+                                )}
+                            />
+                        )}
+                        <span className="text-xs font-black tracking-tighter">${ticker}</span>
+                    </button>
+                )}
                 <PostOptionsMenu
                     postId={post.id}
                     userId={post.userId}
