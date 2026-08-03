@@ -39,9 +39,14 @@ const PREFETCH_MARGIN = "400px";
 // reason; this one sits lower and wants more.)
 const CARD_PX = "px-2";
 const CARD_MB = "mb-20";
-// pt-2.5 above the tabs, matching the px so the header is inset from the
-// outline on three sides rather than just the two.
-const CARD_HEADER_PAD = "px-2 pt-2.5";
+// The TABS' own box, deliberately not the same inset as the rows below them.
+// px-3 sets them in a notch further than the scroller's px-2, and pb-2 is the
+// gap down to the first row — the tabs used to sit on pt-2.5 with nothing under
+// them, so the list started immediately beneath the labels.
+//
+// RailTabs itself is a bare <nav> with no padding of its own, so these are the
+// only values in play; nothing here doubles up.
+const CARD_HEADER_PAD = "px-3 pt-3 pb-2";
 
 
 
