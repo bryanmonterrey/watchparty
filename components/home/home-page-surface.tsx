@@ -10,7 +10,13 @@ import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 
-const RAIL_INNER = "flex h-[100svh] flex-col md:pt-[calc(var(--header-height)+2px)]";
+// h-[calc(100svh-5rem)], not h-[100svh]. The 5rem (80px) is the mb-20 the video
+// card used to carry INSIDE this box: the card's own height is
+// boxHeight - pt - bottomMargin, so moving that 80px out of the card and off the
+// box leaves the card measuring exactly what it did before, while freeing the
+// space between the box and the news card to be the feed's 18px gap instead of
+// an 80px one.
+const RAIL_INNER = "flex h-[calc(100svh-5rem)] flex-col md:pt-[calc(var(--header-height)+2px)]";
 // No divider on this side — the left rail carries the only one (border-r, see
 // home-left-rail), and it sits on the rail rather than on the list inside so it
 // runs the full 100svh rather than stopping where the list does.
@@ -170,7 +176,11 @@ export function HomePageSurface() {
                 {/* The feed right rail's card itself, not a lookalike — see the
                     export note on NewsCard. It inherits the aside's w-96, so it
                     matches the rail above it by construction. */}
-                <div className="flex flex-col pb-8">
+                {/* mt-[18px] — the same gap the feed's rail puts between its own
+                    cards (gap-[18px] on DiscoverRightRail's column), so the two
+                    columns space their cards identically. It replaces the video
+                    card's old mb-20, which was 80px. */}
+                <div className="mt-[18px] flex flex-col pb-8">
                     <NewsCard />
                     {/* The SAME h-[50svh] tail the feed's rail ends with
                         (discover-right-rail). It's what carries that column past
