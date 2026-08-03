@@ -10,6 +10,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { CallBudget, GT_TRENDING_BUDGET } from "@/lib/coin-feed/geckoterminal";
 import { networksForPass, runTrendingSync, sourceForPass } from "@/lib/coin-feed/trending-sync";
 import { TRENDING_NETWORKS } from "@/lib/coin-feed/networks";
+import { runCandleSync, pruneCandles } from "@/lib/coins/candle-sync";
+import { gtKeyed } from "@/lib/coins/gecko-endpoint";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -33,7 +35,23 @@ export async function GET(req: NextRequest) {
 
     try {
         const result = await runTrendingSync(budget, networks, source);
-        return NextResponse.json({ ...result, callsSpent: budget.spent });
+
+        // Candles take what the board's own sweep left. The board has first
+        // claim: it's the front page, and a stale trending list is more visible
+        // than a chart that advances a minute late. With a CoinGecko key the
+        // ceiling is per-key rather than per-IP, so there's real headroom here;
+        // without one this usually gets very little, which is exactly why the
+        // chart READ path doesn't depend on it (see docs/live-charts-plan).
+        const candleBudget = new CallBudget(gtKeyed() ? 40 : 4);
+        const candles = await runCandleSync(candleBudget);
+
+        // Retention runs on the pass that turns the chain list over, so it's
+        // once every five minutes rather than every minute.
+        const pruned = sweepAll || networks[0]?.id === TRENDING_NETWORKS[0]?.id
+            ? await pruneCandles()
+            : 0;
+
+        return NextResponse.json({ ...result, callsSpent: budget.spent, candles, pruned });
     } catch (err) {
         console.error("[trending-sync] pass failed:", err);
         return NextResponse.json({ error: "sync failed" }, { status: 500 });
