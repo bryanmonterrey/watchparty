@@ -12,8 +12,12 @@
 import { withCache, withSwrCache, TTL } from "@/lib/cache";
 
 import { gtBase, gtHeaders } from "@/lib/coins/gecko-endpoint";
-import { readCandles } from "@/lib/coins/candles";
+import { readCandles, writeCandles } from "@/lib/coins/candles";
 import { lookupPoolAddress } from "@/lib/coins/pool-lookup";
+// `barSeconds` is aliased: getUdfBars already destructures a local of that name
+// out of RESOLUTION_MAP, and the shadow would silently win inside the function.
+import { sourceResolution, barSeconds as barSecondsFor } from "@/lib/coins/candle-resolution";
+import { fetchMobulaCandles, mobulaChainId, mobulaEnabled } from "@/lib/coins/mobula";
 
 /** GT-shaped paths hang off `/networks`. */
 const GT = () => `${gtBase()}/networks`;
@@ -141,8 +145,11 @@ export async function getUdfBars(
     // Native SOL isn't indexed by GeckoTerminal — remap to wSOL.
     const mint = address === "So11111111111111111111111111111111111111111" ? WSOL : address;
 
+    // NOT an early return when null. Mobula keys OHLCV by token address, so it
+    // can serve a coin we have no pool for — and "no pool" is exactly the case
+    // that was blanking charts in production. Only the DB and GT paths below
+    // actually need a pool, and each checks for one.
     const pool = await resolvePool(mint, network);
-    if (!pool) return { s: "no_data" };
 
     // OUR DATABASE FIRST. This is the whole point of coin_candles: a chart read
     // must not depend on an upstream that rate-limits our egress. Anything the
@@ -151,24 +158,78 @@ export async function getUdfBars(
     // Falls through to the live fetch below only when the series isn't stored
     // yet — a coin nobody has charted before. Once the sync has seen it, this
     // is the only branch that runs.
-    try {
-        const stored = await readCandles(network, pool.address, resolution, from, to);
-        if (stored.length > 0) {
-            return {
-                s: "ok",
-                t: stored.map((b) => b.ts),
-                o: stored.map((b) => b.o),
-                h: stored.map((b) => b.h),
-                l: stored.map((b) => b.l),
-                c: stored.map((b) => b.c),
-                v: stored.map((b) => b.v ?? 0),
-            };
+    if (pool) {
+        try {
+            const stored = await readCandles(network, pool.address, resolution, from, to);
+            if (stored.length > 0) {
+                return {
+                    s: "ok",
+                    t: stored.map((b) => b.ts),
+                    o: stored.map((b) => b.o),
+                    h: stored.map((b) => b.h),
+                    l: stored.map((b) => b.l),
+                    c: stored.map((b) => b.c),
+                    v: stored.map((b) => b.v ?? 0),
+                };
+            }
+        } catch (err) {
+            // A database problem must not take the chart down when the upstream
+            // path still works — fall through rather than fail.
+            console.error("[udf] candle read failed:", err instanceof Error ? err.message : err);
         }
-    } catch (err) {
-        // A database problem must not take the chart down when the upstream
-        // path still works — fall through rather than fail.
-        console.error("[udf] candle read failed:", err instanceof Error ? err.message : err);
     }
+
+    // MOBULA — the removable provider trial (lib/coins/mobula, and see
+    // docs/market-data-options.md). Unset MOBULA_API_KEY and this whole block is
+    // inert, restoring the previous behaviour exactly.
+    //
+    // Placed after our own store so it's only paid for on a miss, and before GT
+    // because GT is the thing that doesn't work from the Worker. Cached on the
+    // same bucketed key as GT below, so N viewers of one coin cost one fetch per
+    // window rather than one each — at 5 credits a call that distinction is the
+    // difference between the plan lasting a month and lasting a week.
+    if (mobulaEnabled() && mobulaChainId(network)) {
+        const mobulaKey = `mobula:v1:${network}:${mint}:${resolution}:${Math.floor(to / TTL.CHART_OHLCV) * TTL.CHART_OHLCV}`;
+        try {
+            return await withSwrCache(mobulaKey, TTL.CHART_OHLCV, CHART_OHLCV_STALE, async () => {
+                const bars = await fetchMobulaCandles(mint, network, resolution, from, to, countBack);
+                // null = this path can't serve it at all (chain or resolution
+                // unsupported); empty = it answered and the window is bare.
+                // Both must THROW so neither is written to Redis, but only the
+                // second is a real answer — see EmptyWindow's note below.
+                if (!bars) throw new Error("mobula unsupported");
+                if (bars.length === 0) throw new EmptyWindow();
+
+                // Persist so the next viewer is served from Postgres for free.
+                // Needs a pool, since that's the table's key — when we don't
+                // have one the bars are still served, just not stored.
+                if (pool) {
+                    const tier = sourceResolution(resolution);
+                    if (barSecondsFor(resolution) === barSecondsFor(tier)) {
+                        void writeCandles(network, pool.address, tier, bars).catch((e) =>
+                            console.error("[udf] mobula persist failed:", e instanceof Error ? e.message : e),
+                        );
+                    }
+                }
+
+                return {
+                    s: "ok",
+                    t: bars.map((b) => b.ts),
+                    o: bars.map((b) => b.o),
+                    h: bars.map((b) => b.h),
+                    l: bars.map((b) => b.l),
+                    c: bars.map((b) => b.c),
+                    v: bars.map((b) => b.v ?? 0),
+                } as UdfBars;
+            });
+        } catch (err) {
+            if (err instanceof EmptyWindow) return { s: "no_data" };
+            // Anything else: fall through to GT rather than fail the chart.
+            console.error("[udf] mobula failed:", err instanceof Error ? err.message : err);
+        }
+    }
+
+    if (!pool) return { s: "no_data" };
 
     // GeckoTerminal returns up to `limit` candles ending at before_timestamp.
     // Ask for enough to cover the window (capped at GT's 1000 max).

@@ -68,7 +68,7 @@ header on `COINGECKO_API_KEY` / `COINGECKO_PLAN`. One env var to adopt.
   **Verify on their dashboard before paying.**
 - REST only — no bar websocket.
 
-### C. Mobula — best coverage-per-dollar
+### C. Mobula — best coverage-per-dollar · **WIRED, behind a flag**
 
 50+ chains. Has exactly the primitives we need: `/token/ohlcv-history`,
 `/token/trades`, and websocket **bar** streams (`onTokenBarsUpdated`).
@@ -77,6 +77,26 @@ header on `COINGECKO_API_KEY` / `COINGECKO_PLAN`. One env var to adopt.
 - **Start-up $50 / 125k credits / 30 RPS / no WSS**
 - Growth $400 / 1.25M / 50 RPS / **WSS included**
 - Enterprise $750+ / unlimited / 500 RPS / WSS
+
+**A GET to ohlcv-history costs 5 credits, not 1** (their docs, under Rate
+Limit). So Start-up's 125k is **25,000 chart fetches/month, ~830/day** — not the
+4,100 an earlier draft of this doc assumed. Fetch-on-open fits; polling never
+did at any tier.
+
+The decisive advantage over GT: Mobula keys OHLCV by **token address**, not by
+pool. The GT path had to discover a pool first, and that lookup was itself what
+failed in production. No pool means it works for a coin we've never seen on a
+chain we've never indexed.
+
+Implemented in `lib/coins/mobula.ts`, called from `lib/tokens/udf-datafeed`
+after our own database and before GT. Controlled entirely by `MOBULA_API_KEY`:
+
+- unset → inert, previous behaviour exactly
+- `demo` → `demo-api.mobula.io`, no key, no billing (real data; testing only)
+- `<key>` → `api.mobula.io`
+
+Verified against the demo API on Solana, Base and Ethereum at 1m/1h/1d: bar
+counts sane, OHLC invariants hold, timestamps sorted and in-range.
 
 ### D. Codex (ex-Defined.fi)
 
@@ -111,15 +131,17 @@ What Dexscreener actually does. No per-coin quota ever; cost scales with
 Rate limits are a **burst** ceiling. The **monthly credit cap** is what actually
 governs, and it rules out polling as a liveness strategy on any metered plan.
 
-Mobula Start-up's 125k credits/month works out to ~4,100/day, ~2.9/minute.
-Assuming 1 request = 1 credit (**unverified — their docs don't state the
-weighting; ask before paying**):
+Mobula's ohlcv-history GET is **5 credits**, so Start-up's 125k/month is 25,000
+chart fetches — ~830/day, ~0.6/minute:
 
-| usage | calls/day | fits 125k/mo? |
+| usage | credits/day | fits 125k/mo? |
 | --- | --- | --- |
-| on-demand chart opens, 1 call each | ~4,100 | yes, comfortably |
-| polling ONE coin every 30s | 2,880 | ~70% of the month on a single coin |
-| polling a visible coin every 2s | 43,200 | burns the month in 3 days |
+| ~800 chart opens/day, 1 fetch each | ~4,000 | yes, roughly the budget |
+| polling ONE coin every 30s | 14,400 | blows the month in ~9 days |
+| polling a visible coin every 2s | 216,000 | gone in under a day |
+
+Caching matters more than it looks: the adapter buckets its cache key by TTL, so
+N simultaneous viewers of one coin cost **one** fetch per window, not N.
 
 Even Growth's 1.25M/month is only ~28 calls/minute averaged out. That's the
 tell: **you cannot poll your way to live on a metered plan at any tier.** The
