@@ -3,7 +3,7 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { likes, posts } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq, desc, and, asc, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, asc, sql, inArray, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
@@ -66,7 +66,13 @@ export const commentRouter = router({
                 .where(and(
                     eq(posts.replyToId, input.postId),
                     eq(posts.status, "published"),
-                    cursorDate ? sql`${posts.createdAt} < ${cursorDate}` : undefined,
+                    // lt(), not sql`... < ${cursorDate}` — an interpolated value
+                    // carries no column, so drizzle can't encode the Date and
+                    // postgres.js gets it raw, which throws on Workers
+                    // (ERR_INVALID_ARG_TYPE, "Received an instance of Date").
+                    // Page 1 has no cursor, so only replies past the first page
+                    // were affected — the same shape of bug as coinFeed.list.
+                    cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
                 ))
                 .orderBy(
                     desc(posts.isPinned), 

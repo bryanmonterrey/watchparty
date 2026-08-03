@@ -12,7 +12,7 @@ import { db } from "@/db";
 import { COIN_FEED_KINDS, coinFeedEvents, trackedTokens } from "@/db/schema/content/coin-feed";
 import { follows } from "@/db/schema/content/follow";
 import { tokens } from "@/db/schema/content/token";
-import { and, desc, gt, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
 
 /** Cursor is `${iso}|${id}` — both halves of the ORDER BY, so it's total. */
@@ -139,57 +139,42 @@ export const coinFeedRouter = router({
                 // A malformed cursor means "start from the top" rather than an
                 // error — the rail must never hard-fail on a stale query key.
                 if (c) {
-                    // EXPANDED, not the row-constructor form
-                    // `(occurred_at, id) < ($1, $2)`. That version is valid SQL,
-                    // uses this same index, and runs in 3ms against Postgres
-                    // directly — but it fails 100% of the time through
-                    // Hyperdrive, which is what production talks to. The query
-                    // never reaches Postgres (its logs show nothing), so it
-                    // surfaced only as drizzle's opaque "Failed query".
+                    // TYPED OPERATORS, NOT A `sql` TEMPLATE. This was
+                    // `sql\`(occurred_at, id) < (${date}, ${id})\``, and on
+                    // Workers that threw for every cursored page:
                     //
-                    // Page 1 sends no cursor and so never hits this branch,
-                    // which is why the rail always painted and then failed on
-                    // EVERY subsequent page — and why the loop below it retried
-                    // the same cursor forever.
+                    //   TypeError [ERR_INVALID_ARG_TYPE]: The "string" argument
+                    //   must be of type string or an instance of Buffer or
+                    //   ArrayBuffer. Received an instance of Date
+                    //
+                    // A value interpolated into `sql` carries no column, so
+                    // drizzle has no encoder to apply and passes the Date
+                    // straight to postgres.js, where workerd's Buffer polyfill
+                    // rejects it. Under plain Node the same code works, which is
+                    // why it never showed up locally. lt()/eq() take the column,
+                    // so drizzle maps the Date through the timestamptz encoder
+                    // and sends a string — the same reason newCount's
+                    // gt(occurredAt, since) was fine all along.
+                    //
+                    // Expanded rather than the row-constructor form because the
+                    // operators express it directly; verified to return the
+                    // identical rows in the identical order off the same
+                    // idx_coin_feed_cursor index.
                     where.push(
-                        sql`(${coinFeedEvents.occurredAt} < ${c.occurredAt} or (${coinFeedEvents.occurredAt} = ${c.occurredAt} and ${coinFeedEvents.id} < ${c.id}))`,
+                        or(
+                            lt(coinFeedEvents.occurredAt, c.occurredAt),
+                            and(eq(coinFeedEvents.occurredAt, c.occurredAt), lt(coinFeedEvents.id, c.id)),
+                        )!,
                     );
                 }
             }
 
-            // DIAGNOSTIC (temporary). Drizzle's DrizzleQueryError reports only
-            // "Failed query: <sql>" and drops the driver's actual message onto
-            // `.cause`, which is the half that says WHY. Every cursored page of
-            // this query 500s in production while the same query runs in 0.7ms
-            // against Postgres directly and Postgres logs no error for it, so
-            // the cause is the only thing left that can name the failure.
-            let rows;
-            try {
-                rows = await db
-                    .select(SELECTION)
-                    .from(coinFeedEvents)
-                    .where(where.length ? and(...where) : undefined)
-                    .orderBy(desc(coinFeedEvents.occurredAt), desc(coinFeedEvents.id))
-                    .limit(input.limit + 1); // one extra = "is there another page?"
-            } catch (err) {
-                const e = err as { message?: string; cause?: unknown };
-                const cause = e?.cause as
-                    | { message?: string; code?: string; severity?: string; routine?: string; stack?: string }
-                    | undefined;
-                console.error(
-                    "[coinFeed.list] query failed",
-                    JSON.stringify({
-                        hasCursor: !!input.cursor,
-                        top: e?.message?.slice(0, 120),
-                        causeName: (cause as { name?: string })?.name,
-                        causeMessage: cause?.message,
-                        causeCode: cause?.code,
-                        causeSeverity: cause?.severity,
-                        causeRoutine: cause?.routine,
-                    }),
-                );
-                throw err;
-            }
+            const rows = await db
+                .select(SELECTION)
+                .from(coinFeedEvents)
+                .where(where.length ? and(...where) : undefined)
+                .orderBy(desc(coinFeedEvents.occurredAt), desc(coinFeedEvents.id))
+                .limit(input.limit + 1); // one extra = "is there another page?"
 
             const hasMore = rows.length > input.limit;
             const items = hasMore ? rows.slice(0, input.limit) : rows;

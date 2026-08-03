@@ -1112,7 +1112,7 @@ export const communityRouter = router({
             const [newMembers] = await db
                 .select({ n: count() })
                 .from(communityMembers)
-                .where(and(eq(communityMembers.serverId, input.serverId), sql`${communityMembers.createdAt} > ${weekAgo}`));
+                .where(and(eq(communityMembers.serverId, input.serverId), gt(communityMembers.createdAt, weekAgo)));
 
             const [messages7d] = await db
                 .select({ n: count() })
@@ -1121,7 +1121,7 @@ export const communityRouter = router({
                 .where(and(
                     eq(communityChannels.serverId, input.serverId),
                     eq(communityMessages.deleted, false),
-                    sql`${communityMessages.createdAt} > ${weekAgo}`,
+                    gt(communityMessages.createdAt, weekAgo),
                 ));
 
             const [activeMembers] = await db
@@ -1131,7 +1131,7 @@ export const communityRouter = router({
                 .where(and(
                     eq(communityChannels.serverId, input.serverId),
                     eq(communityMessages.deleted, false),
-                    sql`${communityMessages.createdAt} > ${weekAgo}`,
+                    gt(communityMessages.createdAt, weekAgo),
                 ));
 
             const topChannels = await db
@@ -1146,7 +1146,7 @@ export const communityRouter = router({
                 .where(and(
                     eq(communityChannels.serverId, input.serverId),
                     eq(communityMessages.deleted, false),
-                    sql`${communityMessages.createdAt} > ${weekAgo}`,
+                    gt(communityMessages.createdAt, weekAgo),
                 ))
                 .groupBy(communityChannels.id, communityChannels.name, communityChannels.type)
                 .orderBy(desc(count()))
@@ -1190,7 +1190,7 @@ export const communityRouter = router({
                     eq(communityMembers.serverId, input.serverId),
                     eq(communityMembers.role, "GUEST"),
                     lt(communityMembers.createdAt, cutoff),
-                    sql`NOT EXISTS (SELECT 1 FROM community_messages msg WHERE msg.member_id = ${communityMembers.id} AND msg.created_at > ${cutoff})`,
+                    sql`NOT EXISTS (SELECT 1 FROM community_messages msg WHERE msg.member_id = ${communityMembers.id} AND msg.created_at > ${cutoff.toISOString()}::timestamptz)`,
                 ));
             return { count: Number(n) };
         }),
@@ -1212,7 +1212,7 @@ export const communityRouter = router({
                     eq(communityMembers.serverId, input.serverId),
                     eq(communityMembers.role, "GUEST"),
                     lt(communityMembers.createdAt, cutoff),
-                    sql`NOT EXISTS (SELECT 1 FROM community_messages msg WHERE msg.member_id = ${communityMembers.id} AND msg.created_at > ${cutoff})`,
+                    sql`NOT EXISTS (SELECT 1 FROM community_messages msg WHERE msg.member_id = ${communityMembers.id} AND msg.created_at > ${cutoff.toISOString()}::timestamptz)`,
                 ))
                 .returning({ id: communityMembers.id });
 
