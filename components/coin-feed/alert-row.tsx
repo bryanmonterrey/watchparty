@@ -62,7 +62,7 @@ function Headline({ event }: { event: AlertEvent }) {
         // Nearly as tall as the 13px text beside it, per the designs — that is
         // what makes the line scan as "N traders BUY $x" rather than reading the
         // chip as a footnote.
-        <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[13px] font-bold leading-[16px]", TONE_BADGE[meta.tone])}>
+        <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[13px] font-medium leading-[16px]", TONE_BADGE[meta.tone])}>
             {meta.badge}
         </span>
     ) : null;
@@ -72,45 +72,45 @@ function Headline({ event }: { event: AlertEvent }) {
         case "cluster_sell":
             return (
                 <>
-                    <span className="shrink-0 font-bold text-white">{event.traderCount} traders</span>
+                    <span className="shrink-0 font-medium text-white">{event.traderCount} traders</span>
                     {badge}
-                    <span className="truncate font-bold text-white tabular-nums">{formatUsd(event.usdValue)}</span>
+                    <span className="truncate font-medium text-white tabular-nums">{formatUsd(event.usdValue)}</span>
                 </>
             );
         case "whale_buy":
         case "whale_sell":
             return (
                 <>
-                    <span className="shrink-0 font-bold text-white">whale</span>
+                    <span className="shrink-0 font-medium text-white">whale</span>
                     {badge}
-                    <span className="truncate font-bold text-white tabular-nums">{formatUsd(event.usdValue)}</span>
+                    <span className="truncate font-medium text-white tabular-nums">{formatUsd(event.usdValue)}</span>
                 </>
             );
         case "launch":
             return (
                 <>
-                    <span className="shrink-0 font-bold text-white">launched</span>
+                    <span className="shrink-0 font-medium text-white">launched</span>
                     {badge}
                 </>
             );
         case "migration":
             return (
                 <>
-                    <span className="shrink-0 font-bold text-white">bonded</span>
+                    <span className="shrink-0 font-medium text-white">bonded</span>
                     {badge}
                 </>
             );
         case "callout":
             return (
                 <>
-                    <span className="shrink-0 font-bold text-white">called out</span>
+                    <span className="shrink-0 font-medium text-white">called out</span>
                     {badge}
                 </>
             );
         case "prediction":
             return (
                 <>
-                    <span className="shrink-0 font-bold text-white">new market</span>
+                    <span className="shrink-0 font-medium text-white">new market</span>
                     {badge}
                 </>
             );

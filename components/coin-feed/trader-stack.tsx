@@ -27,8 +27,8 @@ const SHOWN = 3;
 // 16-26) still clears. No ring and no z-index here — both existed to manage
 // where overlapping faces met, and nothing overlaps any more.
 const SLOTS = [
-    { size: "size-3", pos: "left-0 top-0" },
-    { size: "size-2.5", pos: "left-[16px] top-[2px]" },
+    { size: "size-3.5", pos: "left-0 top-0" },
+    { size: "size-2.75", pos: "left-[15px] top-[8px]" },
     { size: "size-[9px]", pos: "left-[5px] top-[16px]" },
 ];
 

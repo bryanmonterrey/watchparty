@@ -28,6 +28,8 @@ import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
 import { HomeActionDock } from "@/components/home/home-action-dock";
 import { coinTag, logClient } from "@/lib/client-log";
+import { Squircle } from "@/components/ui/squircle";
+import { RAIL_BORDER } from "@/components/rails/rail-shell";
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
  *  ResolvedCoin — declared here because that module is server-only and this
@@ -378,12 +380,21 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
         <section className="flex min-w-0 flex-col">
             {/* Tab row. Divided by hairlines rather than spacing — the reference
                 reads as one control, not three separate links. */}
-            {/* The tab row sits on a LIGHTER fill than the rows below it. That
-                lift is what makes it read as a header bar rather than the first
-                row of the table — without it the board is one flat sheet and the
-                tabs float in it. soft-gray-10 (#181818) over the #080808 canvas,
-                the same step the app uses elsewhere for a raised surface. */}
-            <div className="flex min-w-0 items-center justify-between gap-4 rounded-t-[inherit] border-b border-flexwhite/10 bg-soft-gray-10 px-5 py-4">
+            {/* No fill — the header is an OUTLINED box, not a raised one, and it
+                carries RAIL_BORDER so its hairline is literally the same value
+                the alerts rail draws (one constant, so the two can't drift).
+
+                Squircled via Lisse rather than `rounded-*`: the border is
+                declared as an effect and stroked into the wrapper Lisse injects,
+                because a CSS border sits inside the border box and the clip-path
+                would cut it away at exactly the corners the squircle exists for.
+                No border-b either — the stroke already closes all four sides. */}
+            <Squircle
+                radius={25}
+                autoEffects={false}
+                innerBorder={RAIL_BORDER}
+                className="flex min-w-0 items-center justify-between gap-4 px-5 py-4"
+            >
                 <div className="flex min-w-0 items-center">
                     {TABS.map((t, i) => (
                         <React.Fragment key={t.id}>
@@ -406,7 +417,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                     <Toggle checked={mentionsOnly} onChange={setMentionsOnly} label="$mentions only" />
                     <Toggle checked={friendsOnly} onChange={setFriendsOnly} label="Friends only" />
                 </div>
-            </div>
+            </Squircle>
 
             <div className={cn(GRID, "border-b border-flexwhite/10 text-[15px] font-normal text-zinc-500")}>
                 <span className="border-r border-flexwhite/10 px-5 py-3">Trader</span>
