@@ -309,10 +309,14 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          // bg-canvas = the profile/app page background (bg-panel's white 3%,
-          // composited over the black shell). Opaque, not bg-panel itself, because
-          // the sidebar overlays content when it peeks on hover — translucent
-          // would bleed. This is the value bg-canvas is defined FROM (globals.css).
+          // bg-canvas = the app's surface colour, and it is now that colour
+          // DIRECTLY rather than a value derived from compositing bg-panel's
+          // white 3% over a black shell — the content scroller no longer carries
+          // that wash (see app-container.tsx), so canvas and background are the
+          // same token and the two surfaces match without arithmetic.
+          //
+          // Still opaque, not bg-panel: the sidebar overlays content when it
+          // peeks on hover, and a translucent fill would bleed.
           className="bg-canvas flex h-full w-full flex-col justify-between group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm"
         >
           {children}

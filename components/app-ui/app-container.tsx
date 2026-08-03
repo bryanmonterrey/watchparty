@@ -19,7 +19,21 @@ export const AppContainer = ({
   return (
     <motion.div
       id="app-scroll-container"
-      className="flex-1 bg-panel min-h-0 max-h-screen hidden-scrollbar h-screen overflow-y-auto overflow-x-hidden shadow-sm max-md:pb-28"
+      // NO bg-panel. This scroller used to carry bg-panel — white at 3% — over
+      // the shell, and that wash is what the app's surface colour actually was:
+      // 0.03×255 + 0.97×base. Over pure black it landed on #080808, which is
+      // exactly why --color-canvas was #080808 and why the sidebar paints flat
+      // bg-canvas to match it.
+      //
+      // That made the requested rgb(5,5,5) UNREACHABLE — with a 3% white wash on
+      // top, the darkest the content area can ever be is rgb(8,8,8), and over
+      // the new base it was compositing to rgb(13,13,13) while the sidebar sat
+      // at rgb(5,5,5). Dropping the wash lets SidebarInset's bg-background show
+      // through, so the scroller and the sidebar are both exactly the token.
+      //
+      // bg-panel itself is untouched and still used by the /trade grid and the
+      // token-page cards, which is what the token was written for.
+      className="flex-1 min-h-0 max-h-screen hidden-scrollbar h-screen overflow-y-auto overflow-x-hidden shadow-sm max-md:pb-28"
       style={{ viewTransitionName: "page-content" }}
       initial={false}
     >
