@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { UserResultCard } from "./user-result-card";
 import { PostCardAvatar } from "./post-card/post-card-avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useForceLoading } from "@/lib/debug-loading";
 
 // Discover right rail — real data. Cards self-hide when empty so the rail is
 // never a wall of placeholders on a young platform:
@@ -22,17 +24,107 @@ function RailCard({ title, children }: { title: string; children: React.ReactNod
     );
 }
 
+// ── Loading ─────────────────────────────────────────────────────────────────
+// Every card used to render `null` until its query resolved, so the whole rail
+// was empty space that then popped in a card at a time. These keep the card's
+// real chrome — same border, same radius, the actual title — and blank only the
+// content, so the column has its shape from the first paint and nothing moves
+// when the data lands.
+//
+// Rows mirror the geometry of the real row they stand in for (padding, avatar
+// size, how many lines of text), which is what stops the swap being visible.
+// Still fills, no sweep — see the skeleton standard in globals.css.
+//
+// `?debug-loading` pins them all on, on prod, via useForceLoading below.
+
+/** Runners: rank, coin mark, ticker + name, change. */
+function RunnerRowSkeleton() {
+    return (
+        <div className="flex w-full items-center gap-3 px-6 py-2.5">
+            <Skeleton className="h-4 w-4 shrink-0" />
+            <Skeleton className="size-9 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-16" />
+            </div>
+            <Skeleton className="h-4 w-12 shrink-0" />
+        </div>
+    );
+}
+
+/** Live: avatar, "<name> is live", title, category, viewer pill. */
+function LiveRowSkeleton() {
+    return (
+        <div className="flex w-full items-start gap-3 px-6 py-2.5">
+            <Skeleton className="mt-0.5 size-11 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="mt-1 h-5 w-12 shrink-0 rounded-full" />
+        </div>
+    );
+}
+
+/** People rows (who to follow / relevant people) sit at UserResultCard's
+ *  px-4 py-3, not the px-6 the coin and live rows use. */
+function PersonRowSkeleton() {
+    return (
+        <div className="flex w-full items-start gap-3 px-4 py-3">
+            <Skeleton className="size-11 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-8 w-20 shrink-0 rounded-full" />
+        </div>
+    );
+}
+
+/** What's happening: meta line above a headline. */
+function TrendRowSkeleton() {
+    return (
+        <div className="w-full space-y-1.5 px-6 py-2.5">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+        </div>
+    );
+}
+
+function SkeletonRows({ count, Row }: { count: number; Row: () => React.ReactElement }) {
+    return (
+        <>
+            {Array.from({ length: count }).map((_, i) => (
+                <Row key={i} />
+            ))}
+        </>
+    );
+}
+
 // ── Relevant people (post detail only) ──────────────────────────────────────
 function RelevantPeopleCard() {
     const pathname = usePathname();
     const postId = pathname?.match(/^\/discover\/post\/([^/]+)/)?.[1];
 
-    const { data } = trpc.content.relevantPeople.useQuery(
+    const { data, isLoading } = trpc.content.relevantPeople.useQuery(
         { postId: postId ?? "" },
         { enabled: !!postId, staleTime: 60_000 },
     );
+    const forceLoading = useForceLoading();
 
-    if (!postId || !data || data.length === 0) return null;
+    // This card is post-detail only, so the route gate comes first — off a post
+    // page there is nothing to be loading.
+    if (!postId) return null;
+    if (isLoading || forceLoading) {
+        return (
+            <RailCard title="Relevant people">
+                <SkeletonRows count={3} Row={PersonRowSkeleton} />
+            </RailCard>
+        );
+    }
+    if (!data || data.length === 0) return null;
 
     return (
         <RailCard title="Relevant people">
@@ -92,7 +184,15 @@ function RunnerRow({ runner, rank }: { runner: Runner; rank: number }) {
 }
 
 function RunnersCard() {
-    const { data } = trpc.trade.runners.useQuery({ limit: 5 }, { staleTime: 60_000, refetchInterval: 60_000 });
+    const { data, isLoading } = trpc.trade.runners.useQuery({ limit: 5 }, { staleTime: 60_000, refetchInterval: 60_000 });
+    const forceLoading = useForceLoading();
+    if (isLoading || forceLoading) {
+        return (
+            <RailCard title="Runners">
+                <SkeletonRows count={5} Row={RunnerRowSkeleton} />
+            </RailCard>
+        );
+    }
     if (!data || data.length === 0) return null;
     return (
         <RailCard title="Runners">
@@ -149,7 +249,15 @@ function LiveRow({ stream }: { stream: LiveStream }) {
 }
 
 function LiveCard() {
-    const { data } = trpc.stream.listLive.useQuery({ limit: 4 }, { staleTime: 30_000, refetchInterval: 60_000 });
+    const { data, isLoading } = trpc.stream.listLive.useQuery({ limit: 4 }, { staleTime: 30_000, refetchInterval: 60_000 });
+    const forceLoading = useForceLoading();
+    if (isLoading || forceLoading) {
+        return (
+            <RailCard title="Live on watchparty">
+                <SkeletonRows count={2} Row={LiveRowSkeleton} />
+            </RailCard>
+        );
+    }
     if (!data || data.length === 0) return null;
     return (
         <RailCard title="Live on watchparty">
@@ -162,7 +270,15 @@ function LiveCard() {
 
 // ── Who to follow ───────────────────────────────────────────────────────────
 function WhoToFollowCard() {
-    const { data } = trpc.user.suggestedFollows.useQuery({ limit: 3 }, { staleTime: 120_000 });
+    const { data, isLoading } = trpc.user.suggestedFollows.useQuery({ limit: 3 }, { staleTime: 120_000 });
+    const forceLoading = useForceLoading();
+    if (isLoading || forceLoading) {
+        return (
+            <RailCard title="Who to follow">
+                <SkeletonRows count={3} Row={PersonRowSkeleton} />
+            </RailCard>
+        );
+    }
     if (!data || data.length === 0) return null;
     return (
         <RailCard title="Who to follow">
@@ -186,7 +302,15 @@ function TrendRow({ title, meta, ticker, tokenAddress }: { title: string; meta: 
 }
 
 function NewsCard() {
-    const { data } = trpc.discover.trending.useQuery({ limit: 5 }, { staleTime: 300_000 });
+    const { data, isLoading } = trpc.discover.trending.useQuery({ limit: 5 }, { staleTime: 300_000 });
+    const forceLoading = useForceLoading();
+    if (isLoading || forceLoading) {
+        return (
+            <RailCard title="What's happening">
+                <SkeletonRows count={4} Row={TrendRowSkeleton} />
+            </RailCard>
+        );
+    }
     if (!data || data.items.length === 0) return null;
     return (
         <RailCard title="What's happening">

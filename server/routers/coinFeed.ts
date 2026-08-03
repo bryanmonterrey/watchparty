@@ -139,8 +139,20 @@ export const coinFeedRouter = router({
                 // A malformed cursor means "start from the top" rather than an
                 // error — the rail must never hard-fail on a stale query key.
                 if (c) {
+                    // EXPANDED, not the row-constructor form
+                    // `(occurred_at, id) < ($1, $2)`. That version is valid SQL,
+                    // uses this same index, and runs in 3ms against Postgres
+                    // directly — but it fails 100% of the time through
+                    // Hyperdrive, which is what production talks to. The query
+                    // never reaches Postgres (its logs show nothing), so it
+                    // surfaced only as drizzle's opaque "Failed query".
+                    //
+                    // Page 1 sends no cursor and so never hits this branch,
+                    // which is why the rail always painted and then failed on
+                    // EVERY subsequent page — and why the loop below it retried
+                    // the same cursor forever.
                     where.push(
-                        sql`(${coinFeedEvents.occurredAt}, ${coinFeedEvents.id}) < (${c.occurredAt}, ${c.id})`,
+                        sql`(${coinFeedEvents.occurredAt} < ${c.occurredAt} or (${coinFeedEvents.occurredAt} = ${c.occurredAt} and ${coinFeedEvents.id} < ${c.id}))`,
                     );
                 }
             }

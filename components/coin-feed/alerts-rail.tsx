@@ -95,6 +95,14 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         hasNextPage,
         isLoading,
         isError,
+        // A FAILED PAGE IS NOT `isError`. On an infinite query the status stays
+        // "success" as long as any page succeeded, so when page 2 started
+        // failing, `isError` never flipped, the `hasNext` guard below stayed
+        // open, and the list re-asked for the same cursor forever — a permanent
+        // request loop on every route that mounts this rail (/home, /feed and
+        // /coin since the rails group). This is the flag that actually reports
+        // it.
+        isFetchNextPageError,
         refetch,
     } = trpc.coinFeed.list.useInfiniteQuery(
         { ...filterInput, limit: PAGE_SIZE },
@@ -121,11 +129,15 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
     // refetches EVERY loaded page, so this is not cheap. It unmounts the moment
     // a fetch succeeds, and the manual retry button is still there for anyone
     // who does not want to wait.
+    //
+    // Covers a failed NEXT page as well, which is now what closes `hasNext` in
+    // the render: without it that guard would be permanent for the session and
+    // the rail could never paginate again once one page had failed.
     useEffect(() => {
-        if (!isError) return;
+        if (!isError && !isFetchNextPageError) return;
         const id = setInterval(() => void refetch(), 30_000);
         return () => clearInterval(id);
-    }, [isError, refetch]);
+    }, [isError, isFetchNextPageError, refetch]);
 
     const { data: coverage } = trpc.coinFeed.coverage.useQuery(undefined, { staleTime: 300_000 });
 
@@ -585,7 +597,14 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         // — the list would call onLoadMore on a loop against a
                         // fetch that keeps erroring. Local slicing from `full`
                         // still works, so scrolling stays alive.
-                        const hasNext = !atLoadedEnd || (!!hasNextPage && !isError);
+                        //
+                        // BOTH flags: `isError` covers a feed that never loaded,
+                        // `isFetchNextPageError` a feed whose FIRST page is fine
+                        // and whose later pages are not. Only the second was
+                        // ever true in the loop this guard was written for, and
+                        // it wasn't being checked.
+                        const hasNext =
+                            !atLoadedEnd || (!!hasNextPage && !isError && !isFetchNextPageError);
 
                         return (
                             <BidirectionalList<AlertEvent>
@@ -614,8 +633,10 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 )}
 
                 {/* Errored but still holding alerts: say so quietly at the
-                    bottom instead of replacing the feed. */}
-                {isError && windowItems.length > 0 && (
+                    bottom instead of replacing the feed. A failed NEXT page
+                    counts — that's the case where the rail looks perfectly
+                    healthy and simply stops growing. */}
+                {(isError || isFetchNextPageError) && windowItems.length > 0 && (
                     <button
                         type="button"
                         onClick={() => void refetch()}

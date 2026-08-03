@@ -184,10 +184,29 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
         hasNextPage: hasNextPosts,
         isLoading: isLoadingPosts,
         isError,
+        refetch: refetchPosts,
     } = trpc.content.getFeed.useInfiniteQuery(
         { type: activeTab, limit: 20 },
-        { getNextPageParam: (lastPage) => lastPage.nextCursor }
+        {
+            getNextPageParam: (lastPage) => lastPage.nextCursor,
+            // "Failed to load feed" used to be TERMINAL. There was no retry and
+            // no recovery, so a single dropped request — which production does
+            // produce, on worker memory — replaced the whole feed with that
+            // message for the rest of the session, and only a manual reload
+            // cleared it. Back off, then keep trying quietly in the background.
+            retry: 3,
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15_000),
+        }
     );
+
+    // Self-heal rather than stranding the user on the error copy. Slow on
+    // purpose: refetch() on an infinite query refetches EVERY loaded page, and
+    // this stops the moment one succeeds.
+    useEffect(() => {
+        if (!isError) return;
+        const id = setInterval(() => void refetchPosts(), 20_000);
+        return () => clearInterval(id);
+    }, [isError, refetchPosts]);
 
     const isLoading = isLoadingPosts;
 
@@ -698,8 +717,17 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
                 transition={{ duration: 0.18, ease: "easeOut" }}
             >
             {isError ? (
-                <div className="py-20 text-center text-zinc-500">
-                    Failed to load feed. Please try again.
+                <div className="flex flex-col items-center gap-3 py-20 text-center">
+                    <p className="text-sm text-zinc-500">couldn&apos;t load the feed</p>
+                    {/* Retrying happens on its own every 20s; this is for
+                        anyone who doesn't want to wait for the next tick. */}
+                    <button
+                        type="button"
+                        onClick={() => void refetchPosts()}
+                        className="cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold text-zinc-400 transition-colors hover:text-white"
+                    >
+                        retry
+                    </button>
                 </div>
             ) : isLoading && !populatedTabs.current.has(activeTab) ? (
                 <div className="flex flex-col bg-canvas">
