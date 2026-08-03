@@ -484,7 +484,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
 export function CoinDetail({ coin }: { coin: CoinViewData }) {
     return (
         <div className="flex w-full min-w-0">
-            <div className="@container/coin min-w-0 flex-1 pt-header">
+            <div className="ml-5 @container/coin min-w-0 flex-1 pt-header">
                 <div className="grid min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_360px]">
                     {/* Header and chart are one column — the header spans the
                         chart's width and nothing else. */}
