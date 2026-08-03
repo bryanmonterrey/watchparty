@@ -38,7 +38,34 @@ export async function readCandles(
     to: number,
     limit = 1000,
 ): Promise<Candle[]> {
-    const source = sourceResolution(resolution);
+    const preferred = sourceResolution(resolution);
+    const rows = await readTier(network, poolAddress, resolution, preferred, from, to, limit);
+    if (rows.length > 0 || preferred === "1") return rows;
+
+    // Nothing stored at the preferred tier — fold the minute bars instead.
+    //
+    // The sync fills tiers in order and aborts the whole pass the moment GT
+    // rate-limits it, so in practice "1" lands and the coarser tiers don't. That
+    // left charts blank at their default 1-hour view while a perfectly good
+    // minute series sat in the table. Bucketing 60 one-minute bars into an hour
+    // is exact — same arithmetic the roll-up below already does for 5m and 4h —
+    // so this serves real data instead of falling through to the upstream that
+    // couldn't be reached in the first place.
+    //
+    // Cost is bounded: `limit` still applies, and a window wide enough to matter
+    // is the same window that would have been a GT call.
+    return readTier(network, poolAddress, resolution, "1", from, to, limit);
+}
+
+async function readTier(
+    network: string,
+    poolAddress: string,
+    resolution: string,
+    source: StoredResolution,
+    from: number,
+    to: number,
+    limit: number,
+): Promise<Candle[]> {
     const span = barSeconds(resolution);
     const sourceSpan = barSeconds(source);
 

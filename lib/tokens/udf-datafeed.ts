@@ -13,6 +13,7 @@ import { withCache, withSwrCache, TTL } from "@/lib/cache";
 
 import { gtBase, gtHeaders } from "@/lib/coins/gecko-endpoint";
 import { readCandles } from "@/lib/coins/candles";
+import { lookupPoolAddress } from "@/lib/coins/pool-lookup";
 
 /** GT-shaped paths hang off `/networks`. */
 const GT = () => `${gtBase()}/networks`;
@@ -73,6 +74,23 @@ interface PoolInfo {
 }
 
 export async function resolvePool(mint: string, network = DEFAULT_NETWORK): Promise<PoolInfo | null> {
+    // OUR DATABASE FIRST — see lib/coins/pool-lookup for why this is the fix and
+    // not an optimisation. Going to GT here made every chart read depend on the
+    // upstream that rate-limits our egress, so this returned null in production
+    // and the caller gave up with `no_data` before ever touching the candles we
+    // had already stored.
+    //
+    // tokenSide is assumed "base", which is how DEX pools list the non-quote
+    // token. It's only read when building the GT OHLCV URL below, so on this
+    // branch — where the bars come from our own table — it isn't consulted at
+    // all. A wrong guess can't affect a stored read.
+    try {
+        const owned = await lookupPoolAddress(mint, network);
+        if (owned) return { address: owned, tokenSide: "base" };
+    } catch {
+        // A database hiccup shouldn't take the chart down when GT might answer.
+    }
+
     try {
         return await withCache(`gt:pool:v2:${network}:${mint}`, TTL.CHART_POOL, async () => {
             const res = await fetch(
