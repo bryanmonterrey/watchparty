@@ -429,7 +429,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 radius={{ topLeft: 25, topRight: 25 }}
                 autoEffects={false}
                 innerBorder={RAIL_BORDER}
-                className="flex bg-sidebar-hover-50 items-center px-2"
+                className="flex pt-2 items-center px-2"
             >
                 {(["alerts"] as const).map((t) => (
                     <button
@@ -438,7 +438,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         onClick={() => switchTab(t)}
                         aria-pressed={tab === t}
                         className={cn(
-                            "cursor-pointer whitespace-nowrap px-2 py-2 text-[15px] font-semibold tracking-tight transition-colors",
+                            "cursor-pointer whitespace-nowrap px-2 pt-2 pb-2 text-[15px] font-medium tracking-tight transition-colors",
                             tab === t ? "text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
@@ -515,7 +515,14 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 list well clear of the bottom of the screen. Scoped here rather
                 than changed in the shell — the video rail still wants to run
                 near the bottom edge. */}
-            <RailShell className="mb-16" radius={{ bottomLeft: 25, bottomRight: 25 }} bordered>
+            {/* -mt-px collapses the seam under the tabs. The header box and this
+                one are separate Squircles that meet, and Lisse's BorderConfig
+                strokes the WHOLE path — there's no per-side option — so each was
+                drawing its own hairline and the two stacked into a visible
+                double rule below the tabs. Pulling the list up one pixel hides
+                the header's bottom edge behind this box's top edge, so the two
+                read as one continuous panel. */}
+            <RailShell className="-mt-px mb-7" radius={{ bottomLeft: 25, bottomRight: 25 }} bordered>
                 {/* Inline bar when already parked at the top — no need to float.
                     Inside the shell, above the scroller: it belongs to the list
                     it's offering to extend, so it sits within the same bordered
