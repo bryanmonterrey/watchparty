@@ -40,7 +40,7 @@ const INNER = "sticky top-0 flex h-screen flex-col items-center justify-end pb-4
 // than routed around — the whole point of that remap is that borders don't
 // drift per surface.
 const BUTTON =
-    "flex size-15 cursor-pointer items-center justify-center border border-flexwhite/10 bg-canvas text-zinc-300 transition-colors hover:bg-soft-gray-20 hover:text-white";
+    "flex size-15 cursor-pointer items-center justify-center border border-soft-gray/12 bg-canvas text-zinc-400 transition-colors hover:bg-soft-gray-20 hover:text-white";
 
 const BUTTON_RADIUS = 16;
 

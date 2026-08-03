@@ -377,7 +377,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     ];
 
     return (
-        <section className="flex min-w-0 flex-col px-4 pb-4">
+        <section className="flex min-w-0 flex-col mt-4 pb-4">
         {/* ONE box around the whole board — header, column headings and rows.
             Not a squircle on the header alone: two stroked paths that meet draw
             two hairlines and the seam between them can't be removed (the alerts
@@ -593,7 +593,7 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
                 now rides in the symbol (`base:0x…`) and this renders whatever
                 the coin is on. The "open the market venue" fallback that used
                 to stand in for non-Solana chains is gone with it. */}
-            <div className="h-[min(64vh,720px)] min-h-[420px] flex-1 bg-canvas">
+            <div className="h-[min(68vh,720px)] min-h-[420px] flex-1 bg-canvas">
                 <TokenTradingViewChart
                     mint={coin.tokenAddress}
                     ticker={coin.symbol}
@@ -638,7 +638,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
     // A `//` comment, NOT `{/* */}`: a JSX comment directly after `return (`
     // parses as an object literal and fails the Turbopack build (see CLAUDE.md).
     return (
-        <aside className="p-4 pr-0">
+        <aside className="pr-0">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 {coin.network !== "solana" ? (
                     <div className={SWAP_CARD + " p-5"}>
@@ -704,8 +704,8 @@ export function CoinDetail({ coin }: { coin: CoinViewData }) {
 
     return (
         <div className="flex w-full min-w-0">
-            <div className="ml-5 @container/coin min-w-0 flex-1 pt-header">
-                <div className="grid min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="pl-3 @container/coin min-w-0 flex-1 pt-header">
+                <div className="grid gap-1 min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_324px]">
                     {/* Header and chart are one column — the header spans the
                         chart's width and nothing else. */}
                     <div className="flex min-w-0 flex-col">
