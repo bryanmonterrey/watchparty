@@ -3,6 +3,7 @@
 import * as React from "react";
 import { subscribeCandles, type LiveBar } from "@/lib/coins/candle-stream";
 import { TokenCandlestickChart } from "./token-candlestick-chart";
+import { logClient } from "@/lib/client-log";
 
 // TradingView Charting Library wrapper — the pump.fun-style candlestick chart.
 //
@@ -30,24 +31,6 @@ const MUTED = "#3F3F46";   // zinc-700 — the loading spinner, deliberately
                            // has loaded.
 
 type LoadState = "loading" | "ready" | "missing";
-
-/** Report a client-side chart failure into the server log, so it shows up in
- *  `wrangler tail` alongside the [udf] traces. The coin page is auth-gated and
- *  can't be driven from a script, so this is the only way the browser half of a
- *  blank chart becomes visible without asking someone to read devtools aloud. */
-function reportChartFailure(tag: string, detail: Record<string, unknown>) {
-    try {
-        const body = JSON.stringify({ tag, detail });
-        // sendBeacon survives the page being navigated away from mid-report,
-        // which a plain fetch does not.
-        if (navigator.sendBeacon?.("/api/client-log", new Blob([body], { type: "application/json" }))) return;
-        void fetch("/api/client-log", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true });
-    } catch {
-        /* diagnostics must never break the page */
-    }
-}
-
-
 
 export function loadScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -152,11 +135,18 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
     React.useEffect(() => {
         if (!symbol) return; // no mint and no ticker — nothing to chart
         let cancelled = false;
+        const startedAt = Date.now();
         // Safety net: if onChartReady never fires (widget stalls on its loading
         // screen), clear the overlay anyway so the user sees the chart's own
         // state ("No data here" / candles) instead of an endless shimmer.
+        //
+        // Logged as "timeout", distinct from "ready": both clear the overlay, so
+        // on screen they look the same — but one drew a chart and the other gave
+        // up waiting, and only the log can tell them apart.
         const readyTimer = window.setTimeout(() => {
-            if (!cancelled) setState("ready");
+            if (cancelled) return;
+            setState("ready");
+            logClient("chart", { symbol, state: "timeout", ms: Date.now() - startedAt });
         }, 8000);
 
         (async () => {
@@ -168,7 +158,7 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
                 // upstream — so a library problem presents as a chart that
                 // loads forever, and looks identical to a data problem.
                 console.error("[tv] library scripts failed to load:", err);
-                reportChartFailure("tv-scripts", { err: String(err).slice(0, 200), symbol });
+                logClient("chart", { symbol, state: "scripts-failed", err: String(err).slice(0, 160) });
                 if (!cancelled) setState("missing");
                 return;
             }
@@ -185,7 +175,7 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
                     symbol,
                 };
                 console.error("[tv] cannot mount widget:", why);
-                reportChartFailure("tv-mount", why);
+                logClient("chart", { state: "cannot-mount", ...why });
                 setState("missing");
                 return;
             }
@@ -258,6 +248,11 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
                 if (cancelled) return;
                 window.clearTimeout(readyTimer);
                 setState("ready");
+                // The positive case matters as much as the failures: "a chart
+                // rendered for this coin, in this many ms" is the only way to
+                // tell a working page from one that merely stopped showing a
+                // spinner.
+                logClient("chart", { symbol, state: "ready", ms: Date.now() - startedAt });
             });
         })();
 

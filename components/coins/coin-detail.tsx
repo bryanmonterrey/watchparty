@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
 import { HomeActionDock } from "@/components/home/home-action-dock";
+import { coinTag, logClient } from "@/lib/client-log";
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
  *  ResolvedCoin — declared here because that module is server-only and this
@@ -181,7 +182,7 @@ const compactAmount = (n: number) =>
  * canvas, and a second surface colour behind an outlined card reads as two
  * boxes stacked. The outline alone is the card.
  */
-const SWAP_CARD = "rounded-2xl border border-[#18181B] bg-transparent";
+const SWAP_CARD = "rounded-[25px] border border-[#18181B] bg-transparent";
 
 type TraderRow = {
     account: string;
@@ -343,6 +344,24 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     );
 
     const rows = React.useMemo(() => foldTraders(trades, coin.priceUsd), [trades, coin.priceUsd]);
+
+    // How much the table actually has to show, per fetch. `trades` is raw swaps
+    // and `rows` is traders folded out of them, so both are worth seeing: zero
+    // rows off a non-zero swap count means the fold dropped everything, which
+    // reads on screen as "no trader activity" and is a different bug entirely
+    // from the upstream returning nothing.
+    const seenRef = React.useRef<string>("");
+    React.useEffect(() => {
+        if (isLoading) return;
+        const sig = `${trades.length}:${rows.length}`;
+        if (sig === seenRef.current) return; // only log when the numbers move
+        seenRef.current = sig;
+        logClient("trades", {
+            coin: coinTag(coin.network, coin.tokenAddress),
+            swaps: trades.length,
+            rows: rows.length,
+        });
+    }, [isLoading, trades.length, rows.length, coin.network, coin.tokenAddress]);
 
     // Trader is fenced by a rule, so it owns a fixed column and the numbers
     // share what's left. One definition for header and rows so they can't drift.
@@ -651,6 +670,18 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
  * the right rather than becoming a grid cell.
  */
 export function CoinDetail({ coin }: { coin: CoinViewData }) {
+    // One line per coin opened. Keyed on the coin so a client-side navigation
+    // between coins logs each one — this page is reached far more often by
+    // in-app link than by fresh load, and a mount-only log would miss most of it.
+    React.useEffect(() => {
+        logClient("coin", {
+            coin: coinTag(coin.network, coin.tokenAddress),
+            symbol: coin.symbol,
+            hasPrice: coin.priceUsd != null,
+            hasPool: !!coin.poolAddress,
+        });
+    }, [coin.network, coin.tokenAddress, coin.symbol, coin.priceUsd, coin.poolAddress]);
+
     return (
         <div className="flex w-full min-w-0">
             <div className="ml-5 @container/coin min-w-0 flex-1 pt-header">

@@ -8,6 +8,7 @@ import { Token } from "@/db/schema/content"
 import { Switch } from "@/components/ui/switch"
 import { trpc } from "@/lib/trpc/client"
 import { subscribeTrades, type LiveTrade } from "@/lib/coins/trade-stream"
+import { coinTag, logClient } from "@/lib/client-log"
 
 export function TokenTradesTable({ token }: { token: Token }) {
     const [filterSize, setFilterSize] = useState(false)
@@ -30,6 +31,11 @@ export function TokenTradesTable({ token }: { token: Token }) {
         // Clear on token change, or the previous coin's tape bleeds into this one.
         setLive([])
         return subscribeTrades("solana", token.tokenAddress, (t) => {
+            // Every pushed swap, so the terminal shows how live the tape really
+            // is. A visit with zero of these and non-zero fetched rows means the
+            // subscription is up but nothing is arriving — indistinguishable on
+            // screen from a quiet coin.
+            logClient("tx", { coin: coinTag("solana", token.tokenAddress!), usd: Math.round(t.usdValue), buy: t.isBuy });
             // Cap the buffer: a hot pool can print faster than anyone reads, and
             // an unbounded array would grow for as long as the tab is open.
             setLive((prev) => (prev.some((p) => p.txHash === t.txHash) ? prev : [t, ...prev].slice(0, 100)))
