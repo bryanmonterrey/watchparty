@@ -103,11 +103,11 @@
 }
 
 .dark {
-  /* #050505, matching --color-canvas exactly. It was oklch(0% 0 0) — pure
+  /* rgb(5, 5, 5), matching --color-canvas exactly. It was oklch(0% 0 0) — pure
      black — which read as a different surface anywhere a bg-background panel
      met a bg-canvas one. Same value now, so the seam disappears.
      Light mode's --background is untouched. */
-  --background: #050505;
+  --background: rgb(5, 5, 5);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -220,9 +220,11 @@
      and the fixed header read this, or the header's controls would sit at the
      screen edges while the content sat centred. */
   --app-max-width: 1536px;
-  /* #050505 — kept identical to .dark's --background above, so bg-canvas and
-     bg-background are interchangeable and never show a seam where they meet. */
-  --color-canvas: #050505;
+  /* rgb(5, 5, 5) — kept identical to .dark's --background above, so bg-canvas
+     and bg-background are interchangeable and never show a seam where they
+     meet. Written as rgb rather than hex so the channels are editable in place
+     (and so bg-canvas/<n> reads obviously). */
+  --color-canvas: rgb(5, 5, 5);
   /* Sidebar menu-item hover pill (the `before:` capsule behind each item).
      Flat and opaque on purpose. It was zinc-900 on the nav items and
      zinc-800/50 on the More trigger — over the sidebar's canvas that blend
