@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "motion/react";
 import { HomeCenterColumn } from "./home-center-column";
-import { HomeRailTabs } from "./home-rail-tabs";
 import { HomeRailVideos } from "./home-rail-videos";
 import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
@@ -14,7 +13,9 @@ const RAIL_INNER = "sticky top-0 flex h-[100svh] flex-col md:pt-[calc(var(--head
 // No divider on this side — the left rail carries the only one (border-r, see
 // home-left-rail), and it sits on the rail rather than on the list inside so it
 // runs the full 100svh rather than stopping where the list does.
-const RAIL_INNER_RIGHT = `${RAIL_INNER} gap-2`;
+// No gap- any more: the rail is a single card now (tabs live inside it as
+// RailShell's header), so there are no longer two children to space apart.
+const RAIL_INNER_RIGHT = RAIL_INNER;
 
 const BrowseFeed = dynamic(
     () => import("@/components/browse/browse-feed").then((module) => module.BrowseFeed),
@@ -134,8 +135,10 @@ export function HomePageSurface() {
                 it hold: the row's slack goes to the rail's RIGHT, so a wider
                 window pushes the dock out instead of prising these two apart. */}
             <aside className="ml-7 mr-auto hidden w-96 shrink-0 xl:block">
+                {/* Tabs are no longer a sibling here — they're the card's header,
+                    inside HomeRailVideos' RailShell, so the rail reads as one
+                    outlined box the way the alerts rail does. */}
                 <div className={RAIL_INNER_RIGHT}>
-                    <HomeRailTabs />
                     <HomeRailVideos />
                 </div>
             </aside>

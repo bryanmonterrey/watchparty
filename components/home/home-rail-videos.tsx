@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { RailRow, RailRowSkeleton } from "@/components/rails/rail-row";
 import { RailShell } from "@/components/rails/rail-shell";
 import { HOME_TAB_LIKED } from "@/components/rails/rail-tabs";
+import { HomeRailTabs } from "./home-rail-tabs";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { useHomeFeed } from "./home-feed-context";
 import { HomeRailRowMenu } from "./home-rail-row-menu";
@@ -49,11 +50,22 @@ export function HomeRailVideos() {
         return () => observer.disconnect();
     }, [hasMore, loadMore]);
 
+    // THE CARD. Same anatomy as the alerts rail's: radius 25, outlined, and the
+    // tabs handed in as `header` so they sit INSIDE the one outline rather than
+    // above it. That last part is the whole trick — RailShell's header prop
+    // exists because Lisse strokes a whole path with no per-side control, so two
+    // bordered boxes that meet draw two hairlines and the seam can't be removed
+    // from the outside. One Squircle with the tabs inside has no internal edge.
+    //
+    // The tabs used to be a loose sibling in home-page-surface, above the shell
+    // and separated by a gap-2; they belong to this list, so they move in here
+    // with it.
+    //
     // The skeleton wears the same shell as the real list — a container that
     // appears only once the rows land would read as a layout shift.
     if (isLoading) {
         return (
-            <RailShell>
+            <RailShell radius={25} bordered header={<HomeRailTabs />}>
                 <div className="flex flex-col">
                     {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
                         <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
@@ -67,7 +79,7 @@ export function HomeRailVideos() {
     // rather than growing the page. RailShell owns the height; this element
     // owns the scrolling.
     return (
-        <RailShell>
+        <RailShell radius={25} bordered header={<HomeRailTabs />}>
             <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
                 {videos.map((v) => (
                     <RailRow
