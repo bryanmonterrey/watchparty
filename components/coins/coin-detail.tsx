@@ -378,7 +378,12 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
         <section className="flex min-w-0 flex-col">
             {/* Tab row. Divided by hairlines rather than spacing — the reference
                 reads as one control, not three separate links. */}
-            <div className="flex min-w-0 items-center justify-between gap-4 border-b border-flexwhite/10 px-5 py-4">
+            {/* The tab row sits on a LIGHTER fill than the rows below it. That
+                lift is what makes it read as a header bar rather than the first
+                row of the table — without it the board is one flat sheet and the
+                tabs float in it. soft-gray-10 (#181818) over the #080808 canvas,
+                the same step the app uses elsewhere for a raised surface. */}
+            <div className="flex min-w-0 items-center justify-between gap-4 rounded-t-[inherit] border-b border-flexwhite/10 bg-soft-gray-10 px-5 py-4">
                 <div className="flex min-w-0 items-center">
                     {TABS.map((t, i) => (
                         <React.Fragment key={t.id}>
