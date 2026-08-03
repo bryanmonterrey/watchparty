@@ -157,12 +157,39 @@ export const coinFeedRouter = router({
                 }
             }
 
-            const rows = await db
-                .select(SELECTION)
-                .from(coinFeedEvents)
-                .where(where.length ? and(...where) : undefined)
-                .orderBy(desc(coinFeedEvents.occurredAt), desc(coinFeedEvents.id))
-                .limit(input.limit + 1); // one extra = "is there another page?"
+            // DIAGNOSTIC (temporary). Drizzle's DrizzleQueryError reports only
+            // "Failed query: <sql>" and drops the driver's actual message onto
+            // `.cause`, which is the half that says WHY. Every cursored page of
+            // this query 500s in production while the same query runs in 0.7ms
+            // against Postgres directly and Postgres logs no error for it, so
+            // the cause is the only thing left that can name the failure.
+            let rows;
+            try {
+                rows = await db
+                    .select(SELECTION)
+                    .from(coinFeedEvents)
+                    .where(where.length ? and(...where) : undefined)
+                    .orderBy(desc(coinFeedEvents.occurredAt), desc(coinFeedEvents.id))
+                    .limit(input.limit + 1); // one extra = "is there another page?"
+            } catch (err) {
+                const e = err as { message?: string; cause?: unknown };
+                const cause = e?.cause as
+                    | { message?: string; code?: string; severity?: string; routine?: string; stack?: string }
+                    | undefined;
+                console.error(
+                    "[coinFeed.list] query failed",
+                    JSON.stringify({
+                        hasCursor: !!input.cursor,
+                        top: e?.message?.slice(0, 120),
+                        causeName: (cause as { name?: string })?.name,
+                        causeMessage: cause?.message,
+                        causeCode: cause?.code,
+                        causeSeverity: cause?.severity,
+                        causeRoutine: cause?.routine,
+                    }),
+                );
+                throw err;
+            }
 
             const hasMore = rows.length > input.limit;
             const items = hasMore ? rows.slice(0, input.limit) : rows;
