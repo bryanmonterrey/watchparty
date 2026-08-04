@@ -311,7 +311,7 @@ export function PostCard({
                 {/* Thread line top — card-level so it spans the reply's top padding
                     and still meets the parent's bottom line at the card boundary. */}
                 {connectTop && (
-                    <div className="absolute top-0 left-[38px] -translate-x-1/2 w-0.5 h-7 bg-zinc-700/50 z-20" />
+                    <div className="absolute top-0 left-[36px] -translate-x-1/2 w-0.5 h-7 bg-zinc-700/50 z-20" />
                 )}
 
                 {/* A threaded reply (member below its parent) never shows a
@@ -319,13 +319,15 @@ export function PostCard({
                 {!connectTop && <StatusBanners post={post} />}
 
                 <div className="flex flex-row items-start space-x-2.5 w-full h-full">
+                    {/* NO onClick and NO cursor-pointer here. self-stretch makes
+                        this column as tall as the whole card, so a profile
+                        handler on it turned the entire vertical strip beside the
+                        post body into a profile link — clicking blank space next
+                        to the text navigated away instead of opening the post.
+                        The handler moved onto the avatar image itself. */}
                     <div
                         {...profilePrefetch}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (user.username) router.push(`/${user.username}`);
-                        }}
-                        className="cursor-pointer self-stretch relative flex flex-col items-center"
+                        className="self-stretch relative flex flex-col items-center"
                     >
                         {/* Thread line bottom — from just below the avatar to the card's
                             bottom edge (pb-0 when connectBottom). Meets the next card's
@@ -333,11 +335,18 @@ export function PostCard({
                             The next card's "reposted"/"Replying" banner is suppressed
                             (see StatusBanners gate) so nothing offsets the join. */}
                         {connectBottom && (
-                            <div className="absolute top-[52px] bottom-0 left-[22px] -translate-x-1/2 w-0.5 bg-zinc-700/50 z-20" />
+                            <div className="absolute top-[48px] bottom-0 left-[20px] -translate-x-1/2 w-0.5 bg-zinc-700/50 z-20" />
                         )}
 
                         <UserHoverCard userId={post.userId}>
-                            <PostCardAvatar user={user} userId={post.userId} />
+                            <PostCardAvatar
+                                user={user}
+                                userId={post.userId}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (user.username) router.push(`/${user.username}`);
+                                }}
+                            />
                         </UserHoverCard>
                     </div>
                     

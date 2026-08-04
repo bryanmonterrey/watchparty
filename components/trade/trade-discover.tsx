@@ -443,16 +443,28 @@ export function TradeDiscover() {
 
                     <div className="flex items-center gap-2">
                     {/* Timeframe — drives the % + volume cells */}
-                    <div className="flex items-center rounded-full bg-white/5 p-1">
+                    {/* The active pill slides between timeframes on the wallet
+                        drawer's spring, like every other tab strip in the app.
+                        `relative` on the track is what the absolutely-positioned
+                        pill measures against. */}
+                    <div className="relative flex items-center rounded-full bg-white/5 p-1">
                         {TIMEFRAMES.map((tf) => (
                             <button
                                 key={tf}
                                 onClick={() => setTimeframe(tf)}
                                 className={cn(
-                                    "h-11 cursor-pointer rounded-full px-3 text-base font-bold transition-colors",
-                                    timeframe === tf ? "bg-soft-gray-15 text-long" : "text-zinc-400 hover:text-white",
+                                    "relative z-10 h-11 cursor-pointer rounded-full px-3 text-base font-bold transition-colors",
+                                    timeframe === tf ? "text-long" : "text-zinc-400 hover:text-white",
                                 )}
                             >
+                                {timeframe === tf && (
+                                    <motion.div
+                                        layoutId="tradeTimeframeHighlight"
+                                        className="absolute inset-0 -z-10 rounded-full bg-soft-gray-15"
+                                        initial={false}
+                                        transition={{ type: "spring", stiffness: 250, damping: 30 }}
+                                    />
+                                )}
                                 {tf}
                             </button>
                         ))}
