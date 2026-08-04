@@ -10,6 +10,7 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { GifIcon, ImageIcon, EmojiIcon, LockIcon, AlertIcon } from "@/components/icons";
 import { BarChart2 } from "lucide-react";
 import { PollComposer, type PollOption } from "@/components/browse/poll-composer";
+import { VoiceRecorder, VoiceRecorderTrigger } from "@/components/browse/voice-recorder";
 import { nanoid } from "nanoid";
 import { EmojiPicker } from "@/components/messages/emoji-picker";
 import { GifPicker } from "@/components/messages/gif-picker";
@@ -82,6 +83,9 @@ export function CommentComposer({
     const [pollEndsAt, setPollEndsAt] = useState<"1d" | "3d" | "7d">("1d");
     const [isPaywalled, setIsPaywalled] = useState(false);
     const [paywallPrice, setPaywallPrice] = useState(0.1);
+    const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+    const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null);
+    const [voiceDuration, setVoiceDuration] = useState(0);
     const [hasContentWarning, setHasContentWarning] = useState(false);
     const [contentWarningText, setContentWarningText] = useState("");
 
@@ -137,7 +141,7 @@ export function CommentComposer({
         el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
     }, [text]);
 
-    const hasMedia = images.length > 0 || !!gif || (showPoll && pollOptions.filter((o) => o.text.trim()).length >= 2);
+    const hasMedia = images.length > 0 || !!gif || !!voiceBlob || (showPoll && pollOptions.filter((o) => o.text.trim()).length >= 2);
     const canPost = (text.trim().length > 0 || hasMedia) && text.length <= MAX_LEN && !isPosting;
 
     const addImages = (files: FileList | null) => {
@@ -155,7 +159,7 @@ export function CommentComposer({
 
         try {
             let imageUrl: string | undefined;
-            const mediaArr: { type: "image" | "video"; url: string }[] = [];
+            const mediaArr: { type: "image" | "video" | "audio"; url: string }[] = [];
 
             if (images.length > 0) {
                 const uploaded = await Promise.all(
@@ -182,6 +186,23 @@ export function CommentComposer({
                 mediaArr.push({ type: "image", url: gif });
             }
 
+            // Voice note. Rides in `media` as an audio item with its length in
+            // `duration`, the same shape the post composer now sends.
+            if (voiceBlob) {
+                const voiceFile = new File([voiceBlob], `voice_${Date.now()}.webm`, { type: "audio/webm" });
+                const { token, path } = await getPresignedUrl.mutateAsync({
+                    bucket: "posts",
+                    filename: voiceFile.name,
+                    contentType: voiceFile.type,
+                });
+                const { data, error } = await supabase.storage.from("posts").uploadToSignedUrl(path, token, voiceFile);
+                if (error) throw error;
+                if (data) {
+                    const { data: pub } = supabase.storage.from("posts").getPublicUrl(data.path);
+                    mediaArr.push({ type: "audio", url: pub.publicUrl });
+                }
+            }
+
             await createComment.mutateAsync({
                 postId,
                 parentId,
@@ -197,6 +218,7 @@ export function CommentComposer({
                         endsAt: new Date(Date.now() + ({ "1d": 1, "3d": 3, "7d": 7 }[pollEndsAt]) * 86_400_000),
                     }
                     : undefined,
+                duration: voiceBlob ? voiceDuration : undefined,
                 isPaywalled,
                 paywallPrice: isPaywalled ? paywallPrice : undefined,
                 hasContentWarning,
@@ -216,6 +238,9 @@ export function CommentComposer({
             setShowPoll(false);
             setPollQuestion("");
             setPollOptions([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }]);
+            setVoiceBlob(null);
+            setVoiceDuration(0);
+            setShowVoiceRecorder(false);
             setIsPaywalled(false);
             setHasContentWarning(false);
             setContentWarningText("");
@@ -303,6 +328,33 @@ export function CommentComposer({
                     </div>
                 )}
 
+                {showVoiceRecorder && (
+                    <VoiceRecorder
+                        onAudioReady={(blob, seconds) => {
+                            setVoiceBlob(blob);
+                            setVoiceDuration(seconds);
+                            setShowVoiceRecorder(false);
+                        }}
+                        onCancel={() => setShowVoiceRecorder(false)}
+                    />
+                )}
+
+                {voiceBlob && !showVoiceRecorder && (
+                    <div className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-2">
+                        <span className="text-[13px] text-zinc-300">
+                            Voice note ({Math.floor(voiceDuration / 60)}:{String(voiceDuration % 60).padStart(2, "0")})
+                        </span>
+                        <button
+                            type="button"
+                            aria-label="remove voice note"
+                            onClick={() => { setVoiceBlob(null); setVoiceDuration(0); }}
+                            className="ml-auto grid size-5 cursor-pointer place-items-center rounded-full text-zinc-500 hover:text-white"
+                        >
+                            <X className="size-3.5" />
+                        </button>
+                    </div>
+                )}
+
                 {showPoll && (
                     <PollComposer
                         question={pollQuestion}
@@ -382,6 +434,11 @@ export function CommentComposer({
                             </span>
                         </EmojiPicker>
 
+                        <VoiceRecorderTrigger
+                            active={showVoiceRecorder || !!voiceBlob}
+                            onClick={() => setShowVoiceRecorder((v) => !v)}
+                        />
+
                         <button
                             type="button"
                             onClick={() => setShowPoll((p) => !p)}
@@ -389,7 +446,7 @@ export function CommentComposer({
                             aria-label="add poll"
                             className={cn(
                                 "grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:bg-white/5",
-                                showPoll ? "text-lantern" : "text-zinc-400 hover:text-white",
+                                showPoll ? "text-flexwhite" : "text-zinc-400 hover:text-white",
                             )}
                         >
                             <BarChart2 className="size-5" />
@@ -402,7 +459,7 @@ export function CommentComposer({
                             aria-label="pay-per-view"
                             className={cn(
                                 "grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:bg-white/5",
-                                isPaywalled ? "text-lantern" : "text-zinc-400 hover:text-white",
+                                isPaywalled ? "text-flexwhite" : "text-zinc-400 hover:text-white",
                             )}
                         >
                             <LockIcon className="size-5" />
@@ -418,7 +475,7 @@ export function CommentComposer({
                             aria-label="content warning"
                             className={cn(
                                 "grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:bg-white/5",
-                                hasContentWarning ? "text-lantern" : "text-zinc-400 hover:text-white",
+                                hasContentWarning ? "text-flexwhite" : "text-zinc-400 hover:text-white",
                             )}
                         >
                             <AlertIcon className="size-5" />

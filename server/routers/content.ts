@@ -195,7 +195,7 @@ export const contentRouter = router({
             z.object({
                 content: z.string().optional(),
                 imageUrl: z.string().optional(),
-                media: z.array(z.object({ type: z.enum(["image", "video"]), url: z.string() })).optional(),
+                media: z.array(z.object({ type: z.enum(["image", "video", "audio"]), url: z.string() })).optional(),
                 visibility: z.enum(["public", "private", "unlisted"]).default("public"),
                 audience: z.enum(["everyone", "followers", "verified", "token_holders", "community", "vip"]).default("everyone"),
                 replyPrivacy: z.enum(["everyone", "followers", "verified", "token_holders"]).default("everyone"),
@@ -217,6 +217,7 @@ export const contentRouter = router({
                 isPaywalled: z.boolean().optional(),
                 paywallPrice: z.number().optional(), // lamports
                 // Content warning
+                duration: z.number().optional(),
                 hasContentWarning: z.boolean().optional(),
                 contentWarningText: z.string().optional(),
                 // Link Preview

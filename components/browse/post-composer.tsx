@@ -238,7 +238,7 @@ export function PostComposer() {
         const hasBuy = !!(tokenLaunch.buyAmount && tokenLaunch.buyAmount > 0);
         let imageUrl: string | undefined;
         let generatedOgUrl: string | undefined;
-        let mediaArr: { type: "image" | "video"; url: string }[] = [];
+        let mediaArr: { type: "image" | "video" | "audio"; url: string }[] = [];
 
         try {
             if (images.length > 0) {
@@ -360,7 +360,16 @@ export function PostComposer() {
         createPost.mutate({
             content,
             imageUrl,
-            media: mediaArr.length > 0 ? mediaArr : undefined,
+            // voiceNoteUrl was computed above and then never sent — voice notes
+            // uploaded to storage and were silently discarded before reaching
+            // the post. It rides in `media` as an audio item, with the length in
+            // `duration` so the player can render before the file loads.
+            media: (() => {
+                const all = [...mediaArr];
+                if (voiceNoteUrl) all.push({ type: "audio" as const, url: voiceNoteUrl });
+                return all.length > 0 ? all : undefined;
+            })(),
+            duration: voiceBlob ? voiceDuration : undefined,
             visibility: "public",
             audience,
             replyPrivacy,

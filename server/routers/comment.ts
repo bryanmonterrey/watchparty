@@ -146,7 +146,7 @@ export const commentRouter = router({
             content: z.string().max(1000).default(""),
             imageUrl: z.string().optional(),
             media: z.array(z.object({
-                type: z.enum(["image", "video"]),
+                type: z.enum(["image", "video", "audio"]),
                 url: z.string(),
             })).optional(),
             linkPreview: z.object({
@@ -183,6 +183,9 @@ export const commentRouter = router({
             paywallPrice: z.number().optional(),
             hasContentWarning: z.boolean().optional(),
             contentWarningText: z.string().optional(),
+            /** Seconds — a voice note's length, so the player can show it
+             *  before the audio loads. */
+            duration: z.number().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             const hasMedia = !!input.imageUrl || (input.media?.length ?? 0) > 0 || !!input.poll;
@@ -260,6 +263,7 @@ export const commentRouter = router({
                 ticker: input.ticker ?? null,
                 tokenStatus: input.tokenStatus ?? (input.earningsEnabled ? "draft" : null),
                 token_image: tokenImage,
+                duration: input.duration,
                 isPaywalled: input.isPaywalled ?? false,
                 paywallPrice: input.paywallPrice,
                 hasContentWarning: input.hasContentWarning ?? false,

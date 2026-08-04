@@ -13,7 +13,9 @@ export const posts = pgTable("posts", {
     title: text("title"),
     content: text("content"),
     imageUrl: text("imageUrl"),
-    media: jsonb("media").$type<{ type: "image" | "video"; url: string }[]>().default([]),
+    // "audio" carries voice notes. Type-level only — jsonb stores whatever it
+    // is handed, so widening this needed no migration.
+    media: jsonb("media").$type<{ type: "image" | "video" | "audio"; url: string }[]>().default([]),
 
     videoUrl: text("videoUrl"),
     thumbnailUrl: text("thumbnailUrl"),

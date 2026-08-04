@@ -18,6 +18,7 @@ import {
 } from "@/components/icons";
 import { MediaGrid } from "@/components/browse/media-grid";
 import { FeedVideoPlayer } from "@/components/video/feed-video-player";
+import { AudioMessagePlayer } from "@/components/messages/audio-message-player";
 import { ImageViewer } from "@/components/ui/image-viewer";
 import { PollDisplay } from "@/components/browse/poll-display";
 import { PostCardSkeleton } from "../post-card-skeleton";
@@ -376,11 +377,16 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                             {/* Media */}
                             {(post.videoUrl || (post.media && post.media.length > 0) || post.imageUrl || post.token_image) && (
                                 <div className="rounded-2xl overflow-hidden mb-4">
+                                    {/* Voice notes get the player; MediaGrid is
+                                        for images and video only. */}
+                                    {post.media?.filter((m) => m.type === "audio").map((m) => (
+                                        <AudioMessagePlayer key={m.url} src={m.url} className="mb-2" />
+                                    ))}
                                     {post.videoUrl ? (
                                         <FeedVideoPlayer postId={post.id} videoUrl={post.videoUrl} poster={post.imageUrl} className="rounded-2xl" />
                                     ) : (
                                         <MediaGrid
-                                            media={post.media && post.media.length > 0 ? post.media : [{ type: "image", url: (post.imageUrl || post.token_image)! }]}
+                                            media={post.media && post.media.length > 0 ? post.media.filter((m): m is { type: "image" | "video"; url: string } => m.type !== "audio") : [{ type: "image", url: (post.imageUrl || post.token_image)! }]}
                                             onImageClick={(index) => {
                                                 const mArray = post.media;
                                                 const urls = (mArray && mArray.length > 0)

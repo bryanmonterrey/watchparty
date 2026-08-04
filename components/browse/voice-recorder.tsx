@@ -158,7 +158,7 @@ export function VoiceRecorderTrigger({ active, onClick }: VoiceRecorderTriggerPr
             onClick={onClick}
             className={cn(
                 "p-2 cursor-pointer rounded-full transition-colors",
-                active ? "text-lantern bg-lantern/10" : "hover:bg-white/10"
+                active ? "text-flexwhite bg-white/10" : "hover:bg-white/10"
             )}
             title="Voice note"
         >

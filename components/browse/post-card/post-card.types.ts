@@ -22,7 +22,7 @@ export interface PostCardPost {
     parentUserName?: string | null;
     parentUserVerifiedTier?: string | null;
     imageUrl: string | null;
-    media?: { type: "image" | "video"; url: string }[] | null;
+    media?: { type: "image" | "video" | "audio"; url: string }[] | null;
     likes: number;
     reposts: number;
     comments: number;
@@ -61,7 +61,7 @@ export interface PostCardPost {
         userId?: string | null;
         content: string | null;
         imageUrl: string | null;
-        media?: { type: "image" | "video"; url: string }[] | null;
+        media?: { type: "image" | "video" | "audio"; url: string }[] | null;
         videoUrl?: string | null;
         createdAt: Date | string | null;
         ticker?: string | null;

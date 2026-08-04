@@ -4,6 +4,7 @@ import React from "react";
 import { CreateIcon, BubbleIcon, RetweetIcon, HeartIcon, HeartFilledIcon, BookmarkIcon, BookmarkFilledIcon, BarsIcon, LinkIcon, VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { PostTickerPill } from "./post-ticker-pill";
 import { MediaGrid } from "@/components/browse/media-grid";
+import { AudioMessagePlayer } from "@/components/messages/audio-message-player";
 import { FeedVideoPlayer } from "@/components/video/feed-video-player";
 import { PollDisplay } from "@/components/browse/poll-display";
 import { LinkPreviewCard } from "@/components/browse/link-preview-card";
@@ -109,8 +110,14 @@ export function PostCardBody({
                 </div>
             ) : !showPaywall && (hasValidImage || hasValidMedia) && !mediaError ? (
                 <div className="mb-3">
+                    {/* Voice notes render as a player, not a grid tile —
+                        MediaGrid draws images. Reuses the messages player
+                        rather than a second waveform implementation. */}
+                    {post.media?.filter((m: { type: string; url: string }) => m.type === "audio").map((m: { type: string; url: string }) => (
+                        <AudioMessagePlayer key={m.url} src={m.url} className="mb-2" />
+                    ))}
                     <MediaGrid
-                        media={(hasValidMedia && !mediaError) ? post.media! : [{ type: "image", url: imageUrl! }]}
+                        media={(hasValidMedia && !mediaError) ? post.media!.filter((m): m is { type: "image" | "video"; url: string } => m.type !== "audio") : [{ type: "image", url: imageUrl! }]}
                         onImageClick={() => setIsImageExpanded(true)}
                         onImageError={() => setMediaError(true)}
                     />

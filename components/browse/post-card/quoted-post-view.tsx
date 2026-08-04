@@ -74,7 +74,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
             ) : (hasValidImage || hasValidMedia) ? (
                 <div className="h-fit overflow-hidden">
                     <MediaGrid
-                        media={hasValidMedia ? media! : [{ type: "image", url: rawImageUrl! }]}
+                        media={hasValidMedia ? media!.filter((m): m is { type: "image" | "video"; url: string } => m.type !== "audio") : [{ type: "image", url: rawImageUrl! }]}
                         onImageClick={(index) => {
                             const urls = hasValidMedia ? media!.map(m => m.url) : [rawImageUrl!];
                             setViewerImage(urls[index] || "");
