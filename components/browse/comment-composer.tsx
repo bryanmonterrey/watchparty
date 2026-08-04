@@ -7,7 +7,10 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { GifIcon, ImageIcon, EmojiIcon } from "@/components/icons";
+import { GifIcon, ImageIcon, EmojiIcon, LockIcon, AlertIcon } from "@/components/icons";
+import { BarChart2 } from "lucide-react";
+import { PollComposer, type PollOption } from "@/components/browse/poll-composer";
+import { nanoid } from "nanoid";
 import { EmojiPicker } from "@/components/messages/emoji-picker";
 import { GifPicker } from "@/components/messages/gif-picker";
 import { useLinkPreview } from "@/hooks/use-link-preview";
@@ -71,6 +74,17 @@ export function CommentComposer({
     });
     const [isEditingTicker, setIsEditingTicker] = useState(false);
 
+    // The rest of the post composer's toolbox. Replies are posts rows, so these
+    // are the same columns the post path writes.
+    const [showPoll, setShowPoll] = useState(false);
+    const [pollQuestion, setPollQuestion] = useState("");
+    const [pollOptions, setPollOptions] = useState<PollOption[]>([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }]);
+    const [pollEndsAt, setPollEndsAt] = useState<"1d" | "3d" | "7d">("1d");
+    const [isPaywalled, setIsPaywalled] = useState(false);
+    const [paywallPrice, setPaywallPrice] = useState(0.1);
+    const [hasContentWarning, setHasContentWarning] = useState(false);
+    const [contentWarningText, setContentWarningText] = useState("");
+
     // $cashtag mentions, same behaviour as the post composer: insert the
     // mention, touch nothing else.
     const [cashtag, setCashtag] = useState<{ query: string; start: number; end: number } | null>(null);
@@ -123,7 +137,7 @@ export function CommentComposer({
         el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
     }, [text]);
 
-    const hasMedia = images.length > 0 || !!gif;
+    const hasMedia = images.length > 0 || !!gif || (showPoll && pollOptions.filter((o) => o.text.trim()).length >= 2);
     const canPost = (text.trim().length > 0 || hasMedia) && text.length <= MAX_LEN && !isPosting;
 
     const addImages = (files: FileList | null) => {
@@ -175,6 +189,18 @@ export function CommentComposer({
                 imageUrl,
                 media: mediaArr.length > 0 ? mediaArr : undefined,
                 linkPreview: preview ?? undefined,
+                poll: showPoll && pollQuestion.trim() && pollOptions.filter((o) => o.text.trim()).length >= 2
+                    ? {
+                        question: pollQuestion.trim(),
+                        options: pollOptions.filter((o) => o.text.trim()),
+                        allowMultiple: false,
+                        endsAt: new Date(Date.now() + ({ "1d": 1, "3d": 3, "7d": 7 }[pollEndsAt]) * 86_400_000),
+                    }
+                    : undefined,
+                isPaywalled,
+                paywallPrice: isPaywalled ? paywallPrice : undefined,
+                hasContentWarning,
+                contentWarningText: hasContentWarning ? contentWarningText : undefined,
                 ticker: tokenLaunch.ticker || undefined,
                 tokenName: tokenLaunch.name || undefined,
                 creatorFeePercent: tokenLaunch.creatorFee,
@@ -187,6 +213,12 @@ export function CommentComposer({
             setGif(null);
             clearPreview();
             setTokenLaunch({ ...DEFAULT_TOKEN_LAUNCH, earningsEnabled: false });
+            setShowPoll(false);
+            setPollQuestion("");
+            setPollOptions([{ id: nanoid(), text: "" }, { id: nanoid(), text: "" }]);
+            setIsPaywalled(false);
+            setHasContentWarning(false);
+            setContentWarningText("");
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Couldn't post your reply");
         } finally {
@@ -271,6 +303,42 @@ export function CommentComposer({
                     </div>
                 )}
 
+                {showPoll && (
+                    <PollComposer
+                        question={pollQuestion}
+                        onQuestionChange={setPollQuestion}
+                        options={pollOptions}
+                        onOptionsChange={setPollOptions}
+                        duration={pollEndsAt}
+                        onDurationChange={setPollEndsAt}
+                        onRemove={() => setShowPoll(false)}
+                    />
+                )}
+
+                {hasContentWarning && (
+                    <input
+                        value={contentWarningText}
+                        onChange={(e) => setContentWarningText(e.target.value)}
+                        placeholder="describe the sensitive content"
+                        className="w-full rounded-full border border-white/10 bg-transparent px-4 py-2 text-[13px] text-zinc-200 outline-none placeholder:text-zinc-500"
+                    />
+                )}
+
+                {isPaywalled && (
+                    <div className="flex items-center gap-2 text-[13px] text-zinc-400">
+                        <span>Unlock price</span>
+                        <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={paywallPrice}
+                            onChange={(e) => setPaywallPrice(parseFloat(e.target.value) || 0)}
+                            className="w-24 rounded-full border border-white/10 bg-transparent px-3 py-1 text-right tabular-nums text-zinc-200 outline-none"
+                        />
+                        <span>SOL</span>
+                    </div>
+                )}
+
                 {preview && !hasMedia && (
                     <LinkPreviewCard preview={preview} onRemove={clearPreview} />
                 )}
@@ -313,6 +381,48 @@ export function CommentComposer({
                                 <EmojiIcon className="size-5" />
                             </span>
                         </EmojiPicker>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowPoll((p) => !p)}
+                            title="Add poll"
+                            aria-label="add poll"
+                            className={cn(
+                                "grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:bg-white/5",
+                                showPoll ? "text-lantern" : "text-zinc-400 hover:text-white",
+                            )}
+                        >
+                            <BarChart2 className="size-5" />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsPaywalled((p) => !p)}
+                            title="Pay-per-view"
+                            aria-label="pay-per-view"
+                            className={cn(
+                                "grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:bg-white/5",
+                                isPaywalled ? "text-lantern" : "text-zinc-400 hover:text-white",
+                            )}
+                        >
+                            <LockIcon className="size-5" />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setHasContentWarning((p) => !p);
+                                if (hasContentWarning) setContentWarningText("");
+                            }}
+                            title="Content warning"
+                            aria-label="content warning"
+                            className={cn(
+                                "grid size-8 cursor-pointer place-items-center rounded-full transition-colors hover:bg-white/5",
+                                hasContentWarning ? "text-lantern" : "text-zinc-400 hover:text-white",
+                            )}
+                        >
+                            <AlertIcon className="size-5" />
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-3">

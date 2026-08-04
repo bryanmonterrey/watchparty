@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
-import { likes, posts } from "@/db/schema/content";
+import { likes, posts, polls } from "@/db/schema/content";
 import { tokens } from "@/db/schema/content/token";
 import { user } from "@/db/schema/auth";
 import { eq, desc, and, asc, sql, inArray, lt } from "drizzle-orm";
@@ -170,9 +170,22 @@ export const commentRouter = router({
             twitterUrl: z.string().optional(),
             telegramUrl: z.string().optional(),
             websiteUrl: z.string().optional(),
+            // The rest of the composer's toolbox. Replies are posts rows, so
+            // every one of these columns already existed — createComment simply
+            // never accepted them.
+            poll: z.object({
+                question: z.string().min(1),
+                options: z.array(z.object({ id: z.string(), text: z.string(), imageUrl: z.string().url().optional() })).min(2).max(4),
+                allowMultiple: z.boolean().default(false),
+                endsAt: z.date().optional(),
+            }).optional(),
+            isPaywalled: z.boolean().optional(),
+            paywallPrice: z.number().optional(),
+            hasContentWarning: z.boolean().optional(),
+            contentWarningText: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
-            const hasMedia = !!input.imageUrl || (input.media?.length ?? 0) > 0;
+            const hasMedia = !!input.imageUrl || (input.media?.length ?? 0) > 0 || !!input.poll;
             if (!input.content.trim() && !hasMedia) {
                 throw new TRPCError({ code: "BAD_REQUEST", message: "A reply needs text or media" });
             }
@@ -247,11 +260,28 @@ export const commentRouter = router({
                 ticker: input.ticker ?? null,
                 tokenStatus: input.tokenStatus ?? (input.earningsEnabled ? "draft" : null),
                 token_image: tokenImage,
+                isPaywalled: input.isPaywalled ?? false,
+                paywallPrice: input.paywallPrice,
+                hasContentWarning: input.hasContentWarning ?? false,
+                contentWarningText: input.contentWarningText,
                 status: "published",
                 visibility: "public",
                 audience: "everyone",
                 replyPrivacy: "everyone",
             });
+            if (input.poll) {
+                const options = input.poll.options.map((o) => ({ ...o, votesCount: 0 }));
+                await db.insert(polls).values({
+                    id: nanoid(),
+                    postId: replyId,
+                    userId: ctx.user.id,
+                    question: input.poll.question,
+                    options,
+                    allowMultiple: input.poll.allowMultiple,
+                    endsAt: input.poll.endsAt,
+                });
+            }
+
             upsertPost({ id: replyId, content: input.content, userId: ctx.user.id, createdAt: new Date() });
 
             // Increment parent comment count
