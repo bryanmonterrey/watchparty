@@ -19,6 +19,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Next 16.3 turned `experimental.turbopackFileSystemCacheForBuild` ON by
+      # default: every `next build` now WRITES ~570MB of Turbopack cache to
+      # .next/cache. That only buys anything if the directory is restored first
+      # — a bare checkout pays the write cost on every run and reads nothing
+      # back. Restore it here (before `bun install`, so hashFiles never walks
+      # node_modules) to actually collect the faster-repeat-build win.
+      #
+      # The exact key changes whenever source does, so a matching hit means a
+      # fully warm cache; the restore-keys fall back to the newest cache for
+      # this lockfile, which is still mostly reusable. Entries are evicted LRU
+      # against the repo's 10GB budget.
+      - name: Restore Turbopack build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
+            nextjs-${{ runner.os }}-
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
