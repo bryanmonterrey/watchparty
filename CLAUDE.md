@@ -166,6 +166,40 @@ query while any page is good. The list re-requested the same cursor forever, on
 every route in the `(rails)` group. Reply pagination (`comment.ts`) had the
 identical bug, silently.
 
+## MUST KNOW: `shadcn add` can silently overwrite `lib/utils.ts`
+
+**Always `--dry-run` first.** Community registries (`@beui` especially) bundle
+shared lib files alongside the component, and the CLI overwrites them:
+
+```bash
+bunx --bun shadcn@latest add @beui/<thing> --dry-run   # read the overwrite list
+cp lib/utils.ts lib/ease.ts /tmp/                      # back up anything named there
+bunx --bun shadcn@latest add @beui/<thing> --overwrite
+# restore/merge, then diff to prove nothing was lost
+```
+
+Hit for real on 2026-08-03 adding `@beui/range-slider`. That item ships its own
+`lib/utils.ts` containing **only `cn`**, and the CLI replaced ours with it —
+dropping `compactCount`, `ellipsify`, `shortenWalletAddress`, `formatNumber`,
+`formatUsd` and `formatNumberGrouped`, every one of them used across the app.
+Caught only because the file had been backed up first; restored byte-identical.
+`lib/ease.ts` was the other overwrite that time and was benign — it diffed clean
+and gained `SPRING_GLIDE`, which the slider needs.
+
+The CLI *does* print `⚠ 2 files will be overwritten`, but only on `--dry-run` or
+in the summary after the fact — by which point the file is already gone. Nothing
+in tsc catches it either: the app still compiles until something imports one of
+the missing helpers.
+
+## `@beui/table` has no scrollbar (checked 2026-08-03)
+
+Don't install it hoping to lift one. Its scroll container is plain
+`className="overflow-auto"` — no `::-webkit-scrollbar` rule, no `scrollbar-*`
+utility, no `css`/`cssVars` on the registry item, across all 14 files. The
+scrollbar on beui.dev is the **native browser one**, which never appears here
+because `globals.css` hides scrollbars app-wide (`* { scrollbar-width: none }`).
+The rails use `components/rails/rail-scrollbar.tsx` instead.
+
 ## Auth / better-auth dependency gotchas
 
 The auth stack is sensitive to transitive versions. Two non-obvious pins/fixes were required to get it compiling and running:

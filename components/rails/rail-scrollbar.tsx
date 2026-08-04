@@ -168,9 +168,12 @@ export function RailScrollbar({
                 // pointer-events-none: an indicator, not a control. Dragging it
                 // would need hit-testing and a grab affordance, and neither rail
                 // wants a second way to scroll.
-                // w-[4px]: the thumb is w-full, so the track's width IS the
-                // indicator's. 3px read thin against a 384px rail.
-                "pointer-events-none absolute right-0.5 z-10 w-[4px] opacity-0 transition-opacity duration-200",
+                // w-[8px]: the thumb is w-full, so the track's width IS the
+                // indicator's. 8px is roughly a native scrollbar thumb — what
+                // `scrollbar-width: thin` renders, and the weight the @beui
+                // table shows on beui.dev (that table styles nothing; it just
+                // doesn't hide the OS scrollbar the way this app does).
+                "pointer-events-none absolute right-0.5 z-10 w-[8px] opacity-0 transition-opacity duration-200",
                 className,
             )}
         >
