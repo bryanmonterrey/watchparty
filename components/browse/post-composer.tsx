@@ -85,10 +85,10 @@ export function PostComposer() {
         if (hit) setCashtagTop(caretLineOffset(el));
     };
 
-    // Picking a ticker does two things at once, which is the whole point: the
-    // text keeps the mention, and the PILL takes the coin. The pill is marked
-    // manually-edited so the composer's auto-derive (which guesses a ticker from
-    // the post body) doesn't immediately overwrite what was just chosen.
+    // Picking a ticker inserts a MENTION and nothing else. It deliberately does
+    // NOT touch the ticker pill: mentioning someone's coin is a reference inside
+    // your text, while the pill is the coin THIS post launches. Filling the pill
+    // from a mention would quietly make another person's ticker your post's own.
     const applyCashtag = (hit: TickerHit) => {
         if (!cashtag) return;
         const before = content.slice(0, cashtag.start);
@@ -97,12 +97,6 @@ export function PostComposer() {
         const next = `${before}${inserted} ${after}`;
         setContent(next);
         setCashtag(null);
-        setTokenLaunch((prev) => ({
-            ...prev,
-            ticker: hit.ticker.toUpperCase(),
-            name: prev.isNameManuallyEdited ? prev.name : hit.name,
-            isTickerManuallyEdited: true,
-        }));
         // Put the caret after what we inserted, on the next frame so React has
         // committed the new value first.
         requestAnimationFrame(() => {
