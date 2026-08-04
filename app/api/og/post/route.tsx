@@ -1,7 +1,10 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
-export const runtime = 'edge';
+// No `runtime` export: Next 16.3 deprecated the edge runtime (build-time warning
+// + @deprecated hint), and the Node.js runtime is the default, so removing the
+// line IS the migration. Nothing here is edge-specific — `next/og` renders the
+// same on both, and on Cloudflare every route runs in workerd regardless.
 
 export async function GET(req: NextRequest) {
     try {

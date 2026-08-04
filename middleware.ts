@@ -9,6 +9,14 @@ import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./route
 // gate below is edge-safe; this is how it ran in sidebar). Revisit when Next
 // ships an edge option for `proxy`.
 //
+// DO NOT run the codemod the build now offers. As of 16.3 Next prints
+// `npx @next/codemod middleware-to-proxy .` inside the deprecation warning on
+// every dev/build run, and 16.3 ALSO deprecates the edge runtime — so Next is
+// deprecating both sides of this fork with no third option. Taking the codemod
+// produces a `proxy.ts` that OpenNext refuses to deploy
+// (opennextjs-cloudflare#1277: "only edge middleware is supported"), i.e. a
+// broken worker, not a migration. The warning stays until that issue closes.
+//
 // Optimistic edge auth gate: checks only for the presence of the session cookie
 // (the real validation stays in (app)/layout via getServerSession). Ported from
 // sidebar and adapted to watchparty's routes (/login, /home).

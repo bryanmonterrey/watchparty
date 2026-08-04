@@ -14,11 +14,13 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
-    // View Transitions — global-search ("search-bar") and app-container
-    // ("page-content") set `viewTransitionName`, which only morphs across
-    // navigations when Next drives them through the View Transitions API.
-    // Ported from sidebar; without this flag those names are inert.
-    viewTransition: true,
+    // NO `viewTransition` flag — 16.3 DELETED it (vercel/next.js#96098) and
+    // tsc rejects it outright. It had already gone inert: nothing in the
+    // runtime read it. View transitions still work here because React's
+    // `<ViewTransition>` (global-search "search-bar") ships in the bundled
+    // canary and every <Link> navigation already runs inside startTransition.
+    // The flag was reserved for Next auto-assigning transition types, which
+    // never landed; a NEW flag will gate that if it ever does.
     // Turbopack's on-disk dev cache kept corrupting — the "Compaction failed:
     // Another write batch or compaction is already active" terminal spam — after
     // a build ran alongside `next dev` (both write .next). Turn the dev
