@@ -8,7 +8,7 @@ import {
 } from "@/lib/security/audit-logger";
 import { headers } from "next/headers";
 import { TRPCError } from "@trpc/server";
-import { isHeliusQuotaError, alertHeliusQuota } from "@/lib/alerts/discord";
+import { isHeliusQuotaError, alertHeliusQuota, alertSwigTreasury } from "@/lib/alerts/discord";
 // web3.js and the Connection helper load lazily — this router rides into
 // every tRPC isolate via the appRouter graph, and the eager SDK import was
 // part of the Workers OOM headroom problem.
@@ -796,6 +796,9 @@ export const walletRouter = router({
                         userId: ctx.user.id,
                         error: err?.message ?? String(err),
                     });
+                    // The silent version of this cost a day: balances and
+                    // messaging both broke with nothing anywhere saying why.
+                    alertSwigTreasury("wallet.frostSetup → createSwigAccount", err?.message ?? String(err));
                 }
             }
             if (accountReady) {

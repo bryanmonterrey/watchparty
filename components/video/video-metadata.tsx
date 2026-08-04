@@ -97,8 +97,11 @@ export function VideoMetadata({
                 <div className="flex flex-col gap-4 pt-4">
                     <div className="shimmer-skeleton h-5 w-36 rounded-full" />
                     <div className="flex items-center gap-3">
-                        <div className="shimmer-skeleton size-9 shrink-0 rounded-full" />
-                        <div className="shimmer-skeleton h-10 flex-1 rounded-full opacity-60" />
+                        {/* size-8 / h-11 track the real composer: an 8-unit
+                            avatar and an h-11 Reply button. They were 9 and 10,
+                            so the row jumped when the comments landed. */}
+                        <div className="shimmer-skeleton size-8 shrink-0 rounded-full" />
+                        <div className="shimmer-skeleton h-11 flex-1 rounded-full opacity-60" />
                     </div>
                     {[0, 1, 2].map((i) => (
                         <div key={i} className="flex gap-3">

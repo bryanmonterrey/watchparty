@@ -104,3 +104,30 @@ export function alertHeliusQuota(context: string, status: number, body?: string)
         windowSeconds: 3600,
     });
 }
+
+/**
+ * The Swig treasury pays rent and fees for every embedded wallet's on-chain
+ * account. When it runs dry, createSwigAccount fails and NOBODY can get an
+ * embedded wallet created — which surfaced as "connect wallet" on the messages
+ * page and took a day to trace, because the failure was silent everywhere.
+ *
+ * Deduped for an hour like the Helius alert: this fires from a per-user code
+ * path, so an empty treasury means every affected user trips it.
+ */
+export function alertSwigTreasury(context: string, detail: string): void {
+    void sendDiscordAlert({
+        key: "swig:treasury",
+        severity: "error",
+        title: "Swig treasury can't fund wallet creation",
+        detail: [
+            detail,
+            "",
+            `Source: ${context}`,
+            "",
+            "Embedded wallets cannot be created on-chain while this lasts, which",
+            "blocks messaging keys and wallet signing for the users affected.",
+            "Top up the treasury keypair and it recovers on the next attempt.",
+        ].join("\n"),
+        windowSeconds: 3600,
+    });
+}
