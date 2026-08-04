@@ -8,6 +8,7 @@ import {
 } from "@/lib/security/audit-logger";
 import { headers } from "next/headers";
 import { TRPCError } from "@trpc/server";
+import { isHeliusQuotaError, alertHeliusQuota } from "@/lib/alerts/discord";
 // web3.js and the Connection helper load lazily — this router rides into
 // every tRPC isolate via the appRouter graph, and the eager SDK import was
 // part of the Workers OOM headroom problem.
@@ -2977,15 +2978,46 @@ export const walletRouter = router({
             const heliusKey = process.env.HELIUS_API_KEY;
             const url = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
 
-            const heliusPost = (id: string, body: object) =>
-                fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    signal: AbortSignal.timeout(10000),
-                    body: JSON.stringify({ jsonrpc: "2.0", id, ...body }),
-                })
-                .then(r => r.json())
-                .catch(() => ({ result: null }));
+            // A failed upstream must not look like an empty wallet.
+            //
+            // This used to be `.catch(() => ({ result: null }))`, which turned
+            // every Helius failure into `items: []` and `nativeBalance: 0` — a
+            // confident, cached, WRONG zero. When the quota ran out on
+            // 2026-08-04 every balance in the app read empty and nothing
+            // anywhere said why.
+            //
+            // Quota refusals now alert (deduped) and throw, so withSwrCache
+            // never stores the zero and the UI can show an error instead of a
+            // number that isn't true.
+            const heliusPost = async (id: string, body: object) => {
+                let res: Response;
+                try {
+                    res = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        signal: AbortSignal.timeout(10000),
+                        body: JSON.stringify({ jsonrpc: "2.0", id, ...body }),
+                    });
+                } catch {
+                    // Network/timeout: transient, and the SWR layer still has
+                    // the previous good value to serve. Don't alert on these.
+                    return { result: null };
+                }
+
+                if (!res.ok) {
+                    const text = await res.text().catch(() => "");
+                    if (isHeliusQuotaError(res.status, text)) {
+                        alertHeliusQuota(`wallet.getWalletAssets (${id})`, res.status, text);
+                        throw new TRPCError({
+                            code: "TOO_MANY_REQUESTS",
+                            message: "Wallet data is temporarily unavailable (upstream quota).",
+                        });
+                    }
+                    return { result: null };
+                }
+
+                return res.json().catch(() => ({ result: null }));
+            };
 
             // 1. Fetch all fungible assets (native balance included via showNativeBalance) and raw token accounts in parallel.
             // showNativeBalance: true returns lamports inside assetsData.result.nativeBalance — eliminates a separate getBalance call.
