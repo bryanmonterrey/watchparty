@@ -17,6 +17,12 @@ export const streams = pgTable("streams", {
     isLive: boolean("isLive").default(false).notNull(),
     title: text("title"),
     category: text("category"),
+    // The stream's coin. `ticker` is the intent, set in stream setup before
+    // going live; `tokenId` is filled when the broadcast starts and the coin is
+    // actually created — so a stream that never goes live leaves no draft coin
+    // behind. See db/stream-coin-columns.sql.
+    ticker: text("ticker"),
+    tokenId: text("token_id"),
     thumbnailUrl: text("thumbnailUrl"),
     viewerCount: integer("viewerCount").default(0).notNull(),
     // Timestamps

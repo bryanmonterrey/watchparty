@@ -11,6 +11,8 @@ import {
     Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
+import { TokenLaunchTrigger, TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/components/browse/token-launch";
+import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Squircle } from "@/components/ui/squircle";
@@ -119,6 +121,7 @@ function Connected({
         isLive: boolean | null;
         title: string | null;
         category: string | null;
+        ticker?: string | null;
     };
     onSwitchProtocol: (p: Protocol) => void;
     switching: boolean;
@@ -153,7 +156,7 @@ function Connected({
             </div>
 
             {/* Stream info — saves itself */}
-            <StreamInfo title={stream.title} category={stream.category} />
+            <StreamInfo title={stream.title} category={stream.category} ticker={stream.ticker} />
 
             {/* How to go live — tucked away once you've seen it */}
             <ObsSteps />
@@ -240,7 +243,7 @@ function CopyCard({
 
 // Title + category save themselves (blur/Enter for the title, click for a
 // pill) — a transient "Saved" flash instead of a Save button.
-function StreamInfo({ title: savedTitle, category: savedCategory }: { title: string | null; category: string | null }) {
+function StreamInfo({ title: savedTitle, category: savedCategory, ticker: savedTicker }: { title: string | null; category: string | null; ticker?: string | null }) {
     const utils = trpc.useUtils();
     const [title, setTitle] = useState(savedTitle ?? "");
     const [savedFlash, setSavedFlash] = useState(false);
@@ -260,6 +263,27 @@ function StreamInfo({ title: savedTitle, category: savedCategory }: { title: str
     const saveTitle = () => {
         if (title.trim() === (savedTitle ?? "")) return;
         updateInfo.mutate({ title: title.trim() || undefined });
+    };
+
+    // The stream's coin. Set BEFORE going live, and saved as intent only — the
+    // coin is created when the broadcast starts, so configuring a ticker and
+    // then never streaming leaves no orphan draft behind.
+    //
+    // ANYONE can launch a stream's coin, same as a post's: the first buy IS the
+    // launch. That's the opposite of a creator coin, which only its creator may
+    // launch — a distinction that has to be enforced server-side, not here.
+    const [tokenLaunch, setTokenLaunch] = useState<TokenLaunchState>({
+        ...DEFAULT_TOKEN_LAUNCH,
+        earningsEnabled: false,
+        ticker: savedTicker ?? "",
+    });
+    const [isEditingTicker, setIsEditingTicker] = useState(false);
+
+    const saveTicker = (next: TokenLaunchState) => {
+        setTokenLaunch(next);
+        if ((next.ticker ?? "") !== (savedTicker ?? "")) {
+            updateInfo.mutate({ ticker: next.ticker || "" });
+        }
     };
 
     return (
@@ -286,6 +310,23 @@ function StreamInfo({ title: savedTitle, category: savedCategory }: { title: str
                 maxLength={100}
                 className="mt-2 h-12 bg-white/[0.04] text-[14px] font-medium"
             />
+            <div className="mt-3 flex items-center gap-2">
+                <p className="text-[13px] font-bold text-zinc-400">Coin</p>
+                <TokenLaunchTrigger
+                    state={tokenLaunch}
+                    onClick={() => setIsEditingTicker(true)}
+                    className="h-11"
+                    onClear={() => saveTicker({ ...tokenLaunch, ticker: "", isTickerManuallyEdited: true })}
+                />
+            </div>
+
+            <TickerEditDialog
+                open={isEditingTicker}
+                onOpenChange={setIsEditingTicker}
+                state={tokenLaunch}
+                onSave={(updates) => saveTicker({ ...tokenLaunch, ...updates })}
+            />
+
             <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {CATEGORIES.map((c) => {
                     const active = (savedCategory ?? "") === c;

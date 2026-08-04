@@ -261,6 +261,9 @@ export const streamRouter = router({
         .input(z.object({
             title: z.string().max(100).optional(),
             category: z.string().max(50).optional(),
+            // The stream's coin ticker. Intent only — the coin itself is
+            // created when the broadcast starts.
+            ticker: z.string().max(16).optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             await db.update(streams).set({ ...input, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
