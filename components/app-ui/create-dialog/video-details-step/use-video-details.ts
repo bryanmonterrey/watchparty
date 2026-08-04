@@ -288,7 +288,15 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
                         const { data: metadataPublicData } = supabase.storage.from('thumbnails').getPublicUrl(metaDataRaw!.path);
 
                         const launchResult = await launchToken(
-                            { name: tokenName, symbol: tokenLaunch.ticker, image: metadataPublicData.publicUrl, description },
+                            {
+                                name: tokenName,
+                                symbol: tokenLaunch.ticker,
+                                image: metadataPublicData.publicUrl,
+                                description,
+                                // Videos live at /video/<postId>; previewId is the
+                                // id this flow already hands createVideo below.
+                                contentPath: `/video/${previewId}`,
+                            },
                             tokenLaunch
                         )
 

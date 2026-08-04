@@ -116,13 +116,27 @@ export function useTokenLaunch() {
             image: string;
             description: string;
             /**
-             * The post this coin belongs to. Given one, external_url points at
-             * the CONTENT rather than the coin page — which is the thing a coin
-             * on watchparty actually is: a post someone can trade. Callers pass
-             * an id they generated themselves and hand to createPost, so both
-             * agree on the url before the post exists.
+             * Path to the content this coin belongs to, e.g. `/feed/post/<id>`
+             * or `/video/<id>`. external_url points here, because a coin on
+             * watchparty IS a piece of content someone can trade — the coin page
+             * is a view of it, not the thing itself.
+             *
+             * A PATH rather than an id because content kinds have different
+             * routes and only the caller knows which it is:
+             *
+             *   post           /feed/post/<id>
+             *   video          /video/<id>   (the old /<user>/<id> 308s here)
+             *   stream         its host's profile — live isn't a route, it's a
+             *                  state of /<username>
+             *   creator coin   /<username> — planned; a creator's coin is ABOUT
+             *                  them, so the profile is its content page. It
+             *                  needs no change here, only a caller.
+             *
+             * Callers generate the id themselves and hand the same one to
+             * createPost/createVideo, so both agree on the url before the
+             * content row exists.
              */
-            postId?: string;
+            contentPath?: string;
         },
         launchState: TokenLaunchState,
         // First-buy on someone ELSE'S draft: the connected wallet pays and
@@ -214,8 +228,8 @@ export function useTokenLaunch() {
                     image: metadata.image,
                     // The content if we know it, the coin page otherwise —
                     // a coin minted outside a post still needs somewhere to go.
-                    external_url: metadata.postId
-                        ? `${siteOrigin}/feed/post/${metadata.postId}`
+                    external_url: metadata.contentPath
+                        ? `${siteOrigin}${metadata.contentPath}`
                         : `${siteOrigin}/coin/${mintAddress}`,
                 };
                 const file = new File(
