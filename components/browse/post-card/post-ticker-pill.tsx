@@ -79,7 +79,7 @@ export function PostTickerPill({
                     )}
                 />
             )}
-            <span className={cn("font-black tracking-tighter", md ? "text-[13px]" : "text-xs")}>
+            <span className={cn("font-medium tracking-tighter", md ? "text-[13px]" : "text-xs")}>
                 ${ticker}
             </span>
         </button>

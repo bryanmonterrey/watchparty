@@ -134,7 +134,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
 
     if (isLoading) {
         return (
-            <ScrollArea className="h-full bg-background">
+            <ScrollArea className="h-full bg-canvas">
                 <div className="mx-auto max-w-2xl px-4 pt-6 md:pt-(--header-height)">
                     <div className="mt-4 h-64 overflow-hidden rounded-3xl"><div className="size-full shimmer-skeleton" /></div>
                 </div>
@@ -143,7 +143,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
     }
     if (!detail) {
         return (
-            <ScrollArea className="h-full bg-background">
+            <ScrollArea className="h-full bg-canvas">
                 <div className="mx-auto max-w-2xl px-4 pt-6 text-center md:pt-(--header-height)">
                     <p className="mt-16 text-[16px] font-bold text-zinc-300">Market not found</p>
                     <Link href="/trade/predictions" className="mt-2 inline-block text-[14px] font-semibold text-zinc-500 hover:text-white">
@@ -156,7 +156,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
     const m = detail;
 
     return (
-        <ScrollArea className="h-full bg-background">
+        <ScrollArea className="h-full bg-canvas">
             <div className="mx-auto max-w-2xl px-4 pb-16 pt-6 md:pt-(--header-height)">
                 {/* Back + eyebrow */}
                 <div className="flex items-center gap-3 pt-4">

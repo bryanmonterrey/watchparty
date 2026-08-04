@@ -45,7 +45,7 @@ function Rows({ count }: { count: number }) {
 
 export function PerpsSkeleton({ geoBlocked = false }: { geoBlocked?: boolean }) {
     return (
-        <div className="h-full bg-background">
+        <div className="h-full bg-canvas">
             <div className="mx-auto flex max-w-[1440px] flex-col px-2 pb-4 pt-4 md:pt-(--header-height) lg:h-dvh lg:pb-2">
                 {geoBlocked && (
                     <div className="mt-2 flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-4 py-2.5">

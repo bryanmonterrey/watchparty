@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { SquareLock02Icon } from '@hugeicons/core-free-icons';
 import { useEncryptionContext } from './encryption-provider';
+import { useAuthSession } from '@/hooks/use-auth-session';
 import { WalletSetupCta } from '@/components/wallet/wallet-drawer/views/setup/wallet-setup-cta';
 
 // Same lazy-mount pattern as WalletButton: the connect modal is heavy and only
@@ -29,10 +30,18 @@ const WalletConnectModal = dynamic(
  */
 export function EncryptionGate({ children }: { children: React.ReactNode }) {
     const { needsWallet, retry } = useEncryptionContext();
+    const { data: session } = useAuthSession();
     const [modalReady, setModalReady] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
 
     if (!needsWallet) return <>{children}</>;
+
+    // Which action can actually work here depends on what the account HAS.
+    // With no wallet at all, "Connect wallet" opens an extension picker the
+    // user has nothing to pick from — setup is the only route forward, so it
+    // leads. With a wallet on file they're an extension user whose adapter
+    // simply isn't connected, and connecting is right.
+    const hasWallet = Boolean(session?.user?.wallet_address);
 
     return (
         <div className="flex h-svh w-full items-center justify-center px-6">
@@ -44,22 +53,40 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
                 <div className="space-y-2">
                     <h2 className="text-[22px] font-bold tracking-tight text-white">Unlock your messages</h2>
                     <p className="text-[13px] font-medium leading-relaxed text-zinc-500">
-                        Messages on watchparty are end-to-end encrypted — your wallet is the key.
-                        Connect one to start chatting, only you can read what&apos;s inside.
+                        {hasWallet
+                            ? "Messages on watchparty are end-to-end encrypted — your wallet is the key. Connect it to start chatting, only you can read what's inside."
+                            : "Messages on watchparty are end-to-end encrypted — your wallet is the key. Set one up to start chatting, only you can read what's inside."}
                     </p>
                 </div>
 
                 <div className="flex w-full flex-col gap-3">
-                    <button
-                        onClick={() => {
-                            setModalReady(true);
-                            setModalOpen(true);
-                        }}
-                        className="h-18 w-full cursor-pointer rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
-                    >
-                        Connect wallet
-                    </button>
-                    <WalletSetupCta variant="inline" />
+                    {hasWallet ? (
+                        <>
+                            <button
+                                onClick={() => {
+                                    setModalReady(true);
+                                    setModalOpen(true);
+                                }}
+                                className="h-18 w-full cursor-pointer rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
+                            >
+                                Connect wallet
+                            </button>
+                            <WalletSetupCta variant="inline" />
+                        </>
+                    ) : (
+                        <>
+                            <WalletSetupCta variant="inline" />
+                            <button
+                                onClick={() => {
+                                    setModalReady(true);
+                                    setModalOpen(true);
+                                }}
+                                className="h-11 w-full cursor-pointer rounded-full text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white"
+                            >
+                                Connect an existing wallet instead
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 <button

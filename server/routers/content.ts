@@ -251,6 +251,15 @@ export const contentRouter = router({
 
             const postId = nanoid();
             let tokenId: string | undefined = undefined;
+            // Hoisted so the POST row can store the same resolved image as the
+            // TOKEN row. It used to be a const inside the `if (input.ticker)`
+            // block, so `posts.token_image` got the raw `input.token_image`
+            // while `tokens.imageUrl` got the full media→avatar fallback — and
+            // the composer usually doesn't send token_image at all. Result: the
+            // coin had an image everywhere it read from `tokens`, and the feed
+            // card's ticker pill (which reads posts.token_image) showed the
+            // blank tinted disc.
+            let tokenImage: string | undefined = input.token_image;
 
             if (input.ticker) {
                 tokenId = input.tokenStatus === "live" ? (input.tokenAddress || nanoid()) : nanoid();
@@ -270,7 +279,7 @@ export const contentRouter = router({
                 // got created that way; see db/token-image-avatar-backfill.sql.
                 // The video path above already did this; now both do.
                 const postSessionUser = ctx.session.user as { avatar_url?: string | null; image?: string | null };
-                const tokenImage =
+                tokenImage =
                     input.token_image ||
                     input.imageUrl?.split(',')[0] ||
                     postSessionUser.avatar_url ||
@@ -319,7 +328,7 @@ export const contentRouter = router({
                 tokenId,
                 ticker: input.ticker ?? null,
                 tokenStatus: input.tokenStatus ?? (input.earningsEnabled ? "draft" : null),
-                token_image: input.token_image,
+                token_image: tokenImage,
                 media: input.media ?? [],
                 isPaywalled: input.isPaywalled ?? false,
                 paywallPrice: input.paywallPrice,

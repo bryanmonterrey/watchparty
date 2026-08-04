@@ -341,7 +341,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
     if (loading) return <PerpsSkeleton geoBlocked={geoBlocked} />;
 
     return (
-        <ScrollArea className="h-full bg-background">
+        <ScrollArea className="h-full bg-canvas">
             <div className="mx-auto flex max-w-[1440px] flex-col px-2 pb-4 pt-2 md:pt-(--header-height) lg:h-dvh lg:pb-2">
                 {geoBlocked && (
                     <div className=" flex items-center justify-center gap-2 rounded-md bg-sunset/10 px-4 py-2.5">

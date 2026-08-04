@@ -760,19 +760,48 @@ export const walletRouter = router({
             throw new TRPCError({ code: "PRECONDITION_FAILED", message: "FROST not initialized — re-create wallet" });
         }
 
-        // Swig account is created eagerly at signup, so this branch only fires for
-        // wallets created before eager creation was introduced (legacy accounts).
+        // Best-effort on-chain Swig creation. NOT a preconditon of this
+        // procedure's actual job, which is returning the FROST client share.
+        //
+        // This used to rethrow, and that made E2E messaging depend on a
+        // successful on-chain write. When the Swig treasury (the fee payer) ran
+        // dry, createSwigAccount failed here, the throw skipped the client-share
+        // decrypt below, and the messages page — whose only ask is a wrap key —
+        // fell through to "Connect wallet", offering an extension-connect modal
+        // to embedded-wallet users who have no extension. Retry re-ran the same
+        // failing path, so the "I've already connected" button appeared dead.
+        //
+        // The client share is sitting decryptable in this very row and has
+        // nothing to do with the chain, so a chain failure must not withhold it.
+        // Signing still needs the account, and the flag stays false so the next
+        // call retries — but reading your messages no longer waits on it.
+        //
+        // NOTE the flag starts false for EVERY wallet (both creation paths insert
+        // false; /api/create-wallet flips it from an `after()` hook that logs and
+        // swallows failures), so this branch is the normal path, not a
+        // legacy-accounts fallback as previously commented.
         if (!walletData.swig_account_created) {
             const { createSwigAccount } = await import("@/lib/swig/swig-server");
+            let accountReady = false;
             try {
                 await createSwigAccount(walletData.swig_id, walletData.frost_public_key);
+                accountReady = true;
             } catch (err: any) {
                 // Already exists from a prior partial attempt — that's fine.
-                if (!err?.message?.includes("already in use")) throw err;
+                if (err?.message?.includes("already in use")) {
+                    accountReady = true;
+                } else {
+                    console.error("[frostSetup] Swig account creation failed (continuing)", {
+                        userId: ctx.user.id,
+                        error: err?.message ?? String(err),
+                    });
+                }
             }
-            await supabase.from("encrypted_wallets")
-                .update({ swig_account_created: true, updated_at: new Date().toISOString() })
-                .eq("user_id", ctx.user.id);
+            if (accountReady) {
+                await supabase.from("encrypted_wallets")
+                    .update({ swig_account_created: true, updated_at: new Date().toISOString() })
+                    .eq("user_id", ctx.user.id);
+            }
         }
 
         // Recover the FROST client share if the server has an encrypted backup.

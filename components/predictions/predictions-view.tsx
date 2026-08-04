@@ -79,7 +79,7 @@ export function PredictionsView({ creatorId }: { creatorId?: string } = {}) {
     }, [markets, category, sort]);
 
     return (
-        <ScrollArea className="h-full bg-background">
+        <ScrollArea className="h-full bg-canvas">
             <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 md:pt-(--header-height)">
                 {/* Category tabs (Kalshi's top rail) + sort + admin create */}
                 <div className="flex items-center gap-3 pt-4">

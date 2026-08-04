@@ -396,7 +396,7 @@ export function TradeDiscover() {
             {/* Glass control bar under the fixed header (same pattern as the
                 memescope board's sticky header). */}
             <div className="sticky top-0 z-40">
-                <div className="pointer-events-none absolute inset-0 -z-10 bg-background backdrop-blur-sm" />
+                <div className="pointer-events-none absolute inset-0 -z-10 bg-canvas backdrop-blur-sm" />
                 <div className="h-(--header-height) max-md:hidden" />
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-2 lg:px-6">
                     <div className="flex items-center gap-1.5">

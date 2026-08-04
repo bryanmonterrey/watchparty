@@ -49,11 +49,11 @@ const CARD_MB = "mb-0";
 //
 // RailTabs itself is a bare <nav> with no padding of its own, so these are the
 // only values in play; nothing here doubles up.
-// EXPERIMENT: bg-canvas/50 + backdrop-blur-xs on the tab strip, to see how a
-// translucent band reads against the card's flat fill. Applied here rather than
-// on RailTabs itself, which the live/video rails also use — this keeps it to
-// home's rail. Revert = drop the last two classes.
-const CARD_HEADER_PAD = "px-3 pt-3 pb-2 bg-canvas/50 backdrop-blur-xs";
+// Opaque bg-canvas. The translucent band (bg-canvas/50 + backdrop-blur-xs) was
+// an experiment and is done — rows now pass cleanly UNDER a solid strip instead
+// of reading blurred through it. Applied here rather than on RailTabs itself,
+// which the live/video rails also use, so this stays scoped to home's rail.
+const CARD_HEADER_PAD = "px-3 pt-3 pb-2 bg-canvas";
 /** Roughly the pinned strip's height — pt-3 (12) + a py-1.5 text-lg row (~40)
  *  + pb-2 (8). Only the scrollbar's top inset reads it, so being a pixel or two
  *  out costs nothing; the tabs themselves are laid out by `sticky`, not by this. */
@@ -72,10 +72,9 @@ export function HomeRailVideos() {
 
     // THE TABS PIN INSIDE THE SCROLLER, they are not a header above it.
     //
-    // That's the whole point of their translucent fill: rows pass UNDER them and
-    // read blurred through the band. As RailShell's `header` they were a
-    // shrink-0 block above the list, so nothing ever moved behind them and
-    // bg-canvas/50 + backdrop-blur-xs had nothing to act on.
+    // Rows pass UNDER them and are covered by the strip's opaque fill. As
+    // RailShell's `header` they were a shrink-0 block above the list, so nothing
+    // ever moved behind them and the fill had nothing to cover.
     //
     // `sticky top-0` rather than an absolute overlay, so the strip occupies its
     // own space on first paint and no manual top-padding has to be kept in sync
