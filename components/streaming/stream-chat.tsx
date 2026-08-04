@@ -8,6 +8,7 @@ import { ChatIdentity } from "./chat-identity";
 import { RailTabs, RAIL_TABS } from "@/components/rails/rail-tabs";
 import { RailVideoList } from "@/components/rails/rail-video-list";
 import { RailRowSkeleton } from "@/components/rails/rail-row";
+import { RailCard, RAIL_ASIDE, RAIL_INNER } from "@/components/rails/rail-card";
 
 // The live page's right rail — home's rail, with one exception: Chat is the
 // first tab, and it's what the page opens on.
@@ -32,12 +33,9 @@ interface StreamChatProps {
 const CHAT_TAB = "Chat";
 const TABS = [CHAT_TAB, ...RAIL_TABS];
 
-// Home's rail shell, same as the video page's: the <aside> holds the width,
-// the inner div pins to the scroller's top and clears the fixed header with its
-// own padding, pr-2 against the window edge. 340px is the app's one right-rail
-// width. Content scrolls inside the sticky column, never growing the page.
-const RAIL_ASIDE = "hidden w-[340px] shrink-0 lg:block";
-const RAIL_INNER = "sticky top-0 flex h-screen flex-col gap-4 pr-2 md:pt-[calc(var(--header-height)+4px)]";
+// Width and shell come from RailCard now — this rail was a lookalike of home's
+// (loose tabs, unboxed list, 340px) rather than the same thing. See
+// components/rails/rail-card.tsx.
 
 export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
     const [tab, setTab] = useState(CHAT_TAB);
@@ -62,12 +60,11 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
         return (
             <aside className={RAIL_ASIDE}>
                 <div className={RAIL_INNER}>
-                    <RailTabs tabs={TABS} active={tab} onChange={setTab} />
-                    <div className="flex min-h-0 flex-1 flex-col">
+                    <RailCard tabs={<RailTabs tabs={TABS} active={tab} onChange={setTab} />}>
                         {Array.from({ length: 6 }).map((_, i) => (
                             <RailRowSkeleton key={i} index={i} count={6} />
                         ))}
-                    </div>
+                    </RailCard>
                 </div>
             </aside>
         );
@@ -76,12 +73,17 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
     return (
         <aside className={RAIL_ASIDE}>
             <div className={RAIL_INNER}>
-            <RailTabs tabs={TABS} active={tab} onChange={setTab} />
+            {/* Chat owns its own scroller (it auto-scrolls to the newest
+                message), so the card must not add a second one around it. The
+                video tabs take the default, which is home's exact behaviour:
+                one scroller holding the pinned tabs and the rows. */}
+            <RailCard
+                scroll={tab !== CHAT_TAB}
+                tabs={<RailTabs tabs={TABS} active={tab} onChange={setTab} />}
+            >
 
             {tab !== CHAT_TAB ? (
-                <div className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
-                    <RailVideoList tab={tab} />
-                </div>
+                <RailVideoList tab={tab} />
             ) : (
                 <div className="flex min-h-0 flex-1 flex-col gap-2">
                     <div ref={chatContainerRef} className="scrollbar-hide min-h-0 flex-1 space-y-2.5 overflow-y-auto px-1">
@@ -129,6 +131,7 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
                     </div>
                 </div>
             )}
+            </RailCard>
             </div>
         </aside>
     );

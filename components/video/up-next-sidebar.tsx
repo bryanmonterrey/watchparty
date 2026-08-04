@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { RailTabs, RAIL_ICON_TAB } from "@/components/rails/rail-tabs";
 import { RailVideoList } from "@/components/rails/rail-video-list";
+import { RailCard, RAIL_ASIDE, RAIL_INNER } from "@/components/rails/rail-card";
 
-// The video page's right rail — home's rail, same tabs, same rows.
+// The video page's right rail — home's rail, same tabs, same rows, same card.
+//
+// That claim was only half-true until now: the tabs and rows were shared, but
+// this rendered them LOOSE at 340px while home wrapped them in a bordered
+// squircle at 384px. RailCard is that card and RAIL_ASIDE that width, so the
+// two can't drift again.
 //
 // It used to run its own tab set (All / From <creator> / Related / Watched) and
 // its own row design (192px thumbnail, views + age line). Both are gone in
@@ -26,17 +32,11 @@ export function UpNextSidebar({ postId }: UpNextSidebarProps) {
     const [tab, setTab] = useState(RAIL_ICON_TAB);
 
     return (
-        // Home's rail shell: the <aside> holds the width, the inner div pins to
-        // the scroller's top and clears the fixed header with its OWN padding
-        // (the column's margin doesn't apply here). pr-2 against the window
-        // edge; the list scrolls inside the sticky column rather than growing
-        // the page. 340px is the app's one right-rail width.
-        <aside className="hidden w-[340px] shrink-0 lg:block">
-            <div className="sticky top-0 flex h-screen flex-col gap-4 pr-2 md:pt-[calc(var(--header-height)+4px)]">
-                <RailTabs active={tab} onChange={setTab} />
-                <div className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <aside className={RAIL_ASIDE}>
+            <div className={RAIL_INNER}>
+                <RailCard tabs={<RailTabs active={tab} onChange={setTab} />}>
                     <RailVideoList tab={tab} excludePostId={postId} />
-                </div>
+                </RailCard>
             </div>
         </aside>
     );
