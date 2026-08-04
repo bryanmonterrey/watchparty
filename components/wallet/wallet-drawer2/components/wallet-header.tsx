@@ -17,6 +17,7 @@ import {
 } from "@/components/motion/popover-morph";
 import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { trpc } from "@/lib/trpc/client";
 
 /**
  * Same three tiers the watch and home headers render. `hidden` honours the
@@ -61,6 +62,42 @@ export function WalletHeader({
         | { verifiedTier?: string | null; hideVerifiedBadge?: boolean | null }
         | undefined;
     const { accounts, setActive, revoke, atCapacity } = useDeviceSessions(accountOpen);
+
+    // Wallets share this panel with accounts: "which wallet" and "which account"
+    // are the two identity questions, and answering them in one place is what
+    // the trigger implies. Wallets sit on top because switching wallet is the
+    // far more frequent action inside a WALLET drawer; accounts are below a
+    // divider so the two lists never read as one.
+    //
+    // Gated on the panel being open, like the account list — nothing is fetched
+    // until someone actually asks.
+    const trpcUtils = trpc.useUtils();
+    const { data: linkedWallets } = trpc.wallet.listLinkedWallets.useQuery(undefined, {
+        enabled: accountOpen,
+    });
+    const setPrimaryWallet = trpc.wallet.setPrimaryWallet.useMutation({
+        onSuccess: () => {
+            // The header chip, the balance and every view key off the primary,
+            // so refetch rather than patch one cache entry.
+            trpcUtils.wallet.listLinkedWallets.invalidate();
+            trpcUtils.wallet.getWalletAssets.invalidate();
+            setAccountOpen(false);
+        },
+        onError: (e) => appToast.error(e.message || "couldn't switch wallet"),
+    });
+    const wallets = linkedWallets?.wallets ?? [];
+
+    // Wallets belong to the ACCOUNT, and each account has its own set — so the
+    // list has to be re-fetched when the active account changes. The query takes
+    // no input, so its cache key doesn't vary by user and would otherwise hand
+    // the newly-switched-to account the previous one's wallets.
+    //
+    // Switching a wallet does NOT switch account: setPrimaryWallet only moves
+    // user.wallet_address within the account you're already in. The two lists
+    // are independent, which is exactly why they're divided.
+    React.useEffect(() => {
+        trpcUtils.wallet.listLinkedWallets.invalidate();
+    }, [activeUserId, trpcUtils]);
 
     const handleCopyAddress = () => {
         if (walletAddress) {
@@ -125,10 +162,57 @@ export function WalletHeader({
                         fill="#111111ff"
                         className="w-[264px] p-1.5"
                     >
-                        {/* Accounts only. The wallet list lived here too and was
-                            redundant: switching the primary wallet already has a
-                            home in settings, and the panel that answers "who am I"
-                            shouldn't also be a wallet manager. */}
+                        {/* WALLETS — first, because inside a wallet drawer that's
+                            the switch people reach for. Identified by label and
+                            source, never by address (house rule). Settings keeps
+                            its fuller manager with linking and unlinking; this is
+                            just the switch. */}
+                        {wallets.length > 1 && (
+                            <>
+                                <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
+                                    wallets
+                                </p>
+                                <ul>
+                                    {wallets.map((w) => {
+                                        const isEmbedded = w.source === "swig";
+                                        const name = w.label || (isEmbedded ? "watchparty wallet" : "connected wallet");
+                                        return (
+                                            <li
+                                                key={w.address}
+                                                className={`flex items-center rounded-2xl transition-colors ${w.isPrimary ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
+                                            >
+                                                <button
+                                                    onClick={() => {
+                                                        if (w.isPrimary) { setAccountOpen(false); return; }
+                                                        setPrimaryWallet.mutate({ address: w.address });
+                                                    }}
+                                                    disabled={setPrimaryWallet.isPending}
+                                                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
+                                                >
+                                                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06]">
+                                                        <WalletIcon className="size-4 text-zinc-400" />
+                                                    </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block truncate text-sm font-semibold text-white">
+                                                            {name}
+                                                        </span>
+                                                        <span className="block text-xs font-medium text-zinc-500">
+                                                            {isEmbedded ? "built in" : "connected"}
+                                                        </span>
+                                                    </span>
+                                                    {w.isPrimary && <Check className="size-4 shrink-0 text-white" />}
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+
+                                {/* The divider is what keeps the two questions
+                                    separate — without it the lists read as one. */}
+                                <div className="mx-3 my-1.5 h-px bg-white/10" />
+                            </>
+                        )}
+
                         <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
                             accounts
                         </p>

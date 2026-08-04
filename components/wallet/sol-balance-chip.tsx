@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -114,7 +115,12 @@ export function useHeaderWalletLoading() {
     // header-loading gate from THIS module.
     const forceLoading = useForceLoading();
     const { data: session, isLoading: sessionLoading } = useAuthSession();
-    const walletAddress = session?.user?.wallet_address;
+    // Same rule as the wallet button: the CONNECTED wallet is the wallet. The
+    // header chip and the drawer must never disagree about whose balance this
+    // is, so both resolve the address the same way — adapter first, embedded
+    // Swig address as the fallback for users with no extension.
+    const { publicKey } = useWallet();
+    const walletAddress = publicKey?.toBase58() ?? session?.user?.wallet_address;
 
     const { data, isLoading, isPlaceholderData } = trpc.wallet.getWalletAssets.useQuery(
         { address: walletAddress ?? "" },

@@ -58,7 +58,20 @@ function WalletButtonInner() {
     const [isSigningIn, startSigningIn] = useTransition();
 
     const isSignedIn = !!session?.user;
-    const walletAddress = session?.user?.wallet_address;
+    // The CONNECTED wallet is the wallet. If an extension is connected, that is
+    // the account the user is looking at, so it's the balance they expect to
+    // see — every wallet-connected app works this way.
+    //
+    // This used to read session.user.wallet_address unconditionally, which is
+    // the embedded Swig address. An extension user got their Swig balance (zero,
+    // for anyone who never funded it) while their extension held the real funds.
+    // Worse, the drawer's send view ALREADY preferred the adapter
+    // (`adapterPublicKey?.toBase58() || walletAddress`), so the drawer displayed
+    // one wallet's balance and spent from another.
+    //
+    // Falls back to the embedded wallet when no extension is connected, which is
+    // the whole population of embedded-only users.
+    const walletAddress = publicKey?.toBase58() ?? session?.user?.wallet_address;
 
     const trpcUtils = trpc.useUtils();
     const handlePrefetch = useCallback(() => {
