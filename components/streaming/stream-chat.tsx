@@ -42,7 +42,14 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
     const [input, setInput] = useState("");
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
-    const { messages, send, connected } = useStreamChat(hostUserId, !!isLive && !isLoading);
+    // Chat stays open whether or not the stream is live.
+    //
+    // It used to connect only while broadcasting, so an offline channel's chat
+    // was a dead box saying "Offline" — the room emptied the moment the stream
+    // ended, exactly when people want to keep talking about it. `isLive` is
+    // still a prop because the surrounding UI reads it; chat just no longer
+    // gates on it.
+    const { messages, send, connected } = useStreamChat(hostUserId, !isLoading);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -89,11 +96,7 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
                     <div ref={chatContainerRef} className="scrollbar-hide min-h-0 flex-1 space-y-2.5 overflow-y-auto px-1">
                         {messages.length === 0 && (
                             <p className="pt-8 text-center text-xs font-medium text-zinc-500">
-                                {isLive
-                                    ? connected
-                                        ? "Welcome to live chat!"
-                                        : "Connecting to chat…"
-                                    : "Chat is disabled for offline streams."}
+                                {connected ? "Say something" : "Connecting to chat…"}
                             </p>
                         )}
                         {messages.map((m, i) => (
@@ -117,13 +120,13 @@ export function StreamChat({ hostUserId, isLive, isLoading }: StreamChatProps) {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                            placeholder={isLive ? (connected ? "Chat..." : "Connecting…") : "Offline"}
-                            disabled={!connected || !isLive}
+                            placeholder={connected ? "Chat..." : "Connecting…"}
+                            disabled={!connected}
                             className="flex-1 rounded-full border border-transparent bg-zinc-800/80 px-3.5 py-2.5 text-sm font-medium text-zinc-200 transition-colors placeholder:text-zinc-500 focus:border-zinc-700 focus:outline-none focus:ring-0 disabled:opacity-50"
                         />
                         <button
                             onClick={sendMessage}
-                            disabled={!input.trim() || !connected || !isLive}
+                            disabled={!input.trim() || !connected}
                             className="shrink-0 rounded-full bg-zinc-800 p-2.5 text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-white disabled:opacity-40"
                         >
                             <Send2Icon className="h-[18px] w-[18px]" />
