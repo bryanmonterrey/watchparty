@@ -30,6 +30,7 @@ import { VoiceRecorder, VoiceRecorderTrigger } from "@/components/browse/voice-r
 import { ScheduledPostsDrawer } from "@/components/browse/scheduled-posts-drawer";
 import { nanoid } from "nanoid";
 import { PollComposer, type PollOption } from "@/components/browse/poll-composer";
+import { CashtagAutocomplete, findCashtagAtCaret, type TickerHit } from "@/components/browse/cashtag-autocomplete";
 
 export function PostComposer() {
     const [content, setContent] = useState("");
@@ -68,6 +69,46 @@ export function PostComposer() {
     const [hasContentWarning, setHasContentWarning] = useState(false);
     const [contentWarningText, setContentWarningText] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // ── $cashtag autocomplete ────────────────────────────────────────────────
+    // Tracks a `$xyz` sitting at the caret. Null closes the panel; a bare `$`
+    // never opens it (see findCashtagAtCaret) so typing a dollar amount is quiet.
+    const [cashtag, setCashtag] = useState<{ query: string; start: number; end: number } | null>(null);
+    const cashtagKeyHandler = useRef<((e: React.KeyboardEvent) => boolean) | null>(null);
+
+    const syncCashtag = (el: HTMLTextAreaElement | null) => {
+        if (!el) return;
+        setCashtag(findCashtagAtCaret(el.value, el.selectionStart ?? 0));
+    };
+
+    // Picking a ticker does two things at once, which is the whole point: the
+    // text keeps the mention, and the PILL takes the coin. The pill is marked
+    // manually-edited so the composer's auto-derive (which guesses a ticker from
+    // the post body) doesn't immediately overwrite what was just chosen.
+    const applyCashtag = (hit: TickerHit) => {
+        if (!cashtag) return;
+        const before = content.slice(0, cashtag.start);
+        const after = content.slice(cashtag.end);
+        const inserted = `$${hit.ticker.toUpperCase()}`;
+        const next = `${before}${inserted} ${after}`;
+        setContent(next);
+        setCashtag(null);
+        setTokenLaunch((prev) => ({
+            ...prev,
+            ticker: hit.ticker.toUpperCase(),
+            name: prev.isNameManuallyEdited ? prev.name : hit.name,
+            isTickerManuallyEdited: true,
+        }));
+        // Put the caret after what we inserted, on the next frame so React has
+        // committed the new value first.
+        requestAnimationFrame(() => {
+            const el = textareaRef.current;
+            if (!el) return;
+            const pos = before.length + inserted.length + 1;
+            el.focus();
+            el.setSelectionRange(pos, pos);
+        });
+    };
     const imageInputRef = useRef<HTMLInputElement>(null);
     const composerRef = useRef<HTMLDivElement>(null);
     const { data: session } = useAuthSession();
@@ -448,16 +489,37 @@ export function PostComposer() {
                     </div>
                 )}
 
+                {/* relative: the autocomplete panel positions against this box,
+                    under the caret's line rather than over the whole dialog. */}
+                <div className="relative mb-5">
                 <textarea
                     ref={textareaRef}
                     placeholder="What's happening?"
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={(e) => { setContent(e.target.value); syncCashtag(e.target); }}
                     onInput={handleTextareaInput}
                     onFocus={() => setFocused(true)}
+                    // Arrows/Enter/Escape belong to the panel while it's open —
+                    // it never takes focus, because focus would collapse the
+                    // caret the replacement depends on.
+                    onKeyDown={(e) => {
+                        if (cashtag && cashtagKeyHandler.current?.(e)) e.preventDefault();
+                    }}
+                    onClick={(e) => syncCashtag(e.currentTarget)}
+                    onKeyUp={(e) => syncCashtag(e.currentTarget)}
+                    onBlur={() => setCashtag(null)}
                     rows={1}
-                    className="w-full bg-transparent text-xl placeholder:text-zinc-400/85 outline-none resize-none mb-5"
+                    className="w-full bg-transparent text-xl placeholder:text-zinc-400/85 outline-none resize-none"
                 />
+                {cashtag && (
+                    <CashtagAutocomplete
+                        query={cashtag.query}
+                        onSelect={applyCashtag}
+                        onClose={() => setCashtag(null)}
+                        registerKeyHandler={(h) => { cashtagKeyHandler.current = h; }}
+                    />
+                )}
+                </div>
 
                 {images.length > 0 && (
                     <div className={cn("grid gap-2 mt-3", images.length === 1 ? "grid-cols-1 max-w-[280px]" : "grid-cols-2 max-w-md")}>
@@ -494,7 +556,7 @@ export function PostComposer() {
                 {/* Link preview (auto-detected) */}
                 {!dismissedPreview && linkPreview && (
                     <div className="mt-3 relative">
-                        <LinkPreviewCard preview={linkPreview} />
+                        <LinkPreviewCard preview={linkPreview} onRemove={clearPreview} />
                         <button
                             onClick={() => setDismissedPreview(true)}
                             className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-black/80 text-white rounded-full"
@@ -751,6 +813,16 @@ export function PostComposer() {
                             state={tokenLaunch}
                             onClick={() => setIsEditingTicker(true)}
                             className="h-11 px-2"
+                            // Clearing keeps isTickerManuallyEdited TRUE on
+                            // purpose: the composer auto-derives a ticker from
+                            // the post body, so resetting the flag would refill
+                            // the pill from the very text containing the mention
+                            // you just cleared it for.
+                            onClear={() => setTokenLaunch((prev) => ({
+                                ...prev,
+                                ticker: "",
+                                isTickerManuallyEdited: true,
+                            }))}
                         />
                         <Button
                             onClick={handlePost}

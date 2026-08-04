@@ -1,5 +1,6 @@
 
 import * as React from "react"
+import { X } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -86,21 +87,39 @@ interface TokenLaunchTriggerProps {
     state: TokenLaunchState
     onClick: () => void
     className?: string
+    /**
+     * Clear the ticker. Shown as an × only while one is set.
+     *
+     * Needed because picking a $cashtag fills this pill: without a way to empty
+     * it you could never MENTION someone else's coin while still launching your
+     * own — the mention would have quietly become your post's ticker.
+     */
+    onClear?: () => void
 }
 
-export function TokenLaunchTrigger({ state, onClick, className }: TokenLaunchTriggerProps) {
+export function TokenLaunchTrigger({ state, onClick, className, onClear }: TokenLaunchTriggerProps) {
     return (
-        <button
-            onClick={onClick}
+        <div
             className={cn(
-                "flex items-center ease-in-out cursor-pointer gap-2 px-5 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-900 transition-all group",
+                "flex items-center ease-in-out gap-1 pl-3 pr-2 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-900 transition-all group",
                 className
             )}
         >
-
-            <span className="text-zinc-400 text-base font-extrabold tracking-tighter px-2 uppercase">
-                ${state.ticker || " • • • • • • •"}
-            </span>
-        </button>
+            <button onClick={onClick} className="cursor-pointer">
+                <span className="text-zinc-400 text-base font-extrabold tracking-tighter px-2 uppercase">
+                    ${state.ticker || " • • • • • • •"}
+                </span>
+            </button>
+            {onClear && state.ticker && (
+                <button
+                    type="button"
+                    aria-label="clear ticker"
+                    onClick={(e) => { e.stopPropagation(); onClear() }}
+                    className="grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                    <X className="size-3.5" />
+                </button>
+            )}
+        </div>
     )
 }

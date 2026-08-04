@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 
 interface LinkPreview {
     url: string;
@@ -10,7 +10,10 @@ interface LinkPreview {
     siteName: string | null;
 }
 
-export function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
+// `onRemove` is what makes this usable INSIDE a composer rather than only in a
+// rendered post: a preview you can't dismiss forces you to delete the URL to get
+// rid of the card. Omit it and the card is exactly what it was.
+export function LinkPreviewCard({ preview, onRemove }: { preview: LinkPreview; onRemove?: () => void }) {
     const domain = (() => {
         try { return new URL(preview.url).hostname.replace("www.", ""); }
         catch { return preview.url; }
@@ -22,8 +25,20 @@ export function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
-            className="block rounded-2xl border border-white/10 overflow-hidden bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors group"
+            className="relative block rounded-2xl border border-white/10 overflow-hidden bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors group"
         >
+            {onRemove && (
+                <button
+                    type="button"
+                    aria-label="remove link preview"
+                    // The card is an <a>; without preventDefault the click would
+                    // also open the link it's removing.
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
+                    className="absolute right-2 top-2 z-10 grid size-7 cursor-pointer place-items-center rounded-full bg-black/70 text-white transition-colors hover:bg-black/90"
+                >
+                    <X className="size-4" />
+                </button>
+            )}
             {preview.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

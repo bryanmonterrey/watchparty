@@ -209,7 +209,7 @@ export function CommentComposer({
                 )}
 
                 {preview && !hasMedia && (
-                    <LinkPreviewCard preview={preview} />
+                    <LinkPreviewCard preview={preview} onRemove={clearPreview} />
                 )}
 
                 <div className="flex items-center justify-between gap-2">

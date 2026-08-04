@@ -207,6 +207,49 @@ export const tradeRouter = router({
             });
         }),
 
+    /**
+     * $cashtag autocomplete: tickers matching what's been typed after the `$`.
+     *
+     * Ranking is prefix-first, then size. Someone typing "$ti" means a ticker
+     * STARTING with "ti" far more often than one merely containing it, so an
+     * exact-prefix hit outranks a substring hit; within each group the bigger
+     * market cap wins, because that's the coin they're most likely to mean.
+     *
+     * publicProcedure — the composer is behind auth anyway, and a ticker list is
+     * public information either way.
+     */
+    searchTickers: publicProcedure
+        .input(z.object({ query: z.string().min(1).max(20), limit: z.number().min(1).max(10).default(6) }))
+        .query(async ({ input }) => {
+            const q = input.query.trim().replace(/^\$/, "").toLowerCase();
+            if (!q) return [];
+
+            // Escape LIKE wildcards so a user typing "%" doesn't match everything.
+            const esc = q.replace(/[%_\\]/g, (c) => `\\${c}`);
+
+            return db
+                .select({
+                    id: tokens.id,
+                    ticker: tokens.ticker,
+                    name: tokens.name,
+                    imageUrl: tokens.imageUrl,
+                    tokenAddress: tokens.tokenAddress,
+                    priceUsd: tokens.priceUsd,
+                    priceChange24h: tokens.priceChange24h,
+                    marketCapUsd: tokens.marketCapUsd,
+                    status: tokens.status,
+                })
+                .from(tokens)
+                .where(sql`(lower(${tokens.ticker}) like ${esc + "%"} escape '\\'
+                         or lower(${tokens.ticker}) like ${"%" + esc + "%"} escape '\\'
+                         or lower(${tokens.name}) like ${esc + "%"} escape '\\')`)
+                .orderBy(
+                    sql`case when lower(${tokens.ticker}) like ${esc + "%"} escape '\\' then 0 else 1 end`,
+                    sql`${tokens.marketCapUsd} desc nulls last`,
+                )
+                .limit(input.limit);
+        }),
+
     /** Perps-rail Follows tab: live tokens from creators the caller follows. */
     getFollowedTokens: protectedProcedure.query(async ({ ctx }) => {
         return db
