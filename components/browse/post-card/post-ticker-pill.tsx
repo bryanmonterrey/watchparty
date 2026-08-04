@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { TradeUpIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 // The post's coin badge: token image, then $TICKER, both inside one
@@ -49,6 +51,33 @@ export function PostTickerPill({
     const router = useRouter();
     const live = tokenStatus === "live";
     const md = size === "md";
+
+    // A DRAFT isn't a coin you can look at — it's a coin waiting for its first
+    // buy, and that buy IS the launch. So a draft gets the header's Launch
+    // action rather than a pill showing a price that doesn't exist yet. Same
+    // arrow + label as TokenAction (components/tokens/token-row) so the two
+    // read as one control; a step down in size and weight because this sits in
+    // a card row, not a page header.
+    if (!live) {
+        return (
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (onClick) { onClick(e); return; }
+                    if (tokenId) router.push(`/coin/${tokenId}`);
+                }}
+                className={cn(
+                    "inline-flex shrink-0 cursor-pointer items-center gap-0.5 font-bold text-twitter2 transition-opacity hover:opacity-80 active:scale-95",
+                    md ? "text-[15px]" : "text-[13px]",
+                    className,
+                )}
+            >
+                <HugeiconsIcon icon={TradeUpIcon} className={md ? "size-5" : "size-4"} strokeWidth={2.5} />
+                Launch
+            </button>
+        );
+    }
 
     return (
         <button
