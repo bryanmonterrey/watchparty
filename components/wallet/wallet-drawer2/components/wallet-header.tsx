@@ -121,8 +121,8 @@ export function WalletHeader({
                         {/* h-5 tracks the username's text-lg — the skeleton has to
                             stand the same height as what replaces it or the header
                             jumps on load. */}
-                        <div className="h-5 w-24 rounded-full shimmer-skeleton" />
-                        <div className="h-3 w-32 rounded-full shimmer-skeleton" />
+                        <div className="h-5 w-24 rounded-sm shimmer-skeleton" />
+                        <div className="h-3 w-32 rounded-sm shimmer-skeleton" />
                     </div>
                 </div>
             ) : (

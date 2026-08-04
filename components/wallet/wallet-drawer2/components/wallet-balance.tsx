@@ -25,7 +25,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                 so hiding is discoverable instead of one-way. */}
             <div className="flex items-center gap-1.5">
                 {loading ? (
-                    <div className="h-3 w-14 rounded-full shimmer-skeleton" />
+                    <div className="h-3 w-14 rounded-sm shimmer-skeleton" />
                 ) : (
                     <>
                         <p className="text-xs font-medium text-zinc-500">Balance</p>
@@ -47,7 +47,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
 
             <div className="mt-1 flex items-end gap-2">
                 {loading ? (
-                    <div className="h-14 w-40 rounded-3xl shimmer-skeleton" />
+                    <div className="h-14 w-40 rounded-sm shimmer-skeleton" />
                 ) : hideBalances ? (
                     <p className="text-6xl font-bold text-white tracking-[0.2em] leading-none">••••••</p>
                 ) : (
@@ -61,7 +61,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
 
             <div className="mt-2 flex items-center gap-2">
                 {loading ? (
-                    <div className="h-5 w-24 rounded-full shimmer-skeleton" />
+                    <div className="h-5 w-24 rounded-sm shimmer-skeleton" />
                 ) : hideBalances ? (
                     // Masked to the same height as the pills, so revealing doesn't
                     // shift the rows below it.
