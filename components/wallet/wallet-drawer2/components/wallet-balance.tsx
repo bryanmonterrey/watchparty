@@ -47,11 +47,11 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
 
             <div className="mt-1 flex items-end gap-2">
                 {loading ? (
-                    <div className="h-10 w-40 rounded-3xl shimmer-skeleton" />
+                    <div className="h-14 w-40 rounded-3xl shimmer-skeleton" />
                 ) : hideBalances ? (
-                    <p className="text-5xl font-bold text-white tracking-[0.2em] leading-none">••••••</p>
+                    <p className="text-6xl font-bold text-white tracking-[0.2em] leading-none">••••••</p>
                 ) : (
-                    <p className="text-5xl font-bold text-white">
+                    <p className="text-6xl font-bold text-white">
                         <PopNumber
                             value={`$${totalUsdBalance !== null ? totalUsdBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}`}
                         />

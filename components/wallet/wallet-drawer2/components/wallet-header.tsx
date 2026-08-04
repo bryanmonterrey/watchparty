@@ -118,7 +118,10 @@ export function WalletHeader({
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full shimmer-skeleton" />
                     <div className="flex flex-col gap-1.5">
-                        <div className="h-4 w-24 rounded-full shimmer-skeleton" />
+                        {/* h-5 tracks the username's text-lg — the skeleton has to
+                            stand the same height as what replaces it or the header
+                            jumps on load. */}
+                        <div className="h-5 w-24 rounded-full shimmer-skeleton" />
                         <div className="h-3 w-32 rounded-full shimmer-skeleton" />
                     </div>
                 </div>
@@ -141,7 +144,7 @@ export function WalletHeader({
                                 one is against house rules anyway (Copy Address on
                                 the power menu is the functional path). */}
                             <div className="flex min-w-0 items-center gap-1">
-                                <p className="truncate text-base font-bold text-white">{username}</p>
+                                <p className="truncate text-lg font-bold text-white">{username}</p>
                                 <VerifiedBadge
                                     tier={activeUser?.verifiedTier}
                                     hidden={activeUser?.hideVerifiedBadge}

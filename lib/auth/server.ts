@@ -61,7 +61,16 @@ const config = {
       // so every session payload carries it — including multiSession's device
       // list, which is what lets the account switcher badge each account
       // without a lookup per row. Pairs with hideVerifiedBadge below.
-      verifiedTier: { type: "string" as const, required: false, input: false },
+      // fieldName is REQUIRED here and nowhere else in this block. Every other
+      // additional field is spelled exactly like its column, so better-auth's
+      // default (field name === column name) happens to be right. This one is
+      // camelCase in code and snake_case in the DB
+      // (db/schema/auth/user.ts: verifiedTierEnum("verified_tier")), so without
+      // the mapping better-auth looked for a "verifiedTier" column, found
+      // nothing, and silently left it undefined on every session — which is why
+      // the badge rendered everywhere that queries the user table directly
+      // (posts, feed) but never anywhere reading it from the session.
+      verifiedTier: { type: "string" as const, required: false, input: false, fieldName: "verified_tier" },
       username: { type: "string" as const, required: false },
       gender: { type: "boolean" as const, required: false },
       last_signed_in: { type: "date" as const, input: false },
