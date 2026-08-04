@@ -1,15 +1,35 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { useMiniPlayer } from "@/contexts/mini-player-context";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { ADS_ENABLED } from "@/lib/ads/config";
-import { VideoPlayer } from "./video-player";
+import { PlayerLoadingScreen } from "./player-loading";
 import { VideoMetadata } from "./video-metadata";
 import { UpNextSidebar } from "./up-next-sidebar";
+
+// ssr:false, and it is load-bearing for the DEPLOY, not just for speed.
+//
+// use-player.ts is the only module in the app that touches hls.js, and it
+// already imports it lazily (`import("hls.js")` inside an effect, so it never
+// runs on the server). Turbopack bundles a dynamic import's target regardless
+// of whether the code path can be reached, so hls.js still landed in an SSR
+// chunk: 152 KiB gzipped of a browser-only video player shipped inside the
+// Cloudflare Worker. Workers cap the compressed script at 10 MiB and this app
+// builds to ~10.0 MiB, so that chunk is a meaningful slice of the headroom.
+//
+// `ssr: false` drops the whole player subtree out of the server graph, which is
+// the only lever Next gives you here — a runtime guard cannot remove a module
+// from the bundle. Nothing is lost visually: the player is entirely
+// client-driven and its first paint was the spinner anyway.
+const VideoPlayer = dynamic(
+    () => import("./video-player").then((m) => m.VideoPlayer),
+    { ssr: false, loading: () => <PlayerLoadingScreen /> },
+);
 
 interface VideoWatchPageProps {
     postId: string;

@@ -1,10 +1,18 @@
 'use client'
 
-import { WalletAdapterNetwork, WalletError } from '@solana/wallet-adapter-base'
+import { WalletAdapterNetwork, WalletError, type Adapter } from '@solana/wallet-adapter-base'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
-import { WalletConnectWalletAdapter } from '@walletconnect/solana-adapter'
-import { ReactNode, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
+import { ReactNode, useCallback, useMemo, useState } from 'react'
 import { ClusterNetwork, useCluster } from '../cluster/cluster-data-access'
+
+// ssr:false is mandatory here, not a preference. This provider wraps the WHOLE
+// authenticated app (see app-providers.tsx), so a static
+// `@walletconnect/solana-adapter` import put @reown/appkit-ui +
+// @phosphor-icons/webcomponents — 355 KiB gzipped, the single largest package
+// in the Worker — into the server bundle on every route. See the registrar for
+// the full explanation of why lazy-importing alone does not remove it.
+const WalletConnectRegistrar = dynamic(() => import('./walletconnect-registrar'), { ssr: false })
 
 // Global Solana provider. Faithful to sidebar: registers the WalletConnect
 // wallet-adapter so "Sign in with QR code" works app-wide via WalletConnect's
@@ -37,29 +45,20 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
     console.error(error)
   }, [])
 
-  const wallets = useMemo(() => {
-    const origin =
-      typeof window !== 'undefined'
-        ? window.location.origin
-        : process.env.NEXT_PUBLIC_BASE_URL || 'https://watchparty.xyz'
-    return [
-      new WalletConnectWalletAdapter({
-        network,
-        options: {
-          projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
-          metadata: {
-            name: process.env.NEXT_PUBLIC_APP_NAME || 'Watchparty',
-            description: 'Sign in to Watchparty',
-            url: origin,
-            icons: [`${origin}/icon-192.png`],
-          },
-        },
-      }),
-    ]
-  }, [network])
+  // Starts empty and gains WalletConnect once the client-only registrar mounts.
+  // Wallet Standard wallets (Phantom, Solflare, Backpack…) are unaffected —
+  // they self-register with the adapter library and were never in this array.
+  // The only visible consequence is that the WalletConnect entry appears a tick
+  // after a browser-extension wallet would; autoConnect still restores a
+  // previously-selected WalletConnect session when the adapter arrives.
+  const [wallets, setWallets] = useState<Adapter[]>([])
+  const handleWalletConnectReady = useCallback((adapter: Adapter) => {
+    setWallets((current) => (current.some((w) => w.name === adapter.name) ? current : [...current, adapter]))
+  }, [])
 
   return (
     <ConnectionProvider endpoint={endpoint}>
+      <WalletConnectRegistrar network={network} onReady={handleWalletConnectReady} />
       <WalletProvider wallets={wallets} onError={onError} autoConnect={true}>
         {children}
       </WalletProvider>
