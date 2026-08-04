@@ -17,7 +17,8 @@ import {
 } from "@/components/motion/popover-morph";
 import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { trpc } from "@/lib/trpc/client";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletReadyState } from "@solana/wallet-adapter-base";
 
 /**
  * Same three tiers the watch and home headers render. `hidden` honours the
@@ -63,41 +64,38 @@ export function WalletHeader({
         | undefined;
     const { accounts, setActive, revoke, atCapacity } = useDeviceSessions(accountOpen);
 
-    // Wallets share this panel with accounts: "which wallet" and "which account"
-    // are the two identity questions, and answering them in one place is what
-    // the trigger implies. Wallets sit on top because switching wallet is the
-    // far more frequent action inside a WALLET drawer; accounts are below a
-    // divider so the two lists never read as one.
+    // WALLET IN USE — deliberately NOT the main wallet.
     //
-    // Gated on the panel being open, like the account list — nothing is fetched
-    // until someone actually asks.
-    const trpcUtils = trpc.useUtils();
-    const { data: linkedWallets } = trpc.wallet.listLinkedWallets.useQuery(undefined, {
-        enabled: accountOpen,
-    });
-    const setPrimaryWallet = trpc.wallet.setPrimaryWallet.useMutation({
-        onSuccess: () => {
-            // The header chip, the balance and every view key off the primary,
-            // so refetch rather than patch one cache entry.
-            trpcUtils.wallet.listLinkedWallets.invalidate();
-            trpcUtils.wallet.getWalletAssets.invalidate();
-            setAccountOpen(false);
-        },
-        onError: (e) => appToast.error(e.message || "couldn't switch wallet"),
-    });
-    const wallets = linkedWallets?.wallets ?? [];
+    // This switch changes which wallet the drawer shows and spends from, and
+    // nothing else. It drives the wallet adapter, so it writes nothing and has
+    // no consequence to anyone but the person tapping it.
+    //
+    // It must never call setPrimaryWallet. `user.wallet_address` is the MAIN
+    // wallet: escrow resolves revenue splits to it (server/routers/escrow.ts),
+    // it's the escrow receiver, and it's exposed on every post and user shape
+    // other people read. Moving it redirects where money arrives, which is a
+    // deliberate settings decision (see components/wallet/linked-wallets-panel),
+    // not a tap in a popover next to an avatar.
+    //
+    // Reading the adapter also keeps this consistent by construction with the
+    // balance (wallet-button, sol-balance-chip2) and with send, which all
+    // resolve the connected adapter first.
+    const {
+        wallets: adapterWallets,
+        wallet: activeAdapter,
+        publicKey: adapterPublicKey,
+        select,
+        disconnect,
+        connecting,
+    } = useWallet();
 
-    // Wallets belong to the ACCOUNT, and each account has its own set — so the
-    // list has to be re-fetched when the active account changes. The query takes
-    // no input, so its cache key doesn't vary by user and would otherwise hand
-    // the newly-switched-to account the previous one's wallets.
-    //
-    // Switching a wallet does NOT switch account: setPrimaryWallet only moves
-    // user.wallet_address within the account you're already in. The two lists
-    // are independent, which is exactly why they're divided.
-    React.useEffect(() => {
-        trpcUtils.wallet.listLinkedWallets.invalidate();
-    }, [activeUserId, trpcUtils]);
+    // Only wallets actually present in the browser. Wallet Standard registers
+    // detected extensions; offering ones the user doesn't have installed would
+    // be a dead row.
+    const installedWallets = adapterWallets.filter(
+        (w) => w.readyState === WalletReadyState.Installed,
+    );
+    const usingEmbedded = !adapterPublicKey;
 
     const handleCopyAddress = () => {
         if (walletAddress) {
@@ -162,56 +160,80 @@ export function WalletHeader({
                         fill="#111111ff"
                         className="w-[264px] p-1.5"
                     >
-                        {/* WALLETS — first, because inside a wallet drawer that's
-                            the switch people reach for. Identified by label and
-                            source, never by address (house rule). Settings keeps
-                            its fuller manager with linking and unlinking; this is
-                            just the switch. */}
-                        {wallets.length > 1 && (
-                            <>
-                                <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
-                                    wallets
-                                </p>
-                                <ul>
-                                    {wallets.map((w) => {
-                                        const isEmbedded = w.source === "swig";
-                                        const name = w.label || (isEmbedded ? "watchparty wallet" : "connected wallet");
-                                        return (
-                                            <li
-                                                key={w.address}
-                                                className={`flex items-center rounded-2xl transition-colors ${w.isPrimary ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
-                                            >
-                                                <button
-                                                    onClick={() => {
-                                                        if (w.isPrimary) { setAccountOpen(false); return; }
-                                                        setPrimaryWallet.mutate({ address: w.address });
-                                                    }}
-                                                    disabled={setPrimaryWallet.isPending}
-                                                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
-                                                >
-                                                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06]">
-                                                        <WalletIcon className="size-4 text-zinc-400" />
-                                                    </span>
-                                                    <span className="min-w-0 flex-1">
-                                                        <span className="block truncate text-sm font-semibold text-white">
-                                                            {name}
-                                                        </span>
-                                                        <span className="block text-xs font-medium text-zinc-500">
-                                                            {isEmbedded ? "built in" : "connected"}
-                                                        </span>
-                                                    </span>
-                                                    {w.isPrimary && <Check className="size-4 shrink-0 text-white" />}
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
+                        {/* WALLET IN USE — first, because inside a wallet drawer
+                            that's the switch people reach for. Selecting drives
+                            the adapter; the embedded wallet is simply "no adapter
+                            connected", so switching to it is a disconnect.
+                            Nothing here changes the main wallet. */}
+                        <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
+                            wallet in use
+                        </p>
+                        <ul>
+                            <li
+                                className={`flex items-center rounded-2xl transition-colors ${usingEmbedded ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
+                            >
+                                <button
+                                    onClick={() => {
+                                        if (usingEmbedded) { setAccountOpen(false); return; }
+                                        disconnect().catch(() => appToast.error("couldn't switch wallet"));
+                                        setAccountOpen(false);
+                                    }}
+                                    disabled={connecting}
+                                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
+                                >
+                                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06]">
+                                        <WalletIcon className="size-4 text-zinc-400" />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-sm font-semibold text-white">
+                                            watchparty wallet
+                                        </span>
+                                        <span className="block text-xs font-medium text-zinc-500">built in</span>
+                                    </span>
+                                    {usingEmbedded && <Check className="size-4 shrink-0 text-white" />}
+                                </button>
+                            </li>
 
-                                {/* The divider is what keeps the two questions
-                                    separate — without it the lists read as one. */}
-                                <div className="mx-3 my-1.5 h-px bg-white/10" />
-                            </>
-                        )}
+                            {installedWallets.map((w) => {
+                                const isActive = !usingEmbedded && activeAdapter?.adapter.name === w.adapter.name;
+                                return (
+                                    <li
+                                        key={w.adapter.name}
+                                        className={`flex items-center rounded-2xl transition-colors ${isActive ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
+                                    >
+                                        <button
+                                            onClick={() => {
+                                                if (isActive) { setAccountOpen(false); return; }
+                                                // autoConnect is on in SolanaProvider, so
+                                                // selecting is enough — it connects itself.
+                                                select(w.adapter.name);
+                                                setAccountOpen(false);
+                                            }}
+                                            disabled={connecting}
+                                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
+                                        >
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={w.adapter.icon}
+                                                alt=""
+                                                className="size-9 shrink-0 rounded-full object-cover"
+                                            />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-sm font-semibold text-white">
+                                                    {w.adapter.name}
+                                                </span>
+                                                <span className="block text-xs font-medium text-zinc-500">extension</span>
+                                            </span>
+                                            {isActive && <Check className="size-4 shrink-0 text-white" />}
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+
+                        {/* The divider is what keeps the two questions separate —
+                            without it the lists read as one. */}
+                        <div className="mx-3 my-1.5 h-px bg-white/10" />
 
                         <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
                             accounts

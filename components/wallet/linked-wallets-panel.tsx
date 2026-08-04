@@ -8,6 +8,7 @@ import {
     Delete02Icon,
     Wallet01Icon,
 } from "@hugeicons/core-free-icons";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/settings/ui";
 import { trpc } from "@/lib/trpc/client";
@@ -44,10 +45,55 @@ export function LinkedWalletsPanel() {
     const setPrimary = trpc.wallet.setPrimaryWallet.useMutation({
         onSuccess: () => {
             utils.wallet.listLinkedWallets.invalidate();
-            appToast.success("primary wallet updated");
+            appToast.success("main wallet updated");
         },
         onError: (e) => appToast.error(e.message),
     });
+
+    // LINKING A CONNECTED EXTENSION.
+    //
+    // getLinkNonce + linkWallet have existed on the server all along with no
+    // caller anywhere in the app, so there was no way to link an extension at
+    // all: connecting one through the adapter gives you a session, never a
+    // linked_wallets row. Accounts that signed up with email/OAuth therefore had
+    // exactly one wallet (the embedded one) no matter how many extensions they
+    // used, and nothing could be chosen as the main wallet.
+    //
+    // It can't happen silently on connect — linking proves ownership with a
+    // signature over a server nonce, which means an explicit user action. So it
+    // lives here, next to the wallet it would add.
+    const { publicKey: adapterPublicKey, signMessage } = useWallet();
+    const connectedAddress = adapterPublicKey?.toBase58();
+    const [linking, setLinking] = React.useState(false);
+
+    const getLinkNonce = trpc.wallet.getLinkNonce.useMutation();
+    const linkWallet = trpc.wallet.linkWallet.useMutation({
+        onSuccess: () => {
+            utils.wallet.listLinkedWallets.invalidate();
+            appToast.success("wallet linked");
+        },
+        onError: (e) => appToast.error(e.message),
+    });
+
+    const handleLinkConnected = async () => {
+        if (!connectedAddress || !signMessage) return;
+        setLinking(true);
+        try {
+            const { message } = await getLinkNonce.mutateAsync({ address: connectedAddress });
+            const signature = await signMessage(new TextEncoder().encode(message));
+            await linkWallet.mutateAsync({
+                address: connectedAddress,
+                signature: Buffer.from(signature).toString("base64"),
+            });
+        } catch (e) {
+            // A user declining the signature is a normal outcome, not an error
+            // worth shouting about; the mutation's onError covers real failures.
+            const msg = e instanceof Error ? e.message : "";
+            if (msg && !/reject|denied|cancel/i.test(msg)) appToast.error(msg);
+        } finally {
+            setLinking(false);
+        }
+    };
 
     const unlink = trpc.wallet.unlinkWallet.useMutation({
         onSuccess: () => {
@@ -86,9 +132,17 @@ export function LinkedWalletsPanel() {
             <div className="flex items-end justify-between gap-3">
                 <div>
                     <h2 className="text-[16px] font-bold tracking-tight text-white">wallets</h2>
+                    {/* "the primary one is what the app uses" was wrong AND
+                        dangerous-by-omission: the app spends from whichever
+                        wallet is connected, while this setting decides where
+                        money ARRIVES — escrow resolves revenue splits to it and
+                        it's the address shown on your posts. Say that plainly,
+                        because it's the only thing on this screen with a
+                        consequence someone else can feel. */}
                     <p className="mt-1 text-[12px] font-medium text-zinc-500">
-                        your watchparty wallet plus any you connect. the primary one is what
-                        the app uses.
+                        your watchparty wallet plus any you connect. your main wallet is where
+                        people pay you and how they find you — switching which wallet you&apos;re
+                        using doesn&apos;t change it.
                     </p>
                 </div>
                 <span className="shrink-0 text-[12px] font-medium text-zinc-500">
@@ -130,7 +184,7 @@ export function LinkedWalletsPanel() {
                                                         className="size-3"
                                                         strokeWidth={2.5}
                                                     />
-                                                    primary
+                                                    main
                                                 </span>
                                             )}
                                         </div>
@@ -149,7 +203,7 @@ export function LinkedWalletsPanel() {
                                             disabled={setPrimary.isPending}
                                             onClick={() => setPrimary.mutate({ address: w.address })}
                                         >
-                                            make primary
+                                            make main
                                         </Button>
                                     )}
                                     {/* The embedded wallet can't be unlinked — we hold its key
@@ -172,6 +226,35 @@ export function LinkedWalletsPanel() {
                         );
                     })}
 
+                    {/* A connected extension that isn't linked yet. Only shown
+                        when there's actually something to add, so it disappears
+                        the moment it's linked. */}
+                    {connectedAddress && !wallets.some((w) => w.address === connectedAddress) && (
+                        <Panel className="flex items-center justify-between gap-3 p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-full bg-white/5 p-2.5">
+                                    <HugeiconsIcon icon={Add01Icon} className="size-5 text-zinc-400" strokeWidth={2} />
+                                </div>
+                                <div>
+                                    <h3 className="text-[14px] font-semibold text-white">
+                                        link your connected wallet
+                                    </h3>
+                                    <p className="text-[12px] font-medium text-zinc-500">
+                                        sign once to prove it&apos;s yours, then you can make it your main
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                size="sm"
+                                className="shrink-0 rounded-full"
+                                disabled={linking || !signMessage}
+                                onClick={handleLinkConnected}
+                            >
+                                {linking ? "linking…" : "link"}
+                            </Button>
+                        </Panel>
+                    )}
+
                     {!hasEmbedded && (
                         <Panel className="flex items-center justify-between gap-3 p-4">
                             <div className="flex items-center gap-3">
@@ -183,7 +266,7 @@ export function LinkedWalletsPanel() {
                                         set up your watchparty wallet
                                     </h3>
                                     <p className="text-[12px] font-medium text-zinc-500">
-                                        one phrase covering every network, and it becomes your primary
+                                        one phrase covering every network, and it becomes your main wallet
                                     </p>
                                 </div>
                             </div>
