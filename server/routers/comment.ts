@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { likes, posts } from "@/db/schema/content";
@@ -138,16 +139,54 @@ export const commentRouter = router({
         .input(z.object({
             postId: z.string(),
             parentId: z.string().optional(),
-            content: z.string().min(1).max(1000),
+            // Was min(1): a reply used to be text or nothing. Now an image or a
+            // GIF alone is a valid reply, same as the post composer, so the
+            // emptiness check moved to "no text AND no media" below.
+            content: z.string().max(1000).default(""),
+            imageUrl: z.string().optional(),
+            media: z.array(z.object({
+                type: z.enum(["image", "video"]),
+                url: z.string(),
+            })).optional(),
+            linkPreview: z.object({
+                url: z.string(),
+                title: z.string().nullable().optional(),
+                description: z.string().nullable().optional(),
+                imageUrl: z.string().nullable().optional(),
+                siteName: z.string().nullable().optional(),
+            }).optional(),
         }))
         .mutation(async ({ ctx, input }) => {
+            const hasMedia = !!input.imageUrl || (input.media?.length ?? 0) > 0;
+            if (!input.content.trim() && !hasMedia) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "A reply needs text or media" });
+            }
+
             const replyId = nanoid();
             const actualReplyToId = input.parentId || input.postId;
 
+            // Replies ARE posts rows, so these columns already existed — the
+            // procedure simply never accepted them, which is why the reply box
+            // could only ever be a single line of text.
             await db.insert(posts).values({
                 id: replyId,
                 userId: ctx.user.id,
                 content: input.content,
+                imageUrl: input.imageUrl,
+                media: input.media ?? [],
+                // Normalized the same way createPost does it: the column's type
+                // has every field present as string | null, while the zod input
+                // marks them optional — so an absent title arrives as undefined
+                // and doesn't satisfy the column. Coerce each to null.
+                linkPreview: input.linkPreview
+                    ? {
+                        url: input.linkPreview.url,
+                        title: input.linkPreview.title ?? null,
+                        description: input.linkPreview.description ?? null,
+                        imageUrl: input.linkPreview.imageUrl ?? null,
+                        siteName: input.linkPreview.siteName ?? null,
+                    }
+                    : undefined,
                 replyToId: actualReplyToId,
                 status: "published",
                 visibility: "public",

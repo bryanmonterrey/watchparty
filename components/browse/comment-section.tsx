@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useAuthSession } from "@/hooks/use-auth-session";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { PostCard } from "./post-card";
 import { PostCardSkeleton } from "./post-card-skeleton";
+import { CommentComposer } from "./comment-composer";
 
 interface CommentSectionProps {
     postId: string;
@@ -16,59 +13,13 @@ interface CommentSectionProps {
 }
 
 export function CommentSection({ postId, hideComposer = false }: CommentSectionProps) {
-    const utils = trpc.useUtils();
     const { data, isLoading } = trpc.comment.getComments.useQuery({ postId, limit: 20 });
-
-    const createComment = trpc.comment.createComment.useMutation({
-        onSuccess: () => utils.comment.getComments.invalidate({ postId }),
-    });
-
-    const [text, setText] = useState("");
-
-    const { data: session } = useAuthSession();
-    const viewerAvatar = (session?.user as { avatar_url?: string | null; image?: string | null } | undefined)?.avatar_url
-        ?? session?.user?.image
-        ?? null;
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!text.trim()) return;
-        createComment.mutate({ postId, content: text.trim() });
-        setText("");
-    };
 
     return (
         <div className="flex flex-col gap-3">
-            {/* Compose */}
-            {!hideComposer && (
-                <form onSubmit={handleSubmit} className="flex items-center gap-2">
-                    {/* The signed-in user's own avatar. This was a bare grey
-                        disc — not a fallback, just a coloured div that never
-                        tried to show anyone. AvatarFallback carries the shared
-                        /avatar.png, so a user with no image still gets the house
-                        placeholder rather than a letter. */}
-                    <Avatar className="size-8 shrink-0">
-                        <AvatarImage src={viewerAvatar ?? undefined} alt="" className="object-cover" />
-                        <AvatarFallback />
-                    </Avatar>
-                    <div className="flex-1 flex items-center gap-2">
-                        <input
-                            value={text}
-                            onChange={e => setText(e.target.value)}
-                            placeholder="Post your reply"
-                            className="flex-1 bg-transparent text-[14px] text-zinc-200 placeholder:text-zinc-500 outline-none transition-colors"
-                            maxLength={1000}
-                        />
-                        <button
-                            type="submit"
-                            disabled={!text.trim() || createComment.isPending}
-                            className="h-11 shrink-0 text-sm font-bold text-black bg-white hover:bg-zinc-200 disabled:opacity-40 px-5 rounded-full transition-colors"
-                        >
-                            Reply
-                        </button>
-                    </div>
-                </form>
-            )}
+            {/* Compose — the full reply composer (text, emoji, GIF,
+                images, link preview). See comment-composer.tsx. */}
+            {!hideComposer && <CommentComposer postId={postId} />}
 
             {/* Comments list */}
             {isLoading ? (
