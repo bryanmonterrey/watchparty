@@ -218,7 +218,10 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
         }
     }, [])
 
-    const previewLink = `${origin}/${session?.user?.username || "user"}/${previewId}`
+    // /video/<id>, not the old /<user>/<id> — that route is a 308 redirect
+    // now, so the copied link worked but sent people through a hop and
+    // broke whenever the creator renamed themselves.
+    const previewLink = `${origin}/video/${previewId}`
 
     const copyLink = () => {
         navigator.clipboard.writeText(previewLink)
