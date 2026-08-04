@@ -20,8 +20,13 @@ export default function MessagesPage() {
     return (
         <ChatProvider>
             {/* Mobile: list fills the screen; opening a conversation swaps to a
-                full-screen chat. Desktop keeps the 3/6 split, edge to edge. */}
-            <div className="grid h-[calc(100svh-var(--header-height))] w-screen grid-cols-1 overflow-hidden md:h-svh md:grid-cols-9">
+                full-screen chat. Desktop keeps the 3/6 split.
+
+                w-full, NOT w-screen. AppContainer centres every page inside
+                max-w-(--app-max-width); 100vw ignores that cap, so this split
+                ran the full viewport while every other route stopped at 1536px
+                (it used to read "edge to edge" here, which was the bug). */}
+            <div className="grid h-[calc(100svh-var(--header-height))] w-full grid-cols-1 overflow-hidden md:h-svh md:grid-cols-9">
                 <div
                     className={`h-full md:col-span-3 md:block md:border-r md:border-flexwhite/10 md:pt-[var(--header-height)] ${selectedConversationId ? "hidden" : "block"}`}
                 >

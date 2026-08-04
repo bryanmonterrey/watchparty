@@ -39,8 +39,12 @@ export default function CommunitiesLayout({
     const phoneShowsMain = !phoneShowsSidebar;
     const phoneShowsRail = !inChannel && !isSettings;
 
+    // w-full, NOT w-screen — see the note in messages/page.tsx. AppContainer
+    // caps content at max-w-(--app-max-width); 100vw escapes that cap and let
+    // this three-column shell run the whole viewport while every other route
+    // stopped at 1536px.
     return (
-        <div className="flex h-svh w-screen flex-col overflow-hidden max-md:pt-16 max-md:pb-20">
+        <div className="flex h-svh w-full flex-col overflow-hidden max-md:pt-16 max-md:pb-20">
             <CommunityModalProvider />
 
             <div className="flex min-h-0 w-full flex-1 overflow-hidden">
