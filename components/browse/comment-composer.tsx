@@ -109,6 +109,14 @@ export function CommentComposer({
         const inserted = `$${hit.ticker.toUpperCase()}`;
         setText(`${before}${inserted} ${after}`);
         setCashtag(null);
+        // Same rule as the post composer: the mention fills the pill, and the
+        // pill's × is how you mention a coin without adopting it.
+        setTokenLaunch((prev) => ({
+            ...prev,
+            ticker: hit.ticker.toUpperCase(),
+            name: prev.isNameManuallyEdited ? prev.name : hit.name,
+            isTickerManuallyEdited: true,
+        }));
         requestAnimationFrame(() => {
             const el = textareaRef.current;
             if (!el) return;
