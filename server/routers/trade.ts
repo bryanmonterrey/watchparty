@@ -275,13 +275,28 @@ export const tradeRouter = router({
      */
     getCreatorCoin: publicProcedure
         .input(z.object({ userId: z.string() }))
-        .query(async ({ input }) => {
+        .query(async ({ ctx, input }) => {
             const [row] = await db
                 .select()
                 .from(tokens)
                 .where(and(eq(tokens.creatorId, input.userId), eq(tokens.isCreatorCoin, true)))
                 .limit(1);
-            return row ?? null;
+            if (!row) return null;
+
+            // A DRAFT creator coin is visible only to its creator.
+            //
+            // For a post's or stream's coin a draft is public on purpose —
+            // anyone can launch it, and the first buy IS the launch, so showing
+            // it is the invitation. None of that applies here: only the creator
+            // may launch this one. To everyone else a draft would be a coin with
+            // no mint, nothing to buy and no action available — it reads as
+            // tradeable while being inert.
+            //
+            // Hidden server-side rather than in the component so it can't leak
+            // through another caller.
+            if (row.status !== "live" && ctx.user?.id !== input.userId) return null;
+
+            return row;
         }),
 
     /**

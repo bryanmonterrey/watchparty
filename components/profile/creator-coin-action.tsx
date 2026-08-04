@@ -23,10 +23,16 @@ import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 // does is reflect it, never establish it. Hiding the button is a courtesy; the
 // server is the guarantee.
 //
-// COLOUR: the ad-state yellow from the video scrubber (bg-yellow-400/80). It
-// marks "there's money attached to this" in the player, and it means the same
-// thing here — deliberately not the brand green, which reads as live.
-const COIN_YELLOW = "bg-yellow-400/80 text-black hover:bg-yellow-400";
+// COLOUR: the ad-state yellow from the video scrubber. It marks "there's money
+// attached to this" in the player and means the same here — deliberately not
+// the brand green, which reads as live.
+//
+// OUTLINED rather than filled. A solid yellow pill competes with Follow and
+// Subscribe for the row's one loud element; an outline keeps the colour's
+// meaning while letting the primary action stay primary. The fill arrives on
+// hover, so pressing it still feels like a button.
+const COIN_YELLOW =
+    "border border-yellow-400/80 text-yellow-400 hover:bg-yellow-400/10";
 
 export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner: boolean }) {
     const router = useRouter();

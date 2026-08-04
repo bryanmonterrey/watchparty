@@ -158,6 +158,8 @@ function Connected({
             {/* Stream info — saves itself */}
             <StreamInfo title={stream.title} category={stream.category} ticker={stream.ticker} />
 
+            <StartBroadcast stream={stream} />
+
             {/* How to go live — tucked away once you've seen it */}
             <ObsSteps />
 
@@ -238,6 +240,53 @@ function CopyCard({
                 </span>
             </button>
         </Squircle>
+    );
+}
+
+// The commit step: everything that must be true BEFORE frames arrive.
+//
+// It does NOT push video — ingest is RTMP, so the stream actually begins when
+// OBS connects and the IVS webhook flips isLive. What this button owns is the
+// coin: it's minted here from the ticker chosen above, rather than when that
+// ticker was typed, so a stream configured and never started leaves no draft
+// coin behind.
+//
+// Disabled without a title because the mutation requires one, and a button that
+// only fails is worse than a button that waits.
+function StartBroadcast({ stream }: { stream: { title: string | null; ticker?: string | null; isLive: boolean | null } }) {
+    const utils = trpc.useUtils();
+    const start = trpc.stream.startBroadcast.useMutation({
+        onSuccess: (r) => {
+            utils.stream.getMine.invalidate();
+            appToast.success(r.created ? "broadcast started — your coin is live as a draft" : "broadcast started");
+        },
+        onError: (e) => appToast.error(e.message),
+    });
+
+    if (stream.isLive) return null;
+
+    const ready = !!stream.title?.trim();
+    return (
+        <div className="mt-6">
+            <button
+                onClick={() => start.mutate()}
+                disabled={!ready || start.isPending}
+                className={cn(
+                    "h-12 w-full cursor-pointer rounded-full text-[15px] font-bold transition-colors",
+                    "bg-pastelred text-black hover:bg-pastelred/90",
+                    "disabled:cursor-not-allowed disabled:opacity-40",
+                )}
+            >
+                {start.isPending ? "Starting…" : "Start broadcast"}
+            </button>
+            <p className="mt-2 text-center text-[12px] font-medium text-zinc-500">
+                {!ready
+                    ? "Add a title first"
+                    : stream.ticker
+                        ? `Creates $${stream.ticker.toUpperCase()}, then connect OBS to go live`
+                        : "Then connect OBS to go live"}
+            </p>
+        </div>
     );
 }
 

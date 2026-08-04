@@ -8,6 +8,7 @@ import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { TRPCError } from "@trpc/server";
 import type { IvsClient } from "@aws-sdk/client-ivs";
 import { nanoid } from "nanoid";
+import { tokens } from "@/db/schema/content/token";
 
 const region = process.env.AWS_REGION ?? "us-east-1";
 
@@ -157,6 +158,66 @@ export const streamRouter = router({
                 .limit(input?.limit ?? 6);
             return rows;
         }),
+
+    /**
+     * Start broadcasting: commit the setup and mint the stream's coin.
+     *
+     * This does NOT push video — ingest is RTMP, so frames start when the
+     * encoder connects and the IVS webhook flips isLive. What this owns is
+     * everything that must be true BEFORE that happens: a title, and the coin
+     * created from the ticker chosen in setup.
+     *
+     * The coin is created HERE rather than when the ticker was typed, which is
+     * the whole reason streams.ticker and streams.token_id are separate columns:
+     * a stream that gets configured and never goes live should leave no draft
+     * coin behind for a broadcast that never happened.
+     *
+     * ANYONE can later launch this coin — first buy IS the launch, same as a
+     * post's. That's deliberately unlike a creator coin, which only its creator
+     * may launch (see trade.createCreatorCoin).
+     *
+     * Idempotent: pressing it twice returns the existing coin instead of
+     * minting a second one.
+     */
+    startBroadcast: protectedProcedure.mutation(async ({ ctx }) => {
+        const [stream] = await db
+            .select()
+            .from(streams)
+            .where(eq(streams.userId, ctx.user.id))
+            .limit(1);
+
+        if (!stream) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "No stream configured" });
+        }
+        if (!stream.title?.trim()) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Give your stream a title first" });
+        }
+        if (!stream.serverUrl || !stream.streamKey) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Generate your stream connection first" });
+        }
+
+        // Already has one — pressing start again must not mint a second coin.
+        if (stream.tokenId) return { tokenId: stream.tokenId, created: false };
+        if (!stream.ticker?.trim()) return { tokenId: null, created: false };
+
+        const tokenId = nanoid();
+        await db.insert(tokens).values({
+            id: tokenId,
+            ticker: stream.ticker.trim().toUpperCase(),
+            name: stream.title.trim().slice(0, 32),
+            description: stream.title.trim(),
+            // Server-resolved, like every other coin here: one that mints
+            // imageless keeps it forever.
+            imageUrl: ctx.user.avatar_url ?? undefined,
+            status: "draft",
+            earningsEnabled: true,
+            creatorId: ctx.user.id,
+        });
+
+        await db.update(streams).set({ tokenId, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
+
+        return { tokenId, created: true };
+    }),
 
     // Get current user's stream config
     getMine: protectedProcedure.query(async ({ ctx }) => {
