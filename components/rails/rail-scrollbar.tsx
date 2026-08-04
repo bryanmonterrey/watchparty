@@ -168,7 +168,9 @@ export function RailScrollbar({
                 // pointer-events-none: an indicator, not a control. Dragging it
                 // would need hit-testing and a grab affordance, and neither rail
                 // wants a second way to scroll.
-                "pointer-events-none absolute right-0.5 z-10 w-[3px] opacity-0 transition-opacity duration-200",
+                // w-[4px]: the thumb is w-full, so the track's width IS the
+                // indicator's. 3px read thin against a 384px rail.
+                "pointer-events-none absolute right-0.5 z-10 w-[4px] opacity-0 transition-opacity duration-200",
                 className,
             )}
         >
