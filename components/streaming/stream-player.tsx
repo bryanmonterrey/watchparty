@@ -5,6 +5,7 @@ import { UserType } from "@/db/schema/auth/user";
 import { PictureInPicture2 } from "lucide-react";
 import { AmbientGlow } from "video-ambient-glow";
 import { AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
+import { MEDIA_RADIUS } from "@/components/video/media-radius";
 import { StreamOverlayAd } from "@/components/ads/stream-overlay-ad";
 import { PlayerLoadingScreen } from "@/components/video/player-loading";
 
@@ -71,7 +72,12 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
         // backdrop hid the glow it was meant to catch — and the glow is only 35%
         // opaque, so the backdrop colour is 65% of what a letterbox bar looks
         // like. Home uses muted; black is what made these bars murky.
-        <div className="ambient-video-container isolate relative aspect-video bg-muted [contain:none] overflow-visible">
+        //
+        // MEDIA_RADIUS goes on the container AND the <video> (and the offline
+        // placeholder below): ambient can't clip, so the media would otherwise
+        // paint square corners over a rounded box. Same radius as the home hero
+        // and the video page.
+        <div className={`ambient-video-container isolate relative aspect-video bg-muted [contain:none] overflow-visible ${MEDIA_RADIUS}`}>
             {isLive ? (
                 <video
                     ref={videoRef}
@@ -79,12 +85,12 @@ export function StreamPlayer({ playbackUrl, isLive, host, showChat, onToggleChat
                     // contain, not cover: a stream that isn't 16:9 was being
                     // cropped to fill. It fits whole now, and the ambient glow
                     // fills the bars — same as the home hero.
-                    className="w-full h-full object-contain outline-none relative z-10"
+                    className={`w-full h-full object-contain outline-none relative z-10 ${MEDIA_RADIUS}`}
                     playsInline
                     autoPlay
                 />
             ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm z-10">
+                <div className={`absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm z-10 ${MEDIA_RADIUS}`}>
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-zinc-800 border-[3px] border-zinc-700 mb-4 opacity-50 grayscale">
                         {host.avatar_url ? (
                             <img src={host.avatar_url} alt={host.name ?? ""} className="object-cover w-full h-full" />

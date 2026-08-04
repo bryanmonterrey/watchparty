@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { MEDIA_RADIUS } from "../media-radius";
 import { PlayerLoadingScreen } from "../player-loading";
 import { MiniPlayerOverlay } from "../mini-player-overlay";
 import { usePlayer } from "./use-player";
@@ -143,6 +144,10 @@ export function VideoPlayer(props: VideoPlayerProps) {
                 // grey the bar reads as lit, over pure black it reads as murky. Same
                 // glow, different floor.
                 "ambient-video-container isolate p-0 relative w-full [contain:none] overflow-visible bg-muted group",
+                // Matches the home hero. Also on the <video> below — see
+                // MEDIA_RADIUS: ambient can't clip, so both carry it. The mini
+                // player keeps its own shape.
+                !isMiniPlayer && MEDIA_RADIUS,
                 !isMiniPlayer && "aspect-video"
             )}
             style={{ cursor: !showControls && isPlaying ? "none" : "auto" }}
@@ -167,7 +172,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
                 // object-contain, matching the hero: a square or portrait upload
                 // fits whole and leaves bars, and the bars are where the blurred
                 // copy of the frame shows through instead of dead black.
-                className="block w-full h-full object-contain outline-none relative z-10 cursor-pointer"
+                className={cn("block w-full h-full object-contain outline-none relative z-10 cursor-pointer", !isMiniPlayer && MEDIA_RADIUS)}
                 onTimeUpdate={onTimeUpdate}
                 onLoadedMetadata={onLoadedMetadata}
                 onPlay={onPlay}

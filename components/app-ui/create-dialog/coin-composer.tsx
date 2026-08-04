@@ -18,6 +18,8 @@ import { supabase } from "@/lib/supabase/client"
 import { trpc } from "@/lib/trpc/client"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useTokenLaunch } from "@/hooks/use-token-launch"
+import { ShareFees } from "@/components/tokens/share-fees"
+import type { SplitShare } from "./token-launch-section"
 
 interface CoinComposerProps {
     onClose: () => void
@@ -42,6 +44,10 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
     const [websiteUrl, setWebsiteUrl] = React.useState("")
     const [creatorFee, setCreatorFee] = React.useState(5)
     const [buyAmount, setBuyAmount] = React.useState<number | undefined>(undefined)
+    // The Coin tab had no fee sharing at all and hardcoded splits: [] into the
+    // launch, so the same product launched from Post and from Coin came out
+    // different. Same ShareFees component the ticker dialog uses.
+    const [splits, setSplits] = React.useState<SplitShare[]>([])
     const [isSubmitting, setIsSubmitting] = React.useState(false)
 
     const previewUrl = React.useMemo(() => (image ? URL.createObjectURL(image) : null), [image])
@@ -102,7 +108,7 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
             // 3. Launch (draft if no first buy, on-chain if a first-buy amount is set).
             const launchResult = await launchToken(
                 { name: tokenName, symbol: ticker, image: metadataUri, description },
-                { earningsEnabled: true, ticker, creatorFee, splits: [], buyAmount }
+                { earningsEnabled: true, ticker, creatorFee, splits, buyAmount }
             )
             if (!launchResult.success) { setIsSubmitting(false); return }
 
@@ -121,6 +127,9 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
                 telegramUrl: telegramUrl.trim() || undefined,
                 websiteUrl: websiteUrl.trim() || undefined,
                 creatorFeePercent: creatorFee,
+                // The launch call above already carries these; createPost is
+                // what persists them onto the token row, so it needs them too.
+                splits,
                 tokenAddress: launchResult.tokenAddress,
                 poolAddress: launchResult.poolAddress,
                 tokenStatus: (launchResult.status as "draft" | "live" | undefined) ?? "draft",
@@ -240,6 +249,9 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
                     A fixed 1% platform fee applies to all trading volume. Total curve fee: {creatorFee + 1}%.
                 </p>
             </div>
+
+            {/* Share fees — directly under the creator fee it divides up. */}
+            <ShareFees splits={splits} onChange={setSplits} />
 
             {/* First buy */}
             <div className="space-y-3">

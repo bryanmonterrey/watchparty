@@ -198,7 +198,7 @@ export function TickerEditDialog({ open, onOpenChange, state, onSave }: TickerEd
                                 type="number"
                                 value={localState.buyAmount === undefined ? "" : localState.buyAmount}
                                 onChange={(e) => updateState({ buyAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
-                                className="pl-13 h-12 text-[15px] [&::-webkit-inner-spin-button]:appearance-none"
+                                className="pl-13 h-14 text-[15px] [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="0.00"
                                 step="0.01"
                                 min="0"

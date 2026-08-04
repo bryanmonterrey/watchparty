@@ -31,18 +31,12 @@ const HERO_BOX = "h-[45svh] aspect-video  max-w-full";
 // the only offset above it is the column's own header clearance.
 const HERO_WRAP = "w-full ";
 
-// The player's corner radius, carried by the container AND by the media inside
-// it — they have to match, so there's one definition.
-//
-// The duplication is load-bearing, not belt-and-braces. In ambient mode the
-// container CANNOT be overflow-hidden (the glow canvas is injected as the
-// video's sibling and clipping erases the whole effect), so its radius has
-// nothing to clip and the media paints its own square corners on top. That's
-// invisible for a letterboxed source — object-contain keeps it off the corners,
-// so you see the container's rounded bg-muted behind it — and only shows up
-// when the frame fills the box edge to edge. Rounding the media itself is what
-// fixes it without reintroducing a clip.
-const MEDIA_RADIUS = "rounded-xl";
+// The player's corner radius. Moved to components/video/media-radius.ts — the
+// video page's player and the live player wear it too, and a constant three
+// surfaces share can't live inside one of them (importing it out of this file
+// would drag the whole carousel into their bundles). The note on WHY it's
+// applied twice lives with it.
+import { MEDIA_RADIUS } from "@/components/video/media-radius";
 
 interface CarouselVideo {
     id: string;
