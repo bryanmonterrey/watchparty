@@ -49,9 +49,13 @@ export function CommunityHomeSidebar() {
     return (
         <div className="flex flex-col h-full py-4 w-76 shrink-0 border-l border-flexwhite/10 overflow-hidden max-md:w-full">
             <div className="p-3 -mt-1 px-2 h-12 flex items-center text-lg justify-center">
+                {/* Outlined, not filled. `border` with no colour picks up the
+                    app-wide slate hairline from globals.css, so this matches
+                    every other neutral edge. h-11 is the standard button height
+                    (design-principles §1) — it was py-3 on an unset height. */}
                 <button
                     onClick={() => setSearchOpen(true)}
-                    className="relative cursor-pointer text-lg font-medium gap-2.5 flex items-center justify-start text-flexwhite/35 bg-zinc-600/10 hover:bg-zinc-600/20 rounded-full transition-colors w-full px-4 py-3"
+                    className="relative cursor-pointer text-lg font-medium gap-2.5 flex items-center justify-start text-flexwhite/35 border hover:bg-zinc-600/10 rounded-full transition-colors w-full px-4 h-11"
                 >
                     <SearchIcon className="size-6 text-flexwhite/35" />
                     Search

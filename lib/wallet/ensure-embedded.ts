@@ -198,6 +198,45 @@ export async function makeWalletPrimary(
   source: "swig" | "extension",
   label?: string
 ): Promise<void> {
+  // Preserve the OUTGOING wallet before anything overwrites it.
+  //
+  // This function's own docs promise that "any wallet the user previously had
+  // (e.g. the extension they signed in with) is preserved as a non-primary
+  // linked row rather than discarded" — but nothing implemented it. A user who
+  // signed in with an extension had user.wallet_address set to that extension
+  // and, if it predated linked_wallets, no row anywhere. Creating the embedded
+  // wallet then called this with the Swig address, the update at the bottom
+  // overwrote wallet_address, and the extension address was simply GONE: not
+  // primary, not linked, not recorded. The app could no longer name the wallet
+  // the account was opened with, which is also why its balance can't be shown
+  // without reconnecting the extension by hand.
+  const [current] = await db
+    .select({ walletAddress: user.wallet_address })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+
+  const outgoing = current?.walletAddress;
+  if (outgoing && outgoing !== address) {
+    const [alreadyLinked] = await db
+      .select({ id: linkedWallets.id })
+      .from(linkedWallets)
+      .where(and(eq(linkedWallets.user_id, userId), eq(linkedWallets.address, outgoing)))
+      .limit(1);
+
+    if (!alreadyLinked) {
+      // It's being displaced by this call, so it isn't the wallet we're
+      // promoting; anything the user arrived with is an external wallet.
+      await db.insert(linkedWallets).values({
+        id: nanoid(),
+        user_id: userId,
+        address: outgoing,
+        source: "extension",
+        is_primary: false,
+      });
+    }
+  }
+
   // Clear the old primary first: a partial unique index allows only one per
   // user, so promoting before demoting would collide.
   await db

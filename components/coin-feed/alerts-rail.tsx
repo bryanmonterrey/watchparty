@@ -464,25 +464,17 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
 
                 <div className="ml-auto flex items-center">
                     <AlertFiltersButton filters={filters} onChange={applyFilters} coverage={coverage} />
-                    {/* Traffic-light minimize, in watchparty's own palette
-                        (sunset) rather than Apple's hex. The glyph is hidden
-                        until hover, which is the whole point of the pattern:
-                        at rest it's a colour, and the colour is the label.
-                        The green counterpart lives in the collapsed strip
-                        (home-left-rail) — the two states are exclusive, so a
-                        second dot here would be a control that does nothing. */}
+                    {/* Plain minus, sized and coloured like the other header
+                        icons (AtIcon, the filter button) so the row reads as one
+                        set. */}
                     {onCollapse && (
                         <button
                             type="button"
                             onClick={onCollapse}
                             aria-label="minimize alerts rail"
-                            className="group/traffic ml-1.5 flex size-3 shrink-0 cursor-pointer items-center justify-center rounded-full bg-sunset transition-transform active:scale-90"
+                            className="flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
                         >
-                            <HugeiconsIcon
-                                icon={MinusSignIcon}
-                                className="size-2 text-black/55 opacity-0 transition-opacity duration-100 group-hover/traffic:opacity-100"
-                                strokeWidth={4}
-                            />
+                            <HugeiconsIcon icon={MinusSignIcon} className="size-6" strokeWidth={2} />
                         </button>
                     )}
                 </div>
