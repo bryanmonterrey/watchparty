@@ -1,8 +1,25 @@
 "use client"
 
 import * as React from "react"
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion"
+import { RangeSlider } from "@/components/motion/range-slider"
 import { cn } from "@/lib/utils"
+
+// AnimatedSlider is now a thin adapter over beui's RangeSlider
+// (components/motion/range-slider.tsx, added from @beui/range-slider) rather
+// than its own framer-motion implementation.
+//
+// KEPT AS AN ADAPTER, not deleted, for two reasons:
+//   - The old control drew a LABEL and a VALUE READOUT inside its track
+//     ("Fee %" on the left, "3" on the right). RangeSlider is a bare 40px track
+//     with ticks and a thumb — no text at all — so a straight swap would have
+//     silently dropped the number people set the fee and leverage by. That row
+//     moves above the track here.
+//   - Seven call sites use this name and prop shape (browse + create-dialog
+//     ticker dialogs, coin-composer, token-launch, perps). Holding the API
+//     means the swap is one file, not seven diffs.
+//
+// The file name is now a misnomer — the motion lives in RangeSlider. Renaming
+// it is a mechanical follow-up if wanted.
 
 interface AnimatedSliderProps {
     label: string
@@ -17,7 +34,7 @@ interface AnimatedSliderProps {
 
 export function AnimatedSlider({
     label,
-    value: controlledValue,
+    value,
     defaultValue = 50,
     onChange,
     min = 0,
@@ -25,165 +42,32 @@ export function AnimatedSlider({
     step = 1,
     className,
 }: AnimatedSliderProps) {
-    const [internalValue, setInternalValue] = React.useState(defaultValue)
-    const [isDragging, setIsDragging] = React.useState(false)
-    const [isClick, setIsClick] = React.useState(false)
-    const [stretchDirection, setStretchDirection] = React.useState<'left' | 'right'>('left')
-    const trackRef = React.useRef<HTMLDivElement>(null)
-    const pointerDownPos = React.useRef(0)
-
-    const value = controlledValue ?? internalValue
-
-    const stretchRaw = useMotionValue(0)
-    const stretch = useSpring(stretchRaw, {
-        stiffness: 250,
-        damping: 40,
-        mass: 4.5,
-    })
-
-    const scaleX = useTransform(stretch, [-3, 0, 3], [1.06, 1, 1.06])
-
-    const handlePointerMove = (clientX: number, isInitialClick = false) => {
-        if (!trackRef.current) return
-
-        const rect = trackRef.current.getBoundingClientRect()
-        const x = clientX - rect.left
-        const percentage = (x / rect.width) * 100
-
-        const clampedPercentage = Math.max(0, Math.min(100, percentage))
-
-        // Calculate subtle stretch
-        let stretchAmount = 0
-        const stretchFactor = 5
-        const maxStretch = 2
-
-        if (percentage > 100) {
-            stretchAmount = Math.max((100 - percentage) / stretchFactor, -maxStretch)
-            setStretchDirection('left')
-        } else if (percentage < 0) {
-            stretchAmount = Math.min((0 - percentage) / stretchFactor, maxStretch)
-            setStretchDirection('right')
-        }
-
-        stretchRaw.set(Math.max(-maxStretch, Math.min(maxStretch, stretchAmount)))
-
-        const newValue = Math.round((clampedPercentage / 100) * (max - min) + min)
-        const steppedValue = step > 0 ? Math.round(newValue / step) * step : newValue
-
-        if (controlledValue === undefined) {
-            setInternalValue(steppedValue)
-        }
-        onChange?.(steppedValue)
-    }
-
-    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-        pointerDownPos.current = e.clientX
-        setIsDragging(true)
-        setIsClick(true)
-        e.currentTarget.setPointerCapture(e.pointerId)
-        handlePointerMove(e.clientX, true)
-    }
-
-    React.useEffect(() => {
-        const handleMove = (e: PointerEvent) => {
-            if (!isDragging) return
-
-            // If mouse moved more than 3px, it's a drag not a click
-            if (Math.abs(e.clientX - pointerDownPos.current) > 3) {
-                setIsClick(false)
-            }
-
-            e.preventDefault()
-            handlePointerMove(e.clientX)
-        }
-
-        const handleUp = () => {
-            if (isDragging) {
-                setIsDragging(false)
-                stretchRaw.set(0)
-                // Reset click state after a short delay
-                setTimeout(() => setIsClick(false), 100)
-            }
-        }
-
-        if (isDragging) {
-            window.addEventListener('pointermove', handleMove)
-            window.addEventListener('pointerup', handleUp)
-            window.addEventListener('pointercancel', handleUp)
-        }
-
-        return () => {
-            window.removeEventListener('pointermove', handleMove)
-            window.removeEventListener('pointerup', handleUp)
-            window.removeEventListener('pointercancel', handleUp)
-        }
-    }, [isDragging])
-
-    const percentValue = ((value - min) / (max - min)) * 100
+    // Uncontrolled call sites still need the readout to move, so mirror the
+    // value locally and let a controlled `value` win when one is passed.
+    const [internal, setInternal] = React.useState(defaultValue)
+    const shown = value ?? internal
 
     return (
-        <div className={cn("w-full select-none touch-none", className)}>
-
-
-            <motion.div
-                className="relative"
-                style={{
-                    scaleX,
-                    transformOrigin: stretchDirection,
+        <div className={cn("w-full select-none", className)}>
+            {/* The label/value row the old track carried inside itself. Above
+                the slider rather than over it — RangeSlider's thumb spans the
+                full track height, so text behind it would be crossed out. */}
+            <div className="mb-2 flex items-center justify-between">
+                <span className="text-base font-medium text-neutral-300">{label}</span>
+                <span className="text-xl font-semibold tabular-nums text-white">{shown}</span>
+            </div>
+            <RangeSlider
+                value={value}
+                defaultValue={defaultValue}
+                onValueChange={(next) => {
+                    setInternal(next)
+                    onChange?.(next)
                 }}
-            >
-                <div
-                    ref={trackRef}
-                    className="relative h-14 rounded-2xl bg-neutral-800/40 border border-neutral-700/15 cursor-pointer overflow-hidden"
-                    onPointerDown={handlePointerDown}
-                >
-                    <div className="absolute inset-0 flex justify-between items-center px-6 pointer-events-none z-10">
-                        <span className="text-neutral-300 font-medium text-base">{label}</span>
-                        <span className="text-white font-semibold text-xl tabular-nums">{value}</span>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
-                        {[...Array(6)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="w-1 h-1 bg-neutral-600/50 rounded-full"
-                            />
-                        ))}
-                    </div>
-                    {/* Filled track */}
-                    <motion.div
-                        className="absolute inset-y-0 left-0 bg-lantern/40 rounded-2xl"
-                        animate={{
-                            width: `${percentValue}%`,
-                        }}
-                        transition={
-                            isClick
-                                ? {
-                                    type: "spring",
-                                    stiffness: 300,
-                                    damping: 30,
-                                    mass: 0.8
-                                }
-                                : isDragging
-                                    ? {
-                                        type: "spring",
-                                        stiffness: 400,
-                                        damping: 35,
-                                        mass: 0.4
-                                    }
-                                    : {
-                                        type: "spring",
-                                        stiffness: 300,
-                                        damping: 30,
-                                        mass: 0.8
-                                    }
-                        }
-                    >
-                        {/* Right edge indicator */}
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-white/50 rounded-full" />
-                    </motion.div>
-                </div>
-            </motion.div>
-
+                min={min}
+                max={max}
+                step={step}
+                aria-label={label}
+            />
         </div>
     )
 }

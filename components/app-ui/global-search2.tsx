@@ -79,7 +79,11 @@ export function GlobalSearch({
                     // z-50 keeps the bar above the attached suggestion panel
                     // (docs/searchbar.svg: the panel wraps the bar at a 2px
                     // inset and renders behind it).
-                    "relative z-50 h-11 backdrop-blur-xl inner-shadow hover:cursor-pointer inner-shadow-blur-sm inner-shadow-white/50 cursor-pointer flex items-center bg-grok rounded-full transition-colors",
+                    // OUTLINED, not filled. bg-grok (a near-opaque #141414 at
+                    // 75%) is gone; the bar is now a hairline over whatever it
+                    // floats above, with backdrop-blur-xl still doing the work
+                    // of keeping the text legible against moving content.
+                    "relative z-50 h-11 backdrop-blur-xl hover:cursor-pointer cursor-pointer flex items-center bg-transparent border border-soft-gray/12 rounded-full transition-colors",
                     // Single source of truth for the ring: isFocused (set on
                     // input focus, cleared on submit / outside click). No ring
                     // while the panel is showing — it would sit inside the
