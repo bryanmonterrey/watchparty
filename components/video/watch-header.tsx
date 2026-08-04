@@ -13,7 +13,7 @@ import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components
 // Shape: avatar | title, @username, token row | actions over the view/viewer
 // count. Three differences from home's, all deliberate:
 //
-//   · the avatar is size-24 and ringless, owned here rather than passed in, so
+//   · the avatar is size-16 and ringless, owned here rather than passed in, so
 //     the two pages cannot drift apart again
 //   · @username is set at the TITLE's size, so the identity reads as the
 //     second line of one block instead of a caption under it
@@ -64,13 +64,13 @@ export function WatchHeader({ user, title, post, stats, tokenRow, onNameClick, n
             {/* The header owns the avatar rather than taking it as a prop: the
                 two pages were passing different components at different sizes
                 (size-20 video, size-24 live) and that's the whole reason they
-                didn't match. size-24 for both, and NO border/ring — the 6px
+                didn't match. size-16 for both, and NO border/ring — the 6px
                 black ring those components draw is for an avatar overlapping a
                 banner, which is the profile page's problem, not this one.
                 (components/profile/profile-avatar keeps its ring for exactly
                 that reason; it's still the profile page's.) */}
             <Link href={`/${user.username ?? ""}`} className="shrink-0" aria-label={user.username ?? "creator"}>
-                <Avatar className="size-24">
+                <Avatar className="size-16">
                     <AvatarImage src={user.avatar_url ?? undefined} className="object-cover" />
                     <AvatarFallback />
                 </Avatar>
@@ -126,7 +126,7 @@ export function WatchHeader({ user, title, post, stats, tokenRow, onNameClick, n
  *
  * One skeleton, next to the component it mirrors, so it can't drift again.
  * Every number below is read off the real markup above: gap-4/px-3/mt-3 frame,
- * size-24 avatar, gap-0.5 identity column, gap-3.5 action column, gap-2 between
+ * size-16 avatar, gap-0.5 identity column, gap-3.5 action column, gap-2 between
  * action buttons.
  */
 export function WatchHeaderSkeleton({
@@ -137,8 +137,8 @@ export function WatchHeaderSkeleton({
 }: { tokenRow?: boolean; stats?: boolean } = {}) {
     return (
         <div className="mt-3 flex items-start gap-4 px-3">
-            {/* size-24, ringless — matches the Avatar above exactly. */}
-            <div className="size-24 shrink-0 rounded-full shimmer-skeleton" />
+            {/* size-16, ringless — matches the Avatar above exactly. */}
+            <div className="size-16 shrink-0 rounded-full shimmer-skeleton" />
 
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 {/* Title and @username are BOTH text-[20px] leading-snug, so each
