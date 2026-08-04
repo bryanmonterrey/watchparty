@@ -749,6 +749,56 @@ export const walletRouter = router({
     // Lazily creates the Swig on-chain account on first outgoing transaction.
     // FROST keypair + Swig PDA are already computed at signup (free, no RPC).
     // This is the only step that hits the chain (treasury pays ~$0.30 once).
+    /**
+     * Create the caller's Swig account on-chain, if it isn't already.
+     *
+     * Split out of frostSetup, which only ever needed to decrypt a column.
+     * Doing it there meant every visit to /messages loaded a chain SDK into a
+     * request handler on a worker that already dies for exceededMemory on ~1%
+     * of requests — and when it died, the client got an unparseable response
+     * ("u is not iterable") and the messages page told embedded-wallet users to
+     * connect a wallet they don't have.
+     *
+     * Call this from the paths that actually need an on-chain account: signing.
+     * Reading messages does not.
+     *
+     * Idempotent and non-throwing on chain failure: it reports what happened
+     * rather than taking the caller down. An empty fee-payer treasury alerts
+     * (deduped) instead of failing silently, which is how it hid for a day.
+     */
+    ensureSwigAccount: protectedProcedure.mutation(async ({ ctx }) => {
+        const { data: w } = await supabase
+            .from("encrypted_wallets")
+            .select("frost_public_key, swig_id, swig_account_created")
+            .eq("user_id", ctx.user.id)
+            .single();
+
+        if (!w?.swig_id || !w.frost_public_key) {
+            throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No embedded wallet" });
+        }
+        if (w.swig_account_created) return { created: false, ready: true };
+
+        try {
+            const { createSwigAccount } = await import("@/lib/swig/swig-server");
+            await createSwigAccount(w.swig_id, w.frost_public_key);
+        } catch (err: any) {
+            const msg = err?.message ?? String(err);
+            // A prior partial attempt already made it — that's success.
+            if (!msg.includes("already in use")) {
+                console.error("[ensureSwigAccount] failed", { userId: ctx.user.id, error: msg });
+                alertSwigTreasury("wallet.ensureSwigAccount → createSwigAccount", msg);
+                return { created: false, ready: false, error: msg };
+            }
+        }
+
+        await supabase
+            .from("encrypted_wallets")
+            .update({ swig_account_created: true, updated_at: new Date().toISOString() })
+            .eq("user_id", ctx.user.id);
+
+        return { created: true, ready: true };
+    }),
+
     frostSetup: protectedProcedure.mutation(async ({ ctx }) => {
         const { data: walletData, error } = await supabase
             .from("encrypted_wallets")
@@ -761,66 +811,25 @@ export const walletRouter = router({
             throw new TRPCError({ code: "PRECONDITION_FAILED", message: "FROST not initialized — re-create wallet" });
         }
 
-        // Best-effort on-chain Swig creation. NOT a preconditon of this
-        // procedure's actual job, which is returning the FROST client share.
+        // NO Swig creation here. On purpose, and it took three wrong guesses
+        // to land on why.
         //
-        // This used to rethrow, and that made E2E messaging depend on a
-        // successful on-chain write. When the Swig treasury (the fee payer) ran
-        // dry, createSwigAccount failed here, the throw skipped the client-share
-        // decrypt below, and the messages page — whose only ask is a wrap key —
-        // fell through to "Connect wallet", offering an extension-connect modal
-        // to embedded-wallet users who have no extension. Retry re-ran the same
-        // failing path, so the "I've already connected" button appeared dead.
+        // This procedure's entire job is an AES decrypt of a column. It was also
+        // pulling in @swig-wallet/classic + @solana/kit + web3.js to poke the
+        // chain — hundreds of exports of SDK, loaded inside a request handler on
+        // a worker that already gets killed for exceededMemory on ~1% of
+        // requests (see CLAUDE.md). The client saw "u is not iterable" out of
+        // TRPCClientError.from, which is the shape of a response the client
+        // couldn't parse — an isolate dying mid-request, not a clean error.
         //
-        // The client share is sitting decryptable in this very row and has
-        // nothing to do with the chain, so a chain failure must not withhold it.
-        // Signing still needs the account, and the flag stays false so the next
-        // call retries — but reading your messages no longer waits on it.
+        // Proven NOT to be: the treasury (matcha's share decrypts fine — checked
+        // against the real row), and not the module failing to load either (it
+        // imports cleanly in a workerd probe, 303 exports). What's left is the
+        // weight of doing it here at all.
         //
-        // NOTE the flag starts false for EVERY wallet (both creation paths insert
-        // false; /api/create-wallet flips it from an `after()` hook that logs and
-        // swallows failures), so this branch is the normal path, not a
-        // legacy-accounts fallback as previously commented.
-        if (!walletData.swig_account_created) {
-            let accountReady = false;
-            try {
-                // The IMPORT is inside the try, not above it.
-                //
-                // It used to sit outside, and that's what kept messaging broken
-                // after the throw was supposedly made non-fatal: loading
-                // @swig-wallet/classic itself fails on workerd
-                // ("u is not iterable", observed in production 2026-08-04), and a
-                // module that throws while EVALUATING escapes a guard that only
-                // wraps the call. So frostSetup still died before the decrypt
-                // below, and the client share — which had nothing to do with the
-                // chain and decrypts perfectly — never reached the client.
-                //
-                // Node never showed this: the same decrypt path runs clean
-                // locally. It's a workerd-only failure, like the drizzle Date
-                // encoding one (see CLAUDE.md).
-                const { createSwigAccount } = await import("@/lib/swig/swig-server");
-                await createSwigAccount(walletData.swig_id, walletData.frost_public_key);
-                accountReady = true;
-            } catch (err: any) {
-                // Already exists from a prior partial attempt — that's fine.
-                if (err?.message?.includes("already in use")) {
-                    accountReady = true;
-                } else {
-                    console.error("[frostSetup] Swig account creation failed (continuing)", {
-                        userId: ctx.user.id,
-                        error: err?.message ?? String(err),
-                    });
-                    // The silent version of this cost a day: balances and
-                    // messaging both broke with nothing anywhere saying why.
-                    alertSwigTreasury("wallet.frostSetup → createSwigAccount", err?.message ?? String(err));
-                }
-            }
-            if (accountReady) {
-                await supabase.from("encrypted_wallets")
-                    .update({ swig_account_created: true, updated_at: new Date().toISOString() })
-                    .eq("user_id", ctx.user.id);
-            }
-        }
+        // Creating the on-chain account is a SIGNING concern. It now lives in
+        // ensureSwigAccount below, called when signing actually needs it, so
+        // reading your messages never loads a chain SDK.
 
         // Recover the FROST client share if the server has an encrypted backup.
         // This restores signing capability when the user's IndexedDB has been cleared
