@@ -159,7 +159,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
     const renderPostSkeleton = () => (
         <div className="px-4 pt-4">
             <div className="flex gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full shimmer-skeleton shrink-0" />
+                <div className="w-10 h-10 rounded-full shimmer-skeleton shrink-0" />
                 <div className="flex flex-col gap-2 flex-1 pt-1">
                     <div className="h-5 w-32 rounded-full shimmer-skeleton" />
                     <div className="h-5 w-24 rounded-full shimmer-skeleton" />
@@ -251,7 +251,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                 <div className="absolute left-[39.5px] top-8 -bottom-6 w-0.5 bg-zinc-700/50 z-20" />
 
                                 <div className="flex gap-3">
-                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-800 shrink-0 relative z-30">
+                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 shrink-0 relative z-30">
                                         {(post as any).parentUserAvatar ? (
                                             <img src={(post as any).parentUserAvatar} alt={(post as any).parentUserName || "User"} className="w-full h-full object-cover" />
                                         ) : (
@@ -305,7 +305,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                             className="px-4 flex items-start justify-between mt-2 mb-4 scroll-mt-[55px] outline-none"
                         >
                             <div className="flex items-center gap-3 relative">
-                                <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-800 shrink-0 relative z-30">
+                                <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 shrink-0 relative z-30">
                                     {post.user.avatar_url ? (
                                         <img src={post.user.avatar_url} alt={post.user.name || "User"} className="w-full h-full object-cover relative z-10" />
                                     ) : (
