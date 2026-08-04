@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
-import { compactCount } from "@/lib/utils";
+import { cn, compactCount } from "@/lib/utils";
+import { ChainBadge } from "@/components/trending/chain-badge";
 
 // $cashtag autocomplete, modelled on X's ticker dropdown.
 //
@@ -32,6 +32,22 @@ export interface TickerHit {
     priceChange24h: number | null;
     marketCapUsd: number | null;
     status: string | null;
+    /**
+     * Which market the row belongs to. "Crypto" today for everything, because
+     * every token here is one.
+     *
+     * TOKENIZED STOCKS get their exchange in this slot — "NYSE", "NASDAQ" —
+     * which is exactly what the reference does and why this is a free-text
+     * venue rather than a boolean. When those land, the only change needed is
+     * the server filling this in; the row already renders it.
+     */
+    venue?: string | null;
+    /**
+     * Chain slug for the badge on the mark (see components/trending/chain-badge).
+     * Solana for now — the column doesn't exist yet, so the server defaults it.
+     * An equity row would carry none, and the badge simply doesn't render.
+     */
+    chain?: string | null;
 }
 
 /**
@@ -52,11 +68,69 @@ export function findCashtagAtCaret(text: string, caret: number): { query: string
     return { query, start: caret - query.length - 1, end: caret };
 }
 
+// The reference shows $23.44 and $0.00000142 in the same list, so a fixed 2dp
+// is not an option — a memecoin would read $0.00 next to a real price. Two
+// decimals from a dollar up, three significant figures below, which is what
+// produces $0.00335 and $0.00000142.
 function fmtPrice(v: number | null) {
     if (v == null) return null;
     if (v >= 1) return `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    // Sub-dollar coins need the small digits or every row reads $0.00.
-    return `$${v.toPrecision(3)}`;
+    return `$${Number(v.toPrecision(3))}`;
+}
+
+/** 0x26f3…2e29 — how the reference tells two same-named tokens apart. */
+function shortAddress(a: string) {
+    return a.length <= 12 ? a : `${a.slice(0, 6)}…${a.slice(-4)}`;
+}
+
+/**
+ * The vertical offset of the caret's line inside a textarea.
+ *
+ * The panel opens directly under the LINE being typed, not under the whole
+ * field — on a multi-line draft those are very different places, and anchoring
+ * to the box puts the menu nowhere near the word it's completing.
+ *
+ * A textarea gives no caret geometry, so the standard trick: render an
+ * invisible div with the same text and the same type metrics, put a marker
+ * where the caret is, and measure the marker. Copying the exact properties that
+ * affect wrapping is the whole job — miss the padding or the font and the
+ * mirror wraps differently from the real thing and the answer is wrong.
+ */
+export function caretLineOffset(el: HTMLTextAreaElement): number {
+    const style = window.getComputedStyle(el);
+    const mirror = document.createElement("div");
+
+    const copy = [
+        "boxSizing", "width", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+        "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth",
+        "fontFamily", "fontSize", "fontWeight", "fontStyle", "letterSpacing",
+        "lineHeight", "textTransform", "wordSpacing", "textIndent",
+    ] as const;
+    for (const p of copy) mirror.style[p as any] = style[p as any];
+
+    mirror.style.position = "absolute";
+    mirror.style.visibility = "hidden";
+    mirror.style.whiteSpace = "pre-wrap";
+    mirror.style.wordWrap = "break-word";
+    mirror.style.overflow = "hidden";
+    mirror.style.height = "auto";
+
+    const caret = el.selectionStart ?? 0;
+    mirror.textContent = el.value.slice(0, caret);
+
+    // A zero-width marker at the caret. Textnode-only measurement would give the
+    // block's height, not the current line's top.
+    const marker = document.createElement("span");
+    marker.textContent = "​";
+    mirror.appendChild(marker);
+
+    document.body.appendChild(mirror);
+    const top = marker.offsetTop;
+    const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+    document.body.removeChild(mirror);
+
+    // Bottom of the caret's line, minus however far the textarea is scrolled.
+    return top + lineHeight - el.scrollTop;
 }
 
 export function CashtagAutocomplete({
@@ -64,12 +138,15 @@ export function CashtagAutocomplete({
     onSelect,
     onClose,
     registerKeyHandler,
+    /** Distance from the top of the positioning parent to the caret's line. */
+    top = 0,
 }: {
     query: string;
     onSelect: (hit: TickerHit) => void;
     onClose: () => void;
     /** Lets the host textarea forward arrow/enter/escape without stealing focus. */
     registerKeyHandler?: (handler: ((e: React.KeyboardEvent) => boolean) | null) => void;
+    top?: number;
 }) {
     const [active, setActive] = useState(0);
 
@@ -116,7 +193,8 @@ export function CashtagAutocomplete({
 
     return (
         <div
-            className="absolute left-0 top-full z-50 mt-1 w-[min(420px,100%)] overflow-hidden rounded-xl border border-white/10 bg-[#0a0a0a] shadow-xl"
+            style={{ top }}
+            className="absolute left-0 z-50 mt-1 w-[min(460px,100%)] overflow-hidden rounded-xl border border-white/10 bg-[#0a0a0a] shadow-xl"
             // Keep the caret: a mousedown anywhere in here would blur the
             // textarea before the click lands, and the selection needs the
             // caret position to know what to replace.
@@ -150,12 +228,24 @@ export function CashtagAutocomplete({
                                 i === active ? "bg-white/[0.07]" : "hover:bg-white/[0.04]",
                             )}
                         >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={hit.imageUrl || "/avatar.png"}
-                                alt=""
-                                className="size-10 shrink-0 rounded-full object-cover"
-                            />
+                            {/* The mark, with its chain badge tucked on the
+                                bottom-right corner exactly as the reference
+                                does. An equity row carries no chain, so the
+                                badge simply doesn't render. */}
+                            <span className="relative size-10 shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={hit.imageUrl || "/avatar.png"}
+                                    alt=""
+                                    className="size-10 rounded-full object-cover"
+                                />
+                                {hit.chain && (
+                                    <ChainBadge
+                                        network={hit.chain}
+                                        className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full ring-2 ring-[#0a0a0a]"
+                                    />
+                                )}
+                            </span>
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-baseline justify-between gap-3">
                                     <span className="truncate text-[15px] font-bold text-white">{hit.name}</span>
@@ -163,20 +253,32 @@ export function CashtagAutocomplete({
                                         <span className="shrink-0 text-[15px] font-bold tabular-nums text-white">{price}</span>
                                     )}
                                 </div>
+                                {/* TICKER · venue · size · address — the
+                                    reference's second line. The address segment
+                                    is what distinguishes two tokens sharing a
+                                    name and ticker on different chains, which is
+                                    a real case here. */}
                                 <div className="flex items-baseline justify-between gap-3">
                                     <span className="truncate text-[13px] font-medium text-zinc-500">
-                                        ${hit.ticker}
-                                        {hit.marketCapUsd != null && ` · ${compactCount(hit.marketCapUsd)}`}
-                                        {hit.status === "draft" && " · draft"}
+                                        {[
+                                            hit.ticker.toUpperCase(),
+                                            hit.venue || "Crypto",
+                                            hit.marketCapUsd != null ? compactCount(hit.marketCapUsd) : null,
+                                            hit.tokenAddress ? shortAddress(hit.tokenAddress) : null,
+                                            hit.status === "draft" ? "draft" : null,
+                                        ].filter(Boolean).join(" · ")}
                                     </span>
                                     {change != null && (
                                         <span
                                             className={cn(
                                                 "shrink-0 text-[13px] font-semibold tabular-nums",
-                                                up ? "text-long" : "text-short",
+                                                // Flat is neither win nor loss —
+                                                // the reference greys 0% rather
+                                                // than painting it green.
+                                                change === 0 ? "text-zinc-400" : up ? "text-long" : "text-short",
                                             )}
                                         >
-                                            {up ? "+" : ""}
+                                            {change > 0 ? "+" : ""}
                                             {change.toFixed(2)}%
                                         </span>
                                     )}

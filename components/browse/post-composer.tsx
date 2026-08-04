@@ -30,7 +30,7 @@ import { VoiceRecorder, VoiceRecorderTrigger } from "@/components/browse/voice-r
 import { ScheduledPostsDrawer } from "@/components/browse/scheduled-posts-drawer";
 import { nanoid } from "nanoid";
 import { PollComposer, type PollOption } from "@/components/browse/poll-composer";
-import { CashtagAutocomplete, findCashtagAtCaret, type TickerHit } from "@/components/browse/cashtag-autocomplete";
+import { CashtagAutocomplete, findCashtagAtCaret, caretLineOffset, type TickerHit } from "@/components/browse/cashtag-autocomplete";
 
 export function PostComposer() {
     const [content, setContent] = useState("");
@@ -74,11 +74,15 @@ export function PostComposer() {
     // Tracks a `$xyz` sitting at the caret. Null closes the panel; a bare `$`
     // never opens it (see findCashtagAtCaret) so typing a dollar amount is quiet.
     const [cashtag, setCashtag] = useState<{ query: string; start: number; end: number } | null>(null);
+    // Where the panel opens: under the CARET's line, not under the field.
+    const [cashtagTop, setCashtagTop] = useState(0);
     const cashtagKeyHandler = useRef<((e: React.KeyboardEvent) => boolean) | null>(null);
 
     const syncCashtag = (el: HTMLTextAreaElement | null) => {
         if (!el) return;
-        setCashtag(findCashtagAtCaret(el.value, el.selectionStart ?? 0));
+        const hit = findCashtagAtCaret(el.value, el.selectionStart ?? 0);
+        setCashtag(hit);
+        if (hit) setCashtagTop(caretLineOffset(el));
     };
 
     // Picking a ticker does two things at once, which is the whole point: the
@@ -513,6 +517,7 @@ export function PostComposer() {
                 />
                 {cashtag && (
                     <CashtagAutocomplete
+                        top={cashtagTop}
                         query={cashtag.query}
                         onSelect={applyCashtag}
                         onClose={() => setCashtag(null)}

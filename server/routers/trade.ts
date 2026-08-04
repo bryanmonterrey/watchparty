@@ -238,6 +238,15 @@ export const tradeRouter = router({
                     priceChange24h: tokens.priceChange24h,
                     marketCapUsd: tokens.marketCapUsd,
                     status: tokens.status,
+                    // Constant for now: every token here is a Solana coin, and
+                    // there's no chain column yet. Both fields exist so the row
+                    // renders the reference's "TICKER · venue · size · address"
+                    // line today and needs no UI change when TOKENIZED STOCKS
+                    // land — those fill `venue` with their exchange (NYSE,
+                    // NASDAQ) and carry no chain, which the badge already
+                    // handles by not rendering.
+                    venue: sql<string>`'Crypto'`,
+                    chain: sql<string>`'solana'`,
                 })
                 .from(tokens)
                 .where(sql`(lower(${tokens.ticker}) like ${esc + "%"} escape '\\'
