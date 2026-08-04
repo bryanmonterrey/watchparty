@@ -83,7 +83,7 @@ export function PostCardHeaderRow({
                 {/* The coin badge. `sm` because the dots button beside it is
                     18px — see post-ticker-pill.tsx for the anatomy. */}
                 {ticker && (
-                    <PostTickerPill ticker={ticker} tokenStatus={tokenStatus} tokenImage={token_image} />
+                    <PostTickerPill ticker={ticker} tokenStatus={tokenStatus} tokenImage={token_image} tokenId={post.tokenId} />
                 )}
                 <PostOptionsMenu
                     postId={post.id}

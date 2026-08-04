@@ -175,6 +175,7 @@ export function PostCardBody({
                                                 ticker={post.ticker}
                                                 tokenStatus={post.tokenStatus}
                                                 tokenImage={post.token_image}
+                                                tokenId={post.tokenId}
                                                 size="md"
                                             />
                                         )}

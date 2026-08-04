@@ -341,6 +341,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                             ticker={post.ticker}
                                             tokenStatus={post.tokenStatus}
                                             tokenImage={post.token_image}
+                                            tokenId={post.tokenId}
                                             size="md"
                                         />
                                     )}
@@ -565,6 +566,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                                 ticker={post.ticker}
                                                 tokenStatus={post.tokenStatus}
                                                 tokenImage={post.token_image}
+                                                tokenId={post.tokenId}
                                                 size="md"
                                             />
                                         )}

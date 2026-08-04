@@ -32,6 +32,7 @@ export interface PostCardPost {
     createdAt: Date | string | null;
     originalCreatedAt?: Date | string | null;
     ticker?: string | null;
+    tokenId?: string | null;
     tokenStatus?: string | null;
     token_image?: string | null;
     videoUrl?: string | null;
@@ -65,6 +66,7 @@ export interface PostCardPost {
         videoUrl?: string | null;
         createdAt: Date | string | null;
         ticker?: string | null;
+    tokenId?: string | null;
         audience?: string | null;
         replyPrivacy?: string | null;
         user: PostCardUser;

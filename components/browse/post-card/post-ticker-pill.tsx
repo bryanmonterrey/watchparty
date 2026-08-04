@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 // The post's coin badge: token image, then $TICKER, both inside one
@@ -29,6 +30,11 @@ export interface PostTickerPillProps {
     size?: "sm" | "md";
     className?: string;
     onClick?: (e: React.MouseEvent) => void;
+    /** The coin this badge belongs to. Given one, the pill navigates to its
+     *  page — which is what a coin badge on a post is FOR. Without it the pill
+     *  was inert AND swallowed the click, so tapping it neither opened the coin
+     *  nor opened the post. */
+    tokenId?: string | null;
 }
 
 export function PostTickerPill({
@@ -38,7 +44,9 @@ export function PostTickerPill({
     size = "sm",
     className,
     onClick,
+    tokenId,
 }: PostTickerPillProps) {
+    const router = useRouter();
     const live = tokenStatus === "live";
     const md = size === "md";
 
@@ -49,7 +57,8 @@ export function PostTickerPill({
             // post), so it must not take the row's click with it.
             onClick={(e) => {
                 e.stopPropagation();
-                onClick?.(e);
+                if (onClick) { onClick(e); return; }
+                if (tokenId) router.push(`/coin/${tokenId}`);
             }}
             className={cn(
                 // Asymmetric padding on purpose: the mark sits nearly flush with

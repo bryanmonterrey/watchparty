@@ -27,6 +27,7 @@ export const postRouter = router({
                     comments: posts.comments,
                     createdAt: posts.createdAt,
                     ticker: posts.ticker,
+                    tokenId: posts.tokenId,
                     tokenStatus: posts.tokenStatus,
                     isPaywalled: posts.isPaywalled,
                     paywallPrice: posts.paywallPrice,
@@ -65,6 +66,7 @@ export const postRouter = router({
                     origComments: origPosts.comments,
                     origCreatedAt: origPosts.createdAt,
                     origTicker: origPosts.ticker,
+                    origTokenId: origPosts.tokenId,
                     origTokenImage: origPosts.token_image,
                     // Selected alongside the other orig* token fields so a
                     // repost's badge can say whether the ORIGINAL coin is live.
@@ -140,6 +142,7 @@ export const postRouter = router({
                     content: row.origContent,
                     imageUrl: row.origImageUrl || null,
                     token_image: row.origTokenImage || null,
+                    tokenId: row.origTokenId || null,
                     media: row.origMedia || [],
                     videoUrl: (row as any).origVideoUrl || null,
                     isPinned: false,
