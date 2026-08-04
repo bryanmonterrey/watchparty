@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { RailRow, RailRowSkeleton } from "./rail-row";
 import { RailRowMenu } from "./rail-row-menu";
-import { RAIL_ICON_TAB } from "./rail-tabs";
+import { RAIL_ICON_TAB, HOME_TAB_ONLINE } from "./rail-tabs";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 
 // What sits under the rail tabs on the video and live pages.
@@ -24,7 +24,11 @@ const SKELETON_COUNT = 6;
 const LIMIT = 20;
 
 export function RailVideoList({ tab, excludePostId }: { tab: string; excludePostId?: string }) {
-    const wantsVideos = tab !== "Live" && tab !== "Upcoming";
+    // "Online" is home's label for the same thing the other rails call
+    // "Live" (see rail-tabs). Both resolve here so a rail can use either
+    // wording without a second code path.
+    const isLiveTab = tab === "Live" || tab === HOME_TAB_ONLINE;
+    const wantsVideos = !isLiveTab && tab !== "Upcoming";
 
     const { data: videoData, isLoading: videosLoading } = trpc.content.getPublicVideos.useQuery(
         { excludePostId, limit: LIMIT },
@@ -33,7 +37,7 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
 
     const { data: liveRows, isLoading: liveLoading } = trpc.stream.listLive.useQuery(
         { limit: 12 },
-        { enabled: tab === "Live", staleTime: 30_000 },
+        { enabled: isLiveTab, staleTime: 30_000 },
     );
 
     // One query serves three tabs — the ordering is the only difference, and
@@ -52,7 +56,7 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
         return <p className="px-2 py-8 text-center text-sm font-medium text-zinc-500">Nothing scheduled yet</p>;
     }
 
-    const isLoading = tab === "Live" ? liveLoading : videosLoading;
+    const isLoading = isLiveTab ? liveLoading : videosLoading;
     if (isLoading) {
         return (
             <div className="flex flex-col">
@@ -63,7 +67,7 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
         );
     }
 
-    if (tab === "Live") {
+    if (isLiveTab) {
         if (!liveRows?.length) {
             return <p className="px-2 py-8 text-center text-sm font-medium text-zinc-500">No one is live right now</p>;
         }
