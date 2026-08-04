@@ -18,6 +18,14 @@ export const tokens = pgTable("tokens", {
     earningsEnabled: boolean("earningsEnabled").default(true),
     splits: jsonb("splits"),
     creatorId: text("creatorId").notNull().references(() => user.id, { onDelete: "cascade" }),
+    // A coin ABOUT a person rather than a piece of content: no post backs it,
+    // and its content page is the creator's profile. One per creator, enforced
+    // by a partial unique index (db/creator-coin-column.sql).
+    //
+    // It also differs in WHO MAY LAUNCH it: a post's or stream's coin can be
+    // launched by anyone, because the first buy IS the launch. A creator coin
+    // can only be launched by its creator — see trade.launchCreatorCoin.
+    isCreatorCoin: boolean("is_creator_coin").notNull().default(false),
 
     // ─── Cached market data — written by the token-stream worker, read by the
     // trade feed. Keeps the read path RPC-free so it scales to many users. ───

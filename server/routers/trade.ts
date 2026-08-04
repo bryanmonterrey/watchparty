@@ -7,6 +7,7 @@ import { follows } from "@/db/schema/content/follow";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
 import { eq, and, desc, sql, isNotNull, type SQL } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { withCache } from "@/lib/cache";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { emitLaunchEvent } from "@/lib/coin-feed/emit";
@@ -265,6 +266,117 @@ export const tradeRouter = router({
                     sql`${tokens.marketCapUsd} desc nulls last`,
                 )
                 .limit(input.limit);
+        }),
+
+    /**
+     * The caller's creator coin, plus whether they have one at all.
+     * Public so a visitor's profile can show the coin; the OWNER check for
+     * mutating it lives in the mutations below.
+     */
+    getCreatorCoin: publicProcedure
+        .input(z.object({ userId: z.string() }))
+        .query(async ({ input }) => {
+            const [row] = await db
+                .select()
+                .from(tokens)
+                .where(and(eq(tokens.creatorId, input.userId), eq(tokens.isCreatorCoin, true)))
+                .limit(1);
+            return row ?? null;
+        }),
+
+    /**
+     * Create the caller's creator coin.
+     *
+     * ONLY the creator may do this, and the rule is enforced here rather than by
+     * hiding a button: a creator coin is minted against `ctx.user.id`, full
+     * stop. There is no userId input to spoof — the identity IS the session.
+     *
+     * That is the opposite of every other coin on watchparty. A post's or
+     * stream's coin can be launched by ANYONE, because the first buy is the
+     * launch and that openness is the point. A coin that represents a person
+     * cannot work that way; a stranger minting "your" coin is impersonation.
+     *
+     * One per creator, guaranteed by a partial unique index rather than this
+     * pre-check alone — two concurrent calls would both pass the check, and the
+     * index is what actually stops the second insert.
+     */
+    createCreatorCoin: protectedProcedure
+        .input(z.object({
+            ticker: z.string().min(1).max(16),
+            name: z.string().max(64).optional(),
+            description: z.string().max(500).optional(),
+            imageUrl: z.string().optional(),
+            creatorFeePercent: z.number().min(0).max(5).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const [existing] = await db
+                .select({ id: tokens.id })
+                .from(tokens)
+                .where(and(eq(tokens.creatorId, ctx.user.id), eq(tokens.isCreatorCoin, true)))
+                .limit(1);
+            if (existing) {
+                throw new TRPCError({ code: "CONFLICT", message: "You already have a creator coin" });
+            }
+
+            const id = nanoid();
+            try {
+                await db.insert(tokens).values({
+                    id,
+                    ticker: input.ticker.toUpperCase(),
+                    name: input.name?.trim() || input.ticker.toUpperCase(),
+                    description: input.description,
+                    // Resolved server-side, like the content coins: a coin that
+                    // mints imageless keeps it forever.
+                    imageUrl: input.imageUrl || ctx.user.avatar_url || undefined,
+                    creatorFeePercent: input.creatorFeePercent,
+                    status: "draft",
+                    earningsEnabled: true,
+                    creatorId: ctx.user.id,
+                    isCreatorCoin: true,
+                });
+            } catch (e: any) {
+                // The unique index fired — someone double-submitted.
+                if (String(e?.message ?? "").includes("idx_tokens_one_creator_coin")) {
+                    throw new TRPCError({ code: "CONFLICT", message: "You already have a creator coin" });
+                }
+                throw e;
+            }
+
+            return { id };
+        }),
+
+    /**
+     * Record a creator coin's on-chain launch.
+     *
+     * Guarded twice over: protectedProcedure for a session, and creatorId in the
+     * WHERE so the row must belong to the caller. A non-creator's call matches
+     * nothing and updates nothing rather than erroring loudly — the answer to
+     * "may I launch someone else's identity coin" is simply no.
+     */
+    launchCreatorCoin: protectedProcedure
+        .input(z.object({
+            tokenAddress: z.string().min(32).max(44),
+            poolAddress: z.string().min(32).max(44),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const updated = await db
+                .update(tokens)
+                .set({
+                    tokenAddress: input.tokenAddress,
+                    poolAddress: input.poolAddress,
+                    status: "live",
+                })
+                .where(and(
+                    eq(tokens.creatorId, ctx.user.id),
+                    eq(tokens.isCreatorCoin, true),
+                    eq(tokens.status, "draft"),
+                ))
+                .returning({ id: tokens.id });
+
+            if (!updated.length) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "No draft creator coin to launch" });
+            }
+            return { id: updated[0].id };
         }),
 
     /** Perps-rail Follows tab: live tokens from creators the caller follows. */
