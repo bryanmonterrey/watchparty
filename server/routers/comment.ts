@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { likes, posts } from "@/db/schema/content";
+import { tokens } from "@/db/schema/content/token";
 import { user } from "@/db/schema/auth";
 import { eq, desc, and, asc, sql, inArray, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -155,6 +156,20 @@ export const commentRouter = router({
                 imageUrl: z.string().nullable().optional(),
                 siteName: z.string().nullable().optional(),
             }).optional(),
+            // Token launch — a reply can carry a coin, same as a post. Mirrors
+            // content.createPost's surface so the two can't drift.
+            ticker: z.string().optional(),
+            tokenName: z.string().optional(),
+            token_image: z.string().optional(),
+            tokenAddress: z.string().optional(),
+            poolAddress: z.string().optional(),
+            creatorFeePercent: z.number().optional(),
+            tokenStatus: z.enum(["draft", "live"]).optional(),
+            earningsEnabled: z.boolean().optional(),
+            splits: z.array(z.any()).optional(),
+            twitterUrl: z.string().optional(),
+            telegramUrl: z.string().optional(),
+            websiteUrl: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             const hasMedia = !!input.imageUrl || (input.media?.length ?? 0) > 0;
@@ -164,6 +179,46 @@ export const commentRouter = router({
 
             const replyId = nanoid();
             const actualReplyToId = input.parentId || input.postId;
+
+            // A reply can launch a coin, same as a post. Mirrors createPost's
+            // token block, including the image fallback resolved HERE rather
+            // than trusted to the client — a coin minted without an image was a
+            // real bug on the post side (db/post-token-image-backfill.sql) and
+            // there's no reason to reproduce it on this one.
+            let tokenId: string | undefined;
+            let tokenImage: string | undefined = input.token_image;
+
+            if (input.ticker) {
+                tokenId = input.tokenStatus === "live" ? (input.tokenAddress || nanoid()) : nanoid();
+
+                const tokenName =
+                    input.tokenName?.trim() ||
+                    input.content?.split("\n")[0]?.trim().slice(0, 32) ||
+                    input.ticker;
+
+                const replySessionUser = ctx.user as { avatar_url?: string | null; image?: string | null };
+                tokenImage =
+                    input.token_image ||
+                    input.imageUrl ||
+                    replySessionUser.avatar_url ||
+                    replySessionUser.image ||
+                    undefined;
+
+                await db.insert(tokens).values({
+                    id: tokenId,
+                    tokenAddress: input.tokenAddress,
+                    poolAddress: input.poolAddress,
+                    ticker: input.ticker,
+                    name: tokenName,
+                    description: input.content,
+                    imageUrl: tokenImage,
+                    creatorFeePercent: input.creatorFeePercent,
+                    status: input.tokenStatus || "draft",
+                    earningsEnabled: input.earningsEnabled,
+                    splits: input.splits,
+                    creatorId: ctx.user.id,
+                });
+            }
 
             // Replies ARE posts rows, so these columns already existed — the
             // procedure simply never accepted them, which is why the reply box
@@ -188,6 +243,10 @@ export const commentRouter = router({
                     }
                     : undefined,
                 replyToId: actualReplyToId,
+                tokenId,
+                ticker: input.ticker ?? null,
+                tokenStatus: input.tokenStatus ?? (input.earningsEnabled ? "draft" : null),
+                token_image: tokenImage,
                 status: "published",
                 visibility: "public",
                 audience: "everyone",

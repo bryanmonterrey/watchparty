@@ -13,6 +13,9 @@ import { GifPicker } from "@/components/messages/gif-picker";
 import { useLinkPreview } from "@/hooks/use-link-preview";
 import { LinkPreviewCard } from "@/components/browse/link-preview-card";
 import { X } from "lucide-react";
+import { TokenLaunchTrigger, TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/components/browse/token-launch";
+import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
+import { CashtagAutocomplete, findCashtagAtCaret, caretLineOffset, type TickerHit } from "@/components/browse/cashtag-autocomplete";
 
 // The reply box, brought up to the post composer's functionality.
 //
@@ -59,6 +62,43 @@ export function CommentComposer({
     const [images, setImages] = useState<File[]>([]);
     const [gif, setGif] = useState<string | null>(null);
     const [isPosting, setIsPosting] = useState(false);
+
+    // A reply can carry a coin, same as a post — comment.createComment takes the
+    // same token surface as content.createPost.
+    const [tokenLaunch, setTokenLaunch] = useState<TokenLaunchState>({
+        ...DEFAULT_TOKEN_LAUNCH,
+        earningsEnabled: false,
+    });
+    const [isEditingTicker, setIsEditingTicker] = useState(false);
+
+    // $cashtag mentions, same behaviour as the post composer: insert the
+    // mention, touch nothing else.
+    const [cashtag, setCashtag] = useState<{ query: string; start: number; end: number } | null>(null);
+    const [cashtagTop, setCashtagTop] = useState(0);
+    const cashtagKeyHandler = useRef<((e: React.KeyboardEvent) => boolean) | null>(null);
+
+    const syncCashtag = (el: HTMLTextAreaElement | null) => {
+        if (!el) return;
+        const found = findCashtagAtCaret(el.value, el.selectionStart ?? 0);
+        setCashtag(found);
+        if (found) setCashtagTop(caretLineOffset(el));
+    };
+
+    const applyCashtag = (hit: TickerHit) => {
+        if (!cashtag) return;
+        const before = text.slice(0, cashtag.start);
+        const after = text.slice(cashtag.end);
+        const inserted = `$${hit.ticker.toUpperCase()}`;
+        setText(`${before}${inserted} ${after}`);
+        setCashtag(null);
+        requestAnimationFrame(() => {
+            const el = textareaRef.current;
+            if (!el) return;
+            const pos = before.length + inserted.length + 1;
+            el.focus();
+            el.setSelectionRange(pos, pos);
+        });
+    };
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,12 +175,18 @@ export function CommentComposer({
                 imageUrl,
                 media: mediaArr.length > 0 ? mediaArr : undefined,
                 linkPreview: preview ?? undefined,
+                ticker: tokenLaunch.ticker || undefined,
+                tokenName: tokenLaunch.name || undefined,
+                creatorFeePercent: tokenLaunch.creatorFee,
+                earningsEnabled: tokenLaunch.earningsEnabled,
+                splits: tokenLaunch.splits,
             });
 
             setText("");
             setImages([]);
             setGif(null);
             clearPreview();
+            setTokenLaunch({ ...DEFAULT_TOKEN_LAUNCH, earningsEnabled: false });
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Couldn't post your reply");
         } finally {
@@ -158,13 +204,20 @@ export function CommentComposer({
             </Avatar>
 
             <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="relative">
                 <textarea
                     ref={textareaRef}
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={(e) => { setText(e.target.value); syncCashtag(e.target); }}
+                    onClick={(e) => syncCashtag(e.currentTarget)}
+                    onKeyUp={(e) => syncCashtag(e.currentTarget)}
+                    onBlur={() => setCashtag(null)}
                     // Enter submits, shift+Enter is a newline — a reply is short
                     // enough that reaching for a button every time is friction.
                     onKeyDown={(e) => {
+                        // The panel owns arrows/Enter/Escape while it's open, so
+                        // Enter picks a ticker instead of posting the reply.
+                        if (cashtag && cashtagKeyHandler.current?.(e)) { e.preventDefault(); return; }
                         if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
                             void submit(e as unknown as React.FormEvent);
@@ -175,6 +228,16 @@ export function CommentComposer({
                     placeholder={placeholder}
                     className="w-full resize-none bg-transparent text-[14px] text-zinc-200 outline-none placeholder:text-zinc-500"
                 />
+                {cashtag && (
+                    <CashtagAutocomplete
+                        top={cashtagTop}
+                        query={cashtag.query}
+                        onSelect={applyCashtag}
+                        onClose={() => setCashtag(null)}
+                        registerKeyHandler={(h) => { cashtagKeyHandler.current = h; }}
+                    />
+                )}
+                </div>
 
                 {images.length > 0 && (
                     <div className="flex flex-wrap gap-2">
@@ -260,6 +323,20 @@ export function CommentComposer({
                                 {MAX_LEN - text.length}
                             </span>
                         )}
+                        {/* Ticker pill — a reply can launch a coin too, so it
+                            gets the same pill and the same edit dialog as the
+                            post composer. Clearing keeps isTickerManuallyEdited
+                            set for the same reason it does there. */}
+                        <TokenLaunchTrigger
+                            state={tokenLaunch}
+                            onClick={() => setIsEditingTicker(true)}
+                            className="h-11"
+                            onClear={() => setTokenLaunch((prev) => ({
+                                ...prev,
+                                ticker: "",
+                                isTickerManuallyEdited: true,
+                            }))}
+                        />
                         <button
                             type="submit"
                             disabled={!canPost}
@@ -270,6 +347,13 @@ export function CommentComposer({
                     </div>
                 </div>
             </div>
+
+            <TickerEditDialog
+                open={isEditingTicker}
+                onOpenChange={setIsEditingTicker}
+                state={tokenLaunch}
+                onSave={(updates) => setTokenLaunch((prev) => ({ ...prev, ...updates }))}
+            />
         </form>
     );
 }
