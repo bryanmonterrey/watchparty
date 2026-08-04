@@ -782,9 +782,23 @@ export const walletRouter = router({
         // swallows failures), so this branch is the normal path, not a
         // legacy-accounts fallback as previously commented.
         if (!walletData.swig_account_created) {
-            const { createSwigAccount } = await import("@/lib/swig/swig-server");
             let accountReady = false;
             try {
+                // The IMPORT is inside the try, not above it.
+                //
+                // It used to sit outside, and that's what kept messaging broken
+                // after the throw was supposedly made non-fatal: loading
+                // @swig-wallet/classic itself fails on workerd
+                // ("u is not iterable", observed in production 2026-08-04), and a
+                // module that throws while EVALUATING escapes a guard that only
+                // wraps the call. So frostSetup still died before the decrypt
+                // below, and the client share — which had nothing to do with the
+                // chain and decrypts perfectly — never reached the client.
+                //
+                // Node never showed this: the same decrypt path runs clean
+                // locally. It's a workerd-only failure, like the drizzle Date
+                // encoding one (see CLAUDE.md).
+                const { createSwigAccount } = await import("@/lib/swig/swig-server");
                 await createSwigAccount(walletData.swig_id, walletData.frost_public_key);
                 accountReady = true;
             } catch (err: any) {
