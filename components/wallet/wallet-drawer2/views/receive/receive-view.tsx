@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, ChevronDown, CreditCard } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { ReceiveQrCode } from "./receive-qr-code";
 import { ReceiveActions } from "./receive-actions";
@@ -124,17 +124,16 @@ export function ReceiveView({
 
                     <ReceiveActions walletAddress={walletAddress} missingAddress={missingAddress} />
 
-                    <div className="pt-2">
-                        {/* w-3/4, centred — matches the address card and copy
-                            button so the three read as one stack. */}
-                        <button
-                            onClick={onBuy}
-                            className="mx-auto w-3/4 cursor-pointer h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold flex items-center justify-center gap-2 transition-all"
-                        >
-                            <CreditCard className="w-5 h-5" />
-                            Buy {config.nativeCurrency.symbol} with Fiat
-                        </button>
-                    </div>
+                    {/* "Buy <SOL> with Fiat" was here. Pulled until there's a
+                        fiat on-ramp behind it — Stripe, see docs/TODO.md. A
+                        button that opens nothing is worst exactly here, on the
+                        screen people reach precisely because they hold no
+                        balance.
+
+                        `onBuy` stays on the props and stays wired from the
+                        drawer, so restoring this is re-adding the markup rather
+                        than re-threading a callback. git show the commit that
+                        removed it for the original. */}
                 </div>
             </div>
         </motion.div>

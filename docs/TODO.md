@@ -117,6 +117,18 @@ Follow-ups (small, whenever):
   `rm -rf .next/dev` regenerates; filter with `grep -v '^\.next/'` meanwhile.
 
 ## 🔜 Loose ends (small)
+- **Buy crypto with fiat (Stripe) — button HIDDEN until it exists** (2026-08-03). The
+  receive view's "Buy \<SOL\> with Fiat" button is removed from
+  `components/wallet/wallet-drawer2/views/receive/receive-view.tsx`. Nothing was ever
+  wired behind it, and receive is the one screen people reach *because* they hold no
+  balance, so a dead button lands worst there. Plan is **Stripe** as the on-ramp.
+  - `onBuy` is still on `ReceiveViewProps` and still passed down from the drawer, so
+    restoring the button is re-adding the markup, not re-threading a callback.
+  - The equivalent Buy action in the TOKEN view (`views/token-view/TokenActions.tsx`,
+    both drawers) was left alone — only the receive screen was asked for. Decide whether
+    that one should go too, or whether it's the natural first place to wire Stripe up.
+  - Note there are two drawers: `wallet-drawer2/` is the live one (`wallet-button.tsx`
+    lazy-imports it); `wallet-drawer/` is the older copy and still has its button.
 - **AI assistant panel behind home's dock button** (2026-08-01). Home now has a 4th column
   (`components/home/home-action-dock.tsx`) mirroring X's Grok/Chat dock. The messages button
   is live (routes to `/messages`, real unread badge off `conversation.getUnreadCount`); the
