@@ -45,11 +45,16 @@ const REST_PX = 0.1;
 
 export function RailScrollbar({
     getScroller,
+    topPx = TRACK_INSET_PX,
     className,
 }: {
     /** Resolved on mount and retried for a few frames — BidirectionalList
      *  creates its scroller after its parent's first effect run. */
     getScroller: () => HTMLElement | null;
+    /** Where the track starts. Defaults to the standard inset; pass the height
+     *  of anything pinned over the top of the scroller (home's rail tabs) so the
+     *  thumb isn't hidden behind it at scroll 0. */
+    topPx?: number;
     className?: string;
 }) {
     const thumbRef = useRef<HTMLDivElement>(null);
@@ -163,7 +168,7 @@ export function RailScrollbar({
         <div
             ref={trackRef}
             aria-hidden
-            style={{ top: TRACK_INSET_PX, bottom: TRACK_INSET_PX }}
+            style={{ top: topPx, bottom: TRACK_INSET_PX }}
             className={cn(
                 // pointer-events-none: an indicator, not a control. Dragging it
                 // would need hit-testing and a grab affordance, and neither rail

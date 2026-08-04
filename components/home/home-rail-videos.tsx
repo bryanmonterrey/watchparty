@@ -54,6 +54,10 @@ const CARD_MB = "mb-0";
 // on RailTabs itself, which the live/video rails also use — this keeps it to
 // home's rail. Revert = drop the last two classes.
 const CARD_HEADER_PAD = "px-3 pt-3 pb-2 bg-canvas/50 backdrop-blur-xs";
+/** Roughly the pinned strip's height — pt-3 (12) + a py-1.5 text-lg row (~40)
+ *  + pb-2 (8). Only the scrollbar's top inset reads it, so being a pixel or two
+ *  out costs nothing; the tabs themselves are laid out by `sticky`, not by this. */
+const TABS_H = 60;
 
 
 
@@ -66,10 +70,18 @@ export function HomeRailVideos() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
 
-    // One header for both branches below, so the skeleton and the real list
-    // present an identical card.
-    const cardHeader = (
-        <div className={CARD_HEADER_PAD}>
+    // THE TABS PIN INSIDE THE SCROLLER, they are not a header above it.
+    //
+    // That's the whole point of their translucent fill: rows pass UNDER them and
+    // read blurred through the band. As RailShell's `header` they were a
+    // shrink-0 block above the list, so nothing ever moved behind them and
+    // bg-canvas/50 + backdrop-blur-xs had nothing to act on.
+    //
+    // `sticky top-0` rather than an absolute overlay, so the strip occupies its
+    // own space on first paint and no manual top-padding has to be kept in sync
+    // with its height — it simply pins once the list scrolls past it.
+    const railTabs = (
+        <div className={cn("sticky top-0 z-20 shrink-0", CARD_HEADER_PAD)}>
             <HomeRailTabs />
         </div>
     );
@@ -105,11 +117,14 @@ export function HomeRailVideos() {
     // appears only once the rows land would read as a layout shift.
     if (isLoading) {
         return (
-            <RailShell className={CARD_MB} radius={25} bordered header={cardHeader}>
-                <div className={cn("flex flex-col", CARD_PX)}>
-                    {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-                        <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
-                    ))}
+            <RailShell className={CARD_MB} radius={25} bordered>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    {railTabs}
+                    <div className={cn("flex flex-col", CARD_PX)}>
+                        {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+                            <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
+                        ))}
+                    </div>
                 </div>
             </RailShell>
         );
@@ -119,12 +134,19 @@ export function HomeRailVideos() {
     // rather than growing the page. RailShell owns the height; this element
     // owns the scrolling.
     return (
-        <RailShell className={CARD_MB} radius={25} bordered header={cardHeader}>
+        <RailShell className={CARD_MB} radius={25} bordered>
             {/* relative is the scrollbar's positioning context; it's absolute
                 against this, not against the scroller (whose own box scrolls). */}
             <div className="relative flex min-h-0 flex-1 flex-col">
-            <RailScrollbar getScroller={() => scrollRef.current} />
-            <div ref={scrollRef} className={cn("hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto", CARD_PX)}>
+            {/* topPx clears the pinned tabs, so the thumb isn't sitting behind
+                them at scroll 0 — which is exactly where it starts. */}
+            <RailScrollbar getScroller={() => scrollRef.current} topPx={TABS_H} />
+            {/* No horizontal padding on the SCROLLER any more: the pinned tabs
+                are inside it now and their translucent band has to reach both
+                edges of the card. The rows carry CARD_PX themselves instead. */}
+            <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
+                {railTabs}
+                <div className={cn("flex flex-col", CARD_PX)}>
                 {videos.map((v) => (
                     <RailRow
                         key={v.id}
@@ -156,6 +178,7 @@ export function HomeRailVideos() {
                 {/* Zero-height tripwire below the last row. Kept mounted only while
                     there's more to fetch, so reaching the cap simply ends the scroll. */}
                 {hasMore && <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />}
+                </div>
             </div>
 
             {/* Bottom fade — rows dissolve into the canvas at the card's lower
