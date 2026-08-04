@@ -133,7 +133,12 @@ export function StreamMetadata({
                 }
             />
 
-            {/* Description Block */}
+            {/* Description Block — hidden entirely when there's nothing in it,
+                same rule as the video page. This used to fall back to "Welcome
+                to the stream!", which meant the panel was NEVER empty and every
+                stream without a description showed filler as if the host had
+                written it. No description now means no panel. */}
+            {(streamCategory || (description ?? "").trim()) && (
             <div className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl p-3 mt-1">
                 {streamCategory && (
                     <div className="flex gap-2 items-center mb-1">
@@ -142,10 +147,13 @@ export function StreamMetadata({
                         </span>
                     </div>
                 )}
-                <p className="text-sm text-zinc-100 whitespace-pre-wrap leading-relaxed font-medium">
-                    {description || "Welcome to the stream!"}
-                </p>
+                {(description ?? "").trim() && (
+                    <p className="text-sm text-zinc-100 whitespace-pre-wrap leading-relaxed font-medium">
+                        {description}
+                    </p>
+                )}
             </div>
+            )}
         </div>
     );
 }

@@ -157,7 +157,11 @@ export function VideoMetadata({
                 giftSubs={false}
             />
 
-            {/* Description Block */}
+            {/* Description Block — hidden entirely when there's nothing in it.
+                An empty panel is worse than no panel: it reads as a thing that
+                failed to load rather than a video whose author wrote no
+                description. Shows if EITHER the category or the body exists. */}
+            {(category || (content ?? "").trim()) && (
             <div
                 className="bg-white/5 hover:bg-white/10 transition-colors rounded-xl p-3 mt-1 cursor-pointer"
                 onClick={() => setDescExpanded(v => !v)}
@@ -181,6 +185,7 @@ export function VideoMetadata({
                     </span>
                 )}
             </div>
+            )}
 
             {/* Comments. The id stays a deep-link target (#comments) even though
                 the header no longer has a button pointing at it. */}

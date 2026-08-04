@@ -70,7 +70,7 @@ export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
         // the column, not padding on the row.
         <div className="relative flex min-h-screen w-full flex-col lg:flex-row">
             {/* ── Main column ─────────────────────────────────────────────── */}
-            <main className={cn("relative flex min-w-0 flex-col pb-4 md:mt-[var(--header-height)] lg:ml-4 lg:mr-1.25", showChat ? "flex-1" : "w-full")}>
+            <main className={cn("relative flex min-w-0 flex-col pb-4 md:mt-[var(--header-height)] lg:ml-4 lg:mr-3", showChat ? "flex-1" : "w-full")}>
                 {isMiniActive ? (
                     <button
                         onClick={exitMiniPlayer}

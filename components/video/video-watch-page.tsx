@@ -82,7 +82,7 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
         // padding would run the column's fill up behind the fixed header.
         <div className="relative flex min-h-dvh w-full flex-col lg:flex-row">
             {/* ── Main column ─────────────────────────────────────────────── */}
-            <main className="relative flex min-w-0 flex-1 flex-col pb-4 md:mt-[var(--header-height)] lg:ml-4 lg:mr-1.25">
+            <main className="relative flex min-w-0 flex-1 flex-col pb-4 md:mt-[var(--header-height)] lg:ml-4 lg:mr-3">
                 {/* No mx-auto and no max-w: the screen spans the column, left
                     edge to the rail. It used to be centred inside a max-w, which
                     is what left the gap down the left side. */}

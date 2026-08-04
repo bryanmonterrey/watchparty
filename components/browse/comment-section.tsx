@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { PostCard } from "./post-card";
@@ -23,6 +25,11 @@ export function CommentSection({ postId, hideComposer = false }: CommentSectionP
 
     const [text, setText] = useState("");
 
+    const { data: session } = useAuthSession();
+    const viewerAvatar = (session?.user as { avatar_url?: string | null; image?: string | null } | undefined)?.avatar_url
+        ?? session?.user?.image
+        ?? null;
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!text.trim()) return;
@@ -34,20 +41,28 @@ export function CommentSection({ postId, hideComposer = false }: CommentSectionP
         <div className="flex flex-col gap-3">
             {/* Compose */}
             {!hideComposer && (
-                <form onSubmit={handleSubmit} className="flex items-start gap-2">
-                    <div className="w-8 h-8 rounded-full bg-zinc-800 shrink-0" />
-                    <div className="flex-1 flex gap-2">
+                <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                    {/* The signed-in user's own avatar. This was a bare grey
+                        disc — not a fallback, just a coloured div that never
+                        tried to show anyone. AvatarFallback carries the shared
+                        /avatar.png, so a user with no image still gets the house
+                        placeholder rather than a letter. */}
+                    <Avatar className="size-8 shrink-0">
+                        <AvatarImage src={viewerAvatar ?? undefined} alt="" className="object-cover" />
+                        <AvatarFallback />
+                    </Avatar>
+                    <div className="flex-1 flex items-center gap-2">
                         <input
                             value={text}
                             onChange={e => setText(e.target.value)}
                             placeholder="Post your reply"
-                            className="flex-1 bg-transparent text-[14px] text-zinc-200 placeholder:text-zinc-500 outline-none transition-colors pb-1"
+                            className="flex-1 bg-transparent text-[14px] text-zinc-200 placeholder:text-zinc-500 outline-none transition-colors"
                             maxLength={1000}
                         />
                         <button
                             type="submit"
                             disabled={!text.trim() || createComment.isPending}
-                            className="text-sm font-bold text-black bg-white hover:bg-zinc-200 disabled:opacity-40 px-3 py-1 rounded-full transition-colors"
+                            className="h-11 shrink-0 text-sm font-bold text-black bg-white hover:bg-zinc-200 disabled:opacity-40 px-5 rounded-full transition-colors"
                         >
                             Reply
                         </button>
