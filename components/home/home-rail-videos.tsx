@@ -9,7 +9,7 @@ import { HomeRailTabs } from "./home-rail-tabs";
 import { cn } from "@/lib/utils";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { useHomeFeed } from "./home-feed-context";
-import { HomeRailRowMenu } from "./home-rail-row-menu";
+import { RailRowMenu } from "@/components/rails/rail-row-menu";
 
 // The rail's video list — this is the carousel's picker, relocated. Clicking a
 // row makes it the hero, exactly as clicking a cell in the old 3x3 grid did.
@@ -155,7 +155,7 @@ export function HomeRailVideos() {
                         verifiedTier={v.user.verifiedTier}
                         title={v.title}
                         views={v.views}
-                        menu={<HomeRailRowMenu postId={v.id} userId={v.user.id} />}
+                        menu={<RailRowMenu postId={v.id} userId={v.user.id} />}
                         isActive={v.id === active?.id}
                         hoverColor={stableHoverColor(v.id)}
                         onSelect={() => setActiveId(v.id)}

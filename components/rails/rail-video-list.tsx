@@ -3,7 +3,9 @@
 import { useMemo } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { RailRow, RailRowSkeleton } from "./rail-row";
+import { RailRowMenu } from "./rail-row-menu";
 import { RAIL_ICON_TAB } from "./rail-tabs";
+import { stableHoverColor } from "@/lib/stable-hover-color";
 
 // What sits under the rail tabs on the video and live pages.
 //
@@ -77,6 +79,14 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
                         username={s.username}
                         verifiedTier={s.verifiedTier}
                         title={s.title ?? `${s.name ?? s.username} is live`}
+                        // Concurrent viewers, in the same slot a video's view
+                        // count uses. ViewsStat prints an eye and a figure with
+                        // no "views" label, so the number reads correctly for
+                        // both. NO menu here: that menu acts on a POST, and a
+                        // live stream doesn't have one — listLive returns a
+                        // userId, not a postId.
+                        views={s.viewerCount}
+                        hoverColor={stableHoverColor(s.userId)}
                     />
                 ))}
             </div>
@@ -89,6 +99,10 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
 
     return (
         <div className="flex flex-col bg-canvas">
+            {/* views + menu are what made these read as a lesser version of
+                home's rows. RailRow already supported both — this list simply
+                wasn't passing them, so the video and live rails lost the
+                engagement line and the options dots. */}
             {videos.map((v) => (
                 <RailRow
                     key={v.id}
@@ -97,6 +111,9 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
                     username={v.author.username}
                     verifiedTier={v.author.verifiedTier}
                     title={v.title}
+                    views={v.views}
+                    menu={<RailRowMenu postId={v.id} userId={v.author.id} />}
+                    hoverColor={stableHoverColor(v.id)}
                 />
             ))}
         </div>

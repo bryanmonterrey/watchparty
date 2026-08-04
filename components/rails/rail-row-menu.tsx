@@ -16,7 +16,7 @@ import { PostOptionsMenu } from "@/components/browse/post-card/post-options-menu
  * Open state lives here, per row, so the rail can render one of these alongside
  * every video without hoisting a map of open flags.
  */
-export function HomeRailRowMenu({ postId, userId }: { postId: string; userId?: string | null }) {
+export function RailRowMenu({ postId, userId }: { postId: string; userId?: string | null }) {
     const [open, setOpen] = useState(false);
 
     return (
