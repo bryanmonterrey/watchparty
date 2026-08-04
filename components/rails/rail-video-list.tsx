@@ -88,7 +88,7 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
     }
 
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col bg-canvas">
             {videos.map((v) => (
                 <RailRow
                     key={v.id}

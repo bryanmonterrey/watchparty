@@ -120,7 +120,7 @@ export function HomeRailVideos() {
             <RailShell className={CARD_MB} radius={25} bordered>
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     {railTabs}
-                    <div className={cn("flex flex-col", CARD_PX)}>
+                    <div className={cn("flex flex-col bg-canvas", CARD_PX)}>
                         {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
                             <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
                         ))}
@@ -146,7 +146,7 @@ export function HomeRailVideos() {
                 edges of the card. The rows carry CARD_PX themselves instead. */}
             <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
                 {railTabs}
-                <div className={cn("flex flex-col", CARD_PX)}>
+                <div className={cn("flex flex-col bg-canvas", CARD_PX)}>
                 {videos.map((v) => (
                     <RailRow
                         key={v.id}
