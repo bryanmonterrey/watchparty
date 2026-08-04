@@ -32,7 +32,7 @@ import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 // meaning while letting the primary action stay primary. The fill arrives on
 // hover, so pressing it still feels like a button.
 const COIN_YELLOW =
-    "border border-yellow-400/80 text-yellow-400 hover:bg-yellow-400/10";
+    "border-2 border-yellow-400/80 text-yellow-400 hover:bg-yellow-400/10";
 
 export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner: boolean }) {
     const router = useRouter();
