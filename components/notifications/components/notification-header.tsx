@@ -14,7 +14,7 @@ export function NotificationHeader({ unreadCount, onMarkAllRead, onClose }: Noti
             <div className="flex items-center gap-2.5">
                 <h2 className="text-xl font-bold text-white">Notifications</h2>
                 {unreadCount > 0 && (
-                    <span className="px-1.5 py-0.5 min-w-[22px] text-center rounded-full bg-twitter2 text-white text-xs font-bold">
+                    <span className="px-1.5 py-0.5 min-w-[22px] text-center rounded-full bg-notification text-white text-xs font-bold">
                         {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                 )}

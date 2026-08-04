@@ -62,7 +62,7 @@ export function NotificationItem({ notification: n, onMarkRead }: NotificationIt
             )}
 
             {!n.isRead && (
-                <div className="w-2 h-2 rounded-full bg-twitter2 shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-notification shrink-0" />
             )}
         </div>
     )

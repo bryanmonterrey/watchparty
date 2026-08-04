@@ -78,7 +78,8 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: -16, opacity: 0 }}
                         transition={{ type: "tween", duration: 0.1, ease: "easeOut" }}
-                        className="fixed left-0 top-0 h-screen w-[440px] z-[60] flex flex-col bg-black border-r border-flexborder/50 overflow-hidden"
+                        // w-[506px]: 440 + 15%.
+                        className="fixed left-0 top-0 h-screen w-[506px] z-[60] flex flex-col bg-black border-r border-flexborder/50 overflow-hidden"
                     >
                         <NotificationHeader
                             unreadCount={unreadData?.count ?? 0}

@@ -117,7 +117,7 @@ export function AppHeader2() {
 
   return (
     <header
-      className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-center px-[var(--header-px)] py-3 pointer-events-none"
+      className="fixed top-0 left-0 w-full h-[var(--header-height)] z-50 max-md:hidden flex items-center justify-center px-[var(--header-px)] py-3 pointer-events-none bg-transparent border-b border-soft-gray/12"
     >
       {/* Scroll backdrop: media pages keep the black scrim over video; /search
           gets a whisper of theme background; /settings goes near-solid (85%).
