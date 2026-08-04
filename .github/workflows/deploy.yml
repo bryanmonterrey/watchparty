@@ -26,15 +26,21 @@ jobs:
       # back. Restore it here (before `bun install`, so hashFiles never walks
       # node_modules) to actually collect the faster-repeat-build win.
       #
-      # The exact key changes whenever source does, so a matching hit means a
-      # fully warm cache; the restore-keys fall back to the newest cache for
-      # this lockfile, which is still mostly reusable. Entries are evicted LRU
-      # against the repo's 10GB budget.
+      # The key is per-commit so every run saves a fresh cache; the restore-keys
+      # fall back to the newest cache for this lockfile, which is still mostly
+      # reusable. Entries are evicted LRU against the repo's 10GB budget.
+      #
+      # Do NOT key on a source glob like hashFiles('**/*.ts', ...). The cache
+      # action re-evaluates `key` in its POST step, by which point node_modules,
+      # .next and .open-next all exist — the walk then blows GitHub's 120s
+      # expression budget, the template is declared invalid, and the save fails
+      # (observed on run 30874361145). `github.sha` is free to evaluate and
+      # changes exactly as often.
       - name: Restore Turbopack build cache
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx') }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
             nextjs-${{ runner.os }}-
