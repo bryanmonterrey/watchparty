@@ -110,7 +110,20 @@ export function useTokenLaunch() {
     const { signAndSubmit: signAndSendCustodialTx } = useWalletSigning();
 
     const launchToken = async (
-        metadata: { name: string; symbol: string; image: string; description: string },
+        metadata: {
+            name: string;
+            symbol: string;
+            image: string;
+            description: string;
+            /**
+             * The post this coin belongs to. Given one, external_url points at
+             * the CONTENT rather than the coin page — which is the thing a coin
+             * on watchparty actually is: a post someone can trade. Callers pass
+             * an id they generated themselves and hand to createPost, so both
+             * agree on the url before the post exists.
+             */
+            postId?: string;
+        },
         launchState: TokenLaunchState,
         // First-buy on someone ELSE'S draft: the connected wallet pays and
         // buys, but the pool identity + fees + leftover belong to the token's
@@ -199,7 +212,11 @@ export function useTokenLaunch() {
                     symbol: metadata.symbol,
                     description: metadata.description,
                     image: metadata.image,
-                    external_url: `${siteOrigin}/coin/${mintAddress}`,
+                    // The content if we know it, the coin page otherwise —
+                    // a coin minted outside a post still needs somewhere to go.
+                    external_url: metadata.postId
+                        ? `${siteOrigin}/feed/post/${metadata.postId}`
+                        : `${siteOrigin}/coin/${mintAddress}`,
                 };
                 const file = new File(
                     [new Blob([JSON.stringify(doc)], { type: 'application/json' })],

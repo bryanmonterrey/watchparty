@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { AnimatedSlider } from "@/components/ui/motion-slider"
 import { Squircle } from "@/components/ui/squircle"
+import { nanoid } from "nanoid"
 import { cn } from "@/lib/utils"
 import { appToast } from "@/components/app-ui/app-toast"
 import { supabase } from "@/lib/supabase/client"
@@ -95,6 +96,10 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
 
         setIsSubmitting(true)
         try {
+            // Generated up front: the coin's metadata embeds this post's url as
+            // external_url, and the launch happens before the post is created.
+            const newPostId = nanoid()
+
             // 1. Upload the coin image.
             const imageUrl = await uploadToPosts(image)
 
@@ -105,13 +110,14 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
             //    would upload a document nothing reads.
             const tokenName = name.trim() || ticker.trim()
             const launchResult = await launchToken(
-                { name: tokenName, symbol: ticker, image: imageUrl, description },
+                { name: tokenName, symbol: ticker, image: imageUrl, description, postId: newPostId },
                 { earningsEnabled: true, ticker, creatorFee, splits, buyAmount }
             )
             if (!launchResult.success) { setIsSubmitting(false); return }
 
             // 4. Persist the coin as a content record.
             createPostMutation.mutate({
+                id: newPostId,
                 content: description.trim() || undefined,
                 imageUrl,
                 visibility: "public",

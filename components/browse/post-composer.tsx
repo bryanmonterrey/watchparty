@@ -236,6 +236,11 @@ export function PostComposer() {
         setIsSubmitting(true);
 
         const hasBuy = !!(tokenLaunch.buyAmount && tokenLaunch.buyAmount > 0);
+        // Generated up front so the coin's metadata can point at this post:
+        // the launch runs BEFORE createPost, so without this the url wouldn't
+        // exist yet. The same id goes to both.
+        const newPostId = nanoid();
+
         let imageUrl: string | undefined;
         let generatedOgUrl: string | undefined;
         let mediaArr: { type: "image" | "video" | "audio"; url: string }[] = [];
@@ -340,6 +345,7 @@ export function PostComposer() {
                     // with an empty image keeps it forever.
                     image: imageUrl || generatedOgUrl || session?.user?.avatar_url || "",
                     description: content,
+                    postId: newPostId,
                 },
                 { ...tokenLaunch, earningsEnabled: true }
             );
@@ -358,6 +364,7 @@ export function PostComposer() {
 
         const validPollOptions = pollOptions.filter(o => o.text.trim());
         createPost.mutate({
+            id: newPostId,
             content,
             imageUrl,
             // voiceNoteUrl was computed above and then never sent — voice notes

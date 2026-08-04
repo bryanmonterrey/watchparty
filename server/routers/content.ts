@@ -240,6 +240,17 @@ export const contentRouter = router({
                 }).optional(),
                 // Threading / Engagement
                 replyToId: z.string().optional(),
+                /**
+                 * Client-supplied post id. The composer needs the post's URL
+                 * BEFORE the post exists, because the coin's on-chain metadata
+                 * embeds it as external_url and the launch happens first. So the
+                 * client generates the id, hands it to the launch, then hands
+                 * the same one here.
+                 *
+                 * Safe: the column is the primary key, so a reused id fails the
+                 * insert rather than overwriting anything.
+                 */
+                id: z.string().min(8).max(64).optional(),
                 repostOfId: z.string().optional(),
             })
         )
@@ -250,7 +261,7 @@ export const contentRouter = router({
                 throw new Error("Post must have content, image, or poll");
             }
 
-            const postId = nanoid();
+            const postId = input.id ?? nanoid();
             let tokenId: string | undefined = undefined;
             // Hoisted so the POST row can store the same resolved image as the
             // TOKEN row. It used to be a const inside the `if (input.ticker)`
