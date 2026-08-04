@@ -397,7 +397,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 reads as one control, not three separate links. */}
             {/* No fill — an internal row of the box above, divided from the
                 table by an ordinary border-b. */}
-            <div className="flex min-w-0 items-center justify-between gap-4 border-b border-flexwhite/10 px-5 py-4">
+            <div className="flex min-w-0 items-center justify-between gap-4 px-5 py-4">
                 <div className="flex min-w-0 items-center">
                     {TABS.map((t, i) => (
                         <React.Fragment key={t.id}>
@@ -422,8 +422,8 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 </div>
             </div>
 
-            <div className={cn(GRID, "border-b border-flexwhite/10 text-[15px] font-normal text-zinc-500")}>
-                <span className="border-r border-flexwhite/10 px-5 py-3">Trader</span>
+            <div className={cn(GRID, "text-[15px] font-normal text-zinc-500")}>
+                <span className="px-5 py-3">Trader</span>
                 <span className="px-5 py-3">Position</span>
                 <span className="px-5 py-3">PnL</span>
                 <span className="px-5 py-3">Avg. entry</span>
@@ -438,7 +438,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 <div className="space-y-px">
                     {Array.from({ length: 6 }).map((_, i) => (
                         <div key={i} className={cn(GRID, "h-[68px]")}>
-                            <div className="flex items-center gap-3 border-r border-flexwhite/10 px-4">
+                            <div className="flex items-center gap-3 px-4">
                                 <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
                                 <div className="h-3.5 w-24 rounded shimmer-skeleton" />
                             </div>
@@ -468,7 +468,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     seeded circle with the brand star, never a
                                     letter — and addresses are never rendered in
                                     full. */}
-                                <span className="flex min-w-0 items-center gap-3 self-stretch border-r border-flexwhite/10 px-5 py-3.5">
+                                <span className="flex min-w-0 items-center gap-3 self-stretch px-5 py-3.5">
                                     <span
                                         className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full"
                                         style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
