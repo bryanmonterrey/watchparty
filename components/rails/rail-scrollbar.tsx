@@ -23,8 +23,13 @@ import { cn } from "@/lib/utils";
 // globals.css hides scrollbars everywhere (`* { scrollbar-width: none }`).
 // Deliberate, and scoped to the two rails that opt in.
 
-/** Constant thumb height. The stable property — never scales with content. */
-const THUMB_PX = 70;
+/** Constant thumb height. The stable property — never scales with content.
+ *  90 rather than the library's 70: these rails run close to the viewport's
+ *  full height, so 70 sat at roughly 9% of the track and read as a tick rather
+ *  than a thumb. Raising it also shortens the travel (trackHeight - THUMB_PX),
+ *  so the same scroll moves it slightly less far — which is the calmer half of
+ *  why a taller thumb feels steadier. */
+const THUMB_PX = 90;
 /** Inset from the scroller's top and bottom edges. */
 const TRACK_INSET_PX = 6;
 
