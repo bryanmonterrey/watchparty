@@ -98,16 +98,14 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
             // 1. Upload the coin image.
             const imageUrl = await uploadToPosts(image)
 
-            // 2. Upload standard token metadata JSON (name/symbol/description/image)
-            //    so the on-chain URI points at real metadata, not just an image.
+            // 2. Launch (draft if no first buy, on-chain if a first-buy amount is
+            //    set). The metadata JSON used to be built and uploaded HERE;
+            //    useTokenLaunch owns it now because external_url needs the mint,
+            //    which only exists inside the launch. Doing it here as well
+            //    would upload a document nothing reads.
             const tokenName = name.trim() || ticker.trim()
-            const metadata = { name: tokenName, symbol: ticker, description, image: imageUrl }
-            const metaFile = new File([new Blob([JSON.stringify(metadata)], { type: "application/json" })], `metadata_${Date.now()}.json`, { type: "application/json" })
-            const metadataUri = await uploadToPosts(metaFile)
-
-            // 3. Launch (draft if no first buy, on-chain if a first-buy amount is set).
             const launchResult = await launchToken(
-                { name: tokenName, symbol: ticker, image: metadataUri, description },
+                { name: tokenName, symbol: ticker, image: imageUrl, description },
                 { earningsEnabled: true, ticker, creatorFee, splits, buyAmount }
             )
             if (!launchResult.success) { setIsSubmitting(false); return }

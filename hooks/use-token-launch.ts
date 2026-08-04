@@ -4,6 +4,7 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, Keypair, Transaction, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 import { toPublicKey } from '@/lib/solana/pubkey';
 import { trpc } from '@/lib/trpc/client';
+import { supabase } from '@/lib/supabase/client';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { SplitShare } from '@/components/app-ui/create-dialog/token-launch-section';
 import { getBoostTreasuryOwner } from '@/lib/premium/boosts';
@@ -104,6 +105,8 @@ export function useTokenLaunch() {
 
     const [isLaunching, setIsLaunching] = useState(false);
     const resolveSplitsMutation = trpc.escrow.resolveSplits.useMutation();
+    // Uploads the token's metadata JSON (see the launch path).
+    const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation();
     const { signAndSubmit: signAndSendCustodialTx } = useWalletSigning();
 
     const launchToken = async (
@@ -167,6 +170,59 @@ export function useTokenLaunch() {
             // Generate Keys
             const configKeypair = Keypair.generate();
             const baseMintKeypair = Keypair.generate();
+
+            // METADATA JSON. `uri` is where a Solana token's metadata lives, and
+            // it used to be handed the raw IMAGE url — so every coin launched
+            // from a post had a uri pointing at a PNG, and any wallet or
+            // explorer fetching it got an image where JSON should be: no name,
+            // no description, no link back to us.
+            //
+            // Built HERE rather than at the call sites because external_url
+            // needs the mint, and the mint is generated on the line above. It's
+            // also what makes the two launch paths agree — both now pass a plain
+            // image url and get the same document.
+            //
+            // external_url is the standard Metaplex field explorers render as
+            // the project link. Pointing it at our own coin page is the link
+            // back to the content, and it's permanent: an on-chain uri can
+            // never be rewritten, so this is the one chance to get the host
+            // right.
+            const mintAddress = baseMintKeypair.publicKey.toBase58();
+            const siteOrigin =
+                process.env.NEXT_PUBLIC_BASE_URL ||
+                (typeof window !== 'undefined' ? window.location.origin : 'https://watchparty.xyz');
+
+            let metadataUri = metadata.image;
+            try {
+                const doc = {
+                    name: metadata.name,
+                    symbol: metadata.symbol,
+                    description: metadata.description,
+                    image: metadata.image,
+                    external_url: `${siteOrigin}/coin/${mintAddress}`,
+                };
+                const file = new File(
+                    [new Blob([JSON.stringify(doc)], { type: 'application/json' })],
+                    `metadata_${mintAddress}.json`,
+                    { type: 'application/json' },
+                );
+                const { token, path } = await getPresignedUrl.mutateAsync({
+                    bucket: 'posts',
+                    filename: file.name,
+                    contentType: file.type,
+                });
+                const { data, error } = await supabase.storage.from('posts').uploadToSignedUrl(path, token, file);
+                if (error) throw error;
+                if (data) {
+                    const { data: pub } = supabase.storage.from('posts').getPublicUrl(data.path);
+                    metadataUri = pub.publicUrl;
+                }
+            } catch (err) {
+                // Fall back to the image url rather than abort the launch — a
+                // coin with a weaker uri beats a failed mint the user has
+                // already approved.
+                console.error('[launch] metadata upload failed, falling back to image uri', err);
+            }
 
             // Prepare Curve Params
             // Define sqrtPrices array for each curve segment checkpoint (Standard Linear/Exponential curve)
@@ -316,7 +372,7 @@ export function useTokenLaunch() {
                 preCreatePoolParam: {
                     name: metadata.name,
                     symbol: metadata.symbol,
-                    uri: metadata.image, // Using image URL as URI for now, ideally upload full metadata JSON
+                    uri: metadataUri,
                     poolCreator: creatorPubkey,
                     baseMint: baseMintKeypair.publicKey,
                 },
