@@ -49,7 +49,11 @@ const CARD_MB = "mb-0";
 //
 // RailTabs itself is a bare <nav> with no padding of its own, so these are the
 // only values in play; nothing here doubles up.
-const CARD_HEADER_PAD = "px-3 pt-3 pb-2";
+// EXPERIMENT: bg-canvas/50 + backdrop-blur-xs on the tab strip, to see how a
+// translucent band reads against the card's flat fill. Applied here rather than
+// on RailTabs itself, which the live/video rails also use — this keeps it to
+// home's rail. Revert = drop the last two classes.
+const CARD_HEADER_PAD = "px-3 pt-3 pb-2 bg-canvas/50 backdrop-blur-xs";
 
 
 
