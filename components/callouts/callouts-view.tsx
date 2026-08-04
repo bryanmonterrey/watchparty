@@ -250,7 +250,12 @@ export function CalloutsView() {
                                     <motion.div
                                         layoutId="callouts-toggle-bg"
                                         className="absolute inset-0 bg-white rounded-full -z-10"
-                                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                        // Matched to the wallet drawer's spring
+                                        // so every tab strip in the app moves at
+                                        // one speed; this was 380 and read
+                                        // noticeably snappier than the rest.
+                                        initial={false}
+                                        transition={{ type: "spring", stiffness: 250, damping: 30 }}
                                     />
                                 )}
                             </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     ArrowDown01Icon,
@@ -399,18 +400,31 @@ export function TradeDiscover() {
                 <div className="pointer-events-none absolute inset-0 -z-10 bg-canvas backdrop-blur-sm" />
                 <div className="h-(--header-height) max-md:hidden" />
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-2 lg:px-6">
-                    <div className="flex items-center gap-1.5">
+                    {/* The active pill SLIDES between tabs (shared layoutId)
+                        rather than cutting, matching the wallet drawer — same
+                        spring, same initial={false} so it doesn't animate in
+                        from nothing on first paint. `relative` on the row is
+                        what the absolutely-positioned pill measures against. */}
+                    <div className="relative flex items-center gap-1.5">
                         {TABS.map((t) => (
                             <button
                                 key={t.key}
                                 onClick={() => selectTab(t.key)}
                                 className={cn(
-                                    "flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-lg font-bold tracking-tight transition-colors",
+                                    "relative z-10 flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-lg font-bold tracking-tight transition-colors",
                                     tab === t.key
-                                        ? "bg-sidebar-hover text-flexwhite"
+                                        ? "text-flexwhite"
                                         : "text-zinc-400 hover:bg-white/10 hover:text-white",
                                 )}
                             >
+                                {tab === t.key && (
+                                    <motion.div
+                                        layoutId="tradeTabHighlight"
+                                        className="absolute inset-0 -z-10 rounded-full bg-sidebar-hover"
+                                        initial={false}
+                                        transition={{ type: "spring", stiffness: 250, damping: 30 }}
+                                    />
+                                )}
                                 {t.key === "live" && liveCount > 0 && (
                                     <span className="relative flex size-2">
                                         <span className="absolute inline-flex size-full animate-ping rounded-full bg-pastelred opacity-75" />

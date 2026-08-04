@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon, TradeDownIcon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
@@ -377,19 +378,30 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
                         Tokens = hottest platform coins, Follows = coins from
                         creators you follow. Token rows open the token page. */}
                     <aside className={cn("hidden min-h-0 flex-col overflow-hidden rounded-lg border border-baseborder/15 bg-panel2", !railCollapsed && "lg:flex")}>
-                        {/* Inactive tabs carry the dark fill; the active tab is
-                            transparent so it IS the body color at any opacity. */}
-                        <div className="flex">
-                            {(["perps", "follows"] as const).map((t, i) => (
+                        {/* Inverted from "inactive tabs carry the dark fill":
+                            that made the lit state the ABSENCE of a background,
+                            so there was nothing to animate. The strip now holds
+                            bg-panel1 and a shared-layout bg-panel2 pill slides
+                            under the active tab, on the wallet drawer's spring
+                            like every other tab strip. */}
+                        <div className="relative flex bg-panel1">
+                            {(["perps", "follows"] as const).map((t) => (
                                 <button
                                     key={t}
                                     onClick={() => setRailTab(t)}
                                     className={cn(
-                                        "flex-1 cursor-pointer py-3 text-base font-bold capitalize transition-colors",
-                                        i < 1 && "",
-                                        railTab === t ? "text-white" : "bg-panel1 text-zinc-500 hover:text-white",
+                                        "relative z-10 flex-1 cursor-pointer py-3 text-base font-bold capitalize transition-colors",
+                                        railTab === t ? "text-white" : "text-zinc-500 hover:text-white",
                                     )}
                                 >
+                                    {railTab === t && (
+                                        <motion.div
+                                            layoutId="perpsRailTabHighlight"
+                                            className="absolute inset-0 -z-10 bg-panel2"
+                                            initial={false}
+                                            transition={{ type: "spring", stiffness: 250, damping: 30 }}
+                                        />
+                                    )}
                                     {t}
                                 </button>
                             ))}

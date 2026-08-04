@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BidirectionalList, { type BidirectionalListRef } from "broad-infinite-list/react";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUp02Icon, ArrowLeftDoubleIcon, AtIcon } from "@hugeicons/core-free-icons";
+import { ArrowUp02Icon, AtIcon, MinusSignIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -464,14 +464,25 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
 
                 <div className="ml-auto flex items-center">
                     <AlertFiltersButton filters={filters} onChange={applyFilters} coverage={coverage} />
+                    {/* Traffic-light minimize, in watchparty's own palette
+                        (sunset) rather than Apple's hex. The glyph is hidden
+                        until hover, which is the whole point of the pattern:
+                        at rest it's a colour, and the colour is the label.
+                        The green counterpart lives in the collapsed strip
+                        (home-left-rail) — the two states are exclusive, so a
+                        second dot here would be a control that does nothing. */}
                     {onCollapse && (
                         <button
                             type="button"
                             onClick={onCollapse}
-                            aria-label="collapse alerts rail"
-                            className="flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
+                            aria-label="minimize alerts rail"
+                            className="group/traffic ml-1.5 flex size-3 shrink-0 cursor-pointer items-center justify-center rounded-full bg-sunset transition-transform active:scale-90"
                         >
-                            <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-6" strokeWidth={2} />
+                            <HugeiconsIcon
+                                icon={MinusSignIcon}
+                                className="size-2 text-black/55 opacity-0 transition-opacity duration-100 group-hover/traffic:opacity-100"
+                                strokeWidth={4}
+                            />
                         </button>
                     )}
                 </div>

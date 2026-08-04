@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
@@ -135,16 +136,30 @@ export function PerpsTape({
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-baseborder/15 bg-panel2">
-            <div className="flex">
+            {/* Segmented control, inverted so the highlight can slide.
+                The recessed fill used to live on the INACTIVE buttons, which
+                means there was nothing to animate — the lit state was just the
+                absence of a background. Now the strip carries bg-panel1 and a
+                shared-layout pill of bg-panel2 slides under the active tab, on
+                the wallet drawer's spring. */}
+            <div className="relative flex bg-panel1">
                 {(["book", "trades"] as const).map((t) => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "flex-1 cursor-pointer py-2.5 text-base font-bold transition-colors",
-                            tab === t ? "text-white" : "bg-panel1 text-zinc-500 hover:text-white",
+                            "relative z-10 flex-1 cursor-pointer py-2.5 text-base font-bold transition-colors",
+                            tab === t ? "text-white" : "text-zinc-500 hover:text-white",
                         )}
                     >
+                        {tab === t && (
+                            <motion.div
+                                layoutId="perpsTapeTabHighlight"
+                                className="absolute inset-0 -z-10 bg-panel2"
+                                initial={false}
+                                transition={{ type: "spring", stiffness: 250, damping: 30 }}
+                            />
+                        )}
                         {t === "book" ? "Order Book" : "Trades"}
                     </button>
                 ))}

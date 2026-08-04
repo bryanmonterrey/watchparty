@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
-import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
+import { ArrowExpandDiagonal01Icon } from "@hugeicons/core-free-icons";
 import { AlertsRail } from "@/components/coin-feed/alerts-rail";
 
 // Home's left column. This exists as a client component purely to own the
@@ -102,11 +102,20 @@ export function HomeLeftRail() {
                         onClick={() => set(false)}
                         aria-label="expand alerts rail"
                         className={cn(
-                            "flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white",
+                            // Green half of the traffic-light pair whose yellow
+                            // sits in the expanded header (alerts-rail). Same
+                            // rule: the glyph only appears on hover, so at rest
+                            // the colour carries the meaning. Brand `lantern`,
+                            // not Apple's green.
+                            "group/traffic flex size-3 shrink-0 cursor-pointer items-center justify-center rounded-full bg-lantern transition-transform active:scale-90",
                             keepsWidth ? "self-end" : "mx-auto",
                         )}
                     >
-                        <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
+                        <HugeiconsIcon
+                            icon={ArrowExpandDiagonal01Icon}
+                            className="size-2 text-black/55 opacity-0 transition-opacity duration-100 group-hover/traffic:opacity-100"
+                            strokeWidth={3.5}
+                        />
                     </button>
                 </div>
             </aside>
