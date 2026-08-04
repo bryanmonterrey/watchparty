@@ -253,19 +253,18 @@ export function CashtagAutocomplete({
                                         <span className="shrink-0 text-[15px] font-bold tabular-nums text-white">{price}</span>
                                     )}
                                 </div>
-                                {/* TICKER · venue · size · address — the
-                                    reference's second line. The address segment
-                                    is what distinguishes two tokens sharing a
-                                    name and ticker on different chains, which is
-                                    a real case here. */}
+                                {/* TICKER · chain · market cap · contract.
+                                    The address segment is the disambiguator —
+                                    it's what tells two tokens sharing a name and
+                                    ticker apart. No draft marker: drafts never
+                                    reach this list (see trade.searchTickers). */}
                                 <div className="flex items-baseline justify-between gap-3">
                                     <span className="truncate text-[13px] font-medium text-zinc-500">
                                         {[
                                             hit.ticker.toUpperCase(),
-                                            hit.venue || "Crypto",
+                                            hit.venue,
                                             hit.marketCapUsd != null ? compactCount(hit.marketCapUsd) : null,
                                             hit.tokenAddress ? shortAddress(hit.tokenAddress) : null,
-                                            hit.status === "draft" ? "draft" : null,
                                         ].filter(Boolean).join(" · ")}
                                     </span>
                                     {change != null && (

@@ -238,20 +238,28 @@ export const tradeRouter = router({
                     priceChange24h: tokens.priceChange24h,
                     marketCapUsd: tokens.marketCapUsd,
                     status: tokens.status,
-                    // Constant for now: every token here is a Solana coin, and
-                    // there's no chain column yet. Both fields exist so the row
-                    // renders the reference's "TICKER · venue · size · address"
-                    // line today and needs no UI change when TOKENIZED STOCKS
-                    // land — those fill `venue` with their exchange (NYSE,
-                    // NASDAQ) and carry no chain, which the badge already
-                    // handles by not rendering.
-                    venue: sql<string>`'Crypto'`,
+                    // The row's third segment: ticker · VENUE · market cap ·
+                    // contract. For a coin that's the chain it lives on; every
+                    // token here is Solana and there's no chain column yet, so
+                    // it's constant.
+                    //
+                    // TOKENIZED STOCKS put their exchange in this same slot
+                    // ("NYSE", "NASDAQ") and carry no `chain`, so their rows
+                    // render correctly with no UI change — the badge just
+                    // doesn't draw.
+                    venue: sql<string>`'Solana'`,
                     chain: sql<string>`'solana'`,
                 })
                 .from(tokens)
-                .where(sql`(lower(${tokens.ticker}) like ${esc + "%"} escape '\\'
-                         or lower(${tokens.ticker}) like ${"%" + esc + "%"} escape '\\'
-                         or lower(${tokens.name}) like ${esc + "%"} escape '\\')`)
+                // LIVE ONLY. A draft has no pool, no price and no contract
+                // address — there is nothing to mention. Mentioning one would
+                // also read as an endorsement of a coin that may never launch.
+                .where(and(
+                    eq(tokens.status, "live"),
+                    sql`(lower(${tokens.ticker}) like ${esc + "%"} escape '\\'
+                      or lower(${tokens.ticker}) like ${"%" + esc + "%"} escape '\\'
+                      or lower(${tokens.name}) like ${esc + "%"} escape '\\')`,
+                ))
                 .orderBy(
                     sql`case when lower(${tokens.ticker}) like ${esc + "%"} escape '\\' then 0 else 1 end`,
                     sql`${tokens.marketCapUsd} desc nulls last`,
