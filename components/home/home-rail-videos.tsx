@@ -157,6 +157,23 @@ export function HomeRailVideos() {
                     there's more to fetch, so reaching the cap simply ends the scroll. */}
                 {hasMore && <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />}
             </div>
+
+            {/* Bottom fade — rows dissolve into the canvas at the card's lower
+                edge instead of being cut off mid-row by the border.
+
+                A DELIBERATE EXCEPTION to the app's no-gradients rule, asked for
+                directly. It's a mask rather than decoration: the colour is the
+                canvas the card sits on, so it reads as the content receding, not
+                as a painted band.
+
+                After the scroller in DOM and absolutely positioned, so it paints
+                over the rows (the scroller isn't positioned). RailScrollbar
+                keeps its z-10 and stays above this, which is what stops the
+                thumb fading out at the bottom of its own travel. */}
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-canvas to-transparent"
+            />
             </div>
         </RailShell>
     );
