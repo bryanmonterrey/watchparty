@@ -15,6 +15,11 @@ import { AlertsRail } from "@/components/coin-feed/alerts-rail";
 //
 // Collapsed is persisted — a rail you shut should stay shut across navigations
 // and reloads, or the button feels like it did nothing.
+//
+// It also starts MINIMIZED. The alerts rail is a side channel, not the page, so
+// the default is out of the way and opening it is a deliberate act. Absence of
+// a stored value therefore means collapsed, not expanded — the initial state and
+// the read below have to agree on that or the rail flips open on first paint.
 
 const STORAGE_KEY = "wp:coin-alerts:collapsed";
 
@@ -40,16 +45,19 @@ const STORAGE_KEY = "wp:coin-alerts:collapsed";
 const INNER = "sticky top-0 z-10 flex h-[100svh] flex-col pl-3 md:pt-[calc(var(--header-height))]";
 
 export function HomeLeftRail() {
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(true);
     const pathname = usePathname();
 
     // After mount, never during render — the app shell server-renders, and
     // reading localStorage in render would be a hydration mismatch.
     useEffect(() => {
         try {
-            setCollapsed(window.localStorage.getItem(STORAGE_KEY) === "1");
+            const stored = window.localStorage.getItem(STORAGE_KEY);
+            // Never opened it before → stay collapsed. Only an explicit "0"
+            // (they opened it and we saved that) expands the rail.
+            setCollapsed(stored === null ? true : stored === "1");
         } catch {
-            // storage disabled — expanded is the right default
+            // storage disabled — collapsed is the default either way
         }
     }, []);
 
