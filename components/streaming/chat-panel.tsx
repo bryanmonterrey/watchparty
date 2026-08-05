@@ -11,6 +11,9 @@ import { ChatLine } from "./chat-line";
 import { ChatComposer } from "./chat-composer";
 import { ChatSettings } from "./chat-settings";
 import { ChatMembers } from "./chat-members";
+import { ChatPinned } from "./chat-pinned";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { toast } from "sonner";
 
 // The chat itself: the message list, the composer, and the settings overlay.
 //
@@ -48,7 +51,22 @@ export function ChatPanel({
     const scrollerRef = useRef<HTMLDivElement>(null);
     const { prefs, update: setPrefs } = useChatPrefs();
 
-    const { messages, send, connected, members, requestMembers } = useStreamChat(hostUserId, enabled);
+    const { messages, send, connected, members, requestMembers, pinned } = useStreamChat(hostUserId, enabled);
+
+    // Whether the viewer can pin. Same procedure the roster ranks with, asked
+    // about one id — it shares a cache shape with that query rather than needing
+    // a second endpoint answering the same question.
+    const { data: session } = useAuthSession();
+    const myId = session?.user?.id;
+    const { data: myRole } = trpc.stream.chatRoles.useQuery(
+        { creatorId: hostUserId, userIds: myId ? [myId] : [] },
+        { enabled: !!myId, staleTime: 5 * 60_000 },
+    );
+    const canModerate = !!myId && (myRole?.[myId] === "host" || myRole?.[myId] === "moderator");
+
+    const pin = trpc.stream.pinChatMessage.useMutation({
+        onError: (e) => toast.error(e.message),
+    });
 
     // The channel's own emotes, merged over the global set.
     const { data: custom } = trpc.creator.getEmotes.useQuery(
@@ -103,9 +121,21 @@ export function ChatPanel({
                             emotes={emotes}
                             prefs={prefs}
                             onReply={setReplyTo}
+                            onPin={canModerate
+                                ? (msg) => pin.mutate({ creatorId: hostUserId, messageId: msg.id })
+                                : undefined}
                         />
                     ))}
                 </div>
+
+                {pinned && (
+                    <ChatPinned
+                        pin={pinned}
+                        hostUserId={hostUserId}
+                        canModerate={canModerate}
+                        emotes={emotes}
+                    />
+                )}
 
                 {!following && (
                     // Floats over the last lines rather than sitting above the

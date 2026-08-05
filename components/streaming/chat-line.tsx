@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";
+import { ArrowTurnBackwardIcon, PinIcon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
 import { MiniProfile } from "@/components/profile/mini-profile-card";
 import { ChatIdentity } from "./chat-identity";
@@ -11,6 +11,7 @@ import { parseChatText, isEmoteOnly, type Emote } from "@/lib/chat/emotes";
 import { CHAT_FONT_CLASS, type ChatPrefs } from "@/hooks/use-chat-prefs";
 import type { StreamChatMessage } from "@/hooks/use-stream-chat";
 import { cn } from "@/lib/utils";
+import { Squircle } from "@/components/ui/squircle";
 
 // One line of live chat.
 //
@@ -40,11 +41,14 @@ export function ChatLine({
     emotes,
     prefs,
     onReply,
+    onPin,
 }: {
     message: StreamChatMessage;
     emotes: Map<string, Emote>;
     prefs: ChatPrefs;
     onReply?: (m: StreamChatMessage) => void;
+    /** Moderators only — absent for everyone else, so the row has one action. */
+    onPin?: (m: StreamChatMessage) => void;
 }) {
     // Same cached query ChatIdentity reads — react-query dedupes per userId, so
     // the pair costs one request per unique chatter per 5 min, not two.
@@ -130,18 +134,35 @@ export function ChatLine({
                 })}
             </p>
 
-            {onReply && (
-                // Absolute so it costs the line no width — a reply affordance that
-                // reflowed the text on hover would make the whole list twitch.
-                <button
-                    type="button"
-                    onClick={() => onReply(message)}
-                    aria-label={`reply to ${message.sender}`}
-                    className="absolute right-1 top-1 hidden cursor-pointer rounded-md bg-soft-gray-15 p-1 text-zinc-400 transition-colors hover:text-white group-hover:block"
-                >
-                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3.5" strokeWidth={2} />
-                </button>
-            )}
+            {/* Absolute so the actions cost the line no width — affordances that
+                reflowed the text on hover would make the whole list twitch. */}
+            <div className="absolute right-1 top-1 hidden gap-1 group-hover:flex">
+                {onPin && (
+                    <Squircle asChild radius={12}>
+                        <button
+                            type="button"
+                            onClick={() => onPin(message)}
+                            aria-label={`pin ${message.sender}'s message`}
+                            title="Pin for everyone"
+                            className="flex size-10 cursor-pointer items-center justify-center bg-soft-gray-15 text-zinc-400 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon icon={PinIcon} className="size-5" strokeWidth={2} />
+                        </button>
+                    </Squircle>
+                )}
+                {onReply && (
+                    <Squircle asChild radius={12}>
+                        <button
+                            type="button"
+                            onClick={() => onReply(message)}
+                            aria-label={`reply to ${message.sender}`}
+                            className="flex size-10 cursor-pointer items-center justify-center bg-soft-gray-15 text-zinc-400 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-5" strokeWidth={2} />
+                        </button>
+                    </Squircle>
+                )}
+            </div>
         </div>
     );
 }

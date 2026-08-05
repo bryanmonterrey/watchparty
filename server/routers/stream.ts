@@ -10,6 +10,8 @@ import type { IvsClient } from "@aws-sdk/client-ivs";
 import { nanoid } from "nanoid";
 import { tokens } from "@/db/schema/content/token";
 import { creatorModerators, vipMembers } from "@/db/schema/content/creator";
+import { publishToRoom } from "@/lib/realtime/publish";
+import { rooms } from "@/lib/realtime/protocol";
 import { subscriptions } from "@/db/schema/content/subscription";
 
 const region = process.env.AWS_REGION ?? "us-east-1";
@@ -422,5 +424,40 @@ export const streamRouter = router({
             for (const r of mods) roles[r.id] = "moderator";
             if (userIds.includes(creatorId)) roles[creatorId] = "host";
             return roles;
+        }),
+
+    /**
+     * Pin a chat line for the channel, or clear the pin with `messageId: null`.
+     *
+     * Authorisation lives here because the Durable Object has no database — it
+     * can't know who moderates a channel. The DO does the opposite half: it
+     * resolves the id against room history, so a moderator chooses WHICH
+     * message is pinned and never what it says or whose name is on it. Neither
+     * side is trusted with the other's job.
+     */
+    pinChatMessage: protectedProcedure
+        .input(z.object({ creatorId: z.string(), messageId: z.string().nullable() }))
+        .mutation(async ({ ctx, input }) => {
+            const { creatorId, messageId } = input;
+
+            if (ctx.user.id !== creatorId) {
+                const mod = await db.select({ id: creatorModerators.id })
+                    .from(creatorModerators)
+                    .where(and(
+                        eq(creatorModerators.creatorId, creatorId),
+                        eq(creatorModerators.moderatorId, ctx.user.id),
+                    ))
+                    .limit(1);
+                if (!mod.length) {
+                    throw new TRPCError({ code: "FORBIDDEN", message: "Only the host and moderators can pin" });
+                }
+            }
+
+            await publishToRoom(rooms.streamChat(creatorId), {
+                t: "pin",
+                id: messageId,
+                by: ctx.user.name ?? "a moderator",
+            });
+            return { success: true };
         }),
 });

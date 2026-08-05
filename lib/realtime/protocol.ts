@@ -27,6 +27,23 @@ export type PresenceUser = { userId: string; userName: string };
  */
 export type ChatReply = { id: string; name: string; text: string };
 
+/**
+ * The channel's pinned line.
+ *
+ * Resolved by the DO from room history, not supplied by the pinner — a
+ * moderator can choose WHICH message is pinned, but not what it says or who it
+ * came from.
+ */
+export type PinnedMessage = {
+  id: string;
+  userId: string;
+  name: string;
+  text: string;
+  /** Display name of the moderator who pinned it. */
+  pinnedBy: string;
+  at: number;
+};
+
 /** One stream/channel chat line as stamped by the DO. */
 export type ChatLine = {
   id: string;
@@ -58,7 +75,15 @@ export type ServerEvent =
   // order that wobbles between two answers describing the identical set of
   // people makes the same data look like new data, which quietly turns a poll
   // into a refetch of everything downstream of it.
-  | { t: "members"; users: PresenceUser[] };
+  | { t: "members"; users: PresenceUser[] }
+  // The room's current pin, or null once cleared. Broadcast on change and sent
+  // to each joiner, so arriving late still shows what's pinned.
+  | { t: "pinned"; pin: PinnedMessage | null }
+  // SERVER-SIDE ONLY, and never broadcast as-is: tRPC POSTs this to the room
+  // after checking the caller moderates the channel, and the DO turns it into
+  // the `pinned` event above by looking the id up in history. It rides in
+  // ServerEvent because that's what publishToRoom accepts.
+  | { t: "pin"; id: string | null; by: string };
 
 /** Messages a client sends UP to the room. Relayed to peers; never persisted. */
 export type ClientMessage =

@@ -6,7 +6,7 @@ import {
   type WSMessage,
 } from "partyserver";
 import { verifyRealtimeToken } from "./auth";
-import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, type ChatLine, type ChatReply, type ClientMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
+import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, type ChatLine, type ChatReply, type ClientMessage, type PinnedMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
 
 // Per-connection chat rate limit: max N lines per window.
 const CHAT_RATE_MAX = 5;
@@ -53,6 +53,7 @@ export class Chat extends Server<Env> {
    * feel empty on arrival. In-memory cache avoids a storage read per line.
    */
   private historyCache: ChatLine[] | null = null;
+  private pinnedCache: PinnedMessage | null | undefined;
 
   private async getHistory(): Promise<ChatLine[]> {
     if (this.historyCache) return this.historyCache;
@@ -79,6 +80,11 @@ export class Chat extends Server<Env> {
       if (lines.length) {
         connection.send(JSON.stringify({ t: "chat-history", lines } satisfies ServerEvent));
       }
+      // A pin outlives any one session, so joiners are told about it too —
+      // otherwise it would only exist for whoever happened to be watching when
+      // a moderator set it.
+      const pin = await this.getPinned();
+      if (pin) connection.send(JSON.stringify({ t: "pinned", pin } satisfies ServerEvent));
     }
     this.broadcastPresence();
   }
@@ -158,6 +164,25 @@ export class Chat extends Server<Env> {
     return { id: target.id, name: target.name, text };
   }
 
+  private async getPinned(): Promise<PinnedMessage | null> {
+    if (this.pinnedCache !== undefined) return this.pinnedCache;
+    this.pinnedCache = (await this.ctx.storage.get<PinnedMessage>("pinned")) ?? null;
+    return this.pinnedCache;
+  }
+
+  private async setPinned(pin: PinnedMessage | null) {
+    this.pinnedCache = pin;
+    if (pin) await this.ctx.storage.put("pinned", pin);
+    else await this.ctx.storage.delete("pinned");
+  }
+
+  /** Builds a pin from a line in history. Null when the line has aged out. */
+  private resolvePin(id: string, by: string): PinnedMessage | null {
+    const target = this.historyCache?.find((l) => l.id === id);
+    if (!target) return null;
+    return { id: target.id, userId: target.userId, name: target.name, text: target.text, pinnedBy: by, at: Date.now() };
+  }
+
   private allowChat(id: string): boolean {
     const now = Date.now();
     const hits = (this.chatHits.get(id) ?? []).filter((t) => now - t < CHAT_RATE_WINDOW_MS);
@@ -182,6 +207,18 @@ export class Chat extends Server<Env> {
     } catch {
       return new Response("bad request", { status: 400 });
     }
+    // `pin` is a request, not an announcement: tRPC has already checked that the
+    // caller moderates this channel, but only the DO holds the history, so the
+    // line's text and author are looked up HERE rather than trusted from the
+    // wire. A moderator picks which message is pinned, never what it says.
+    if (event.t === "pin") {
+      const pin = event.id ? this.resolvePin(event.id, event.by) : null;
+      if (event.id && !pin) return new Response("unknown message", { status: 404 });
+      await this.setPinned(pin);
+      this.broadcast(JSON.stringify({ t: "pinned", pin } satisfies ServerEvent));
+      return new Response("ok");
+    }
+
     this.broadcast(JSON.stringify(event));
     return new Response("ok");
   }

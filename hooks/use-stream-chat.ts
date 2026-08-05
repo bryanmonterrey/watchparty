@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type PartySocket from 'partysocket';
 import { createRoomSocket, isRealtimeEnabled } from '@/lib/realtime/client';
-import { parseServerEvent, rooms, type ChatReply, type PresenceUser } from '@/lib/realtime/protocol';
+import { parseServerEvent, rooms, type ChatReply, type PinnedMessage, type PresenceUser } from '@/lib/realtime/protocol';
 
 export type StreamChatMessage = {
     id: string;
@@ -29,6 +29,7 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
     const [messages, setMessages] = useState<StreamChatMessage[]>([]);
     const [connected, setConnected] = useState(false);
     const [members, setMembers] = useState<PresenceUser[] | null>(null);
+    const [pinned, setPinned] = useState<PinnedMessage | null>(null);
     const socketRef = useRef<PartySocket | null>(null);
 
     useEffect(() => {
@@ -45,6 +46,8 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
                     ...prev.slice(-199),
                     { id: e.id, userId: e.userId, sender: e.name, content: e.text, ts: e.ts, replyTo: e.replyTo },
                 ]);
+            } else if (e?.t === 'pinned') {
+                setPinned(e.pin);
             } else if (e?.t === 'members') {
                 setMembers(e.users);
             } else if (e?.t === 'chat-history') {
@@ -69,6 +72,7 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
             setConnected(false);
             setMessages([]);
             setMembers(null);
+            setPinned(null);
         };
     }, [streamId, enabled]);
 
@@ -86,5 +90,5 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
         socket.send(JSON.stringify({ t: 'members' }));
     }, []);
 
-    return { messages, send, connected, members, requestMembers };
+    return { messages, send, connected, members, requestMembers, pinned };
 }
