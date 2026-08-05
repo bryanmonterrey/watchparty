@@ -3,10 +3,12 @@
 import { useMemo } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";
+import { trpc } from "@/lib/trpc/client";
 import { MiniProfile } from "@/components/profile/mini-profile-card";
 import { ChatIdentity } from "./chat-identity";
-import { chatNameColor } from "@/lib/chat/chat-name-color";
+import { resolveChatNameColor } from "@/lib/chat/chat-name-color";
 import { parseChatText, isEmoteOnly, type Emote } from "@/lib/chat/emotes";
+import { CHAT_FONT_CLASS, type ChatPrefs } from "@/hooks/use-chat-prefs";
 import type { StreamChatMessage } from "@/hooks/use-stream-chat";
 import { cn } from "@/lib/utils";
 
@@ -27,18 +29,32 @@ const EMOTE_INLINE = "inline-block h-[22px] w-[22px] translate-y-[-1px] align-mi
 /** ...but a line that is ONLY emotes is a reaction, so it gets room to be one. */
 const EMOTE_SOLO = "inline-block h-11 w-11 align-middle";
 
+const CARD_STALE_MS = 5 * 60 * 1000;
+
 export function ChatLine({
     message,
     emotes,
+    prefs,
     onReply,
 }: {
     message: StreamChatMessage;
     emotes: Map<string, Emote>;
+    prefs: ChatPrefs;
     onReply?: (m: StreamChatMessage) => void;
 }) {
-    const tokens = useMemo(() => parseChatText(message.content, emotes), [message.content, emotes]);
+    // Same cached query ChatIdentity reads — react-query dedupes per userId, so
+    // the pair costs one request per unique chatter per 5 min, not two.
+    const { data: card } = trpc.profile.card.useQuery(
+        { userId: message.userId },
+        { staleTime: CARD_STALE_MS, enabled: !!message.userId },
+    );
+
+    const tokens = useMemo(
+        () => parseChatText(message.content, prefs.emotes ? emotes : new Map()),
+        [message.content, emotes, prefs.emotes],
+    );
     const solo = useMemo(() => isEmoteOnly(tokens), [tokens]);
-    const nameColor = chatNameColor(message.userId);
+    const nameColor = resolveChatNameColor(message.userId, card?.chatColor);
 
     return (
         <div className="group relative rounded-lg px-1.5 py-[3px] transition-colors hover:bg-white/[0.04]">
@@ -53,8 +69,13 @@ export function ChatLine({
                 </p>
             )}
 
-            <p className="break-words text-[13px] leading-[1.45]">
-                <ChatIdentity userId={message.userId} />
+            <p className={cn("break-words leading-[1.45]", CHAT_FONT_CLASS[prefs.fontSize])}>
+                {prefs.timestamps && (
+                    <span className="mr-1.5 align-middle text-[11px] font-medium tabular-nums text-zinc-600">
+                        {new Date(message.ts).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                )}
+                {prefs.badges && <ChatIdentity userId={message.userId} />}
                 <MiniProfile userId={message.userId} triggerClassName="inline">
                     <span
                         className="cursor-pointer font-bold hover:underline"

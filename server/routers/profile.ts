@@ -1,13 +1,14 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
+import { protectedProcedure, publicProcedure, router } from "../trpc";
 import { db } from "@/db";
 import { follows, pnlSnapshots, subscriptions, subscriptionTiers } from "@/db/schema/content";
 import { communityMemberRoles, communityMembers, communityRoles, communityServers } from "@/db/schema/community";
 import { user } from "@/db/schema/auth/user";
 import { and, count, eq, sql } from "drizzle-orm";
-import { withCache } from "@/lib/cache";
+import { invalidateCache, withCache } from "@/lib/cache";
 import { computeBadges } from "@/server/lib/badges";
 import type { EarnedBadge } from "@/lib/badges";
+import { isChatNameColor } from "@/lib/chat/chat-name-color";
 
 // The mini-profile popout + profile-header data source
 // (docs/design-brief-2026-07.md §1). ONE batched query per user: identity,
@@ -39,6 +40,8 @@ interface CardCore {
     subscribable: boolean;
     /** Top community roles (Discord-style chips): highest-positioned first. */
     roles: { name: string; color: string; server: string }[];
+    /** Live-chat name colour, or null when they've never picked one. */
+    chatColor: string | null;
 }
 
 async function buildCardCore(target: typeof user.$inferSelect): Promise<CardCore> {
@@ -81,6 +84,7 @@ async function buildCardCore(target: typeof user.$inferSelect): Promise<CardCore
         pnl: pnl.length ? { realizedUsd: pnl[0].realizedUsd, winRate: pnl[0].winRate } : null,
         subscribable: tiers.length > 0,
         roles,
+        chatColor: target.chatColor,
     };
 }
 
@@ -97,9 +101,9 @@ export const profileRouter = router({
             });
             if (!target) throw new Error("User not found");
 
-            // v2: shape gained `roles` — versioned key so stale v1 entries can't
-            // serve a card missing the field.
-            const core = await withCache(`profile:card:v2:${target.id}`, CARD_TTL_SECONDS, () => buildCardCore(target));
+            // Versioned key so stale entries can't serve a card missing a
+            // field. v2 added `roles`; v3 added `chatColor`.
+            const core = await withCache(`profile:card:v3:${target.id}`, CARD_TTL_SECONDS, () => buildCardCore(target));
 
             const viewer = ctx.user;
             const [isFollowing, isSubscribed] = viewer && viewer.id !== target.id
@@ -118,5 +122,26 @@ export const profileRouter = router({
                 : [false, false];
 
             return { ...core, isFollowing, isSubscribed, isSelf: viewer?.id === target.id };
+        }),
+
+    /**
+     * Sets the caller's live-chat name colour (Identity panel).
+     *
+     * The value is checked against the palette rather than accepted as free
+     * text: this string is interpolated into a style on every line the user
+     * sends, so an arbitrary value is both a rendering hazard (a name the
+     * colour of the background is a name nobody can moderate) and needless
+     * surface area. null clears it, which returns them to the deterministic
+     * colour their id hashes to.
+     */
+    setChatColor: protectedProcedure
+        .input(z.object({ color: z.string().nullable() }))
+        .mutation(async ({ ctx, input }) => {
+            if (input.color !== null && !isChatNameColor(input.color)) {
+                throw new Error("Unsupported chat colour");
+            }
+            await db.update(user).set({ chatColor: input.color }).where(eq(user.id, ctx.user.id));
+            await invalidateCache(`profile:card:v3:${ctx.user.id}`);
+            return { color: input.color };
         }),
 });

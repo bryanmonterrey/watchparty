@@ -2,7 +2,7 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { BadgeGlyph } from "@/components/profile/badge-glyphs";
-import { chatNameColor } from "@/lib/chat/chat-name-color";
+import { resolveChatNameColor } from "@/lib/chat/chat-name-color";
 
 // Chat-line identity (design brief §2, owner decision 2026-07-19): the level
 // + the single top earned badge (badges[0] — catalog order IS priority), one
@@ -26,7 +26,7 @@ export function ChatIdentity({ userId }: { userId: string }) {
     );
     if (!data) return null;
     const top = data.badges[0];
-    const color = chatNameColor(userId);
+    const color = resolveChatNameColor(userId, data.chatColor);
     return (
         <span className="mr-1.5 inline-flex items-center gap-1 align-middle">
             <span

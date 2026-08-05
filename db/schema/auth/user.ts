@@ -20,6 +20,7 @@ export const user = pgTable("user", {
   website: text("website"),
   socials: jsonb("socials").$type<SocialLinks>(),          // platform key -> handle/url (lib/profile/socials.ts)
   accentColor: text("accentColor"),                        // hex; Twitch-style vertical bar on the profile page (null = off)
+  chatColor: text("chatColor"),                            // live-chat name colour picked in Identity (null = deterministic default, lib/chat/chat-name-color.ts)
   role: text("role").default("user").notNull(),
   verifiedTier: verifiedTierEnum("verified_tier"),
   affiliateUsername: text("affiliate_username"),       // org this user is affiliated to (links + drives badge)

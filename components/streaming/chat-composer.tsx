@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, SmileIcon, UserMultiple02Icon, ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, SmileIcon, UserMultiple02Icon, ArrowTurnBackwardIcon, ShieldEnergyIcon, Settings02Icon } from "@hugeicons/core-free-icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { EMOTES, searchEmotes, type Emote } from "@/lib/chat/emotes";
@@ -13,11 +13,13 @@ import { compactCount } from "@/lib/utils";
 // Everything below the message list: the reply banner, the quick emote strip,
 // the input, and the footer bar.
 //
-// Anatomy from the reference. What was cut, and why: the shield (chat rules),
-// the points counter, and the settings gear all sit on systems that don't exist
-// here — a rules doc, a channel currency, and stored chat prefs — and a control
-// that opens nothing is worse than an absent one. The viewer count is real
-// (stream.listLive already returns it) so it stays.
+// Anatomy from the reference. The shield opens Identity and the gear opens Chat
+// Settings — both render chat-settings.tsx, which is one drill-down stack, so
+// the shield is a shortcut to a screen the gear also reaches.
+//
+// Still cut: the points counter, which would need a channel currency that
+// doesn't exist. The viewer count beside it is real (stream.listLive returns
+// it), so that stays.
 //
 // Colour: chrome is neutral and goes white when active, so the one green thing
 // on the panel isn't a send button — the send pill is white, which on this
@@ -33,6 +35,8 @@ export function ChatComposer({
     emotes,
     replyTo,
     onCancelReply,
+    onOpenIdentity,
+    onOpenSettings,
 }: {
     onSend: (text: string, replyTo?: string) => void;
     connected: boolean;
@@ -40,6 +44,8 @@ export function ChatComposer({
     emotes: Map<string, Emote>;
     replyTo?: StreamChatMessage | null;
     onCancelReply?: () => void;
+    onOpenIdentity: () => void;
+    onOpenSettings: () => void;
 }) {
     const [input, setInput] = useState("");
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -99,7 +105,18 @@ export function ChatComposer({
                 ))}
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-2xl border border-[rgba(138,145,158,0.2)] bg-soft-gray-5 px-3 py-2 transition-colors focus-within:border-[rgba(138,145,158,0.45)]">
+            {/* h-11, the app's control height — set on the ROW, since the input
+                inside it is borderless and stretches. */}
+            <div className="flex h-11 items-center gap-2 rounded-2xl border border-[rgba(138,145,158,0.2)] bg-soft-gray-5 px-2.5 transition-colors focus-within:border-[rgba(138,145,158,0.45)]">
+                <button
+                    type="button"
+                    onClick={onOpenIdentity}
+                    aria-label="identity"
+                    title="Identity"
+                    className="shrink-0 cursor-pointer rounded-lg bg-soft-gray-15 p-1.5 text-zinc-400 transition-colors hover:text-white"
+                >
+                    <HugeiconsIcon icon={ShieldEnergyIcon} className="size-[18px]" strokeWidth={2} />
+                </button>
                 <input
                     ref={inputRef}
                     value={input}
@@ -160,14 +177,25 @@ export function ChatComposer({
                     <HugeiconsIcon icon={UserMultiple02Icon} className="size-4" strokeWidth={2} />
                     {viewerCount !== undefined ? compactCount(viewerCount) : "—"}
                 </span>
-                <Button
-                    size="sm"
-                    onClick={submit}
-                    disabled={!input.trim() || !connected}
-                    className="bg-white font-bold text-black hover:bg-white/85"
-                >
-                    Chat
-                </Button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={onOpenSettings}
+                        aria-label="chat settings"
+                        title="Chat settings"
+                        className="cursor-pointer text-zinc-500 transition-colors hover:text-white"
+                    >
+                        <HugeiconsIcon icon={Settings02Icon} className="size-[18px]" strokeWidth={2} />
+                    </button>
+                    <Button
+                        size="sm"
+                        onClick={submit}
+                        disabled={!input.trim() || !connected}
+                        className="bg-white font-bold text-black hover:bg-white/85"
+                    >
+                        Send
+                    </Button>
+                </div>
             </div>
         </div>
     );

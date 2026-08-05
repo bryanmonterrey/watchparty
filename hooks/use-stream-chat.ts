@@ -10,6 +10,8 @@ export type StreamChatMessage = {
     userId: string;
     sender: string;
     content: string;
+    /** DO-stamped send time; the Appearance panel's timestamps read it. */
+    ts: number;
     /** Resolved by the DO, not the sender — see ChatReply in the protocol. */
     replyTo?: ChatReply;
 };
@@ -40,12 +42,12 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
             if (e?.t === 'chat') {
                 setMessages((prev) => [
                     ...prev.slice(-199),
-                    { id: e.id, userId: e.userId, sender: e.name, content: e.text, replyTo: e.replyTo },
+                    { id: e.id, userId: e.userId, sender: e.name, content: e.text, ts: e.ts, replyTo: e.replyTo },
                 ]);
             } else if (e?.t === 'chat-history') {
                 // One-shot replay on join (and on reconnect): the room's recent
                 // lines replace anything local so order stays authoritative.
-                setMessages(e.lines.map((l) => ({ id: l.id, userId: l.userId, sender: l.name, content: l.text, replyTo: l.replyTo })));
+                setMessages(e.lines.map((l) => ({ id: l.id, userId: l.userId, sender: l.name, content: l.text, ts: l.ts, replyTo: l.replyTo })));
             }
         };
         const onOpen = () => setConnected(true);
