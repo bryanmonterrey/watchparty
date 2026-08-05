@@ -19,10 +19,26 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 
-function createClient(connectionString: string) {
+function createClient(connectionString: string, { perRequest = false } = {}) {
     return postgres(connectionString, {
-        max: 5,
-        idle_timeout: 20,
+        // On Workers this client is REQUEST-SCOPED, so `max` is not a pool for
+        // the app — it's a multiplier on every request in flight. At 5, a burst
+        // of webhook deliveries claimed five connections each and exhausted
+        // Hyperdrive's small fixed allowance; once exhausted, every other query
+        // in the isolate started failing with `write CONNECTION_CLOSED`,
+        // including the `user` lookup that renders /[username]. That is what
+        // users saw as React #441 on profile pages — a Server Components render
+        // error with nothing to do with profiles.
+        //
+        // One connection per request makes the ceiling the request concurrency
+        // itself. Queries a single request runs in parallel now queue behind
+        // each other, which is the right trade: Hyperdrive is the scarce
+        // resource, and a slightly slower request beats an unrelated page
+        // erroring out.
+        max: perRequest ? 1 : 5,
+        // A request-scoped client is dead the moment the response is sent;
+        // holding its socket for 20s after that keeps a slot nobody can use.
+        idle_timeout: perRequest ? 5 : 20,
         connect_timeout: 10,
         prepare: false, // Supabase pooler / Hyperdrive: no prepared statements
     });
@@ -51,7 +67,7 @@ function hyperdriveConnectionString(): string | undefined {
 
 // Workers path: one client per request (React cache resets between requests).
 const getRequestDb = cache((connectionString: string): Db =>
-    drizzle(createClient(connectionString), { schema }),
+    drizzle(createClient(connectionString, { perRequest: true }), { schema }),
 );
 
 // Off-Workers path: one reused client per process.
