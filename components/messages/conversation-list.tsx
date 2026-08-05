@@ -29,7 +29,7 @@ export function ConversationList({
     const [activeTab, setActiveTab] = useState<'messages' | 'requests'>('messages');
     const [showNewConversation, setShowNewConversation] = useState(false);
 
-    const { conversations, isLoading } = useConversations();
+    const { conversations, isLoading } = useConversations(selectedConversationId);
     const { setActiveRecipient } = useChat();
     const { data: session } = useAuthSession();
 

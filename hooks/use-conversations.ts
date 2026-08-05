@@ -31,17 +31,35 @@ export interface Conversation {
     lastReactionSenderId: string | null;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Hook for managing conversations with real-time updates
+ * Hook for managing conversations with real-time updates.
+ *
+ * `activeConversationId` is the chat currently open. The server lists only
+ * threads with messages (empty ones are leftovers, not conversations) — passing
+ * the open one keeps a chat you just started in the list until you send.
  */
-export function useConversations() {
+export function useConversations(activeConversationId?: string | null) {
     const utils = trpc.useUtils();
 
-    // Fetch conversations
-    const { data, isLoading, error } = trpc.conversation.list.useQuery();
+    // The active id comes from ?c=, which anyone can hand-edit. The procedure
+    // takes a uuid, so pass one or pass nothing — a junk param must not fail
+    // the input and blank the whole list.
+    const activeId = activeConversationId && UUID_RE.test(activeConversationId)
+        ? activeConversationId
+        : undefined;
 
-    // Note: detailed real-time updates for *new* conversations from others 
-    // would require a user-channel subscription. 
+    // Fetch conversations
+    const { data, isLoading, error } = trpc.conversation.list.useQuery(
+        { activeConversationId: activeId },
+        // The active id is part of the key, so switching chats starts a fresh
+        // fetch — hold the previous list rather than flashing the skeleton.
+        { placeholderData: (prev) => prev },
+    );
+
+    // Note: detailed real-time updates for *new* conversations from others
+    // would require a user-channel subscription.
     // For now, the list updates when WE send a message (via invalidation).
 
     return {

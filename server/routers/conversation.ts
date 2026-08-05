@@ -10,68 +10,107 @@ import { aliasedTable } from "drizzle-orm";
 
 export const conversationRouter = router({
     /**
-     * List all conversations for the current user
+     * List all conversations for the current user.
+     *
+     * Only threads that actually have messages are listed. An empty thread is
+     * an artifact, not a conversation: `create` used to mint a fresh row on
+     * every press of Message, so a pair could accumulate several dead threads
+     * and this painted one row each — the same person listed two or three times
+     * over. `create` reuses the existing DM now, but the rows it already left
+     * behind are still in the table and would still paint.
+     *
+     * `activeConversationId` is the one exception, so a chat you just started
+     * stays visible in the list (and titles the header nav) until you send the
+     * first message.
      */
-    list: protectedProcedure.query(async ({ ctx }) => {
-        const partnerParticipant = aliasedTable(conversationParticipants, "partner_participant");
-        const partnerUser = aliasedTable(user, "partner_user");
-        const lastMessage = aliasedTable(messages, "last_message");
-        const senderKeys = aliasedTable(userEncryptionKeys, "sender_keys");
-        const partnerKeys = aliasedTable(userEncryptionKeys, "partner_keys");
+    list: protectedProcedure
+        .input(z.object({ activeConversationId: z.string().uuid().optional() }).optional())
+        .query(async ({ ctx, input }) => {
+            const partnerParticipant = aliasedTable(conversationParticipants, "partner_participant");
+            const partnerUser = aliasedTable(user, "partner_user");
+            const lastMessage = aliasedTable(messages, "last_message");
+            const senderKeys = aliasedTable(userEncryptionKeys, "sender_keys");
+            const partnerKeys = aliasedTable(userEncryptionKeys, "partner_keys");
 
-        const userConversations = await db
-            .select({
-                id: conversations.id,
-                createdAt: conversations.createdAt,
-                updatedAt: conversations.updatedAt,
-                lastMessageAt: conversations.lastMessageAt,
-                isGroup: conversations.isGroup,
-                groupName: conversations.groupName,
-                groupAvatar: conversations.groupAvatar,
-                otherParticipantId: partnerUser.id,
-                otherParticipantName: partnerUser.name,
-                otherParticipantAvatar: partnerUser.avatar_url,
-                otherParticipantWalletAddress: encrypted_wallets.address,
-                // Last message details
-                lastMessageContent: lastMessage.content,
-                lastMessageSenderId: lastMessage.senderId,
-                lastMessageType: lastMessage.messageType,
-                lastMessageIsEncrypted: lastMessage.isEncrypted,
-                lastMessageIv: lastMessage.encryptionIv,
-                lastMessageSenderPublicKey: senderKeys.publicKey,
-                otherParticipantPublicKey: partnerKeys.publicKey,
-                lastReactionAt: conversations.lastReactionAt,
-                lastReactionSenderId: conversations.lastReactionSenderId,
-            })
-            .from(conversations)
-            .innerJoin(
-                conversationParticipants,
-                eq(conversations.id, conversationParticipants.conversationId)
-            )
-            .leftJoin(
-                partnerParticipant,
-                and(
-                    eq(conversations.id, partnerParticipant.conversationId),
-                    ne(partnerParticipant.userId, ctx.user.id)
+            // Has real history. Deliberately "any message row exists" rather than
+            // conversations.lastMessageId IS NOT NULL — that pointer can dangle at
+            // a message that no longer exists, which paints a conversation with a
+            // timestamp and no content.
+            const hasMessages = sql`EXISTS (SELECT 1 FROM ${messages} m WHERE m.conversation_id = ${conversations.id})`;
+
+            const userConversations = await db
+                .select({
+                    id: conversations.id,
+                    createdAt: conversations.createdAt,
+                    updatedAt: conversations.updatedAt,
+                    lastMessageAt: conversations.lastMessageAt,
+                    isGroup: conversations.isGroup,
+                    groupName: conversations.groupName,
+                    groupAvatar: conversations.groupAvatar,
+                    otherParticipantId: partnerUser.id,
+                    otherParticipantName: partnerUser.name,
+                    otherParticipantAvatar: partnerUser.avatar_url,
+                    otherParticipantWalletAddress: encrypted_wallets.address,
+                    // Last message details
+                    lastMessageContent: lastMessage.content,
+                    lastMessageSenderId: lastMessage.senderId,
+                    lastMessageType: lastMessage.messageType,
+                    lastMessageIsEncrypted: lastMessage.isEncrypted,
+                    lastMessageIv: lastMessage.encryptionIv,
+                    lastMessageSenderPublicKey: senderKeys.publicKey,
+                    otherParticipantPublicKey: partnerKeys.publicKey,
+                    lastReactionAt: conversations.lastReactionAt,
+                    lastReactionSenderId: conversations.lastReactionSenderId,
+                })
+                .from(conversations)
+                .leftJoin(
+                    partnerParticipant,
+                    and(
+                        eq(conversations.id, partnerParticipant.conversationId),
+                        ne(partnerParticipant.userId, ctx.user.id),
+                        // Exactly one partner row, always the same one. Without this
+                        // a group fans out into one row per other member.
+                        sql`${partnerParticipant.id} = (
+                            SELECT cp.id FROM ${conversationParticipants} cp
+                            WHERE cp.conversation_id = ${conversations.id}
+                              AND cp.user_id <> ${ctx.user.id}
+                            ORDER BY cp.joined_at ASC, cp.id ASC
+                            LIMIT 1
+                        )`
+                    )
                 )
-            )
-            .leftJoin(partnerUser, eq(partnerParticipant.userId, partnerUser.id))
-            .leftJoin(encrypted_wallets, eq(partnerUser.id, encrypted_wallets.user_id))
-            // Join with messages to get the one matching lastMessageAt
-            // Note: usage of lastMessageAt relies on it being in sync with message creation
-            .leftJoin(lastMessage, eq(lastMessage.id, conversations.lastMessageId))
-            // Join to get sender's public key for decryption (if someone else sent it)
-            .leftJoin(senderKeys, eq(lastMessage.senderId, senderKeys.userId))
-            // Join to get partner's public key (if I sent it, I need their key to decrypt)
-            .leftJoin(partnerKeys, eq(partnerUser.id, partnerKeys.userId))
-            .where(eq(conversationParticipants.userId, ctx.user.id))
-            .orderBy(desc(sql`COALESCE(GREATEST(${conversations.lastMessageAt}, ${conversations.lastReactionAt}), ${conversations.createdAt})`));
+                .leftJoin(partnerUser, eq(partnerParticipant.userId, partnerUser.id))
+                .leftJoin(encrypted_wallets, eq(partnerUser.id, encrypted_wallets.user_id))
+                // Join with messages to get the one matching lastMessageAt
+                // Note: usage of lastMessageAt relies on it being in sync with message creation
+                .leftJoin(lastMessage, eq(lastMessage.id, conversations.lastMessageId))
+                // Join to get sender's public key for decryption (if someone else sent it)
+                .leftJoin(senderKeys, eq(lastMessage.senderId, senderKeys.userId))
+                // Join to get partner's public key (if I sent it, I need their key to decrypt)
+                .leftJoin(partnerKeys, eq(partnerUser.id, partnerKeys.userId))
+                .where(
+                    and(
+                        // My membership is a filter, not a join — joining
+                        // conversation_participants multiplies the conversation by
+                        // every row that matches, so one duplicated membership row
+                        // would paint the same thread twice.
+                        sql`EXISTS (
+                            SELECT 1 FROM ${conversationParticipants} me
+                            WHERE me.conversation_id = ${conversations.id}
+                              AND me.user_id = ${ctx.user.id}
+                        )`,
+                        input?.activeConversationId
+                            ? or(hasMessages, eq(conversations.id, input.activeConversationId))
+                            : hasMessages
+                    )
+                )
+                .orderBy(desc(sql`COALESCE(GREATEST(${conversations.lastMessageAt}, ${conversations.lastReactionAt}), ${conversations.createdAt})`));
 
-        return {
-            success: true,
-            conversations: userConversations,
-        };
-    }),
+            return {
+                success: true,
+                conversations: userConversations,
+            };
+        }),
 
     /**
      * Get a single conversation by ID

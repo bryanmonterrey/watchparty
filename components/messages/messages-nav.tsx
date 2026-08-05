@@ -19,7 +19,7 @@ export function useActiveConversation() {
 
 export function MessagesNav() {
     const [activeId, setActiveId] = useActiveConversation();
-    const { conversations } = useConversations();
+    const { conversations } = useConversations(activeId);
 
     const active = conversations.find((c) => c.id === activeId);
     const title = active ? (active.groupName || active.otherParticipantName || "Chat") : "Messages";
