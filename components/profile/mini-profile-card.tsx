@@ -10,6 +10,19 @@ import { BadgeStrip } from "./badge-strip";
 import { LevelBadge } from "./level-badge";
 import { SubscribeButton } from "@/components/browse/subscribe-button";
 import { Button } from "@/components/ui/button";
+import dynamic from "next/dynamic";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GiftIcon, VolumeMute02Icon } from "@hugeicons/core-free-icons";
+import { toast } from "sonner";
+
+// ssr:false, not a bare import(): the gift dialog pulls the wallet stack
+// (useConnection, useWallet, signing), and a lazy import alone still bundles it
+// into every route a mini profile can appear on — which is all of them. Only
+// ssr:false actually keeps it out until someone opens it.
+const GiftSubscriptionDialog = dynamic(
+    () => import("@/components/browse/gift-subscription-dialog").then((m) => m.GiftSubscriptionDialog),
+    { ssr: false },
+);
 
 // Avatar-anchored mini-profile popout (docs/design-brief-2026-07.md §1) —
 // the Discord move: identity renders anywhere an avatar appears, so every
@@ -35,12 +48,22 @@ function pnlChip(pnl: { realizedUsd: number; winRate: number | null }) {
     );
 }
 
-export function MiniProfile({ userId, username, children, triggerClassName }: {
+export function MiniProfile({ userId, username, children, triggerClassName, inline }: {
     userId?: string | null;
     username?: string | null;
     children: React.ReactNode;
     /** Layout class for the trigger wrapper — rows in tight flex layouts pass "min-w-0". */
     triggerClassName?: string;
+    /**
+     * Wrap in a <span> instead of a <div>.
+     *
+     * Required anywhere the trigger sits inside a paragraph — a chat line is one
+     * <p>, and a <div> inside <p> is invalid HTML that the parser closes the
+     * paragraph to escape. The trigger then ends up as a SIBLING of the text it
+     * was meant to wrap, which is why hovering a chat username did nothing while
+     * clicking still worked.
+     */
+    inline?: boolean;
 }) {
     const router = useRouter();
     const [open, setOpen] = React.useState(false);
@@ -70,6 +93,7 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
             utils.content.getVideosByUser.prefetch({ userId: targetUserId, limit: 12 });
         }
     }, [open, slug, targetUserId, router, utils]);
+    const [giftOpen, setGiftOpen] = React.useState(false);
     const [optimisticFollowing, setOptimisticFollowing] = React.useState<boolean | null>(null);
     const settle = () => {
         utils.profile.card.invalidate();
@@ -79,6 +103,24 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
     const unfollow = trpc.user.unfollow.useMutation({ onSuccess: settle, onError: () => setOptimisticFollowing(null) });
     const isFollowing = optimisticFollowing ?? card?.isFollowing ?? false;
 
+    // Mute state is its own query rather than part of profile.card: the card is
+    // server-cached for five minutes and shared by every viewer, while this is
+    // per-viewer and has to flip the instant they act on it.
+    const targetId = userId ?? card?.id;
+    const { data: muted } = trpc.moderation.isMuted.useQuery(
+        { userId: targetId ?? "" },
+        { enabled: !!targetId && open },
+    );
+    const settleMute = () => utils.moderation.isMuted.invalidate({ userId: targetId ?? "" });
+    const mute = trpc.moderation.mute.useMutation({
+        onSuccess: () => { settleMute(); toast.success("Muted"); },
+        onError: (e) => toast.error(e.message),
+    });
+    const unmute = trpc.moderation.unmute.useMutation({
+        onSuccess: () => { settleMute(); toast.success("Unmuted"); },
+        onError: (e) => toast.error(e.message),
+    });
+
     if (!enabled) return <>{children}</>;
 
     const goToProfile = () => card?.username && router.push(`/${card.username}`);
@@ -86,7 +128,11 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
     return (
         <HoverCard open={open} onOpenChange={setOpen} openDelay={150} closeDelay={120}>
             <HoverCardTrigger asChild>
-                <div className={cn("cursor-pointer", triggerClassName ?? "w-full")}>{children}</div>
+                {inline ? (
+                    <span className={cn("cursor-pointer", triggerClassName)}>{children}</span>
+                ) : (
+                    <div className={cn("cursor-pointer", triggerClassName ?? "w-full")}>{children}</div>
+                )}
             </HoverCardTrigger>
             <HoverCardContent className="w-[320px] overflow-hidden rounded-3xl border-none bg-[#101011] shadow-none ring-1 ring-white/10">
                 {isLoading || !card ? (
@@ -193,6 +239,49 @@ export function MiniProfile({ userId, username, children, triggerClassName }: {
                                         <SubscribeButton creatorId={card.id} creatorName={card.name} />
                                     )}
                                 </div>
+                            )}
+
+                            {!card.isSelf && (
+                                // Second row, quieter than the first: following
+                                // and subscribing are what the card is FOR, while
+                                // these two are things you do about one person.
+                                <div className="flex items-center gap-2">
+                                    {card.subscribable && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setGiftOpen(true)}
+                                            className="h-11 flex-1 rounded-full text-sm font-bold"
+                                        >
+                                            <HugeiconsIcon icon={GiftIcon} className="size-4" strokeWidth={2} />
+                                            Gift a sub
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            muted?.muted
+                                                ? unmute.mutate({ userId: card.id })
+                                                : mute.mutate({ userId: card.id })
+                                        }
+                                        disabled={mute.isPending || unmute.isPending}
+                                        className={cn(
+                                            "h-11 rounded-full text-sm font-bold",
+                                            card.subscribable ? "flex-1" : "w-full",
+                                        )}
+                                    >
+                                        <HugeiconsIcon icon={VolumeMute02Icon} className="size-4" strokeWidth={2} />
+                                        {muted?.muted ? "Unmute" : "Mute"}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {giftOpen && (
+                                <GiftSubscriptionDialog
+                                    creatorId={card.id}
+                                    creatorName={card.name}
+                                    open={giftOpen}
+                                    onOpenChange={setGiftOpen}
+                                />
                             )}
                         </div>
                     </div>

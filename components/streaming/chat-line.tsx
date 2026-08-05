@@ -98,7 +98,7 @@ export function ChatLine({
                     </span>
                 )}
                 {prefs.badges && <ChatIdentity userId={message.userId} />}
-                <MiniProfile userId={message.userId} triggerClassName="inline">
+                <MiniProfile userId={message.userId} inline>
                     <span
                         className="cursor-pointer font-bold hover:underline"
                         style={{ color: nameColor }}
