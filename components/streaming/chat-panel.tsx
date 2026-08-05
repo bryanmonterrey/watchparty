@@ -52,6 +52,8 @@ export function ChatPanel({
     const [membersOpen, setMembersOpen] = useState(false);
     const [boardOpen, setBoardOpen] = useState(false);
     const scrollerRef = useRef<HTMLDivElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const composerRef = useRef<HTMLDivElement>(null);
     const { prefs, update: setPrefs } = useChatPrefs();
 
     const { messages, send, connected, members, requestMembers, pinned } = useStreamChat(hostUserId, enabled);
@@ -92,6 +94,22 @@ export function ChatPanel({
         el.scrollTop = el.scrollHeight;
     }, [messages, following]);
 
+    // The menu sheets run to the panel's bottom edge and pad their CONTENT clear
+    // of the composer, so the card reads as a card rather than a box floating
+    // above a gap. That padding has to be the composer's real height, which
+    // isn't constant — the reply banner appears and disappears — so it's
+    // measured and published as a CSS variable rather than guessed at.
+    useEffect(() => {
+        const composer = composerRef.current;
+        const panel = panelRef.current;
+        if (!composer || !panel) return;
+        const observer = new ResizeObserver(([entry]) => {
+            panel.style.setProperty("--chat-composer-h", `${entry.contentRect.height}px`);
+        });
+        observer.observe(composer);
+        return () => observer.disconnect();
+    }, []);
+
     const onScroll = useCallback(() => {
         const el = scrollerRef.current;
         if (!el) return;
@@ -105,7 +123,7 @@ export function ChatPanel({
     }, []);
 
     return (
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div ref={panelRef} className="relative flex min-h-0 flex-1 flex-col">
             <ChatGifterMarquee hostUserId={hostUserId} onOpen={() => setBoardOpen(true)} />
 
             {/* The MESSAGE region, and the positioning context for the menus.
@@ -163,31 +181,12 @@ export function ChatPanel({
                     </button>
                 )}
 
-                {membersOpen && (
-                    <ChatMembers
-                        hostUserId={hostUserId}
-                        members={members}
-                        onRequest={requestMembers}
-                        onClose={() => setMembersOpen(false)}
-                    />
-                )}
-
-                {boardOpen && (
-                    <ChatLeaderboard hostUserId={hostUserId} onClose={() => setBoardOpen(false)} />
-                )}
-
-                {settings && (
-                    <ChatSettings
-                        hostUserId={hostUserId}
-                        initialScreen={settings}
-                        canModerate={canModerate}
-                        prefs={prefs}
-                        onPrefs={setPrefs}
-                        onClose={() => setSettings(null)}
-                    />
-                )}
             </div>
 
+            {/* z-40: the composer paints OVER the sheets, which reach the panel's
+                bottom edge and reserve its height as padding. That's what keeps
+                the emote row, input and send row live while a menu is open. */}
+            <div ref={composerRef} className="relative z-40">
             <ChatComposer
                 onSend={send}
                 connected={connected}
@@ -199,6 +198,31 @@ export function ChatPanel({
                 onOpenMembers={() => setMembersOpen(true)}
                 lockedReason={gate?.canChat === false ? gate.reason : null}
             />
+            </div>
+
+            {membersOpen && (
+                <ChatMembers
+                    hostUserId={hostUserId}
+                    members={members}
+                    onRequest={requestMembers}
+                    onClose={() => setMembersOpen(false)}
+                />
+            )}
+
+            {boardOpen && (
+                <ChatLeaderboard hostUserId={hostUserId} onClose={() => setBoardOpen(false)} />
+            )}
+
+            {settings && (
+                <ChatSettings
+                    hostUserId={hostUserId}
+                    initialScreen={settings}
+                    canModerate={canModerate}
+                    prefs={prefs}
+                    onPrefs={setPrefs}
+                    onClose={() => setSettings(null)}
+                />
+            )}
         </div>
     );
 }

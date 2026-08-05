@@ -13,12 +13,23 @@ import { cn } from "@/lib/utils";
 // as well — so opening settings took the chat away instead of putting something
 // in front of it, and there was nothing to type into while it was open.
 //
-// It's anchored to the BOTTOM of the message area — chat-panel makes that
-// region the positioned parent, so `bottom-0` here means "on top of the last
-// message", not "on top of the composer" — and grows upward only as far as its
-// content needs, capped at that area's height. Short menus are short. Long ones
-// stop at the tabs and scroll inside themselves rather than pushing anything
-// around, and the emote strip, input and send row stay usable throughout.
+// It runs to the panel's own edges: -mx-2 cancels the chat column's px-2
+// (RailCard's CARD_PX) so the card's sides meet the outer card's, rather than
+// floating inset from them.
+//
+// Bottom-anchored sheets reach the panel's bottom edge and RESERVE the
+// composer's height as padding, so the card reads as a card instead of a box
+// hovering above a gap — chat-panel measures that height and publishes it as
+// --chat-composer-h, since the reply banner makes it vary. The composer paints
+// over that reserved strip at z-40 and stays usable throughout.
+//
+// Top-anchored is for a sheet opened from something at the TOP of the panel (the
+// leaderboard, from its marquee): it hangs from the header instead, squares its
+// top edge and drops the outline, because a stroked top edge there draws a
+// second hairline right under the one the header already has.
+//
+// Either way it grows only as far as its content needs and scrolls inside
+// itself past that, rather than pushing anything around.
 //
 // radius 25 + RAIL_BORDER are the rail card's own values, so this reads as a
 // card of the same family rather than a panel that happens to be rounded. Both
@@ -27,6 +38,7 @@ import { cn } from "@/lib/utils";
 export function ChatSheet({
     title,
     subtitle,
+    anchor = "bottom",
     onBack,
     onClose,
     onPrev,
@@ -36,6 +48,8 @@ export function ChatSheet({
     title: string;
     /** Second line under the title, e.g. a leaderboard's reset countdown. */
     subtitle?: string;
+    /** Which edge the sheet hangs from. Matches whatever opened it. */
+    anchor?: "top" | "bottom";
     /** Shown only when there's somewhere to go back TO. */
     onBack?: () => void;
     onClose: () => void;
@@ -44,13 +58,20 @@ export function ChatSheet({
     onNext?: () => void;
     children: React.ReactNode;
 }) {
+    const top = anchor === "top";
+
     return (
-        // mb-2 keeps it off the emote strip below; z-30 clears the paused pill.
-        <div className="absolute inset-x-0 bottom-0 z-30 mb-2 flex max-h-full flex-col">
+        <div
+            className={cn(
+                "absolute inset-x-0 -mx-2 z-30 flex max-h-full flex-col",
+                top ? "top-0" : "bottom-0",
+            )}
+        >
             <Squircle
-                radius={25}
+                // Square the edge that meets something, round the free one.
+                radius={top ? { bottomLeft: 25, bottomRight: 25 } : 25}
                 autoEffects={false}
-                innerBorder={RAIL_BORDER}
+                innerBorder={top ? undefined : RAIL_BORDER}
                 className="flex max-h-full min-h-0 flex-col bg-canvas"
             >
                 {/* shrink-0: the header is fixed furniture and the scroller
@@ -106,7 +127,16 @@ export function ChatSheet({
                     </button>
                 </div>
 
-                <div className="hidden-scrollbar min-h-0 overflow-y-auto px-3 pb-3">{children}</div>
+                {/* Bottom sheets clear the composer with its measured height;
+                    top sheets have nothing below them to clear. */}
+                <div
+                    className={cn(
+                        "hidden-scrollbar min-h-0 overflow-y-auto px-3",
+                        top ? "pb-3" : "pb-[calc(var(--chat-composer-h,7rem)+0.75rem)]",
+                    )}
+                >
+                    {children}
+                </div>
             </Squircle>
         </div>
     );

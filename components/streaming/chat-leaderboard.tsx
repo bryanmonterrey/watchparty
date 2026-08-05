@@ -72,6 +72,10 @@ export function ChatLeaderboard({
 
     return (
         <ChatSheet
+            // Hangs from the header, because that's where the marquee that opens
+            // it lives — a board that dropped in from the bottom would leave the
+            // control you tapped stranded at the far end of the panel.
+            anchor="top"
             title={PERIOD_LABEL[period]}
             subtitle={resetLabel(data?.resetsAt ?? null)}
             onPrev={() => step(-1)}
