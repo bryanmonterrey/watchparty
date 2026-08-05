@@ -19,7 +19,7 @@ export type Env = {
 };
 
 /** Per-connection state, persisted in the WS attachment (survives hibernation). */
-type ConnState = { userId: string; name: string };
+type ConnState = { userId: string; name: string; canChat: boolean };
 
 /**
  * `Chat` is the single realtime room class for every surface — community
@@ -74,7 +74,9 @@ export class Chat extends Server<Env> {
       connection.close(4401, "unauthorized");
       return;
     }
-    connection.setState({ userId: claims.sub, name: claims.name });
+    // `chat` is only present for gated rooms (stream chat). Absent means the
+    // room has no gate, so absent is allowed — see RealtimeClaims.
+    connection.setState({ userId: claims.sub, name: claims.name, canChat: claims.chat !== false });
     if (this.isHighFanout) {
       const lines = await this.getHistory();
       if (lines.length) {
@@ -127,6 +129,11 @@ export class Chat extends Server<Env> {
       const users = [...seen.values()].sort((a, b) => (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0));
       connection.send(JSON.stringify({ t: "members", users } satisfies ServerEvent));
     } else if (msg.t === "chat") {
+      // Followers-only / subscribers-only, enforced against the SIGNED claim
+      // rather than anything the client sent. The UI locks its input too, but
+      // that's a courtesy — this is the check that counts, and it's why the
+      // token is minted per room.
+      if (!state.canChat) return;
       if (!this.allowChat(connection.id)) return;
       const text = typeof msg.text === "string" ? msg.text.trim().slice(0, CHAT_MAX_LEN) : "";
       if (!text) return;

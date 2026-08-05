@@ -22,17 +22,20 @@ import { toast } from "sonner";
 // Pop-out is a link, not a screen: it opens /popout/chat/<userId>, a bare route
 // with no app chrome, sized for a second monitor.
 
-type Screen = "menu" | "identity" | "appearance" | "muted";
+type Screen = "menu" | "identity" | "appearance" | "muted" | "mode";
 
 export function ChatSettings({
     hostUserId,
     initialScreen = "menu",
+    canModerate = false,
     prefs,
     onPrefs,
     onClose,
 }: {
     hostUserId: string;
     initialScreen?: Screen;
+    /** Unlocks the Chat Mode row — host and moderators only. */
+    canModerate?: boolean;
     prefs: ChatPrefs;
     onPrefs: (patch: Partial<ChatPrefs>) => void;
     onClose: () => void;
@@ -43,7 +46,8 @@ export function ChatSettings({
         screen === "identity" ? "Identity"
             : screen === "appearance" ? "Chat Appearance"
                 : screen === "muted" ? "Muted Users"
-                    : "Chat Settings";
+                    : screen === "mode" ? "Chat Mode"
+                        : "Chat Settings";
 
     return (
         <ChatSheet
@@ -51,10 +55,11 @@ export function ChatSettings({
             onBack={screen === "menu" ? undefined : () => setScreen("menu")}
             onClose={onClose}
         >
-            {screen === "menu" && <Menu onOpen={setScreen} hostUserId={hostUserId} />}
+            {screen === "menu" && <Menu onOpen={setScreen} hostUserId={hostUserId} canModerate={canModerate} />}
             {screen === "identity" && <Identity hostUserId={hostUserId} />}
             {screen === "appearance" && <Appearance prefs={prefs} onPrefs={onPrefs} />}
             {screen === "muted" && <Muted />}
+            {screen === "mode" && <Mode hostUserId={hostUserId} />}
         </ChatSheet>
     );
 }
@@ -74,10 +79,17 @@ function Row({ label, onClick }: { label: string; onClick: () => void }) {
     );
 }
 
-function Menu({ onOpen, hostUserId }: { onOpen: (s: Screen) => void; hostUserId: string }) {
+function Menu({ onOpen, hostUserId, canModerate }: {
+    onOpen: (s: Screen) => void;
+    hostUserId: string;
+    canModerate: boolean;
+}) {
     return (
         <div className="flex flex-col">
             <Row label="Identity" onClick={() => onOpen("identity")} />
+            {/* Only for people who can actually change it — a row that always
+                403s is worse than an absent one. */}
+            {canModerate && <Row label="Chat Mode" onClick={() => onOpen("mode")} />}
             <Row label="Chat Appearance" onClick={() => onOpen("appearance")} />
             <Row label="Muted Users" onClick={() => onOpen("muted")} />
             <a
@@ -326,6 +338,98 @@ function Muted() {
                     </button>
                 </div>
             ))}
+        </div>
+    );
+}
+
+// ─── Chat Mode ───────────────────────────────────────────────────────────────
+
+const MODES = [
+    { value: "everyone", label: "Everyone", hint: "Anyone signed in can chat" },
+    { value: "followers", label: "Followers", hint: "Only people who follow the channel" },
+    { value: "subscribers", label: "Subscribers", hint: "Only active subscribers" },
+] as const;
+
+/** Wait options, in minutes. The gate caps at a day (see setChatMode). */
+const WAITS = [
+    { value: 0, label: "None" },
+    { value: 10, label: "10 min" },
+    { value: 60, label: "1 hour" },
+    { value: 1440, label: "1 day" },
+];
+
+function Mode({ hostUserId }: { hostUserId: string }) {
+    const utils = trpc.useUtils();
+    const { data, isLoading } = trpc.stream.chatGate.useQuery({ creatorId: hostUserId });
+
+    const save = trpc.stream.setChatMode.useMutation({
+        onSuccess: () => {
+            utils.stream.chatGate.invalidate({ creatorId: hostUserId });
+            toast.success("Chat mode updated");
+        },
+        onError: (e) => toast.error(e.message),
+    });
+
+    if (isLoading || !data) {
+        return (
+            <div className="flex flex-col gap-1.5 py-1">
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-11 rounded-lg bg-soft-gray-10" />)}
+            </div>
+        );
+    }
+
+    const set = (mode: typeof MODES[number]["value"], followerMinutes: number) =>
+        save.mutate({ creatorId: hostUserId, mode, followerMinutes });
+
+    return (
+        <div>
+            <p className="pb-2 text-[13px] font-medium text-zinc-500">Who can chat</p>
+            {MODES.map((m) => (
+                <button
+                    key={m.value}
+                    type="button"
+                    disabled={save.isPending}
+                    onClick={() => set(m.value, data.followerMinutes)}
+                    className={cn(
+                        "flex w-full cursor-pointer flex-col items-start rounded-lg px-2 py-2.5 text-left transition-colors",
+                        data.mode === m.value ? "bg-white/[0.08]" : "hover:bg-white/[0.06]",
+                    )}
+                >
+                    <span className={cn("text-[15px] font-bold", data.mode === m.value ? "text-flexwhite" : "text-zinc-300")}>
+                        {m.label}
+                    </span>
+                    <span className="text-[13px] font-medium text-zinc-500">{m.hint}</span>
+                </button>
+            ))}
+
+            {/* Only meaningful for followers mode — a subscriber's wait is their
+                billing date, and "everyone" has nothing to wait for. */}
+            {data.mode === "followers" && (
+                <>
+                    <SectionRule />
+                    <p className="pb-2 text-[13px] font-medium text-zinc-500">
+                        Wait before a new follower&apos;s first message
+                    </p>
+                    <div className="flex gap-1.5">
+                        {WAITS.map((w) => (
+                            <button
+                                key={w.value}
+                                type="button"
+                                disabled={save.isPending}
+                                onClick={() => set("followers", w.value)}
+                                className={cn(
+                                    "flex-1 cursor-pointer rounded-lg px-2 py-2 text-[13px] font-bold transition-colors",
+                                    data.followerMinutes === w.value
+                                        ? "bg-white text-black"
+                                        : "bg-soft-gray-10 text-zinc-400 hover:text-white",
+                                )}
+                            >
+                                {w.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

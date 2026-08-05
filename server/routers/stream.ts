@@ -12,6 +12,7 @@ import { tokens } from "@/db/schema/content/token";
 import { creatorModerators, vipMembers } from "@/db/schema/content/creator";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { giftSubscriptions } from "@/db/schema/content/subscription";
+import { evaluateChatGate } from "@/lib/chat/gate";
 import { count as sqlCount, gte } from "drizzle-orm";
 import { rooms } from "@/lib/realtime/protocol";
 import { subscriptions } from "@/db/schema/content/subscription";
@@ -29,6 +30,16 @@ export type ChatRole = "host" | "moderator" | "vip" | "subscriber";
  * midnight would rank different people for different people. Weeks start
  * Monday. Lifetime has no bound and never resets.
  */
+/** Shared by the gate query and the two mod-only mutations. */
+async function isChannelModerator(creatorId: string, userId: string): Promise<boolean> {
+    if (creatorId === userId) return true;
+    const rows = await db.select({ id: creatorModerators.id })
+        .from(creatorModerators)
+        .where(and(eq(creatorModerators.creatorId, creatorId), eq(creatorModerators.moderatorId, userId)))
+        .limit(1);
+    return rows.length > 0;
+}
+
 function periodWindow(period: "weekly" | "monthly" | "yearly" | "lifetime") {
     const now = new Date();
     if (period === "lifetime") return { start: null, resetsAt: null };
@@ -555,5 +566,39 @@ export const streamRouter = router({
             }
 
             return { period, resetsAt: resetsAt?.toISOString() ?? null, rows: ranked, mine, target };
+        }),
+
+    /** The channel's chat gate, evaluated for the caller. Drives the lock UI. */
+    chatGate: publicProcedure
+        .input(z.object({ creatorId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const isMod = ctx.user ? await isChannelModerator(input.creatorId, ctx.user.id) : false;
+            return evaluateChatGate(input.creatorId, ctx.user?.id ?? null, isMod);
+        }),
+
+    /**
+     * Host or moderators set who may talk.
+     *
+     * The mode takes effect on the next CONNECT for anyone already in the room,
+     * because entitlement rides in the connection's signed token. Tightening it
+     * therefore doesn't silence people mid-session — which is the gentler
+     * behaviour anyway, and a mod who wants someone gone has mute and ban.
+     */
+    setChatMode: protectedProcedure
+        .input(z.object({
+            creatorId: z.string(),
+            mode: z.enum(["everyone", "followers", "subscribers"]),
+            // A day is the ceiling; past that "followers only" is really an
+            // invite list and should be a different feature.
+            followerMinutes: z.number().min(0).max(1440).default(0),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            if (ctx.user.id !== input.creatorId && !(await isChannelModerator(input.creatorId, ctx.user.id))) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Only the host and moderators can change chat mode" });
+            }
+            await db.update(streams)
+                .set({ chatMode: input.mode, chatFollowerMinutes: input.followerMinutes, updatedAt: new Date() })
+                .where(eq(streams.userId, input.creatorId));
+            return { success: true };
         }),
 });

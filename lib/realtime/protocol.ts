@@ -109,8 +109,23 @@ export const CHAT_REPLY_EXCERPT = 60;
 export type RealtimeClaims = {
   /** user id */
   sub: string;
-  /** display name (for presence/typing) */
+  /** @handle — what the DO stamps on chat lines and presence. */
   name: string;
+  /**
+   * Whether this connection may SEND chat, for the room the token was minted
+   * for.
+   *
+   * The claim is room-scoped, which is what makes followers-only and
+   * subscribers-only enforceable at all: chat goes straight to the Durable
+   * Object over the socket, and the DO has no database, so it cannot ask
+   * whether someone follows a channel. The Next app answers that question once,
+   * at connect time, and signs the answer — the DO then trusts a value it can
+   * verify rather than one the client asserts.
+   *
+   * Undefined means "not evaluated", which the DO reads as allowed. Rooms that
+   * aren't gated (DMs, communities, spaces) never set it.
+   */
+  chat?: boolean;
 };
 
 /**

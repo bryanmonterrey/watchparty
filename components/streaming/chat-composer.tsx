@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, SmileIcon, UserMultiple02Icon, ArrowTurnBackwardIcon, ShieldEnergyIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, SmileIcon, UserMultiple02Icon, ArrowTurnBackwardIcon, ShieldEnergyIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { SettingsIcon } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,7 @@ export function ChatComposer({
     onOpenIdentity,
     onOpenSettings,
     onOpenMembers,
+    lockedReason,
 }: {
     onSend: (text: string, replyTo?: string) => void;
     connected: boolean;
@@ -53,6 +54,8 @@ export function ChatComposer({
     onOpenIdentity: () => void;
     onOpenSettings: () => void;
     onOpenMembers: () => void;
+    /** Null when the viewer may talk; otherwise why they can't. */
+    lockedReason?: string | null;
 }) {
     const [input, setInput] = useState("");
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -70,7 +73,7 @@ export function ChatComposer({
 
     const submit = () => {
         const text = input.trim();
-        if (!text || !connected) return;
+        if (!text || !connected || lockedReason) return;
         onSend(text, replyTo?.id);
         setInput("");
         onCancelReply?.();
@@ -127,18 +130,29 @@ export function ChatComposer({
                 >
                     <HugeiconsIcon icon={ShieldEnergyIcon} className={ROW_ICON} strokeWidth={2} />
                 </button>
-                <input
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value.slice(0, CHAT_MAX_LEN))}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") submit();
-                        if (e.key === "Escape") onCancelReply?.();
-                    }}
-                    placeholder={connected ? "Send a message" : "Connecting…"}
-                    disabled={!connected}
-                    className="min-w-0 flex-1 bg-transparent text-sm font-medium text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-50"
-                />
+                {lockedReason ? (
+                    // The whole field becomes the notice. An input that's merely
+                    // disabled still reads as "type here", and a gated viewer
+                    // needs to know WHY — "Followers only" is actionable in a way
+                    // that a greyed-out box isn't.
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-semibold text-zinc-400">
+                        <HugeiconsIcon icon={SquareLock02Icon} className="size-[18px] shrink-0" strokeWidth={2} />
+                        <span className="truncate">{lockedReason}</span>
+                    </span>
+                ) : (
+                    <input
+                        ref={inputRef}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value.slice(0, CHAT_MAX_LEN))}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") submit();
+                            if (e.key === "Escape") onCancelReply?.();
+                        }}
+                        placeholder={connected ? "Send a message" : "Connecting…"}
+                        disabled={!connected}
+                        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-50"
+                    />
+                )}
 
                 <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
                     <PopoverTrigger asChild>
@@ -210,7 +224,7 @@ export function ChatComposer({
                 </button>
                 <Button
                     onClick={submit}
-                    disabled={!input.trim() || !connected}
+                    disabled={!input.trim() || !connected || !!lockedReason}
                     className="bg-white text-[15px] font-bold text-black hover:bg-white/85"
                 >
                     Send

@@ -12,7 +12,7 @@ export async function signRealtimeToken(
   ttlSeconds = 120,
 ): Promise<string> {
   const key = new TextEncoder().encode(secret);
-  return new SignJWT({ name: claims.name })
+  return new SignJWT({ name: claims.name, chat: claims.chat })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(claims.sub)
     .setIssuedAt()

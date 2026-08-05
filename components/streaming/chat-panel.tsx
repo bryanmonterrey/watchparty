@@ -67,6 +67,14 @@ export function ChatPanel({
     );
     const canModerate = !!myId && (myRole?.[myId] === "host" || myRole?.[myId] === "moderator");
 
+    // The lock the composer renders. The DO enforces the same rule from the
+    // signed token (see lib/chat/gate.ts) — this is the courtesy half, so a
+    // gated viewer sees why instead of typing into a void.
+    const { data: gate } = trpc.stream.chatGate.useQuery(
+        { creatorId: hostUserId },
+        { enabled: !!hostUserId, staleTime: 60_000 },
+    );
+
     const pin = trpc.stream.pinChatMessage.useMutation({
         onError: (e) => toast.error(e.message),
     });
@@ -172,6 +180,7 @@ export function ChatPanel({
                     <ChatSettings
                         hostUserId={hostUserId}
                         initialScreen={settings}
+                        canModerate={canModerate}
                         prefs={prefs}
                         onPrefs={setPrefs}
                         onClose={() => setSettings(null)}
@@ -188,6 +197,7 @@ export function ChatPanel({
                 onOpenIdentity={() => setSettings("identity")}
                 onOpenSettings={() => setSettings("menu")}
                 onOpenMembers={() => setMembersOpen(true)}
+                lockedReason={gate?.canChat === false ? gate.reason : null}
             />
         </div>
     );

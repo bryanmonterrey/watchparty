@@ -25,6 +25,10 @@ export const streams = pgTable("streams", {
     tokenId: text("token_id"),
     thumbnailUrl: text("thumbnailUrl"),
     viewerCount: integer("viewerCount").default(0).notNull(),
+    // Who may talk in this channel's chat, and how long they must have followed
+    // first. 'everyone' + 0 is the default and the historical behaviour.
+    chatMode: text("chatMode", { enum: ["everyone", "followers", "subscribers"] }).default("everyone").notNull(),
+    chatFollowerMinutes: integer("chatFollowerMinutes").default(0).notNull(),
     // Timestamps
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
