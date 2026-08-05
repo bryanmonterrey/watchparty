@@ -11,6 +11,8 @@ import { nanoid } from "nanoid";
 import { tokens } from "@/db/schema/content/token";
 import { creatorModerators, vipMembers } from "@/db/schema/content/creator";
 import { publishToRoom } from "@/lib/realtime/publish";
+import { giftSubscriptions } from "@/db/schema/content/subscription";
+import { count as sqlCount, gte } from "drizzle-orm";
 import { rooms } from "@/lib/realtime/protocol";
 import { subscriptions } from "@/db/schema/content/subscription";
 
@@ -18,6 +20,38 @@ const region = process.env.AWS_REGION ?? "us-east-1";
 
 /** Standing in a channel's chat, strongest first. Absent = plain viewer. */
 export type ChatRole = "host" | "moderator" | "vip" | "subscriber";
+
+/**
+ * Start and reset time for a leaderboard window.
+ *
+ * UTC-aligned, so every viewer of a channel sees the same board and the same
+ * countdown regardless of where they are — a board that resets at local
+ * midnight would rank different people for different people. Weeks start
+ * Monday. Lifetime has no bound and never resets.
+ */
+function periodWindow(period: "weekly" | "monthly" | "yearly" | "lifetime") {
+    const now = new Date();
+    if (period === "lifetime") return { start: null, resetsAt: null };
+
+    if (period === "weekly") {
+        const day = now.getUTCDay();
+        // getUTCDay() is 0 for Sunday, which is 6 days INTO a Monday week.
+        const since = day === 0 ? 6 : day - 1;
+        const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - since));
+        const resetsAt = new Date(start.getTime() + 7 * 864e5);
+        return { start, resetsAt };
+    }
+
+    if (period === "monthly") {
+        const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+        const resetsAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+        return { start, resetsAt };
+    }
+
+    const start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+    const resetsAt = new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1));
+    return { start, resetsAt };
+}
 
 // The AWS SDKs are heavy, and this router rides into every tRPC isolate via
 // the appRouter graph — load them only when an IVS procedure actually runs
@@ -459,5 +493,67 @@ export const streamRouter = router({
                 by: ctx.user.name ?? "a moderator",
             });
             return { success: true };
+        }),
+
+    /**
+     * Top gifters for a channel, for the chat leaderboard.
+     *
+     * Ranked on gift_subscriptions — subs gifted TO this creator's channel —
+     * which is the unit the board is denominated in. COUNT of rows, not a sum of
+     * durationMonths: gifting one person three months is one sub gifted, and a
+     * bulk gift of five is five rows.
+     *
+     * Windows are calendar-aligned rather than rolling, because the board
+     * advertises when it RESETS. A rolling 7 days never resets — everyone's
+     * total just decays, and "resets in 4 days" would be a lie.
+     */
+    topGifters: publicProcedure
+        .input(z.object({
+            creatorId: z.string(),
+            period: z.enum(["weekly", "monthly", "yearly", "lifetime"]).default("weekly"),
+            limit: z.number().min(1).max(50).default(10),
+        }))
+        .query(async ({ ctx, input }) => {
+            const { creatorId, period, limit } = input;
+            const { start, resetsAt } = periodWindow(period);
+
+            // gte(column, date), never a Date interpolated into sql`` — drizzle
+            // needs the column to know it's a timestamptz, and on Workers the
+            // raw Date reaches postgres.js and throws (see CLAUDE.md).
+            const where = start
+                ? and(eq(giftSubscriptions.creatorId, creatorId), gte(giftSubscriptions.createdAt, start))
+                : eq(giftSubscriptions.creatorId, creatorId);
+
+            const rows = await db
+                .select({
+                    userId: giftSubscriptions.senderId,
+                    gifts: sqlCount(),
+                    name: user.name,
+                    username: user.username,
+                    avatar_url: user.avatar_url,
+                })
+                .from(giftSubscriptions)
+                .innerJoin(user, eq(giftSubscriptions.senderId, user.id))
+                .where(where)
+                .groupBy(giftSubscriptions.senderId, user.name, user.username, user.avatar_url)
+                .orderBy(desc(sqlCount()))
+                .limit(limit);
+
+            const ranked = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+            const mine = ctx.user ? ranked.find((r) => r.userId === ctx.user!.id) ?? null : null;
+
+            // What it costs to move up one place — the board's whole call to
+            // action. Unranked viewers take the first free spot below the board.
+            let target: { rank: number; needed: number } | null = null;
+            if (!ctx.user) {
+                target = null;
+            } else if (!mine) {
+                target = { rank: ranked.length + 1, needed: 1 };
+            } else if (mine.rank > 1) {
+                const above = ranked[mine.rank - 2];
+                target = { rank: mine.rank - 1, needed: above.gifts - mine.gifts + 1 };
+            }
+
+            return { period, resetsAt: resetsAt?.toISOString() ?? null, rows: ranked, mine, target };
         }),
 });

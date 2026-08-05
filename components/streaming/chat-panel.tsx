@@ -12,6 +12,8 @@ import { ChatComposer } from "./chat-composer";
 import { ChatSettings } from "./chat-settings";
 import { ChatMembers } from "./chat-members";
 import { ChatPinned } from "./chat-pinned";
+import { ChatGifterMarquee } from "./chat-gifter-marquee";
+import { ChatLeaderboard } from "./chat-leaderboard";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { toast } from "sonner";
 
@@ -48,6 +50,7 @@ export function ChatPanel({
     // straight to Identity while the gear starts at the menu.
     const [settings, setSettings] = useState<"menu" | "identity" | null>(null);
     const [membersOpen, setMembersOpen] = useState(false);
+    const [boardOpen, setBoardOpen] = useState(false);
     const scrollerRef = useRef<HTMLDivElement>(null);
     const { prefs, update: setPrefs } = useChatPrefs();
 
@@ -95,6 +98,8 @@ export function ChatPanel({
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
+            <ChatGifterMarquee hostUserId={hostUserId} onOpen={() => setBoardOpen(true)} />
+
             {/* The MESSAGE region, and the positioning context for the menus.
                 They anchor to the bottom of this — not of the whole panel — so
                 the emote strip, the input and the send row below always stay in
@@ -157,6 +162,10 @@ export function ChatPanel({
                         onRequest={requestMembers}
                         onClose={() => setMembersOpen(false)}
                     />
+                )}
+
+                {boardOpen && (
+                    <ChatLeaderboard hostUserId={hostUserId} onClose={() => setBoardOpen(false)} />
                 )}
 
                 {settings && (

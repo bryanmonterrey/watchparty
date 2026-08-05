@@ -1,9 +1,10 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Squircle } from "@/components/ui/squircle";
 import { RAIL_BORDER } from "@/components/rails/rail-shell";
+import { cn } from "@/lib/utils";
 
 // The card the chat menus (Settings, Identity, Members) sit in.
 //
@@ -25,14 +26,22 @@ import { RAIL_BORDER } from "@/components/rails/rail-shell";
 
 export function ChatSheet({
     title,
+    subtitle,
     onBack,
     onClose,
+    onPrev,
+    onNext,
     children,
 }: {
     title: string;
+    /** Second line under the title, e.g. a leaderboard's reset countdown. */
+    subtitle?: string;
     /** Shown only when there's somewhere to go back TO. */
     onBack?: () => void;
     onClose: () => void;
+    /** Pager arrows, for a sheet whose title names one of several views. */
+    onPrev?: () => void;
+    onNext?: () => void;
     children: React.ReactNode;
 }) {
     return (
@@ -57,7 +66,36 @@ export function ChatSheet({
                             <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" strokeWidth={2.5} />
                         </button>
                     )}
-                    <h2 className="flex-1 text-[15px] font-bold text-flexwhite">{title}</h2>
+                    {onPrev && (
+                        <button
+                            type="button"
+                            onClick={onPrev}
+                            aria-label="previous"
+                            className="cursor-pointer text-zinc-400 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" strokeWidth={2.5} />
+                        </button>
+                    )}
+
+                    {/* Centred when it's paged, left-aligned otherwise — the
+                        arrows need something between them to point at. */}
+                    <div className={cn("min-w-0 flex-1", onPrev && "text-center")}>
+                        <h2 className="truncate text-[15px] font-bold text-flexwhite">{title}</h2>
+                        {subtitle && (
+                            <p className="truncate text-[11px] font-medium text-zinc-500">{subtitle}</p>
+                        )}
+                    </div>
+
+                    {onNext && (
+                        <button
+                            type="button"
+                            onClick={onNext}
+                            aria-label="next"
+                            className="cursor-pointer text-zinc-400 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" strokeWidth={2.5} />
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={onClose}

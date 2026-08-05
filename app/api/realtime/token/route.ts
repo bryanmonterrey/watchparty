@@ -20,7 +20,12 @@ export async function GET() {
   }
 
   const token = await signRealtimeToken(
-    { sub: session.user.id, name: session.user.name ?? "User" },
+    // The username, not the display name. This claim is what the Durable
+    // Object stamps onto every chat line and onto presence, so it's what the
+    // whole realtime surface renders — chat, the member roster, pinned
+    // messages. @handle is the identity across this app; a display name is
+    // decoration and two people can share one.
+    { sub: session.user.id, name: session.user.username ?? session.user.name ?? "User" },
     secret,
   );
   return NextResponse.json({ token });

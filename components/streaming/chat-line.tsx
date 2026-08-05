@@ -89,7 +89,11 @@ export function ChatLine({
                         className="cursor-pointer font-bold hover:underline"
                         style={{ color: nameColor }}
                     >
-                        {message.sender}
+                        {/* The card's username wins over the DO's stamp. The
+                            stamp is the username now too, but history replayed
+                            from before that change carries display names, and
+                            this card is already fetched for the colour. */}
+                        {card?.username ?? message.sender}
                     </span>
                 </MiniProfile>
                 <span className="text-zinc-500">: </span>
