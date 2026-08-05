@@ -247,13 +247,21 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
                                 // these two are things you do about one person.
                                 <div className="flex items-center gap-2">
                                     {card.subscribable && (
+                                        // "Gift subs", not "Gift a sub". This is
+                                        // community gifting: it buys subs to
+                                        // THEIR channel for random eligible
+                                        // followers, and the API takes a quantity
+                                        // rather than a recipient. "Gift a sub"
+                                        // reads as gifting this person one, which
+                                        // is a thing the app can't do.
                                         <Button
                                             variant="outline"
                                             onClick={() => setGiftOpen(true)}
+                                            title={`Gift subs to ${card.name}'s channel — they go to random followers who aren't subscribed`}
                                             className="h-11 flex-1 rounded-full text-sm font-bold"
                                         >
                                             <HugeiconsIcon icon={GiftIcon} className="size-4" strokeWidth={2} />
-                                            Gift a sub
+                                            Gift subs
                                         </Button>
                                     )}
                                     <Button
