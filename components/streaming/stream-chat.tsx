@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { RailTabs, RAIL_TABS } from "@/components/rails/rail-tabs";
 import { RailVideoList } from "@/components/rails/rail-video-list";
 import { RailRowSkeleton } from "@/components/rails/rail-row";
@@ -63,16 +64,23 @@ export function StreamChat({ hostUserId, isLoading }: StreamChatProps) {
                     scroll={tab !== CHAT_TAB}
                     tabs={<RailTabs tabs={TABS} active={tab} onChange={setTab} />}
                 >
-                    {tab !== CHAT_TAB ? (
-                        <RailVideoList tab={tab} />
-                    ) : (
-                        // Chat stays open whether or not the stream is live. It
-                        // used to connect only while broadcasting, so an offline
-                        // channel's chat was a dead box — the room emptied the
-                        // moment the stream ended, exactly when people want to
-                        // keep talking about it.
+                    {tab !== CHAT_TAB && <RailVideoList tab={tab} />}
+
+                    {/* HIDDEN, not unmounted, when another tab is showing.
+                        ChatPanel owns the room socket, so unmounting it
+                        disconnected anyone who glanced at Online or New — they
+                        vanished from the member roster while still watching, and
+                        came back to a chat that had reset. display:none takes it
+                        out of flow at no layout cost and the socket lives on.
+
+                        Chat itself stays open whether or not the stream is live:
+                        it used to connect only while broadcasting, so an offline
+                        channel's chat was a dead box, emptying the moment the
+                        stream ended — exactly when people want to keep talking
+                        about it. */}
+                    <div className={cn("flex min-h-0 flex-1 flex-col", tab !== CHAT_TAB && "hidden")}>
                         <ChatPanel hostUserId={hostUserId} />
-                    )}
+                    </div>
                 </RailCard>
             </div>
         </aside>

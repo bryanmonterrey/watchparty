@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-    ArrowLeft01Icon,
-    ArrowRight01Icon,
-    Cancel01Icon,
-    LinkSquare02Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
+import { ChatSheet } from "./chat-sheet";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { BadgeGlyph } from "@/components/profile/badge-glyphs";
@@ -16,7 +12,8 @@ import { CHAT_FONT_CLASS, type ChatFontSize, type ChatPrefs } from "@/hooks/use-
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-// Chat Settings, as an overlay ON the chat panel rather than a dialog.
+// Chat Settings, as a card above the composer rather than a dialog (chrome and
+// sizing live in chat-sheet.tsx).
 //
 // It's a drill-down stack, which is why Identity has a back chevron AND a close
 // — the shield beside the composer opens Identity directly, and back returns to
@@ -49,38 +46,16 @@ export function ChatSettings({
                     : "Chat Settings";
 
     return (
-        // Opaque and inset-0 over the chat column: the messages behind it keep
-        // arriving, and a translucent sheet over moving text is unreadable.
-        <div className="absolute inset-0 z-30 flex flex-col bg-canvas">
-            <div className="flex items-center gap-2 px-1 pb-3 pt-1">
-                {screen !== "menu" && (
-                    <button
-                        type="button"
-                        onClick={() => setScreen("menu")}
-                        aria-label="back"
-                        className="cursor-pointer text-zinc-400 transition-colors hover:text-white"
-                    >
-                        <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" strokeWidth={2.5} />
-                    </button>
-                )}
-                <h2 className="flex-1 text-[15px] font-bold text-flexwhite">{title}</h2>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    aria-label="close settings"
-                    className="cursor-pointer text-zinc-400 transition-colors hover:text-white"
-                >
-                    <HugeiconsIcon icon={Cancel01Icon} className="size-5" strokeWidth={2.5} />
-                </button>
-            </div>
-
-            <div className="hidden-scrollbar min-h-0 flex-1 overflow-y-auto px-1 pb-2">
-                {screen === "menu" && <Menu onOpen={setScreen} hostUserId={hostUserId} />}
-                {screen === "identity" && <Identity hostUserId={hostUserId} />}
-                {screen === "appearance" && <Appearance prefs={prefs} onPrefs={onPrefs} />}
-                {screen === "muted" && <Muted />}
-            </div>
-        </div>
+        <ChatSheet
+            title={title}
+            onBack={screen === "menu" ? undefined : () => setScreen("menu")}
+            onClose={onClose}
+        >
+            {screen === "menu" && <Menu onOpen={setScreen} hostUserId={hostUserId} />}
+            {screen === "identity" && <Identity hostUserId={hostUserId} />}
+            {screen === "appearance" && <Appearance prefs={prefs} onPrefs={onPrefs} />}
+            {screen === "muted" && <Muted />}
+        </ChatSheet>
     );
 }
 
