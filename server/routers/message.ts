@@ -3,10 +3,44 @@ import { z } from "zod";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { messages, conversationParticipants, conversations, messageReactions, messageReadReceipts } from "@/db/schema/messaging";
-import { eq, and, desc, inArray, getTableColumns, aliasedTable } from "drizzle-orm";
+import { eq, and, ne, desc, inArray, getTableColumns, aliasedTable } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { publishToRoom } from "@/lib/realtime/publish";
-import { rooms } from "@/lib/realtime/protocol";
+import { rooms, INBOX_CONVERSATION_EVENT, type InboxConversationPayload } from "@/lib/realtime/protocol";
+
+/**
+ * Nudge everyone else in a thread that their message list moved.
+ *
+ * A `dm:` room only reaches people who have that conversation open, so this is
+ * the only thing that reaches a recipient sitting anywhere else in the app —
+ * without it an incoming DM stays invisible until something refetches.
+ *
+ * Ids only, and only to people actually in the thread: an inbox room is a
+ * nudge to refetch, never a second delivery path for content. Best-effort,
+ * like every publish — `publishToRoom` swallows its own failures so realtime
+ * can never take a write down with it.
+ */
+async function notifyInbox(conversationId: string, exceptUserId: string) {
+    const others = await db
+        .select({ userId: conversationParticipants.userId })
+        .from(conversationParticipants)
+        .where(
+            and(
+                eq(conversationParticipants.conversationId, conversationId),
+                ne(conversationParticipants.userId, exceptUserId)
+            )
+        );
+
+    await Promise.all(
+        others.map((p) =>
+            publishToRoom(rooms.inbox(p.userId), {
+                t: "event",
+                name: INBOX_CONVERSATION_EVENT,
+                payload: { conversationId } satisfies InboxConversationPayload,
+            })
+        )
+    );
+}
 
 export const messageRouter = router({
     /**
@@ -189,6 +223,8 @@ export const messageRouter = router({
                 t: "message",
                 payload: newMessage,
             });
+
+            await notifyInbox(input.conversationId, ctx.user.id);
 
             return {
                 success: true,
@@ -412,6 +448,11 @@ export const messageRouter = router({
                         },
                     },
                 });
+
+                // Adding one moves the row: the list sorts on lastReactionAt
+                // and paints it. Removing one doesn't clear the timestamp, so
+                // that branch has nothing to tell anyone.
+                await notifyInbox(message[0].conversationId, ctx.user.id);
 
                 return { success: true, action: "added" };
             }

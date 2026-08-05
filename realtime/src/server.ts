@@ -6,7 +6,7 @@ import {
   type WSMessage,
 } from "partyserver";
 import { verifyRealtimeToken } from "./auth";
-import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, type ChatLine, type ChatReply, type ClientMessage, type PinnedMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
+import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, INBOX_PREFIX, type ChatLine, type ChatReply, type ClientMessage, type PinnedMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
 
 // Per-connection chat rate limit: max N lines per window.
 const CHAT_RATE_MAX = 5;
@@ -72,6 +72,16 @@ export class Chat extends Server<Env> {
     const claims = token ? await verifyRealtimeToken(token, this.env.REALTIME_SECRET) : null;
     if (!claims) {
       connection.close(4401, "unauthorized");
+      return;
+    }
+    // An inbox room belongs to exactly one person. The token proves WHO is
+    // connecting but carries nothing about the room, so this is the join that
+    // ties the two together — without it anyone signed in could listen to
+    // anyone's inbox by guessing a user id. Comparing here (rather than at
+    // mint time) is what makes it enforcement: the room name is in the URL the
+    // client chose, and this is the only place both are known.
+    if (this.name.startsWith(INBOX_PREFIX) && claims.sub !== this.name.slice(INBOX_PREFIX.length)) {
+      connection.close(4403, "forbidden");
       return;
     }
     // `chat` is only present for gated rooms (stream chat). Absent means the

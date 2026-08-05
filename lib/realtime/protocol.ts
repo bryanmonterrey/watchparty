@@ -135,6 +135,23 @@ export type RealtimeClaims = {
 };
 
 /**
+ * Prefix of the per-user inbox room. Exported because the DO matches on it to
+ * refuse a connection from anyone but the room's owner — a room name is the
+ * only thing tying that connection to a user, so both sides need the literal.
+ */
+export const INBOX_PREFIX = "inbox:";
+
+/** `event` name sent on an inbox room when one of the user's threads moved. */
+export const INBOX_CONVERSATION_EVENT = "conversation";
+
+/**
+ * Payload of that event. Deliberately just an id: an inbox room says "your
+ * list changed, go ask", never what was said. Message content stays in the
+ * conversation's own room, end-to-end encrypted.
+ */
+export type InboxConversationPayload = { conversationId: string };
+
+/**
  * Room name builders. One `Chat` DO class, namespaced by purpose so 1 binding
  * serves every surface. Keep these the single source of truth for room ids.
  */
@@ -145,6 +162,15 @@ export const rooms = {
   communityChannel: (channelId: string) => `community-channel:${channelId}`,
   /** A direct-message conversation. */
   dm: (conversationId: string) => `dm:${conversationId}`,
+  /**
+   * One user's message inbox — where "a thread of yours moved" is delivered
+   * while they're anywhere else in the app. A `dm:` room only reaches people
+   * who have that conversation open, so without this an incoming DM is
+   * invisible until something refetches.
+   *
+   * Owner-only, enforced in the DO (realtime/src/server.ts).
+   */
+  inbox: (userId: string) => `${INBOX_PREFIX}${userId}`,
   /** A live stream's chat room (high fan-out). */
   streamChat: (streamId: string) => `stream-chat:${streamId}`,
   /** A live audio Space (stage coordination: roles, raise-hand, presence). */
