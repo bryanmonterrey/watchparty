@@ -1,0 +1,122 @@
+"use client";
+
+import { useMemo } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";
+import { MiniProfile } from "@/components/profile/mini-profile-card";
+import { ChatIdentity } from "./chat-identity";
+import { chatNameColor } from "@/lib/chat/chat-name-color";
+import { parseChatText, isEmoteOnly, type Emote } from "@/lib/chat/emotes";
+import type { StreamChatMessage } from "@/hooks/use-stream-chat";
+import { cn } from "@/lib/utils";
+
+// One line of live chat.
+//
+// The anatomy is the reference's, not what this rail had before: no avatar
+// column, badges where the avatar was, and the name coloured per-user. The
+// avatar went because a 24px circle on every line costs more vertical room than
+// it earns — in a 384px rail that swap is worth about five more visible lines,
+// and identity is already carried by the colour and the badges.
+//
+// The whole line is ONE wrapping paragraph rather than a flex row: badges, name
+// and text are inline, so a long message wraps back under the badges the way
+// running text should, instead of forming a hanging indent against an avatar.
+
+/** Emotes sitting in a sentence match the text's rhythm... */
+const EMOTE_INLINE = "inline-block h-[22px] w-[22px] translate-y-[-1px] align-middle";
+/** ...but a line that is ONLY emotes is a reaction, so it gets room to be one. */
+const EMOTE_SOLO = "inline-block h-11 w-11 align-middle";
+
+export function ChatLine({
+    message,
+    emotes,
+    onReply,
+}: {
+    message: StreamChatMessage;
+    emotes: Map<string, Emote>;
+    onReply?: (m: StreamChatMessage) => void;
+}) {
+    const tokens = useMemo(() => parseChatText(message.content, emotes), [message.content, emotes]);
+    const solo = useMemo(() => isEmoteOnly(tokens), [tokens]);
+    const nameColor = chatNameColor(message.userId);
+
+    return (
+        <div className="group relative rounded-lg px-1.5 py-[3px] transition-colors hover:bg-white/[0.04]">
+            {message.replyTo && (
+                // The quote is what the DO resolved, not what the sender typed —
+                // see ChatReply in the protocol.
+                <p className="mb-0.5 flex items-center gap-1 truncate text-[11px] font-medium text-zinc-500">
+                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3 shrink-0" strokeWidth={2} />
+                    <span className="truncate">
+                        Replying to {message.replyTo.name}: {message.replyTo.text}
+                    </span>
+                </p>
+            )}
+
+            <p className="break-words text-[13px] leading-[1.45]">
+                <ChatIdentity userId={message.userId} />
+                <MiniProfile userId={message.userId} triggerClassName="inline">
+                    <span
+                        className="cursor-pointer font-bold hover:underline"
+                        style={{ color: nameColor }}
+                    >
+                        {message.sender}
+                    </span>
+                </MiniProfile>
+                <span className="text-zinc-500">: </span>
+                {tokens.map((t, i) => {
+                    if (t.t === "emote") {
+                        return (
+                            <img
+                                key={i}
+                                src={t.src}
+                                alt={`:${t.code}:`}
+                                title={`:${t.code}:`}
+                                draggable={false}
+                                className={cn(solo ? EMOTE_SOLO : EMOTE_INLINE, "mx-[1px]")}
+                            />
+                        );
+                    }
+                    if (t.t === "mention") {
+                        return (
+                            <span key={i} className="font-semibold text-flexwhite">
+                                {t.v}
+                            </span>
+                        );
+                    }
+                    if (t.t === "link") {
+                        return (
+                            <a
+                                key={i}
+                                href={t.v}
+                                target="_blank"
+                                rel="noopener noreferrer nofollow"
+                                className="font-medium text-flexwhite underline underline-offset-2"
+                            >
+                                {t.v}
+                            </a>
+                        );
+                    }
+                    return (
+                        <span key={i} className="text-zinc-100">
+                            {t.v}
+                        </span>
+                    );
+                })}
+            </p>
+
+            {onReply && (
+                // Absolute so it costs the line no width — a reply affordance that
+                // reflowed the text on hover would make the whole list twitch.
+                <button
+                    type="button"
+                    onClick={() => onReply(message)}
+                    aria-label={`reply to ${message.sender}`}
+                    className="absolute right-1 top-1 hidden cursor-pointer rounded-md bg-soft-gray-15 p-1 text-zinc-400 transition-colors hover:text-white group-hover:block"
+                >
+                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3.5" strokeWidth={2} />
+                </button>
+            )}
+        </div>
+    );
+}

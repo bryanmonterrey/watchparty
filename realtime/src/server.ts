@@ -6,7 +6,7 @@ import {
   type WSMessage,
 } from "partyserver";
 import { verifyRealtimeToken } from "./auth";
-import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, type ChatLine, type ClientMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
+import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, type ChatLine, type ChatReply, type ClientMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
 
 // Per-connection chat rate limit: max N lines per window.
 const CHAT_RATE_MAX = 5;
@@ -118,10 +118,30 @@ export class Chat extends Server<Env> {
         name: state.name,
         text,
         ts: Date.now(),
+        replyTo: this.resolveReply(msg.replyTo),
       };
       this.broadcast(JSON.stringify({ t: "chat", ...line } satisfies ServerEvent));
       if (this.isHighFanout) void this.appendHistory(line);
     }
+  }
+
+  /**
+   * Turns a target line id into the quote the UI shows.
+   *
+   * Read from the in-memory history cache rather than storage because
+   * onMessage is synchronous and this is decoration — a reply to a line that
+   * has already aged out of the last CHAT_HISTORY_MAX simply sends flat rather
+   * than blocking the message. Resolving here (not trusting the client's copy)
+   * is what stops someone quoting words the other person never said.
+   */
+  private resolveReply(id: string | undefined): ChatReply | undefined {
+    if (!id) return undefined;
+    const target = this.historyCache?.find((l) => l.id === id);
+    if (!target) return undefined;
+    const text = target.text.length > CHAT_REPLY_EXCERPT
+      ? `${target.text.slice(0, CHAT_REPLY_EXCERPT).trimEnd()}…`
+      : target.text;
+    return { id: target.id, name: target.name, text };
   }
 
   private allowChat(id: string): boolean {

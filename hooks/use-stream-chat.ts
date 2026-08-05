@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type PartySocket from 'partysocket';
 import { createRoomSocket, isRealtimeEnabled } from '@/lib/realtime/client';
-import { parseServerEvent, rooms } from '@/lib/realtime/protocol';
+import { parseServerEvent, rooms, type ChatReply } from '@/lib/realtime/protocol';
 
 export type StreamChatMessage = {
     id: string;
     userId: string;
     sender: string;
     content: string;
+    /** Resolved by the DO, not the sender — see ChatReply in the protocol. */
+    replyTo?: ChatReply;
 };
 
 /**
@@ -38,12 +40,12 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
             if (e?.t === 'chat') {
                 setMessages((prev) => [
                     ...prev.slice(-199),
-                    { id: e.id, userId: e.userId, sender: e.name, content: e.text },
+                    { id: e.id, userId: e.userId, sender: e.name, content: e.text, replyTo: e.replyTo },
                 ]);
             } else if (e?.t === 'chat-history') {
                 // One-shot replay on join (and on reconnect): the room's recent
                 // lines replace anything local so order stays authoritative.
-                setMessages(e.lines.map((l) => ({ id: l.id, userId: l.userId, sender: l.name, content: l.text })));
+                setMessages(e.lines.map((l) => ({ id: l.id, userId: l.userId, sender: l.name, content: l.text, replyTo: l.replyTo })));
             }
         };
         const onOpen = () => setConnected(true);
@@ -64,11 +66,11 @@ export function useStreamChat(streamId: string | null | undefined, enabled: bool
         };
     }, [streamId, enabled]);
 
-    const send = useCallback((text: string) => {
+    const send = useCallback((text: string, replyTo?: string) => {
         const socket = socketRef.current;
         const trimmed = text.trim();
         if (!socket || socket.readyState !== 1 || !trimmed) return;
-        socket.send(JSON.stringify({ t: 'chat', text: trimmed }));
+        socket.send(JSON.stringify({ t: 'chat', text: trimmed, replyTo }));
     }, []);
 
     return { messages, send, connected };

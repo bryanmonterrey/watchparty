@@ -17,8 +17,25 @@ export type PresenceUser = { userId: string; userName: string };
  * `message` / `event` are opaque relays — the DO never inspects the payload,
  * so persistence + E2E encryption stay in tRPC, unchanged.
  */
+/**
+ * What a line is replying to, as resolved by the DO.
+ *
+ * The sender only wires up the target's id — the name and excerpt are looked up
+ * server-side in room history, so a client can't put words in someone else's
+ * mouth by hand-crafting the quote. Excerpt is already truncated here; the UI
+ * renders it as-is.
+ */
+export type ChatReply = { id: string; name: string; text: string };
+
 /** One stream/channel chat line as stamped by the DO. */
-export type ChatLine = { id: string; userId: string; name: string; text: string; ts: number };
+export type ChatLine = {
+  id: string;
+  userId: string;
+  name: string;
+  text: string;
+  ts: number;
+  replyTo?: ChatReply;
+};
 
 export type ServerEvent =
   | { t: "presence"; users: PresenceUser[] }
@@ -37,14 +54,18 @@ export type ClientMessage =
   | { t: "typing"; channelId?: string }
   | { t: "stop-typing"; channelId?: string }
   | { t: "event"; name: string; payload: unknown }
-  // Send a live stream chat line; the DO stamps sender + id + ts.
-  | { t: "chat"; text: string };
+  // Send a live stream chat line; the DO stamps sender + id + ts, and resolves
+  // `replyTo` (the id of the line being answered) against room history.
+  | { t: "chat"; text: string; replyTo?: string };
 
 /** Max length the DO enforces on a stream chat line. */
 export const CHAT_MAX_LEN = 500;
 
 /** How many chat lines a stream-chat room replays to joiners. */
 export const CHAT_HISTORY_MAX = 50;
+
+/** How much of the quoted line a reply carries. One line's worth in the rail. */
+export const CHAT_REPLY_EXCERPT = 60;
 
 /** Short-lived auth token claims minted by the Next app, verified by the DO. */
 export type RealtimeClaims = {

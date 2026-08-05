@@ -111,6 +111,7 @@ export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
                     isLive={isLive}
                     chatRoomArn={chatRoomArn}
                     isLoading={isLoading}
+                    viewerCount={viewerCount}
                 />
             )}
         </div>
