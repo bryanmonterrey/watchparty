@@ -68,6 +68,18 @@ export function AppHeader2() {
   useEffect(() => setMounted(true), [])
 
   const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'feed', 'notifications'];
+  // Every top-level route the app owns. A single-segment path that ISN'T one of
+  // these is a username — which is the only way to tell a profile from a page,
+  // since both are one segment.
+  //
+  // Deliberately separate from PROTECTED_FIRST_SEGMENTS, which is missing most
+  // of these (home, trade, search, quests, premium, category, status) and is
+  // also what gates the search bar. Widening that list to fix the backdrop would
+  // have silently pulled the search bar off pages that have it today.
+  const APP_ROOT_SEGMENTS = [
+    'category', 'coin', 'communities', 'feed', 'home', 'messages', 'notifications',
+    'premium', 'quests', 'search', 'settings', 'shorts', 'status', 'trade', 'video',
+  ];
   const segments = pathname.split('/');
   const firstSegment = segments[1] ?? '';
 
@@ -91,7 +103,15 @@ export function AppHeader2() {
   // firstSegment.length >= 21` — guessing "is this a mint address?" from string
   // length, back when a coin and a username shared the top-level namespace.
   const isTokenPage = isCoinPath;
-  const isMediaPage = isWatchPage || isTokenPage;
+  // A profile — /<username> — and that includes the LIVE page, which is a
+  // profile whose host happens to be broadcasting. Both are topped by media (a
+  // banner, or the player) that the header sits over, so both want the same
+  // black scrim on scroll that watch and token pages get. It never had it:
+  // isWatchPage wants three segments and a profile is one.
+  const isProfilePage = segments.length === 2
+    && firstSegment !== ''
+    && !APP_ROOT_SEGMENTS.includes(firstSegment);
+  const isMediaPage = isWatchPage || isTokenPage || isProfilePage;
   // The scroll-in backdrop exists on media-style pages (watch/token), the /home
   // feed, /search, and /settings; everywhere else the header stays as-is on
   // scroll. NOT on /feed: the app shell stacks the fixed header above all
