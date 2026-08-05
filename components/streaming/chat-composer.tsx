@@ -11,6 +11,7 @@ import { CHAT_MAX_LEN } from "@/lib/realtime/protocol";
 import { trpc } from "@/lib/trpc/client";
 import type { StreamChatMessage } from "@/hooks/use-stream-chat";
 import { REPLY_GLYPH } from "./chat-line";
+import { resolveChatNameColor } from "@/lib/chat/chat-name-color";
 import { cn } from "@/lib/utils";
 
 // Everything below the message list: the reply banner, the quick emote strip,
@@ -252,7 +253,13 @@ function ReplyBanner({
         <div className="-mx-2 flex items-center gap-1.5 rounded-t-2xl rounded-b-none bg-soft-gray-10 px-3 py-2 text-[13px] font-medium text-zinc-400">
             <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-3.5 shrink-0", REPLY_GLYPH)} strokeWidth={2} />
             <span className="min-w-0 flex-1 truncate">
-                Replying to <span className="font-bold text-flexwhite">{card?.username ?? replyTo.sender}</span>
+                Replying to{" "}
+                <span
+                    className="font-bold"
+                    style={{ color: resolveChatNameColor(replyTo.userId, card?.chatColor) }}
+                >
+                    {card?.username ?? replyTo.sender}
+                </span>
             </span>
             <button
                 type="button"

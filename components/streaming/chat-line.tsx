@@ -77,7 +77,16 @@ export function ChatLine({
                 <p className="mb-0.5 flex items-center gap-1 truncate text-[11px] font-medium text-zinc-500">
                     <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-3 shrink-0", REPLY_GLYPH)} strokeWidth={2} />
                     <span className="truncate">
-                        Replying to {message.replyTo.name}: {message.replyTo.text}
+                        Replying to{" "}
+                        {/* The quoted author's own colour, same as their name on
+                            their own line — so a thread is scannable by hue. */}
+                        <span
+                            className="font-bold"
+                            style={{ color: resolveChatNameColor(message.replyTo.userId) }}
+                        >
+                            {message.replyTo.name}
+                        </span>
+                        : {message.replyTo.text}
                     </span>
                 </p>
             )}

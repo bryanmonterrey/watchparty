@@ -25,7 +25,13 @@ export type PresenceUser = { userId: string; userName: string };
  * mouth by hand-crafting the quote. Excerpt is already truncated here; the UI
  * renders it as-is.
  */
-export type ChatReply = { id: string; name: string; text: string };
+export type ChatReply = {
+  id: string;
+  /** Author of the quoted line, so a reply can paint their name their colour. */
+  userId: string;
+  name: string;
+  text: string;
+};
 
 /**
  * The channel's pinned line.

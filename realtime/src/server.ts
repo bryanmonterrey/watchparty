@@ -168,7 +168,7 @@ export class Chat extends Server<Env> {
     const text = target.text.length > CHAT_REPLY_EXCERPT
       ? `${target.text.slice(0, CHAT_REPLY_EXCERPT).trimEnd()}…`
       : target.text;
-    return { id: target.id, name: target.name, text };
+    return { id: target.id, userId: target.userId, name: target.name, text };
   }
 
   private async getPinned(): Promise<PinnedMessage | null> {
