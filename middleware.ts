@@ -29,6 +29,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // /feed/post/<id> is /status/<id> now.
+  //
+  // Handled HERE, ahead of the auth gate, rather than left to next.config's
+  // redirects(): on Workers this edge middleware runs first, so a logged-out
+  // visitor to the old path was sent to /login carrying the DEAD path as its
+  // callbackUrl. That matters more than it looks — a coin's on-chain metadata
+  // points at the old path forever and can never be edited, so it has to
+  // resolve identically whether the visitor is signed in, signed out, or a
+  // crawler fetching an OG card.
+  const legacyPost = /^\/feed\/post\/([^/]+)\/?$/.exec(pathname);
+  if (legacyPost) {
+    const moved = new URL(`/status/${legacyPost[1]}`, request.url);
+    moved.search = request.nextUrl.search;
+    return NextResponse.redirect(moved, 308);
+  }
+
   // On an auth route (/login): always allow. We do NOT optimistically redirect
   // a "logged-in" user to the app here, because getSessionCookie only checks the
   // cookie's PRESENCE. If the cookie is present but the session is invalid, that
