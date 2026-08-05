@@ -25,11 +25,15 @@ export const DEFAULT_CHAT_PREFS: ChatPrefs = {
     emotes: true,
 };
 
-/** Text size per line, matched to the rail's 13px baseline at "md". */
+/**
+ * Text size per line. "md" is text-sm (14px) — the floor for chat per owner
+ * review, since 13px in a 384px rail reads as fine print beside the rest of the
+ * app. Small still steps down from it, for people who want more lines on screen.
+ */
 export const CHAT_FONT_CLASS: Record<ChatFontSize, string> = {
-    sm: "text-[12px]",
-    md: "text-[13px]",
-    lg: "text-[15px]",
+    sm: "text-[13px]",
+    md: "text-sm",
+    lg: "text-base",
 };
 
 const STORAGE_KEY = "wp:chat-prefs";

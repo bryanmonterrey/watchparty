@@ -137,7 +137,7 @@ export function ChatComposer({
                     }}
                     placeholder={connected ? "Send a message" : "Connecting…"}
                     disabled={!connected}
-                    className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-50"
+                    className="min-w-0 flex-1 bg-transparent text-sm font-medium text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-50"
                 />
 
                 <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
@@ -157,7 +157,7 @@ export function ChatComposer({
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Search emotes"
-                            className="mb-2 w-full rounded-lg bg-soft-gray-10 px-2.5 py-1.5 text-[13px] font-medium text-zinc-100 outline-none placeholder:text-zinc-500"
+                            className="mb-2 w-full rounded-lg bg-soft-gray-10 px-2.5 py-2 text-sm font-medium text-zinc-100 outline-none placeholder:text-zinc-500"
                         />
                         <div className="hidden-scrollbar grid max-h-56 grid-cols-6 gap-1 overflow-y-auto">
                             {results.map((e) => (
@@ -202,7 +202,7 @@ export function ChatComposer({
                 <Button
                     onClick={submit}
                     disabled={!input.trim() || !connected}
-                    className="bg-white font-bold text-black hover:bg-white/85"
+                    className="bg-white text-[15px] font-bold text-black hover:bg-white/85"
                 >
                     Send
                 </Button>

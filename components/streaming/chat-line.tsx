@@ -24,9 +24,13 @@ import { cn } from "@/lib/utils";
 // and text are inline, so a long message wraps back under the badges the way
 // running text should, instead of forming a hanging indent against an avatar.
 
-/** Emotes sitting in a sentence match the text's rhythm... */
-const EMOTE_INLINE = "inline-block h-[22px] w-[22px] translate-y-[-1px] align-middle";
-/** ...but a line that is ONLY emotes is a reaction, so it gets room to be one. */
+/**
+ * Emotes sitting in a sentence match the text's rhythm — sized in `em` rather
+ * than pixels so they track the reader's font-size choice instead of staying
+ * put while the words around them grow.
+ */
+const EMOTE_INLINE = "inline-block h-[1.6em] w-[1.6em] translate-y-[-1px] align-middle";
+/** A line that is ONLY emotes is a reaction, so it gets room to be one. */
 const EMOTE_SOLO = "inline-block h-11 w-11 align-middle";
 
 const CARD_STALE_MS = 5 * 60 * 1000;
