@@ -2,6 +2,8 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { BadgeGlyph } from "@/components/profile/badge-glyphs";
+import { Hint } from "@/components/ui/hint";
+import { BADGE_BY_ID } from "@/lib/badges";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { resolveChatNameColor } from "@/lib/chat/chat-name-color";
 
@@ -49,13 +51,14 @@ export function ChatIdentity({ userId }: { userId: string }) {
     const color = resolveChatNameColor(userId, data.chatColor);
     return (
         <span className="mr-1.5 inline-flex items-center gap-1 align-middle">
-            <span
-                className="inline-flex h-[15px] min-w-[15px] items-center justify-center rounded-[4px] px-[3px] font-pixel text-[9px] leading-none"
-                style={{ color, backgroundColor: `color-mix(in oklab, ${color} 22%, transparent)` }}
-                title={`level ${data.level}`}
-            >
-                {data.level}
-            </span>
+            <Hint label={`Level ${data.level}`} placement="top" asChild>
+                <span
+                    className="inline-flex h-[15px] min-w-[15px] items-center justify-center rounded-[4px] px-[3px] font-pixel text-[9px] leading-none"
+                    style={{ color, backgroundColor: `color-mix(in oklab, ${color} 22%, transparent)` }}
+                >
+                    {data.level}
+                </span>
+            </Hint>
             {data.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-4 shrink-0" />}
             {data.verifiedTier === "business" && <BusinessBadgeIcon className="size-4 shrink-0" />}
             {data.verifiedTier === "government" && <GovBadgeIcon className="size-4 shrink-0" />}
@@ -63,7 +66,15 @@ export function ChatIdentity({ userId }: { userId: string }) {
                 size each "pixel" lands on a fraction of a device pixel and
                 crispEdges snaps them to uneven widths. 1:1 is the only size a
                 pixel glyph is actually crisp at. */}
-            {top && <BadgeGlyph id={top.id} className="size-4 shrink-0" />}
+            {top && (
+                // Same hint the community server icons use — top-centred, so a
+                // 16px glyph on a chat line is identifiable without a click.
+                <Hint label={BADGE_BY_ID[top.id]?.name ?? top.id} placement="top" asChild>
+                    <span className="inline-flex">
+                        <BadgeGlyph id={top.id} className="size-4 shrink-0" />
+                    </span>
+                </Hint>
+            )}
         </span>
     );
 }

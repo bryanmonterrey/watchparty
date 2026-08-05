@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useStreamChat, type StreamChatMessage } from "@/hooks/use-stream-chat";
 import { useChatPrefs } from "@/hooks/use-chat-prefs";
 import { emoteSet } from "@/lib/chat/emotes";
+import { RailScrollbar } from "@/components/rails/rail-scrollbar";
 import { ChatLine } from "./chat-line";
 import { ChatComposer } from "./chat-composer";
 import { ChatSettings } from "./chat-settings";
@@ -135,6 +136,11 @@ export function ChatPanel({
                 height: that height isn't fixed (the reply banner comes and goes),
                 so any hard-coded offset would be wrong half the time. */}
             <div className="relative flex min-h-0 flex-1 flex-col">
+                {/* globals.css hides scrollbars app-wide, so a long chat gave no
+                    hint that there was anything above the fold. Same custom
+                    thumb the rails use; topPx 0 because nothing is pinned over
+                    this scroller. */}
+                <RailScrollbar getScroller={() => scrollerRef.current} topPx={0} />
                 <div
                     ref={scrollerRef}
                     onScroll={onScroll}

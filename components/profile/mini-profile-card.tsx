@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, CalendarIcon } from "@/components/icons";
@@ -27,8 +27,14 @@ const GiftSubscriptionDialog = dynamic(
 // Avatar-anchored mini-profile popout (docs/design-brief-2026-07.md §1) —
 // the Discord move: identity renders anywhere an avatar appears, so every
 // leaderboard row / callout / feed item becomes a follow surface. One batched
-// profile.card query (server-cached 5 min; staleTime keeps row-hover cheap),
-// hover-intent 150 ms. Depth = flat fill + uniform inner hairline, no shadows.
+// profile.card query (server-cached 5 min). Depth = flat fill + uniform inner
+// hairline, no shadows.
+//
+// CLICK, not hover (owner decision 2026-08-05). It was a hover card, and in a
+// moving chat that is hostile: reading a line drags a 320px panel over the
+// messages under it, and the panel now carries actions — follow, mute, gift —
+// which are not things to put under an accidental pointer. A popover also
+// dismisses on click-away and keyboard, which hover never did.
 
 const CARD_STALE_MS = 5 * 60 * 1000;
 
@@ -148,15 +154,15 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
     const goToProfile = () => card?.username && router.push(`/${card.username}`);
 
     return (
-        <HoverCard open={open} onOpenChange={setOpen} openDelay={150} closeDelay={120}>
-            <HoverCardTrigger asChild>
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
                 {inline ? (
                     <span className={cn("cursor-pointer", triggerClassName)}>{children}</span>
                 ) : (
                     <div className={cn("cursor-pointer", triggerClassName ?? "w-full")}>{children}</div>
                 )}
-            </HoverCardTrigger>
-            <HoverCardContent className="w-[320px] overflow-hidden rounded-3xl border-none bg-[#101011] shadow-none ring-1 ring-white/10">
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] overflow-hidden rounded-3xl border-none bg-[#101011] p-0 shadow-none ring-1 ring-white/10">
                 {isLoading || !card ? (
                     <div className="flex flex-col">
                         <div className="shimmer-skeleton h-20 w-full" />
@@ -318,7 +324,7 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
                         </div>
                     </div>
                 )}
-            </HoverCardContent>
-        </HoverCard>
+            </PopoverContent>
+        </Popover>
     );
 }

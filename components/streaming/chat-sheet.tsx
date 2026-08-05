@@ -2,8 +2,6 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
-import { Squircle } from "@/components/ui/squircle";
-import { RAIL_BORDER } from "@/components/rails/rail-shell";
 import { cn } from "@/lib/utils";
 
 // The card the chat menus (Settings, Identity, Members) sit in.
@@ -31,9 +29,16 @@ import { cn } from "@/lib/utils";
 // Either way it grows only as far as its content needs and scrolls inside
 // itself past that, rather than pushing anything around.
 //
-// radius 25 + RAIL_BORDER are the rail card's own values, so this reads as a
-// card of the same family rather than a panel that happens to be rounded. Both
-// come from rail-shell, not copied numbers.
+// Chrome differs by anchor, and deliberately. A bottom sheet fills the chat
+// column corner to corner and takes neither outline nor rounding — it IS the
+// panel while it's open, and an outline inside an outlined card is two hairlines
+// a few pixels apart. The leaderboard hangs from the header, so it reads as a
+// thing dropped over the chat and gets sides and a bottom edge to say so; its
+// top is where the header already draws one.
+//
+// Plain CSS borders, not the Squircle used elsewhere: Lisse strokes a whole
+// path with no per-side control, and border-x + border-b is exactly the
+// per-side case it can't express.
 
 export function ChatSheet({
     title,
@@ -67,12 +72,11 @@ export function ChatSheet({
                 top ? "top-0" : "bottom-0",
             )}
         >
-            <Squircle
-                // Square the edge that meets something, round the free one.
-                radius={top ? { bottomLeft: 25, bottomRight: 25 } : 25}
-                autoEffects={false}
-                innerBorder={top ? undefined : RAIL_BORDER}
-                className="flex max-h-full min-h-0 flex-col bg-canvas"
+            <div
+                className={cn(
+                    "flex max-h-full min-h-0 flex-col bg-canvas",
+                    top && "rounded-b-[25px] border-x border-b border-[rgba(138,145,158,0.2)]",
+                )}
             >
                 {/* shrink-0: the header is fixed furniture and the scroller
                     below takes whatever height is left. */}
@@ -137,7 +141,7 @@ export function ChatSheet({
                 >
                     {children}
                 </div>
-            </Squircle>
+            </div>
         </div>
     );
 }
