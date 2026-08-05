@@ -23,9 +23,15 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
             {/* Label + eye above the number, per the wallet-card block. The eye
                 lives here rather than appearing only once the balance is hidden,
                 so hiding is discoverable instead of one-way. */}
-            <div className="flex items-center gap-1.5">
+            {/* Each skeleton below sits in the same line box as the type it
+                replaces (12px label, 60px number, 15px change + its pill), so
+                the block is exactly as tall loading as loaded and the tabs
+                underneath don't shift when the balance lands. Bars are
+                rounded-full like every other skeleton in the app — these were
+                rounded-sm, the one square-ish thing in the drawer. */}
+            <div className="flex h-4 items-center gap-1.5">
                 {loading ? (
-                    <div className="h-3 w-14 rounded-sm shimmer-skeleton" />
+                    <div className="h-3 w-14 rounded-full shimmer-skeleton" />
                 ) : (
                     <>
                         <p className="text-xs font-medium text-zinc-500">Balance</p>
@@ -47,7 +53,9 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
 
             <div className="mt-1 flex items-end gap-2">
                 {loading ? (
-                    <div className="h-14 w-40 rounded-sm shimmer-skeleton" />
+                    // text-6xl at leading-none is exactly 60px tall; h-14 (56px)
+                    // left the number a touch shorter than what replaced it.
+                    <div className="h-[60px] w-56 rounded-2xl shimmer-skeleton" />
                 ) : hideBalances ? (
                     <p className="text-6xl font-bold text-white tracking-[0.2em] leading-none">••••••</p>
                 ) : (
@@ -59,9 +67,15 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                 )}
             </div>
 
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex h-6 items-center gap-2">
                 {loading ? (
-                    <div className="h-5 w-24 rounded-sm shimmer-skeleton" />
+                    // Two shapes, because there are two: the dollar change and
+                    // the percentage badge. One wide bar read as a single
+                    // sentence and then split in half on load.
+                    <>
+                        <div className="h-[15px] w-20 rounded-full shimmer-skeleton" />
+                        <div className="h-6 w-14 rounded-md shimmer-skeleton" />
+                    </>
                 ) : hideBalances ? (
                     // Masked to the same height as the pills, so revealing doesn't
                     // shift the rows below it.

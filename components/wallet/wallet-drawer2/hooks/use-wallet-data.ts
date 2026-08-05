@@ -85,7 +85,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
     }, [toggleNftPinMutation]);
 
     const {
-        data: assetData,
+        data: freshAssets,
         isLoading: isLoadingTokens,
         refetch: refresh,
     } = trpc.wallet.getWalletAssets.useQuery(
@@ -96,9 +96,26 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
             staleTime: 15000,
             gcTime: 5 * 60 * 1000,
             placeholderData: keepPreviousData,
-            retry: 1,
+            // The server throws rather than caching a zero when Helius gives it
+            // nothing, so a transient blip arrives here as an error.
+            retry: 2,
         }
     );
+
+    // Hold the last answer we actually got for this wallet.
+    //
+    // keepPreviousData is PLACEHOLDER data, which react-query only applies
+    // while a query is pending — an errored query carries no data at all. So a
+    // single failed refresh emptied the drawer: $0.00 total and "No Coins
+    // Found" on a wallet that has coins. Same defect the header chip had, where
+    // it read as the balance flickering to zero.
+    const lastAssets = React.useRef<{ address: string; data: NonNullable<typeof freshAssets> } | null>(null);
+    if (walletAddress && freshAssets) lastAssets.current = { address: walletAddress, data: freshAssets };
+    const held = lastAssets.current;
+    // Both sides must be a real address — undefined === undefined would hand
+    // back the previous wallet's holdings.
+    const assetData =
+        freshAssets ?? (held && walletAddress && held.address === walletAddress ? held.data : undefined);
 
     const { data: transactions, isLoading: isLoadingActivity } = trpc.wallet.getTransactions.useQuery(undefined, {
         enabled: enabled && activeTab === "activity",

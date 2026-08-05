@@ -114,15 +114,23 @@ export function WalletHeader({
                 MorphPopover rather than GooDropdown here. Goo is the standard for
                 menus of rows; this panel has its own header and per-account layout,
                 which is what the morph primitive is for. */}
-            {loading ? (
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full shimmer-skeleton" />
-                    <div className="flex flex-col gap-1.5">
-                        {/* h-5 tracks the username's text-lg — the skeleton has to
-                            stand the same height as what replaces it or the header
-                            jumps on load. */}
-                        <div className="h-5 w-24 rounded-sm shimmer-skeleton" />
-                        <div className="h-3 w-32 rounded-sm shimmer-skeleton" />
+            {/* Skeleton only when the NAME is actually missing.
+                `loading` here is the assets query, and this row doesn't render
+                assets — the username and avatar arrive with the session, which
+                is already resolved by the time the drawer can open. Blanking
+                them while balances load skeletoned data we already had.
+
+                Single line, matching the trigger below: the address used to
+                make this two, and it was removed (house rule — never render a
+                wallet address). The second bar was still here. */}
+            {loading && !username ? (
+                <div className="-ml-2 flex items-center gap-3 px-2 py-1.5">
+                    <div className="h-10 w-10 rounded-full shimmer-skeleton shrink-0" />
+                    {/* h-7 is the text-lg line box, the bar is the ink — the row
+                        has to stand the same height as what replaces it or the
+                        balance below jumps on load. */}
+                    <div className="flex h-7 items-center">
+                        <div className="h-[18px] w-24 rounded-full shimmer-skeleton" />
                     </div>
                 </div>
             ) : (

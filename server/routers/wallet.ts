@@ -3282,6 +3282,10 @@ export const walletRouter = router({
             return { tokens: tokenResult.tokens, solPrice: tokenResult.solPrice, hiddenTokenMints };
         } catch (error) {
             console.error("Failed to fetch wallet assets:", error);
+            // The upstream-unavailable and quota throws above are deliberate,
+            // typed answers ("we don't know", not "we broke"). Flattening them
+            // into a 500 here threw away the only signal that says which.
+            if (error instanceof TRPCError) throw error;
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to fetch wallet assets",

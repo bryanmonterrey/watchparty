@@ -57,24 +57,15 @@ function WalletButtonInner() {
     const { data: session, isLoading: loading, isFetching: fetchingSession } = useAuthSession();
     // Shared with the balance chip + Create button so all three header tiles
     // leave their skeletons in the same paint (see useHeaderWalletLoading).
-    const { loading: headerLoading } = useHeaderWalletLoading();
+    const { loading: headerLoading, address: walletAddress } = useHeaderWalletLoading();
     const [isSigningIn, startSigningIn] = useTransition();
 
     const isSignedIn = !!session?.user;
-    // The CONNECTED wallet is the wallet. If an extension is connected, that is
-    // the account the user is looking at, so it's the balance they expect to
-    // see — every wallet-connected app works this way.
-    //
-    // This used to read session.user.wallet_address unconditionally, which is
-    // the embedded Swig address. An extension user got their Swig balance (zero,
-    // for anyone who never funded it) while their extension held the real funds.
-    // Worse, the drawer's send view ALREADY preferred the adapter
-    // (`adapterPublicKey?.toBase58() || walletAddress`), so the drawer displayed
-    // one wallet's balance and spent from another.
-    //
-    // Falls back to the embedded wallet when no extension is connected, which is
-    // the whole population of embedded-only users.
-    const walletAddress = publicKey?.toBase58() ?? session?.user?.wallet_address;
+    // walletAddress comes from the shared hook rather than being resolved here
+    // a second time, so the chip, this button and the drawer can't disagree
+    // about whose wallet is on screen. The rule it applies (connected extension
+    // first, embedded Swig address as the fallback, and a brief wait for
+    // autoConnect before choosing) is documented in use-header-wallet.
 
     const trpcUtils = trpc.useUtils();
     const handlePrefetch = useCallback(() => {
