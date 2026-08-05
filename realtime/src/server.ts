@@ -115,7 +115,11 @@ export class Chat extends Server<Env> {
         const st = c.state;
         if (st) seen.set(st.userId, { userId: st.userId, userName: st.name });
       }
-      connection.send(JSON.stringify({ t: "members", users: [...seen.values()] } satisfies ServerEvent));
+      // Sorted, per the protocol's contract. getConnections() yields whatever
+      // order the socket map happens to be in, which can differ between two
+      // answers listing the identical people.
+      const users = [...seen.values()].sort((a, b) => (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0));
+      connection.send(JSON.stringify({ t: "members", users } satisfies ServerEvent));
     } else if (msg.t === "chat") {
       if (!this.allowChat(connection.id)) return;
       const text = typeof msg.text === "string" ? msg.text.trim().slice(0, CHAT_MAX_LEN) : "";

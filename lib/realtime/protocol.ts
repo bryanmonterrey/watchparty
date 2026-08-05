@@ -52,6 +52,12 @@ export type ServerEvent =
   // stream-chat room skips continuous presence on purpose (broadcasting a
   // roster on every join and leave is O(N^2) at fan-out), so the roster is
   // pulled when someone opens it rather than pushed to everyone forever.
+  //
+  // `users` is ORDERED BY userId, and that's part of the contract rather than
+  // an accident of iteration. Callers key caches and queries off this list; an
+  // order that wobbles between two answers describing the identical set of
+  // people makes the same data look like new data, which quietly turns a poll
+  // into a refetch of everything downstream of it.
   | { t: "members"; users: PresenceUser[] };
 
 /** Messages a client sends UP to the room. Relayed to peers; never persisted. */

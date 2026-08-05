@@ -54,11 +54,11 @@ export function ChatMembers({
         return () => clearInterval(id);
     }, [onRequest]);
 
-    // SORTED, and that's load-bearing. react-query hashes the input into the
-    // query key, the poll hands back a fresh array every REFRESH_MS, and the
-    // DO's connection iteration order isn't guaranteed stable — so an unsorted
-    // list can hash differently for the very same people and refetch roles on
-    // every tick, staleTime or not. Sorted, the key only moves when the set does.
+    // Sorted here too, though the DO now guarantees it (see the `members`
+    // event in the protocol). react-query hashes this straight into the query
+    // key and the poll hands back a fresh array every REFRESH_MS, so an order
+    // that wobbles means the same people hash differently and refetch roles on
+    // every tick, staleTime or not. Cheap enough to not depend on the wire.
     const userIds = useMemo(
         () => (members ?? []).map((m) => m.userId).sort(),
         [members],
