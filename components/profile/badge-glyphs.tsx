@@ -4,8 +4,12 @@ import type { BadgeFamily, BadgeId } from "@/lib/badges";
 import { RibbonWhiteBadge } from "@/components/badges";
 
 // Badge glyphs from Microsoft Fluent Emoji (github.com/microsoft/fluentui-emoji,
-// MIT), Flat style, vendored into public/badges/ — real emoji-grade art instead
-// of hand-drawn shapes. Mapping: trophy = top caller, money bag = top trader,
+// MIT), Flat style, vendored into public/badges/ — then redrawn as pixel art by
+// scripts/build-pixel-badges.mjs and served from public/badges/pixel/.
+//
+// The smooth originals read as "an emoji someone dropped in" beside font-pixel;
+// the pixel versions belong to the same face. They're still SVG (squares, not a
+// raster), so the 14px chat glyph and the 32px profile one are both exact. Mapping: trophy = top caller, money bag = top trader,
 // bullseye = sniper, crystal ball = prophet, chart = profitable, rocket =
 // launcher, fire = streak. Level tiers share the shield with the tier number
 // composited on top (SVG text so it scales with the glyph). Early member is
@@ -39,7 +43,7 @@ export function BadgeGlyph({ id, className, style }: {
     if (tier == null) {
         return (
             <img
-                src={`/badges/${id}.svg`}
+                src={`/badges/pixel/${id}.svg`}
                 alt=""
                 aria-hidden
                 draggable={false}
@@ -48,17 +52,19 @@ export function BadgeGlyph({ id, className, style }: {
             />
         );
     }
-    // Fluent assets are 32×32 — compose the tier number over the shield.
+    // The pixel shield is a 16-unit grid — compose the tier number over it, in
+    // the pixel face so the number doesn't reintroduce smooth type on top of
+    // pixel art.
     return (
-        <svg viewBox="0 0 32 32" aria-hidden className={cn("select-none", className)} style={style}>
-            <image href="/badges/level.svg" width="32" height="32" />
+        <svg viewBox="0 0 16 16" aria-hidden className={cn("select-none", className)} style={style}>
+            <image href="/badges/pixel/level.svg" width="16" height="16" />
             <text
-                x="16"
-                y="16.5"
+                x="8"
+                y="8.5"
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontSize={tier >= 10 ? 12 : 14}
-                fontWeight="800"
+                fontSize={tier >= 10 ? 6 : 7.5}
+                className="font-pixel"
                 fill="#fff"
             >
                 {tier}

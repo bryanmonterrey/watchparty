@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, SmileIcon, UserMultiple02Icon, ArrowTurnBackwardIcon, ShieldEnergyIcon, Settings02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, SmileIcon, UserMultiple02Icon, ArrowTurnBackwardIcon, ShieldEnergyIcon } from "@hugeicons/core-free-icons";
+import { SettingsIcon } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { EMOTES, searchEmotes, type Emote } from "@/lib/chat/emotes";
@@ -27,6 +28,12 @@ import { compactCount } from "@/lib/utils";
 
 /** How many of the set the strip shows without opening the picker. */
 const QUICK_COUNT = 10;
+
+/** The two glyphs inside the input field, which are a matched pair. */
+const ROW_ICON = "size-6";
+
+/** The footer's two icon buttons, also a matched pair. */
+const FOOT_ICON = "size-[22px]";
 
 export function ChatComposer({
     onSend,
@@ -108,14 +115,17 @@ export function ChatComposer({
             {/* h-11, the app's control height — set on the ROW, since the input
                 inside it is borderless and stretches. */}
             <div className="flex h-11 items-center gap-2 rounded-2xl border border-[rgba(138,145,158,0.2)] bg-soft-gray-5 px-2.5 transition-colors focus-within:border-[rgba(138,145,158,0.45)]">
+                {/* Bare glyph, no chip. A filled square around one of the two
+                    icons inside the field made it read as a separate control
+                    docked to the input rather than part of it. */}
                 <button
                     type="button"
                     onClick={onOpenIdentity}
                     aria-label="identity"
                     title="Identity"
-                    className="shrink-0 cursor-pointer rounded-lg bg-soft-gray-15 p-1.5 text-zinc-400 transition-colors hover:text-white"
+                    className="shrink-0 cursor-pointer text-zinc-400 transition-colors hover:text-white"
                 >
-                    <HugeiconsIcon icon={ShieldEnergyIcon} className="size-[18px]" strokeWidth={2} />
+                    <HugeiconsIcon icon={ShieldEnergyIcon} className={ROW_ICON} strokeWidth={2} />
                 </button>
                 <input
                     ref={inputRef}
@@ -137,7 +147,7 @@ export function ChatComposer({
                             aria-label="emotes"
                             className="shrink-0 cursor-pointer text-zinc-500 transition-colors hover:text-white data-[state=open]:text-white"
                         >
-                            <HugeiconsIcon icon={SmileIcon} className="size-[18px]" strokeWidth={2} />
+                            <HugeiconsIcon icon={SmileIcon} className={ROW_ICON} strokeWidth={2} />
                         </button>
                     </PopoverTrigger>
                     {/* side=top: the composer sits at the bottom of the rail, so
@@ -172,30 +182,30 @@ export function ChatComposer({
                 </Popover>
             </div>
 
-            <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
-                    <HugeiconsIcon icon={UserMultiple02Icon} className="size-4" strokeWidth={2} />
+            {/* One right-hand cluster: viewers, settings, Send. The count used
+                to sit alone at the far left, which read as a stat stranded on
+                the panel rather than part of the control row. */}
+            <div className="flex items-center justify-end gap-3">
+                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-zinc-500">
+                    <HugeiconsIcon icon={UserMultiple02Icon} className={FOOT_ICON} strokeWidth={2} />
                     {viewerCount !== undefined ? compactCount(viewerCount) : "—"}
                 </span>
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={onOpenSettings}
-                        aria-label="chat settings"
-                        title="Chat settings"
-                        className="cursor-pointer text-zinc-500 transition-colors hover:text-white"
-                    >
-                        <HugeiconsIcon icon={Settings02Icon} className="size-[18px]" strokeWidth={2} />
-                    </button>
-                    <Button
-                        size="sm"
-                        onClick={submit}
-                        disabled={!input.trim() || !connected}
-                        className="bg-white font-bold text-black hover:bg-white/85"
-                    >
-                        Send
-                    </Button>
-                </div>
+                <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    aria-label="chat settings"
+                    title="Chat settings"
+                    className="cursor-pointer text-zinc-500 transition-colors hover:text-white"
+                >
+                    <SettingsIcon filled className={FOOT_ICON} />
+                </button>
+                <Button
+                    onClick={submit}
+                    disabled={!input.trim() || !connected}
+                    className="bg-white font-bold text-black hover:bg-white/85"
+                >
+                    Send
+                </Button>
             </div>
         </div>
     );

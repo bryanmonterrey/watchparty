@@ -36,7 +36,11 @@ export function ChatIdentity({ userId }: { userId: string }) {
             >
                 {data.level}
             </span>
-            {top && <BadgeGlyph id={top.id} className="size-3.5 shrink-0" />}
+            {/* 16px, not 14: the glyph is a 16-unit pixel grid, so at any other
+                size each "pixel" lands on a fraction of a device pixel and
+                crispEdges snaps them to uneven widths. 1:1 is the only size a
+                pixel glyph is actually crisp at. */}
+            {top && <BadgeGlyph id={top.id} className="size-4 shrink-0" />}
         </span>
     );
 }
