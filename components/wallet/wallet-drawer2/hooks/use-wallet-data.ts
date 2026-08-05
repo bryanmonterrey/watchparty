@@ -8,6 +8,7 @@ import { Token, NFT, TabId, NFTCollection } from "../types";
 import type { ChainId } from "@/lib/chains/types";
 import { getChainOrDefault } from "@/lib/chains/registry";
 import { hideSmallBalancesAtom, hideUnknownTokensAtom, hideReportedActivityAtom } from "../store/wallet-settings";
+import { readWalletAssetsSnapshot } from "@/components/wallet/use-header-wallet";
 
 
 interface UseWalletDataProps {
@@ -87,6 +88,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
     const {
         data: freshAssets,
         isLoading: isLoadingTokens,
+        isError: assetsErrored,
         refetch: refresh,
     } = trpc.wallet.getWalletAssets.useQuery(
         { address: walletAddress ?? "" },
@@ -112,10 +114,32 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
     const lastAssets = React.useRef<{ address: string; data: NonNullable<typeof freshAssets> } | null>(null);
     if (walletAddress && freshAssets) lastAssets.current = { address: walletAddress, data: freshAssets };
     const held = lastAssets.current;
+
+    // ...and, behind that, the snapshot the header persists.
+    //
+    // The in-memory ref above is empty every time the drawer opens — it mounts
+    // lazily, so it has no history to hold. With the upstream down (Helius
+    // quota, 429) that read as an EMPTY WALLET: the chip painted a balance from
+    // localStorage while the drawer, on the very same errored query, said "No
+    // Coins Found". Same wallet, two answers, and the wrong one was the
+    // confident one.
+    //
+    // The snapshot is slimmed for the header (no icons/market data), so it's a
+    // degraded row, not a lie — balances and prices are the last real ones.
+    const snapshot = React.useMemo(
+        () => readWalletAssetsSnapshot(walletAddress) as NonNullable<typeof freshAssets> | undefined,
+        [walletAddress],
+    );
+
     // Both sides must be a real address — undefined === undefined would hand
     // back the previous wallet's holdings.
     const assetData =
-        freshAssets ?? (held && walletAddress && held.address === walletAddress ? held.data : undefined);
+        freshAssets ?? (held && walletAddress && held.address === walletAddress ? held.data : undefined) ?? snapshot;
+
+    // Nothing has ever answered for this wallet and the query is failing — the
+    // list is empty because we don't KNOW, which is not the same as a wallet
+    // with nothing in it, and must not be worded like one.
+    const assetsUnavailable = assetsErrored && !assetData;
 
     const { data: transactions, isLoading: isLoadingActivity } = trpc.wallet.getTransactions.useQuery(undefined, {
         enabled: enabled && activeTab === "activity",
@@ -313,6 +337,8 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
         tokens: mergedTokens,
         allTokens: mergedAllTokens,
         isLoadingTokens: isLoadingTokens || isLoadingChainAssets,
+        /** The list is empty because the upstream is down, not because the wallet is. */
+        assetsUnavailable,
         // NFTs remain Solana-only.
         nfts,
         collections,

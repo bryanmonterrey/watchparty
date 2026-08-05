@@ -57,6 +57,8 @@ interface WalletTabsProps {
     collections: NFTCollection[];
     transactions: Transaction[];
     isLoadingTokens: boolean;
+    /** No holdings because the upstream is down — say that, don't say "empty". */
+    assetsUnavailable?: boolean;
     isLoadingNfts: boolean;
     isLoadingActivity: boolean;
     onTokenClick: (token: Token) => void;
@@ -80,6 +82,7 @@ export function WalletTabs({
     collections,
     transactions,
     isLoadingTokens,
+    assetsUnavailable,
     isLoadingNfts,
     isLoadingActivity,
     onTokenClick,
@@ -218,11 +221,23 @@ export function WalletTabs({
                                 />
                             ))
                         ) : tokens.length === 0 && !isLoadingTokens ? (
-                            <EmptyState
-                                icon={Coins}
-                                title="No Coins Found"
-                                description="Your coin balances will appear here once you have assets."
-                            />
+                            // "No coins" is a claim about the WALLET. When the
+                            // upstream is down we don't know anything about the
+                            // wallet, so saying it would be the same confident
+                            // lie the balance chip used to tell with 0.000.
+                            assetsUnavailable ? (
+                                <EmptyState
+                                    icon={Coins}
+                                    title="Balances unavailable"
+                                    description="We couldn't reach the network just now. Your coins are safe — pull to refresh in a moment."
+                                />
+                            ) : (
+                                <EmptyState
+                                    icon={Coins}
+                                    title="No Coins Found"
+                                    description="Your coin balances will appear here once you have assets."
+                                />
+                            )
                         ) : (
                             <TokenListSkeleton />
                         )}

@@ -23,6 +23,19 @@ export type WalletAssetsData = {
 // the real fetch lands silently.
 const snapshotKey = (address: string) => `wallet-assets-snapshot:${address}`;
 
+/**
+ * The last assets we saw for an address, from localStorage.
+ *
+ * Exported because the DRAWER needs the same fallback the header has. Holding
+ * it only in memory (as the drawer did) is no fallback at all for a component
+ * that mounts when it opens: the header would paint a balance from here while
+ * the drawer, opening cold into the same failed query, said "No Coins Found" —
+ * two surfaces disagreeing about one wallet.
+ */
+export function readWalletAssetsSnapshot(address: string | null | undefined): WalletAssetsData | undefined {
+    return readSnapshot(address);
+}
+
 function readSnapshot(address: string | null | undefined): WalletAssetsData | undefined {
     if (!address || typeof window === "undefined") return undefined;
     try {

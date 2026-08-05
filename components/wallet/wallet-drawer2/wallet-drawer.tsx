@@ -139,6 +139,7 @@ export function WalletDrawer({
         tokens,
         allTokens,
         isLoadingTokens,
+        assetsUnavailable,
         nfts,
         collections,
         isLoadingNfts,
@@ -255,6 +256,7 @@ export function WalletDrawer({
                                     collections={collections}
                                     transactions={transactions || []}
                                     isLoadingTokens={isLoadingTokens}
+                                    assetsUnavailable={assetsUnavailable}
                                     isLoadingNfts={isLoadingNfts}
                                     isLoadingActivity={isLoadingActivity}
                                     onRefresh={refresh}
