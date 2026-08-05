@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TradeUpIcon } from "@hugeicons/core-free-icons";
+import { CreateIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { appToast } from "@/components/app-ui/app-toast";
@@ -36,6 +37,11 @@ import { useTokenLaunch } from "@/hooks/use-token-launch";
 const PILL_BASE =
     "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-2 px-4 text-[15px] font-bold transition-colors active:scale-95";
 const PILL_DRAFT = "border-yellow-400/80 text-yellow-400 hover:bg-yellow-400/10";
+// The entry point wears no border. There's no coin yet, so there's no state for
+// a colour to report — and an outlined pill here read as a third option
+// competing with Follow and Subscribe rather than as an "add" action.
+const PILL_CREATE =
+    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold text-zinc-200 transition-colors hover:bg-white/5 hover:text-white active:scale-95";
 const PILL_UP = "border-long/80 text-long hover:bg-long/10";
 const PILL_DOWN = "border-short/80 text-short hover:bg-short/10";
 
@@ -166,10 +172,10 @@ export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner
                     type="button"
                     onClick={() => setIsEditing(true)}
                     disabled={busy || isLaunching}
-                    className={cn(PILL_BASE, PILL_DRAFT, "disabled:opacity-50")}
+                    className={cn(PILL_CREATE, "disabled:opacity-50")}
                 >
-                    <HugeiconsIcon icon={TradeUpIcon} className="size-5" strokeWidth={2.5} />
-                    {busy || isLaunching ? "Creating…" : "Create coin"}
+                    <CreateIcon className="size-5" strokeWidth={2.5} />
+                    {busy || isLaunching ? "Creating…" : "Creator coin"}
                 </button>
                 <TickerEditDialog
                     open={isEditing}
