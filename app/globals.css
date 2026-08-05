@@ -311,9 +311,13 @@
      looks like the old bg-soft-gray/5 over black, but the button is fully
      opaque and never shows through to whatever sits behind it. (Dark-only
      literals; the app runs dark on these surfaces.) Utilities: bg-soft-gray-5
-     / -10 / -15. */
+     / -10 / -12 / -15 / -20, and border-soft-gray-* for the same values. */
   --color-soft-gray-5: #0C0C0C;
   --color-soft-gray-10: #181818;
+  /* 12% — the chat menus' side rule. Opaque like its neighbours rather than
+     soft-gray/12, because those cards stack over a moving message list and a
+     translucent border would show the text sliding underneath it. */
+  --color-soft-gray-12: #1D1D1D;
   --color-soft-gray-15: #242425;
   --color-soft-gray-20: #303131;
   /* The skeleton fill — same idea, one surface further along: the flat hex

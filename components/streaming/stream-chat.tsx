@@ -64,20 +64,16 @@ export function StreamChat({ hostUserId, isLoading }: StreamChatProps) {
     }
 
     return (
-        <aside className={cn(RAIL_ASIDE, "relative")} style={{ width }}>
-            {/* The grab edge. Invisible until you're on it or dragging, because a
-                permanent rule down the left of the chat is a divider nobody
-                asked for. Double-click restores the default width. */}
+        <aside className={cn(RAIL_ASIDE, "relative", dragging && "select-none")} style={{ width }}>
+            {/* The grab edge draws NOTHING — the cursor is the whole affordance.
+                Any rule here, even one that only appears on hover, reads as a
+                divider the layout didn't ask for. Double-click resets the width. */}
             <div
                 {...handleProps}
                 role="separator"
                 aria-orientation="vertical"
                 aria-label="resize chat"
-                className={cn(
-                    HANDLE,
-                    "after:absolute after:inset-y-2 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-white/25 after:opacity-0 after:transition-opacity hover:after:opacity-100",
-                    dragging && "after:opacity-100",
-                )}
+                className={HANDLE}
             />
             <div className={RAIL_INNER}>
                 {/* Chat owns its own scroller (it auto-scrolls to the newest

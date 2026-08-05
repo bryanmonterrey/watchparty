@@ -74,8 +74,15 @@ export function ChatSheet({
         >
             <div
                 className={cn(
-                    "flex max-h-full min-h-0 flex-col bg-canvas",
-                    top && "rounded-b-[25px] border-x border-b border-[rgba(138,145,158,0.2)]",
+                    // Side rules on every sheet, so a card that runs corner to
+                    // corner still has an edge against the column it covers.
+                    // soft-gray-12 is opaque (see globals.css): these sit over a
+                    // moving message list, and a translucent border would show
+                    // the text sliding under it.
+                    "flex max-h-full min-h-0 flex-col border-x border-soft-gray-12 bg-canvas",
+                    // The leaderboard hangs from the header, so it closes itself
+                    // off at the bottom; its top edge is the header's own rule.
+                    top && "rounded-b-[25px] border-b border-soft-gray-12",
                 )}
             >
                 {/* shrink-0: the header is fixed furniture and the scroller
