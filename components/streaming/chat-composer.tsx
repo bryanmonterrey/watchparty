@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { EMOTES, searchEmotes, type Emote } from "@/lib/chat/emotes";
 import { CHAT_MAX_LEN } from "@/lib/realtime/protocol";
+import { trpc } from "@/lib/trpc/client";
 import type { StreamChatMessage } from "@/hooks/use-stream-chat";
 import { REPLY_GLYPH } from "./chat-line";
 import { cn } from "@/lib/utils";
@@ -83,22 +84,7 @@ export function ChatComposer({
 
     return (
         <div className="flex flex-col gap-2 pb-1 pt-1.5">
-            {replyTo && (
-                <div className="flex items-center gap-1.5 rounded-lg bg-soft-gray-10 px-2.5 py-1.5 text-[11px] font-medium text-zinc-400">
-                    <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-3 shrink-0", REPLY_GLYPH)} strokeWidth={2} />
-                    <span className="min-w-0 flex-1 truncate">
-                        Replying to <span className="text-flexwhite">{replyTo.sender}</span>
-                    </span>
-                    <button
-                        type="button"
-                        onClick={onCancelReply}
-                        aria-label="cancel reply"
-                        className="cursor-pointer text-zinc-500 transition-colors hover:text-white"
-                    >
-                        <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" strokeWidth={2} />
-                    </button>
-                </div>
-            )}
+            {replyTo && <ReplyBanner replyTo={replyTo} onCancel={onCancelReply} />}
 
             {/* The quick strip. Scrolls rather than wraps: a second row would
                 eat message space every time the set grows. */}
@@ -232,6 +218,47 @@ export function ChatComposer({
                     Send
                 </Button>
             </div>
+        </div>
+    );
+}
+
+/**
+ * The strip above the emote row naming who you're answering.
+ *
+ * -mx-2 cancels the chat column's own px-2 (RailCard's CARD_PX, and the pop-out
+ * route's matching padding) so the banner runs to the card's inner edges
+ * instead of floating inset from them. Square bottom corners because it sits
+ * flush on the emote strip — a rounded edge there would read as a separate
+ * floating chip rather than a header for what's below it.
+ */
+function ReplyBanner({
+    replyTo,
+    onCancel,
+}: {
+    replyTo: StreamChatMessage;
+    onCancel?: () => void;
+}) {
+    // The @handle, not the DO's stamp. That stamp is the username for anything
+    // sent since the token change, but replayed history carries display names.
+    const { data: card } = trpc.profile.card.useQuery(
+        { userId: replyTo.userId },
+        { staleTime: 5 * 60_000, enabled: !!replyTo.userId },
+    );
+
+    return (
+        <div className="-mx-2 flex items-center gap-1.5 rounded-t-lg rounded-b-none bg-soft-gray-10 px-3 py-2 text-[13px] font-medium text-zinc-400">
+            <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-3.5 shrink-0", REPLY_GLYPH)} strokeWidth={2} />
+            <span className="min-w-0 flex-1 truncate">
+                Replying to <span className="font-bold text-flexwhite">{card?.username ?? replyTo.sender}</span>
+            </span>
+            <button
+                type="button"
+                onClick={onCancel}
+                aria-label="cancel reply"
+                className="shrink-0 cursor-pointer text-zinc-500 transition-colors hover:text-white"
+            >
+                <HugeiconsIcon icon={Cancel01Icon} className="size-4" strokeWidth={2} />
+            </button>
         </div>
     );
 }
