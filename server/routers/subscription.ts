@@ -342,6 +342,38 @@ export const subscriptionRouter = router({
             return { count: row?.count ?? 0 };
         }),
 
+    /**
+     * Whether ONE named person can be gifted a sub to this channel.
+     *
+     * Directed gifting's answer to getGiftEligibleCount, and the client must ask
+     * before building the payment: money moves on-chain first, so anything we
+     * can refuse has to be refused while it's still free to.
+     *
+     * Note it does NOT require the recipient to follow the creator, unlike
+     * community gifting — which picks from followers because it needs a pool.
+     * You gift a named person because you're looking at them in chat, and
+     * making them follow first is friction with nothing behind it.
+     */
+    canReceiveGift: protectedProcedure
+        .input(z.object({ creatorId: z.string(), recipientId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            if (input.recipientId === ctx.user.id) return { eligible: false, reason: "You can't gift yourself" };
+            if (input.recipientId === input.creatorId) {
+                return { eligible: false, reason: "That's the channel's own creator" };
+            }
+            const [existing] = await db
+                .select({ id: subscriptions.id })
+                .from(subscriptions)
+                .where(and(
+                    eq(subscriptions.subscriberId, input.recipientId),
+                    eq(subscriptions.creatorId, input.creatorId),
+                    inArray(subscriptions.status, ["active", "past_due"]),
+                ))
+                .limit(1);
+            if (existing) return { eligible: false, reason: "They're already subscribed" };
+            return { eligible: true, reason: null as string | null };
+        }),
+
     giftSubscription: protectedProcedure
         .input(z.object({
             creatorId: z.string(),
@@ -349,6 +381,15 @@ export const subscriptionRouter = router({
             quantity: z.number().int().min(1).max(50),
             message: z.string().max(200).optional(),
             txSignature: z.string().min(64).max(120),
+            /**
+             * Gift to ONE named person instead of the random pool.
+             *
+             * Present means quantity is 1 and the recipient is chosen, not
+             * drawn — see the eligibility handling in the body, which must
+             * honour a payment that has already cleared even if this person
+             * stopped being eligible in the meantime.
+             */
+            recipientId: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             const tier = await db.query.subscriptionTiers.findFirst({ where: eq(subscriptionTiers.id, input.tierId) });
@@ -370,21 +411,54 @@ export const subscriptionRouter = router({
                 .limit(1);
             if (already.length) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
 
-            const eligible = await db
-                .select({ id: follows.followerId })
-                .from(follows)
-                .leftJoin(subscriptions, and(
-                    eq(subscriptions.subscriberId, follows.followerId),
-                    eq(subscriptions.creatorId, input.creatorId),
-                    inArray(subscriptions.status, ["active", "past_due"]),
-                ))
-                .where(and(
-                    eq(follows.followingId, input.creatorId),
-                    sql`${subscriptions.id} IS NULL`,
-                    ne(follows.followerId, ctx.user.id),
-                ))
-                .orderBy(sql`random()`)
-                .limit(input.quantity);
+            const directed = !!input.recipientId;
+            if (directed && input.quantity !== 1) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "A directed gift is one subscription" });
+            }
+            if (directed && input.recipientId === ctx.user.id) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "You can't gift yourself" });
+            }
+
+            let eligible: { id: string }[];
+            if (directed) {
+                // Re-checked here even though canReceiveGift already ran on the
+                // client, because that check and this charge are separated by a
+                // wallet round trip and the person could have subscribed in
+                // between.
+                //
+                // Ineligible does NOT throw. The payment has already cleared
+                // on-chain by the time this mutation runs, so refusing would
+                // take the money and hand back nothing. It falls through to the
+                // queued-credit path below instead — the same mechanism a
+                // community gift's overflow uses — so the sub still reaches
+                // someone on this channel and the gifter is never out of pocket.
+                const [taken] = await db
+                    .select({ id: subscriptions.id })
+                    .from(subscriptions)
+                    .where(and(
+                        eq(subscriptions.subscriberId, input.recipientId!),
+                        eq(subscriptions.creatorId, input.creatorId),
+                        inArray(subscriptions.status, ["active", "past_due"]),
+                    ))
+                    .limit(1);
+                eligible = taken ? [] : [{ id: input.recipientId! }];
+            } else {
+                eligible = await db
+                    .select({ id: follows.followerId })
+                    .from(follows)
+                    .leftJoin(subscriptions, and(
+                        eq(subscriptions.subscriberId, follows.followerId),
+                        eq(subscriptions.creatorId, input.creatorId),
+                        inArray(subscriptions.status, ["active", "past_due"]),
+                    ))
+                    .where(and(
+                        eq(follows.followingId, input.creatorId),
+                        sql`${subscriptions.id} IS NULL`,
+                        ne(follows.followerId, ctx.user.id),
+                    ))
+                    .orderBy(sql`random()`)
+                    .limit(input.quantity);
+            }
 
             const expected = BigInt(tier.priceUsdcMonthly) * BigInt(input.quantity);
             const treasuryAta = await getTreasuryUsdcAta(getBoostTreasuryOwner());
@@ -482,7 +556,7 @@ export const subscriptionRouter = router({
                 });
             }
 
-            return { success: true, gifted: eligible.length, queued: shortfall };
+            return { success: true, gifted: eligible.length, queued: shortfall, directed };
         }),
 
     redeemGift: protectedProcedure

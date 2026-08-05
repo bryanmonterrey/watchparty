@@ -275,23 +275,24 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
                                 // these two are things you do about one person.
                                 <div className="flex items-center gap-2">
                                     {giftCreatorId && (
-                                        // Gifts go to the CHANNEL, not to the
-                                        // person whose card this is — see
-                                        // giftCreatorId. Quantity, not recipient:
-                                        // the subs land on random eligible
-                                        // followers of that channel.
+                                        // Gifts THIS person a sub to the channel
+                                        // you're in — the card names the
+                                        // recipient, giftCreatorId names the
+                                        // channel it's a sub to. Both are
+                                        // needed: neither alone says what the
+                                        // gift is.
                                         <Button
                                             variant="outline"
                                             onClick={() => setGiftOpen(true)}
                                             title={
                                                 giftChannel
-                                                    ? `Gift subs to ${giftChannel.username ?? giftChannel.name}'s channel`
-                                                    : "Gift subs to this channel"
+                                                    ? `Gift ${card.username ?? card.name} a sub to ${giftChannel.username ?? giftChannel.name}`
+                                                    : "Gift them a sub to this channel"
                                             }
                                             className="h-11 flex-1 rounded-full text-sm font-bold"
                                         >
                                             <HugeiconsIcon icon={GiftIcon} className="size-4" strokeWidth={2} />
-                                            Gift subs
+                                            Gift a sub
                                         </Button>
                                     )}
                                     <Button
@@ -316,7 +317,9 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
                             {giftOpen && giftCreatorId && (
                                 <GiftSubscriptionDialog
                                     creatorId={giftCreatorId}
-                                    creatorName={giftChannel?.name ?? "this channel"}
+                                    creatorName={giftChannel?.username ?? giftChannel?.name ?? "this channel"}
+                                    recipientId={card.id}
+                                    recipientName={card.username ?? card.name}
                                     open={giftOpen}
                                     onOpenChange={setGiftOpen}
                                 />

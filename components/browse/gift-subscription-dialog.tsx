@@ -30,11 +30,21 @@ interface GiftSubscriptionDialogProps {
     creatorName: string;
     /** Quantity to open on — the leaderboard passes what it takes to move up. */
     initialQuantity?: number;
+    /**
+     * Gift to ONE named person rather than the random pool.
+     *
+     * Turns the dialog into a single-sub flow: no quantity picker, no queue
+     * copy, and the recipient's eligibility is checked BEFORE the pay button
+     * unlocks — money moves on-chain first, so anything refusable has to be
+     * refused while it's still free to.
+     */
+    recipientId?: string;
+    recipientName?: string;
     open: boolean;
     onOpenChange: (o: boolean) => void;
 }
 
-export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity, open, onOpenChange }: GiftSubscriptionDialogProps) {
+export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity, recipientId, recipientName, open, onOpenChange }: GiftSubscriptionDialogProps) {
     const { data: session } = useAuthSession();
     const { connection } = useConnection();
     const { sendTransaction } = useWallet();
@@ -46,7 +56,15 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
     const gift = trpc.subscription.giftSubscription.useMutation();
 
     const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
-    const [quantity, setQuantity] = useState(initialQuantity ?? 1);
+    const directed = !!recipientId;
+    const [quantity, setQuantity] = useState(directed ? 1 : initialQuantity ?? 1);
+
+    // Asked only in directed mode, and only while the dialog is open. This is
+    // the check that has to happen before the wallet does anything.
+    const { data: canReceive } = trpc.subscription.canReceiveGift.useQuery(
+        { creatorId, recipientId: recipientId ?? "" },
+        { enabled: open && directed },
+    );
     const [message, setMessage] = useState("");
     const [paying, setPaying] = useState(false);
 
@@ -58,7 +76,7 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
     const willQueue = Math.max(0, quantity - eligibleCount);
     const totalUsdc = selectedTier?.priceUsdcMonthly ? selectedTier.priceUsdcMonthly * quantity : 0;
 
-    const reset = () => { setSelectedTierId(null); setQuantity(initialQuantity ?? 1); setMessage(""); };
+    const reset = () => { setSelectedTierId(null); setQuantity(directed ? 1 : initialQuantity ?? 1); setMessage(""); };
 
     const handleGift = async () => {
         if (!selectedTier?.priceUsdcMonthly || !session?.user) return;
@@ -100,12 +118,24 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
                 quantity,
                 message: message || undefined,
                 txSignature,
+                recipientId,
             });
 
-            const parts = [];
-            if (result.gifted > 0) parts.push(`${result.gifted} gifted now`);
-            if (result.queued > 0) parts.push(`${result.queued} queued for new followers`);
-            toast.success(`${parts.join(", ")} — ${selectedTier.name} for ${creatorName}'s community!`);
+            if (directed) {
+                // A directed gift can still end up queued: if they subscribed in
+                // the gap between the eligibility check and the charge landing,
+                // the server honours the payment rather than swallowing it.
+                toast.success(
+                    result.gifted > 0
+                        ? `Gifted ${selectedTier.name} to ${recipientName ?? "them"}!`
+                        : `${recipientName ?? "They"} just subscribed — your gift is queued for the next new follower.`,
+                );
+            } else {
+                const parts = [];
+                if (result.gifted > 0) parts.push(`${result.gifted} gifted now`);
+                if (result.queued > 0) parts.push(`${result.queued} queued for new followers`);
+                toast.success(`${parts.join(", ")} — ${selectedTier.name} for ${creatorName}'s community!`);
+            }
             utils.subscription.getGiftEligibleCount.invalidate({ creatorId });
             reset();
             onOpenChange(false);
@@ -123,7 +153,11 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
                     <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-lantern/10">
                         <Gift className="size-6 text-lantern" />
                     </div>
-                    <DialogTitle className="text-white">Gift subs to {creatorName}&apos;s community</DialogTitle>
+                    <DialogTitle className="text-white">
+                        {directed
+                            ? `Gift ${recipientName ?? "them"} a sub to ${creatorName}`
+                            : `Gift subs to ${creatorName}'s community`}
+                    </DialogTitle>
                     <DialogDescription className="text-zinc-500">
                         Lands on random eligible followers, one month each — anything left over queues for the next new follower instead of going to waste.
                     </DialogDescription>
@@ -155,8 +189,10 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
                             ))}
                         </div>
 
-                        {/* Quantity */}
-                        {selectedTierId && (
+                        {/* Quantity — community gifting only. A directed gift is
+                            one sub to one person; a picker there would be a
+                            control with a single valid value. */}
+                        {selectedTierId && !directed && (
                             <div className="flex flex-col gap-2">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                                     How many <span className="text-zinc-600">· {eligibleCount} eligible now</span>
@@ -198,15 +234,32 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
                             />
                         )}
 
+                        {/* Why they can't be gifted, before the button rather
+                            than after the payment — "already subscribed" is a
+                            fine thing to learn for free and a terrible one to
+                            learn from a receipt. */}
+                        {directed && canReceive && !canReceive.eligible && (
+                            <p className="text-center text-xs font-semibold text-zinc-500">{canReceive.reason}</p>
+                        )}
+
                         <button
                             onClick={handleGift}
-                            disabled={!selectedTierId || paying}
+                            // Directed gifts wait for the eligibility answer.
+                            // undefined is "still asking", which is not the same
+                            // as yes — paying on an unanswered check is exactly
+                            // the race this query exists to close.
+                            disabled={!selectedTierId || paying || (directed && !canReceive?.eligible)}
                             className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-all hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-50"
                         >
                             {paying ? (
                                 <><Loader2 className="size-4 animate-spin" /> Gifting…</>
                             ) : (
-                                <><Gift className="size-4" /> Gift {quantity > 1 ? `${quantity} subs` : "1 sub"}</>
+                                <>
+                                    <Gift className="size-4" />
+                                    {directed
+                                        ? `Gift ${recipientName ?? "them"} a sub`
+                                        : `Gift ${quantity > 1 ? `${quantity} subs` : "1 sub"}`}
+                                </>
                             )}
                         </button>
                     </div>
