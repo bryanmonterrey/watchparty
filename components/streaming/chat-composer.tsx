@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { EMOTES, searchEmotes, type Emote } from "@/lib/chat/emotes";
 import { CHAT_MAX_LEN } from "@/lib/realtime/protocol";
 import type { StreamChatMessage } from "@/hooks/use-stream-chat";
-import { compactCount } from "@/lib/utils";
 
 // Everything below the message list: the reply banner, the quick emote strip,
 // the input, and the footer bar.
@@ -19,8 +18,9 @@ import { compactCount } from "@/lib/utils";
 // the shield is a shortcut to a screen the gear also reaches.
 //
 // Still cut: the points counter, which would need a channel currency that
-// doesn't exist. The viewer count beside it is real (stream.listLive returns
-// it), so that stays.
+// doesn't exist. The viewer count isn't here either — it lives beside the launch
+// button in the stream header, which is the one place it means the stream's
+// viewers rather than this room's.
 //
 // Colour: chrome is neutral and goes white when active, so the one green thing
 // on the panel isn't a send button — the send pill is white, which on this
@@ -38,7 +38,6 @@ const FOOT_ICON = "size-[22px]";
 export function ChatComposer({
     onSend,
     connected,
-    viewerCount,
     emotes,
     replyTo,
     onCancelReply,
@@ -48,7 +47,6 @@ export function ChatComposer({
 }: {
     onSend: (text: string, replyTo?: string) => void;
     connected: boolean;
-    viewerCount?: number;
     emotes: Map<string, Emote>;
     replyTo?: StreamChatMessage | null;
     onCancelReply?: () => void;
@@ -188,19 +186,18 @@ export function ChatComposer({
                 to sit alone at the far left, which read as a stat stranded on
                 the panel rather than part of the control row. */}
             <div className="flex items-center justify-end gap-3">
-                {/* A button, not a readout — it opens the room's roster. The
-                    count next to it is the STREAM's concurrent viewers, which is
-                    a different number from who's in chat, so it's omitted rather
-                    than shown as a dash when the channel is offline. */}
+                {/* Icon only. The viewer count belongs beside the launch button
+                    in the stream header (stream-metadata's stats row), and it was
+                    the STREAM's concurrent viewers anyway — a different number
+                    from who's in this room, printed where it read as chat's. */}
                 <button
                     type="button"
                     onClick={onOpenMembers}
                     aria-label="chat members"
                     title="Chat members"
-                    className="flex cursor-pointer items-center gap-1.5 text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white"
+                    className="cursor-pointer text-zinc-500 transition-colors hover:text-white"
                 >
                     <HugeiconsIcon icon={UserMultiple02Icon} className={FOOT_ICON} strokeWidth={2} />
-                    {viewerCount !== undefined && compactCount(viewerCount)}
                 </button>
                 <button
                     type="button"

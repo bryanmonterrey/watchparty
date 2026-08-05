@@ -108,10 +108,8 @@ export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
             {(showChat || isLoading) && (
                 <StreamChat
                     hostUserId={host.id}
-                    isLive={isLive}
                     chatRoomArn={chatRoomArn}
                     isLoading={isLoading}
-                    viewerCount={viewerCount}
                 />
             )}
         </div>

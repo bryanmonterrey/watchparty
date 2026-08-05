@@ -33,12 +33,9 @@ const EMOTE_STALE_MS = 5 * 60 * 1000;
 export function ChatPanel({
     hostUserId,
     enabled = true,
-    viewerCount,
 }: {
     hostUserId: string;
     enabled?: boolean;
-    /** Concurrent viewers for the footer; omit when the channel is offline. */
-    viewerCount?: number;
 }) {
     const [replyTo, setReplyTo] = useState<StreamChatMessage | null>(null);
     // Whether new messages pull the view down. Scrolling up turns this off so
@@ -117,7 +114,6 @@ export function ChatPanel({
             <ChatComposer
                 onSend={send}
                 connected={connected}
-                viewerCount={viewerCount}
                 emotes={emotes}
                 replyTo={replyTo}
                 onCancelReply={() => setReplyTo(null)}

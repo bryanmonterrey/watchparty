@@ -23,12 +23,9 @@ import { ChatPanel } from "./chat-panel";
 
 interface StreamChatProps {
     hostUserId: string;
-    isLive: boolean;
     /** @deprecated IVS chat ARN — unused now that chat runs on the realtime DO. */
     chatRoomArn?: string | null;
     isLoading?: boolean;
-    /** Concurrent viewers, shown in the composer's footer. */
-    viewerCount?: number;
 }
 
 const CHAT_TAB = "Chat";
@@ -38,7 +35,7 @@ const TABS = [CHAT_TAB, ...RAIL_TABS];
 // (loose tabs, unboxed list, 340px) rather than the same thing. See
 // components/rails/rail-card.tsx.
 
-export function StreamChat({ hostUserId, isLive, isLoading, viewerCount }: StreamChatProps) {
+export function StreamChat({ hostUserId, isLoading }: StreamChatProps) {
     const [tab, setTab] = useState(CHAT_TAB);
 
     if (isLoading) {
@@ -73,12 +70,8 @@ export function StreamChat({ hostUserId, isLive, isLoading, viewerCount }: Strea
                         // used to connect only while broadcasting, so an offline
                         // channel's chat was a dead box — the room emptied the
                         // moment the stream ended, exactly when people want to
-                        // keep talking about it. `isLive` only decides whether a
-                        // viewer count means anything.
-                        <ChatPanel
-                            hostUserId={hostUserId}
-                            viewerCount={isLive ? viewerCount : undefined}
-                        />
+                        // keep talking about it.
+                        <ChatPanel hostUserId={hostUserId} />
                     )}
                 </RailCard>
             </div>
