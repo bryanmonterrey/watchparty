@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { EMOTES, searchEmotes, type Emote } from "@/lib/chat/emotes";
 import { CHAT_MAX_LEN } from "@/lib/realtime/protocol";
 import type { StreamChatMessage } from "@/hooks/use-stream-chat";
+import { REPLY_GLYPH } from "./chat-line";
+import { cn } from "@/lib/utils";
 
 // Everything below the message list: the reply banner, the quick emote strip,
 // the input, and the footer bar.
@@ -83,7 +85,7 @@ export function ChatComposer({
         <div className="flex flex-col gap-2 pb-1 pt-1.5">
             {replyTo && (
                 <div className="flex items-center gap-1.5 rounded-lg bg-soft-gray-10 px-2.5 py-1.5 text-[11px] font-medium text-zinc-400">
-                    <HugeiconsIcon icon={LinkBackwardIcon} className="size-3 shrink-0" strokeWidth={2} />
+                    <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-3 shrink-0", REPLY_GLYPH)} strokeWidth={2} />
                     <span className="min-w-0 flex-1 truncate">
                         Replying to <span className="text-flexwhite">{replyTo.sender}</span>
                     </span>

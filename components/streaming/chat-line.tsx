@@ -34,6 +34,11 @@ const EMOTE_INLINE = "inline-block h-[1.6em] w-[1.6em] translate-y-[-1px] align-
 /** A line that is ONLY emotes is a reaction, so it gets room to be one. */
 const EMOTE_SOLO = "inline-block h-11 w-11 align-middle";
 
+// Flipped vertically: LinkBackward's arrow curves UP out of the line, which
+// reads as forwarding away from the conversation. Mirrored, it curves down
+// into the message below it — the direction a reply actually goes.
+export const REPLY_GLYPH = "-scale-y-100";
+
 const CARD_STALE_MS = 5 * 60 * 1000;
 
 export function ChatLine({
@@ -70,7 +75,7 @@ export function ChatLine({
                 // The quote is what the DO resolved, not what the sender typed —
                 // see ChatReply in the protocol.
                 <p className="mb-0.5 flex items-center gap-1 truncate text-[11px] font-medium text-zinc-500">
-                    <HugeiconsIcon icon={LinkBackwardIcon} className="size-3 shrink-0" strokeWidth={2} />
+                    <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-3 shrink-0", REPLY_GLYPH)} strokeWidth={2} />
                     <span className="truncate">
                         Replying to {message.replyTo.name}: {message.replyTo.text}
                     </span>
@@ -162,7 +167,7 @@ export function ChatLine({
                             aria-label={`reply to ${message.sender}`}
                             className="flex size-10 cursor-pointer items-center justify-center bg-soft-gray-15 text-zinc-400 transition-colors hover:text-white"
                         >
-                            <HugeiconsIcon icon={LinkBackwardIcon} className="size-5" strokeWidth={2} />
+                            <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-5", REPLY_GLYPH)} strokeWidth={2} />
                         </button>
                     </Squircle>
                 )}
