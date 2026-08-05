@@ -9,7 +9,7 @@ import { CardCarousel } from "@/components/marketing/card-carousel";
 import { type Feature } from "@/components/marketing/feature-card";
 import { MiniServer, MiniSpace, MiniChat } from "@/components/marketing/mocks";
 
-export const metadata: Metadata = { title: "Communities" };
+export const metadata: Metadata = { title: "communities" };
 
 // The belonging page: hero, card spread, varied bento, and an asymmetric bots
 // showcase. Bento carries the breadth; the split carries the automation story.

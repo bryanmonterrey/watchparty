@@ -46,10 +46,20 @@ const nextConfig: NextConfig = {
   // /discover became /feed. Permanent, and :path* so the whole subtree comes
   // with it — /discover/post/<id> is the canonical share URL for every post
   // ever shared, and those links live in other people's messages and timelines.
+  //
+  // /feed/post/<id> then became /status/<id>. This one is NOT optional
+  // housekeeping: a coin's on-chain metadata carries external_url pointing at
+  // the post that launched it, and that JSON is immutable — every coin already
+  // launched links to /feed/post/<id> forever. Push notifications with that path
+  // have been delivered to phones too. The redirect IS the compatibility layer.
+  //
+  // Ordering matters: /discover/post/<id> hits the second rule first and lands
+  // on /feed/post/<id>, which the third then forwards to /status/<id>.
   async redirects() {
     return [
       { source: "/discover", destination: "/feed", permanent: true },
       { source: "/discover/:path*", destination: "/feed/:path*", permanent: true },
+      { source: "/feed/post/:id", destination: "/status/:id", permanent: true },
     ];
   },
 };

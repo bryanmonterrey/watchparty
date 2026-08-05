@@ -358,7 +358,7 @@ export function PostComposer() {
                     // with an empty image keeps it forever.
                     image: imageUrl || generatedOgUrl || session?.user?.avatar_url || "",
                     description: content,
-                    contentPath: `/feed/post/${newPostId}`,
+                    contentPath: `/status/${newPostId}`,
                 },
                 { ...tokenLaunch, earningsEnabled: true }
             );

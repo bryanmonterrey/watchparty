@@ -458,7 +458,7 @@ export const postRouter = router({
      * in the post body, and the people who most recently replied (replies are
      * posts with replyToId = this post). Deduped, author first, viewer excluded,
      * each carrying the viewer's follow state so the card can render a Follow
-     * button. Powers the right-rail card on /feed/post/[id].
+     * button. Powers the right-rail card on /status/[id].
      */
     relevantPeople: publicProcedure
         .input(z.object({ postId: z.string(), limit: z.number().min(1).max(8).default(4) }))

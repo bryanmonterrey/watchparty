@@ -36,7 +36,7 @@ const getCreator = cache((userId: string) =>
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
     const { videoId } = await params;
     const post = await getVideoPost(videoId);
-    if (!post) return { title: "Not Found" };
+    if (!post) return { title: "not found" };
 
     return {
         title: post.title ?? "Video",

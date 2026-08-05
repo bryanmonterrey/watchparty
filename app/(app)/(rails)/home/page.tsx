@@ -16,7 +16,7 @@ import { HomePageSurface } from "@/components/home/home-page-surface";
 // desktop-home2.tsx (hero + categories + IRL); render <DesktopHome /> inside
 // <main> to bring it back.
 export const metadata: Metadata = {
-    title: "Home",
+    title: "home",
 };
 
 export default function AppHome() {

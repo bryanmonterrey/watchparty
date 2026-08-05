@@ -57,7 +57,7 @@ type Params = { params: Promise<{ slug: string[] }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
     const { slug } = await params;
     const parsed = parseSlug(slug);
-    if (!parsed) return { title: "Not Found" };
+    if (!parsed) return { title: "not found" };
 
     const token = await getToken(parsed.address);
     if (token) {
@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
         return { title: coin.name ? `${coin.name} ($${coin.symbol})` : `$${coin.symbol}` };
     }
 
-    return { title: "Not Found" };
+    return { title: "not found" };
 }
 
 /**

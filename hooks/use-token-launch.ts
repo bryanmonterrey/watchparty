@@ -116,7 +116,7 @@ export function useTokenLaunch() {
             image: string;
             description: string;
             /**
-             * Path to the content this coin belongs to, e.g. `/feed/post/<id>`
+             * Path to the content this coin belongs to, e.g. `/status/<id>`
              * or `/video/<id>`. external_url points here, because a coin on
              * watchparty IS a piece of content someone can trade — the coin page
              * is a view of it, not the thing itself.
@@ -124,7 +124,7 @@ export function useTokenLaunch() {
              * A PATH rather than an id because content kinds have different
              * routes and only the caller knows which it is:
              *
-             *   post           /feed/post/<id>
+             *   post           /status/<id>
              *   video          /video/<id>   (the old /<user>/<id> 308s here)
              *   stream         its host's profile — live isn't a route, it's a
              *                  state of /<username>

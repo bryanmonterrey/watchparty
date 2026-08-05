@@ -77,7 +77,7 @@ export function PostCard({
     const detailPrefetch = useHoverPrefetch(() => {
         utils.content.getPost.prefetch({ postId: id });
         utils.comment.getComments.prefetch({ postId: id, limit: 20 });
-        router.prefetch(`/feed/post/${id}`);
+        router.prefetch(`/status/${id}`);
     });
     const profilePrefetch = useHoverPrefetch(() => {
         if (user.username) router.prefetch(`/${user.username}`);
@@ -85,7 +85,7 @@ export function PostCard({
 
     // Mouse-only pointerdown navigation — the click commits on press instead
     // of release (see the hook for the guard rails).
-    const instantNav = useInstantNav(() => `/feed/post/${post.id}`);
+    const instantNav = useInstantNav(() => `/status/${post.id}`);
 
     const incrementView = trpc.content.incrementView.useMutation({
         onSuccess: () => {
@@ -299,7 +299,7 @@ export function PostCard({
                 onPointerDown={instantNav.onPointerDown}
                 onClick={() => {
                     if (instantNav.consumedClick()) return;
-                    router.push(`/feed/post/${post.id}`);
+                    router.push(`/status/${post.id}`);
                 }}
                 className={cn(
                     "group relative flex cursor-pointer flex-col bg-canvas px-4 pt-2.5 pb-1.5 transition-colors",

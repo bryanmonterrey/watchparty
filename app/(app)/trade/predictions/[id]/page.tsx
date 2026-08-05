@@ -13,13 +13,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             .from(predictionMarkets)
             .where(eq(predictionMarkets.id, id))
             .limit(1);
-        if (!market) return { title: "Market not found" };
+        if (!market) return { title: "market not found" };
         return {
             title: market.question,
             description: market.description?.slice(0, 160) ?? "Back an outcome in USDC on watchparty.",
         };
     } catch {
-        return { title: "Predictions" };
+        return { title: "predictions" };
     }
 }
 

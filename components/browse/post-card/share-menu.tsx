@@ -14,7 +14,7 @@ interface ShareMenuProps {
 
 export function ShareMenu({ post, bookmarked, handleBookmark }: ShareMenuProps) {
     const copyLink = () => {
-        const url = `${window.location.origin}/feed/post/${post.id}`;
+        const url = `${window.location.origin}/status/${post.id}`;
         navigator.clipboard.writeText(url);
     };
 

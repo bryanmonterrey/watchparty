@@ -28,7 +28,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
         <div 
             onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/feed/post/${id}`);
+                router.push(`/status/${id}`);
             }}
             className="border border-flexborder rounded-2xl p-3 bg-white2/[0.05] transition-colors overflow-hidden cursor-pointer"
         >

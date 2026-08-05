@@ -106,7 +106,10 @@ function SkeletonRows({ count, Row }: { count: number; Row: () => React.ReactEle
 // ── Relevant people (post detail only) ──────────────────────────────────────
 function RelevantPeopleCard() {
     const pathname = usePathname();
-    const postId = pathname?.match(/^\/discover\/post\/([^/]+)/)?.[1];
+    // /status/<id>. This still matched /discover/post/<id>, a path that has
+    // been redirected away twice over (discover -> feed -> status), so the card
+    // had quietly stopped rendering on the page it exists for.
+    const postId = pathname?.match(/^\/status\/([^/]+)/)?.[1];
 
     const { data, isLoading } = trpc.content.relevantPeople.useQuery(
         { postId: postId ?? "" },

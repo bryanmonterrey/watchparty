@@ -3,7 +3,7 @@ import { ALL_CATEGORIES } from "@/lib/data/all-categories";
 import { CategoryGrid } from "@/components/categories/category-grid";
 
 export const metadata: Metadata = {
-    title: "Browse categories",
+    title: "browse categories",
 };
 
 // Full categories index — the "View all" target from the home Categories row

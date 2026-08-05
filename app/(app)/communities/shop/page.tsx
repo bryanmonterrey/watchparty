@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { ShopView } from "@/components/community/shop-view";
 
 export const metadata: Metadata = {
-    title: "Shop",
+    title: "shop",
 };
 
 export default function ShopPage() {

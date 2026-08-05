@@ -20,15 +20,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             .limit(1);
 
         const post = result[0];
-        if (!post) return { title: "Post not found" };
+        if (!post) return { title: "post not found" };
 
         return {
-            title: `${post.name} (@${post.username}) on Watchparty`,
+            // Name and @handle are identity and keep their case; the brand
+            // is dropped because the root template appends "/ watchparty"
+            // already, and this read "... on Watchparty / watchparty".
+            title: `${post.name} (@${post.username})`,
             description: post.content?.slice(0, 160) || "Check out this post on Watchparty",
         };
     } catch (error) {
         console.error("Error in generateMetadata:", error);
-        return { title: "Watchparty Post" };
+        return { title: "post" };
     }
 }
 

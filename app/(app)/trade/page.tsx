@@ -4,7 +4,7 @@ import { TradeView } from "@/components/trade/trade-view";
 // Port of sidebar's (browse)/trade/page.tsx; TradeView picks the desktop
 // three-column board or the mobile token list per viewport.
 export const metadata: Metadata = {
-    title: "Trade",
+    title: "trade",
 };
 
 export default function TradePage() {

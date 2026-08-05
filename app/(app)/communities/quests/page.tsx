@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { QuestsView } from "@/components/quests/quests-view";
 
 export const metadata: Metadata = {
-    title: "Quests",
+    title: "quests",
 };
 
 // The same quests panel as /quests, framed inside the communities layout.

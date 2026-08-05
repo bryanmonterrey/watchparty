@@ -47,10 +47,12 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
 
     const userProfile = await getUserBySlug(username);
     if (userProfile) {
-        return { title: `@${userProfile.username}` };
+        // No @ — the root template already reads "%s / watchparty", and
+        // "@name / watchparty" put two sigils in a six-character tab.
+        return { title: userProfile.username };
     }
 
-    return { title: "Not Found" };
+    return { title: "not found" };
 }
 
 export default async function UsernamePage({ params }: { params: Promise<{ username: string }> }) {

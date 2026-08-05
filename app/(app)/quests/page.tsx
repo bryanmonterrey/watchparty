@@ -4,7 +4,7 @@ import { QuestsView } from "@/components/quests/quests-view";
 // Daily/weekly quests — progress accrues from normal activity and XP
 // auto-claims on completion (docs/exp-callouts.md, Phase 3).
 export const metadata: Metadata = {
-    title: "Quests",
+    title: "quests",
 };
 
 export default function QuestsPage() {

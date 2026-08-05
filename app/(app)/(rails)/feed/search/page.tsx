@@ -3,7 +3,7 @@ import { Metadata } from "next";
 
 // Port of sidebar's (browse)/discover/search/page.tsx.
 export const metadata: Metadata = {
-    title: "Search",
+    title: "search",
     description: "Search for posts, people, and more.",
 };
 

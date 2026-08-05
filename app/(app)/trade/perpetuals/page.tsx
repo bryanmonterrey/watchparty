@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { PerpsLoader } from "@/components/perps/perps-loader";
 
 export const metadata: Metadata = {
-    title: "Perpetuals",
+    title: "perpetuals",
 };
 
 // Leveraged perps aren't offered to US users. Phantom's pattern: the page

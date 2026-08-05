@@ -3,7 +3,7 @@ import { Metadata } from "next";
 
 // Port of sidebar's (browse)/shorts/page.tsx.
 export const metadata: Metadata = {
-    title: "Shorts",
+    title: "shorts",
     description: "Watch short-form vertical videos.",
 };
 

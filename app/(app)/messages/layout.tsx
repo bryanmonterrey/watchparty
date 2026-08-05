@@ -3,7 +3,7 @@ import { EncryptionProvider } from "@/components/encryption/encryption-provider"
 import { EncryptionGate } from "@/components/encryption/encryption-gate";
 
 export const metadata: Metadata = {
-  title: "Messages",
+  title: "messages",
 };
 
 export default function MessagesLayout({

@@ -5,7 +5,7 @@ import Link from "next/link";
 
 // Port of sidebar's (browse)/discover/bookmarks/page.tsx.
 export const metadata: Metadata = {
-    title: "Bookmarks",
+    title: "bookmarks",
     description: "Your bookmarked posts on Watchparty.",
 };
 

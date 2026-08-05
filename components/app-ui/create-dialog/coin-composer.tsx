@@ -110,7 +110,7 @@ export function CoinComposer({ onClose }: CoinComposerProps) {
             //    would upload a document nothing reads.
             const tokenName = name.trim() || ticker.trim()
             const launchResult = await launchToken(
-                { name: tokenName, symbol: ticker, image: imageUrl, description, contentPath: `/feed/post/${newPostId}` },
+                { name: tokenName, symbol: ticker, image: imageUrl, description, contentPath: `/status/${newPostId}` },
                 { earningsEnabled: true, ticker, creatorFee, splits, buyAmount }
             )
             if (!launchResult.success) { setIsSubmitting(false); return }
