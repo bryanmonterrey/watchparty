@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useResizableRail } from "@/hooks/use-resizable-rail";
 import { RailTabs, RAIL_TABS } from "@/components/rails/rail-tabs";
 import { RailVideoList } from "@/components/rails/rail-video-list";
 import { RailRowSkeleton } from "@/components/rails/rail-row";
@@ -35,13 +36,22 @@ const TABS = [CHAT_TAB, ...RAIL_TABS];
 // Width and shell come from RailCard now — this rail was a lookalike of home's
 // (loose tabs, unboxed list, 340px) rather than the same thing. See
 // components/rails/rail-card.tsx.
+//
+// It's the one rail that resizes, though: chat is the thing people sit in for
+// hours, and how wide it wants to be depends on whether you're reading it or
+// watching past it. RAIL_ASIDE still supplies the breakpoint and shrink-0; the
+// inline width overrides w-96 only once a drag has happened.
+
+/** Hit area for the drag edge. Wider than it looks so the cursor is easy to catch. */
+const HANDLE = "absolute inset-y-0 -left-1 z-30 w-2 cursor-ew-resize";
 
 export function StreamChat({ hostUserId, isLoading }: StreamChatProps) {
     const [tab, setTab] = useState(CHAT_TAB);
+    const { width, dragging, handleProps } = useResizableRail();
 
     if (isLoading) {
         return (
-            <aside className={RAIL_ASIDE}>
+            <aside className={cn(RAIL_ASIDE, "relative")} style={{ width }}>
                 <div className={RAIL_INNER}>
                     <RailCard tabs={<RailTabs tabs={TABS} active={tab} onChange={setTab} />}>
                         {Array.from({ length: 6 }).map((_, i) => (
@@ -54,7 +64,21 @@ export function StreamChat({ hostUserId, isLoading }: StreamChatProps) {
     }
 
     return (
-        <aside className={RAIL_ASIDE}>
+        <aside className={cn(RAIL_ASIDE, "relative")} style={{ width }}>
+            {/* The grab edge. Invisible until you're on it or dragging, because a
+                permanent rule down the left of the chat is a divider nobody
+                asked for. Double-click restores the default width. */}
+            <div
+                {...handleProps}
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="resize chat"
+                className={cn(
+                    HANDLE,
+                    "after:absolute after:inset-y-2 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-white/25 after:opacity-0 after:transition-opacity hover:after:opacity-100",
+                    dragging && "after:opacity-100",
+                )}
+            />
             <div className={RAIL_INNER}>
                 {/* Chat owns its own scroller (it auto-scrolls to the newest
                     message), so the card must not add a second one around it. The
