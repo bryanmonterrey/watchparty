@@ -131,7 +131,19 @@ function Identity({ hostUserId }: { hostUserId: string }) {
     const channelBadge = earned?.find((b) => b.creatorId === hostUserId);
 
     const setColor = trpc.profile.setChatColor.useMutation({
-        onSuccess: () => utils.profile.card.invalidate({ userId }),
+        // Write the new colour into the cache immediately.
+        //
+        // invalidate() alone made this feel broken: the mutation saved (the
+        // column proves it) but nothing on screen moved until a reload, so the
+        // swatch ring sat on the old colour and the picker looked dead. The
+        // cache entry is keyed { userId }, which is the SAME entry chat lines
+        // read for their name colour — so patching it here repaints the picker,
+        // the preview and every message this user has sent, in one go.
+        onMutate: ({ color }) => {
+            utils.profile.card.setData({ userId }, (prev) => prev && { ...prev, chatColor: color });
+        },
+        // Reconcile either way: a rejected colour snaps back to the truth.
+        onSettled: () => utils.profile.card.invalidate({ userId }),
         onError: (e) => toast.error(e.message),
     });
 

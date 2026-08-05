@@ -30,6 +30,10 @@ export function useResizableRail() {
     const widthRef = useRef(RAIL_BASE_PX);
     const startRef = useRef<{ x: number; w: number } | null>(null);
 
+    /** False until the stored width has been read, so the write below can't
+     *  race ahead and save the default over it. */
+    const loadedRef = useRef(false);
+
     // After mount, never during render — the rail server-renders and reading
     // localStorage in render is a hydration mismatch.
     useEffect(() => {
@@ -42,8 +46,25 @@ export function useResizableRail() {
             }
         } catch {
             // storage disabled — the default is fine
+        } finally {
+            loadedRef.current = true;
         }
     }, []);
+
+    // Persist on every settled width rather than only at the end of a drag.
+    //
+    // Saving in the pointerup handler alone was too fragile: it depends on that
+    // one event arriving on the same element the capture was taken on, and any
+    // path that ends a drag differently (pointercancel during a gesture, a
+    // re-render swapping the node, the pointer leaving the window) silently
+    // dropped the write and the rail was back to 384 on the next load. Keying
+    // it to the value means the value is what gets saved, however the drag ends.
+    useEffect(() => {
+        if (!loadedRef.current) return;
+        try {
+            window.localStorage.setItem(STORAGE_KEY, String(width));
+        } catch { /* storage disabled */ }
+    }, [width]);
 
     const onPointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
         // Stops the drag from selecting the chat text it passes over.
@@ -70,18 +91,16 @@ export function useResizableRail() {
         if (e.currentTarget.hasPointerCapture(e.pointerId)) {
             e.currentTarget.releasePointerCapture(e.pointerId);
         }
-        try {
-            window.localStorage.setItem(STORAGE_KEY, String(widthRef.current));
-        } catch { /* not worth failing the drag over */ }
+        // The width effect above does the saving.
     }, []);
 
     /** Double-click the handle to go back to the default width. */
     const reset = useCallback(() => {
         widthRef.current = RAIL_BASE_PX;
         setWidth(RAIL_BASE_PX);
-        try {
-            window.localStorage.removeItem(STORAGE_KEY);
-        } catch { /* ignore */ }
+        // Written back as the default rather than removed — the effect above
+        // would immediately re-save it anyway, and a key that reappears after
+        // being deleted is more confusing than one that just holds 384.
     }, []);
 
     return {

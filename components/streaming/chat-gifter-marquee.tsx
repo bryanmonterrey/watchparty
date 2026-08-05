@@ -51,7 +51,7 @@ export function ChatGifterMarquee({
                 type="button"
                 onClick={onOpen}
                 aria-label="leaderboard"
-                className="w-full cursor-pointer overflow-hidden border-b border-[rgba(138,145,158,0.2)] py-1.5 transition-colors hover:bg-white/[0.04]"
+                className="w-full cursor-pointer overflow-hidden border-b border-[rgba(138,145,158,0.2)] bg-white/[0.04] py-1.5 transition-colors hover:bg-white/[0.08]"
             >
                 <Marquee burst pauseOnHover repeat={4} className="[--duration:26s] [--gap:3rem]">
                     <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-zinc-400">
@@ -70,7 +70,7 @@ export function ChatGifterMarquee({
             type="button"
             onClick={onOpen}
             aria-label="top gifters"
-            className="w-full cursor-pointer overflow-hidden border-b border-[rgba(138,145,158,0.2)] py-1.5 transition-colors hover:bg-white/[0.04]"
+            className="w-full cursor-pointer overflow-hidden border-b border-[rgba(138,145,158,0.2)] bg-white/[0.04] py-1.5 transition-colors hover:bg-white/[0.08]"
         >
             {/* repeat=2 with a short list still fills the track, and pausing on
                 hover means a name you want to read stops moving under you. */}
