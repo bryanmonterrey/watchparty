@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowTurnBackwardIcon, PinIcon } from "@hugeicons/core-free-icons";
+import { LinkBackwardIcon, PinIcon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
 import { MiniProfile } from "@/components/profile/mini-profile-card";
 import { ChatIdentity } from "./chat-identity";
@@ -70,7 +70,7 @@ export function ChatLine({
                 // The quote is what the DO resolved, not what the sender typed —
                 // see ChatReply in the protocol.
                 <p className="mb-0.5 flex items-center gap-1 truncate text-[11px] font-medium text-zinc-500">
-                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3 shrink-0" strokeWidth={2} />
+                    <HugeiconsIcon icon={LinkBackwardIcon} className="size-3 shrink-0" strokeWidth={2} />
                     <span className="truncate">
                         Replying to {message.replyTo.name}: {message.replyTo.text}
                     </span>
@@ -162,7 +162,7 @@ export function ChatLine({
                             aria-label={`reply to ${message.sender}`}
                             className="flex size-10 cursor-pointer items-center justify-center bg-soft-gray-15 text-zinc-400 transition-colors hover:text-white"
                         >
-                            <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-5" strokeWidth={2} />
+                            <HugeiconsIcon icon={LinkBackwardIcon} className="size-5" strokeWidth={2} />
                         </button>
                     </Squircle>
                 )}

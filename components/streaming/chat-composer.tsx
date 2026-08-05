@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, SmileIcon, UserMultiple02Icon, ArrowTurnBackwardIcon, ShieldEnergyIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, SmileIcon, UserMultiple02Icon, LinkBackwardIcon, ShieldEnergyIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { SettingsIcon } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -83,7 +83,7 @@ export function ChatComposer({
         <div className="flex flex-col gap-2 pb-1 pt-1.5">
             {replyTo && (
                 <div className="flex items-center gap-1.5 rounded-lg bg-soft-gray-10 px-2.5 py-1.5 text-[11px] font-medium text-zinc-400">
-                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3 shrink-0" strokeWidth={2} />
+                    <HugeiconsIcon icon={LinkBackwardIcon} className="size-3 shrink-0" strokeWidth={2} />
                     <span className="min-w-0 flex-1 truncate">
                         Replying to <span className="text-flexwhite">{replyTo.sender}</span>
                     </span>

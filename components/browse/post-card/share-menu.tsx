@@ -3,7 +3,8 @@
 import React from "react";
 import { Link, Mail, Upload, BookmarkPlus, Download, Feather, Plus } from "lucide-react";
 import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
-import { LinkIcon } from "@/components/icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { LinkForwardIcon } from "@hugeicons/core-free-icons";
 
 interface ShareMenuProps {
     post: any;
@@ -102,7 +103,9 @@ export function ShareMenu({ post, bookmarked, handleBookmark }: ShareMenuProps) 
             stopPropagation
             triggerAriaLabel="Share"
             triggerClassName="text-postgray hover:bg-twitter2/[12%] cursor-pointer hover:text-white p-1.5 rounded-full transition-colors aria-expanded:text-white aria-expanded:bg-twitter2/[12%]"
-            trigger={<LinkIcon className="w-[18px] h-[18px]" />}
+            // LinkForward, the mirror of the LinkBackward that means reply in chat —
+            // so the pair reads as one gesture in two directions.
+            trigger={<HugeiconsIcon icon={LinkForwardIcon} className="size-[18px]" strokeWidth={2} />}
             items={items}
         />
     );
