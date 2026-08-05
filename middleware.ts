@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
+import { allowsAnonymous } from "./lib/auth/public-browsing";
 
 // Edge middleware. Next 16 deprecated `middleware` in favor of `proxy`, BUT
 // `proxy` is locked to the Node.js runtime, which OpenNext/Cloudflare Workers
@@ -59,14 +60,27 @@ export function middleware(request: NextRequest) {
   // destination through login (invite links, deep links) — the login card
   // funnels every auth method through resolvePostLoginRedirect(callbackUrl),
   // which only honors same-site targets.
-  const isPublic = publicRoutes.includes(pathname) || publicPrefixes.some((p) => pathname.startsWith(p));
+  const isPublic = publicRoutes.includes(pathname)
+    || publicPrefixes.some((p) => pathname.startsWith(p))
+    // lib/auth/public-browsing.ts — one flag opens the browse surfaces to
+    // signed-out visitors and leaves the personal ones (messages, settings,
+    // wallet) gated. Flip it off and this term is always false, restoring the
+    // wall exactly.
+    || allowsAnonymous(pathname);
+
   if (!session && !isPublic) {
     const login = new URL("/login", request.url);
     login.searchParams.set("callbackUrl", pathname + request.nextUrl.search);
     return NextResponse.redirect(login);
   }
 
-  return NextResponse.next();
+  // The app layout re-checks the session for real (this is a cookie-presence
+  // check only), and it needs to know WHICH path it's rendering to decide
+  // whether anonymous is allowed. Next doesn't expose the pathname to a server
+  // component, so it travels as a header.
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

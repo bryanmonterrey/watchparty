@@ -28,11 +28,13 @@ const QUANTITY_PRESETS = [1, 3, 5, 10];
 interface GiftSubscriptionDialogProps {
     creatorId: string;
     creatorName: string;
+    /** Quantity to open on — the leaderboard passes what it takes to move up. */
+    initialQuantity?: number;
     open: boolean;
     onOpenChange: (o: boolean) => void;
 }
 
-export function GiftSubscriptionDialog({ creatorId, creatorName, open, onOpenChange }: GiftSubscriptionDialogProps) {
+export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity, open, onOpenChange }: GiftSubscriptionDialogProps) {
     const { data: session } = useAuthSession();
     const { connection } = useConnection();
     const { sendTransaction } = useWallet();
@@ -44,7 +46,7 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, open, onOpenCha
     const gift = trpc.subscription.giftSubscription.useMutation();
 
     const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState(initialQuantity ?? 1);
     const [message, setMessage] = useState("");
     const [paying, setPaying] = useState(false);
 
@@ -56,7 +58,7 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, open, onOpenCha
     const willQueue = Math.max(0, quantity - eligibleCount);
     const totalUsdc = selectedTier?.priceUsdcMonthly ? selectedTier.priceUsdcMonthly * quantity : 0;
 
-    const reset = () => { setSelectedTierId(null); setQuantity(1); setMessage(""); };
+    const reset = () => { setSelectedTierId(null); setQuantity(initialQuantity ?? 1); setMessage(""); };
 
     const handleGift = async () => {
         if (!selectedTier?.priceUsdcMonthly || !session?.user) return;

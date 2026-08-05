@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
@@ -40,6 +40,7 @@ function shortenWalletAddress(address: string): string {
 
 function WalletButtonInner() {
     const router = useRouter();
+    const pathname = usePathname();
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
     // Lazy-mount gates: don't fetch the drawer/modal chunks until the user shows
@@ -220,9 +221,17 @@ function WalletButtonInner() {
 
     const handleButtonClick = () => {
         if (connected && !isSignedIn) {
+            // A wallet is already connected — this is the SIWS step, not a
+            // choice of method.
             handleSignIn();
         } else if (!connected) {
-            handleConnect();
+            // Straight to /login rather than the wallet modal. A signed-out
+            // visitor browsing the app most likely has no wallet at all, and
+            // /login is the page carrying every method (OAuth, email code,
+            // passkey, QR) — the modal offers only the wallet ones. The current
+            // path rides along so pressing Sign In returns them to what they
+            // were looking at.
+            router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/home")}`);
         }
     };
 
@@ -235,9 +244,10 @@ function WalletButtonInner() {
     // shimmer for a moment, instead of telling a signed-in person they're
     // signed out.
     //
-    // It is never a real state here anyway: (app)/layout.tsx resolves the
-    // session on the server and redirects to /login without one, so anything
-    // rendering this header already has a session.
+    // "Sign In" IS reachable now — PUBLIC_BROWSING lets signed-out visitors
+    // browse the app (lib/auth/public-browsing.ts), so this button is how they
+    // start. What must not happen is showing it to someone who IS signed in
+    // while their session is merely still in flight, which is the case above.
     if (loading || headerLoading || (fetchingSession && !session?.user)) {
         return <WalletButtonSkeleton />;
     }

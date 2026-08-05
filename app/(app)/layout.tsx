@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getServerSession } from "@/lib/auth/get-session";
+import { allowsAnonymous } from "@/lib/auth/public-browsing";
 import AppProviders from "@/components/app-ui/app-providers";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-ui/app-sidebar";
@@ -32,7 +34,22 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
-  if (!session) redirect("/login");
+
+  // The real gate — middleware only checks that a cookie EXISTS. What changed
+  // is that a missing session is no longer automatically a redirect: with
+  // PUBLIC_BROWSING on, a signed-out visitor gets the app shell and browses,
+  // and only the personal routes still bounce. The pathname comes from the
+  // header middleware sets, since a server component can't read the URL.
+  //
+  // Flip PUBLIC_BROWSING off (lib/auth/public-browsing.ts) and allowsAnonymous
+  // is false everywhere, which is the old `if (!session) redirect` exactly.
+  if (!session) {
+    const pathname = (await headers()).get("x-pathname") ?? "";
+    if (!allowsAnonymous(pathname)) {
+      const login = pathname ? `/login?callbackUrl=${encodeURIComponent(pathname)}` : "/login";
+      redirect(login);
+    }
+  }
 
   // Sidebar always starts fully collapsed (hover the rail to peek, trigger to
   // pin) — deliberately NOT restored from the cookie anymore.

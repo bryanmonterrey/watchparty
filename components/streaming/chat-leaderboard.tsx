@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GiftIcon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
@@ -8,6 +9,13 @@ import { MiniProfile } from "@/components/profile/mini-profile-card";
 import { Button } from "@/components/ui/button";
 import { ChatSheet } from "./chat-sheet";
 import { cn } from "@/lib/utils";
+
+// ssr:false, not a bare import(): the dialog pulls the wallet stack, and a lazy
+// import alone still bundles it into every route the chat rail appears on.
+const GiftSubscriptionDialog = dynamic(
+    () => import("@/components/browse/gift-subscription-dialog").then((m) => m.GiftSubscriptionDialog),
+    { ssr: false },
+);
 
 // Top gifters, opened from the marquee.
 //
@@ -54,12 +62,16 @@ function resetLabel(resetsAt: string | null): string | undefined {
 
 export function ChatLeaderboard({
     hostUserId,
+    hostName,
     onClose,
 }: {
     hostUserId: string;
+    /** Channel name for the gift dialog's heading. */
+    hostName?: string | null;
     onClose: () => void;
 }) {
     const [index, setIndex] = useState(0);
+    const [giftOpen, setGiftOpen] = useState(false);
     const period = PERIODS[index];
 
     const { data, isLoading } = trpc.stream.topGifters.useQuery(
@@ -124,11 +136,25 @@ export function ChatLeaderboard({
                         Gift {data.target.needed} sub{data.target.needed === 1 ? "" : "s"} to take{" "}
                         {ordinal(data.target.rank)}
                     </p>
-                    <Button className="mt-2 w-full bg-white text-[15px] font-bold text-black hover:bg-white/85">
+                    {/* Opens on exactly the quantity the line above quotes, so
+                        the CTA and the dialog agree about what it takes. */}
+                    <Button
+                        onClick={() => setGiftOpen(true)}
+                        className="mt-2 w-full bg-white text-[15px] font-bold text-black hover:bg-white/85"
+                    >
                         <HugeiconsIcon icon={GiftIcon} className="size-5" strokeWidth={2.5} />
                         Gift {data.target.needed} sub{data.target.needed === 1 ? "" : "s"}
                     </Button>
                 </div>
+            )}
+            {giftOpen && (
+                <GiftSubscriptionDialog
+                    creatorId={hostUserId}
+                    creatorName={hostName ?? "this channel"}
+                    initialQuantity={data?.target?.needed ?? 1}
+                    open={giftOpen}
+                    onOpenChange={setGiftOpen}
+                />
             )}
         </ChatSheet>
     );
