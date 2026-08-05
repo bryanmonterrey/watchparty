@@ -51,7 +51,7 @@ function WalletButtonInner() {
     const isAutoSignInTriggered = useRef(false);
 
     const { publicKey, connected, connecting, disconnecting, disconnect, signMessage } = useWallet();
-    const { data: session, isLoading: loading } = useAuthSession();
+    const { data: session, isLoading: loading, isFetching: fetchingSession } = useAuthSession();
     // Shared with the balance chip + Create button so all three header tiles
     // leave their skeletons in the same paint (see useHeaderWalletLoading).
     const { loading: headerLoading } = useHeaderWalletLoading();
@@ -226,7 +226,19 @@ function WalletButtonInner() {
         }
     };
 
-    if ((loading && session === undefined) || headerLoading) {
+    // Skeleton whenever we don't yet KNOW, not just on the very first load.
+    //
+    // isLoading is false the instant any value is cached — including a null —
+    // so a session query that resolved null once dropped the button straight to
+    // "Sign In" and left it there for the whole staleTime. Holding the skeleton
+    // while a refetch is in flight with no user means the worst case is a
+    // shimmer for a moment, instead of telling a signed-in person they're
+    // signed out.
+    //
+    // It is never a real state here anyway: (app)/layout.tsx resolves the
+    // session on the server and redirects to /login without one, so anything
+    // rendering this header already has a session.
+    if (loading || headerLoading || (fetchingSession && !session?.user)) {
         return <WalletButtonSkeleton />;
     }
 
