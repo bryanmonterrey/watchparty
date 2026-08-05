@@ -334,6 +334,10 @@
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   --animate-shimmer-sweep: shimmer-sweep 2s infinite linear;
+  /* Two passes, then rest. For a strip whose message is a nudge rather than a
+     list: a nudge that never stops moving is wallpaper, and one that scrolls
+     twice and then holds still reads as a thing that was said. */
+  --animate-marquee-burst: marquee-burst var(--duration) infinite linear;
 
 
   @keyframes marquee {
@@ -343,6 +347,24 @@
 
     to {
       transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  /* Travels TWO copy-widths in the first 45% of the cycle, then holds for the
+     rest. The hold ends where the loop restarts, and because every copy is
+     identical, translateX(-2 widths) and translateX(0) are the same picture —
+     so the snap back is invisible and no second animation is needed. */
+  @keyframes marquee-burst {
+    0% {
+      transform: translateX(0);
+    }
+
+    45% {
+      transform: translateX(calc(-200% - 2 * var(--gap)));
+    }
+
+    100% {
+      transform: translateX(calc(-200% - 2 * var(--gap)));
     }
   }
 

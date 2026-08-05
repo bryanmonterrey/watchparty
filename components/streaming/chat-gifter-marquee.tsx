@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { GiftIcon } from "@hugeicons/core-free-icons";
+import { GiftIcon, StarIcon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
 import { Marquee } from "@/components/ui/marquee";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,11 @@ import { cn } from "@/lib/utils";
 // RANKING, and a strip that fits two names always shows the same two — the
 // people already winning. Scrolling puts everyone who placed in front of the
 // room, which is the point of having a board at all.
+//
+// With nobody on the board it becomes the invitation to start one, and switches
+// motion with it: the ranking scrolls continuously because it's a list you dip
+// into, while the invitation runs twice and then rests. A call to action that
+// never stops moving is wallpaper within a minute.
 
 const MEDAL: Record<number, string> = {
     1: "bg-[#f5b31b] text-black",
@@ -37,9 +42,28 @@ export function ChatGifterMarquee({
         { staleTime: 60_000 },
     );
 
-    // Nothing to rank yet → no strip. An empty leaderboard rail is a permanent
-    // reminder that nobody has gifted, which is the opposite of the nudge.
-    if (!data?.rows.length) return null;
+    // Still loading — no strip yet rather than a flash of the empty state.
+    if (!data) return null;
+
+    if (data.rows.length === 0) {
+        return (
+            <button
+                type="button"
+                onClick={onOpen}
+                aria-label="leaderboard"
+                className="w-full cursor-pointer overflow-hidden border-b border-[rgba(138,145,158,0.2)] py-1.5 transition-colors hover:bg-white/[0.04]"
+            >
+                <Marquee burst pauseOnHover repeat={4} className="[--duration:26s] [--gap:3rem]">
+                    <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-zinc-400">
+                        <HugeiconsIcon icon={StarIcon} className="size-4 shrink-0 text-[#f5b31b]" strokeWidth={2} />
+                        Gift
+                        <HugeiconsIcon icon={GiftIcon} className="size-4 shrink-0" strokeWidth={2} />
+                        1 sub or more to enter the leaderboard
+                    </span>
+                </Marquee>
+            </button>
+        );
+    }
 
     return (
         <button

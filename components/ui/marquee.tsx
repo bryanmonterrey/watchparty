@@ -31,6 +31,14 @@ interface MarqueeProps extends ComponentPropsWithoutRef<"div"> {
      * @default 4
      */
     repeat?: number
+    /**
+     * Scroll twice, then hold, then repeat — instead of moving forever.
+     *
+     * For a strip carrying a MESSAGE rather than a list. Continuous motion turns
+     * a call to action into wallpaper; two passes and a rest reads as something
+     * that was said. Needs repeat >= 4, since the cycle travels two copy-widths.
+     */
+    burst?: boolean
 }
 
 export function Marquee({
@@ -40,6 +48,7 @@ export function Marquee({
     children,
     vertical = false,
     repeat = 4,
+    burst = false,
     ...props
 }: MarqueeProps) {
     return (
@@ -60,7 +69,8 @@ export function Marquee({
                     <div
                         key={i}
                         className={cn("flex shrink-0 justify-start [gap:var(--gap)] min-w-full will-change-transform motion-reduce:animate-none", {
-                            "animate-marquee flex-row": !vertical,
+                            "animate-marquee flex-row": !vertical && !burst,
+                            "animate-marquee-burst flex-row": !vertical && burst,
                             "animate-marquee-vertical flex-col": vertical,
                             "group-hover:[animation-play-state:paused]": pauseOnHover,
                             "[animation-direction:reverse]": reverse,
