@@ -43,12 +43,15 @@ const CARD_STALE_MS = 5 * 60 * 1000;
 
 export function ChatLine({
     message,
+    hostUserId,
     emotes,
     prefs,
     onReply,
     onPin,
 }: {
     message: StreamChatMessage;
+    /** The channel this line is in — gifts from a chatter's card go HERE. */
+    hostUserId: string;
     emotes: Map<string, Emote>;
     prefs: ChatPrefs;
     onReply?: (m: StreamChatMessage) => void;
@@ -98,7 +101,7 @@ export function ChatLine({
                     </span>
                 )}
                 {prefs.badges && <ChatIdentity userId={message.userId} />}
-                <MiniProfile userId={message.userId} inline>
+                <MiniProfile userId={message.userId} giftCreatorId={hostUserId} inline>
                     <span
                         className="cursor-pointer font-bold hover:underline"
                         style={{ color: nameColor }}

@@ -113,7 +113,7 @@ export function ChatMembers({
                             {group.label} · {group.users.length}
                         </h3>
                         {group.users.map((m) => (
-                            <MiniProfile key={m.userId} userId={m.userId} triggerClassName="block">
+                            <MiniProfile key={m.userId} userId={m.userId} giftCreatorId={hostUserId} triggerClassName="block">
                                 <div className="cursor-pointer rounded-lg px-2 py-1.5 text-left text-sm font-bold transition-colors hover:bg-white/[0.06]">
                                     <span style={{ color: resolveChatNameColor(m.userId) }}>{m.userName}</span>
                                 </div>

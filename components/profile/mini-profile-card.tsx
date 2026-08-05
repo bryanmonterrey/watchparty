@@ -48,7 +48,7 @@ function pnlChip(pnl: { realizedUsd: number; winRate: number | null }) {
     );
 }
 
-export function MiniProfile({ userId, username, children, triggerClassName, inline }: {
+export function MiniProfile({ userId, username, children, triggerClassName, inline, giftCreatorId }: {
     userId?: string | null;
     username?: string | null;
     children: React.ReactNode;
@@ -64,6 +64,19 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
      * clicking still worked.
      */
     inline?: boolean;
+    /**
+     * The channel a gift would go to — NOT the person whose card this is.
+     *
+     * Gifting is an act inside a channel: opening a chatter's card while
+     * watching Bryan and hitting gift buys subs to BRYAN's channel, the way it
+     * works on every streaming site. Keying it to the card's own id (which this
+     * first did) meant hovering a random chatter offered to gift subs to that
+     * chatter's channel instead, which is never what anyone means.
+     *
+     * Absent means no channel context — a feed post, a comment thread — and the
+     * button doesn't render, because there's nothing to gift to.
+     */
+    giftCreatorId?: string | null;
 }) {
     const router = useRouter();
     const [open, setOpen] = React.useState(false);
@@ -111,6 +124,15 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
         { userId: targetId ?? "" },
         { enabled: !!targetId && open },
     );
+    // The channel's own card, for the gift dialog's heading. Only fetched once
+    // the popover is open and there IS a channel — and it's the same cached
+    // profile.card every other surface reads, so on a stream page it's already
+    // warm.
+    const { data: giftChannel } = trpc.profile.card.useQuery(
+        { userId: giftCreatorId ?? "" },
+        { enabled: !!giftCreatorId && open, staleTime: CARD_STALE_MS },
+    );
+
     const settleMute = () => utils.moderation.isMuted.invalidate({ userId: targetId ?? "" });
     const mute = trpc.moderation.mute.useMutation({
         onSuccess: () => { settleMute(); toast.success("Muted"); },
@@ -246,18 +268,20 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
                                 // and subscribing are what the card is FOR, while
                                 // these two are things you do about one person.
                                 <div className="flex items-center gap-2">
-                                    {card.subscribable && (
-                                        // "Gift subs", not "Gift a sub". This is
-                                        // community gifting: it buys subs to
-                                        // THEIR channel for random eligible
-                                        // followers, and the API takes a quantity
-                                        // rather than a recipient. "Gift a sub"
-                                        // reads as gifting this person one, which
-                                        // is a thing the app can't do.
+                                    {giftCreatorId && (
+                                        // Gifts go to the CHANNEL, not to the
+                                        // person whose card this is — see
+                                        // giftCreatorId. Quantity, not recipient:
+                                        // the subs land on random eligible
+                                        // followers of that channel.
                                         <Button
                                             variant="outline"
                                             onClick={() => setGiftOpen(true)}
-                                            title={`Gift subs to ${card.name}'s channel — they go to random followers who aren't subscribed`}
+                                            title={
+                                                giftChannel
+                                                    ? `Gift subs to ${giftChannel.username ?? giftChannel.name}'s channel`
+                                                    : "Gift subs to this channel"
+                                            }
                                             className="h-11 flex-1 rounded-full text-sm font-bold"
                                         >
                                             <HugeiconsIcon icon={GiftIcon} className="size-4" strokeWidth={2} />
@@ -274,7 +298,7 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
                                         disabled={mute.isPending || unmute.isPending}
                                         className={cn(
                                             "h-11 rounded-full text-sm font-bold",
-                                            card.subscribable ? "flex-1" : "w-full",
+                                            giftCreatorId ? "flex-1" : "w-full",
                                         )}
                                     >
                                         <HugeiconsIcon icon={VolumeMute02Icon} className="size-4" strokeWidth={2} />
@@ -283,10 +307,10 @@ export function MiniProfile({ userId, username, children, triggerClassName, inli
                                 </div>
                             )}
 
-                            {giftOpen && (
+                            {giftOpen && giftCreatorId && (
                                 <GiftSubscriptionDialog
-                                    creatorId={card.id}
-                                    creatorName={card.name}
+                                    creatorId={giftCreatorId}
+                                    creatorName={giftChannel?.name ?? "this channel"}
                                     open={giftOpen}
                                     onOpenChange={setGiftOpen}
                                 />

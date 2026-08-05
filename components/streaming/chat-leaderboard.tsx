@@ -97,7 +97,7 @@ export function ChatLeaderboard({
             )}
 
             {data?.rows.map((r) => (
-                <MiniProfile key={r.userId} userId={r.userId} triggerClassName="block">
+                <MiniProfile key={r.userId} userId={r.userId} giftCreatorId={hostUserId} triggerClassName="block">
                     <div className="flex cursor-pointer items-center gap-2.5 rounded-lg px-1 py-1.5 transition-colors hover:bg-white/[0.06]">
                         <span
                             className={cn(

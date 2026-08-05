@@ -149,6 +149,7 @@ export function ChatPanel({
                         <ChatLine
                             key={`${m.id}-${i}`}
                             message={m}
+                            hostUserId={hostUserId}
                             emotes={emotes}
                             prefs={prefs}
                             onReply={setReplyTo}
