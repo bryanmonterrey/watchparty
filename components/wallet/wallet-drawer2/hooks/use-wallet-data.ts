@@ -8,7 +8,7 @@ import { Token, NFT, TabId, NFTCollection } from "../types";
 import type { ChainId } from "@/lib/chains/types";
 import { getChainOrDefault } from "@/lib/chains/registry";
 import { hideSmallBalancesAtom, hideUnknownTokensAtom, hideReportedActivityAtom } from "../store/wallet-settings";
-import { readWalletAssetsSnapshot } from "@/components/wallet/use-header-wallet";
+import { readWalletAssetsSnapshot, isUpstreamRefusal } from "@/components/wallet/use-header-wallet";
 
 
 interface UseWalletDataProps {
@@ -94,13 +94,20 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
         { address: walletAddress ?? "" },
         {
             enabled,
-            refetchInterval: enabled ? 15000 : false,
-            staleTime: 15000,
+            // Was 15 s, which made an OPEN drawer the single most expensive
+            // thing in the app — four upstream fetches a minute, per viewer,
+            // for balances that only move on a transaction. The webhook (and
+            // the header's subscription to it) refreshes this same query key
+            // the moment one lands, so the timer only has to cover the gap if
+            // that push is missed.
+            refetchInterval: enabled ? 60_000 : false,
+            staleTime: 60_000,
             gcTime: 5 * 60 * 1000,
             placeholderData: keepPreviousData,
             // The server throws rather than caching a zero when Helius gives it
-            // nothing, so a transient blip arrives here as an error.
-            retry: 2,
+            // nothing, so a transient blip arrives here as an error — worth one
+            // more ask. A refusal isn't: see isUpstreamRefusal.
+            retry: (count, err) => !isUpstreamRefusal(err) && count < 2,
         }
     );
 

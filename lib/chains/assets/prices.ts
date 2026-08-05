@@ -120,9 +120,25 @@ const NATIVE_SYMBOLS: Record<ChainId, string> = {
   robinhood: "ETH",
 };
 
+const priceKey = (chain: ChainId, address: string) => `price:${chain}:${address}`;
+
 /**
- * USD prices for token contracts on one chain, keyed by lowercased address.
- * DexScreener caps a request at 30 addresses, so this chunks.
+ * USD prices for token contracts on one chain.
+ *
+ * Results are keyed by the address AS GIVEN and, additionally, by its
+ * lowercased form. Both, because the two chain families disagree about case:
+ * an EVM address is hex and callers normalize it, while a Solana mint is
+ * base58, where casing is part of the identity — lowercasing one produces an
+ * address that simply doesn't exist, and every Solana token would come back
+ * unpriced. Requests go out with the original casing for the same reason.
+ *
+ * Quotes are cached per mint and shared by every caller: a price is a property
+ * of the token, not of whoever is looking at it, so ten people holding the same
+ * coin cost one lookup rather than ten. That shared cache is what lets the
+ * wallet's holdings sit on a long window without the prices going stale —
+ * pricing is free and keyless here, so refreshing it costs no Helius credits.
+ *
+ * DexScreener caps a request at 30 addresses, so misses are chunked.
  */
 export async function getTokenPrices(
   chain: ChainId,
@@ -132,11 +148,41 @@ export async function getTokenPrices(
   const slug = DEXSCREENER_SLUGS[chain];
   if (!slug) return {};
 
-  const unique = [...new Set(contracts.map((c) => c.toLowerCase()))];
+  const unique = [...new Set(contracts)];
   const out: Record<string, PriceQuote> = {};
+  const record = (address: string, quote: PriceQuote) => {
+    out[address] = quote;
+    out[address.toLowerCase()] = quote;
+  };
 
-  for (let i = 0; i < unique.length; i += 30) {
-    const chunk = unique.slice(i, i + 30);
+  // One read for every mint at once — a per-key round trip would cost more
+  // than the fetch it saves.
+  let missing = unique;
+  try {
+    const cached = await redis.mget<(PriceQuote | null)[]>(
+      ...unique.map((a) => priceKey(chain, a))
+    );
+    missing = unique.filter((address, i) => {
+      const hit = cached?.[i];
+      if (hit && typeof hit.price === "number" && hit.price > 0) {
+        record(address, hit);
+        return false;
+      }
+      return true;
+    });
+  } catch {
+    // Redis unavailable — price everything live.
+  }
+
+  if (missing.length === 0) return out;
+
+  const fresh: Record<string, PriceQuote> = {};
+  // Liquidity of the pair each quote came from, so a later, thinner pool can't
+  // overwrite a deep one — thin pools give wild prices.
+  const depth: Record<string, number> = {};
+
+  for (let i = 0; i < missing.length; i += 30) {
+    const chunk = missing.slice(i, i + 30);
     try {
       const res = await fetch(
         `https://api.dexscreener.com/tokens/v1/${slug}/${chunk.join(",")}`,
@@ -147,13 +193,14 @@ export async function getTokenPrices(
       if (!Array.isArray(pairs)) continue;
 
       for (const pair of pairs) {
-        const address = pair?.baseToken?.address?.toLowerCase();
+        const address = pair?.baseToken?.address;
         const priceUsd = Number(pair?.priceUsd);
         if (!address || !Number.isFinite(priceUsd) || priceUsd <= 0) continue;
-        // Keep the deepest pair per token — thin pools give wild prices.
-        const existing = out[address];
-        if (existing && existing.price > 0 && (pair?.liquidity?.usd ?? 0) === 0) continue;
-        out[address] = {
+
+        const liquidity = Number(pair?.liquidity?.usd ?? 0);
+        if (fresh[address] && liquidity <= (depth[address] ?? 0)) continue;
+        depth[address] = liquidity;
+        fresh[address] = {
           price: priceUsd,
           priceChange24h:
             pair?.priceChange?.h24 !== undefined ? Number(pair.priceChange.h24) : undefined,
@@ -162,6 +209,23 @@ export async function getTokenPrices(
     } catch {
       // Price data is best-effort — a failed chunk just leaves those unpriced.
     }
+  }
+
+  for (const [address, quote] of Object.entries(fresh)) record(address, quote);
+
+  // Write back what we learned. Only successes: caching a miss would hold a
+  // token unpriced for the whole TTL over one bad response.
+  try {
+    const entries = Object.entries(fresh);
+    if (entries.length) {
+      const pipe = redis.pipeline();
+      for (const [address, quote] of entries) {
+        pipe.set(priceKey(chain, address), quote, { ex: TTL.TOKEN_PRICE });
+      }
+      await pipe.exec();
+    }
+  } catch {
+    // Redis unavailable — the quotes still went out with this response.
   }
 
   return out;

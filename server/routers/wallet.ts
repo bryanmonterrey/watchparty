@@ -45,8 +45,9 @@ import {
 import { accrueSendFee } from "@/lib/chains/send/fees";
 import { getChain, CHAINS, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
+import { getNativePrice, getTokenPrices } from "@/lib/chains/assets/prices";
+import { heliusQuotaOut, markHeliusQuotaOut } from "@/lib/helius/quota";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
-import { getNativePrice } from "@/lib/chains/assets/prices";
 import {
     getActivityForChain,
     hasActivityProvider,
@@ -112,6 +113,26 @@ const supabase = createClient(
 );
 
 const SOL_WSOL_MINT = "So11111111111111111111111111111111111111112";
+
+/** All-ones mint: how native SOL is keyed in the wallet's own token lists. */
+const SOL_NATIVE_MINT = "So11111111111111111111111111111111111111111";
+
+/**
+ * Drop a wallet's cached holdings after something we did changed them.
+ *
+ * Load-bearing now that holdings sit on a long window: they only move when a
+ * transaction touches the wallet, so freshness comes from being TOLD, not from
+ * asking often — the Helius webhook covers deposits from outside, and this
+ * covers the sends and swaps we make ourselves. Without it our own transfer
+ * would leave a stale balance on screen for the whole window.
+ *
+ * Clears the pre-split key too, so nothing cached under it outlives the deploy.
+ */
+function invalidateWalletAssets(address?: string | null): void {
+    if (!address) return;
+    void invalidateCache(`helius:holdings:${address}`);
+    void invalidateCache(`helius:assets:${address}`);
+}
 
 // GeckoTerminal TTLs — now backed by Redis (see getChartData)
 const GT_POOL_TTL  = 60 * 60 * 1000;  // kept for reference
@@ -1056,7 +1077,7 @@ export const walletRouter = router({
                     sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 });
                 }
                 // Balances changed — drop the SWR'd assets snapshot.
-                if (ctx.user.wallet_address) invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
+                if (ctx.user.wallet_address) invalidateWalletAssets(ctx.user.wallet_address);
                 return { type: "tx" as const, signature: sig };
             }
         }),
@@ -1123,7 +1144,7 @@ export const walletRouter = router({
 
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
                 // Balances changed — drop the SWR'd assets snapshot.
-                if (ctx.user.wallet_address) invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
+                if (ctx.user.wallet_address) invalidateWalletAssets(ctx.user.wallet_address);
                 return { success: true, signature };
             } catch (error) {
                 await logWalletAccess({
@@ -1383,7 +1404,7 @@ export const walletRouter = router({
 
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
                 // Balances changed — drop the SWR'd assets snapshot.
-                invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
+                invalidateWalletAssets(ctx.user.wallet_address);
                 return { success: true, signature };
             } catch (error) {
                 await logWalletAccess({
@@ -1489,7 +1510,7 @@ export const walletRouter = router({
 
                 // The tx changes balances — drop the SWR'd assets snapshot so
                 // the next fetch reflects it instead of serving stale.
-                invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
+                invalidateWalletAssets(ctx.user.wallet_address);
                 return { success: true, signature };
             } catch (error) {
                 console.error("Failed to sign and send transaction:", error);
@@ -2968,7 +2989,7 @@ export const walletRouter = router({
 
             if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save" });
             // Bust the Redis cache so the next getWalletAssets fetch reflects the updated list
-            if (ctx.user.wallet_address) invalidateCache(`helius:assets:${ctx.user.wallet_address}`);
+            if (ctx.user.wallet_address) invalidateWalletAssets(ctx.user.wallet_address);
             return { success: true };
         }),
 
@@ -2997,10 +3018,27 @@ export const walletRouter = router({
                 .eq("user_id", ctx.user.id)
                 .single();
 
-            // SWR: cached assets (even a few minutes old) are served instantly and
-            // refreshed in the background — the header/drawer never block on the
-            // Helius + DexScreener round-trips except on a true cold miss.
-            const tokenDataPromise = withSwrCache(`helius:assets:${address}`, TTL.WALLET_ASSETS, TTL.WALLET_ASSETS_STALE, async () => {
+            // HOLDINGS ONLY — no prices in here.
+            //
+            // What's in this blob changes only when a transaction touches the
+            // wallet, and a Helius webhook already tells us when that happens
+            // (app/api/webhooks/helius-assets busts this key and nudges the
+            // client). Prices change every block and are the SAME for everyone,
+            // so bundling them in forced a per-user Helius refresh every 30
+            // seconds just to keep a number fresh that isn't per-user at all.
+            // That, times every open tab, is what emptied the key.
+            //
+            // Now: balances are refreshed on a long window and on the webhook,
+            // prices are layered on at read time from a shared per-mint cache
+            // (free/keyless — DexScreener + CoinGecko, no Helius credits).
+            const tokenDataPromise = withSwrCache(`helius:holdings:${address}`, TTL.WALLET_HOLDINGS, TTL.WALLET_HOLDINGS_STALE, async () => {
+            // Key already refused? Don't spend a request finding out again.
+            if (await heliusQuotaOut()) {
+                throw new TRPCError({
+                    code: "TOO_MANY_REQUESTS",
+                    message: "Wallet data is temporarily unavailable (upstream quota).",
+                });
+            }
             const heliusKey = process.env.HELIUS_API_KEY;
             const url = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
 
@@ -3034,6 +3072,9 @@ export const walletRouter = router({
                     const text = await res.text().catch(() => "");
                     if (isHeliusQuotaError(res.status, text)) {
                         alertHeliusQuota(`wallet.getWalletAssets (${id})`, res.status, text);
+                        // Trip the breaker so the next caller fails fast rather
+                        // than spending another request to be told the same.
+                        await markHeliusQuotaOut();
                         throw new TRPCError({
                             code: "TOO_MANY_REQUESTS",
                             message: "Wallet data is temporarily unavailable (upstream quota).",
@@ -3094,60 +3135,12 @@ export const walletRouter = router({
 
             const nativeSolBalance = (assetsData.result?.nativeBalance?.lamports || 0) / 1e9;
 
-            // 2. Build the list of mints to enrich with price data from DexScreener
-            const mintsToEnrich = items
-                .filter((item: any) => item.token_info?.balance > 0)
-                .map((item: any) => item.id);
-
-            // Always include WSOL and USDC so we have reliable market baselines
-            if (!mintsToEnrich.includes(SOL_MINT_WSOL)) mintsToEnrich.unshift(SOL_MINT_WSOL);
-            if (!mintsToEnrich.includes(USDC_MINT)) mintsToEnrich.unshift(USDC_MINT);
-
-            // dexTokenData stores both the USD price AND the 24h change per mint
-            const dexTokenData: Record<string, { price: number; priceChange24h: number }> = {};
-            if (mintsToEnrich.length > 0) {
-                try {
-                    const chunkSize = 30;
-                    const chunks: string[][] = [];
-                    for (let i = 0; i < mintsToEnrich.length; i += chunkSize) {
-                        chunks.push(mintsToEnrich.slice(i, i + chunkSize));
-                    }
-
-                    const dexResponses = await Promise.all(
-                        chunks.map(chunk =>
-                            fetch(`https://api.dexscreener.com/latest/dex/tokens/${chunk.join(",")}`)
-                                .then(res => res.ok ? res.json() : { pairs: [] })
-                                .catch(() => ({ pairs: [] }))
-                        )
-                    );
-
-                    dexResponses.forEach(res => {
-                        // Group pairs by base token mint, pick the highest-liquidity pair per mint
-                        const byMint: Record<string, any[]> = {};
-                        for (const pair of (res.pairs || [])) {
-                            const mint = pair.baseToken?.address;
-                            if (!mint || !pair.priceUsd) continue;
-                            (byMint[mint] ??= []).push(pair);
-                        }
-                        for (const [mint, pairs] of Object.entries(byMint)) {
-                            if (dexTokenData[mint]) continue;
-                            const best = [...pairs].sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-                            if (best?.priceUsd) {
-                                dexTokenData[mint] = {
-                                    price: Number(best.priceUsd),
-                                    priceChange24h: Number(best.priceChange?.h24 ?? 0),
-                                };
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.error("DexScreener Enrichment Error:", e);
-                }
-            }
-
-            // solPrice will be set from Helius price_info during item processing; DexScreener is fallback
-            let solPrice = 0;
-            const solPriceChange = dexTokenData[SOL_MINT_WSOL]?.priceChange24h;
+            // No price fetching in here — see the note on the cache key. What
+            // survives is the price Helius already handed us inside the SAME
+            // response (`price_info`), kept as a per-mint fallback for anything
+            // the market source doesn't cover. It costs nothing extra and it's
+            // the only price that would otherwise be lost by moving pricing out.
+            const heliusPrices: Record<string, number> = {};
             const formattedTokens: any[] = [];
 
             // Process DAS items — fungible tokens only (skip NFTs)
@@ -3158,9 +3151,8 @@ export const walletRouter = router({
 
                 const info = item.token_info;
 
-                // Extract SOL price from Helius (primary source)
                 if (item.id === SOL_MINT_WSOL && info?.price_info?.price_per_token) {
-                    solPrice = info.price_info.price_per_token;
+                    heliusPrices[SOL_MINT_WSOL] = info.price_info.price_per_token;
                 }
 
                 // Skip WSOL and native SOL placeholders — we inject native SOL manually below
@@ -3170,10 +3162,7 @@ export const walletRouter = router({
                 const balance = (info?.balance || 0) / Math.pow(10, tokenDecimals);
                 if (balance <= 0) return; // skip sold/empty tokens
 
-                // Use Helius price first, fall back to DexScreener price
-                const heliusPrice = info?.price_info?.price_per_token || 0;
-                const price = heliusPrice || dexTokenData[item.id]?.price || 0;
-                const usdValue = balance * price;
+                if (info?.price_info?.price_per_token) heliusPrices[item.id] = info.price_info.price_per_token;
 
                 formattedTokens.push({
                     mint: item.id,
@@ -3182,19 +3171,16 @@ export const walletRouter = router({
                     icon: item.content?.links?.image || item.content?.files?.[0]?.uri || undefined,
                     balance,
                     decimals: tokenDecimals,
-                    price,
-                    usdValue,
-                    priceChange24h: dexTokenData[item.id]?.priceChange24h,
                     marketCap: info?.price_info?.market_cap,
                     fdv: info?.price_info?.fully_diluted_valuation,
                 });
             });
 
-            // Helius didn't return SOL price from items — try getAsset, then DexScreener
-            if (solPrice === 0) {
-                const solInfo = await heliusPost("getSolPrice", { method: "getAsset", params: { id: SOL_MINT_WSOL } });
-                solPrice = solInfo.result?.token_info?.price_info?.price_per_token || dexTokenData[SOL_MINT_WSOL]?.price || 0;
-            }
+            // The extra getAsset call that used to run when Helius returned no
+            // SOL price is gone: SOL is priced from the shared native-price
+            // cache now (CoinGecko, with an Alchemy fallback), which every
+            // chain in the wallet already uses. One less Helius request per
+            // cold fetch, on the request that runs for every user.
 
             // Supplement with raw on-chain token accounts to catch newly launched coins not yet in DAS
             if (tokenAccountsData?.result?.value) {
@@ -3232,8 +3218,9 @@ export const walletRouter = router({
                         for (const mint of newMints) {
                             const asset = batchAssets[mint];
                             const { uiAmount, decimals } = newMintBalances[mint];
-                            const dexEntry = dexTokenData[mint];
-                            const price = dexEntry?.price || 0;
+                            if (asset?.token_info?.price_info?.price_per_token) {
+                                heliusPrices[mint] = asset.token_info.price_info.price_per_token;
+                            }
                             formattedTokens.push({
                                 mint,
                                 symbol: asset?.token_info?.symbol || asset?.content?.metadata?.symbol || "UNKNOWN",
@@ -3241,9 +3228,6 @@ export const walletRouter = router({
                                 icon: asset?.content?.links?.image || asset?.content?.files?.[0]?.uri || undefined,
                                 balance: uiAmount,
                                 decimals,
-                                price,
-                                usdValue: uiAmount * price,
-                                priceChange24h: dexEntry?.priceChange24h,
                                 marketCap: asset?.token_info?.price_info?.market_cap,
                                 fdv: asset?.token_info?.price_info?.fully_diluted_valuation,
                             });
@@ -3254,7 +3238,8 @@ export const walletRouter = router({
                 }
             }
 
-            // Prepend Native SOL explicitly
+            // Prepend Native SOL explicitly. Unpriced here — priced below, with
+            // everything else.
             formattedTokens.unshift({
                 mint: SOL_MINT_NATIVE,
                 symbol: "SOL",
@@ -3262,24 +3247,71 @@ export const walletRouter = router({
                 icon: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
                 balance: nativeSolBalance,
                 decimals: 9,
-                price: solPrice,
-                priceChange24h: solPriceChange,
-                usdValue: nativeSolBalance * solPrice,
             });
 
-            // Sort by USD value descending
-            formattedTokens.sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0));
-
-            return { tokens: formattedTokens, solPrice };
-            }); // end withCache
+            return { tokens: formattedTokens, heliusPrices };
+            }); // end withSwrCache
 
             const [tokenResult, { data: pinDataAssets }] = await Promise.all([
                 tokenDataPromise,
                 hiddenTokensPromise,
             ]);
 
+            // ── Prices, layered on at read time ──────────────────────────────
+            //
+            // Shared, not per-wallet: two people holding the same coin now hit
+            // one cached quote instead of each paying for their own lookup
+            // inside their own blob. Both sources are free and keyless, so a
+            // price refresh costs no Helius credits at all — which is what lets
+            // the holdings above sit on a long window without the numbers going
+            // stale on screen.
+            const held: any[] = tokenResult.tokens ?? [];
+            // WSOL rides along in the batch whether or not the wallet holds it:
+            // it's how SOL gets a market price if CoinGecko is rate-limiting,
+            // and it costs nothing to ask for in a request already going out.
+            // Without it, a wallet with no WSOL position had no fallback at all
+            // and SOL would have priced at 0 — the whole balance reading $0.00.
+            const contractMints = [
+                SOL_WSOL_MINT,
+                ...held.map((t) => t.mint).filter((m: string) => m !== SOL_NATIVE_MINT),
+            ];
+
+            const [nativeQuote, tokenQuotes] = await Promise.all([
+                getNativePrice("solana"),
+                getTokenPrices("solana", contractMints),
+            ]);
+
+            // CoinGecko (carries the 24h change) → DexScreener's WSOL pool →
+            // whatever Helius quoted alongside the holdings.
+            const wsolQuote = tokenQuotes[SOL_WSOL_MINT];
+            const solQuote = nativeQuote ??
+                wsolQuote ??
+                (tokenResult.heliusPrices?.[SOL_WSOL_MINT]
+                    ? { price: tokenResult.heliusPrices[SOL_WSOL_MINT] }
+                    : undefined);
+            const solPrice = solQuote?.price ?? 0;
+
+            const tokens = held.map((t) => {
+                const isSol = t.mint === SOL_NATIVE_MINT;
+                // Market quote first (fresh), then the price Helius happened to
+                // carry with the holdings (up to the holdings window old), then
+                // nothing — never a made-up 0 dressed as a quote.
+                const quote = isSol ? solQuote : tokenQuotes[t.mint];
+                const price = quote?.price ?? tokenResult.heliusPrices?.[t.mint] ?? 0;
+                return {
+                    ...t,
+                    price,
+                    usdValue: (t.balance ?? 0) * price,
+                    priceChange24h: quote?.priceChange24h,
+                };
+            });
+
+            // Biggest holdings first — the list's own order, restored here now
+            // that USD value is only known at this point.
+            tokens.sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0));
+
             const hiddenTokenMints: string[] = pinDataAssets?.hidden_tokens || [];
-            return { tokens: tokenResult.tokens, solPrice: tokenResult.solPrice, hiddenTokenMints };
+            return { tokens, solPrice, hiddenTokenMints };
         } catch (error) {
             console.error("Failed to fetch wallet assets:", error);
             // The upstream-unavailable and quota throws above are deliberate,

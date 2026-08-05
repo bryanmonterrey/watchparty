@@ -114,6 +114,15 @@ export const TTL = {
     TOKEN_SEARCH: 300,       // 5 min — search results
     WALLET_ASSETS: 30,        // 30 s fresh window (SWR; see WALLET_ASSETS_STALE)
     WALLET_ASSETS_STALE: 600, // 10 min stale-serveable window — served instantly + refreshed in background
+    // HOLDINGS = balances + metadata, no prices (prices are layered on per
+    // request from the shared per-mint caches below). What's in here changes
+    // only when a transaction touches the wallet, and the Helius address
+    // webhook busts this key the moment one does — so the window is long on
+    // purpose. It used to be 30 s because prices rode along inside it, which
+    // meant every open tab pulled a fresh DAS fetch twice a minute to keep a
+    // number current that wasn't even per-wallet.
+    WALLET_HOLDINGS: 600,        // 10 min fresh — webhook-busted on any tx
+    WALLET_HOLDINGS_STALE: 3600, // 1 h stale-serveable — survives an outage
     TRANSACTIONS: 20,        // 20 s — show new txs quickly
     NFTS: 900,               // 15 min — NFT list
     TOKEN_METADATA: 86400,   // 24h — on-chain metadata

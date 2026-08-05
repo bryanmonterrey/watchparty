@@ -96,6 +96,16 @@ function subscribeAssetsChanged(address: string, listener: () => void): () => vo
     };
 }
 
+/**
+ * Did the server refuse rather than fail? Quota exhaustion and a downed
+ * upstream are both answers, not accidents — retrying them adds load to
+ * exactly the thing that's already over its limit.
+ */
+export function isUpstreamRefusal(err: unknown): boolean {
+    const code = (err as { data?: { code?: string } } | null)?.data?.code;
+    return code === "TOO_MANY_REQUESTS" || code === "SERVICE_UNAVAILABLE";
+}
+
 // Longest we'll wait for a remembered extension to hand over its public key
 // before falling back to the embedded wallet. Bounded on purpose: an extension
 // that never connects (uninstalled since, or an unlock prompt left sitting)
@@ -170,13 +180,17 @@ export function useHeaderWalletLoading() {
         { address: walletAddress ?? "" },
         {
             enabled: !!walletAddress,
-            staleTime: 30_000,
-            refetchInterval: 60_000,
-            // The server THROWS on an upstream miss now rather than caching a
-            // zero (server/routers/wallet.ts), which means a transient Helius
-            // blip reaches the client as an error instead of a wrong number.
-            // Retry it a couple of times before believing it.
-            retry: 2,
+            staleTime: 60_000,
+            // The interval is a SAFETY NET, not the update path. Balances move
+            // when a transaction touches the wallet, and the Helius webhook
+            // says so within seconds (subscribeAssetsChanged below) — polling
+            // every 60 s on top of that spent the key to keep already-current
+            // numbers current. Window focus still refetches.
+            refetchInterval: 5 * 60_000,
+            // Retry a transient blip, but never a refusal: "we're out of quota"
+            // and "the upstream is down" don't become true on the third ask,
+            // and retrying is how a dead key gets hammered hardest.
+            retry: (count, err) => !isUpstreamRefusal(err) && count < 2,
         },
     );
 

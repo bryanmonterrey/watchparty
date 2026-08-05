@@ -78,7 +78,13 @@ export async function POST(req: NextRequest) {
     // Safety cap — a pathological tx (airdrop batch) shouldn't fan out wide.
     const list = [...addresses].slice(0, 50);
 
-    await Promise.all(list.map((a) => invalidateCache(`helius:assets:${a}`)));
+    // Both keys: `holdings` is the live one (balances + metadata, long window
+    // — this webhook IS its freshness), `assets` is the pre-split key, still
+    // busted so anything cached under it before the deploy can't outlive a tx.
+    await Promise.all(list.flatMap((a) => [
+        invalidateCache(`helius:holdings:${a}`),
+        invalidateCache(`helius:assets:${a}`),
+    ]));
     await broadcastAssetsChanged(list);
 
     return NextResponse.json({ ok: true, invalidated: list.length });
