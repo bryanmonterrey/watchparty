@@ -76,40 +76,69 @@ export function ChatPanel({
     }, []);
 
     return (
-        <div className="relative flex min-h-0 flex-1 flex-col">
-            <div
-                ref={scrollerRef}
-                onScroll={onScroll}
-                className="hidden-scrollbar min-h-0 flex-1 overflow-y-auto"
-            >
-                {messages.length === 0 && (
-                    <p className="pt-8 text-center text-xs font-medium text-zinc-500">
-                        {connected ? "Say something" : "Connecting to chat…"}
-                    </p>
-                )}
-                {messages.map((m, i) => (
-                    <ChatLine
-                        key={`${m.id}-${i}`}
-                        message={m}
-                        emotes={emotes}
-                        prefs={prefs}
-                        onReply={setReplyTo}
-                    />
-                ))}
-            </div>
+        <div className="flex min-h-0 flex-1 flex-col">
+            {/* The MESSAGE region, and the positioning context for the menus.
+                They anchor to the bottom of this — not of the whole panel — so
+                the emote strip, the input and the send row below always stay in
+                view and usable with a menu open.
 
-            {!following && (
-                // Floats over the last lines rather than sitting above the
-                // composer, so resuming doesn't reflow the panel under the cursor.
-                <button
-                    type="button"
-                    onClick={resume}
-                    className="absolute inset-x-0 bottom-2 mx-auto flex w-fit cursor-pointer items-center gap-1.5 rounded-full bg-soft-gray-20 px-3 py-1.5 text-xs font-bold text-flexwhite transition-colors hover:bg-soft-gray-15"
+                An anchor rather than padding the menus out by the composer's
+                height: that height isn't fixed (the reply banner comes and goes),
+                so any hard-coded offset would be wrong half the time. */}
+            <div className="relative flex min-h-0 flex-1 flex-col">
+                <div
+                    ref={scrollerRef}
+                    onScroll={onScroll}
+                    className="hidden-scrollbar min-h-0 flex-1 overflow-y-auto"
                 >
-                    <HugeiconsIcon icon={PauseIcon} className="size-3.5" strokeWidth={2.5} />
-                    Chat paused for scrolling
-                </button>
-            )}
+                    {messages.length === 0 && (
+                        <p className="pt-8 text-center text-xs font-medium text-zinc-500">
+                            {connected ? "Say something" : "Connecting to chat…"}
+                        </p>
+                    )}
+                    {messages.map((m, i) => (
+                        <ChatLine
+                            key={`${m.id}-${i}`}
+                            message={m}
+                            emotes={emotes}
+                            prefs={prefs}
+                            onReply={setReplyTo}
+                        />
+                    ))}
+                </div>
+
+                {!following && (
+                    // Floats over the last lines rather than sitting above the
+                    // composer, so resuming doesn't reflow the panel under the cursor.
+                    <button
+                        type="button"
+                        onClick={resume}
+                        className="absolute inset-x-0 bottom-2 mx-auto flex w-fit cursor-pointer items-center gap-1.5 rounded-full bg-soft-gray-20 px-3 py-1.5 text-xs font-bold text-flexwhite transition-colors hover:bg-soft-gray-15"
+                    >
+                        <HugeiconsIcon icon={PauseIcon} className="size-3.5" strokeWidth={2.5} />
+                        Chat paused for scrolling
+                    </button>
+                )}
+
+                {membersOpen && (
+                    <ChatMembers
+                        hostUserId={hostUserId}
+                        members={members}
+                        onRequest={requestMembers}
+                        onClose={() => setMembersOpen(false)}
+                    />
+                )}
+
+                {settings && (
+                    <ChatSettings
+                        hostUserId={hostUserId}
+                        initialScreen={settings}
+                        prefs={prefs}
+                        onPrefs={setPrefs}
+                        onClose={() => setSettings(null)}
+                    />
+                )}
+            </div>
 
             <ChatComposer
                 onSend={send}
@@ -121,25 +150,6 @@ export function ChatPanel({
                 onOpenSettings={() => setSettings("menu")}
                 onOpenMembers={() => setMembersOpen(true)}
             />
-
-            {membersOpen && (
-                <ChatMembers
-                    hostUserId={hostUserId}
-                    members={members}
-                    onRequest={requestMembers}
-                    onClose={() => setMembersOpen(false)}
-                />
-            )}
-
-            {settings && (
-                <ChatSettings
-                    hostUserId={hostUserId}
-                    initialScreen={settings}
-                    prefs={prefs}
-                    onPrefs={setPrefs}
-                    onClose={() => setSettings(null)}
-                />
-            )}
         </div>
     );
 }

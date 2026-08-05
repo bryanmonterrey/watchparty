@@ -12,10 +12,12 @@ import { RAIL_BORDER } from "@/components/rails/rail-shell";
 // as well — so opening settings took the chat away instead of putting something
 // in front of it, and there was nothing to type into while it was open.
 //
-// It's anchored to the BOTTOM of the message area and grows upward only as far
-// as its content needs, capped at the height of that area (max-h-full against
-// the positioned parent). Short menus are short. Long ones stop at the tabs and
-// scroll inside themselves rather than pushing anything around.
+// It's anchored to the BOTTOM of the message area — chat-panel makes that
+// region the positioned parent, so `bottom-0` here means "on top of the last
+// message", not "on top of the composer" — and grows upward only as far as its
+// content needs, capped at that area's height. Short menus are short. Long ones
+// stop at the tabs and scroll inside themselves rather than pushing anything
+// around, and the emote strip, input and send row stay usable throughout.
 //
 // radius 25 + RAIL_BORDER are the rail card's own values, so this reads as a
 // card of the same family rather than a panel that happens to be rounded. Both
