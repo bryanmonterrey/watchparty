@@ -227,9 +227,12 @@ export function ChatComposer({
  *
  * -mx-2 cancels the chat column's own px-2 (RailCard's CARD_PX, and the pop-out
  * route's matching padding) so the banner runs to the card's inner edges
- * instead of floating inset from them. Square bottom corners because it sits
- * flush on the emote strip — a rounded edge there would read as a separate
- * floating chip rather than a header for what's below it.
+ * instead of floating inset from them.
+ *
+ * Top corners rounded hard (2xl), bottom squared: it sits flush on the emote
+ * strip, so a rounded bottom edge would read as a separate floating chip rather
+ * than a header for what's below it — while the top is a free edge and gets the
+ * app's usual aggressive rounding.
  */
 function ReplyBanner({
     replyTo,
@@ -246,7 +249,7 @@ function ReplyBanner({
     );
 
     return (
-        <div className="-mx-2 flex items-center gap-1.5 rounded-t-lg rounded-b-none bg-soft-gray-10 px-3 py-2 text-[13px] font-medium text-zinc-400">
+        <div className="-mx-2 flex items-center gap-1.5 rounded-t-2xl rounded-b-none bg-soft-gray-10 px-3 py-2 text-[13px] font-medium text-zinc-400">
             <HugeiconsIcon icon={LinkBackwardIcon} className={cn("size-3.5 shrink-0", REPLY_GLYPH)} strokeWidth={2} />
             <span className="min-w-0 flex-1 truncate">
                 Replying to <span className="font-bold text-flexwhite">{card?.username ?? replyTo.sender}</span>
