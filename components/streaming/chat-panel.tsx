@@ -124,6 +124,7 @@ export function ChatPanel({
 
             {membersOpen && (
                 <ChatMembers
+                    hostUserId={hostUserId}
                     members={members}
                     onRequest={requestMembers}
                     onClose={() => setMembersOpen(false)}

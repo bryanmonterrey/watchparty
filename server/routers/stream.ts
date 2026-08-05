@@ -3,14 +3,19 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, inArray } from "drizzle-orm";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { TRPCError } from "@trpc/server";
 import type { IvsClient } from "@aws-sdk/client-ivs";
 import { nanoid } from "nanoid";
 import { tokens } from "@/db/schema/content/token";
+import { creatorModerators, vipMembers } from "@/db/schema/content/creator";
+import { subscriptions } from "@/db/schema/content/subscription";
 
 const region = process.env.AWS_REGION ?? "us-east-1";
+
+/** Standing in a channel's chat, strongest first. Absent = plain viewer. */
+export type ChatRole = "host" | "moderator" | "vip" | "subscriber";
 
 // The AWS SDKs are heavy, and this router rides into every tRPC isolate via
 // the appRouter graph — load them only when an IVS procedure actually runs
@@ -365,5 +370,57 @@ export const streamRouter = router({
         .mutation(async ({ ctx, input }) => {
             await db.update(streams).set({ isLive: input.isLive, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
             return { success: true };
+        }),
+
+    /**
+     * Standing of each given user in a channel, for the chat member list.
+     *
+     * Takes the ids rather than deriving them, because the roster comes from the
+     * realtime DO (who is CONNECTED) and the database only knows who holds a
+     * role — neither half can answer "who is in here, ranked" alone.
+     *
+     * Returns only users who hold something. Anyone absent is a plain viewer,
+     * which is most of a chat, so saying so per-id would be the bulk of the
+     * payload for no information.
+     *
+     * protected, not public: this reports subscriber and VIP standing for
+     * arbitrary ids, and every caller is signed in anyway (the chat lives inside
+     * the authenticated app shell), so there's no reason to answer strangers.
+     */
+    chatRoles: protectedProcedure
+        .input(z.object({
+            creatorId: z.string(),
+            // Capped: this is three indexed IN-lookups, and a roster longer than
+            // this is a scrolling problem before it's a query problem.
+            userIds: z.array(z.string()).max(200),
+        }))
+        .query(async ({ input }) => {
+            const { creatorId, userIds } = input;
+            if (userIds.length === 0) return {} as Record<string, ChatRole>;
+
+            const [mods, vips, subs] = await Promise.all([
+                db.select({ id: creatorModerators.moderatorId })
+                    .from(creatorModerators)
+                    .where(and(eq(creatorModerators.creatorId, creatorId), inArray(creatorModerators.moderatorId, userIds))),
+                db.select({ id: vipMembers.memberId })
+                    .from(vipMembers)
+                    .where(and(eq(vipMembers.creatorId, creatorId), inArray(vipMembers.memberId, userIds))),
+                db.select({ id: subscriptions.subscriberId })
+                    .from(subscriptions)
+                    .where(and(
+                        eq(subscriptions.creatorId, creatorId),
+                        eq(subscriptions.status, "active"),
+                        inArray(subscriptions.subscriberId, userIds),
+                    )),
+            ]);
+
+            // Assigned weakest-first so a stronger role overwrites: someone can
+            // be a subscriber AND a mod, and they should read as a mod.
+            const roles: Record<string, ChatRole> = {};
+            for (const r of subs) roles[r.id] = "subscriber";
+            for (const r of vips) roles[r.id] = "vip";
+            for (const r of mods) roles[r.id] = "moderator";
+            if (userIds.includes(creatorId)) roles[creatorId] = "host";
+            return roles;
         }),
 });
