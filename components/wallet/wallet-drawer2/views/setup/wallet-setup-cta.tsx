@@ -15,6 +15,7 @@ import {
     DialogTitle,
     DialogDescription,
 } from '@/components/ui/dialog';
+import { useTurnstile } from '@/components/ui/turnstile';
 
 type Step = 'cta' | 'generating' | 'seed_phrase';
 
@@ -27,13 +28,23 @@ export function WalletSetupCta({ variant = 'drawer' }: { variant?: 'drawer' | 'i
     const [error, setError] = useState<string | null>(null);
     const queryClient = useQueryClient();
     const router = useRouter();
+    const { getToken, widget: turnstileWidget, challenging } = useTurnstile();
 
     const handleCreate = useCallback(async () => {
         try {
             setStep('generating');
             setError(null);
 
-            const response = await fetch('/api/create-wallet', { method: 'POST' });
+            // Solved before the request, not shown before the click: the widget
+            // is invisible and only surfaces a challenge if Cloudflare wants
+            // one. A null token still goes — the server is what decides.
+            const turnstileToken = await getToken();
+
+            const response = await fetch('/api/create-wallet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ turnstileToken }),
+            });
             if (!response.ok) {
                 const err = await response.json();
                 throw new Error(err.error || 'Failed to create wallet');
@@ -55,7 +66,7 @@ export function WalletSetupCta({ variant = 'drawer' }: { variant?: 'drawer' | 'i
             setError(err instanceof Error ? err.message : 'Failed to create wallet');
             setStep('cta');
         }
-    }, []);
+    }, [getToken]);
 
     const handlePhraseConfirmed = useCallback(async () => {
         // Close the dialog first, then force a synchronous refetch so the drawer
@@ -102,13 +113,14 @@ export function WalletSetupCta({ variant = 'drawer' }: { variant?: 'drawer' | 'i
                     {step === 'generating' ? (
                         <>
                             <span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                            Creating your wallet…
+                            {challenging ? 'Checking you’re human…' : 'Creating your wallet…'}
                         </>
                     ) : 'Create a new wallet'}
                 </button>
                 {error && (
                     <p className="text-center text-[13px] font-medium text-pastelred">{error}</p>
                 )}
+                {turnstileWidget}
                 {seedDialog}
             </>
         );
@@ -143,11 +155,13 @@ export function WalletSetupCta({ variant = 'drawer' }: { variant?: 'drawer' | 'i
                     {step === 'generating' ? (
                         <>
                             <span className="size-4 animate-spin rounded-full border-2 border-black/25 border-t-black" />
-                            Creating your wallet…
+                            {challenging ? 'Checking you’re human…' : 'Creating your wallet…'}
                         </>
                     ) : 'Create wallet'}
                 </button>
             </div>
+
+            {turnstileWidget}
 
             {/* Seed phrase shown in a full dialog on top */}
             {seedDialog}

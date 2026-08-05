@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import { auth } from "../../../lib/auth/server";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { headers } from "next/headers";
 import { db } from "../../../db";
 import { user } from "../../../db/schema";
@@ -156,8 +157,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // IP rate limit — relaxed to 100/day during testing (tighten before launch)
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+
+    // Turnstile, before any key generation or writes.
+    //
+    // The session check above says the caller is signed in and the IP limit
+    // below says they haven't asked 100 times today; neither says a person
+    // asked. This endpoint mints a keypair, writes an encrypted row, and puts
+    // an account on-chain the treasury pays rent for — so it's worth the extra
+    // round trip. Token comes from the widget on the create button.
+    const turnstileToken = await req
+        .clone()
+        .json()
+        .then((b: { turnstileToken?: string }) => b?.turnstileToken)
+        .catch(() => undefined);
+
+    const captcha = await verifyTurnstile(turnstileToken, ip);
+    if (!captcha.ok) {
+        console.warn("[create-wallet] turnstile rejected", { userId, reason: captcha.reason });
+        return NextResponse.json(
+            { error: "Couldn't verify that you're human. Please try again." },
+            { status: 403 },
+        );
+    }
+
+    // IP rate limit — relaxed to 100/day during testing (tighten before launch)
     const ipKey = `ratelimit:create-wallet:${ip}`;
     try {
       const count = await redis.incr(ipKey);

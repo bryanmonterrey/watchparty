@@ -62,7 +62,16 @@ function DialogContent({
         className={cn(
           // Shared dialog surface: near-black solid (frosted #6A6A6A/35 washed
           // out over busy content).
-          "bg-[#0C0C0C] backdrop-blur-xl text-flexwhite data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
+          //
+          // border-soft-gray/10 is not decoration — `border` on its own sets a
+          // WIDTH and leaves the colour at currentColor (Tailwind v4 changed
+          // the default from gray-200), and this surface is text-flexwhite, so
+          // every dialog that didn't pass its own border colour was drawing a
+          // white hairline. Naming a colour here fixes all of them at once;
+          // callers that pass their own still win through cn(). The value lands
+          // on the app's standard hairline either way — globals.css remaps
+          // border-soft-gray* to --wp-border.
+          "bg-[#0C0C0C] border-soft-gray/10 backdrop-blur-xl text-flexwhite data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
           className
         )}
         {...props}
