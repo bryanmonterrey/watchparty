@@ -141,7 +141,10 @@ export function WalletHeader({
                             // -ml-2 pulls the avatar back to the card's content
                             // edge, so it still lines up with the balance below
                             // despite the trigger's own padding.
-                            className={`-ml-2 flex min-w-0 cursor-pointer items-center gap-3 rounded-2xl px-2 py-1.5 transition-colors ${accountOpen ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
+                            // justify-start is explicit: the name sits against
+                            // the avatar and stays there, whatever width the
+                            // trigger ends up with.
+                            className={`-ml-2 flex min-w-0 cursor-pointer items-center justify-start gap-3 rounded-2xl px-2 py-1.5 transition-colors ${accountOpen ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
                         >
                             <Avatar className="h-10 w-10 shrink-0">
                                 <AvatarImage src={avatarUrl} alt={username} className="object-cover" />
@@ -151,7 +154,7 @@ export function WalletHeader({
                                 the only thing making this two lines, and rendering
                                 one is against house rules anyway (Copy Address on
                                 the power menu is the functional path). */}
-                            <div className="flex min-w-0 items-center gap-1">
+                            <div className="flex min-w-0 items-center justify-start gap-1 text-left">
                                 <p className="truncate text-lg font-bold text-white">{username}</p>
                                 <VerifiedBadge
                                     tier={activeUser?.verifiedTier}
