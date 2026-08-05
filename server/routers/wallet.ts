@@ -3063,6 +3063,29 @@ export const walletRouter = router({
                 }),
             ]);
 
+            // A null result means the UPSTREAM gave us nothing — not that the
+            // wallet is empty. Left to fall through it becomes `items: []` and
+            // `nativeBalance: 0`, and withSwrCache then stores that for the full
+            // stale window: a confident, cached, wrong zero. Reported as the
+            // balance chip "flickering to 0 for 20-30 seconds", which is
+            // TTL.WALLET_ASSETS almost exactly.
+            //
+            // The quota path already throws for this reason. But three other
+            // paths in heliusPost return { result: null } and reach here the
+            // same way — a network error, a 10s timeout, and any non-quota HTTP
+            // failure — so the fix only ever covered one of four.
+            //
+            // Throwing is what keeps the real balance on screen: a background
+            // SWR refresh that throws is swallowed and the previous good value
+            // keeps serving, and on a cold miss the client holds its last data
+            // rather than painting a zero.
+            if (!assetsData?.result) {
+                throw new TRPCError({
+                    code: "SERVICE_UNAVAILABLE",
+                    message: "Wallet balances are temporarily unavailable.",
+                });
+            }
+
             const items = assetsData.result?.items || [];
 
             const SOL_MINT_NATIVE = "So11111111111111111111111111111111111111111"; // Native SOL (used for display/balances)

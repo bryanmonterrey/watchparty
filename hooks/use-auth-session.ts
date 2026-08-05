@@ -5,7 +5,18 @@ export function useAuthSession() {
     return useQuery({
         queryKey: ["session"],
         queryFn: async () => {
-            const { data } = await authClient.getSession();
+            // The error was being discarded and only `data` returned, so a
+            // FAILED request became `null` — indistinguishable from "signed
+            // out". Everything downstream believed it: the header offered Sign
+            // In to a signed-in user, and the wallet button's auto sign-in
+            // fired a signature prompt at one.
+            //
+            // Throwing instead makes it a query error, which retries and keeps
+            // the previous session as `data` rather than replacing it with a
+            // wrong answer. A genuine null still returns null — signed out is a
+            // real state now that anonymous browsing is on.
+            const { data, error } = await authClient.getSession();
+            if (error) throw new Error(error.message ?? "session request failed");
             return data;
         },
         staleTime: 5 * 60 * 1000, // 5 minutes — dedupes the many callers

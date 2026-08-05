@@ -50,6 +50,8 @@ function WalletButtonInner() {
     const [modalReady, setModalReady] = useState(false);
     const isSigningOut = useRef(false);
     const isAutoSignInTriggered = useRef(false);
+    /** True once a real session has been seen on the current wallet connection. */
+    const sawSessionRef = useRef(false);
 
     const { publicKey, connected, connecting, disconnecting, disconnect, signMessage } = useWallet();
     const { data: session, isLoading: loading, isFetching: fetchingSession } = useAuthSession();
@@ -181,7 +183,28 @@ function WalletButtonInner() {
         setIsModalOpen(true);
     }, []);
 
-    // Auto sign-in when wallet connects
+    // Auto sign-in when wallet connects.
+    //
+    // This fires a WALLET SIGNATURE PROMPT, so it must only run when we're
+    // certain the user isn't signed in. It wasn't: `loading` is react-query's
+    // isLoading, which goes false the moment any value is cached — including a
+    // null. So a session refetch that transiently resolved null (window focus
+    // is enough, and this query refetches on focus) flipped isSignedIn false
+    // while the wallet stayed connected, and this asked a signed-in user to
+    // sign. Twice, when the value flapped. Reported 2026-08-05 as "hanging out
+    // on home and it asked me to sign in and sign again".
+    //
+    // Two guards, on top of the original conditions:
+    //
+    //   fetchingSession — never prompt while the answer is in flight.
+    //   sawSessionRef   — once a real session has been observed on THIS
+    //                     connection, a later null is a blip, not a sign-out.
+    //                     A genuine sign-out disconnects the wallet, which
+    //                     clears the latch below.
+    useEffect(() => {
+        if (session?.user) sawSessionRef.current = true;
+    }, [session]);
+
     useEffect(() => {
         let timer: NodeJS.Timeout | number;
 
@@ -189,6 +212,8 @@ function WalletButtonInner() {
             connected &&
             !isSignedIn &&
             !loading &&
+            !fetchingSession &&
+            !sawSessionRef.current &&
             !isSigningIn &&
             !isAutoSignInTriggered.current
         ) {
@@ -203,10 +228,16 @@ function WalletButtonInner() {
             isAutoSignInTriggered.current = false;
         }
 
+        // Disconnecting ends the connection this latch describes, so the next
+        // wallet to connect can still be signed in automatically.
+        if (!connected) {
+            sawSessionRef.current = false;
+        }
+
         return () => {
             if (timer) clearTimeout(timer as any);
         };
-    }, [connected, isSignedIn, loading, isSigningIn, handleSignIn]);
+    }, [connected, isSignedIn, loading, fetchingSession, session, isSigningIn, handleSignIn]);
 
     const getButtonText = () => {
         if (connecting) return "Connecting...";
