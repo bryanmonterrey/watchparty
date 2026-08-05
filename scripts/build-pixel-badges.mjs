@@ -87,7 +87,11 @@ async function pixelize(file) {
         .map((r) => `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="1" fill="${r.fill}"/>`)
         .join("");
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRID} ${GRID}" shape-rendering="crispEdges">${body}</svg>`;
+    // width/height as well as viewBox, matching the Fluent originals: an SVG
+    // with no intrinsic size can collapse when loaded through <img>, and these
+    // are rendered that way.
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${GRID}" height="${GRID}"`
+        + ` viewBox="0 0 ${GRID} ${GRID}" shape-rendering="crispEdges">${body}</svg>`;
 }
 
 mkdirSync(OUT, { recursive: true });

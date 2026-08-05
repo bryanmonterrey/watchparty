@@ -10,6 +10,7 @@ import { emoteSet } from "@/lib/chat/emotes";
 import { ChatLine } from "./chat-line";
 import { ChatComposer } from "./chat-composer";
 import { ChatSettings } from "./chat-settings";
+import { ChatMembers } from "./chat-members";
 
 // The chat itself: the message list, the composer, and the settings overlay.
 //
@@ -46,10 +47,11 @@ export function ChatPanel({
     // null = closed. The value is which screen to open on, so the shield can go
     // straight to Identity while the gear starts at the menu.
     const [settings, setSettings] = useState<"menu" | "identity" | null>(null);
+    const [membersOpen, setMembersOpen] = useState(false);
     const scrollerRef = useRef<HTMLDivElement>(null);
     const { prefs, update: setPrefs } = useChatPrefs();
 
-    const { messages, send, connected } = useStreamChat(hostUserId, enabled);
+    const { messages, send, connected, members, requestMembers } = useStreamChat(hostUserId, enabled);
 
     // The channel's own emotes, merged over the global set.
     const { data: custom } = trpc.creator.getEmotes.useQuery(
@@ -121,7 +123,16 @@ export function ChatPanel({
                 onCancelReply={() => setReplyTo(null)}
                 onOpenIdentity={() => setSettings("identity")}
                 onOpenSettings={() => setSettings("menu")}
+                onOpenMembers={() => setMembersOpen(true)}
             />
+
+            {membersOpen && (
+                <ChatMembers
+                    members={members}
+                    onRequest={requestMembers}
+                    onClose={() => setMembersOpen(false)}
+                />
+            )}
 
             {settings && (
                 <ChatSettings

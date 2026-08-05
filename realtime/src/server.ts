@@ -106,6 +106,16 @@ export class Chat extends Server<Env> {
       this.relay({ t: "stop-typing", userId: state.userId, channelId: msg.channelId }, connection.id);
     } else if (msg.t === "event") {
       this.relay({ t: "event", name: msg.name, payload: msg.payload }, connection.id);
+    } else if (msg.t === "members") {
+      // Pull, not push. High-fan-out rooms skip presence broadcasts entirely
+      // (see broadcastPresence), so this walks the connections once for the one
+      // person who asked instead of telling everyone on every join.
+      const seen = new Map<string, PresenceUser>();
+      for (const c of this.getConnections<ConnState>()) {
+        const st = c.state;
+        if (st) seen.set(st.userId, { userId: st.userId, userName: st.name });
+      }
+      connection.send(JSON.stringify({ t: "members", users: [...seen.values()] } satisfies ServerEvent));
     } else if (msg.t === "chat") {
       if (!this.allowChat(connection.id)) return;
       const text = typeof msg.text === "string" ? msg.text.trim().slice(0, CHAT_MAX_LEN) : "";

@@ -44,6 +44,7 @@ export function ChatComposer({
     onCancelReply,
     onOpenIdentity,
     onOpenSettings,
+    onOpenMembers,
 }: {
     onSend: (text: string, replyTo?: string) => void;
     connected: boolean;
@@ -53,6 +54,7 @@ export function ChatComposer({
     onCancelReply?: () => void;
     onOpenIdentity: () => void;
     onOpenSettings: () => void;
+    onOpenMembers: () => void;
 }) {
     const [input, setInput] = useState("");
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -186,10 +188,20 @@ export function ChatComposer({
                 to sit alone at the far left, which read as a stat stranded on
                 the panel rather than part of the control row. */}
             <div className="flex items-center justify-end gap-3">
-                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-zinc-500">
+                {/* A button, not a readout — it opens the room's roster. The
+                    count next to it is the STREAM's concurrent viewers, which is
+                    a different number from who's in chat, so it's omitted rather
+                    than shown as a dash when the channel is offline. */}
+                <button
+                    type="button"
+                    onClick={onOpenMembers}
+                    aria-label="chat members"
+                    title="Chat members"
+                    className="flex cursor-pointer items-center gap-1.5 text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white"
+                >
                     <HugeiconsIcon icon={UserMultiple02Icon} className={FOOT_ICON} strokeWidth={2} />
-                    {viewerCount !== undefined ? compactCount(viewerCount) : "—"}
-                </span>
+                    {viewerCount !== undefined && compactCount(viewerCount)}
+                </button>
                 <button
                     type="button"
                     onClick={onOpenSettings}

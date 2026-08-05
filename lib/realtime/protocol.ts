@@ -47,7 +47,12 @@ export type ServerEvent =
   | ({ t: "chat" } & ChatLine)
   // One-shot replay of recent lines, sent only to a just-joined connection
   // (stream-chat rooms keep the last CHAT_HISTORY_MAX in DO storage).
-  | { t: "chat-history"; lines: ChatLine[] };
+  | { t: "chat-history"; lines: ChatLine[] }
+  // Answer to a `members` request. Sent to the ASKING connection only — a
+  // stream-chat room skips continuous presence on purpose (broadcasting a
+  // roster on every join and leave is O(N^2) at fan-out), so the roster is
+  // pulled when someone opens it rather than pushed to everyone forever.
+  | { t: "members"; users: PresenceUser[] };
 
 /** Messages a client sends UP to the room. Relayed to peers; never persisted. */
 export type ClientMessage =
@@ -56,7 +61,9 @@ export type ClientMessage =
   | { t: "event"; name: string; payload: unknown }
   // Send a live stream chat line; the DO stamps sender + id + ts, and resolves
   // `replyTo` (the id of the line being answered) against room history.
-  | { t: "chat"; text: string; replyTo?: string };
+  | { t: "chat"; text: string; replyTo?: string }
+  // "Who's in here?" — answered once, to the asker.
+  | { t: "members" };
 
 /** Max length the DO enforces on a stream chat line. */
 export const CHAT_MAX_LEN = 500;
