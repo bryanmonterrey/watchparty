@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { RailRow, RailRowSkeleton } from "./rail-row";
 import { RailRowMenu } from "./rail-row-menu";
-import { RAIL_ICON_TAB, HOME_TAB_ONLINE } from "./rail-tabs";
+import { RAIL_ICON_TAB, RAIL_TAB_ONLINE } from "./rail-tabs";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 
 // What sits under the rail tabs on the video and live pages.
@@ -15,7 +15,7 @@ import { stableHoverColor } from "@/lib/stable-hover-color";
 //
 //   trending → public videos, most-viewed first
 //   For you  → public videos in the feed's own order (baseScore, then recency)
-//   Live     → stream.listLive, ordered by viewers
+//   Online   → stream.listLive, ordered by viewers
 //   New      → public videos, newest first
 //   Upcoming → nothing. Scheduled streams don't exist yet, so this says so
 //              rather than quietly showing the same list as another tab.
@@ -24,10 +24,7 @@ const SKELETON_COUNT = 6;
 const LIMIT = 20;
 
 export function RailVideoList({ tab, excludePostId }: { tab: string; excludePostId?: string }) {
-    // "Online" is home's label for the same thing the other rails call
-    // "Live" (see rail-tabs). Both resolve here so a rail can use either
-    // wording without a second code path.
-    const isLiveTab = tab === "Live" || tab === HOME_TAB_ONLINE;
+    const isLiveTab = tab === RAIL_TAB_ONLINE;
     const wantsVideos = !isLiveTab && tab !== "Upcoming";
 
     const { data: videoData, isLoading: videosLoading } = trpc.content.getPublicVideos.useQuery(

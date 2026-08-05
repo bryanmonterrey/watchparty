@@ -5,7 +5,7 @@ import { Send2Icon } from "../icons";
 import { useStreamChat } from "@/hooks/use-stream-chat";
 import { MiniProfile } from "@/components/profile/mini-profile-card";
 import { ChatIdentity } from "./chat-identity";
-import { RailTabs, RAIL_ICON_TAB, HOME_TAB_ONLINE } from "@/components/rails/rail-tabs";
+import { RailTabs, RAIL_TABS } from "@/components/rails/rail-tabs";
 import { RailVideoList } from "@/components/rails/rail-video-list";
 import { RailRowSkeleton } from "@/components/rails/rail-row";
 import { RailCard, RAIL_ASIDE, RAIL_INNER } from "@/components/rails/rail-card";
@@ -31,11 +31,7 @@ interface StreamChatProps {
 }
 
 const CHAT_TAB = "Chat";
-// Home's wording, not RAIL_TABS'. "Online" and "Live" are the same tab — see
-// rail-tabs — and on a page that IS a live stream, a tab labelled "Live" reads
-// as "this stream" rather than "other people streaming". Online says who else
-// is on, which is what it lists.
-const TABS = [CHAT_TAB, RAIL_ICON_TAB, HOME_TAB_ONLINE, "New", "Upcoming"];
+const TABS = [CHAT_TAB, ...RAIL_TABS];
 
 // Width and shell come from RailCard now — this rail was a lookalike of home's
 // (loose tabs, unboxed list, 340px) rather than the same thing. See
