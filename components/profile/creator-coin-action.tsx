@@ -37,11 +37,10 @@ import { useTokenLaunch } from "@/hooks/use-token-launch";
 const PILL_BASE =
     "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-2 px-4 text-[15px] font-bold transition-colors active:scale-95";
 const PILL_DRAFT = "border-yellow-400/80 text-yellow-400 hover:bg-yellow-400/10";
-// The entry point wears no border. There's no coin yet, so there's no state for
-// a colour to report — and an outlined pill here read as a third option
-// competing with Follow and Subscribe rather than as an "add" action.
+// The entry point drops the border only — it keeps the draft yellow, since
+// what it opens is a draft.
 const PILL_CREATE =
-    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold text-zinc-200 transition-colors hover:bg-white/5 hover:text-white active:scale-95";
+    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold text-yellow-400 transition-colors hover:bg-yellow-400/10 active:scale-95";
 const PILL_UP = "border-long/80 text-long hover:bg-long/10";
 const PILL_DOWN = "border-short/80 text-short hover:bg-short/10";
 
