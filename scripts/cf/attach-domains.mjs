@@ -1,11 +1,12 @@
-// Re-attach watchparty.xyz + www to the `watchparty` worker (2026-08-06 outage).
+// Move watchparty.xyz + www between the two production workers:
+//   watchparty      — the plain OpenNext Worker (the documented rollback target)
+//   watchparty-app  — the container worker (container/wrangler.jsonc; see the
+//                     deploy-container job in deploy.yml)
 //
-// The domain had been moved to a separate `watchparty-app` script (created
-// 03:25 UTC today, code frozen at 14:51) while every repo/CI deploy updates
-// the script named `watchparty` — so no fix ever reached visitors. The
-// `watchparty` script is fully deployed with the DB fix, has all runtime
-// secrets, and is verified working on its workers.dev URL. This points the
-// domains back at it. Revert = same call with service: "watchparty-app".
+// Written during the 2026-08-06 outage, when the container worker's DB path
+// wedged and the domains were rolled back to `watchparty`. Cutting over to the
+// container again = run the deploy-container workflow, then:
+//   node scripts/cf/attach-domains.mjs watchparty-app
 //
 // Usage: node scripts/cf/attach-domains.mjs
 import fs from "node:fs";
