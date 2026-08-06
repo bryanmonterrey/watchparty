@@ -50,10 +50,21 @@ function isRetryable(err: unknown, query: string): boolean {
     return /^\s*(select|with)\b/i.test(query);
 }
 
-function createClient(connectionString: string) {
+function createClient(connectionString: string, { perRequest = false } = {}) {
     const sql = postgres(connectionString, {
-        max: 5,
-        idle_timeout: 20,
+        // A request-scoped client is never closed, and a live socket or idle
+        // timer is a GC root — so each one stays in memory until its own
+        // timeout fires. With almost no traffic one isolate serves everything
+        // for a long time, so these pile up and the isolate is eventually
+        // killed for exceededMemory, taking whatever request happens to be
+        // running with it (get-session, heartbeat — bystanders, not causes).
+        //
+        // So a request-scoped client holds as little as possible: one socket,
+        // released after two idle seconds. The idle-close race that makes this
+        // risky on its own is absorbed by the retry above, which is why this
+        // is worth doing NOW and wasn't before.
+        max: perRequest ? 1 : 5,
+        idle_timeout: perRequest ? 2 : 20,
         connect_timeout: 10,
         prepare: false, // Supabase pooler / Hyperdrive: no prepared statements
     });
@@ -128,7 +139,7 @@ function hyperdriveConnectionString(): string | undefined {
 
 // Workers path: one client per request (React cache resets between requests).
 const getRequestDb = cache((connectionString: string): Db =>
-    drizzle(createClient(connectionString), { schema }),
+    drizzle(createClient(connectionString, { perRequest: true }), { schema }),
 );
 
 // Off-Workers path: one reused client per process.
