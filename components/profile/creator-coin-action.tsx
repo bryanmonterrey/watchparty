@@ -37,18 +37,19 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 //   live   green or red by 24h change — once it trades, the one thing worth
 //          saying at a glance is which way it's going.
 //
-// Outlined rather than filled throughout: a solid pill competes with Follow and
-// Subscribe for the row's one loud element.
+// Colour alone carries the state — only the live pills take a border, where the
+// ring reads as a price you can act on. Draft and create stay borderless: they
+// carry no price, and a solid pill would compete with Follow and Subscribe for
+// the row's one loud element.
 const PILL_BASE =
-    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-2 px-4 text-[15px] font-bold transition-colors active:scale-95";
-const PILL_DRAFT = "border-yellow-400/80 text-yellow-400 hover:bg-yellow-400/10";
-// The entry point: no border, and twitter2 rather than the draft yellow.
-// Yellow is the colour of a draft that EXISTS; nothing exists yet at this
-// point, so the button is an invitation rather than a status.
-const PILL_CREATE =
-    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold text-twitter2 transition-colors hover:bg-twitter2/10 active:scale-95";
-const PILL_UP = "border-long/80 text-long hover:bg-long/10";
-const PILL_DOWN = "border-short/80 text-short hover:bg-short/10";
+    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold transition-colors active:scale-95";
+const PILL_DRAFT = "text-yellow-400 hover:bg-yellow-400/10";
+// The entry point: twitter2 rather than the draft yellow. Yellow is the colour
+// of a draft that EXISTS; nothing exists yet at this point, so the button is an
+// invitation rather than a status.
+const PILL_CREATE = "text-twitter2 hover:bg-twitter2/10";
+const PILL_UP = "border-2 border-long/80 text-long hover:bg-long/10";
+const PILL_DOWN = "border-2 border-short/80 text-short hover:bg-short/10";
 
 export function CreatorCoinAction({
     userId,
@@ -227,7 +228,7 @@ export function CreatorCoinAction({
                     type="button"
                     onClick={() => setIsEditing(true)}
                     disabled={busy || isLaunching}
-                    className={cn(PILL_CREATE, "disabled:opacity-50")}
+                    className={cn(PILL_BASE, PILL_CREATE, "disabled:opacity-50")}
                 >
                     <CreateIcon className="size-5" strokeWidth={2.5} />
                     {busy || isLaunching ? "Creating…" : "Creator coin"}
