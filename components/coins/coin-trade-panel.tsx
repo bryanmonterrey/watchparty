@@ -28,6 +28,7 @@ import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { showSwapToast } from "@/components/wallet/wallet-drawer/views/swap/swap-transaction-toast";
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { chainLabel } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
@@ -131,6 +132,9 @@ export function CoinTradePanel({
     const [amount, setAmount] = React.useState("");
     const [slippageBps, setSlippageBps] = React.useState(200);
     const [submitting, setSubmitting] = React.useState(false);
+    // "No wallet on this chain yet" gets a dialog (dismissable by clicking
+    // outside), not a toast — it's a setup step, not a transient failure.
+    const [walletDialogOpen, setWalletDialogOpen] = React.useState(false);
     const amountNum = Number(amount) || 0;
     const debouncedAmount = useDebounced(amount, 400);
 
@@ -278,7 +282,15 @@ export function CoinTradePanel({
             }
             setAmount("");
         } catch (error) {
-            swapToast.error((error as Error)?.message || "swap failed");
+            const code = (error as { data?: { code?: string } })?.data?.code;
+            if (code === "PRECONDITION_FAILED") {
+                // No embedded wallet on this chain — a setup step, not a swap
+                // failure. The dialog explains; the toast would just alarm.
+                swapToast.dismiss();
+                setWalletDialogOpen(true);
+            } else {
+                swapToast.error((error as Error)?.message || "swap failed");
+            }
         } finally {
             setSubmitting(false);
         }
@@ -319,7 +331,16 @@ export function CoinTradePanel({
     const presets = side === "buy" ? (isSolana ? BUY_PRESETS_SOL : BUY_PRESETS_EVM) : SELL_PRESETS_PCT;
     const balance = side === "buy" ? nativeBalance : coinBalance;
     const balanceSymbol = side === "buy" ? nativeSymbol : coinSymbol;
-    const quoteError = isEvm && evmQuote.isError ? (evmQuote.error as { message?: string })?.message : null;
+    // The missing-wallet precondition never renders inline — pressing the
+    // action button opens the setup dialog instead. Everything else (no
+    // liquidity, amount too small) is a real quote answer and shows in place.
+    const quoteErrorCode = isEvm && evmQuote.isError
+        ? (evmQuote.error as { data?: { code?: string } })?.data?.code
+        : null;
+    const quoteError =
+        isEvm && evmQuote.isError && quoteErrorCode !== "PRECONDITION_FAILED"
+            ? (evmQuote.error as { message?: string })?.message
+            : null;
     const canSubmit = amountNum > 0 && !submitting && (!isSolana || mintDecimals.data != null);
 
     return (
@@ -457,6 +478,28 @@ export function CoinTradePanel({
                     open market ↗
                 </a>
             )}
+
+            {/* Radix closes this on outside click / escape — exactly the asked-for
+                behaviour. Lives in a portal, so its place in this card is moot. */}
+            <Dialog open={walletDialogOpen} onOpenChange={setWalletDialogOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogTitle>no {chain?.name ?? "chain"} wallet yet</DialogTitle>
+                    <DialogDescription>
+                        trading on {chain?.name ?? "this chain"} uses your embedded multichain wallet, and
+                        this account doesn&apos;t have one set up. open your wallet to create it — your
+                        address on every chain comes from the same phrase.
+                    </DialogDescription>
+                    <Button
+                        onClick={() => {
+                            setWalletDialogOpen(false);
+                            window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT));
+                        }}
+                        className="mt-2 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85"
+                    >
+                        open wallet
+                    </Button>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

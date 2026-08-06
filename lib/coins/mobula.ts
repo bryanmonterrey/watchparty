@@ -197,6 +197,159 @@ function interestingToken(p: MobulaPairRaw): MobulaPairToken | null {
     return t0;
 }
 
+/** The coin page's network slugs (GeckoTerminal vocabulary, what resolveCoin
+ *  stores) → the `blockchain` param Mobula's token endpoints accept. */
+const COIN_NETWORKS: Record<string, string> = {
+    solana: "solana",
+    eth: "ethereum",
+    ethereum: "ethereum",
+    base: "base",
+    polygon_pos: "polygon",
+    polygon: "polygon",
+    bsc: "bsc",
+    bnb: "bsc",
+    avax: "avalanche",
+    avalanche: "avalanche",
+    hyperevm: "hyperevm",
+    arbitrum: "arbitrum",
+    optimism: "optimism",
+};
+
+export function mobulaCoinBlockchain(network: string): string | null {
+    return COIN_NETWORKS[network.toLowerCase()] ?? null;
+}
+
+export interface MobulaTrade {
+    account: string;
+    isBuy: boolean;
+    usdValue: number;
+    tokenAmount: number;
+    /** Unix seconds. */
+    ts: number;
+    txHash: string;
+}
+
+/**
+ * Recent trades for ANY token on any covered chain — what freed the coin
+ * page's trades/holders board from its Solana-only pool reader. REST because
+ * Mobula's websockets are gated to their Growth plan (verified live 2026-08-06:
+ * "WebSocket usage is allowed only on Growth and Enterprise plans"); the tRPC
+ * layer caches this per coin so every viewer shares one upstream hit per window.
+ */
+export async function fetchMobulaTokenTrades(
+    network: string,
+    address: string,
+    limit = 100,
+): Promise<MobulaTrade[] | null> {
+    if (!mobulaEnabled()) return null;
+    const blockchain = mobulaCoinBlockchain(network);
+    if (!blockchain) return null;
+
+    const url = new URL(`${isDemo() ? DEMO_BASE : LIVE_BASE}/2/token/trades`);
+    url.searchParams.set("address", address);
+    url.searchParams.set("blockchain", blockchain);
+    url.searchParams.set("limit", String(limit));
+    // The swap RECIPIENT is the trader — routers/aggregators sit in the middle
+    // of transactionSenderAddress on routed swaps.
+    url.searchParams.set("useSwapRecipient", "true");
+
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (!isDemo()) headers.Authorization = rawKey();
+
+    const res = await fetch(url.toString(), { headers, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`mobula trades ${res.status}`);
+
+    const json = (await res.json()) as {
+        data?: {
+            type?: string;
+            baseTokenAmount?: number;
+            baseTokenAmountUSD?: number;
+            date?: number;
+            swapRecipient?: string;
+            transactionSenderAddress?: string;
+            transactionHash?: string;
+        }[];
+    };
+    return (json.data ?? [])
+        .map((t) => ({
+            account: t.swapRecipient || t.transactionSenderAddress || "",
+            isBuy: t.type === "buy",
+            usdValue: t.baseTokenAmountUSD ?? 0,
+            tokenAmount: t.baseTokenAmount ?? 0,
+            ts: t.date ? Math.floor(t.date / 1000) : 0,
+            txHash: t.transactionHash ?? "",
+        }))
+        .filter((t) => t.account && t.ts > 0);
+}
+
+export interface MobulaTokenSecurity {
+    holdersCount: number | null;
+    securityScore: number | null;
+    top10Pct: number | null;
+    devPct: number | null;
+    snipersPct: number | null;
+    snipersCount: number | null;
+    insidersPct: number | null;
+    insidersCount: number | null;
+    bundlersPct: number | null;
+    bundlersCount: number | null;
+    liquidityBurnPct: number | null;
+    noMintAuthority: boolean | null;
+    isFreezable: boolean | null;
+    buyTaxPct: number | null;
+    sellTaxPct: number | null;
+    honeypotFlag: boolean | null;
+}
+
+/** Holder-quality + contract-safety stats for one token — the MTT-style
+ *  security block. One GET to token/details, heavily cacheable. */
+export async function fetchMobulaTokenSecurity(
+    network: string,
+    address: string,
+): Promise<MobulaTokenSecurity | null> {
+    if (!mobulaEnabled()) return null;
+    const blockchain = mobulaCoinBlockchain(network);
+    if (!blockchain) return null;
+
+    const url = new URL(`${isDemo() ? DEMO_BASE : LIVE_BASE}/2/token/details`);
+    url.searchParams.set("address", address);
+    url.searchParams.set("blockchain", blockchain);
+
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (!isDemo()) headers.Authorization = rawKey();
+
+    const res = await fetch(url.toString(), { headers, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`mobula details ${res.status}`);
+
+    const json = (await res.json()) as { data?: Record<string, unknown> };
+    const d = json.data;
+    if (!d) return null;
+    const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    const sec = (d.security ?? {}) as Record<string, unknown>;
+    const tax = (v: unknown): number | null => {
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    return {
+        holdersCount: num(d.holdersCount),
+        securityScore: num(d.securityScore),
+        top10Pct: num(d.top10HoldingsPercentage),
+        devPct: num(d.devHoldingsPercentage),
+        snipersPct: num(d.snipersHoldingsPercentage),
+        snipersCount: num(d.snipersCount),
+        insidersPct: num(d.insidersHoldingsPercentage),
+        insidersCount: num(d.insidersCount),
+        bundlersPct: num(d.bundlersHoldingsPercentage),
+        bundlersCount: num(d.bundlersCount),
+        liquidityBurnPct: num(d.liquidityBurnPercentage),
+        noMintAuthority: typeof sec.noMintAuthority === "boolean" ? sec.noMintAuthority : null,
+        isFreezable: typeof sec.isFreezable === "boolean" ? sec.isFreezable : null,
+        buyTaxPct: tax(sec.buyTax),
+        sellTaxPct: tax(sec.sellTax),
+        honeypotFlag: typeof sec.isBlacklisted === "boolean" ? sec.isBlacklisted : null,
+    };
+}
+
 /**
  * Chain-wide pairs, for /trade's chain feed.
  *

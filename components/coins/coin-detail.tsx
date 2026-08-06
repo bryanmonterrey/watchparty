@@ -18,13 +18,13 @@ import { ChainBadge } from "@/components/trending/chain-badge";
 import { PinkStarLogo } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
+import { CoinSecurityCard } from "./coin-security-card";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
 import { HomeActionDock } from "@/components/home/home-action-dock";
 import { coinTag, logClient } from "@/lib/client-log";
 import { Squircle } from "@/components/ui/squircle";
-import { RAIL_BORDER } from "@/components/rails/rail-shell";
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
  *  ResolvedCoin — declared here because that module is server-only and this
@@ -335,9 +335,13 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     const [mentionsOnly, setMentionsOnly] = React.useState(false);
     const [friendsOnly, setFriendsOnly] = React.useState(false);
 
-    const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
-        { mint: coin.tokenAddress },
-        { enabled: coin.network === "solana", staleTime: 30_000, refetchInterval: 60_000, retry: 1 },
+    // Every chain, near-live: the server folds all viewers into one upstream
+    // call per 5s window, and this refetch rides that cache — so the board
+    // ticks like a stream without per-client upstream cost. (The old reader
+    // was Solana-only and a minute behind.)
+    const { data: trades = [], isLoading } = trpc.trade.coinTrades.useQuery(
+        { network: coin.network, address: coin.tokenAddress },
+        { staleTime: 4_000, refetchInterval: 5_000, retry: 1 },
     );
 
     const rows = React.useMemo(() => foldTraders(trades, coin.priceUsd), [trades, coin.priceUsd]);
@@ -380,12 +384,11 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
             one path, the divider under the tabs is an ordinary internal
             border-b, which is exactly what it should be.
 
-            RAIL_BORDER is imported rather than re-typed so this hairline and the
-            alerts rail's are literally the same value. */}
+            The hairline (innerBorder={RAIL_BORDER}) is OFF for now per design —
+            restore it there if the table gets its outline back. */}
         <Squircle
             radius={25}
             autoEffects={false}
-            innerBorder={RAIL_BORDER}
             className="flex min-w-0 flex-col overflow-hidden"
         >
             {/* Tab row. Divided by hairlines rather than spacing — the reference
@@ -425,11 +428,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 <span className="px-5 py-3">$mentions</span>
             </div>
 
-            {coin.network !== "solana" ? (
-                <p className="px-4 py-6 text-sm text-zinc-500">
-                    Trader activity is read from the Solana pool. Open the market venue for {chainLabel(coin.network)}.
-                </p>
-            ) : isLoading ? (
+            {isLoading ? (
                 <div className="space-y-px">
                     {Array.from({ length: 6 }).map((_, i) => (
                         <div key={i} className={cn(GRID, "h-[68px]")}>
@@ -618,6 +617,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
         <aside className="pr-0">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 <CoinTradePanel key={coin.id} coin={coin} marketUrl={marketUrl} cardClassName={SWAP_CARD} />
+                <CoinSecurityCard coin={coin} cardClassName={SWAP_CARD} />
             </div>
         </aside>
     );

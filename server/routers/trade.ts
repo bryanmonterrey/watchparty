@@ -11,7 +11,14 @@ import { nanoid } from "nanoid";
 import { withCache } from "@/lib/cache";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { emitLaunchEvent } from "@/lib/coin-feed/emit";
-import { fetchMobulaChainPairs, mobulaEnabled, type MobulaPair } from "@/lib/coins/mobula";
+import {
+    fetchMobulaChainPairs,
+    fetchMobulaTokenTrades,
+    fetchMobulaTokenSecurity,
+    mobulaEnabled,
+    type MobulaPair,
+} from "@/lib/coins/mobula";
+import { resolveTraders } from "@/lib/coins/resolve-traders";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -218,6 +225,49 @@ export const tradeRouter = router({
                     tokens: (rows ?? []).map((p) => pairToTradeToken(input.chain, p)),
                 };
             })
+        ),
+
+    /**
+     * Recent trades for any coin on any covered chain — the coin page's
+     * trades/holders board. Near-live by shared cache: 5s TTL means every
+     * viewer of a coin costs ONE upstream call per window, and the client's 5s
+     * refetch rides it. (True push needs Mobula's Growth-plan websockets or
+     * the Helius indexer — docs/market-data-options.md; the transport can swap
+     * under this same procedure when either lands.)
+     */
+    coinTrades: publicProcedure
+        .input(z.object({ network: z.string(), address: z.string() }))
+        .query(({ input }) =>
+            withCache(`coin:trades:v1:${input.network}:${input.address}`, 5, async () => {
+                const rows = await fetchMobulaTokenTrades(input.network, input.address).catch(() => null);
+                if (!rows?.length) return [];
+                // Same enrichment the old Solana-only reader did: wallets that
+                // belong to someone here render as the person, on every chain —
+                // resolveTraders checks the derived per-chain addresses too.
+                const identities = await resolveTraders([...new Set(rows.map((r) => r.account))]);
+                return rows.map((r) => {
+                    const who = identities.get(r.account);
+                    return {
+                        account: r.account,
+                        username: who?.username ?? null,
+                        avatarUrl: who?.avatarUrl ?? null,
+                        isBuy: r.isBuy,
+                        usdValue: r.usdValue,
+                        tokenAmount: r.tokenAmount,
+                        ts: r.ts,
+                        txHash: r.txHash,
+                    };
+                });
+            })
+        ),
+
+    /** Holder-quality + contract-safety block for one coin. Cached 120s. */
+    coinSecurity: publicProcedure
+        .input(z.object({ network: z.string(), address: z.string() }))
+        .query(({ input }) =>
+            withCache(`coin:security:v1:${input.network}:${input.address}`, 120, () =>
+                fetchMobulaTokenSecurity(input.network, input.address).catch(() => null)
+            )
         ),
 
     /**
