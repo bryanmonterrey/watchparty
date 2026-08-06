@@ -281,7 +281,24 @@ export const tradeRouter = router({
                 .from(tokens)
                 .where(and(eq(tokens.creatorId, input.userId), eq(tokens.isCreatorCoin, true)))
                 .limit(1);
-            return row ?? null;
+            if (!row) return null;
+
+            // A creator coin's art TRACKS the creator's avatar until it mints.
+            //
+            // It isn't stored on the draft at all (see createCreatorCoin), so
+            // changing your picture changes the coin — which is what a coin
+            // that represents a person should do. Launching freezes it: from
+            // then on the row carries its own imageUrl and this resolves to
+            // nothing, because the mint's metadata can't be edited and the app
+            // must not disagree with it.
+            if (row.imageUrl) return row;
+
+            const [creator] = await db
+                .select({ avatar: user.avatar_url })
+                .from(user)
+                .where(eq(user.id, input.userId))
+                .limit(1);
+            return { ...row, imageUrl: creator?.avatar ?? null };
         }),
 
     /**
@@ -328,9 +345,11 @@ export const tradeRouter = router({
                     ticker: input.ticker.toUpperCase(),
                     name: input.name?.trim() || input.ticker.toUpperCase(),
                     description: input.description,
-                    // Resolved server-side, like the content coins: a coin that
-                    // mints imageless keeps it forever.
-                    imageUrl: input.imageUrl || ctx.user.avatar_url || undefined,
+                    // Deliberately NOT defaulted to the avatar: a draft with no
+                    // stored image is what lets getCreatorCoin resolve the
+                    // creator's CURRENT one, so the coin tracks their picture
+                    // until the launch freezes it.
+                    imageUrl: input.imageUrl || undefined,
                     creatorFeePercent: input.creatorFeePercent,
                     status: "draft",
                     earningsEnabled: true,
@@ -410,6 +429,11 @@ export const tradeRouter = router({
                     tokenAddress: input.tokenAddress,
                     poolAddress: input.poolAddress,
                     status: "live",
+                    // Freeze the art. Up to now the draft stored none and the
+                    // avatar was resolved on read; the mint has just baked one
+                    // in permanently, so the row has to stop tracking and hold
+                    // exactly what was minted.
+                    imageUrl: sql`coalesce(${tokens.imageUrl}, ${ctx.user.avatar_url ?? null})`,
                 })
                 .where(and(
                     eq(tokens.creatorId, ctx.user.id),
@@ -458,12 +482,33 @@ export const tradeRouter = router({
         }))
         .mutation(async ({ input }) => {
             const [row] = await db
-                .select({ id: tokens.id, status: tokens.status })
+                .select({
+                    id: tokens.id,
+                    status: tokens.status,
+                    imageUrl: tokens.imageUrl,
+                    isCreatorCoin: tokens.isCreatorCoin,
+                    creatorId: tokens.creatorId,
+                })
                 .from(tokens)
                 .where(eq(tokens.id, input.tokenId))
                 .limit(1);
             if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Coin not found" });
             if (row.status === "live") return { activated: false, alreadyLive: true };
+
+            // A creator coin's draft stores no art — getCreatorCoin resolves the
+            // creator's avatar on read so the coin tracks their picture. The
+            // mint is about to bake one in permanently, so freeze it here too:
+            // read-time tracking must stop the moment it goes live, or the app
+            // would drift away from the metadata the next time they change it.
+            let frozenImage: string | null = null;
+            if (row.isCreatorCoin && !row.imageUrl && row.creatorId) {
+                const [creator] = await db
+                    .select({ avatar: user.avatar_url })
+                    .from(user)
+                    .where(eq(user.id, row.creatorId))
+                    .limit(1);
+                frozenImage = creator?.avatar ?? null;
+            }
 
             // On-chain proof: the pool must exist and be for this mint.
             const [{ DynamicBondingCurveClient }, { Connection }] = await Promise.all([
@@ -485,6 +530,7 @@ export const tradeRouter = router({
                     poolAddress: input.poolAddress,
                     status: "live",
                     phase: "new",
+                    ...(frozenImage ? { imageUrl: frozenImage } : {}),
                     updatedAt: new Date(),
                 })
                 .where(and(eq(tokens.id, input.tokenId), eq(tokens.status, "draft")))
