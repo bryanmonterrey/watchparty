@@ -25,6 +25,60 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "fallback_key");
 
+// Resend permanently suppresses an address account-wide after one hard bounce,
+// and a send to a suppressed address still returns a normal id with no `error`
+// — so the OTP silently vanishes while the UI reports the code was sent. One
+// historical bounce (typo'd signup, a mailbox that was full that day, a dead
+// work address) therefore locks the account out of email login forever, with
+// nothing in the logs. Requesting a login code is an explicit ask for mail, so
+// clear any stale suppression first.
+//
+// Tradeoff: if the address is genuinely dead this re-bounces on each attempt,
+// which costs sending reputation. That's bounded by the OTP rate limit, and is
+// the better failure than a permanent silent lockout.
+async function clearResendSuppression(email: string): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  const headers = { Authorization: `Bearer ${key}` };
+  try {
+    // NOTE: `?email=` is accepted but NOT honoured — Resend returns the whole
+    // list regardless (verified 2026-08-06). It's sent anyway in case that's
+    // ever fixed, but the client-side filter below is load-bearing, not a
+    // belt-and-braces check: without it this deletes every suppression on the
+    // account on every login. Do not "simplify" it away.
+    const res = await fetch(
+      `https://api.resend.com/suppressions?limit=100&email=${encodeURIComponent(email)}`,
+      { headers },
+    );
+    if (!res.ok) return;
+    const body = (await res.json()) as {
+      data?: { id: string; email: string }[];
+      has_more?: boolean;
+    };
+    const matches = (body.data ?? []).filter(
+      (s) => s.email?.toLowerCase() === email.toLowerCase(),
+    );
+    if (!matches.length && body.has_more) {
+      // Unfiltered list is longer than one page, so the address may be further
+      // down and we'd silently fail to clear it. Log rather than paginate the
+      // whole account inside a login request.
+      console.warn(
+        `Resend suppression list exceeds one page; could not confirm ${email} is unsuppressed`,
+      );
+    }
+    for (const s of matches) {
+      await fetch(`https://api.resend.com/suppressions/${s.id}`, {
+        method: "DELETE",
+        headers,
+      });
+      console.log(`Cleared Resend suppression for ${email} (${s.id})`);
+    }
+  } catch (err) {
+    // Never block a login on cleanup — fall through and attempt the send.
+    console.error("Resend suppression cleanup failed:", err);
+  }
+}
+
 const config = {
   baseURL: process.env.NEXT_PUBLIC_AUTH_URL ?? "http://localhost:3001/api/auth",
   basePath: "/api/auth",
@@ -204,7 +258,8 @@ export const auth = betterAuth({
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
         if (process.env.RESEND_API_KEY) {
-          const { error } = await resend.emails.send({
+          await clearResendSuppression(email);
+          const { data, error } = await resend.emails.send({
             from: "Watchparty <login@watchparty.xyz>",
             to: email,
             subject: "Your sign in code",
@@ -221,6 +276,9 @@ export const auth = betterAuth({
             console.error("Resend error:", JSON.stringify(error));
             throw new Error(`OTP email failed: ${error.message}`);
           }
+          // A suppressed send looks identical to a successful one here, so log
+          // the id — it's the only handle for tracing "I never got the code".
+          console.log(`OTP email queued for ${email}: ${data?.id}`);
         } else {
           // Dev fallback when no Resend key is configured.
           console.log(`\n\n[DEV] OTP code for ${email}: ${otp}\n\n`);
