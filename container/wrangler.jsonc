@@ -12,6 +12,11 @@
     {
       "class_name": "NextApp",
       "image": "./Dockerfile",
+      // The build context is the REPO ROOT, not this folder. Without it the
+      // very first COPY fails with "/package.json not found": wrangler defaults
+      // the context to the Dockerfile's directory, and everything the image
+      // needs — package.json, the lockfile, the app itself — lives a level up.
+      "image_build_context": "../",
       // 4 GiB / half a vCPU. The Worker this replaces had 128 MB, and was
       // being killed for exceededMemory at near-zero traffic.
       "instance_type": "standard-1",

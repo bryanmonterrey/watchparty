@@ -25,13 +25,16 @@ ENV BUILD_TARGET=container
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# NEXT_PUBLIC_* values are inlined into the client bundle at build time, so the
-# env file has to be present for THIS step. It stays in the build stage — the
-# runtime image below never copies it, so no secret is baked into a shipped
-# layer. Everything the server needs at runtime arrives from the Worker
-# instead (see envVars in ../src/index.ts).
-RUN --mount=type=secret,id=dotenv,target=/app/.env \
-    NODE_OPTIONS=--max-old-space-size=6144 npx next build
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time, so
+# .env has to be readable HERE — CI restores it from DOTENV_PRODUCTION before
+# the build, and `next build` picks it up on its own.
+#
+# It only ever exists in this stage. The runtime stage below starts from a
+# clean base and copies just the built output, so no env file is in the shipped
+# image. (A build secret would be tidier still, but wrangler's image build has
+# no way to pass one.) Everything the server needs at RUNTIME arrives from the
+# Worker instead — see envVars in ../src/index.ts.
+RUN NODE_OPTIONS=--max-old-space-size=6144 npx next build
 
 # ── runtime ─────────────────────────────────────────────────────────────────
 FROM --platform=linux/amd64 node:22-slim AS runtime

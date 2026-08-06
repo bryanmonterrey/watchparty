@@ -7,9 +7,18 @@ node_modules
 mobile
 realtime
 cron
+container
 docs
-scripts
+archive
 public/videos
 *.log
-.env*
-!.env.production
+
+# NOT `.env` — the build needs it, because NEXT_PUBLIC_* values are inlined
+# into the client bundle at build time and `next build` reads that file itself.
+# It exists only in the build stage; the runtime stage starts from a clean base
+# and copies just the compiled output, so no env file is in the shipped image.
+# Excluding it (which this file used to) would have silently produced a bundle
+# with empty NEXT_PUBLIC_ values — including the base URL the RPC proxy needs.
+.env.local
+.env.production.local
+.env.example
