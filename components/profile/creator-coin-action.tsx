@@ -177,13 +177,14 @@ export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner
                     {busy || isLaunching ? (
                         "Creating…"
                     ) : (
-                        <>
-                            {/* The mark for a coin, sitting where a ticker's $
-                                would — the live and draft states of this same
-                                button render $TICKER. */}
+                        // Its own flex box with no gap, so the button's gap-1.5
+                        // still separates the plus from the label but the mark
+                        // sits flush against the word — "$Creator", the way a
+                        // ticker reads.
+                        <span className="flex items-center">
                             <HugeiconsIcon icon={DollarSignIcon} className="size-4" strokeWidth={2.5} />
                             Creator coin
-                        </>
+                        </span>
                     )}
                 </button>
                 <TickerEditDialog
