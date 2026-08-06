@@ -1,84 +1,214 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Globe02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { TokenColumn } from "./token-column";
 import { TokenColumnHeader } from "./token-column-header";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
+import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
+import { CHAIN_OPTIONS, type TradeChain } from "./chains";
+import {
+    MemescopeFilterDialog,
+    applyMemescopeFilters,
+    filtersActive,
+    NO_FILTERS,
+    type MemescopeFilters,
+} from "./memescope-filter-dialog";
 import type { TokenStatus, TradeToken } from "./types";
 
 const EMPTY: Record<TokenStatus, TradeToken[]> = { new: [], migrating: [], migrated: [] };
 
+/** On-curve past this = the Migrating column ("final stretch"); under it the
+ *  coin is still a fresh launch and lives in New. Matches the ring's own
+ *  near-migration color flip at 80. */
+const FINAL_STRETCH_AT = 70;
+
+/** The sticky header's height: 52px app-header spacer + 48px chain-picker row
+ *  + 52px column headers + the row gaps. The columns' top pusher must match or
+ *  rows start underneath the glass. */
+const HEADER_PUSH_PX = 168;
+
 export function TradeFeed() {
-  const utils = trpc.useUtils();
-  const { quickBuy, buyingId, amountSol } = useQuickBuy();
-  // Read path is cache-only on the server; refetch is a cheap fallback while
-  // the realtime push (below) handles instant updates from the stream worker.
-  const { data = EMPTY, isLoading } = trpc.trade.getFeed.useQuery(undefined, {
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
-  });
+    const utils = trpc.useUtils();
+    const { quickBuy, buyingId, amountSol } = useQuickBuy();
+    // "all" is the default — memescope is one board over every chain we route,
+    // and the picker narrows it when you care about a single ecosystem.
+    const [chain, setChain] = useState<"all" | TradeChain>("all");
+    const [filters, setFilters] = useState<MemescopeFilters>(NO_FILTERS);
+    const [filterOpen, setFilterOpen] = useState(false);
 
-  // Realtime: the token-stream worker writes cached market data → Postgres
-  // change → push to every client. One subscription, no per-user polling.
-  useEffect(() => {
-    let channel: ReturnType<ReturnType<typeof getRealtimeClient>["channel"]> | null = null;
-    let cancelled = false;
-    (async () => {
-      const client = getRealtimeClient();
-      try {
-        await authenticateRealtimeClient();
-      } catch {
-        return; // anon users fall back to the refetch interval
-      }
-      if (cancelled) return;
-      channel = client
-        .channel("trade:tokens")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "tokens" },
-          () => utils.trade.getFeed.invalidate()
-        )
-        .subscribe();
-    })();
-    return () => {
-      cancelled = true;
-      if (channel) getRealtimeClient().removeChannel(channel);
+    const wantsInHouse = chain === "all" || chain === "solana";
+    // Read path is cache-only on the server; refetch is a cheap fallback while
+    // the realtime push (below) handles instant updates from the stream worker.
+    const { data = EMPTY, isLoading } = trpc.trade.getFeed.useQuery(undefined, {
+        refetchInterval: 15_000,
+        refetchOnWindowFocus: true,
+        enabled: wantsInHouse,
+    });
+
+    // The chain-wide newest-pairs list per selected chain — ONE list serves all
+    // three columns (fresh curves → New, high bonding → Migrating, bonded or
+    // plain DEX pairs → Migrated), so "all chains" costs one cached call per
+    // chain, not one per column.
+    const chainIds = chain === "all" ? CHAIN_OPTIONS.map((c) => c.id) : [chain];
+    const external = trpc.useQueries((t) =>
+        chainIds.map((c) =>
+            t.trade.chainFeed({ chain: c, list: "new" }, { staleTime: 60_000, refetchInterval: 120_000 }),
+        ),
+    );
+
+    // Realtime: the token-stream worker writes cached market data → Postgres
+    // change → push to every client. One subscription, no per-user polling.
+    useEffect(() => {
+        let channel: ReturnType<ReturnType<typeof getRealtimeClient>["channel"]> | null = null;
+        let cancelled = false;
+        (async () => {
+            const client = getRealtimeClient();
+            try {
+                await authenticateRealtimeClient();
+            } catch {
+                return; // anon users fall back to the refetch interval
+            }
+            if (cancelled) return;
+            channel = client
+                .channel("trade:tokens")
+                .on(
+                    "postgres_changes",
+                    { event: "*", schema: "public", table: "tokens" },
+                    () => utils.trade.getFeed.invalidate()
+                )
+                .subscribe();
+        })();
+        return () => {
+            cancelled = true;
+            if (channel) getRealtimeClient().removeChannel(channel);
+        };
+    }, [utils]);
+
+    // Merge in-house launches with the chain-wide pairs, dedupe by mint with
+    // in-house winning (it knows the creator/live state), then split by
+    // lifecycle. Cheap enough to run per render — a few hundred rows.
+    const inHouse = wantsInHouse ? data : EMPTY;
+    const inHouseMints = new Set(
+        [...inHouse.new, ...inHouse.migrating, ...inHouse.migrated]
+            .map((t) => t.tokenAddress)
+            .filter(Boolean),
+    );
+    const externalRows = external
+        .flatMap((q) => q.data?.tokens ?? [])
+        .filter((t) => !inHouseMints.has(t.tokenAddress));
+    const byNewest = (a: TradeToken, b: TradeToken) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0);
+    const columns: Record<TokenStatus, TradeToken[]> = {
+        new: applyMemescopeFilters(
+            [
+                ...inHouse.new,
+                ...externalRows.filter((t) => t.status === "migrating" && t.bondingProgress < FINAL_STRETCH_AT),
+            ].sort(byNewest),
+            filters,
+        ),
+        migrating: applyMemescopeFilters(
+            [
+                ...inHouse.migrating,
+                ...externalRows.filter((t) => t.status === "migrating" && t.bondingProgress >= FINAL_STRETCH_AT),
+            ].sort((a, b) => b.bondingProgress - a.bondingProgress),
+            filters,
+        ),
+        migrated: applyMemescopeFilters(
+            [...inHouse.migrated, ...externalRows.filter((t) => t.status === "migrated")].sort(byNewest),
+            filters,
+        ),
     };
-  }, [utils]);
+    const loading = (wantsInHouse && isLoading) || external.some((q) => q.isLoading);
 
-  return (
-    <div className="h-full relative" style={{ transform: "translateZ(0)" }}>
-      {/* FIXED GLASS HEADER */}
-      <div className="sticky w-full top-0 left-0 right-0 z-40 flex items-center justify-center flex-col pt-2 pb-0 space-y-3">
-        <div className="absolute inset-0 -z-10 pointer-events-none" />
-        {/* Spacer clears the app header (logo + menu overlay this row). The
-            quick-buy amount selector that used to sit here collided with
-            them — removed for now; rows quick-buy at the hook's amount. */}
-        <div className="w-full h-[52px]" />
-        <div className="flex-1 w-full grid grid-cols-3 gap-1 px-2">
-          <TokenColumnHeader status="new" tokensCount={data.new.length} />
-          <TokenColumnHeader status="migrating" tokensCount={data.migrating.length} />
-          <TokenColumnHeader status="migrated" tokensCount={data.migrated.length} />
+    const activeChain = chain === "all" ? null : CHAIN_OPTIONS.find((c) => c.id === chain);
+    const openFilter = () => setFilterOpen(true);
+    const active = filtersActive(filters);
+
+    return (
+        <div className="h-full relative" style={{ transform: "translateZ(0)" }}>
+            {/* FIXED GLASS HEADER */}
+            <div className="sticky w-full top-0 left-0 right-0 z-40 flex items-center justify-center flex-col pt-2 pb-0 space-y-3">
+                <div className="absolute inset-0 -z-10 pointer-events-none" />
+                {/* Spacer clears the app header (logo + menu overlay this row). */}
+                <div className="w-full h-[52px]" />
+                {/* Chain picker — left-aligned; the top-right belongs to the app
+                    header's wallet cluster. */}
+                <div className="flex w-full items-center px-2">
+                    <GooDropdown
+                        align="start"
+                        width={200}
+                        gap={8}
+                        fill={GOO_PANEL_FILL}
+                        triggerAriaLabel="Pick a chain"
+                        triggerClassName={GOO_TRIGGER_PILL}
+                        trigger={
+                            <>
+                                {activeChain ? (
+                                    <activeChain.Icon className="size-4" />
+                                ) : (
+                                    <HugeiconsIcon icon={Globe02Icon} className="size-4" strokeWidth={2} />
+                                )}
+                                {activeChain?.label ?? "all chains"}
+                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
+                            </>
+                        }
+                        items={[
+                            gooMenuItem({
+                                key: "all",
+                                label: "all chains",
+                                icon: <HugeiconsIcon icon={Globe02Icon} className="size-4" strokeWidth={2} />,
+                                onClick: () => setChain("all"),
+                                right: chain === "all"
+                                    ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
+                                    : undefined,
+                            }),
+                            ...CHAIN_OPTIONS.map((c) =>
+                                gooMenuItem({
+                                    key: c.id,
+                                    label: c.label,
+                                    icon: <c.Icon className="size-4" />,
+                                    onClick: () => setChain(c.id),
+                                    right: chain === c.id
+                                        ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
+                                        : undefined,
+                                }),
+                            ),
+                        ]}
+                    />
+                </div>
+                <div className="flex-1 w-full grid grid-cols-3 gap-1 px-2">
+                    <TokenColumnHeader status="new" tokensCount={columns.new.length} onFilter={openFilter} filterActive={active} />
+                    <TokenColumnHeader status="migrating" tokensCount={columns.migrating.length} onFilter={openFilter} filterActive={active} />
+                    <TokenColumnHeader status="migrated" tokensCount={columns.migrated.length} onFilter={openFilter} filterActive={active} />
+                </div>
+            </div>
+
+            <div className="absolute inset-0 grid grid-cols-3 gap-1 px-2 lg:px-2 overflow-hidden">
+                {(["new", "migrating", "migrated"] as const).map((status) => (
+                    <TokenColumn
+                        key={status}
+                        status={status}
+                        tokens={columns[status]}
+                        loading={loading}
+                        quickBuy={quickBuy}
+                        buyingId={buyingId}
+                        amountSol={amountSol}
+                        headerPushPx={HEADER_PUSH_PX}
+                    />
+                ))}
+            </div>
+
+            <MemescopeFilterDialog
+                open={filterOpen}
+                onOpenChange={setFilterOpen}
+                filters={filters}
+                onApply={setFilters}
+            />
         </div>
-      </div>
-
-      <div className="absolute inset-0 grid grid-cols-3 gap-1 px-2 lg:px-2 overflow-hidden">
-        {(["new", "migrating", "migrated"] as const).map((status) => (
-          <TokenColumn
-            key={status}
-            status={status}
-            tokens={data[status]}
-            loading={isLoading}
-            quickBuy={quickBuy}
-            buyingId={buyingId}
-            amountSol={amountSol}
-          />
-        ))}
-      </div>
-    </div>
-  );
+    );
 }
 
 export type { TokenStatus };

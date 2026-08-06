@@ -91,12 +91,18 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
     const [copied, setCopied] = useState(false);
 
     // Token page resolves by tokenAddress (live) or id — either works via /coin.
+    // Chain-wide rows carry their chain in the URL: the same address can live
+    // on several chains, which is exactly why /coin/<chain>/<address> exists.
     const slug = token.tokenAddress || token.id;
+    const href = token.external ? `/coin/${token.chain}/${token.tokenAddress}` : `/coin/${slug}`;
+    // The swap engine only speaks Solana: external Solana coins quick-buy by
+    // mint like any in-house coin, EVM rows just open their coin page.
+    const canBuy = !token.external || token.chain === "solana";
     // Token page is server-rendered, so warm the route's RSC payload on hover
     // intent (120ms rest, once per row — cheap even on a dense board).
-    const rowPrefetch = useHoverPrefetch(() => router.prefetch(`/coin/${slug}`));
+    const rowPrefetch = useHoverPrefetch(() => router.prefetch(href));
     // Mouse-only pointerdown navigation — commits the nav on press.
-    const instantNav = useInstantNav(() => `/coin/${slug}`);
+    const instantNav = useInstantNav(() => href);
 
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -113,11 +119,11 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
     const handleBuy = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!quickBuy) {
-            router.push(`/coin/${slug}`);
+            router.push(href);
             return;
         }
         const result = await quickBuy(token);
-        if (result === "no-mint") router.push(`/coin/${slug}`);
+        if (result === "no-mint") router.push(href);
     };
 
     const up = token.changePercent >= 0;
@@ -128,7 +134,7 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
             onPointerDown={instantNav.onPointerDown}
             onClick={() => {
                 if (instantNav.consumedClick()) return;
-                router.push(`/coin/${slug}`);
+                router.push(href);
             }}
             className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
         >
@@ -192,15 +198,19 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
                 </div>
             </div>
 
-            {/* Buy — quick-buy in place when wired, else the token page */}
-            <button
-                onClick={handleBuy}
-                disabled={buying}
-                className="flex cursor-pointer items-center gap-1.5 self-center rounded-full bg-white/10 px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-default"
-            >
-                <SolanaIcon className="size-3.5" />
-                {buying ? "Buying…" : quickBuy && amountSol ? `Buy ${amountSol}` : "Buy"}
-            </button>
+            {/* Buy — quick-buy in place when wired, else the token page. EVM
+                rows have no in-row buy (the engine is Solana-only); the row
+                itself opens the coin page, where the trade panel routes them. */}
+            {canBuy && (
+                <button
+                    onClick={handleBuy}
+                    disabled={buying}
+                    className="flex cursor-pointer items-center gap-1.5 self-center rounded-full bg-white/10 px-4 py-2 text-[13px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-default"
+                >
+                    <SolanaIcon className="size-3.5" />
+                    {buying ? "Buying…" : quickBuy && amountSol ? `Buy ${amountSol}` : "Buy"}
+                </button>
+            )}
         </div>
     );
 }

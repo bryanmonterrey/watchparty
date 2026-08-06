@@ -13,9 +13,13 @@ const COLUMN_LABELS: Record<TokenStatus, string> = {
 export interface TokenColumnHeaderProps {
   status: TokenStatus;
   tokensCount: number;
+  /** Opens the board's filter dialog (shared across columns). */
+  onFilter?: () => void;
+  /** A filter is applied — the button wears a dot so the narrowing is visible. */
+  filterActive?: boolean;
 }
 
-export function TokenColumnHeader({ status, tokensCount }: TokenColumnHeaderProps) {
+export function TokenColumnHeader({ status, tokensCount, onFilter, filterActive }: TokenColumnHeaderProps) {
   return (
     <div className="relative w-full h-[52px] flex items-center justify-between pl-4 pr-1 rounded-t-xl transition-colors duration-300">
       <div className="flex items-center gap-3">
@@ -27,8 +31,15 @@ export function TokenColumnHeader({ status, tokensCount }: TokenColumnHeaderProp
         </span>
       </div>
       <div className="flex items-center rounded-full backdrop-blur-sm">
-        <button className="cursor-pointer text-zinc-400 border-none outline-none hover:text-flexwhite bg-soft-gray-10 transition-colors p-2 rounded-full hover:bg-soft-gray-15">
+        <button
+          onClick={onFilter}
+          aria-label="filter coins"
+          className="relative cursor-pointer text-zinc-400 border-none outline-none hover:text-flexwhite bg-soft-gray-10 transition-colors p-2 rounded-full hover:bg-soft-gray-15"
+        >
           <Menu2Icon className="size-6" />
+          {filterActive && (
+            <span className="absolute right-1 top-1 size-2 rounded-full bg-lantern" />
+          )}
         </button>
       </div>
     </div>

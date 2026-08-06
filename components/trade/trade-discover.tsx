@@ -17,16 +17,9 @@ import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { Squircle } from "@/components/ui/squircle";
-import {
-    SolanaIcon,
-    SolanaMarkIcon,
-    EthereumIcon,
-    BaseSquareIcon,
-    PolygonIcon,
-    BnbIcon,
-    HyperliquidIcon,
-} from "@/components/icons";
+import { SolanaIcon } from "@/components/icons";
 import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
+import { CHAIN_OPTIONS, type TradeChain } from "./chains";
 import type { TokenStatus, TradeToken } from "./types";
 
 // Discover: the /trade landing (per the Axiom reference, in watchparty's
@@ -51,24 +44,6 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 type SortKey = "volume" | "marketCap" | "txCount" | "newest";
-
-// The chain picker's set — matches trade.chainFeed's TRADE_CHAINS enum. Every
-// chain here is one Mobula's pairs endpoint actually serves; the wallet-side
-// registry chains it can't (bitcoin, robinhood) are deliberately absent.
-type TradeChain = "solana" | "ethereum" | "base" | "polygon" | "bnb" | "hyperevm";
-
-const CHAIN_OPTIONS: {
-    id: TradeChain;
-    label: string;
-    Icon: (props: { className?: string }) => React.ReactNode;
-}[] = [
-    { id: "solana", label: "Solana", Icon: SolanaMarkIcon },
-    { id: "ethereum", label: "Ethereum", Icon: EthereumIcon },
-    { id: "base", label: "Base", Icon: BaseSquareIcon },
-    { id: "polygon", label: "Polygon", Icon: PolygonIcon },
-    { id: "bnb", label: "BNB Chain", Icon: BnbIcon },
-    { id: "hyperevm", label: "HyperEVM", Icon: HyperliquidIcon },
-];
 
 // Each tab's natural ordering; the sort dropdown can override it afterwards.
 const TAB_SORT: Record<Tab, SortKey> = {

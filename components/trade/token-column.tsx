@@ -13,6 +13,9 @@ interface TokenColumnProps {
   quickBuy?: (t: TradeToken) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
   buyingId?: string | null;
   amountSol?: number;
+  /** Height of the board's sticky header — the column's top pusher must match
+   *  or rows start underneath the glass. Owned by trade-feed.tsx. */
+  headerPushPx?: number;
 }
 
 const EMPTY_COPY: Record<TokenStatus, { title: string; hint: string }> = {
@@ -21,11 +24,11 @@ const EMPTY_COPY: Record<TokenStatus, { title: string; hint: string }> = {
   migrated: { title: "No graduates yet", hint: "Coins that complete their curve appear here." },
 };
 
-export function TokenColumn({ status, tokens, loading, className, quickBuy, buyingId, amountSol }: TokenColumnProps) {
+export function TokenColumn({ status, tokens, loading, className, quickBuy, buyingId, amountSol, headerPushPx = 116 }: TokenColumnProps) {
   return (
     <div className={cn("h-full overflow-y-auto scroll-smooth hidden-scrollbar mt-2", className)}>
       {/* Pushes initial content below the fixed header; scrolls away as you go up */}
-      <div className="h-[116px] shrink-0" />
+      <div className="shrink-0" style={{ height: headerPushPx }} />
       <Squircle asChild radius={10} autoEffects={false}>
         <div className="bg-panel/50">
           {loading ? (
