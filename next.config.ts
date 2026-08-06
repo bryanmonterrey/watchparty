@@ -14,6 +14,25 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
+    // Barrel-file packages, rewritten to per-module imports at build time.
+    //
+    // `import { UserIcon } from "@hugeicons/core-free-icons"` reads like one
+    // icon; without this it is an import of the package's index, and the
+    // package is 125 MB (lucide is another 40). Every module that touches one
+    // icon can drag the barrel behind it — into the CLIENT bundle and, because
+    // client components are still server-rendered, into the WORKER bundle too.
+    // That worker is 41 MB and gets parsed by every isolate before it serves
+    // anything, which is what leaves so little of the 128 MB memory ceiling
+    // that /api/auth/get-session and user.heartbeat were being killed for
+    // exceededMemory.
+    //
+    // Next ships this transform for exactly this shape. Measure the effect on
+    // the deploy's "Total Upload / gzip" line, not by eye.
+    optimizePackageImports: [
+      "@hugeicons/core-free-icons",
+      "@hugeicons/react",
+      "lucide-react",
+    ],
     // NO `viewTransition` flag — 16.3 DELETED it (vercel/next.js#96098) and
     // tsc rejects it outright. It had already gone inert: nothing in the
     // runtime read it. View transitions still work here because React's
