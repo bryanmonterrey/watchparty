@@ -8,6 +8,7 @@ import { LevelBadge } from "./level-badge";
 import { BadgeStrip } from "./badge-strip";
 import { FollowersFollowingDialog } from "./followers-following-dialog";
 import { ProfileHeaderActions } from "./profile-header-actions";
+import { CreatorCoinAction } from "./creator-coin-action";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -145,6 +146,19 @@ export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameCl
                         </button>
                     </div>
                 )}
+
+                {/* The coin sits under the follow counts rather than in the
+                    action row: it describes the identity (alongside who follows
+                    it) rather than being something you do to it. Renders
+                    nothing when there's no coin and it isn't yours. */}
+                <div className="mt-2 flex">
+                    <CreatorCoinAction
+                        userId={user.id}
+                        isOwner={isOwner}
+                        creatorWallet={user.wallet_address ?? null}
+                        creatorAvatar={user.avatar_url ?? null}
+                    />
+                </div>
 
                 <FollowersFollowingDialog
                     userId={user.id}

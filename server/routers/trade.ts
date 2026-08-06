@@ -275,28 +275,13 @@ export const tradeRouter = router({
      */
     getCreatorCoin: publicProcedure
         .input(z.object({ userId: z.string() }))
-        .query(async ({ ctx, input }) => {
+        .query(async ({ input }) => {
             const [row] = await db
                 .select()
                 .from(tokens)
                 .where(and(eq(tokens.creatorId, input.userId), eq(tokens.isCreatorCoin, true)))
                 .limit(1);
-            if (!row) return null;
-
-            // A DRAFT creator coin is visible only to its creator.
-            //
-            // For a post's or stream's coin a draft is public on purpose —
-            // anyone can launch it, and the first buy IS the launch, so showing
-            // it is the invitation. None of that applies here: only the creator
-            // may launch this one. To everyone else a draft would be a coin with
-            // no mint, nothing to buy and no action available — it reads as
-            // tradeable while being inert.
-            //
-            // Hidden server-side rather than in the component so it can't leak
-            // through another caller.
-            if (row.status !== "live" && ctx.user?.id !== input.userId) return null;
-
-            return row;
+            return row ?? null;
         }),
 
     /**
@@ -306,10 +291,13 @@ export const tradeRouter = router({
      * hiding a button: a creator coin is minted against `ctx.user.id`, full
      * stop. There is no userId input to spoof — the identity IS the session.
      *
-     * That is the opposite of every other coin on watchparty. A post's or
-     * stream's coin can be launched by ANYONE, because the first buy is the
-     * launch and that openness is the point. A coin that represents a person
-     * cannot work that way; a stranger minting "your" coin is impersonation.
+     * CREATING is creator-only; LAUNCHING is not. The split is deliberate:
+     * authoring the coin — its ticker, name, fee — is what makes it represent a
+     * person, and a stranger doing that would be impersonation. The first buy
+     * is just a purchase of something the creator already authored, so it
+     * follows the site-wide rule (`activateToken`): anyone can be the first
+     * buyer, they get the first tokens, and the creator keeps the pool
+     * identity and fees either way.
      *
      * One per creator, guaranteed by a partial unique index rather than this
      * pre-check alone — two concurrent calls would both pass the check, and the

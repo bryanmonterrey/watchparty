@@ -17,7 +17,6 @@ import { GiftSubsButton } from "@/components/browse/gift-subs-button";
 import { GiftPremiumButton } from "@/components/browse/gift-premium-button";
 import { MessageButton } from "@/components/browse/message-button";
 import { TipModal } from "@/components/browse/tip-modal";
-import { CreatorCoinAction } from "./creator-coin-action";
 import { EditProfileDialog } from "./edit-profile-dialog";
 
 // Shared header button skin: soft-gray fill, hairline border, pill. Icon
@@ -150,11 +149,8 @@ export function ProfileHeaderActions({ user, isOwner }: ProfileHeaderActionsProp
 
     return (
         <div className="flex items-center gap-2 shrink-0">
-            {/* The creator's coin leads the row on both views: it's the thing
-                this profile is worth money for. Renders nothing on someone
-                else's profile when they have no coin. */}
-            <CreatorCoinAction userId={user.id} isOwner={isOwner} />
-
+            {/* The creator's coin used to lead this row; it now lives under the
+                follow counts in ProfileHeader. */}
             {!isOwner ? (
                 // Left to right: gift premium (icon-only), message, send,
                 // follow, [subscribe/gift subs], then the dots LAST — the

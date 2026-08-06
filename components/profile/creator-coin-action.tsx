@@ -10,19 +10,23 @@ import { cn } from "@/lib/utils";
 import { appToast } from "@/components/app-ui/app-toast";
 import { TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/components/browse/token-launch";
 import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
+import { CreatorCoinLaunchDialog } from "./creator-coin-launch-dialog";
 import { useTokenLaunch } from "@/hooks/use-token-launch";
 
 // The creator's own coin, on their profile.
 //
 // A creator coin is ABOUT a person: no post behind it, and its content page is
-// this profile. It also inverts the launch rule — a post's or stream's coin can
-// be launched by ANYONE because the first buy IS the launch, but only the
-// creator may launch the coin that represents them. A stranger minting "your"
-// coin is impersonation.
+// this profile. CREATING one is creator-only — the ticker, name and fee are
+// what make it represent someone, and a stranger authoring those is
+// impersonation (enforced in trade.createCreatorCoin, which mints against
+// ctx.user.id and takes no userId to spoof).
 //
-// Enforced in trade.createCreatorCoin / trade.launchCreatorCoin, which mint
-// against ctx.user.id and take no userId to spoof. This component reflects that
-// rule; it never establishes it.
+// LAUNCHING it is not creator-only. The first buy is a purchase of something
+// the creator already authored, so it follows the same rule as every other coin
+// here: anyone can be the first buyer, and the creator keeps the pool identity
+// and fees regardless. Hence two different dialogs — the owner gets
+// TickerEditDialog (edit + launch), a visitor gets CreatorCoinLaunchDialog
+// (first buy only, everything else read-only).
 //
 // THE PILL'S COLOUR IS ITS STATE:
 //
@@ -45,13 +49,25 @@ const PILL_CREATE =
 const PILL_UP = "border-long/80 text-long hover:bg-long/10";
 const PILL_DOWN = "border-short/80 text-short hover:bg-short/10";
 
-export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner: boolean }) {
+export function CreatorCoinAction({
+    userId,
+    isOwner,
+    creatorWallet = null,
+    creatorAvatar = null,
+}: {
+    userId: string;
+    isOwner: boolean;
+    /** Kept as the coin's fee destination when a visitor makes the first buy. */
+    creatorWallet?: string | null;
+    creatorAvatar?: string | null;
+}) {
     const router = useRouter();
     const utils = trpc.useUtils();
     const { launchToken, isLaunching } = useTokenLaunch();
     const { data: coin, isLoading } = trpc.trade.getCreatorCoin.useQuery({ userId });
 
     const [isEditing, setIsEditing] = React.useState(false);
+    const [isLaunchingDraft, setIsLaunchingDraft] = React.useState(false);
     const [busy, setBusy] = React.useState(false);
     const [draft, setDraft] = React.useState<TokenLaunchState>({
         ...DEFAULT_TOKEN_LAUNCH,
@@ -144,10 +160,37 @@ export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner
 
     if (isLoading) return null;
 
-    // Someone else's profile. getCreatorCoin hides drafts from non-creators, so
-    // anything reaching here is live and tradeable.
+    // Someone else's profile.
     if (!isOwner) {
         if (!coin) return null;
+
+        // Their draft. A visitor gets the LAUNCH dialog, never the edit one:
+        // the ticker/name/fee are the creator's authorship and stay read-only,
+        // but the first buy is open to anyone (the buy IS the launch), exactly
+        // like a post's or stream's coin.
+        if (coin.status !== "live") {
+            return (
+                <>
+                    <button
+                        type="button"
+                        onClick={() => setIsLaunchingDraft(true)}
+                        className={cn(PILL_BASE, PILL_DRAFT)}
+                    >
+                        <HugeiconsIcon icon={TradeUpIcon} className="size-5" strokeWidth={2.5} />
+                        ${coin.ticker}
+                    </button>
+                    <CreatorCoinLaunchDialog
+                        open={isLaunchingDraft}
+                        onOpenChange={setIsLaunchingDraft}
+                        coin={coin}
+                        creatorWallet={creatorWallet}
+                        creatorAvatar={creatorAvatar}
+                        onLaunched={() => utils.trade.getCreatorCoin.invalidate({ userId })}
+                    />
+                </>
+            );
+        }
+
         const up = (coin.priceChange24h ?? 0) >= 0;
         return (
             <button
