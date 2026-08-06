@@ -1,0 +1,6 @@
+{
+  "name": "watchparty-dbprobe",
+  "main": "dbprobe-worker.mjs",
+  "compatibility_date": "2026-04-15",
+  "routes": [{ "pattern": "watchparty.xyz/__dbprobe*", "zone_name": "watchparty.xyz" }]
+}

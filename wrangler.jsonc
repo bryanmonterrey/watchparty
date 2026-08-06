@@ -17,15 +17,19 @@
   },
   // Supabase session pooler (DIRECT_URL) fronted by Hyperdrive — the DB client
   // in db/index.ts reads env.HYPERDRIVE.connectionString on Workers.
-  // Config swapped 2026-08-06: the original config (85d170665be54585b8f8124bd9fbb404,
-  // "watchparty-db") wedged internally — every query queued forever while the DB sat
-  // idle — and a config modification did not clear it. Fresh id = fresh pool state.
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "ba858f4c848844f8af5b003f453fd693"
-    }
-  ]
+  // HYPERDRIVE BINDING REMOVED 2026-08-06 (outage): with the binding present the
+  // worker routes queries into Hyperdrive, and every query through it hung
+  // forever (config swap 85d17066…→ba858f4c… and origin changes did not help)
+  // while direct pooler connections stayed healthy. Without the binding,
+  // db/index.ts uses the per-request client against DATABASE_URL (transaction
+  // pooler :6543). Restore the binding only after proving Hyperdrive serves
+  // queries again.
+  // "hyperdrive": [
+  //   {
+  //     "binding": "HYPERDRIVE",
+  //     "id": "ba858f4c848844f8af5b003f453fd693"
+  //   }
+  // ]
   // Added later for ISR/revalidation caching (mirrors the playground16 example):
   //   "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "watchparty-cache" }]
   //   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "watchparty" }]
