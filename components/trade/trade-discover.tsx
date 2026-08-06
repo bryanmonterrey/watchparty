@@ -17,7 +17,15 @@ import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { Squircle } from "@/components/ui/squircle";
-import { SolanaIcon } from "@/components/icons";
+import {
+    SolanaIcon,
+    SolanaMarkIcon,
+    EthereumIcon,
+    BaseSquareIcon,
+    PolygonIcon,
+    BnbIcon,
+    HyperliquidIcon,
+} from "@/components/icons";
 import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
 import type { TokenStatus, TradeToken } from "./types";
 
@@ -43,6 +51,24 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 type SortKey = "volume" | "marketCap" | "txCount" | "newest";
+
+// The chain picker's set — matches trade.chainFeed's TRADE_CHAINS enum. Every
+// chain here is one Mobula's pairs endpoint actually serves; the wallet-side
+// registry chains it can't (bitcoin, robinhood) are deliberately absent.
+type TradeChain = "solana" | "ethereum" | "base" | "polygon" | "bnb" | "hyperevm";
+
+const CHAIN_OPTIONS: {
+    id: TradeChain;
+    label: string;
+    Icon: (props: { className?: string }) => React.ReactNode;
+}[] = [
+    { id: "solana", label: "Solana", Icon: SolanaMarkIcon },
+    { id: "ethereum", label: "Ethereum", Icon: EthereumIcon },
+    { id: "base", label: "Base", Icon: BaseSquareIcon },
+    { id: "polygon", label: "Polygon", Icon: PolygonIcon },
+    { id: "bnb", label: "BNB Chain", Icon: BnbIcon },
+    { id: "hyperevm", label: "HyperEVM", Icon: HyperliquidIcon },
+];
 
 // Each tab's natural ordering; the sort dropdown can override it afterwards.
 const TAB_SORT: Record<Tab, SortKey> = {
@@ -174,6 +200,12 @@ function DiscoverRow({
     const router = useRouter();
     const [copied, setCopied] = useState(false);
     const slug = token.tokenAddress || token.id;
+    // Chain-wide rows carry their chain in the URL — the same address can live
+    // on several chains, which is exactly why /coin/<chain>/<address> exists.
+    const href = token.external ? `/coin/${token.chain}/${token.tokenAddress}` : `/${slug}`;
+    // The swap engine only speaks Solana: external Solana coins quick-buy by
+    // mint like any in-house coin, EVM rows just open their coin page.
+    const canBuy = !token.external || token.chain === "solana";
 
     const copy = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -190,7 +222,7 @@ function DiscoverRow({
     const handleBuy = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const result = await quickBuy(token);
-        if (result === "no-mint") router.push(`/${slug}`);
+        if (result === "no-mint") router.push(href);
     };
 
     const change = changeFor(token, timeframe);
@@ -199,7 +231,7 @@ function DiscoverRow({
 
     return (
         <div
-            onClick={() => router.push(`/${slug}`)}
+            onClick={() => router.push(href)}
             className={cn(GRID, "cursor-pointer px-4 py-3 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]")}
         >
             {/* Pair */}
@@ -279,16 +311,20 @@ function DiscoverRow({
                 </p>
             </div>
 
-            {/* Quick buy — preset SOL amount, swaps in place */}
+            {/* Quick buy — preset SOL amount, swaps in place. EVM rows have no
+                buy (the swap engine is Solana-only); the cell stays for grid
+                alignment and the row itself opens the coin page. */}
             <div className="flex justify-end">
-                <button
-                    onClick={handleBuy}
-                    disabled={buying}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-default"
-                >
-                    <SolanaIcon className="size-3.5" />
-                    {buying ? "Buying…" : `Buy ${amountSol}`}
-                </button>
+                {canBuy && (
+                    <button
+                        onClick={handleBuy}
+                        disabled={buying}
+                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-default"
+                    >
+                        <SolanaIcon className="size-3.5" />
+                        {buying ? "Buying…" : `Buy ${amountSol}`}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -317,13 +353,31 @@ export function TradeDiscover() {
     const [tab, setTab] = useState<Tab>("trending");
     const [sort, setSort] = useState<SortKey>("volume");
     const [timeframe, setTimeframe] = useState<Timeframe>("24h");
+    const [chain, setChain] = useState<TradeChain>("solana");
     const { quickBuy, buyingId, amountSol, setAmountSol } = useQuickBuy();
     const utils = trpc.useUtils();
 
+    const onSolana = chain === "solana";
+    const activeChain = CHAIN_OPTIONS.find((c) => c.id === chain) ?? CHAIN_OPTIONS[0];
+
+    // In-house coins are Solana launches — off Solana the query stays cold and
+    // the board is purely the chain-wide feed.
     const { data = EMPTY, isLoading } = trpc.trade.getFeed.useQuery(undefined, {
         refetchInterval: 15_000,
         refetchOnWindowFocus: true,
+        enabled: onSolana,
     });
+
+    // The chain-wide board (every coin, DexScreener-style). One list per
+    // tab-shape: New reads the newest-pairs list, everything else the
+    // volume-ranked one. Server caches 90s per chain+list, so the client
+    // refetch mostly rides the cache.
+    const chainFeed = trpc.trade.chainFeed.useQuery(
+        { chain, list: tab === "new" ? "new" : "trending" },
+        { refetchInterval: 60_000, staleTime: 30_000 },
+    );
+    const externalRows = chainFeed.data?.tokens;
+    const marketDataOff = chainFeed.data ? !chainFeed.data.enabled : false;
 
     // Same realtime push as the memescope board: token-stream worker writes →
     // Postgres change → invalidate. `streams` is watched too so the Live tab
@@ -357,25 +411,32 @@ export function TradeDiscover() {
     }, [utils]);
 
     const all = useMemo(
-        () => [...data.new, ...data.migrating, ...data.migrated],
-        [data],
+        () => (onSolana ? [...data.new, ...data.migrating, ...data.migrated] : []),
+        [data, onSolana],
     );
     const liveCount = all.filter((t) => t.creatorIsLive).length;
 
     const tokens = useMemo(() => {
+        // One board, two sources: in-house launches (Solana only) + the
+        // chain-wide feed. Deduped by mint, in-house winning — that row knows
+        // its creator, live state and bonding curve; the Mobula one doesn't.
+        const inHouseMints = new Set(all.map((t) => t.tokenAddress).filter(Boolean));
+        const external = (externalRows ?? []).filter((t) => !inHouseMints.has(t.tokenAddress));
+        const merged = [...all, ...external];
+
         const base =
+            // Live is watchparty-native: coins whose creator is streaming here.
             tab === "live" ? all.filter((t) => t.creatorIsLive)
-            // Surge = positive 5-minute momentum with real 5-minute volume
-            : tab === "surge" ? all.filter((t) => (t.changePercent5m ?? 0) > 0 && (t.volume5m ?? 0) > 0)
-            : tab === "new" ? [...data.new]
-            : [...all];
+            // Surge = positive 5-minute momentum with real 5-minute volume —
+            // external rows carry real 5m windows, so they compete too.
+            : tab === "surge" ? merged.filter((t) => (t.changePercent5m ?? 0) > 0 && (t.volume5m ?? 0) > 0)
+            : tab === "new" ? [...(onSolana ? data.new : []), ...external]
+            : merged;
         const by: Record<SortKey, (a: TradeToken, b: TradeToken) => number> = {
             volume: (a, b) => b.volume - a.volume,
             marketCap: (a, b) => b.marketCap - a.marketCap,
             txCount: (a, b) => b.txCount - a.txCount,
-            // getFeed already returns each column newest/most-progressed first;
-            // "newest" keeps the natural order.
-            newest: () => 0,
+            newest: (a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0),
         };
         return base.sort((a, b) =>
             // Live tab: most-watched streams first; Surge: hottest 5m move
@@ -384,12 +445,18 @@ export function TradeDiscover() {
             : tab === "surge" ? (b.changePercent5m ?? 0) - (a.changePercent5m ?? 0) || (b.volume5m ?? 0) - (a.volume5m ?? 0)
             : by[sort](a, b),
         );
-    }, [data, all, tab, sort]);
+    }, [data, all, externalRows, onSolana, tab, sort]);
 
     const selectTab = (t: Tab) => {
         setTab(t);
         setSort(TAB_SORT[t]);
         if (t === "surge") setTimeframe("5m"); // surge reads in 5m terms
+    };
+
+    const selectChain = (c: TradeChain) => {
+        setChain(c);
+        // Live is creators streaming on watchparty — a Solana-only idea.
+        if (c !== "solana" && tab === "live") selectTab("trending");
     };
 
     return (
@@ -470,26 +537,56 @@ export function TradeDiscover() {
                         ))}
                     </div>
 
-                    {/* Quick-buy amount */}
+                    {/* Quick-buy amount — Solana only; the amount is SOL and
+                        the engine it feeds only swaps there. */}
+                    {onSolana && (
+                        <GooDropdown
+                            align="end"
+                            width={160}
+                            gap={8}
+                            fill={GOO_PANEL_FILL}
+                            triggerAriaLabel="Quick-buy amount"
+                            triggerClassName={GOO_TRIGGER_PILL}
+                            trigger={
+                                <>
+                                    <SolanaIcon className="size-4" />
+                                    {amountSol}
+                                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
+                                </>
+                            }
+                            items={QUICK_BUY_PRESETS.map((v) => gooMenuItem({
+                                key: String(v),
+                                label: `${v} SOL`,
+                                onClick: () => setAmountSol(v),
+                                right: amountSol === v
+                                    ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
+                                    : undefined,
+                            }))}
+                        />
+                    )}
+
+                    {/* Chain picker — which chain the board shows. Every coin
+                        on that chain is eligible, DexScreener-style. */}
                     <GooDropdown
                         align="end"
-                        width={160}
+                        width={200}
                         gap={8}
                         fill={GOO_PANEL_FILL}
-                        triggerAriaLabel="Quick-buy amount"
+                        triggerAriaLabel="Pick a chain"
                         triggerClassName={GOO_TRIGGER_PILL}
                         trigger={
                             <>
-                                <SolanaIcon className="size-4" />
-                                {amountSol}
+                                <activeChain.Icon className="size-4" />
+                                {activeChain.label}
                                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
                             </>
                         }
-                        items={QUICK_BUY_PRESETS.map((v) => gooMenuItem({
-                            key: String(v),
-                            label: `${v} SOL`,
-                            onClick: () => setAmountSol(v),
-                            right: amountSol === v
+                        items={CHAIN_OPTIONS.map((c) => gooMenuItem({
+                            key: c.id,
+                            label: c.label,
+                            icon: <c.Icon className="size-4" />,
+                            onClick: () => selectChain(c.id),
+                            right: chain === c.id
                                 ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
                                 : undefined,
                         }))}
@@ -540,12 +637,16 @@ export function TradeDiscover() {
                         </div>
 
                         <div>
-                            {isLoading ? (
+                            {(onSolana ? isLoading : chainFeed.isLoading) ? (
                                 Array.from({ length: 10 }).map((_, i) => <RowSkeleton key={i} />)
                             ) : tokens.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center gap-1 py-20">
                                     <p className="text-base font-bold text-zinc-400">{EMPTY_COPY[tab].title}</p>
-                                    <p className="text-sm text-zinc-600">{EMPTY_COPY[tab].hint}</p>
+                                    <p className="text-sm text-zinc-600">
+                                        {marketDataOff && tab !== "live"
+                                            ? "market data isn't connected yet — the board fills in once it is"
+                                            : EMPTY_COPY[tab].hint}
+                                    </p>
                                 </div>
                             ) : (
                                 tokens.map((t) => (

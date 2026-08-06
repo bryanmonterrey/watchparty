@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
 import { withCache } from "@/lib/cache";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { emitLaunchEvent } from "@/lib/coin-feed/emit";
+import { fetchMobulaChainPairs, mobulaEnabled, type MobulaPair } from "@/lib/coins/mobula";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -81,6 +82,56 @@ function toTradeToken({ token: t, creatorIsLive, liveViewerCount, creatorUsernam
         creatorIsLive: creatorIsLive ?? false,
         liveViewerCount: creatorIsLive ? (liveViewerCount ?? 0) : 0,
         creatorUsername,
+        createdAtMs: t.createdAt.getTime(),
+    };
+}
+
+/** Chains the /trade chain picker offers — our registry ∩ what Mobula's pairs
+ *  endpoint actually serves (bitcoin has no token pairs; robinhood 500s). */
+export const TRADE_CHAINS = ["solana", "ethereum", "base", "polygon", "bnb", "hyperevm"] as const;
+
+// A Mobula pair in the feed's row shape. External rows carry `chain` +
+// `external`, which is what routes them to /coin/<chain>/<address> and (off
+// Solana) hides the quick-buy — the swap engine only speaks Solana today.
+function pairToTradeToken(chain: string, p: MobulaPair) {
+    // Launchpad pairs (pump.fun-style) keep their real bonding ring; a plain
+    // DEX pair has no curve, which in this UI's language is "migrated" — the
+    // full ring every already-tradeable coin wears.
+    const onCurve = !p.bonded && (p.bondingPercentage ?? 0) > 0;
+    return {
+        id: `${chain}:${p.tokenAddress}`,
+        name: p.name,
+        symbol: p.symbol,
+        imageUrl: p.logo ?? "",
+        platform: (p.source === "pumpfun" || p.source === "raydium" || p.source === "meteora"
+            ? p.source
+            : "other") as "pumpfun" | "raydium" | "meteora" | "other",
+        timeAgo: p.createdAtMs ? timeAgo(new Date(p.createdAtMs)) : "",
+        hasSocials: {},
+        priceUsd: p.priceUsd,
+        holderCount: p.holders,
+        txCount: p.trades24h,
+        bondingProgress: onCurve ? Math.round(p.bondingPercentage ?? 0) : 100,
+        solAmount: 0,
+        marketCap: p.marketCap,
+        volume: p.volume24h,
+        buyPercent: 0,
+        sellPercent: 0,
+        changePercent: p.change24h,
+        changePercent5m: p.change5m,
+        changePercent1h: p.change1h,
+        changePercent6h: p.change6h,
+        volume5m: p.volume5m,
+        volume1h: p.volume1h,
+        status: (p.bonded || !onCurve ? "migrated" : "migrating") as "migrated" | "migrating",
+        tokenAddress: p.tokenAddress,
+        poolAddress: p.pairAddress,
+        creatorIsLive: false,
+        liveViewerCount: 0,
+        creatorUsername: null,
+        createdAtMs: p.createdAtMs,
+        chain,
+        external: true as const,
     };
 }
 
@@ -139,6 +190,35 @@ export const tradeRouter = router({
             migrated: migratedCol.map(toTradeToken),
         };
     }),
+
+    /**
+     * Chain-wide token board — every coin on the chain, DexScreener-style,
+     * from Mobula's pairs endpoint (see docs/market-data-options.md for the
+     * provider choice; GT from the Worker's shared egress IP is dead).
+     *
+     * "trending" is volume-ranked, "new" is newest pairs first. Cached 90s per
+     * chain+list, so N viewers cost one upstream call per window — the credit
+     * budget scales with cache windows, never with traffic. `enabled: false`
+     * means MOBULA_API_KEY is unset and the board has no data source.
+     */
+    chainFeed: publicProcedure
+        .input(z.object({
+            chain: z.enum(TRADE_CHAINS),
+            list: z.enum(["trending", "new"]).default("trending"),
+        }))
+        .query(({ input }) =>
+            withCache(`trade:chainfeed:v1:${input.chain}:${input.list}`, 90, async () => {
+                const rows = await fetchMobulaChainPairs(
+                    input.chain,
+                    input.list,
+                    input.list === "new" ? 50 : 100,
+                ).catch(() => null);
+                return {
+                    enabled: mobulaEnabled(),
+                    tokens: (rows ?? []).map((p) => pairToTradeToken(input.chain, p)),
+                };
+            })
+        ),
 
     /**
      * "Runners" — live coins pumping right now (biggest 24h gainers with real

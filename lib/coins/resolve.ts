@@ -62,6 +62,22 @@ export async function resolveCoin(raw: string, network?: string): Promise<Resolv
     // and a couple of older rows may have been written before this existed.
     const address = normalizeAddress(raw);
 
+    // The URL's chain segment arrives in whatever vocabulary wrote the link —
+    // the wallet registry says "ethereum"/"polygon"/"bnb", Dexscreener says
+    // "ethereum"/"bsc", while every table here stores GeckoTerminal's slugs
+    // ("eth", "polygon_pos", "bsc"). Normalise the INPUT so /coin/ethereum/0x…
+    // and /coin/eth/0x… are the same page instead of the former 404ing.
+    const NETWORK_ALIASES: Record<string, string> = {
+        ethereum: "eth",
+        polygon: "polygon_pos",
+        matic: "polygon_pos",
+        bnb: "bsc",
+        avalanche: "avax",
+        sui: "sui-network",
+        sei: "sei-network",
+    };
+    network = network ? (NETWORK_ALIASES[network.toLowerCase()] ?? network.toLowerCase()) : undefined;
+
     const onNetwork = <T extends { network: unknown }>(col: T) =>
         network ? eq(col.network as never, network) : undefined;
 

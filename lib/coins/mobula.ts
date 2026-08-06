@@ -104,6 +104,169 @@ export function mobulaChainId(network: string): string | null {
 
 type MobulaCandle = { t: number; o: number; h: number; l: number; c: number; v: number };
 
+// ── Chain-wide pair feed (the /trade DexScreener-style board) ────────────────
+//
+// GET /api/1/market/blockchain/pairs is pair-level and per-chain: every DEX
+// pair on the chain with 5m/1h/24h price+volume windows, trade counts, holder
+// counts, liquidity and (for launchpad pairs) bonding state. Default order is
+// newest-created first; sortBy=volume_24h gives the trending board. Verified
+// against the demo host on solana/ethereum/base/polygon/bsc/hyperevm.
+
+/** /trade's chain ids → the `blockchain` param the pairs endpoint accepts.
+ *  Separate from CHAIN_IDS above: bnb is "bsc" here, and chains the pairs
+ *  endpoint 500s on (bitcoin, robinhood) are simply absent. */
+const PAIR_BLOCKCHAINS: Record<string, string> = {
+    solana: "solana",
+    ethereum: "ethereum",
+    base: "base",
+    polygon: "polygon",
+    bnb: "bsc",
+    hyperevm: "hyperevm",
+};
+
+/** Symbols that mean "the boring side of the pair" — the wrapped native or a
+ *  stable. The OTHER token is the one a trading feed is about. */
+const QUOTE_SYMBOLS = new Set([
+    "SOL", "WSOL", "ETH", "WETH", "BNB", "WBNB", "POL", "WPOL", "WMATIC",
+    "HYPE", "WHYPE", "USDC", "USDC.E", "USDBC", "USDT", "DAI",
+]);
+
+interface MobulaPairToken {
+    address?: string;
+    symbol?: string;
+    name?: string;
+    logo?: string | null;
+    price?: number;
+    marketCap?: number;
+    bonded?: boolean | null;
+    bondingPercentage?: number | null;
+}
+
+interface MobulaPairRaw {
+    price?: number;
+    price_change_5min?: number;
+    price_change_1h?: number;
+    price_change_6h?: number;
+    price_change_24h?: number;
+    created_at?: string;
+    holders_count?: number;
+    volume_5min?: number;
+    volume_1h?: number;
+    volume_24h?: number;
+    trades_24h?: number;
+    liquidity?: number;
+    source?: string;
+    pair?: { address?: string; token0?: MobulaPairToken; token1?: MobulaPairToken };
+}
+
+/** One pair, flattened to the token the feed is about. */
+export interface MobulaPair {
+    tokenAddress: string;
+    symbol: string;
+    name: string;
+    logo: string | null;
+    priceUsd: number;
+    marketCap: number;
+    liquidity: number;
+    volume24h: number;
+    volume1h: number;
+    volume5m: number;
+    change24h: number;
+    change1h: number;
+    change5m: number;
+    change6h: number;
+    trades24h: number;
+    holders: number;
+    createdAtMs: number | null;
+    source: string;
+    bonded: boolean | null;
+    bondingPercentage: number | null;
+    pairAddress: string | null;
+}
+
+/** The side of the pair worth showing: not the wrapped native / stable. When
+ *  neither side is a known quote, token0 — pair convention puts the base first. */
+function interestingToken(p: MobulaPairRaw): MobulaPairToken | null {
+    const t0 = p.pair?.token0;
+    const t1 = p.pair?.token1;
+    if (!t0 || !t1) return t0 ?? t1 ?? null;
+    const q0 = QUOTE_SYMBOLS.has((t0.symbol ?? "").toUpperCase());
+    const q1 = QUOTE_SYMBOLS.has((t1.symbol ?? "").toUpperCase());
+    if (q0 && !q1) return t1;
+    if (q1 && !q0) return t0;
+    return t0;
+}
+
+/**
+ * Chain-wide pairs, for /trade's chain feed.
+ *
+ * `list` picks the board: "trending" is volume-ranked, "new" is the endpoint's
+ * natural newest-first order. Returns null (not []) when the provider is off or
+ * the chain unsupported, same convention as the candle fetch above.
+ */
+export async function fetchMobulaChainPairs(
+    chain: string,
+    list: "trending" | "new",
+    limit = 100,
+): Promise<MobulaPair[] | null> {
+    if (!mobulaEnabled()) return null;
+    const blockchain = PAIR_BLOCKCHAINS[chain.toLowerCase()];
+    if (!blockchain) return null;
+
+    const url = new URL(`${isDemo() ? DEMO_BASE : LIVE_BASE}/1/market/blockchain/pairs`);
+    url.searchParams.set("blockchain", blockchain);
+    url.searchParams.set("limit", String(limit));
+    if (list === "trending") {
+        url.searchParams.set("sortBy", "volume_24h");
+        url.searchParams.set("sortOrder", "desc");
+    }
+
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (!isDemo()) headers.Authorization = rawKey();
+
+    const res = await fetch(url.toString(), { headers, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`mobula pairs ${res.status}`);
+
+    const json = (await res.json()) as { data?: MobulaPairRaw[] };
+    const rows = json.data ?? [];
+
+    const out: MobulaPair[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+        const token = interestingToken(row);
+        if (!token?.address || !token.symbol) continue;
+        // One row per token: the same coin trades in many pools, and a feed
+        // that lists WIF five times reads as a bug. Keep the first (highest
+        // volume on trending, newest on new).
+        if (seen.has(token.address)) continue;
+        seen.add(token.address);
+        out.push({
+            tokenAddress: token.address,
+            symbol: token.symbol,
+            name: token.name ?? token.symbol,
+            logo: token.logo ?? null,
+            priceUsd: token.price ?? row.price ?? 0,
+            marketCap: token.marketCap ?? 0,
+            liquidity: row.liquidity ?? 0,
+            volume24h: row.volume_24h ?? 0,
+            volume1h: row.volume_1h ?? 0,
+            volume5m: row.volume_5min ?? 0,
+            change24h: row.price_change_24h ?? 0,
+            change1h: row.price_change_1h ?? 0,
+            change5m: row.price_change_5min ?? 0,
+            change6h: row.price_change_6h ?? 0,
+            trades24h: row.trades_24h ?? 0,
+            holders: row.holders_count ?? 0,
+            createdAtMs: row.created_at ? Date.parse(row.created_at) : null,
+            source: row.source ?? "",
+            bonded: token.bonded ?? null,
+            bondingPercentage: token.bondingPercentage ?? null,
+            pairAddress: row.pair?.address ?? null,
+        });
+    }
+    return out;
+}
+
 /**
  * Fetch candles for a token, in OUR shape (`ts` in unix SECONDS).
  *

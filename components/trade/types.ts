@@ -35,4 +35,11 @@ export interface TradeToken {
   creatorIsLive: boolean;
   liveViewerCount: number;
   creatorUsername?: string | null;
+  /** Epoch ms the coin/pair was created — what the "newest" sort orders by. */
+  createdAtMs?: number | null;
+  /** Chain id for rows from the chain-wide feed; absent = in-house coin. */
+  chain?: string;
+  /** True for chain-wide (Mobula) rows: routes to /coin/<chain>/<address>,
+   *  and off Solana hides quick-buy (the swap engine only speaks Solana). */
+  external?: boolean;
 }
