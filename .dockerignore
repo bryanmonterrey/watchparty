@@ -1,0 +1,15 @@
+# Keep the build context small — it's uploaded to the builder on every deploy.
+node_modules
+.next
+.open-next
+.git
+.github
+mobile
+realtime
+cron
+docs
+scripts
+public/videos
+*.log
+.env*
+!.env.production

@@ -13,6 +13,13 @@ const nextConfig: NextConfig = {
       fs: { browser: "./lib/node-browser-stub.js" },
     },
   },
+  // `standalone` ONLY for the container build.
+  //
+  // opennextjs-cloudflare does its own packaging and does not want this set;
+  // the container image does, because it runs `node server.js` directly. The
+  // env var keeps the two builds from fighting over one field — the Worker
+  // deploy is byte-for-byte what it was.
+  output: process.env.BUILD_TARGET === "container" ? "standalone" : undefined,
   experimental: {
     // Barrel-file packages, rewritten to per-module imports at build time.
     //

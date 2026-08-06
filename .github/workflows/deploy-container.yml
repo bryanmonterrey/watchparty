@@ -1,0 +1,64 @@
+name: Deploy container app (parallel to the live Worker)
+
+# The Next app as a Cloudflare Container instead of a Worker: 4 GiB instead of
+# 128 MB, and no 10 MiB bundle ceiling.
+#
+# MANUAL ONLY, on purpose. This deploys a SEPARATE worker (`watchparty-app`)
+# and does not touch the live one — watchparty.xyz keeps serving from the
+# existing deploy until someone moves the route. Run it from the Actions tab.
+#
+# It also runs here rather than locally because the image build needs Docker
+# and a lot of RAM, and the dev machine has neither to spare.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: cf-deploy-container
+  cancel-in-progress: true
+
+jobs:
+  deploy-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # The same env the Worker deploy uses. Needed twice: NEXT_PUBLIC_* values
+      # are inlined into the client bundle during the image build, and the rest
+      # are pushed as Worker secrets below, from where the container reads them
+      # at runtime.
+      - name: Restore .env
+        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        env:
+          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+
+      - name: Build image and deploy container worker
+        # wrangler builds the Dockerfile, pushes it to the account registry and
+        # deploys the worker that fronts it. The env file is mounted as a build
+        # secret so it never lands in a shipped image layer.
+        run: bunx wrangler deploy --config container/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # Same bundle the live worker gets, so the container has an identical
+      # runtime environment — one source of truth for secrets, not two.
+      - name: Generate runtime secrets bundle
+        run: node scripts/cf/gen-secrets.mjs
+
+      - name: Push secrets to the container worker
+        run: bunx wrangler secret bulk .cf-secrets.json --config container/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Where it landed
+        run: echo "Preview URL: https://watchparty-app.<your-subdomain>.workers.dev — the live site is unchanged."

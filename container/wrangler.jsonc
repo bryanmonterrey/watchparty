@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Deliberately a SEPARATE worker from `watchparty`. The live site keeps
+  // running on the existing Worker until this one proves out and you move the
+  // route — nothing here can take production down.
+  "name": "watchparty-app",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-15",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "containers": [
+    {
+      "class_name": "NextApp",
+      "image": "./Dockerfile",
+      // 4 GiB / half a vCPU. The Worker this replaces had 128 MB, and was
+      // being killed for exceededMemory at near-zero traffic.
+      "instance_type": "standard-1",
+      // No autoscaling exists yet, so this is the ceiling AND the plan.
+      "max_instances": 1
+    }
+  ],
+
+  // Containers are Durable Object backed — the DO is how an instance is
+  // addressed and kept alive.
+  "durable_objects": {
+    "bindings": [{ "name": "NEXT_APP", "class_name": "NextApp" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NextApp"] }],
+
+  "observability": { "enabled": true }
+}
