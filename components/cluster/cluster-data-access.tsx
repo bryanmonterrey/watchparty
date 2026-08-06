@@ -19,11 +19,23 @@ export enum ClusterNetwork {
   Custom = 'custom',
 }
 
-// Mainnet uses NEXT_PUBLIC_HELIUS_RPC_URL (exposed client-side Helius endpoint) with /api/rpc proxy as fallback
+// The browser NEVER holds our RPC key.
+//
+// Mainnet goes through `/api/rpc`, the same-origin proxy that attaches the key
+// server-side and caches read methods. It used to point at
+// NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL, which meant the key shipped inside the
+// client bundle — readable, and spendable, by anyone who opened devtools. That
+// is also why traffic we never sent could burn the quota.
+//
+// Absolute, not "/api/rpc": web3.js parses the endpoint with `new URL()`, which
+// rejects a relative path. NEXT_PUBLIC_BASE_URL is a domain, not a secret.
+const RPC_PROXY = `${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/rpc`
+
 export const defaultClusters: SolanaCluster[] = [
   {
     name: 'devnet',
-    endpoint: process.env.NEXT_PUBLIC_HELIUS_DEVNET_RPC_URL || clusterApiUrl('devnet'),
+    // Public devnet: nothing here is hot enough to justify a key in the bundle.
+    endpoint: clusterApiUrl('devnet'),
     network: ClusterNetwork.Devnet,
   },
   {
@@ -33,7 +45,7 @@ export const defaultClusters: SolanaCluster[] = [
   },
   {
     name: 'mainnet-beta',
-    endpoint: process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL || '/api/rpc',
+    endpoint: RPC_PROXY,
     network: ClusterNetwork.Mainnet,
   },
 ]
@@ -47,8 +59,8 @@ const clustersAtom = atomWithStorage<SolanaCluster[]>('solana-clusters', default
 const syncedClustersAtom = atom(
   (get) => {
     const clusters = get(clustersAtom)
-    const mainnetEndpoint = process.env.NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL || '/api/rpc'
-    const devnetEndpoint = process.env.NEXT_PUBLIC_HELIUS_DEVNET_RPC_URL || clusterApiUrl('devnet')
+    const mainnetEndpoint = RPC_PROXY
+    const devnetEndpoint = clusterApiUrl('devnet')
     return clusters.map((c) => {
       if (c.network === ClusterNetwork.Mainnet) return { ...c, endpoint: mainnetEndpoint }
       if (c.network === ClusterNetwork.Devnet) return { ...c, endpoint: devnetEndpoint }

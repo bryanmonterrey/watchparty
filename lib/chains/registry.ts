@@ -11,7 +11,9 @@ export const SOLANA: ChainConfig = {
   name: "Solana",
   coinType: 501,
   derivationPath: "m/44'/501'/0'/0'",
-  rpcUrl: process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? "https://api.mainnet-beta.solana.com",
+  rpcUrl:
+    process.env.HELIUS_RPC_URL ??
+    (process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/rpc` : "https://api.mainnet-beta.solana.com"),
   explorer: "https://solscan.io",
   nativeCurrency: { symbol: "SOL", decimals: 9 },
 };

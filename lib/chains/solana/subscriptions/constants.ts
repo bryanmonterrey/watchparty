@@ -19,6 +19,7 @@ export const PREMIUM_TOKEN_PROGRAM: Address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9
 export function getRpcUrl(): string {
     return (
         process.env.SOLANA_RPC_URL ??
+        process.env.HELIUS_RPC_URL ??
         process.env.NEXT_PUBLIC_HELIUS_RPC_URL ??
         "https://api.mainnet-beta.solana.com"
     );

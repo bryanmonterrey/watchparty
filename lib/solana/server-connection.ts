@@ -14,7 +14,7 @@ import { Connection } from "@solana/web3.js";
  * never call `new Connection(...)` directly in routers/lib.
  */
 export function createServerConnection(
-    url: string = process.env.NEXT_PUBLIC_HELIUS_RPC_URL!,
+    url: string = (process.env.HELIUS_RPC_URL ?? process.env.NEXT_PUBLIC_HELIUS_RPC_URL)!,
 ): Connection {
     return new Connection(url, {
         commitment: "confirmed",

@@ -29,8 +29,8 @@ import { createServerConnection } from '@/lib/solana/server-connection';
 let _rpc: Connection | null = null;
 function getRpc(): Connection {
     if (!_rpc) {
-        const url = process.env.NEXT_PUBLIC_HELIUS_RPC_URL;
-        if (!url) throw new Error("NEXT_PUBLIC_HELIUS_RPC_URL is not set");
+        const url = process.env.HELIUS_RPC_URL ?? process.env.NEXT_PUBLIC_HELIUS_RPC_URL;
+        if (!url) throw new Error("HELIUS_RPC_URL is not set");
         _rpc = createServerConnection(url);
     }
     return _rpc;

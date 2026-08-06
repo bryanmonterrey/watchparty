@@ -17,10 +17,10 @@ import { isNotNull } from "drizzle-orm";
 
 export function heliusApiKey(): string {
     if (process.env.HELIUS_API_KEY) return process.env.HELIUS_API_KEY;
-    const rpc = process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? "";
+    const rpc = process.env.HELIUS_RPC_URL ?? process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? "";
     const m = rpc.match(/api-key=([^&]+)/);
     if (m) return m[1];
-    throw new Error("Set HELIUS_API_KEY (or NEXT_PUBLIC_HELIUS_RPC_URL with ?api-key=).");
+    throw new Error("Set HELIUS_API_KEY (or HELIUS_RPC_URL with ?api-key=).");
 }
 
 // Helius caps one webhook at 100k addresses; leave headroom before this
