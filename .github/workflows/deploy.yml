@@ -163,11 +163,58 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+  # THE ONE THAT SERVES THE SITE.
+  #
+  # watchparty.xyz is attached to `watchparty-app`, the Worker that fronts the
+  # container — so a push that only rebuilt the `deploy` job above would leave
+  # the live site on old code. That happened once already, within an hour of
+  # the cutover: a change deployed green and wasn't on the site, because the
+  # container image was still the previous commit.
+  #
+  # The `deploy` job above stays, and stays current, precisely so it remains a
+  # working rollback target — reattach the domain to `watchparty` and it's
+  # serving this same commit.
+  deploy-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Needed twice over: NEXT_PUBLIC_* are inlined into the client bundle
+      # during the image build, and the rest are pushed as Worker secrets below,
+      # which is where the container reads its runtime env from.
+      - name: Restore .env
+        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        env:
+          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+
+      - name: Build image and deploy container worker
+        run: bunx wrangler deploy --config container/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Generate runtime secrets bundle
+        run: node scripts/cf/gen-secrets.mjs
+
+      - name: Push secrets to the container worker
+        run: bunx wrangler secret bulk .cf-secrets.json --config container/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   # Loud failure signal: if any deploy job above fails, open (or append to) a
   # sticky GitHub issue so a broken build can't silently leave production stale.
   # A failed deploy means prod keeps serving the last *successful* build.
   notify-failure:
-    needs: [deploy, deploy-realtime, deploy-cron]
+    needs: [deploy, deploy-realtime, deploy-cron, deploy-container]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
