@@ -177,6 +177,15 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
     generateId: () => crypto.randomUUID(),
+    // Share the session cookie across subdomains. ads.watchparty.xyz has no
+    // login of its own — its proxy checks for this cookie and bounces to
+    // watchparty's login when missing, so a host-only cookie loops that
+    // bounce forever (login sees a session, ads never does). Production only:
+    // a ".watchparty.xyz" Domain attribute on localhost is rejected by the
+    // browser and would break dev login.
+    ...(process.env.NODE_ENV === "production"
+      ? { crossSubDomainCookies: { enabled: true, domain: ".watchparty.xyz" } }
+      : {}),
   },
 
   account: {
