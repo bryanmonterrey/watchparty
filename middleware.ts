@@ -18,6 +18,41 @@ import { allowsAnonymous } from "./lib/auth/public-browsing";
 // (opennextjs-cloudflare#1277: "only edge middleware is supported"), i.e. a
 // broken worker, not a migration. The warning stays until that issue closes.
 //
+// The 2026-08-06 cross-subdomain cookie change (lib/auth/server.ts,
+// crossSubDomainCookies) left every browser that signed in BEFORE it holding
+// the session cookie twice: the old host-only identity plus the new
+// .watchparty.xyz one — same name, two cookies. RFC 6265 leaves the send order
+// effectively unspecified across browsers, and better-auth's parser takes the
+// last occurrence, so a browser that happens to send the fresh cookie first
+// makes every request read the STALE token — the server answers "no session"
+// cleanly and the app shows Sign In no matter how often you refresh.
+//
+// Deleting a cookie targets (name, domain, path), so expiring the name WITHOUT
+// a Domain attribute removes only the host-only copy and leaves the real
+// domain-wide session untouched. Fires only while a duplicate actually exists:
+// one response later the browser is migrated and this is a no-op forever.
+const DUPLICATE_COOKIE_NAMES = [
+  "__Secure-better-auth.session_token",
+  "__Secure-better-auth.session_data",
+  "better-auth.session_token",
+  "better-auth.session_data",
+];
+
+function hostOnlyCookieCleanup(request: NextRequest): string[] {
+  const header = request.headers.get("cookie");
+  if (!header) return [];
+  const cleanup: string[] = [];
+  for (const name of DUPLICATE_COOKIE_NAMES) {
+    const re = new RegExp(`(?:^|;\\s*)${name.replace(/\./g, "\\.")}=`, "g");
+    if ((header.match(re) ?? []).length >= 2) {
+      cleanup.push(
+        `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Lax`,
+      );
+    }
+  }
+  return cleanup;
+}
+
 // Optimistic edge auth gate: checks only for the presence of the session cookie
 // (the real validation stays in (app)/layout via getServerSession). Ported from
 // sidebar and adapted to watchparty's routes (/login, /home).
@@ -25,9 +60,18 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const session = getSessionCookie(request);
 
+  // Expire stale host-only duplicates on EVERY branch below — including the
+  // API pass-through, because /api/auth/get-session is exactly the request
+  // whose cookie read the duplicate corrupts.
+  const cleanup = hostOnlyCookieCleanup(request);
+  const withCleanup = (res: NextResponse) => {
+    for (const c of cleanup) res.headers.append("Set-Cookie", c);
+    return res;
+  };
+
   // Always allow better-auth + internal API routes (tRPC, webhooks).
   if (pathname.startsWith(apiAuthPrefix) || pathname.startsWith("/api/")) {
-    return NextResponse.next();
+    return withCleanup(NextResponse.next());
   }
 
   // /feed/post/<id> is /status/<id> now.
@@ -43,7 +87,7 @@ export function middleware(request: NextRequest) {
   if (legacyPost) {
     const moved = new URL(`/status/${legacyPost[1]}`, request.url);
     moved.search = request.nextUrl.search;
-    return NextResponse.redirect(moved, 308);
+    return withCleanup(NextResponse.redirect(moved, 308));
   }
 
   // On an auth route (/login): always allow. We do NOT optimistically redirect
@@ -53,7 +97,7 @@ export function middleware(request: NextRequest) {
   // -> ... which Safari shows as "this page couldn't load". Post-login redirects
   // already send users to /home directly, so this is purely a safety removal.
   if (authRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.next();
+    return withCleanup(NextResponse.next());
   }
 
   // Everything else that isn't explicitly public requires a session. Carry the
@@ -71,7 +115,7 @@ export function middleware(request: NextRequest) {
   if (!session && !isPublic) {
     const login = new URL("/login", request.url);
     login.searchParams.set("callbackUrl", pathname + request.nextUrl.search);
-    return NextResponse.redirect(login);
+    return withCleanup(NextResponse.redirect(login));
   }
 
   // The app layout re-checks the session for real (this is a cookie-presence
@@ -80,7 +124,7 @@ export function middleware(request: NextRequest) {
   // component, so it travels as a header.
   const headers = new Headers(request.headers);
   headers.set("x-pathname", pathname);
-  return NextResponse.next({ request: { headers } });
+  return withCleanup(NextResponse.next({ request: { headers } }));
 }
 
 export const config = {
