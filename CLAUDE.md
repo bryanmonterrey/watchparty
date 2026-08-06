@@ -137,6 +137,33 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
 - **Reused production DB (dev == prod):** dev runs against the **same** Supabase DB as production, so any schema change hits live data immediately. **Additive, nullable changes are OK** (e.g. `ADD COLUMN ... text` — safe and reversible); apply them deliberately and prefer manual SQL committed under `db/` (see `db/affiliate-column.sql`, `db/feed-indexes.sql`) so the change is reviewable. **Avoid destructive migrations and `drizzle-kit push`**, which can clobber the auth tables ported verbatim from the old app. Keep `db/schema/auth` in sync with the DB by hand.
 - **Squircle corners: use Lisse (`@lisse/react`), opt-in per element.** The old `tailwindcss-corner-shape` was removed — it used the CSS `corner-shape` property which is **Chrome-only** (broken in Safari) and forced squircle onto *every* `rounded-*` (so even pills got squircled). Lisse uses SVG `clip-path` (works in Safari/Firefox/Chrome). Apply via the `components/ui/squircle.tsx` helper: `<Squircle asChild radius={20}><button className="…">…</button></Squircle>` — and do NOT add `rounded-*` to a squircled element (redundant under clip-path). **Pills (Connect Wallet, Complete, Create) stay plain `rounded-full` with NO `<Squircle>`.**
 
+### Cloudflare bot protection: leave Bot Fight Mode OFF (decided 2026-08-06)
+
+Cloudflare's domain security scan recommends enabling **Bot Fight Mode**. Don't.
+It challenges anything it scores as automated, exempts only Cloudflare's
+verified-bot list, and on the free plan **cannot be scoped or excepted** — WAF
+skip rules do not apply to it. This domain serves four kinds of legitimate
+non-browser traffic that would start failing silently:
+
+- `/api/trpc/*` — the Expo app (`mobile/`), which can't solve a JS challenge
+- `/api/captions/webhook` (AWS IVS) and `/api/webhooks/community/[webhookId]`
+- the `watchparty-cron` worker's 14 public fetches, plus `/api/ad/*`, `/api/rpc`
+
+The Security Center row says "Bot Fight Mode not enabled" *because* it's off, so
+being off never satisfies it — **dismiss the row**, don't flip the setting. It's
+typed "Configuration suggestion," not a vulnerability.
+
+**If bot protection is ever actually wanted, the real path is Pro + Super Bot
+Fight Mode**, which *does* support skip rules — exempt `/api/*` and let it work
+on the HTML routes.
+
+Related zone state (all verified 2026-08-06): `crawler_protection: enabled`
+(AI Labyrinth — traps crawlers that ignore robots.txt, no SEO impact) and
+`ai_bots_protection: "block"`, which was pre-existing and blocks AI crawlers
+outright — that's the setting that governs whether ChatGPT/Perplexity can cite
+the site, and it's a product call, not a security one. Email/DNS posture (SPF,
+DMARC, security.txt) is documented in the memory `email-dns-hardening`.
+
 ## Query gotcha: never interpolate a JS `Date` into a `sql` template
 
 ```ts
