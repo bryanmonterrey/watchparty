@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TradeUpIcon, DollarSignIcon } from "@hugeicons/core-free-icons";
+import { TradeUpIcon } from "@hugeicons/core-free-icons";
 import { CreateIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -37,10 +37,11 @@ import { useTokenLaunch } from "@/hooks/use-token-launch";
 const PILL_BASE =
     "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-2 px-4 text-[15px] font-bold transition-colors active:scale-95";
 const PILL_DRAFT = "border-yellow-400/80 text-yellow-400 hover:bg-yellow-400/10";
-// The entry point drops the border only — it keeps the draft yellow, since
-// what it opens is a draft.
+// The entry point: no border, and twitter2 rather than the draft yellow.
+// Yellow is the colour of a draft that EXISTS; nothing exists yet at this
+// point, so the button is an invitation rather than a status.
 const PILL_CREATE =
-    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold text-yellow-400 transition-colors hover:bg-yellow-400/10 active:scale-95";
+    "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold text-twitter2 transition-colors hover:bg-twitter2/10 active:scale-95";
 const PILL_UP = "border-long/80 text-long hover:bg-long/10";
 const PILL_DOWN = "border-short/80 text-short hover:bg-short/10";
 
@@ -174,18 +175,7 @@ export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner
                     className={cn(PILL_CREATE, "disabled:opacity-50")}
                 >
                     <CreateIcon className="size-5" strokeWidth={2.5} />
-                    {busy || isLaunching ? (
-                        "Creating…"
-                    ) : (
-                        // Its own flex box with no gap, so the button's gap-1.5
-                        // still separates the plus from the label but the mark
-                        // sits flush against the word — "$Creator", the way a
-                        // ticker reads.
-                        <span className="flex items-center">
-                            <HugeiconsIcon icon={DollarSignIcon} className="size-4" strokeWidth={2.5} />
-                            Creator coin
-                        </span>
-                    )}
+                    {busy || isLaunching ? "Creating…" : "Creator coin"}
                 </button>
                 <TickerEditDialog
                     open={isEditing}
