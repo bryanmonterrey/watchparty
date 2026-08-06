@@ -51,9 +51,17 @@ export async function POST(request: NextRequest) {
         );
     }
 
+    // HELIUS_RPC_URL is a COMPLETE url — it carries the key, because that's the
+    // shape every other server-side caller needs. Blindly appending a second
+    // `?api-key=` made it malformed and every proxied call failed, which now
+    // matters far more than it used to: the browser has no other RPC path.
     const baseUrl = process.env.HELIUS_RPC_URL || 'https://mainnet.helius-rpc.com/';
+    const upstreamUrl = baseUrl.includes('api-key=')
+        ? baseUrl
+        : `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}api-key=${apiKey}`;
+
     const upstream = async () => {
-        const response = await fetch(`${baseUrl}?api-key=${apiKey}`, {
+        const response = await fetch(upstreamUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
