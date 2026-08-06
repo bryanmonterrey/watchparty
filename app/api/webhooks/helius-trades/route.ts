@@ -10,7 +10,7 @@ import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { and, eq, isNotNull } from "drizzle-orm";
-import { withCache } from "@/lib/cache";
+import { withCache, redis } from "@/lib/cache";
 import { syncMarketData, syncCurveProgress, type SyncableToken } from "@/lib/tokens/market-sync";
 import { recordSwaps, type HeliusSwapEvent } from "@/lib/coins/record-swaps";
 
@@ -26,6 +26,38 @@ type HeliusEvent = {
 
 // A hot token can appear in many txs per second; sync it at most once per
 // window and let the rest ride the resulting realtime push.
+// A failed read here used to become an endless one. `withCache` stores nothing
+// when the query throws, so the next delivery ran it again immediately — and
+// this endpoint takes tens per second. The database was being hammered BECAUSE
+// it was failing, which is how one bad moment turned into 100 errors per 10
+// minutes and took unrelated page renders down with it.
+//
+// So the first failure buys quiet: skip the read (and the delivery) for a few
+// seconds instead of re-asking. Short on purpose — recovery shouldn't need a
+// deploy, and a dropped delivery costs a few seconds of tape, not correctness.
+const DB_BREAKER_KEY = "helius-trades:db-out";
+const DB_BREAKER_SECONDS = 15;
+
+async function readOrSkip<T>(key: string, ttl: number, fn: () => Promise<T>): Promise<T | null> {
+    try {
+        if (await redis.get(DB_BREAKER_KEY)) return null;
+    } catch {
+        // Redis unreachable — that's no reason to skip the read.
+    }
+
+    try {
+        return await withCache(key, ttl, fn);
+    } catch (err) {
+        console.error(`[helius-trades] ${key} failed:`, err instanceof Error ? err.message : err);
+        try {
+            await redis.set(DB_BREAKER_KEY, Date.now(), { ex: DB_BREAKER_SECONDS });
+        } catch {
+            // Without Redis there's no breaker; the read simply retries next time.
+        }
+        return null;
+    }
+}
+
 const THROTTLE_SECONDS = 5;
 const MAX_TOKENS_PER_CALL = 10;
 
@@ -65,7 +97,7 @@ export async function POST(req: NextRequest) {
     // Live tokens are the ones WE launched, so this list is small and changes
     // only when one launches. Caching it for 60s makes the hot path do no reads
     // at all; the only database work left per delivery is the tape insert.
-    const liveTokens = await withCache("helius-trades:live-tokens", 60, async () =>
+    const liveTokens = await readOrSkip("helius-trades:live-tokens", 60, async () =>
         db
             .select({
                 id: tokens.id,
@@ -80,6 +112,12 @@ export async function POST(req: NextRequest) {
             .from(tokens)
             .where(and(eq(tokens.status, "live"), isNotNull(tokens.poolAddress))),
     );
+    // Breaker up (or the read just failed): acknowledge and move on. Helius
+    // takes a 200 as delivered and won't redeliver, which is the point — a
+    // retry storm on a database that's already struggling is what we're
+    // getting away from.
+    if (!liveTokens) return NextResponse.json({ ok: true, skipped: "db" });
+
     const rows = liveTokens
         .filter((t) => t.poolAddress && touched.has(t.poolAddress))
         .slice(0, MAX_TOKENS_PER_CALL);
@@ -94,7 +132,7 @@ export async function POST(req: NextRequest) {
     // 15-connection pool and took out unrelated pages. The trending board only
     // changes on its own sync, so a 60s cache is free accuracy-wise and turns
     // the hot path into zero database reads.
-    const displayPools = await withCache("helius-trades:display-pools", 60, async () =>
+    const displayPools = await readOrSkip("helius-trades:display-pools", 60, async () =>
         db
             .select({ poolAddress: trendingCoins.poolAddress, tokenAddress: trendingCoins.tokenAddress })
             .from(trendingCoins)
@@ -102,7 +140,9 @@ export async function POST(req: NextRequest) {
             .orderBy(trendingCoins.rank)
             .limit(50),
     );
-    const displayHits = displayPools.filter((p) => p.poolAddress && touched.has(p.poolAddress));
+    // A missing trending list only costs display-pool tape, so this one degrades
+    // rather than skipping: tokens we own the pricing model for still sync.
+    const displayHits = (displayPools ?? []).filter((p) => p.poolAddress && touched.has(p.poolAddress));
 
     if (rows.length === 0 && displayHits.length === 0) {
         return NextResponse.json({ ok: true, synced: 0 });

@@ -31,7 +31,12 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 // postgres.js can pick one in the instant between "idle" and "closed".
 //
 // So the fix is to survive it rather than prevent it.
-const CONNECTION_LOST = /CONNECTION_CLOSED|CONNECTION_ENDED|CONNECTION_DESTROYED/i;
+// "This socket has been ended by the other party" is the same event wearing a
+// different string — Node's own message when the peer closed the socket, which
+// postgres.js surfaces unchanged. It was 30 of the 107 failures in the first
+// window after this shipped, and none of them were being retried.
+const CONNECTION_LOST =
+    /CONNECTION_CLOSED|CONNECTION_ENDED|CONNECTION_DESTROYED|socket has been ended by the other party/i;
 
 function isRetryable(err: unknown, query: string): boolean {
     const message = String((err as { message?: unknown } | null)?.message ?? err);
