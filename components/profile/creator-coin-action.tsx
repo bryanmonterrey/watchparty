@@ -88,6 +88,7 @@ export function CreatorCoinAction({
     });
 
     const create = trpc.trade.createCreatorCoin.useMutation();
+    const updateDraft = trpc.trade.updateCreatorCoin.useMutation();
     const recordLaunch = trpc.trade.launchCreatorCoin.useMutation();
 
     // The profile this pill sits on — a creator coin's content page.
@@ -115,7 +116,11 @@ export function CreatorCoinAction({
                     {
                         name: next.name?.trim() || next.ticker.trim(),
                         symbol: next.ticker.trim(),
-                        image: "",
+                        // createCreatorCoin defaults the row's image to the
+                        // creator's avatar; the MINT has to get the same one or
+                        // a coin created and launched in one go carries no art
+                        // at all, permanently.
+                        image: creatorAvatar || "",
                         description: "",
                         contentPath: profilePath(),
                     },
@@ -138,34 +143,62 @@ export function CreatorCoinAction({
         }
     };
 
-    // Launching an existing draft is the same first-buy flow, just later.
-    const launchExisting = async (next: TokenLaunchState) => {
-        if (!next.buyAmount || next.buyAmount <= 0) {
-            appToast.error("set a first buy amount to launch");
-            return;
-        }
+    // Saving an existing draft, and launching it too when a first buy is set.
+    //
+    // A draft is editable precisely because nothing is on-chain yet, so a
+    // rename is a normal save rather than an error — the first buy is what
+    // freezes the ticker. Edits are persisted BEFORE the launch so the mint
+    // carries what's on screen; launching from stale DB values was the old
+    // behaviour and it silently threw the rename away.
+    const saveDraft = async (next: TokenLaunchState) => {
+        const ticker = next.ticker?.trim();
+        if (!ticker) return;
+        const wantsLaunch = !!next.buyAmount && next.buyAmount > 0;
+
+        // The dialog saves on close, so an untouched open would otherwise fire
+        // a pointless write on every dismissal.
+        const edited =
+            ticker.toUpperCase() !== (coin?.ticker ?? "").toUpperCase() ||
+            (next.name?.trim() || "") !== (coin?.name ?? "") ||
+            next.creatorFee !== (coin?.creatorFeePercent ?? undefined);
+        if (!edited && !wantsLaunch) return;
+
         setBusy(true);
         try {
-            const result = await launchToken(
-                {
-                    name: coin?.name ?? next.ticker,
-                    symbol: coin?.ticker ?? next.ticker,
-                    image: coin?.imageUrl ?? "",
-                    description: coin?.description ?? "",
-                    contentPath: profilePath(),
-                },
-                { ...next, earningsEnabled: true },
-            );
-            if (result.success && result.tokenAddress && result.poolAddress) {
-                await recordLaunch.mutateAsync({
-                    tokenAddress: result.tokenAddress,
-                    poolAddress: result.poolAddress,
+            if (edited) {
+                await updateDraft.mutateAsync({
+                    ticker,
+                    name: next.name?.trim() || undefined,
+                    creatorFeePercent: next.creatorFee,
                 });
-                utils.trade.getCreatorCoin.invalidate({ userId });
-                appToast.success("coin launched");
             }
+
+            if (wantsLaunch) {
+                const result = await launchToken(
+                    {
+                        name: next.name?.trim() || ticker,
+                        symbol: ticker,
+                        // Whatever mints here is the coin's art forever, so the
+                        // creator's face fills the blank rather than launching
+                        // imageless — same rule the visitor path follows.
+                        image: coin?.imageUrl || creatorAvatar || "",
+                        description: coin?.description ?? "",
+                        contentPath: profilePath(),
+                    },
+                    { ...next, ticker, earningsEnabled: true },
+                );
+                if (result.success && result.tokenAddress && result.poolAddress) {
+                    await recordLaunch.mutateAsync({
+                        tokenAddress: result.tokenAddress,
+                        poolAddress: result.poolAddress,
+                    });
+                }
+            }
+
+            utils.trade.getCreatorCoin.invalidate({ userId });
+            appToast.success(wantsLaunch ? "coin launched" : "saved");
         } catch (e) {
-            appToast.error(e instanceof Error ? e.message : "launch failed");
+            appToast.error(e instanceof Error ? e.message : wantsLaunch ? "launch failed" : "couldn't save");
         } finally {
             setBusy(false);
         }
@@ -249,8 +282,9 @@ export function CreatorCoinAction({
 
     const isDraft = coin.status !== "live";
 
-    // Own draft: the pill IS the launch control. Pressing it reopens the dialog,
-    // where a first-buy amount is what turns it live.
+    // Own draft: the pill opens the editor. Nothing is on-chain yet, so the
+    // ticker, name and fee are all still editable — a first-buy amount is what
+    // turns it live and freezes them.
     if (isDraft) {
         return (
             <>
@@ -261,16 +295,24 @@ export function CreatorCoinAction({
                     className={cn(PILL_BASE, PILL_DRAFT, "disabled:opacity-50")}
                 >
                     <HugeiconsIcon icon={TradeUpIcon} className="size-5" strokeWidth={2.5} />
-                    {busy || isLaunching ? "Launching…" : `$${coin.ticker}`}
+                    {busy || isLaunching ? "Saving…" : `$${coin.ticker}`}
                 </button>
                 <TickerEditDialog
                     open={isEditing}
                     onOpenChange={setIsEditing}
-                    state={{ ...draft, ticker: coin.ticker, name: coin.name ?? "" }}
+                    state={{
+                        ...draft,
+                        ticker: coin.ticker,
+                        name: coin.name ?? "",
+                        creatorFee: coin.creatorFeePercent ?? draft.creatorFee,
+                    }}
                     onSave={(updates) => {
-                        const next = { ...draft, ticker: coin.ticker, ...updates };
+                        // `updates` last: it carries the edited ticker/name, and
+                        // seeding from the row is only a fallback for fields the
+                        // dialog didn't touch.
+                        const next = { ...draft, ticker: coin.ticker, name: coin.name ?? "", ...updates };
                         setDraft(next);
-                        void launchExisting(next);
+                        void saveDraft(next);
                     }}
                 />
             </>

@@ -349,6 +349,48 @@ export const tradeRouter = router({
         }),
 
     /**
+     * Edit the caller's creator coin while it's still a draft.
+     *
+     * Draft-only, and that's the whole point of the `status` guard: once the
+     * coin is live the ticker, name and image are in on-chain metadata, so
+     * changing the row here would just make the app disagree with the mint.
+     * Creator-gated the same way as everything else on this coin — the WHERE
+     * carries ctx.user.id, so there's no id to spoof.
+     */
+    updateCreatorCoin: protectedProcedure
+        .input(z.object({
+            ticker: z.string().min(1).max(16).optional(),
+            name: z.string().max(64).optional(),
+            description: z.string().max(500).optional(),
+            imageUrl: z.string().optional(),
+            creatorFeePercent: z.number().min(0).max(5).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const patch: Record<string, unknown> = {};
+            if (input.ticker !== undefined) patch.ticker = input.ticker.trim().toUpperCase();
+            if (input.name !== undefined) patch.name = input.name.trim() || undefined;
+            if (input.description !== undefined) patch.description = input.description;
+            if (input.imageUrl !== undefined) patch.imageUrl = input.imageUrl;
+            if (input.creatorFeePercent !== undefined) patch.creatorFeePercent = input.creatorFeePercent;
+            if (!Object.keys(patch).length) return { id: null };
+
+            const updated = await db
+                .update(tokens)
+                .set(patch)
+                .where(and(
+                    eq(tokens.creatorId, ctx.user.id),
+                    eq(tokens.isCreatorCoin, true),
+                    eq(tokens.status, "draft"),
+                ))
+                .returning({ id: tokens.id });
+
+            if (!updated.length) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "No draft creator coin to edit" });
+            }
+            return { id: updated[0].id };
+        }),
+
+    /**
      * Record a creator coin's on-chain launch.
      *
      * Guarded twice over: protectedProcedure for a session, and creatorId in the
