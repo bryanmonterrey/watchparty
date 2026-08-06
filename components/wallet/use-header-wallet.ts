@@ -173,8 +173,15 @@ export function useHeaderWalletAddress() {
 export function useHeaderWalletLoading() {
     // Debug switch (?debug-loading) pins all three tiles into their skeletons.
     const forceLoading = useForceLoading();
-    const { isLoading: sessionLoading } = useAuthSession();
+    const { isLoading: sessionLoading, isError: sessionError, data: sessionData } = useAuthSession();
     const { address: walletAddress, waitingOnAdapter, session } = useHeaderWalletAddress();
+
+    // An errored session read that never produced an answer is UNKNOWN, not
+    // signed-out. data stays undefined only when no request has ever succeeded
+    // (a later error keeps the previous answer) — so this holds the skeleton
+    // through a failed first load instead of flipping the tiles to their
+    // signed-out states while use-auth-session's error interval retries.
+    const sessionUnknown = sessionError && sessionData === undefined;
 
     const query = trpc.wallet.getWalletAssets.useQuery(
         { address: walletAddress ?? "" },
@@ -233,6 +240,7 @@ export function useHeaderWalletLoading() {
         loading:
             forceLoading ||
             sessionLoading ||
+            sessionUnknown ||
             waitingOnAdapter ||
             (!known && !!walletAddress && query.isPending),
         data,

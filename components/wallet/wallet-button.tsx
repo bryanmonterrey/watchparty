@@ -54,7 +54,11 @@ function WalletButtonInner() {
     const sawSessionRef = useRef(false);
 
     const { publicKey, connected, connecting, disconnecting, disconnect, signMessage } = useWallet();
-    const { data: session, isLoading: loading, isFetching: fetchingSession } = useAuthSession();
+    const { data: session, isLoading: loading, isFetching: fetchingSession, isError: sessionError } = useAuthSession();
+    // Errored with no answer EVER — unknown, not signed-out. (A later error
+    // keeps the previous session as data, so this is only the failed-first-load
+    // case; use-auth-session retries it on an interval until an answer lands.)
+    const sessionUnknown = sessionError && session === undefined;
     // Shared with the balance chip + Create button so all three header tiles
     // leave their skeletons in the same paint (see useHeaderWalletLoading).
     const { loading: headerLoading, address: walletAddress } = useHeaderWalletLoading();
@@ -204,6 +208,10 @@ function WalletButtonInner() {
             !isSignedIn &&
             !loading &&
             !fetchingSession &&
+            // Never fire a signature prompt off an ERRORED session read — "we
+            // couldn't ask" is not "they're signed out". Same class as the
+            // 2026-08-05 report the guards above fixed.
+            !sessionUnknown &&
             !sawSessionRef.current &&
             !isSigningIn &&
             !isAutoSignInTriggered.current
@@ -228,7 +236,7 @@ function WalletButtonInner() {
         return () => {
             if (timer) clearTimeout(timer as any);
         };
-    }, [connected, isSignedIn, loading, fetchingSession, session, isSigningIn, handleSignIn]);
+    }, [connected, isSignedIn, loading, fetchingSession, sessionUnknown, session, isSigningIn, handleSignIn]);
 
     const getButtonText = () => {
         if (connecting) return "Connecting...";
@@ -270,7 +278,7 @@ function WalletButtonInner() {
     // browse the app (lib/auth/public-browsing.ts), so this button is how they
     // start. What must not happen is showing it to someone who IS signed in
     // while their session is merely still in flight, which is the case above.
-    if (loading || headerLoading || (fetchingSession && !session?.user)) {
+    if (loading || headerLoading || sessionUnknown || (fetchingSession && !session?.user)) {
         return <WalletButtonSkeleton />;
     }
 

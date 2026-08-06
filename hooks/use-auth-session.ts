@@ -29,6 +29,13 @@ export function useAuthSession() {
         refetchOnMount: "always",
         refetchOnWindowFocus: true, // Refetch when window regains focus (e.g. after passkey dialog)
         // A dropped request shouldn't read as signed out either.
-        retry: 2
+        retry: 2,
+        // Self-heal an errored session read. Without this, a first load whose
+        // get-session died (the daily session-refresh WRITE is the one that
+        // hits the flaky DB path — see db/index.ts on CONNECTION_CLOSED) sat
+        // in error state until a refocus or manual refresh, and the header
+        // told a signed-in user to sign in for the whole pageview. Errors are
+        // transient here; keep asking until an answer lands, then stop.
+        refetchInterval: (query) => (query.state.error ? 15_000 : false),
     });
 }
