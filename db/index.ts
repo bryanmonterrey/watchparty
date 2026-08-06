@@ -150,7 +150,14 @@ function getGlobalDb(): Db {
 
 function resolveDb(): Db {
     const cfConn = hyperdriveConnectionString();
-    return cfConn ? getRequestDb(cfConn) : getGlobalDb();
+    if (cfConn) return getRequestDb(cfConn);
+    // Workers WITHOUT a Hyperdrive binding — the emergency bypass used when
+    // Hyperdrive itself is the wedged tier (2026-08-06): connect straight to
+    // the transaction pooler in DATABASE_URL. Must still be the per-request
+    // client; the global one reuses connections across requests, which the
+    // Workers runtime does not allow.
+    if (onWorkersRuntime()) return getRequestDb(process.env.DATABASE_URL!);
+    return getGlobalDb();
 }
 
 export const db = new Proxy({} as Db, {

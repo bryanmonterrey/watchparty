@@ -17,10 +17,13 @@
   },
   // Supabase session pooler (DIRECT_URL) fronted by Hyperdrive — the DB client
   // in db/index.ts reads env.HYPERDRIVE.connectionString on Workers.
+  // Config swapped 2026-08-06: the original config (85d170665be54585b8f8124bd9fbb404,
+  // "watchparty-db") wedged internally — every query queued forever while the DB sat
+  // idle — and a config modification did not clear it. Fresh id = fresh pool state.
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "85d170665be54585b8f8124bd9fbb404"
+      "id": "ba858f4c848844f8af5b003f453fd693"
     }
   ]
   // Added later for ISR/revalidation caching (mirrors the playground16 example):
