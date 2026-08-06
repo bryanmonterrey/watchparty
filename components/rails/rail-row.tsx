@@ -110,6 +110,19 @@ export function RailRow({
     return (
         <Squircle asChild radius={12} autoEffects={false}>
             <div
+                // The row itself selects, not just the button inside it.
+                //
+                // The stretched ::after below was supposed to make the whole row
+                // a target, but anything painted above it isn't covered — the
+                // views/menu line is deliberately `z-10` so the menu stays
+                // clickable — and in practice you had to hit the thumb or the
+                // title. Handling the click here is unconditional: every pixel
+                // of the row, whatever is painted over it.
+                //
+                // Only for the onSelect flavour. The href flavour is a real
+                // <Link>, and a wrapper click would be a second, worse way to
+                // navigate (no middle-click, no open-in-new-tab).
+                onClick={onSelect}
                 className={cn(
                     // `relative` is what the target's stretched ::after resolves
                     // against, so it's load-bearing for the row being clickable
@@ -153,7 +166,12 @@ export function RailRow({
                     ::after — without it the overlay would swallow the menu's
                     clicks and opening a row's menu would just select the row. */}
                 {hasExtras && (
-                    <div className={cn("relative z-10 flex items-center justify-end gap-1.5", INFO_INDENT)}>
+                    <div
+                        // The menu lives here, so a click that lands on it must
+                        // not also select the row on its way up to the wrapper.
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn("relative z-10 flex items-center justify-end gap-1.5", INFO_INDENT)}
+                    >
                         <ViewsStat
                             views={views}
                             className="text-sm font-medium text-flexwhite/50"
