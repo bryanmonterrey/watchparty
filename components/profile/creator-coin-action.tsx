@@ -174,7 +174,13 @@ export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner
                     className={cn(PILL_CREATE, "disabled:opacity-50")}
                 >
                     <CreateIcon className="size-5" strokeWidth={2.5} />
-                    {busy || isLaunching ? "Creating…" : "Creator coin"}
+                    {/* The $ is the app's own mark for a coin — every ticker
+                        elsewhere in this component renders as $TICKER — so it
+                        says what the button makes before there's a ticker to
+                        show. Glyph, not an icon: there is no dollar mark in
+                        components/icons, and a text $ matches the label's
+                        weight and colour for free. */}
+                    {busy || isLaunching ? "Creating…" : <span>$Creator coin</span>}
                 </button>
                 <TickerEditDialog
                     open={isEditing}
