@@ -161,16 +161,40 @@ async function syncTier(
     return writeCandles(target.network, target.poolAddress, resolution, candles);
 }
 
-/** Drop bars past each tier's retention window. */
+/**
+ * Drop bars past each tier's retention window.
+ *
+ * Batched and bounded. On 2026-08-06 a prune pass's client (the worker
+ * isolate) died mid-statement and the orphaned transaction sat "active" on
+ * the pooler's only server connection for 1.5h — every DB-backed request on
+ * the site queued behind it. The role-level statement_timeout
+ * (db/app-role-timeouts.sql) is what self-heals that class of wedge now;
+ * batching keeps each statement small so a timeout mid-prune never rolls back
+ * more than one batch, and coin_candles_prune_idx
+ * (db/coin-candles-prune-index.sql) keeps the victim scan cheap as the table
+ * grows into its ~288k-rows/day steady state.
+ */
+const PRUNE_BATCH_ROWS = 5_000;
+const PRUNE_MAX_BATCHES = 20;
+
 export async function pruneCandles(): Promise<number> {
     const now = Math.floor(Date.now() / 1000);
     let removed = 0;
     for (const [resolution, keep] of Object.entries(RETAIN_SECONDS) as [StoredResolution, number][]) {
         if (keep === 0) continue;
-        const res = await db
-            .delete(coinCandles)
-            .where(sql`${coinCandles.resolution} = ${resolution} and ${coinCandles.ts} < ${now - keep}`);
-        removed += (res as unknown as { count?: number }).count ?? 0;
+        const cutoff = now - keep;
+        for (let i = 0; i < PRUNE_MAX_BATCHES; i++) {
+            const res = await db.execute(sql`
+                delete from ${coinCandles} where ctid in (
+                    select ctid from ${coinCandles}
+                    where ${coinCandles.resolution} = ${resolution} and ${coinCandles.ts} < ${cutoff}
+                    limit ${PRUNE_BATCH_ROWS}
+                )
+            `);
+            const n = (res as unknown as { count?: number }).count ?? 0;
+            removed += n;
+            if (n < PRUNE_BATCH_ROWS) break;
+        }
     }
     return removed;
 }

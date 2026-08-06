@@ -1,0 +1,12 @@
+-- Prune-path index for coin_candles (2026-08-06 outage follow-up).
+--
+-- pruneCandles deletes by (resolution, ts); neither the PK nor
+-- coin_candles_series_idx leads with those columns, so the victim scan is a
+-- seq scan. Harmless at today's row count, not at the designed steady state
+-- (~288k rows/day of 1m bars) — and with a 30s role statement_timeout now in
+-- force (db/app-role-timeouts.sql), the prune must never be the slow query.
+--
+-- Apply order matters: CREATE INDEX takes a SHARE lock, which conflicts with
+-- a running delete's ROW EXCLUSIVE lock. Kill any wedged coin_candles delete
+-- first (pg_terminate_backend) or this will queue behind it and block writes.
+create index if not exists coin_candles_prune_idx on coin_candles (resolution, ts);
