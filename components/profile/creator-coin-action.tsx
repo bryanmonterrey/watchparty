@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TradeUpIcon } from "@hugeicons/core-free-icons";
+import { TradeUpIcon, DollarSignIcon } from "@hugeicons/core-free-icons";
 import { CreateIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -174,13 +174,17 @@ export function CreatorCoinAction({ userId, isOwner }: { userId: string; isOwner
                     className={cn(PILL_CREATE, "disabled:opacity-50")}
                 >
                     <CreateIcon className="size-5" strokeWidth={2.5} />
-                    {/* The $ is the app's own mark for a coin — every ticker
-                        elsewhere in this component renders as $TICKER — so it
-                        says what the button makes before there's a ticker to
-                        show. Glyph, not an icon: there is no dollar mark in
-                        components/icons, and a text $ matches the label's
-                        weight and colour for free. */}
-                    {busy || isLaunching ? "Creating…" : <span>$Creator coin</span>}
+                    {busy || isLaunching ? (
+                        "Creating…"
+                    ) : (
+                        <>
+                            {/* The mark for a coin, sitting where a ticker's $
+                                would — the live and draft states of this same
+                                button render $TICKER. */}
+                            <HugeiconsIcon icon={DollarSignIcon} className="size-4" strokeWidth={2.5} />
+                            Creator coin
+                        </>
+                    )}
                 </button>
                 <TickerEditDialog
                     open={isEditing}
