@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import { RailRow, RailRowSkeleton } from "@/components/rails/rail-row";
 import { RailShell } from "@/components/rails/rail-shell";
 import { RailScrollbar } from "@/components/rails/rail-scrollbar";
-import { HOME_TAB_LIKED } from "@/components/rails/rail-tabs";
+import { RailOnlineList } from "@/components/rails/rail-online-list";
+import { HOME_TAB_LIKED, RAIL_TAB_ONLINE } from "@/components/rails/rail-tabs";
 import { HomeRailTabs } from "./home-rail-tabs";
 import { cn } from "@/lib/utils";
 import { stableHoverColor } from "@/lib/stable-hover-color";
@@ -66,6 +67,10 @@ export function HomeRailVideos() {
     // so this list is just whatever the query returned — no sieving here.
     const { videos, active, setActiveId, isLoading, hasMore, isLoadingMore, loadMore, tab } = useHomeFeed();
     const onLiked = tab === HOME_TAB_LIKED;
+    // Online swaps the video picker for the who's-online people list. Its rows
+    // navigate to the channel rather than picking the hero — the hero keeps
+    // playing whatever it was on underneath.
+    const onOnline = tab === RAIL_TAB_ONLINE;
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
@@ -114,7 +119,10 @@ export function HomeRailVideos() {
     //
     // The skeleton wears the same shell as the real list — a container that
     // appears only once the rows land would read as a layout shift.
-    if (isLoading) {
+    //
+    // Not on Online: that tab's list isn't this feed, and RailOnlineList carries
+    // its own skeleton — the feed still loading shouldn't blank it.
+    if (isLoading && !onOnline) {
         return (
             <RailShell className={CARD_MB} radius={25} bordered>
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -146,37 +154,43 @@ export function HomeRailVideos() {
             <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
                 {railTabs}
                 <div className={cn("flex flex-col bg-canvas", CARD_PX)}>
-                {videos.map((v) => (
-                    <RailRow
-                        key={v.id}
-                        thumbnailUrl={v.thumbnailUrl}
-                        isLive={v.isLive}
-                        username={v.user.username}
-                        verifiedTier={v.user.verifiedTier}
-                        title={v.title}
-                        views={v.views}
-                        menu={<RailRowMenu postId={v.id} userId={v.user.id} />}
-                        isActive={v.id === active?.id}
-                        hoverColor={stableHoverColor(v.id)}
-                        onSelect={() => setActiveId(v.id)}
-                    />
-                ))}
+                {onOnline ? (
+                    <RailOnlineList />
+                ) : (
+                    <>
+                        {videos.map((v) => (
+                            <RailRow
+                                key={v.id}
+                                thumbnailUrl={v.thumbnailUrl}
+                                isLive={v.isLive}
+                                username={v.user.username}
+                                verifiedTier={v.user.verifiedTier}
+                                title={v.title}
+                                views={v.views}
+                                menu={<RailRowMenu postId={v.id} userId={v.user.id} />}
+                                isActive={v.id === active?.id}
+                                hoverColor={stableHoverColor(v.id)}
+                                onSelect={() => setActiveId(v.id)}
+                            />
+                        ))}
 
-                {/* Liked is the only tab that can legitimately come back empty — the
-                    unfiltered feed is empty only while the first page is in flight,
-                    which the skeleton above already covers. */}
-                {onLiked && videos.length === 0 && !isLoadingMore && (
-                    <p className="px-1 py-6 text-sm text-zinc-500">nothing liked yet</p>
+                        {/* Liked is the only tab that can legitimately come back empty — the
+                            unfiltered feed is empty only while the first page is in flight,
+                            which the skeleton above already covers. */}
+                        {onLiked && videos.length === 0 && !isLoadingMore && (
+                            <p className="px-1 py-6 text-sm text-zinc-500">nothing liked yet</p>
+                        )}
+
+                        {isLoadingMore &&
+                            Array.from({ length: LOADING_MORE_ROWS }).map((_, i) => (
+                                <RailRowSkeleton key={`more-${i}`} index={i} count={LOADING_MORE_ROWS} />
+                            ))}
+
+                        {/* Zero-height tripwire below the last row. Kept mounted only while
+                            there's more to fetch, so reaching the cap simply ends the scroll. */}
+                        {hasMore && <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />}
+                    </>
                 )}
-
-                {isLoadingMore &&
-                    Array.from({ length: LOADING_MORE_ROWS }).map((_, i) => (
-                        <RailRowSkeleton key={`more-${i}`} index={i} count={LOADING_MORE_ROWS} />
-                    ))}
-
-                {/* Zero-height tripwire below the last row. Kept mounted only while
-                    there's more to fetch, so reaching the cap simply ends the scroll. */}
-                {hasMore && <div ref={sentinelRef} aria-hidden className="h-px shrink-0" />}
                 </div>
             </div>
 

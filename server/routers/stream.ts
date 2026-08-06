@@ -3,7 +3,8 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
-import { and, eq, desc, inArray } from "drizzle-orm";
+import { and, eq, desc, inArray, sql } from "drizzle-orm";
+import { follows } from "@/db/schema/content/follow";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { TRPCError } from "@trpc/server";
 import type { IvsClient } from "@aws-sdk/client-ivs";
@@ -208,6 +209,37 @@ export const streamRouter = router({
                 .where(eq(streams.isLive, true))
                 .orderBy(desc(streams.viewerCount))
                 .limit(input?.limit ?? 6);
+            return rows;
+        }),
+
+    // The viewer's followed channels with their live state — the rail's Online
+    // tab. Live first (most-watched on top), then offline by follow recency.
+    // LEFT join: someone who has never configured a stream still shows up, as
+    // offline — the tab is "who I follow", not "who has a channel row".
+    followedChannels: protectedProcedure
+        .input(z.object({ limit: z.number().min(1).max(50).default(40) }).optional())
+        .query(async ({ ctx, input }) => {
+            const rows = await db
+                .select({
+                    userId: user.id,
+                    name: user.name,
+                    username: user.username,
+                    avatar_url: user.avatar_url,
+                    verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
+                    isLive: sql<boolean>`coalesce(${streams.isLive}, false)`,
+                    category: streams.category,
+                    viewerCount: sql<number>`coalesce(${streams.viewerCount}, 0)`,
+                })
+                .from(follows)
+                .innerJoin(user, eq(follows.followingId, user.id))
+                .leftJoin(streams, eq(streams.userId, user.id))
+                .where(eq(follows.followerId, ctx.user.id))
+                .orderBy(
+                    desc(sql`coalesce(${streams.isLive}, false)`),
+                    desc(sql`coalesce(${streams.viewerCount}, 0)`),
+                    desc(follows.createdAt),
+                )
+                .limit(input?.limit ?? 40);
             return rows;
         }),
 

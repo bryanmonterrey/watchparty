@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { RailRow, RailRowSkeleton } from "./rail-row";
 import { RailRowMenu } from "./rail-row-menu";
+import { RailOnlineList } from "./rail-online-list";
 import { RAIL_ICON_TAB, RAIL_TAB_ONLINE } from "./rail-tabs";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 
@@ -15,7 +16,7 @@ import { stableHoverColor } from "@/lib/stable-hover-color";
 //
 //   trending → public videos, most-viewed first
 //   For you  → public videos in the feed's own order (baseScore, then recency)
-//   Online   → stream.listLive, ordered by viewers
+//   Online   → RailOnlineList, the shared who's-online sections
 //   New      → public videos, newest first
 //   Upcoming → nothing. Scheduled streams don't exist yet, so this says so
 //              rather than quietly showing the same list as another tab.
@@ -30,11 +31,6 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
     const { data: videoData, isLoading: videosLoading } = trpc.content.getPublicVideos.useQuery(
         { excludePostId, limit: LIMIT },
         { enabled: wantsVideos, staleTime: 60_000 },
-    );
-
-    const { data: liveRows, isLoading: liveLoading } = trpc.stream.listLive.useQuery(
-        { limit: 12 },
-        { enabled: isLiveTab, staleTime: 30_000 },
     );
 
     // One query serves three tabs — the ordering is the only difference, and
@@ -53,42 +49,17 @@ export function RailVideoList({ tab, excludePostId }: { tab: string; excludePost
         return <p className="px-2 py-8 text-center text-sm font-medium text-zinc-500">Nothing scheduled yet</p>;
     }
 
-    const isLoading = isLiveTab ? liveLoading : videosLoading;
-    if (isLoading) {
+    // The who's-online sections, shared with home's rail. It owns its own
+    // queries, skeleton and empty state.
+    if (isLiveTab) {
+        return <RailOnlineList />;
+    }
+
+    if (videosLoading) {
         return (
             <div className="flex flex-col">
                 {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
                     <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
-                ))}
-            </div>
-        );
-    }
-
-    if (isLiveTab) {
-        if (!liveRows?.length) {
-            return <p className="px-2 py-8 text-center text-sm font-medium text-zinc-500">No one is live right now</p>;
-        }
-        return (
-            <div className="flex flex-col">
-                {liveRows.map((s) => (
-                    <RailRow
-                        key={s.userId}
-                        // A stream is a state of its host's profile now, not a
-                        // route — so a live row goes to the host.
-                        href={`/${s.username ?? ""}`}
-                        isLive
-                        username={s.username}
-                        verifiedTier={s.verifiedTier}
-                        title={s.title ?? `${s.name ?? s.username} is live`}
-                        // Concurrent viewers, in the same slot a video's view
-                        // count uses. ViewsStat prints an eye and a figure with
-                        // no "views" label, so the number reads correctly for
-                        // both. NO menu here: that menu acts on a POST, and a
-                        // live stream doesn't have one — listLive returns a
-                        // userId, not a postId.
-                        views={s.viewerCount}
-                        hoverColor={stableHoverColor(s.userId)}
-                    />
                 ))}
             </div>
         );
