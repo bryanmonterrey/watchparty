@@ -61,4 +61,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Where it landed
-        run: echo "Preview URL: https://watchparty-app.<your-subdomain>.workers.dev — the live site is unchanged."
+        # Block scalar, not an inline string: the ": " inside "Preview URL:"
+        # made YAML read this as a nested mapping key, which GitHub rejects as
+        # an invalid workflow — no jobs, no logs, just a failed run.
+        run: |
+          echo "Deployed watchparty-app. Its workers.dev URL is in the deploy step above."
+          echo "The live site (watchparty.xyz) is unchanged."
