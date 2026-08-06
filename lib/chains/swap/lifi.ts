@@ -36,6 +36,24 @@ function viemChain(id: ChainId) {
   } as const;
 }
 
+/**
+ * Token metadata by contract — what the swap procs need BEFORE quoting: a
+ * quote's fromAmount is base units, so converting the user's human amount
+ * needs the token's decimals first. Keyless, same API as the quotes.
+ */
+export async function getLifiTokenInfo(
+  chainId: ChainId,
+  token: string
+): Promise<{ address: string; symbol: string; name: string; decimals: number; priceUSD?: string }> {
+  const chain = evmChainOrThrow(chainId);
+  const params = new URLSearchParams({ chain: String(chain.chainId), token });
+  const res = await fetch(`${LIFI_API}/token?${params}`, { headers: { accept: "application/json" } });
+  if (!res.ok) throw new Error(`Token not found on ${chain.name} (${res.status})`);
+  const t = (await res.json()) as any;
+  if (typeof t?.decimals !== "number") throw new Error(`Token metadata incomplete on ${chain.name}`);
+  return { address: t.address, symbol: t.symbol, name: t.name ?? t.symbol, decimals: t.decimals, priceUSD: t.priceUSD };
+}
+
 export async function getLifiQuote(
   request: SwapQuoteRequest,
   fromAddress: string

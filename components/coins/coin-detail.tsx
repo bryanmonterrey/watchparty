@@ -11,18 +11,13 @@
 // hands its result straight in with no mapping.
 
 import * as React from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Clock01Icon, Copy01Icon, FavouriteIcon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import { ChainBadge } from "@/components/trending/chain-badge";
 import { PinkStarLogo } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
-import { SwapView } from "@/components/wallet/wallet-drawer2/views/swap/swap-view";
-import type { Token as SwapToken } from "@/components/wallet/wallet-drawer2/views/swap/token-selector-modal";
-import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
-import { Button } from "@/components/ui/button";
-import { useAuthSession } from "@/hooks/use-auth-session";
+import { CoinTradePanel } from "./coin-trade-panel";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
@@ -610,61 +605,19 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
 }
 
 function CoinSwap({ coin }: { coin: CoinViewData }) {
-    const { data: session } = useAuthSession();
-    const { publicKey } = useWallet();
-    const walletAddress = publicKey?.toBase58() || session?.user?.wallet_address || "";
     const marketUrl = tradeUrl(coin.network, coin.tokenAddress, coin.poolAddress);
-    const { data: metadata, isLoading } = trpc.wallet.getTokensByMints.useQuery(
-        { ids: [coin.tokenAddress] },
-        { enabled: coin.network === "solana" && !!walletAddress, staleTime: 60 * 60 * 1000 },
-    );
-    const tokenMetadata = metadata?.[coin.tokenAddress];
-    const outputToken: SwapToken | null = tokenMetadata?.decimals != null ? {
-        address: coin.tokenAddress,
-        symbol: tokenMetadata.symbol || coin.symbol,
-        name: tokenMetadata.name || coin.name || coin.symbol,
-        decimals: tokenMetadata.decimals,
-        logoURI: tokenMetadata.logoURI || coin.imageUrl || undefined,
-    } : null;
 
-    // The cards below carry the same hairline the alerts list does
-    // (RAIL_BORDER, #18181B) with no fill of their own, so each reads as an
-    // outlined card on the page rather than a second surface colour. See
-    // SWAP_CARD.
-    // pr-1 pulls the swap card up close to the action dock, which is a sibling
-    // of the grid. p-4 still holds the other three sides — the left one is the
-    // gap against the chart column.
+    // The buy/sell panel replaced the drawer's generic SwapView here — every
+    // coin on every routable chain trades in place now (Jupiter for Solana,
+    // LI.FI for the EVM chains), and the panel owns its own gates: connect
+    // card, unsupported-chain card, quote errors. See coin-trade-panel.tsx.
     //
-    // A `//` comment, NOT `{/* */}`: a JSX comment directly after `return (`
-    // parses as an object literal and fails the Turbopack build (see CLAUDE.md).
+    // The card chrome (SWAP_CARD) is passed in so this file stays the single
+    // owner of the swap column's outline style.
     return (
         <aside className="pr-0">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
-                {coin.network !== "solana" ? (
-                    <div className={SWAP_CARD + " p-5"}>
-                        <h3 className="text-lg font-bold text-white">Trade {coin.symbol}</h3>
-                        <p className="mt-2 text-sm leading-relaxed text-zinc-500">In-app swaps currently route through Jupiter on Solana. Use the live venue for {chainLabel(coin.network)}.</p>
-                        {marketUrl && <Button asChild className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85"><a href={marketUrl} target="_blank" rel="noopener noreferrer">Open market</a></Button>}
-                    </div>
-                ) : !walletAddress ? (
-                    <div className={SWAP_CARD + " p-5"}>
-                        <h3 className="text-lg font-bold text-white">Swap {coin.symbol}</h3>
-                        <p className="mt-2 text-sm text-zinc-500">Connect or unlock your wallet to trade this coin through Jupiter.</p>
-                        <Button onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))} className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85">Open wallet</Button>
-                    </div>
-                ) : isLoading ? (
-                    <div className="h-[430px] rounded-2xl shimmer-skeleton" />
-                ) : !outputToken ? (
-                    <div className={SWAP_CARD + " p-5"}>
-                        <h3 className="text-lg font-bold text-white">Swap unavailable</h3>
-                        <p className="mt-2 text-sm leading-relaxed text-zinc-500">This coin is not available from the current Jupiter token metadata source.</p>
-                        {marketUrl && <Button asChild className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85"><a href={marketUrl} target="_blank" rel="noopener noreferrer">Open market</a></Button>}
-                    </div>
-                ) : (
-                    <div className={SWAP_CARD + " overflow-hidden"}>
-                        <SwapView key={coin.id} walletAddress={walletAddress} onBack={() => {}} initialOutputToken={outputToken} showBack={false} />
-                    </div>
-                )}
+                <CoinTradePanel key={coin.id} coin={coin} marketUrl={marketUrl} cardClassName={SWAP_CARD} />
             </div>
         </aside>
     );

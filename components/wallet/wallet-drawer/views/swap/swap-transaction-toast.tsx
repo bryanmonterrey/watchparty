@@ -3,6 +3,7 @@
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, X, ArrowRight, ArrowUpRight } from "lucide-react";
+import { Squircle } from "@/components/ui/squircle";
 
 export type SwapToastStep = "building" | "signing" | "confirming" | "success" | "error";
 
@@ -15,6 +16,9 @@ interface SwapToastData {
     inputIcon?: string;
     outputIcon?: string;
     txHash?: string;
+    /** Overrides the default Solana tx viewer — EVM swaps pass their chain's
+     *  explorer here so "View tx" doesn't point an 0x hash at orbmarkets. */
+    explorerUrl?: string;
     error?: string;
 }
 
@@ -59,11 +63,15 @@ function SwapToastContent({
     const activeStepIdx = STEPS.indexOf(step as SwapToastStep);
 
     return (
+        // Squircled glass per the app's toast standard: translucent black over
+        // backdrop blur, no border (the clip-path would eat it anyway) and no
+        // gray drop shadow — the blur separates it from the page.
+        <Squircle asChild radius={24} autoEffects={false}>
         <motion.div
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="w-[300px] bg-black1 border border-zinc-800/60 rounded-3xl p-4 flex flex-col gap-3 shadow-2xl"
+            className="w-[300px] bg-black/45 backdrop-blur-lg p-4 flex flex-col gap-3"
         >
             {/* Token pair + dismiss */}
             <div className="flex items-center gap-2">
@@ -145,7 +153,7 @@ function SwapToastContent({
                     {isSuccess && txHash && (
                         <motion.a
                             key="solscan"
-                            href={`https://orbmarkets.io/tx/${txHash}`}
+                            href={data.explorerUrl ?? `https://orbmarkets.io/tx/${txHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             initial={{ opacity: 0, x: 8 }}
@@ -185,6 +193,7 @@ function SwapToastContent({
                 )}
             </AnimatePresence>
         </motion.div>
+        </Squircle>
     );
 }
 
@@ -212,7 +221,7 @@ export function showSwapToast(opts: {
 
     return {
         setStep: (step: SwapToastStep) => render({ ...base, step }),
-        success: (txHash?: string) => render({ ...base, step: "success", txHash }),
+        success: (txHash?: string, explorerUrl?: string) => render({ ...base, step: "success", txHash, explorerUrl }),
         error: (message?: string) => render({ ...base, step: "error", error: message }),
         dismiss: () => toast.dismiss(TOAST_ID),
     };

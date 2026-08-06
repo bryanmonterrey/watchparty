@@ -34,6 +34,7 @@ import {
     executeSwap,
     getSwapQuote,
     swapSupport,
+    NATIVE_TOKEN as EVM_NATIVE_TOKEN,
     type SwapQuote,
 } from "@/lib/chains/swap";
 import {
@@ -59,8 +60,68 @@ import {
     getAddressesByKind,
     persistDerivedAddresses,
 } from "@/lib/wallet/multichain";
+import { getLifiTokenInfo } from "@/lib/chains/swap/lifi";
 
 const subtle = globalThis.crypto?.subtle;
+
+/** Human decimal string → base units, BigInt-safe — no float ever touches it. */
+function humanToBaseUnits(human: string, decimals: number): string {
+    const trimmed = human.trim();
+    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Enter a valid amount" });
+    }
+    const [whole, frac = ""] = trimmed.split(".");
+    const fracPadded = (frac + "0".repeat(decimals)).slice(0, decimals);
+    return (BigInt(whole || "0") * BigInt(10) ** BigInt(decimals) + BigInt(fracPadded || "0")).toString();
+}
+
+const evmSwapInput = z.object({
+    chain: z.string(),
+    /** Contract address, or the zero-address sentinel for the native coin. */
+    fromToken: z.string(),
+    toToken: z.string(),
+    /** Human units ("0.25"), converted server-side — the client would need the
+     *  token's decimals to build base units, and resolving those lives here. */
+    amountHuman: z.string(),
+    slippageBps: z.number().min(10).max(3000).default(100),
+});
+
+/** Shared by the quote query and the swap mutation: resolve the user's EVM
+ *  address, convert the human amount via real decimals, quote through LI.FI. */
+async function resolveEvmSwapQuote(userId: string, input: z.infer<typeof evmSwapInput>) {
+    const chain = getChain(input.chain);
+    if (!chain || swapSupport(input.chain).provider !== "lifi") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Swaps aren't available on this chain" });
+    }
+    const addresses = await getAddressesByKind(userId);
+    const address = addresses[chain.kind];
+    if (!address) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No wallet on this chain yet — open your wallet to set one up" });
+    }
+    const fromDecimals =
+        input.fromToken === EVM_NATIVE_TOKEN
+            ? chain.nativeCurrency.decimals
+            : (
+                  await withCache(`lifi-token:${chain.id}:${input.fromToken.toLowerCase()}`, 86_400, () =>
+                      getLifiTokenInfo(chain.id, input.fromToken)
+                  )
+              ).decimals;
+    const fromAmount = humanToBaseUnits(input.amountHuman, fromDecimals);
+    if (BigInt(fromAmount) <= BigInt(0)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Amount is too small" });
+    }
+    const quote = await getSwapQuote(
+        {
+            chain: chain.id,
+            fromToken: input.fromToken,
+            toToken: input.toToken,
+            fromAmount,
+            slippage: input.slippageBps / 10_000,
+        },
+        address
+    );
+    return { chain, address, quote };
+}
 
 
 /**
@@ -720,6 +781,67 @@ export const walletRouter = router({
             } catch (err: any) {
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: false });
                 throw new TRPCError({ code: "BAD_REQUEST", message: err?.message ?? "Send failed" });
+            }
+        }),
+
+    /**
+     * Quote an EVM swap (LI.FI) against the signed-in user's derived address.
+     * A query, so the coin page's trade panel can debounce it for live
+     * estimates without spending a signature.
+     */
+    getEvmSwapQuote: protectedProcedure
+        .input(evmSwapInput)
+        .query(async ({ ctx, input }) => {
+            const { quote } = await resolveEvmSwapQuote(ctx.user.id, input);
+            return {
+                toAmount: quote.toAmount,
+                toAmountMin: quote.toAmountMin,
+                toSymbol: quote.toToken.symbol,
+                toDecimals: quote.toToken.decimals,
+                fromSymbol: quote.fromToken.symbol,
+                fromDecimals: quote.fromToken.decimals,
+                tool: quote.tool,
+            };
+        }),
+
+    /**
+     * Execute an EVM swap. Re-quotes fresh server-side — a client-held quote
+     * is never trusted — then signs from the seed-derived key, the same trust
+     * model as sendOnChain. executeLifiSwap handles the ERC-20 allowance when
+     * the input is a token rather than the native coin.
+     */
+    swapEvm: protectedProcedure
+        .input(evmSwapInput)
+        .mutation(async ({ ctx, input }) => {
+            const headersList = await headers();
+            const ipAddress = headersList.get("x-forwarded-for") || "unknown";
+            const userAgent = headersList.get("user-agent") || "unknown";
+
+            if (!checkRateLimit(ctx.user.id, "sign_transaction")) {
+                throw new TRPCError({
+                    code: "TOO_MANY_REQUESTS",
+                    message: `Too many transactions. Try again after ${getResetTime(ctx.user.id, "sign_transaction")}`,
+                });
+            }
+
+            try {
+                const { chain, address, quote } = await resolveEvmSwapQuote(ctx.user.id, input);
+                const seed = await getSeedForUser(ctx.user.id);
+                const result = await executeSwap(seed, quote);
+
+                await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
+                await invalidateCache(`assets:${chain.id}:${address}`);
+                return {
+                    txId: result.txId,
+                    explorerUrl: result.explorerUrl,
+                    toAmount: quote.toAmount,
+                    toDecimals: quote.toToken.decimals,
+                    toSymbol: quote.toToken.symbol,
+                };
+            } catch (err: any) {
+                await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: false });
+                if (err instanceof TRPCError) throw err;
+                throw new TRPCError({ code: "BAD_REQUEST", message: err?.message ?? "Swap failed" });
             }
         }),
 
