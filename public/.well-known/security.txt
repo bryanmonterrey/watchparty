@@ -1,0 +1,7 @@
+# https://watchparty.xyz security contact — RFC 9116
+# Field names are spec-defined; do not lowercase them.
+
+Contact: mailto:security@watchparty.xyz
+Expires: 2027-08-06T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://watchparty.xyz/.well-known/security.txt
