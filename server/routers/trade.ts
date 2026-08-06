@@ -15,6 +15,7 @@ import {
     fetchMobulaChainPairs,
     fetchMobulaTokenTrades,
     fetchMobulaTokenSecurity,
+    mobulaCadence,
     mobulaEnabled,
     type MobulaPair,
 } from "@/lib/coins/mobula";
@@ -214,7 +215,7 @@ export const tradeRouter = router({
             list: z.enum(["trending", "new"]).default("trending"),
         }))
         .query(({ input }) =>
-            withCache(`trade:chainfeed:v1:${input.chain}:${input.list}`, 90, async () => {
+            withCache(`trade:chainfeed:v1:${input.chain}:${input.list}`, mobulaCadence().chainFeedTtl, async () => {
                 const rows = await fetchMobulaChainPairs(
                     input.chain,
                     input.list,
@@ -238,7 +239,7 @@ export const tradeRouter = router({
     coinTrades: publicProcedure
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
-            withCache(`coin:trades:v1:${input.network}:${input.address}`, 5, async () => {
+            withCache(`coin:trades:v1:${input.network}:${input.address}`, mobulaCadence().tradesTtl, async () => {
                 const rows = await fetchMobulaTokenTrades(input.network, input.address).catch(() => null);
                 if (!rows?.length) return [];
                 // Same enrichment the old Solana-only reader did: wallets that
@@ -265,7 +266,7 @@ export const tradeRouter = router({
     coinSecurity: publicProcedure
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
-            withCache(`coin:security:v1:${input.network}:${input.address}`, 120, () =>
+            withCache(`coin:security:v1:${input.network}:${input.address}`, mobulaCadence().securityTtl, () =>
                 fetchMobulaTokenSecurity(input.network, input.address).catch(() => null)
             )
         ),

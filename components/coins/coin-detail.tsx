@@ -341,7 +341,10 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     // was Solana-only and a minute behind.)
     const { data: trades = [], isLoading } = trpc.trade.coinTrades.useQuery(
         { network: coin.network, address: coin.tokenAddress },
-        { staleTime: 4_000, refetchInterval: 5_000, retry: 1 },
+        // The server cache (mobulaCadence) governs actual freshness per plan;
+        // this poll just picks fresh windows up promptly, and it's nearly
+        // always answered from Redis.
+        { staleTime: 10_000, refetchInterval: 15_000, retry: 1 },
     );
 
     const rows = React.useMemo(() => foldTraders(trades, coin.priceUsd), [trades, coin.priceUsd]);

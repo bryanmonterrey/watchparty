@@ -50,6 +50,21 @@ const isDemo = () => rawKey().toLowerCase() === "demo";
 export const mobulaEnabled = () => !!rawKey();
 
 /**
+ * Upstream cadence per plan — how often the tRPC caches let a coin cost a
+ * fresh Mobula call. The FREE key has 10k credits/month, which a 5s trades
+ * window would burn in days (12/min per watched coin); these defaults keep a
+ * continuously-watched coin near ~2.9k calls/day worst case, and real usage
+ * far below it. Set MOBULA_PLAN=startup after upgrading to the $50 tier
+ * (125k credits) and every board tightens without a code change.
+ */
+export function mobulaCadence() {
+    const free = (process.env.MOBULA_PLAN ?? "free").trim().toLowerCase() === "free";
+    return free
+        ? { tradesTtl: 30, chainFeedTtl: 300, securityTtl: 900 }
+        : { tradesTtl: 5, chainFeedTtl: 90, securityTtl: 120 };
+}
+
+/**
  * TradingView resolution → Mobula `period`.
  *
  * Returns null for anything without an exact match rather than guessing: a
