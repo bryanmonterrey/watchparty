@@ -16,15 +16,22 @@ export class NextApp extends Container {
     defaultPort = 3000;
 
     /**
-     * Kept warm on purpose.
+     * Sleeps when idle — the deliberate cost choice.
      *
-     * Containers sleep when idle and cold-start in 1-3 seconds, and on a site
-     * with little traffic the person paying that cost is a real visitor —
-     * almost every visit would be the first one after a nap. Staying up costs a
-     * couple of dollars a month more than sleeping; a two-second wait on the
-     * homepage costs more than that.
+     * Hardware is identical whether it sleeps or not (standard-1: 4 GiB, half
+     * a vCPU). Billing only runs while the instance is awake, so this is the
+     * difference between roughly $10 and roughly $33 a month.
+     *
+     * What it buys back: the first visitor after an idle period waits for a
+     * cold start. Measured on this deploy, not guessed — 4.0s cold, 0.17s
+     * warm.
+     *
+     * 15 minutes is the compromise: long enough that one person browsing
+     * several pages only ever pays it once, short enough that an idle night
+     * isn't billed. Raise it if the wait shows up in real use; the number is
+     * the only thing that changes.
      */
-    sleepAfter = "8h";
+    sleepAfter = "15m";
 
     /**
      * Runtime env for the server, forwarded from this Worker's own bindings —
