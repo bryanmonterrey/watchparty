@@ -40,6 +40,19 @@ export const trpcClient = trpc.createClient({
         httpBatchStreamLink({
             url: `${getBaseUrl()}/api/trpc`,
             transformer: superjson,
+            // Cap how much rides in one request.
+            //
+            // A batch runs every procedure in it inside ONE worker invocation,
+            // in one isolate, at the same time — so a page that fires twenty
+            // queries at mount asks a 128 MB budget to hold twenty result sets
+            // at once. Workers were being killed for `exceededMemory` (26 in an
+            // hour) on exactly that shape, including a getPollsForPosts batch
+            // carrying a screenful of post ids.
+            //
+            // Splitting past this length costs an extra HTTP request and buys
+            // headroom the isolate can't otherwise get: the memory ceiling is
+            // fixed and not configurable.
+            maxURLLength: 2000,
             headers() {
                 return {};
             },
