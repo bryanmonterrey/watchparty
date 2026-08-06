@@ -12,6 +12,7 @@ import { TokenLaunchState, DEFAULT_TOKEN_LAUNCH } from "@/components/browse/toke
 import { TickerEditDialog } from "@/components/browse/ticker-edit-dialog";
 import { CreatorCoinLaunchDialog } from "./creator-coin-launch-dialog";
 import { useTokenLaunch } from "@/hooks/use-token-launch";
+import { useAuthSession } from "@/hooks/use-auth-session";
 
 // The creator's own coin, on their profile.
 //
@@ -65,6 +66,17 @@ export function CreatorCoinAction({
     const utils = trpc.useUtils();
     const { launchToken, isLaunching } = useTokenLaunch();
     const { data: coin, isLoading } = trpc.trade.getCreatorCoin.useQuery({ userId });
+
+    // `isOwner` is false for two different reasons — "not the owner" and "not
+    // known yet" (pre-hydration, or the session still in flight). Rendering on
+    // the second one puts a VISITOR's launch dialog on your own profile, and
+    // when the session lands the branch swaps under you: the open dialog
+    // unmounts and the next press opens the owner's edit dialog instead.
+    // So wait for ownership to actually be knowable before choosing a branch.
+    const { isPending: sessionPending } = useAuthSession();
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => { setMounted(true); }, []);
+    const ownershipResolved = mounted && !sessionPending;
 
     const [isEditing, setIsEditing] = React.useState(false);
     const [isLaunchingDraft, setIsLaunchingDraft] = React.useState(false);
@@ -158,7 +170,7 @@ export function CreatorCoinAction({
         }
     };
 
-    if (isLoading) return null;
+    if (isLoading || !ownershipResolved) return null;
 
     // Someone else's profile.
     if (!isOwner) {
