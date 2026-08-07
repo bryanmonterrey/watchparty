@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeftDoubleIcon, ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
-import { BookmarkIcon, MessagesIcon, Star2Icon } from "@/components/icons";
+import { BookmarkIcon, MessagesIcon } from "@/components/icons";
 import { Squircle } from "@/components/ui/squircle";
+import { AskWatchparty } from "@/components/ai/ask-watchparty";
 import { trpc } from "@/lib/trpc/client";
 
 // Home's 4th column: a narrow gutter to the right of the video rail whose only
@@ -127,7 +128,14 @@ export function HomeActionDock() {
     }
 
     return (
-        <aside className="hidden pl-2 pr-1 shrink-0 xl:block">
+        // relative z-101 exists for the assistant panel, which opens leftward
+        // out of this column and across the right rail. INNER is `sticky`, so
+        // it's already a stacking context — a z-index on the panel itself can
+        // never lift it past feed-frame's `z-100` content column, because that
+        // comparison happens out here between siblings. Raising the whole dock
+        // is the only lever, and it's free: the buttons occupy their own
+        // column, so nothing else is behind them to cover.
+        <aside className="relative z-101 hidden pl-2 pr-1 shrink-0 xl:block">
             <div className={`${INNER} gap-2.5`}>
                 <button
                     type="button"
@@ -143,14 +151,13 @@ export function HomeActionDock() {
                     /feed. Order lives here, in the shared component, so the two
                     can't disagree.
 
-                    TODO: opens the GLM assistant panel — see docs/TODO.md.
-                    Inert until that surface exists. */}
+                    Opens the "ask watchparty" panel upward, out of this SLOT —
+                    which is why the slot's `relative` matters to more than the
+                    unread badge now. The button's chrome is passed down rather
+                    than restated inside the widget, so it can't drift from the
+                    two below it. */}
                 <div className={SLOT}>
-                    <Squircle asChild radius={BUTTON_RADIUS} shadow={BUTTON_GLOW}>
-                        <button type="button" aria-label="ask ai" className={BUTTON}>
-                            <Star2Icon className="size-6.5" />
-                        </button>
-                    </Squircle>
+                    <AskWatchparty className={BUTTON} radius={BUTTON_RADIUS} glow={BUTTON_GLOW} />
                 </div>
 
                 {/* Bookmarks. Its only entry point used to be the discover
