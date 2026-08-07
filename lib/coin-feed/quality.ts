@@ -42,6 +42,52 @@ export function isBrandSquat(symbol: string, name: string | null | undefined): b
     return BRAND_TERMS.some((t) => hay.includes(t));
 }
 
+// ── Holder-quality risk (Mobula security stats) ─────────────────────────────
+//
+// One set of thresholds serving two surfaces: the boards' "hide risky coins"
+// toggle (fields ride free on the pairs feed) and the alert watch list's
+// adoption gate (cached token/details lookup). Null-safe and fail-OPEN: brand
+// new coins report nothing, and "no data" must never read as "risky".
+
+export interface HoldingsRisk {
+    top10Pct: number | null;
+    snipersPct: number | null;
+    insidersPct: number | null;
+    bundlersPct: number | null;
+    devPct: number | null;
+}
+
+/** Concentration levels at which a coin is one wallet-cluster's exit event. */
+export function isRiskyHoldings(h: HoldingsRisk): boolean {
+    return (
+        (h.top10Pct ?? 0) >= 80 ||
+        (h.snipersPct ?? 0) >= 40 ||
+        (h.insidersPct ?? 0) >= 40 ||
+        (h.bundlersPct ?? 0) >= 40 ||
+        (h.devPct ?? 0) >= 30
+    );
+}
+
+/** The alert-adoption bar: contract flags plus the holdings thresholds.
+ *  Fail-open on missing data — the gate exists to stop KNOWN-bad coins. */
+export function passesSecurityBar(
+    sec:
+        | (HoldingsRisk & {
+              honeypotFlag: boolean | null;
+              buyTaxPct: number | null;
+              sellTaxPct: number | null;
+              securityScore: number | null;
+          })
+        | null
+        | undefined,
+): boolean {
+    if (!sec) return true;
+    if (sec.honeypotFlag) return false;
+    if ((sec.buyTaxPct ?? 0) > 10 || (sec.sellTaxPct ?? 0) > 10) return false;
+    if (sec.securityScore != null && sec.securityScore < 30) return false;
+    return !isRiskyHoldings(sec);
+}
+
 /** The gate discovery applies on top of the per-network floors: brand-riding
  *  names need the high liquidity bar; everything else passes through to the
  *  normal floors. */

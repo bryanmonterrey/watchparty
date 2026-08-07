@@ -155,6 +155,13 @@ interface MobulaPairToken {
     marketCap?: number;
     bonded?: boolean | null;
     bondingPercentage?: number | null;
+    // Holder-quality stats ride free on every pair token — the boards' risk
+    // flag costs no extra API call.
+    top10HoldingsPercentage?: number | null;
+    snipersHoldingsPercentage?: number | null;
+    insidersHoldingsPercentage?: number | null;
+    bundlersHoldingsPercentage?: number | null;
+    devHoldingsPercentage?: number | null;
 }
 
 interface MobulaPairRaw {
@@ -197,6 +204,11 @@ export interface MobulaPair {
     bonded: boolean | null;
     bondingPercentage: number | null;
     pairAddress: string | null;
+    top10Pct: number | null;
+    snipersPct: number | null;
+    insidersPct: number | null;
+    bundlersPct: number | null;
+    devPct: number | null;
 }
 
 /** The side of the pair worth showing: not the wrapped native / stable. When
@@ -430,6 +442,11 @@ export async function fetchMobulaChainPairs(
             bonded: token.bonded ?? null,
             bondingPercentage: token.bondingPercentage ?? null,
             pairAddress: row.pair?.address ?? null,
+            top10Pct: token.top10HoldingsPercentage ?? null,
+            snipersPct: token.snipersHoldingsPercentage ?? null,
+            insidersPct: token.insidersHoldingsPercentage ?? null,
+            bundlersPct: token.bundlersHoldingsPercentage ?? null,
+            devPct: token.devHoldingsPercentage ?? null,
         });
     }
     return out;

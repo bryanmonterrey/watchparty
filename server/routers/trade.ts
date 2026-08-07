@@ -20,6 +20,7 @@ import {
     type MobulaPair,
 } from "@/lib/coins/mobula";
 import { resolveTraders } from "@/lib/coins/resolve-traders";
+import { isRiskyHoldings } from "@/lib/coin-feed/quality";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -142,6 +143,9 @@ function pairToTradeToken(chain: string, p: MobulaPair) {
         createdAtMs: p.createdAtMs,
         chain,
         external: true as const,
+        // One boolean, computed server-side from the pair's holder-quality
+        // stats, drives the boards' "hide risky coins" toggle.
+        risky: isRiskyHoldings(p),
     };
 }
 

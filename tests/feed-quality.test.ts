@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { clearsBrandBar, isBrandSquat, BRAND_SQUAT_MIN_LIQUIDITY_USD } from "@/lib/coin-feed/quality";
+import {
+    clearsBrandBar,
+    isBrandSquat,
+    isRiskyHoldings,
+    passesSecurityBar,
+    BRAND_SQUAT_MIN_LIQUIDITY_USD,
+} from "@/lib/coin-feed/quality";
+import { applyMemescopeFilters, filtersActive, NO_FILTERS } from "@/components/trade/memescope-filter-dialog";
 import { collapseCopycats } from "@/components/trade/collapse-copycats";
 import type { TradeToken } from "@/components/trade/types";
 
@@ -85,5 +92,40 @@ describe("collapseCopycats", () => {
         const a = tok({ id: "a", volume: 100, marketCap: 100 });
         const b = tok({ id: "b", volume: 100, marketCap: 100 });
         expect(collapseCopycats([a, b]).map((t) => t.id)).toEqual(["a"]);
+    });
+});
+
+const NO_RISK = { top10Pct: null, snipersPct: null, insidersPct: null, bundlersPct: null, devPct: null };
+
+describe("holdings risk + security bar", () => {
+    test("thresholds, per axis", () => {
+        expect(isRiskyHoldings(NO_RISK)).toBe(false);
+        expect(isRiskyHoldings({ ...NO_RISK, top10Pct: 80 })).toBe(true);
+        expect(isRiskyHoldings({ ...NO_RISK, top10Pct: 79.9 })).toBe(false);
+        expect(isRiskyHoldings({ ...NO_RISK, snipersPct: 40 })).toBe(true);
+        expect(isRiskyHoldings({ ...NO_RISK, insidersPct: 40 })).toBe(true);
+        expect(isRiskyHoldings({ ...NO_RISK, bundlersPct: 40 })).toBe(true);
+        expect(isRiskyHoldings({ ...NO_RISK, devPct: 30 })).toBe(true);
+    });
+
+    test("security bar: fail-open on missing data, hard-fail on flags", () => {
+        expect(passesSecurityBar(null)).toBe(true);
+        expect(passesSecurityBar({ ...NO_RISK, honeypotFlag: null, buyTaxPct: null, sellTaxPct: null, securityScore: null })).toBe(true);
+        expect(passesSecurityBar({ ...NO_RISK, honeypotFlag: true, buyTaxPct: null, sellTaxPct: null, securityScore: null })).toBe(false);
+        expect(passesSecurityBar({ ...NO_RISK, honeypotFlag: false, buyTaxPct: 11, sellTaxPct: null, securityScore: null })).toBe(false);
+        expect(passesSecurityBar({ ...NO_RISK, honeypotFlag: false, buyTaxPct: null, sellTaxPct: null, securityScore: 29 })).toBe(false);
+        expect(passesSecurityBar({ ...NO_RISK, snipersPct: 90, honeypotFlag: false, buyTaxPct: null, sellTaxPct: null, securityScore: null })).toBe(false);
+    });
+});
+
+describe("hide risky filter", () => {
+    test("drops flagged rows only when the toggle is on", () => {
+        const safe = tok({ id: "s" });
+        const risky = tok({ id: "r", risky: true });
+        expect(applyMemescopeFilters([safe, risky], NO_FILTERS)).toHaveLength(2);
+        const out = applyMemescopeFilters([safe, risky], { ...NO_FILTERS, hideRisky: true });
+        expect(out.map((t) => t.id)).toEqual(["s"]);
+        expect(filtersActive({ ...NO_FILTERS, hideRisky: true })).toBe(true);
+        expect(filtersActive(NO_FILTERS)).toBe(false);
     });
 });

@@ -42,4 +42,7 @@ export interface TradeToken {
   /** True for chain-wide (Mobula) rows: routes to /coin/<chain>/<address>,
    *  and off Solana hides quick-buy (the swap engine only speaks Solana). */
   external?: boolean;
+  /** Holder-quality red flag (lib/coin-feed/quality isRiskyHoldings) — what
+   *  the boards' "hide risky coins" toggle filters. Absent = no data = safe. */
+  risky?: boolean;
 }

@@ -12,7 +12,9 @@
 
 import { db } from "@/db";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
-import { clearsBrandBar } from "./quality";
+import { clearsBrandBar, passesSecurityBar } from "./quality";
+import { fetchMobulaTokenSecurity, mobulaCadence, mobulaEnabled } from "@/lib/coins/mobula";
+import { withCache } from "@/lib/cache";
 import { tokens } from "@/db/schema/content/token";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { CallBudget, fetchNewPools, fetchTrendingPools, type DiscoveredPool } from "./geckoterminal";
@@ -51,6 +53,41 @@ function qualifies(pool: DiscoveredPool): boolean {
     const liquidity = pool.liquidityUsd ?? 0;
     const volume = pool.volume24hUsd ?? 0;
     return liquidity >= net.minLiquidityUsd && volume >= net.minVolume24hUsd;
+}
+
+/** Fresh security lookups per pass — the free Mobula key is ~1 RPS and the
+ *  pass runs inside a cron route's time budget. Serial on purpose; repeats are
+ *  cache hits (same key + TTL as the coin page's security card), and anything
+ *  past the cap adopts unscreened this pass — fail-open, screened next time. */
+const SECURITY_CHECKS_PER_PASS = 12;
+
+/** Drop pools whose token/details security stats are KNOWN bad (honeypot,
+ *  double-digit taxes, extreme sniper/insider/top-10 concentration — see
+ *  quality.ts passesSecurityBar). Missing data always passes: this gate stops
+ *  known rugs, it doesn't punish being new. */
+async function screenSecurity(pools: DiscoveredPool[]): Promise<DiscoveredPool[]> {
+    if (!mobulaEnabled() || pools.length === 0) return pools;
+    const byToken = new Map<string, DiscoveredPool>();
+    for (const p of pools) byToken.set(trackedTokenId(p.network, p.tokenAddress), p);
+
+    const rejected = new Set<string>();
+    let checked = 0;
+    for (const [id, p] of byToken) {
+        if (checked >= SECURITY_CHECKS_PER_PASS) break;
+        checked++;
+        try {
+            const sec = await withCache(
+                `coin:security:v1:${p.network}:${p.tokenAddress}`,
+                mobulaCadence().securityTtl,
+                () => fetchMobulaTokenSecurity(p.network, p.tokenAddress),
+            );
+            if (!passesSecurityBar(sec)) rejected.add(id);
+        } catch {
+            // 429/timeout — fail-open, retried on a later pass via cache miss.
+        }
+    }
+    if (rejected.size > 0) console.log(`[coin-feed] security gate rejected ${rejected.size} pool(s)`);
+    return pools.filter((p) => !rejected.has(trackedTokenId(p.network, p.tokenAddress)));
 }
 
 const CHUNK = 100;
@@ -297,7 +334,7 @@ export async function runDiscovery(budget: CallBudget): Promise<DiscoveryResult>
         found.push(...trending.filter(qualifies), ...fresh.filter(qualifies));
     }
 
-    const discovered = await upsertPools(found);
+    const discovered = await upsertPools(await screenSecurity(found));
     const watchparty = await syncWatchpartyTokens();
     const evicted = await evictExcluded();
     const pruned = await pruneStale();

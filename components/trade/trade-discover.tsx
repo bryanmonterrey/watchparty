@@ -303,6 +303,7 @@ export function TradeDiscover() {
     const [sort, setSort] = useState<SortKey>("volume");
     const [timeframe, setTimeframe] = useState<Timeframe>("24h");
     const [chain, setChain] = useState<TradeChain>("solana");
+    const [hideRisky, setHideRisky] = useState(false);
     const { quickBuy, buyingId, amountSol, setAmountSol } = useQuickBuy();
     const utils = trpc.useUtils();
 
@@ -373,14 +374,15 @@ export function TradeDiscover() {
         const external = (externalRows ?? []).filter((t) => !inHouseMints.has(t.tokenAddress));
         const merged = [...all, ...external];
 
+        const visible = hideRisky ? merged.filter((t) => !t.risky) : merged;
         const base =
             // Live is watchparty-native: coins whose creator is streaming here.
             tab === "live" ? all.filter((t) => t.creatorIsLive)
             // Surge = positive 5-minute momentum with real 5-minute volume —
             // external rows carry real 5m windows, so they compete too.
-            : tab === "surge" ? merged.filter((t) => (t.changePercent5m ?? 0) > 0 && (t.volume5m ?? 0) > 0)
-            : tab === "new" ? [...(onSolana ? data.new : []), ...external]
-            : merged;
+            : tab === "surge" ? visible.filter((t) => (t.changePercent5m ?? 0) > 0 && (t.volume5m ?? 0) > 0)
+            : tab === "new" ? [...(onSolana ? data.new : []), ...external].filter((t) => !hideRisky || !t.risky)
+            : visible;
         const by: Record<SortKey, (a: TradeToken, b: TradeToken) => number> = {
             volume: (a, b) => b.volume - a.volume,
             marketCap: (a, b) => b.marketCap - a.marketCap,
@@ -394,7 +396,7 @@ export function TradeDiscover() {
             : tab === "surge" ? (b.changePercent5m ?? 0) - (a.changePercent5m ?? 0) || (b.volume5m ?? 0) - (a.volume5m ?? 0)
             : by[sort](a, b),
         ));
-    }, [data, all, externalRows, onSolana, tab, sort]);
+    }, [data, all, externalRows, onSolana, tab, sort, hideRisky]);
 
     const selectTab = (t: Tab) => {
         setTab(t);
@@ -485,6 +487,20 @@ export function TradeDiscover() {
                             </button>
                         ))}
                     </div>
+
+                    {/* Risky-coin filter — drops rows the holder-quality
+                        thresholds flag (sniper/insider/top-10 concentration). */}
+                    <button
+                        type="button"
+                        onClick={() => setHideRisky((v) => !v)}
+                        aria-pressed={hideRisky}
+                        className={cn(
+                            "h-11 shrink-0 cursor-pointer rounded-full px-4 text-base font-bold transition-colors",
+                            hideRisky ? "bg-lantern text-black" : "bg-white/5 text-zinc-400 hover:text-white",
+                        )}
+                    >
+                        hide risky
+                    </button>
 
                     {/* Quick-buy amount — Solana only; the amount is SOL and
                         the engine it feeds only swaps there. */}
