@@ -51,15 +51,40 @@ const SUGGESTIONS = [
 const HEADER_BTN =
     "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-soft-gray-15 hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500";
 
-// `parts` is the SDK's tagged union; text is the only kind this assistant
-// produces today, but joining rather than taking [0] means a reasoning or tool
-// part landing later degrades to "renders the prose" instead of "renders
-// nothing".
+// `parts` is the SDK's tagged union. Joining rather than taking [0] means a
+// reasoning part landing later degrades to "renders the prose" rather than
+// "renders nothing".
 function textOf(message: UIMessage) {
     return message.parts
         .filter((p): p is { type: "text"; text: string } => p.type === "text")
         .map((p) => p.text)
         .join("");
+}
+
+// What the assistant is looking up, in the user's words rather than the tool's.
+const TOOL_LABELS: Record<string, string> = {
+    getHotCoins: "checking what's running",
+    lookupCoin: "looking up that coin",
+    getLiveStreams: "checking who's live",
+    getMarketTrending: "checking the market",
+};
+
+// Tool calls arrive as parts typed `tool-<name>`, and prompt-kit has no
+// renderer for them — left alone they'd render as nothing, so a question that
+// triggers a lookup would sit blank until the prose arrived. This surfaces the
+// in-flight ones only; once a tool returns, the answer it produced is the
+// feedback, and a stale "checking…" line next to a finished reply reads as
+// stuck. (AI Elements ships a full tool-part renderer with input/output states
+// — worth cherry-picking if these ever need to show their results.)
+function pendingToolLabels(message: UIMessage): string[] {
+    return message.parts
+        .filter((p) => {
+            if (!p.type.startsWith("tool-")) return false;
+            const state = (p as { state?: string }).state;
+            return state !== "output-available" && state !== "output-error";
+        })
+        .map((p) => TOOL_LABELS[p.type.slice("tool-".length)] ?? "looking that up")
+        .filter((label, i, all) => all.indexOf(label) === i);
 }
 
 export function AskSurface({
@@ -240,6 +265,15 @@ export function AskSurface({
                     m.role === "assistant" ? (
                         <Message key={m.id} className="items-start gap-2.5">
                             <StarOutline className="mt-1 size-4 shrink-0" />
+                            {pendingToolLabels(m).length > 0 && textOf(m).length === 0 ? (
+                                <div className="flex min-w-0 flex-1 flex-col gap-1 py-1">
+                                    {pendingToolLabels(m).map((label) => (
+                                        <p key={label} className="text-xs text-zinc-500">
+                                            {label}…
+                                        </p>
+                                    ))}
+                                </div>
+                            ) : null}
                             {/* Markdown is styled with explicit child
                                 selectors, NOT `prose-*` modifiers: prompt-kit
                                 assumes @tailwindcss/typography and this project

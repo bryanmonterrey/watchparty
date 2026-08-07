@@ -4,10 +4,12 @@ import {
     createUIMessageStream,
     createUIMessageStreamResponse,
     smoothStream,
+    stepCountIs,
     streamText,
     toUIMessageStream,
     type UIMessage,
 } from "ai";
+import { assistantTools } from "@/server/lib/assistant-tools";
 import { z } from "zod";
 import { auth } from "@/lib/auth/server";
 import { getPremiumEntitlement } from "@/server/lib/premium-entitlement";
@@ -59,6 +61,8 @@ function systemPrompt(path: string | undefined) {
         "You are the in-app assistant for watchparty, a live-streaming and social app built on Solana where creators stream, post, and launch coins.",
         "What exists in the product, so you never invent surfaces: live streams and clips, a following/for-you feed, coins (every post or stream can have a token, and the first buyer is the launch), a trade page with charts and quick-buy, prediction markets, perps, creator subscriptions and platform premium tiers billed in USDC, quests and XP, direct messages, and communities.",
         "Answer as a knowledgeable product guide and crypto-literate assistant. Be concrete and brief — a few short paragraphs at most.",
+        "You have tools that read live data: getHotCoins (watchparty coins moving now), lookupCoin (one coin by ticker or name), getLiveStreams (who is streaming), getMarketTrending (the wider multi-chain market). USE THEM whenever the question is about what is happening right now, or names a specific coin — do not answer those from memory, and never invent a price, a ticker, or a viewer count.",
+        "When a tool returns nothing, say so plainly ('no one's live right now', 'I can't find that coin') instead of filling the gap. Prices move, so mention that a number is a snapshot rather than presenting it as fixed.",
         "You may use markdown: short lists, bold for emphasis, links, and code blocks when code is genuinely the answer. Do not use headings.",
         "Never give financial advice, never predict a price, and never promise a coin will go up. If someone asks whether to buy something, explain how to evaluate it instead.",
         "If you do not know something about this specific app, say so plainly rather than guessing at a feature name or a menu path.",
@@ -133,6 +137,11 @@ export async function POST(request: Request) {
                 messages: await convertToModelMessages(uiMessages),
                 temperature: 0.6,
                 maxOutputTokens: 900,
+                tools: assistantTools,
+                // Enough for look-up → answer, or two look-ups → answer.
+                // Unbounded stepping is how one message quietly becomes a
+                // dozen model round-trips against a metered account.
+                stopWhen: stepCountIs(4),
                 // Chunk by word rather than by token. Raw token deltas arrive
                 // in bursts that read as stuttering; this is the one piece of
                 // "feel" the SDK gives for free, and every reference chat app
