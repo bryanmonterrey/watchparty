@@ -264,9 +264,14 @@ surface, ported from `vercel/ai-chatbot`. Three API facts, all of which look
 right from memory and all of which fail on `ai@7`:
 
 - **`toDataStreamResponse()` no longer exists.** It's the v3/v4 name.
-- **`result.toUIMessageStreamResponse()` is deprecated** and goes away next
-  major. The current shape is `createUIMessageStream({ execute })` →
-  `writer.merge(result.toUIMessageStream())` → `createUIMessageStreamResponse()`.
+- **Every `result.*` convenience method is deprecated** — both
+  `toUIMessageStreamResponse()` and `toUIMessageStream()` say "will be removed
+  in the next major release". Use the **standalone** helpers with
+  `result.stream`: `createUIMessageStream({ execute })` →
+  `writer.merge(toUIMessageStream({ stream: result.stream }))` →
+  `createUIMessageStreamResponse()`. Check the `@deprecated` tags in
+  `node_modules/ai/dist/index.d.ts` before copying any example — the method
+  forms still compile, so nothing warns you.
 - **`convertToModelMessages()` returns a Promise** (it resolves file/image
   parts), so `execute` has to be `async` and await it. Skipping the await is a
   type error, not a runtime one — tsc catches this one.

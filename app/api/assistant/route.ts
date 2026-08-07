@@ -5,6 +5,7 @@ import {
     createUIMessageStreamResponse,
     smoothStream,
     streamText,
+    toUIMessageStream,
     type UIMessage,
 } from "ai";
 import { z } from "zod";
@@ -133,7 +134,10 @@ export async function POST(request: Request) {
                 abortSignal: request.signal,
             });
 
-            writer.merge(result.toUIMessageStream());
+            // Standalone helper, not `result.toUIMessageStream()` — the method
+            // carries the same "removed in the next major" deprecation as the
+            // Response variant.
+            writer.merge(toUIMessageStream({ stream: result.stream }));
         },
         // Never leak provider internals or keys to the client. The real error
         // is logged here and the user gets something they can act on.
