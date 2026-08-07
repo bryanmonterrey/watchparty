@@ -133,7 +133,13 @@ export function TradeFeed() {
     const active = filtersActive(filters);
 
     return (
-        <div className="h-full relative" style={{ transform: "translateZ(0)" }}>
+        // h-svh, NOT h-full: every ancestor up to the app scroller is
+        // auto-height, so 100% resolves to CONTENT height — which is just the
+        // sticky header (~180px), and the columns' absolute inset-0 +
+        // overflow-hidden box clipped every row out of view (the "counts are
+        // non-zero but no coins show" bug). A definite viewport height makes
+        // inset-0 mean the screen.
+        <div className="h-svh relative" style={{ transform: "translateZ(0)" }}>
             {/* FIXED GLASS HEADER */}
             <div className="sticky w-full top-0 left-0 right-0 z-40 flex items-center justify-center flex-col pt-2 pb-0 space-y-3">
                 <div className="absolute inset-0 -z-10 pointer-events-none" />
