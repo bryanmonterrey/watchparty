@@ -10,6 +10,7 @@ import {
 } from "@solana/web3.js";
 import { ArrowLeft } from "lucide-react";
 import { showSendToast } from "./send-transaction-toast";
+import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { trpc } from "@/lib/trpc/client";
 import { motion } from "framer-motion";
 import { SendAmountInput } from "./send-amount-input";
@@ -506,17 +507,37 @@ export function SendView({
                     </p>
                 )}
 
-                {/* Send button */}
-                <button
-                    onClick={handleSend}
-                    disabled={!canSend}
-                    className={`cursor-pointer w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 ${canSend
-                            ? "bg-white text-black hover:bg-zinc-100 active:scale-[0.98]"
-                            : "bg-zinc-800/60 text-zinc-500 cursor-not-allowed"
-                        }`}
-                >
-                    {buttonLabel}
-                </button>
+                {/* Send button.
+
+                    Hold-to-confirm once the transfer is actually valid: this is
+                    the last step before funds leave, and it's irreversible in a
+                    way almost nothing else in the app is. The hold replaces a
+                    confirmation dialog — cheaper to back out of (slide off, let
+                    go) and impossible to fat-finger.
+
+                    Only when `canSend`. In every other state the button is
+                    carrying an explanation ("Enter a recipient", "Not enough
+                    SOL"), and there is nothing to confirm — asking someone to
+                    hold a disabled button would be nonsense.
+
+                    h-14/text-lg preserves this button's existing size rather
+                    than adopting the h-12 wide-button standard; resizing the
+                    wallet's primary action isn't part of this change. */}
+                {canSend ? (
+                    <HoldToConfirm
+                        label={buttonLabel}
+                        holdingLabel="Keep holding…"
+                        onConfirm={handleSend}
+                        className="h-14 text-lg"
+                    />
+                ) : (
+                    <button
+                        disabled
+                        className="w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 bg-zinc-800/60 text-zinc-500 cursor-not-allowed"
+                    >
+                        {buttonLabel}
+                    </button>
+                )}
             </div>
         </motion.div>
     );
