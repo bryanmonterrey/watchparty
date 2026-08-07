@@ -189,16 +189,33 @@ Follow-ups (small, whenever):
     `biz_custom` is capped at biz_pro rather than unlimited on purpose, so a contract
     needing more wants a per-account override, not a bigger table.
 
-  Three follow-ups, none blocking:
+  - **Grounded in real data** (2026-08-07): `server/lib/assistant-tools.ts` — `getHotCoins`,
+    `lookupCoin`, `getLiveStreams`, `getMarketTrending`, each an existing tRPC procedure body
+    LIFTED rather than called (a Route Handler has no ctx; `db` and `withCache` are plain
+    imports). Returns are 5-6 fields capped at 10 rows because a tool result is re-sent as
+    history every later turn. `stopWhen: stepCountIs(4)`.
+    Not exposed, deliberately: `discover.trending` (nests a Workers AI call inside this one),
+    `content.search` (uncached Typesense + DexScreener), `user.suggestedFollows` (correlated
+    per-row subquery), `coinFeed.list` (needs ctx, jsonb scans).
+    Adding a tool later? Keep returns dense, cache them, and remember quota is charged per
+    MESSAGE — the token ceiling is what actually catches a chatty tool loop.
+
+  Two follow-ups, neither blocking:
   - **No persistence.** The thread lives in `useChat` state and dies with the panel. Storing
     it means a `chat`/`message` table with `parts` as JSONB verbatim (vercel/ai-chatbot's
-    `Message_v2` shape) plus `onFinish` → save. Nothing else has to change.
-  - **Prompt-grounded only** — it knows what the product is, not what's on the page. Real
-    context (the coin being viewed, who's live) means feeding server-side data into the
-    system prompt; today it gets `path` and nothing more.
-  - **No resumable streams.** Closing the panel mid-answer loses the reply. The fix is
-    `resumable-stream` + `consumeSseStream`, which wants a Redis connection — we're on
-    Upstash-over-HTTP, so it needs checking before it's assumed to work on Workers.
+    `Message_v2` shape) plus `onEnd` → save. Nothing else has to change. NB `onEnd` on
+    `createUIMessageStream`, not `streamText`'s `onFinish` — only the former hands you
+    assembled `UIMessage`s, i.e. exactly what the client rendered (tool parts included).
+  - **No resumable streams.** Closing the panel mid-answer loses the reply. `resumable-stream`
+    wants a real Redis connection and we're on Upstash-over-HTTP; its producer side also leans
+    on `waitUntil` keeping a pump alive after the response returns, which is exactly the
+    workerd-vs-Node divergence `prod-only-worker-bugs` warns about. Cheaper answer, from
+    vercel-labs/eve-chat-template: append deltas to a `chat_event(chatId, eventIndex)` table
+    (unique index, batched writes) and replay `WHERE eventIndex > ?` on reopen — no Redis, no
+    pub/sub, no `waitUntil`. Converges with the Durable Objects direction in
+    `realtime-video-architecture-direction`, so probably one job rather than two.
+    Also note `vercel/ai-chatbot`'s own resume endpoint is a `204` stub in main (deleted in
+    `9d5d8a3`, 2026-01-15) while its client still calls it — don't copy it expecting it to work.
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.
