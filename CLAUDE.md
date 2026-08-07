@@ -137,6 +137,12 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
 
 - **Deploy: Cloudflare** via `@opennextjs/cloudflare` (chosen for speed/cost). Keep code Workers-compatible: HTTP-based services (Upstash Redis, Resend) are fine; the DB uses **postgres.js** which runs on Cloudflare **Hyperdrive** (front Supabase with it — edge compute + single-region Postgres is slow without it). Full CF/wrangler/Hyperdrive setup is a later milestone.
 - **Dev runs on port 3001** (`bun dev` → `next dev -p 3001`) to match the reused OAuth callback URLs and `NEXT_PUBLIC_AUTH_URL` in `.env` (copied from `../sidebar`; same Supabase DB).
+- **Dev DB split (2026-08-07):** local dev should point at the SEPARATE free
+  Supabase dev project via `.env.local` (bootstrap a fresh one with
+  `node scripts/db/setup-dev-db.mjs "<dev direct url>"` — it drizzle-pushes the
+  schema and replays `db/*.sql`; hard-refuses the prod ref). Schema changes
+  still ship as SQL under `db/` — apply to BOTH projects. If `.env.local` has
+  no dev override the fallback is still prod, so the next point still applies:
 - **Reused production DB (dev == prod):** dev runs against the **same** Supabase DB as production, so any schema change hits live data immediately. **Additive, nullable changes are OK** (e.g. `ADD COLUMN ... text` — safe and reversible); apply them deliberately and prefer manual SQL committed under `db/` (see `db/affiliate-column.sql`, `db/feed-indexes.sql`) so the change is reviewable. **Avoid destructive migrations and `drizzle-kit push`**, which can clobber the auth tables ported verbatim from the old app. Keep `db/schema/auth` in sync with the DB by hand.
 - **Squircle corners: use Lisse (`@lisse/react`), opt-in per element.** The old `tailwindcss-corner-shape` was removed — it used the CSS `corner-shape` property which is **Chrome-only** (broken in Safari) and forced squircle onto *every* `rounded-*` (so even pills got squircled). Lisse uses SVG `clip-path` (works in Safari/Firefox/Chrome). Apply via the `components/ui/squircle.tsx` helper: `<Squircle asChild radius={20}><button className="…">…</button></Squircle>` — and do NOT add `rounded-*` to a squircled element (redundant under clip-path). **Pills (Connect Wallet, Complete, Create) stay plain `rounded-full` with NO `<Squircle>`.**
 

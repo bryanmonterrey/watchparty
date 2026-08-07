@@ -19,7 +19,12 @@ Tracked live in-session too; update statuses here as they move.
 3. **Money-path tests + CI gate — DONE 2026-08-07.** 27 tests (base-unit
    BigInt conversion, memescope filters, chain maps, formatters); `test` job
    in deploy.yml gates deploy + deploy-container.
-4. **Split dev DB from prod — NOT STARTED.** Dev == prod DB is the biggest
+4. **Split dev DB from prod — TOOLING READY, awaiting the project.** Decision:
+   free second Supabase project (matches the hand-SQL workflow; branching
+   add-on rejected). `scripts/db/setup-dev-db.mjs "<dev direct url>"` does the
+   rest (prod-ref guard, drizzle push, db/*.sql replay, .env.local template).
+   User creates the project in the dashboard (~2 min), then run the script.
+   Previously NOT STARTED: Dev == prod DB is the biggest
    pre-launch risk. Options: Supabase branch (MCP `create_branch`) or second
    project; swap local DATABASE_URL; keep db/schema sync discipline.
 5b. **Feed quality — DONE 2026-08-07.** Alerts: brand-squat gate (\$CLAUDE/
