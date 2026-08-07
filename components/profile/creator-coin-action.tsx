@@ -39,15 +39,18 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 //
 // Colour alone carries the state — only the live pills take a border, where the
 // ring reads as a price you can act on. Draft and create stay borderless: they
-// carry no price, and a solid pill would compete with Follow and Subscribe for
-// the row's one loud element.
+// carry no price.
 const PILL_BASE =
     "flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[15px] font-bold transition-colors active:scale-95";
 const PILL_DRAFT = "text-yellow-400 hover:bg-yellow-400/10";
 // The entry point: twitter2 rather than the draft yellow. Yellow is the colour
 // of a draft that EXISTS; nothing exists yet at this point, so the button is an
 // invitation rather than a status.
-const PILL_CREATE = "text-twitter2 hover:bg-twitter2/10";
+//
+// The only one of these that sits on a tint at rest — it's an invitation, so it
+// reads as a thing to press rather than a label. Hover lifts the same tint one
+// step instead of introducing a second colour.
+const PILL_CREATE = "bg-twitter2/10 text-twitter2 hover:bg-twitter2/15";
 const PILL_UP = "border-2 border-long/80 text-long hover:bg-long/10";
 const PILL_DOWN = "border-2 border-short/80 text-short hover:bg-short/10";
 
