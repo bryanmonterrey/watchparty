@@ -104,8 +104,10 @@ export const TRADE_CHAINS = ["solana", "ethereum", "base", "polygon", "bnb", "hy
 function pairToTradeToken(chain: string, p: MobulaPair) {
     // Launchpad pairs (pump.fun-style) keep their real bonding ring; a plain
     // DEX pair has no curve, which in this UI's language is "migrated" — the
-    // full ring every already-tradeable coin wears.
-    const onCurve = !p.bonded && (p.bondingPercentage ?? 0) > 0;
+    // full ring every already-tradeable coin wears. A pumpfun pair at 0% is
+    // still ON the curve (seconds old, nothing bought yet) — without the
+    // source check those landed in Migrated, the one column they aren't.
+    const onCurve = !p.bonded && ((p.bondingPercentage ?? 0) > 0 || p.source === "pumpfun");
     return {
         id: `${chain}:${p.tokenAddress}`,
         name: p.name,
@@ -214,19 +216,38 @@ export const tradeRouter = router({
             chain: z.enum(TRADE_CHAINS),
             list: z.enum(["trending", "new"]).default("trending"),
         }))
-        .query(({ input }) =>
-            withCache(`trade:chainfeed:v1:${input.chain}:${input.list}`, mobulaCadence().chainFeedTtl, async () => {
-                const rows = await fetchMobulaChainPairs(
-                    input.chain,
-                    input.list,
-                    input.list === "new" ? 50 : 100,
-                ).catch(() => null);
-                return {
-                    enabled: mobulaEnabled(),
-                    tokens: (rows ?? []).map((p) => pairToTradeToken(input.chain, p)),
-                };
-            })
-        ),
+        .query(async ({ input }) => {
+            try {
+                return await withCache(
+                    `trade:chainfeed:v1:${input.chain}:${input.list}`,
+                    mobulaCadence().chainFeedTtl,
+                    async () => {
+                        // Hard 10s lid ON TOP of the fetch's own AbortSignal —
+                        // observed on prod (bnb, 2026-08-06): the upstream call
+                        // hung for minutes despite the 8s abort, and a request
+                        // that never resolves is worse than an empty answer.
+                        const rows = await Promise.race([
+                            fetchMobulaChainPairs(input.chain, input.list, input.list === "new" ? 50 : 100),
+                            new Promise<never>((_, reject) =>
+                                setTimeout(() => reject(new Error("chain feed upstream timeout")), 10_000)
+                            ),
+                        ]);
+                        // null = provider off / chain unsupported — a real,
+                        // cacheable answer, unlike a failure.
+                        return {
+                            enabled: mobulaEnabled(),
+                            tokens: (rows ?? []).map((p) => pairToTradeToken(input.chain, p)),
+                        };
+                    }
+                );
+            } catch {
+                // Upstream failure (timeout, 429 on the free key's 1 RPS when
+                // several chains fan out together): answer empty but DON'T
+                // cache it — the old catch-inside-the-cache turned one 429
+                // into five minutes of empty board for that chain.
+                return { enabled: mobulaEnabled(), tokens: [] };
+            }
+        }),
 
     /**
      * Recent trades for any coin on any covered chain — the coin page's

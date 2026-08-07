@@ -121,7 +121,12 @@ export function TradeFeed() {
             filters,
         ),
     };
-    const loading = (wantsInHouse && isLoading) || external.some((q) => q.isLoading);
+    // Skeletons only while NOTHING has answered. This was `some(isLoading)`,
+    // which let one hung chain (bnb, 2026-08-06 — upstream hangs minutes on
+    // prod) hold every column in skeletons forever. Whatever has arrived
+    // renders; slow chains stream in when (if) they land.
+    const anyAnswer = (wantsInHouse && !isLoading) || external.some((q) => q.data != null);
+    const loading = !anyAnswer && ((wantsInHouse && isLoading) || external.some((q) => q.isLoading));
 
     const activeChain = chain === "all" ? null : CHAIN_OPTIONS.find((c) => c.id === chain);
     const openFilter = () => setFilterOpen(true);
