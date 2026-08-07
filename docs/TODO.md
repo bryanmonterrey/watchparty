@@ -180,6 +180,14 @@ Follow-ups (small, whenever):
     `@cf/zai-org/glm-5.2`, model env-swappable via `ASSISTANT_MODEL`.
   - `components/prompt-kit/` — vendored prompt-kit UI; see CLAUDE.md for why it is NOT
     installed with the shadcn CLI.
+  - **Gated + metered** (2026-08-07): free accounts get 5 messages/day, paid tiers get a
+    per-billing-period allowance — `lib/premium/assistant-quota.ts` (the numbers),
+    `server/lib/assistant-usage.ts` (Redis counters), `server/lib/premium-entitlement.ts`
+    (the shared entitlement predicate), `assistant.quota` tRPC query (the "N left" readout).
+    Two open judgement calls: the free tier's **5/day is a guess** and is the number that
+    decides whether this converts or just annoys — revisit against real usage; and
+    `biz_custom` is capped at biz_pro rather than unlimited on purpose, so a contract
+    needing more wants a per-account override, not a bigger table.
 
   Three follow-ups, none blocking:
   - **No persistence.** The thread lives in `useChat` state and dies with the panel. Storing

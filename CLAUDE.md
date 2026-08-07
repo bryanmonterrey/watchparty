@@ -30,6 +30,27 @@ scheduled collector that auto-pulls each period. Built, tsc/build-clean, and
   Cloudflare, not Vercel (provisioning is permanent + host-independent; secrets/crons belong
   on the real host).
 - Treasury keypairs are generated into the gitignored `.treasury-keys/` (back up + delete).
+- **Gating a feature on premium: use `server/lib/premium-entitlement.ts`.** It owns
+  the one predicate — `(status === "active" || status === "past_due") &&
+  currentPeriodEnd > now`. `isEntitled(row)` when you already hold the row,
+  `getPremiumEntitlement(userId)` when you don't. It exists because that rule had
+  already been hand-copied into `premium.getStatus` and community's
+  `boostAllowance`; both now read from it, and a third copy is how the rule
+  starts to drift. Two things it encodes that are easy to get backwards:
+  `past_due` **counts as entitled** (grace window while the collector retries),
+  and `currentPeriodEnd` is the real gate, because a failed first charge writes
+  `periodEnd = now`.
+  **Never gate on `user.verifiedTier`.** It looks like the tier field but it's a
+  *badge* (`verified | business | government`), deliberately kept out of lockstep
+  with billing by `server/lib/premium-verified.ts` (skipped when an admin-approved
+  verification request exists, never re-applied on renewal), and it's cached in the
+  session payload so it goes stale. Gating on it both leaks access to lapsed
+  subscribers and locks out badge-only accounts.
+  There is no `premiumProcedure` middleware — server-side gates throw
+  `TRPCError({ code: "FORBIDDEN" })` (or a 402 from a Route Handler); client-side,
+  read `usePremium()` and call `openOverlay()` from `lib/premium/overlay-store.ts`.
+  Note `components/premium/premium-gate.tsx` exists but is imported nowhere, and
+  its `tier` prop only sets the overlay label — it does **not** enforce a tier.
 
 ## Commands
 
