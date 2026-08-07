@@ -12,12 +12,13 @@ Tracked live in-session too; update statuses here as they move.
    emails bryan@watchparty.xyz on down/recovered transitions, re-alerting every
    30 min while down. State in Upstash (`monitor:site-state`). Alert sender:
    login@watchparty.xyz via Resend. Code: `cron/src/monitor.ts`.
-2. **Container cut-over — PENDING USER.** watchparty-app fixed (per-request DB
-   clients, verified incl. after-idle) and current with every deploy. Flip:
-   `node scripts/cf/attach-domains.mjs watchparty-app`; rollback = no arg.
-   Kills the plain worker's ~1% exceededMemory error class.
-3. **Money-path tests + CI gate — IN PROGRESS.** bun test over pure money
-   logic (base-unit conversion, filters, mappings) + a deploy-blocking CI job.
+2. **Container cut-over — DONE 2026-08-07.** Domains on watchparty-app
+   (per-request DB clients; DB-touching probes verified incl. after-idle).
+   Rollback stays one command: `node scripts/cf/attach-domains.mjs` (no arg).
+   The ~1% exceededMemory error class is gone from visitor traffic.
+3. **Money-path tests + CI gate — DONE 2026-08-07.** 27 tests (base-unit
+   BigInt conversion, memescope filters, chain maps, formatters); `test` job
+   in deploy.yml gates deploy + deploy-container.
 4. **Split dev DB from prod — NOT STARTED.** Dev == prod DB is the biggest
    pre-launch risk. Options: Supabase branch (MCP `create_branch`) or second
    project; swap local DATABASE_URL; keep db/schema sync discipline.
