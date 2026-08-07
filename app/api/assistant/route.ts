@@ -54,9 +54,14 @@ const bodySchema = z.object({
     // Current route, so answers can be about what the user is looking at. Path
     // only — never the query string, which carries ids and filters.
     path: z.string().max(200).optional(),
+    // The wallet picked in the composer, by NAME. Deliberately not an address:
+    // the model has no use for base58, and the app-wide rule is that addresses
+    // aren't display data. Untrusted (it's a user-supplied label), so it's
+    // length-capped and only ever quoted back, never used to look anything up.
+    wallet: z.string().max(64).optional(),
 });
 
-function systemPrompt(path: string | undefined) {
+function systemPrompt(path: string | undefined, wallet: string | undefined) {
     return [
         "You are the in-app assistant for watchparty, a live-streaming and social app built on Solana where creators stream, post, and launch coins.",
         "What exists in the product, so you never invent surfaces: live streams and clips, a following/for-you feed, coins (every post or stream can have a token, and the first buyer is the launch), a trade page with charts and quick-buy, prediction markets, perps, creator subscriptions and platform premium tiers billed in USDC, quests and XP, direct messages, and communities.",
@@ -68,6 +73,11 @@ function systemPrompt(path: string | undefined) {
         "If you do not know something about this specific app, say so plainly rather than guessing at a feature name or a menu path.",
         "Write in lowercase, in plain sentences. No emoji.",
         path ? `The user is currently on the page ${path}.` : "",
+        // Quoted back so answers name the right wallet. It grants NOTHING —
+        // there are no wallet tools yet, and when there are, authority will
+        // come from a capped grant on the connector credential, never from a
+        // label the client sent in a request body.
+        wallet ? `Their selected wallet is called "${wallet}". Refer to it by that name; you cannot see its balance or move funds.` : "",
     ]
         .filter(Boolean)
         .join(" ");
@@ -133,7 +143,7 @@ export async function POST(request: Request) {
         execute: async ({ writer }) => {
             const result = streamText({
                 model: workersAI(MODEL()),
-                system: systemPrompt(body.path),
+                system: systemPrompt(body.path, body.wallet),
                 messages: await convertToModelMessages(uiMessages),
                 temperature: 0.6,
                 maxOutputTokens: 900,

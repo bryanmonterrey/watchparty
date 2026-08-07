@@ -21,6 +21,7 @@ import { PromptInput, PromptInputTextarea } from "@/components/prompt-kit/prompt
 import { PromptSuggestion } from "@/components/prompt-kit/prompt-suggestion";
 import { ScrollButton } from "@/components/prompt-kit/scroll-button";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { WalletPill, type PickedWallet } from "@/components/ai/wallet-pill";
 import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 
@@ -97,6 +98,9 @@ export function AskSurface({
     onClose: () => void;
 }) {
     const [input, setInput] = useState("");
+    // Which wallet the assistant is talking about. Null = the user's primary,
+    // resolved server-side; the pill only appears when there's a real choice.
+    const [wallet, setWallet] = useState<PickedWallet | null>(null);
     const reduced = useReducedMotion();
     const { data: session } = useAuthSession();
     const utils = trpc.useUtils();
@@ -123,6 +127,10 @@ export function AskSurface({
         () =>
             new DefaultChatTransport({
                 api: "/api/assistant",
+                // The transport is built ONCE, so nothing render-scoped can be
+                // closed over here — it would pin first-render values forever.
+                // Per-message fields (the picked wallet) ride in via
+                // sendMessage's `body` option and land in `...body` below.
                 prepareSendMessagesRequest: ({ messages, body }) => ({
                     body: { messages, path: window.location.pathname, ...body },
                 }),
@@ -166,7 +174,9 @@ export function AskSurface({
         if (!text || busy) return;
         setInput("");
         clearError();
-        void sendMessage({ text });
+        // Wallet rides per-message, not in the transport — see the
+        // prepareSendMessagesRequest note above.
+        void sendMessage({ text }, { body: { wallet: wallet?.name } });
     };
 
     const reset = () => {
@@ -383,6 +393,10 @@ export function AskSurface({
                         placeholder="ask anything…"
                         className="min-h-[44px] flex-1 bg-transparent px-2 text-sm text-flexwhite placeholder:text-zinc-500"
                     />
+                    {/* Hidden entirely for anyone with one wallet — see the
+                        component. side="top" because the composer sits at the
+                        bottom edge of both the docked panel and the overlay. */}
+                    <WalletPill value={wallet} onChange={setWallet} />
                     <button
                         type="button"
                         onClick={busy ? () => stop() : submit}
