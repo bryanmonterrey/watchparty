@@ -157,6 +157,18 @@ function resolveDb(): Db {
     // client; the global one reuses connections across requests, which the
     // Workers runtime does not allow.
     if (onWorkersRuntime()) return getRequestDb(process.env.DATABASE_URL!);
+    // The container (real Node serving HTTP — see container/Dockerfile) takes
+    // the per-request client too, BY CHOICE rather than runtime constraint:
+    // the global pool's sockets wedge silently against Supavisor (alive but
+    // unresponsive, and no client-side timeout ever fires), which hung every
+    // tRPC query on the 2026-08-06 cut-over attempt — the same mechanism as
+    // that morning's outage. Fresh connection per request + the statement
+    // retry above is the configuration that provably survives it. React
+    // cache() is request-scoped under the Next server here, same as Workers.
+    if (process.env.WATCHPARTY_CONTAINER) return getRequestDb(process.env.DATABASE_URL!);
+    // Scripts, next build, next dev: long-lived Node processes with no request
+    // scope — cache() wouldn't memoize, so per-request clients would leak a
+    // connection per query. They keep the global client.
     return getGlobalDb();
 }
 

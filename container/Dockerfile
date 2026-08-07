@@ -43,6 +43,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# Tells db/index.ts it's serving HTTP inside the container, so it picks the
+# per-request DB client (the wedge-proof Workers strategy) instead of the
+# process-global pool — whose silently-dead Supavisor sockets hung every tRPC
+# query on the 2026-08-06 cut-over attempt. Runtime stage only: build-time
+# code (next build) still wants the global client.
+ENV WATCHPARTY_CONTAINER=1
 
 # `standalone` ships its own minimal node_modules — the 41 MB problem doesn't
 # follow us here, but there's no reason to carry the full tree either.
