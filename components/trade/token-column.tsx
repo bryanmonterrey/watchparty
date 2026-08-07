@@ -29,8 +29,11 @@ export function TokenColumn({ status, tokens, loading, className, quickBuy, buyi
     <div className={cn("h-full overflow-y-auto scroll-smooth hidden-scrollbar mt-2", className)}>
       {/* Pushes initial content below the fixed header; scrolls away as you go up */}
       <div className="shrink-0" style={{ height: headerPushPx }} />
+      {/* No fill: the panel's bg-panel/50 top edge read as a hairline under
+          the column labels, and these boards are borderless now (same call as
+          the coin page's tables). Rows carry their own hover fills. */}
       <Squircle asChild radius={10} autoEffects={false}>
-        <div className="bg-panel/50">
+        <div>
           {loading ? (
             <div className="flex flex-col py-1">
               {Array.from({ length: 8 }).map((_, i) => (
