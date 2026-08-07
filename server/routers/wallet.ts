@@ -64,15 +64,16 @@ import { getLifiTokenInfo } from "@/lib/chains/swap/lifi";
 
 const subtle = globalThis.crypto?.subtle;
 
-/** Human decimal string → base units, BigInt-safe — no float ever touches it. */
-function humanToBaseUnits(human: string, decimals: number): string {
-    const trimmed = human.trim();
-    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Enter a valid amount" });
+import { humanToBaseUnits } from "@/lib/wallet/base-units";
+
+/** humanToBaseUnits with the router's error vocabulary — the lib throws
+ *  RangeError so it stays unit-testable without tRPC in the graph. */
+function toBaseUnitsOrBadRequest(human: string, decimals: number): string {
+    try {
+        return humanToBaseUnits(human, decimals);
+    } catch (err) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: (err as Error).message });
     }
-    const [whole, frac = ""] = trimmed.split(".");
-    const fracPadded = (frac + "0".repeat(decimals)).slice(0, decimals);
-    return (BigInt(whole || "0") * BigInt(10) ** BigInt(decimals) + BigInt(fracPadded || "0")).toString();
 }
 
 const evmSwapInput = z.object({
@@ -106,7 +107,7 @@ async function resolveEvmSwapQuote(userId: string, input: z.infer<typeof evmSwap
                       getLifiTokenInfo(chain.id, input.fromToken)
                   )
               ).decimals;
-    const fromAmount = humanToBaseUnits(input.amountHuman, fromDecimals);
+    const fromAmount = toBaseUnitsOrBadRequest(input.amountHuman, fromDecimals);
     if (BigInt(fromAmount) <= BigInt(0)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Amount is too small" });
     }

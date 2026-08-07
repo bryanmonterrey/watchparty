@@ -79,7 +79,10 @@ Revisit when typescript-eslint supports TS 7 and `useTypeScriptCli` is stable.
   mostly `no-explicit-any`), and runs in neither CI nor `next build` — Next 16
   removed `next lint`.
 
-No test framework is configured yet — do not assume one exists.
+Tests: `bun test ./tests` (bun's built-in runner — quests/xp logic, money-path
+base-unit conversion, memescope filters, chain maps). CI runs it as the `test`
+job in deploy.yml and it GATES `deploy` + `deploy-container`. Pure logic only —
+no DB, no network; keep it that way so the gate stays fast and unflaky.
 
 ## Architecture
 
