@@ -515,6 +515,16 @@ export function SendView({
                     confirmation dialog — cheaper to back out of (slide off, let
                     go) and impossible to fat-finger.
 
+                    EMBEDDED WALLETS ONLY. An extension wallet answers with
+                    Phantom's own approve sheet, which is already a deliberate,
+                    reviewable confirmation — and it shows the decoded transfer,
+                    which we can't. Stacking a hold in front of it would be two
+                    confirmations for one action, and the weaker of the two
+                    first. `adapterPublicKey` is the app-wide discriminator for
+                    "extension is driving" (same branch handleSend takes at
+                    :345), so the hold fills the gap that exists only when
+                    nothing else is going to ask.
+
                     Only when `canSend`. In every other state the button is
                     carrying an explanation ("Enter a recipient", "Not enough
                     SOL"), and there is nothing to confirm — asking someone to
@@ -523,20 +533,28 @@ export function SendView({
                     h-14/text-lg preserves this button's existing size rather
                     than adopting the h-12 wide-button standard; resizing the
                     wallet's primary action isn't part of this change. */}
-                {canSend ? (
-                    <HoldToConfirm
-                        label={buttonLabel}
-                        holdingLabel="Keep holding…"
-                        onConfirm={handleSend}
-                        className="h-14 text-lg"
-                    />
-                ) : (
+                {!canSend ? (
                     <button
                         disabled
                         className="w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 bg-zinc-800/60 text-zinc-500 cursor-not-allowed"
                     >
                         {buttonLabel}
                     </button>
+                ) : adapterPublicKey ? (
+                    // Extension: tap, then confirm in the wallet's own sheet.
+                    <button
+                        onClick={handleSend}
+                        className="cursor-pointer w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-100 active:scale-[0.98]"
+                    >
+                        {buttonLabel}
+                    </button>
+                ) : (
+                    <HoldToConfirm
+                        label={buttonLabel}
+                        holdingLabel="Keep holding…"
+                        onConfirm={handleSend}
+                        className="h-14 text-lg"
+                    />
                 )}
             </div>
         </motion.div>
