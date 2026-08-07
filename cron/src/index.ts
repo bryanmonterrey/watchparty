@@ -13,7 +13,9 @@
 // coin-alerts "* * * * *" (per-minute, the /home alert rail's ingestion pass),
 // trending-sync "* * * * *" (per-minute slice of the /trending board's chains).
 
-interface Env {
+import { runMonitor, type MonitorEnv } from "./monitor";
+
+interface Env extends MonitorEnv {
     CRON_SECRET: string;
     TARGET_BASE_URL: string;
 }
@@ -67,6 +69,9 @@ export default {
             // Its budget and coin-alerts' deliberately sum under GeckoTerminal's
             // shared ~30 calls/min ceiling — see lib/coin-feed/geckoterminal.ts.
             ctx.waitUntil(call(env, "/api/cron/trending-sync"));
+            // Uptime monitor — probes the live site (incl. a DB-touching tRPC
+            // query) and emails on down/recovered transitions. See monitor.ts.
+            ctx.waitUntil(runMonitor(env));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
         }

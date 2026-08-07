@@ -13,7 +13,7 @@
   // predictions-factory hourly at :07 (AI market generation + auto-resolve).
   // Dispatched by event.cron in code.
   "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *", "*/10 * * * *", "* * * * *", "7 * * * *"] },
-  "vars": { "TARGET_BASE_URL": "https://watchparty.xyz" },
+  "vars": { "TARGET_BASE_URL": "https://watchparty.xyz", "ALERT_EMAIL": "bryan@watchparty.xyz" },
   "observability": { "enabled": true }
   // CRON_SECRET is a secret and MUST equal the app's CRON_SECRET. Set out-of-band:
   //   cd cron && wrangler secret put CRON_SECRET

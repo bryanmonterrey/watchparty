@@ -1,6 +1,30 @@
 # watchparty — running TODO (handoff)
 
-Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-07-31.
+Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-08-07.
+
+## 🚨 Ops maturity (2026-08-07 — "run it like a consumer company")
+
+Tracked live in-session too; update statuses here as they move.
+
+1. **Uptime monitor + alerting — SHIPPED (this commit).** cron worker probes
+   watchparty.xyz every minute (home + auth + a DB-touching tRPC query — the
+   2026-08-06 lesson: pages/auth stay green while the DB path is wedged) and
+   emails bryan@watchparty.xyz on down/recovered transitions, re-alerting every
+   30 min while down. State in Upstash (`monitor:site-state`). Alert sender:
+   login@watchparty.xyz via Resend. Code: `cron/src/monitor.ts`.
+2. **Container cut-over — PENDING USER.** watchparty-app fixed (per-request DB
+   clients, verified incl. after-idle) and current with every deploy. Flip:
+   `node scripts/cf/attach-domains.mjs watchparty-app`; rollback = no arg.
+   Kills the plain worker's ~1% exceededMemory error class.
+3. **Money-path tests + CI gate — IN PROGRESS.** bun test over pure money
+   logic (base-unit conversion, filters, mappings) + a deploy-blocking CI job.
+4. **Split dev DB from prod — NOT STARTED.** Dev == prod DB is the biggest
+   pre-launch risk. Options: Supabase branch (MCP `create_branch`) or second
+   project; swap local DATABASE_URL; keep db/schema sync discipline.
+5. **Security housekeeping — NOT STARTED.** Rotate CLOUDFLARE_API_TOKEN (two
+   flagged pastes: 2026-06-20, 2026-08-06) per docs/cloudflare-token-rotation.md;
+   rotate .env.production:54 secret; DMARC p=none → quarantine after reviewing
+   rua reports. Mostly needs the user's dashboards.
 
 ## ✅ Perf pass (2026-07-31, local — pending deploy)
 - **`/api/rpc` caching** (`app/api/rpc/route.ts`): allowlisted read-only Solana/Helius

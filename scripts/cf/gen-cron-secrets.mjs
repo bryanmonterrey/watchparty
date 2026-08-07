@@ -9,7 +9,7 @@
 import fs from "node:fs";
 
 const FILES = [".env", ".env.local", ".env.production.local"];
-const INCLUDE = ["CRON_SECRET"];
+const INCLUDE = ["CRON_SECRET", "RESEND_API_KEY", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"];
 
 function parseEnv(file) {
     const out = {};
