@@ -20,13 +20,17 @@ describe("brand-squat gate", () => {
         expect(isBrandSquat("AI", "Anthropic Coin")).toBe(true);
         expect(isBrandSquat("BABYCLAUDE", "baby claude to the moon")).toBe(true);
         expect(isBrandSquat("GPT5", null)).toBe(true);
+        // Word-boundary brands: the whole word rides the name…
+        expect(isBrandSquat("APPLE", "Apple Coin")).toBe(true);
+        expect(isBrandSquat("AAPL", "Apple PreStocks")).toBe(true);
+        expect(isBrandSquat("NVIDIA", null)).toBe(true);
     });
 
     test("ordinary memecoins pass untouched", () => {
         expect(isBrandSquat("DOGE", "Doge")).toBe(false);
         expect(isBrandSquat("WIF", "dogwifhat")).toBe(false);
-        // Bare 'apple' is a fruit; only 'apple inc' is the brand term.
-        expect(isBrandSquat("APPLE", "green apple")).toBe(false);
+        // …but only as a whole word: pineapple stays a fruit.
+        expect(isBrandSquat("PINEAPPLE", "pineapple party")).toBe(false);
     });
 
     test("high liquidity overrides — a bar, not a ban", () => {

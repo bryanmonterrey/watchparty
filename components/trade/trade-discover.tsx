@@ -372,7 +372,7 @@ export function TradeDiscover() {
         // its creator, live state and bonding curve; the Mobula one doesn't.
         const inHouseMints = new Set(all.map((t) => t.tokenAddress).filter(Boolean));
         const external = (externalRows ?? []).filter((t) => !inHouseMints.has(t.tokenAddress));
-        const merged = [...all, ...external];
+        const merged: TradeToken[] = [...all, ...external];
 
         const visible = hideRisky ? merged.filter((t) => !t.risky) : merged;
         const base =
@@ -381,7 +381,7 @@ export function TradeDiscover() {
             // Surge = positive 5-minute momentum with real 5-minute volume —
             // external rows carry real 5m windows, so they compete too.
             : tab === "surge" ? visible.filter((t) => (t.changePercent5m ?? 0) > 0 && (t.volume5m ?? 0) > 0)
-            : tab === "new" ? [...(onSolana ? data.new : []), ...external].filter((t) => !hideRisky || !t.risky)
+            : tab === "new" ? ([...(onSolana ? data.new : []), ...external] as TradeToken[]).filter((t) => !hideRisky || !t.risky)
             : visible;
         const by: Record<SortKey, (a: TradeToken, b: TradeToken) => number> = {
             volume: (a, b) => b.volume - a.volume,

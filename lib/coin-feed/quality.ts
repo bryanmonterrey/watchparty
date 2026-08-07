@@ -30,16 +30,21 @@ const BRAND_TERMS = [
     "tesla",
     "spacex",
     "nvidia",
-    "apple inc",
     "microsoft",
     "coinbase",
     "binance",
     "blackrock",
 ];
 
+/** Ambiguous words matched on WORD BOUNDARIES, not substrings — $APPLE and
+ *  "Apple Coin" ride the brand, $PINEAPPLE is a fruit. (Reported culprits
+ *  2026-08-07: nvidia, openai, apple.) */
+const BRAND_WORDS = ["apple", "aapl"];
+const BRAND_WORD_RE = new RegExp(`\\b(${BRAND_WORDS.join("|")})\\b`, "i");
+
 export function isBrandSquat(symbol: string, name: string | null | undefined): boolean {
     const hay = `${symbol} ${name ?? ""}`.toLowerCase();
-    return BRAND_TERMS.some((t) => hay.includes(t));
+    return BRAND_TERMS.some((t) => hay.includes(t)) || BRAND_WORD_RE.test(hay);
 }
 
 // ── Holder-quality risk (Mobula security stats) ─────────────────────────────
