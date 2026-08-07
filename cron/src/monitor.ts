@@ -118,6 +118,10 @@ export async function runMonitor(env: MonitorEnv): Promise<void> {
         const results = await Promise.all(PROBES.map(probe));
         const failing = results.filter((r) => !r.ok);
         const now = Date.now();
+        // Heartbeat, unconditionally: a healthy monitor is otherwise silent
+        // (no logs, no state writes), which makes "is the monitor itself
+        // alive?" unanswerable. `GET monitor:last-run` answers it.
+        await redis(env, ["SET", "monitor:last-run", String(now)]).catch(() => {});
         const state = await getState(env);
 
         if (failing.length === 0) {
