@@ -170,15 +170,18 @@ Follow-ups (small, whenever):
     that one should go too, or whether it's the natural first place to wire Stripe up.
   - Note there are two drawers: `wallet-drawer2/` is the live one (`wallet-button.tsx`
     lazy-imports it); `wallet-drawer/` is the older copy and still has its button.
-- **AI assistant panel behind home's dock button** (2026-08-01). Home now has a 4th column
-  (`components/home/home-action-dock.tsx`) mirroring X's Grok/Chat dock. The messages button
-  is live (routes to `/messages`, real unread badge off `conversation.getUnreadCount`); the
-  **star button is deliberately inert** and its tooltip says "coming soon". Owner's call: it
-  gets a real assistant panel — a new tRPC endpoint streaming from Workers AI
-  (`@cf/zai-org/glm-5.2`, same account API the predictions factory uses in
-  `lib/predictions/factory.ts`), opening as a docked panel anchored above the button rather
-  than a route. When that lands, swap the no-op `<button>` for the panel trigger and drop
-  the "· coming soon" from the tooltip label.
+- ~~**AI assistant panel behind home's dock button**~~ (2026-08-01) — **SHIPPED 2026-08-07.**
+  The star button opens "ask watchparty": `components/ai/ask-watchparty.tsx` (trigger +
+  GSAP star⇄X morph), `ask-panel.tsx` (docked panel, lazy via `ssr: false`),
+  `server/routers/assistant.ts` (streaming Workers AI `@cf/zai-org/glm-5.2`, model
+  env-swappable via `ASSISTANT_MODEL`). Two follow-ups, neither blocking:
+  - It's the app's **first streaming procedure** — an async generator flushed over the
+    `httpBatchStreamLink` the client already used. Worth confirming on the deployed worker
+    that chunks actually arrive incrementally rather than buffered; the code is written to
+    work either way, so a buffered host looks like a slow reply, not a bug.
+  - The assistant is **prompt-grounded only** — it knows what the product is, not what's on
+    the page. Feeding it real context (the coin being viewed, who's live) means passing
+    server-side data into the system prompt; today it gets `path` and nothing more.
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.
