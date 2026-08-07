@@ -65,12 +65,48 @@ if (prodRefs.has(devRef)) {
 }
 console.log(`target project: ${devRef} (prod refs: ${[...prodRefs].join(", ")})`);
 
+// ── 1b. Preflight — fail ONCE with a diagnosis, not forty times ─────────────
+// New Supabase projects' direct hosts (db.<ref>.supabase.co) are IPv6-ONLY;
+// on an IPv4 network they don't resolve at all (getaddrinfo ENOTFOUND). The
+// Session pooler string is the IPv4 path and handles DDL fine.
+{
+    const probe = postgres(devUrl, { max: 1, prepare: false, connect_timeout: 10 });
+    try {
+        await probe`select 1`;
+    } catch (err) {
+        console.error(`\nCannot reach the database: ${String(err.message ?? err).split("\n")[0]}`);
+        console.error(`
+If that says ENOTFOUND for db.<ref>.supabase.co, the project is IPv6-only on
+the direct host. Use the SESSION POOLER string instead (IPv4):
+  dashboard → Connect → "Session pooler" (port 5432)
+  looks like: postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`);
+        process.exit(1);
+    } finally {
+        await probe.end({ timeout: 1 }).catch(() => {});
+    }
+    console.log("connectivity: ok");
+}
+
 // ── 2. Schema from drizzle ──────────────────────────────────────────────────
 console.log("\n→ drizzle-kit push (creates the full schema on the empty project)…");
 execSync("bunx drizzle-kit push --force", {
     stdio: "inherit",
-    env: { ...process.env, DIRECT_URL: devUrl, DATABASE_URL: devUrl },
+    // DRIZZLE_DB_URL is read by drizzle.config.ts BEFORE dotenv runs — plain
+    // DIRECT_URL was clobbered by .env.local's override:true, which is exactly
+    // how the 2026-08-07 incident pushed drift DDL to production.
+    env: { ...process.env, DRIZZLE_DB_URL: devUrl, DIRECT_URL: devUrl, DATABASE_URL: devUrl },
 });
+
+// Defense in depth: prove the push landed HERE before replaying anything.
+{
+    const check = postgres(devUrl, { max: 1, prepare: false });
+    const [{ ok }] = await check`SELECT (to_regclass('public.user') IS NOT NULL) AS ok`;
+    await check.end();
+    if (!ok) {
+        console.error("ABORT: schema push did not reach the target database — refusing to continue.");
+        process.exit(1);
+    }
+}
 
 // ── 3. Replay the hand-written SQL ──────────────────────────────────────────
 const sql = postgres(devUrl, { max: 1, prepare: false, onnotice: () => {} });
@@ -82,6 +118,10 @@ for (const f of files) {
         results.ok.push(f);
     } catch (err) {
         results.failed.push(`${f} — ${String(err.message ?? err).split("\n")[0].slice(0, 100)}`);
+        // A file with an open BEGIN can leave the session in an aborted
+        // transaction, which would fail every later file with "current
+        // transaction is aborted" — clear it before moving on.
+        await sql.unsafe("ROLLBACK").catch(() => {});
     }
 }
 await sql.end();

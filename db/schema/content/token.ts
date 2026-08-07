@@ -88,7 +88,7 @@ export type TokenAlertSubscription = typeof tokenAlertSubscriptions.$inferSelect
 export const driftAccounts = pgTable("drift_accounts", {
     userId: text("user_id").primaryKey(),
     authority: text("authority").notNull(),
-    sweptTakerFees: bigint("swept_taker_fees", { mode: "bigint" }).default(BigInt(0)).notNull(),
+    sweptTakerFees: bigint("swept_taker_fees", { mode: "bigint" }).default(sql`0`).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }).enableRLS()
 

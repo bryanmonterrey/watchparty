@@ -33,7 +33,7 @@ export const predictionOutcomes = pgTable("prediction_outcomes", {
     idx: integer("idx").notNull(),
     label: text("label").notNull(),
     /** denormalized pool total in USDC base units (6dp) */
-    poolUsdc: bigint("pool_usdc", { mode: "bigint" }).default(BigInt(0)).notNull(),
+    poolUsdc: bigint("pool_usdc", { mode: "bigint" }).default(sql`0`).notNull(),
 }, (table) => [
     uniqueIndex("uq_prediction_outcomes").on(table.marketId, table.idx),
     index("idx_prediction_outcomes_market").on(table.marketId),
