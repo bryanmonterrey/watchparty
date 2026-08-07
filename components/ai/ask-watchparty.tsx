@@ -6,22 +6,27 @@ import { AnimatePresence } from "motion/react";
 import { Squircle, type SquircleCorners } from "@/components/ui/squircle";
 import { StarMorphIcon } from "@/components/ai/star-morph-icon";
 
-// The dock's AI button and the panel it opens (docs/TODO.md's "docked panel
+// The dock's AI button and the surface it opens (docs/TODO.md's "docked panel
 // anchored above the button rather than a route").
 //
-// Rendered inside HomeActionDock's SLOT, which is the `relative` box the panel
-// positions against — this component deliberately adds no positioning context
-// of its own, so the panel hangs off the button's own corner.
+// Rendered inside HomeActionDock's SLOT, which is the `relative` box the docked
+// panel positions against — this component deliberately adds no positioning
+// context of its own, so the panel hangs off the button's own corner. The
+// overlay doesn't use that anchor at all; it portals to the body.
 //
 // Chrome (className/radius/glow) is passed in rather than restated here: the
 // dock owns how its buttons look, and the AI one must not be able to drift from
 // its two neighbours.
+//
+// This file stays deliberately thin. It holds the two bits of state the
+// keyboard and click-away handlers need (`open`, `expanded`) and nothing else —
+// everything that costs bytes (AI SDK, prompt-kit, markdown, shiki) lives
+// behind the lazy boundary below.
 
 // ssr: false, not a bare `await import()` — per the memory
 // `worker-bundle-size-ceiling`, a lazy import alone still ships the code in the
-// worker bundle; only ssr:false actually splits it out. Nothing in the panel
-// (thread UI, session read, streaming client) loads until the first press.
-const AskPanel = dynamic(() => import("@/components/ai/ask-panel"), { ssr: false });
+// worker bundle; only ssr:false actually splits it out.
+const AskSurface = dynamic(() => import("@/components/ai/ask-surface"), { ssr: false });
 
 export function AskWatchparty({
     className,
@@ -33,6 +38,7 @@ export function AskWatchparty({
     glow?: { offsetX: number; offsetY: number; blur: number; spread: number; color: string; opacity: number };
 }) {
     const [open, setOpen] = useState(false);
+    const [expanded, setExpanded] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
     // Escape and click-away, both scoped to while it's open so a closed panel
@@ -41,12 +47,19 @@ export function AskWatchparty({
         if (!open) return;
 
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setOpen(false);
+            if (e.key !== "Escape") return;
+            // Escape unwinds one level at a time: overlay → docked → closed.
+            if (expanded) setExpanded(false);
+            else setOpen(false);
         };
+
         const onPointer = (e: PointerEvent) => {
+            // The overlay has its own backdrop, which is a better click-away
+            // than this one — running both would race over the same press.
+            if (expanded) return;
             const target = e.target as Node | null;
             if (!target) return;
-            // The button toggles itself — letting the away-handler also see the
+            // The button toggles itself; letting the away-handler also see the
             // press would close and reopen in the same tick.
             if (buttonRef.current?.contains(target)) return;
             if (target instanceof Element && target.closest("[data-ask-panel]")) return;
@@ -59,7 +72,14 @@ export function AskWatchparty({
             document.removeEventListener("keydown", onKey);
             document.removeEventListener("pointerdown", onPointer);
         };
-    }, [open]);
+    }, [open, expanded]);
+
+    const close = () => {
+        setOpen(false);
+        // Reset the mode too, so reopening always lands on the docked panel
+        // rather than silently restoring a fullscreen overlay.
+        setExpanded(false);
+    };
 
     return (
         <>
@@ -67,7 +87,7 @@ export function AskWatchparty({
                 <button
                     ref={buttonRef}
                     type="button"
-                    onClick={() => setOpen((v) => !v)}
+                    onClick={() => (open ? close() : setOpen(true))}
                     aria-label={open ? "close ask watchparty" : "ask ai"}
                     aria-expanded={open}
                     className={className}
@@ -80,10 +100,19 @@ export function AskWatchparty({
                 </button>
             </Squircle>
 
-            {/* AskPanel is the direct child, not a wrapper — AnimatePresence
+            {/* AskSurface is the direct child, not a wrapper — AnimatePresence
                 tracks its own children, and a plain <div> in between would
-                swallow the panel's exit animation. */}
-            <AnimatePresence>{open && <AskPanel key="ask-panel" onClose={() => setOpen(false)} />}</AnimatePresence>
+                swallow the surface's exit animation. */}
+            <AnimatePresence>
+                {open && (
+                    <AskSurface
+                        key="ask-surface"
+                        expanded={expanded}
+                        onExpandedChange={setExpanded}
+                        onClose={close}
+                    />
+                )}
+            </AnimatePresence>
         </>
     );
 }

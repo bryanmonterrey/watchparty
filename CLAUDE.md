@@ -227,6 +227,56 @@ in the summary after the fact — by which point the file is already gone. Nothi
 in tsc catches it either: the app still compiles until something imports one of
 the missing helpers.
 
+### Corollary: `registryDependencies` can clobber our primitives too
+
+The `lib/utils.ts` trap is the famous one, but a registry item's
+`registryDependencies` array is the same hazard aimed at `components/ui/`.
+prompt-kit's `message` lists `avatar` + `tooltip`, `prompt-input` lists
+`textarea` + `tooltip`, `scroll-button` and `loader` list `button` — and
+resolving those pulls **shadcn's** versions over ours. That would have silently
+reverted the h-11 button size scale (`button-height-standard`) and the
+`AvatarFallback` that always renders `/public/avatar.png` instead of letter
+initials — two rules the design system depends on, neither of which tsc would
+flag.
+
+**So `components/prompt-kit/` is vendored by hand, not installed.** Fetch
+`https://prompt-kit.com/c/<name>.json`, write `files[].content` straight into
+`components/prompt-kit/`, and re-point anything it imports. Every prompt-kit
+file is self-contained, so this costs nothing. Only edit vs. source so far:
+lucide swapped for HugeIcons in `scroll-button.tsx`.
+
+Two things about them that will otherwise waste an hour:
+- **`prose` does nothing here.** prompt-kit's `MessageContent` ships a `prose`
+  class and assumes `@tailwindcss/typography`, which this project does **not**
+  install — so `prose` and every `prose-*` variant are inert. Style markdown
+  with explicit child selectors (`[&_ul]:list-disc`, `[&_a]:text-bleu`, …), as
+  `components/ai/ask-surface.tsx` does.
+- **`ScrollButton` must stay inside `ChatContainerRoot`** (it reads
+  `useStickToBottomContext`), but the `relative` it anchors to must be
+  **outside** it. Root is the scroll container, and an absolutely-positioned
+  child whose containing block is the scroller scrolls away with the content
+  instead of staying pinned.
+
+## The AI assistant is Vercel AI SDK v7 — most examples you'll recall are wrong
+
+`app/api/assistant/route.ts` ("ask watchparty") is the app's only LLM-streaming
+surface, ported from `vercel/ai-chatbot`. Three API facts, all of which look
+right from memory and all of which fail on `ai@7`:
+
+- **`toDataStreamResponse()` no longer exists.** It's the v3/v4 name.
+- **`result.toUIMessageStreamResponse()` is deprecated** and goes away next
+  major. The current shape is `createUIMessageStream({ execute })` →
+  `writer.merge(result.toUIMessageStream())` → `createUIMessageStreamResponse()`.
+- **`convertToModelMessages()` returns a Promise** (it resolves file/image
+  parts), so `execute` has to be `async` and await it. Skipping the await is a
+  type error, not a runtime one — tsc catches this one.
+
+The model is Cloudflare Workers AI over its **OpenAI-compatible** endpoint via
+`@ai-sdk/openai-compatible`, i.e. the same account API as
+`lib/predictions/factory.ts` and `server/routers/discover.ts` — there is no
+standalone GLM URL to point a provider at. `workers-ai-provider` was rejected:
+it wants a native `Ai` binding, which OpenNext doesn't expose here.
+
 ## `@beui/table` has no scrollbar (checked 2026-08-03)
 
 Don't install it hoping to lift one. Its scroll container is plain

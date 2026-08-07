@@ -1,6 +1,5 @@
 import { router, mergeRouters } from "@/server/trpc";
 import { accountRouter } from "./account";
-import { assistantRouter } from "./assistant";
 import { auditLogRouter } from "./auditLog";
 import { passkeyRouter } from "./passkey";
 import { walletRouter } from "./wallet";
@@ -47,7 +46,6 @@ import { trendingRouter } from "./trending";
  */
 export const appRouter = router({
     account: accountRouter,
-    assistant: assistantRouter,
     auditLog: auditLogRouter,
     passkey: passkeyRouter,
     wallet: walletRouter,

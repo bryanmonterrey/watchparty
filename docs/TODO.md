@@ -171,17 +171,26 @@ Follow-ups (small, whenever):
   - Note there are two drawers: `wallet-drawer2/` is the live one (`wallet-button.tsx`
     lazy-imports it); `wallet-drawer/` is the older copy and still has its button.
 - ~~**AI assistant panel behind home's dock button**~~ (2026-08-01) — **SHIPPED 2026-08-07.**
-  The star button opens "ask watchparty": `components/ai/ask-watchparty.tsx` (trigger +
-  GSAP star⇄X morph), `ask-panel.tsx` (docked panel, lazy via `ssr: false`),
-  `server/routers/assistant.ts` (streaming Workers AI `@cf/zai-org/glm-5.2`, model
-  env-swappable via `ASSISTANT_MODEL`). Two follow-ups, neither blocking:
-  - It's the app's **first streaming procedure** — an async generator flushed over the
-    `httpBatchStreamLink` the client already used. Worth confirming on the deployed worker
-    that chunks actually arrive incrementally rather than buffered; the code is written to
-    work either way, so a buffered host looks like a slow reply, not a bug.
-  - The assistant is **prompt-grounded only** — it knows what the product is, not what's on
-    the page. Feeding it real context (the coin being viewed, who's live) means passing
-    server-side data into the system prompt; today it gets `path` and nothing more.
+  The star button opens "ask watchparty":
+  - `components/ai/ask-watchparty.tsx` — trigger, GSAP star⇄X morph, `open`/`expanded` state.
+  - `components/ai/ask-surface.tsx` — the chat itself, docked panel AND fullscreen overlay
+    from one mounted instance (so resizing mid-answer keeps the thread). Lazy, `ssr: false`.
+  - `components/ai/expand-morph-icon.tsx` — the header's resize control, brackets⇄X.
+  - `app/api/assistant/route.ts` — Vercel AI SDK v7 streaming against Workers AI
+    `@cf/zai-org/glm-5.2`, model env-swappable via `ASSISTANT_MODEL`.
+  - `components/prompt-kit/` — vendored prompt-kit UI; see CLAUDE.md for why it is NOT
+    installed with the shadcn CLI.
+
+  Three follow-ups, none blocking:
+  - **No persistence.** The thread lives in `useChat` state and dies with the panel. Storing
+    it means a `chat`/`message` table with `parts` as JSONB verbatim (vercel/ai-chatbot's
+    `Message_v2` shape) plus `onFinish` → save. Nothing else has to change.
+  - **Prompt-grounded only** — it knows what the product is, not what's on the page. Real
+    context (the coin being viewed, who's live) means feeding server-side data into the
+    system prompt; today it gets `path` and nothing more.
+  - **No resumable streams.** Closing the panel mid-answer loses the reply. The fix is
+    `resumable-stream` + `consumeSseStream`, which wants a Redis connection — we're on
+    Upstash-over-HTTP, so it needs checking before it's assumed to work on Workers.
 - **Test a real USDC subscribe** end-to-end on mainnet once funds available (only unproven money path).
 - **Rotate chat-exposed Cloudflare tokens** — `docs/cloudflare-token-rotation.md` (two `cfat_…` tokens + realtime token).
 - **Wallet-connect state in premium overlay** — if no wallet connected, Subscribe just toasts with no connect entry point; add a "Connect Wallet" state.
