@@ -22,6 +22,13 @@ Tracked live in-session too; update statuses here as they move.
 4. **Split dev DB from prod — NOT STARTED.** Dev == prod DB is the biggest
    pre-launch risk. Options: Supabase branch (MCP `create_branch`) or second
    project; swap local DATABASE_URL; keep db/schema sync discipline.
+5b. **Feed quality — DONE 2026-08-07.** Alerts: brand-squat gate (\$CLAUDE/
+   \$ANTHROPIC/… need \$250K liquidity; word-boundary apple/aapl) + Mobula
+   security adoption gate (honeypot/taxes/score/holder concentration,
+   fail-open, 12 lookups/pass). 8 junk rows purged from tracked_tokens.
+   Boards: copycat collapse (one row per symbol+name, best copy wins) +
+   server-computed `risky` flag with hide-risky toggles (memescope dialog +
+   discover pill). Thresholds live in lib/coin-feed/quality.ts; 37 tests.
 5. **Security housekeeping — NOT STARTED.** Rotate CLOUDFLARE_API_TOKEN (two
    flagged pastes: 2026-06-20, 2026-08-06) per docs/cloudflare-token-rotation.md;
    rotate .env.production:54 secret; DMARC p=none → quarantine after reviewing
