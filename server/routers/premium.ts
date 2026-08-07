@@ -16,6 +16,7 @@ import {
     formatUsd,
 } from "@/lib/premium/tiers";
 import { syncPremiumBadge } from "@/server/lib/premium-verified";
+import { isEntitled } from "@/server/lib/premium-entitlement";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
 import { createNotification } from "@/server/lib/notify";
@@ -79,6 +80,12 @@ export const premiumRouter = router({
     }),
 
     // ─── Current entitlement (source of truth for gating) ────────────────────
+    //
+    // The active/past_due/periodEnd predicate now lives in
+    // server/lib/premium-entitlement.ts so the assistant's quota gate and
+    // community's boost allowance read the same rule. This keeps its own full
+    // row select — it returns billing fields the helper doesn't carry (cycle,
+    // cancelAtPeriodEnd) — and applies the shared predicate to it.
     getStatus: protectedProcedure.query(async ({ ctx }) => {
         const [row] = await db
             .select()
@@ -88,12 +95,8 @@ export const premiumRouter = router({
 
         if (!row) return { entitled: false as const, subscription: null };
 
-        const active =
-            (row.status === "active" || row.status === "past_due") &&
-            row.currentPeriodEnd.getTime() > Date.now();
-
         return {
-            entitled: active,
+            entitled: isEntitled(row),
             subscription: {
                 tierKey: row.tierKey as TierKey,
                 group: TIERS[row.tierKey as TierKey]?.group ?? "individual",

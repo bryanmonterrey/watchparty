@@ -10,7 +10,12 @@ import {
 } from "ai";
 import { z } from "zod";
 import { auth } from "@/lib/auth/server";
-import { redis } from "@/lib/cache";
+import { getPremiumEntitlement } from "@/server/lib/premium-entitlement";
+import {
+    recordAssistantTokens,
+    refundAssistantMessage,
+    spendAssistantMessage,
+} from "@/server/lib/assistant-usage";
 
 // "ask watchparty" — the assistant behind the dock's star button
 // (components/ai/ask-watchparty.tsx).
@@ -39,11 +44,6 @@ const TOKEN = () => process.env.CLOUDFLARE_API_TOKEN;
 // catalog moves faster than a deploy does.
 const MODEL = () => process.env.ASSISTANT_MODEL ?? process.env.PREDICTIONS_FACTORY_MODEL ?? "@cf/zai-org/glm-5.2";
 
-// Generous enough that a real conversation never notices, tight enough that a
-// stuck client can't run up the Workers AI bill. Per user, per rolling hour.
-const RATE_LIMIT = 60;
-const RATE_WINDOW_SECONDS = 3600;
-
 const bodySchema = z.object({
     // `useChat` posts UIMessages (role + parts). Validated loosely on purpose —
     // the parts union is the SDK's to define, and `convertToModelMessages`
@@ -69,22 +69,6 @@ function systemPrompt(path: string | undefined) {
         .join(" ");
 }
 
-// Per-user hourly cap. Raw INCR/EXPIRE against the shared client, which is the
-// pattern actually used in this repo (lib/security/audit-logger.ts,
-// app/api/create-wallet/route.ts) — lib/rate-limit.ts is dead code and throws a
-// bare Error that wouldn't map to a 429. Fails OPEN: Redis being down should
-// not take the assistant down with it.
-async function underRateLimit(userId: string) {
-    try {
-        const key = `ratelimit:assistant:${userId}`;
-        const used = await redis.incr(key);
-        if (used === 1) await redis.expire(key, RATE_WINDOW_SECONDS);
-        return used <= RATE_LIMIT;
-    } catch {
-        return true;
-    }
-}
-
 export async function POST(request: Request) {
     const account = ACCOUNT();
     const token = TOKEN();
@@ -104,8 +88,31 @@ export async function POST(request: Request) {
         return Response.json({ error: "bad request" }, { status: 400 });
     }
 
-    if (!(await underRateLimit(session.user.id))) {
-        return Response.json({ error: "you've hit the hourly limit — try again in a bit" }, { status: 429 });
+    // Entitlement first, then quota. Free accounts aren't blocked outright —
+    // they get FREE_QUOTA, so someone can find out whether this is worth
+    // paying for. Running out is what surfaces the upgrade overlay.
+    //
+    // This is a Postgres read, so unlike the Redis quota below it fails CLOSED:
+    // if the DB is down nobody streams, which is correct for a paid gate.
+    const entitlement = await getPremiumEntitlement(session.user.id);
+    const spend = await spendAssistantMessage(session.user.id, entitlement);
+
+    if (!spend.allowed) {
+        // 402 is the client's cue to open the upgrade overlay (see the custom
+        // fetch in components/ai/ask-surface.tsx). `upgrade` is false for users
+        // who already pay — they've hit their tier's ceiling, and showing them
+        // a "subscribe" sheet they're already inside of would be nonsense.
+        return Response.json(
+            {
+                error: entitlement.entitled
+                    ? `you've used your ${entitlement.tierKey} ai allowance for this billing period`
+                    : "you've used today's free ai messages — upgrade for more",
+                code: spend.reason === "tokens" ? "token_ceiling" : "quota_exhausted",
+                upgrade: !entitlement.entitled,
+                resetAt: spend.resetAt.toISOString(),
+            },
+            { status: 402 },
+        );
     }
 
     const workersAI = createOpenAICompatible({
@@ -132,6 +139,21 @@ export async function POST(request: Request) {
                 // (ai-chatbot, chat-zeron, scira) turns it on.
                 experimental_transform: smoothStream({ chunking: "word" }),
                 abortSignal: request.signal,
+                // Real cost, charged after the fact — the message counter is
+                // what gates, this is the backstop that notices when a small
+                // number of messages is actually a large amount of spend.
+                // `totalTokens` covers prompt + completion, so long histories
+                // are priced honestly rather than counted as one cheap turn.
+                //
+                // `usage`, not `totalUsage` — the latter is @deprecated on this
+                // event ("Use `usage` instead"), same as every other `result.*`
+                // convenience in ai@7. Both compile, so only the .d.ts tells you.
+                onFinish: ({ usage }) => {
+                    const spent = usage?.totalTokens;
+                    if (typeof spent === "number") {
+                        void recordAssistantTokens(session.user.id, entitlement, spent);
+                    }
+                },
             });
 
             // Standalone helper, not `result.toUIMessageStream()` — the method
@@ -141,8 +163,13 @@ export async function POST(request: Request) {
         },
         // Never leak provider internals or keys to the client. The real error
         // is logged here and the user gets something they can act on.
+        //
+        // Also refunds the message: it was charged before the stream started,
+        // and a failure here means no answer was delivered. Aborts don't come
+        // through this path, so stopping a reply you asked for still costs.
         onError: (error) => {
             console.error("assistant stream failed:", error);
+            void refundAssistantMessage(session.user.id, entitlement);
             return "the assistant is having a moment — try again";
         },
     });

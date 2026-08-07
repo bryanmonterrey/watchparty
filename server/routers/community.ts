@@ -25,6 +25,7 @@ import { premiumSubscriptions } from "@/db/schema/content";
 import { TIERS, USDC_MINT, type TierKey } from "@/lib/premium/tiers";
 import { BOOST_PACKS, getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { boostLevelFor } from "@/lib/premium/boost-levels";
+import { isEntitled } from "@/server/lib/premium-entitlement";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { eq, and, or, desc, asc, sql, lt, ne, count, inArray, gt, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -144,10 +145,9 @@ async function boostAllowance(userId: string) {
         .from(premiumSubscriptions)
         .where(eq(premiumSubscriptions.userId, userId))
         .limit(1);
-    const tierActive =
-        !!sub &&
-        (sub.status === "active" || sub.status === "past_due") &&
-        sub.currentPeriodEnd.getTime() > Date.now();
+    // Shared predicate (server/lib/premium-entitlement.ts) — this used to be a
+    // second hand-written copy of the active/past_due/periodEnd rule.
+    const tierActive = !!sub && isEntitled(sub);
     const tierSlots = tierActive ? (TIERS[sub.tierKey as TierKey]?.boostSlots ?? 0) : 0;
 
     const [grantRow] = await db

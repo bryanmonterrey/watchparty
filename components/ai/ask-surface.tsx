@@ -21,6 +21,8 @@ import { PromptInput, PromptInputTextarea } from "@/components/prompt-kit/prompt
 import { PromptSuggestion } from "@/components/prompt-kit/prompt-suggestion";
 import { ScrollButton } from "@/components/prompt-kit/scroll-button";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { trpc } from "@/lib/trpc/client";
+import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 
 // The assistant's chat surface. Lazy-loaded (ssr: false) by ask-watchparty.tsx,
 // so the AI SDK, the markdown renderer and shiki are all paid for on first
@@ -72,6 +74,11 @@ export function AskSurface({
     const [input, setInput] = useState("");
     const reduced = useReducedMotion();
     const { data: session } = useAuthSession();
+    const utils = trpc.useUtils();
+
+    // What's left in this window. Read-only — the quota is charged server-side
+    // when a message is actually sent, so opening the panel costs nothing.
+    const { data: quota } = trpc.assistant.quota.useQuery(undefined, { staleTime: 30_000 });
 
     const avatar =
         (session?.user as { avatar_url?: string | null; image?: string | null } | undefined)?.avatar_url ??
@@ -80,6 +87,13 @@ export function AskSurface({
 
     // Built once. A fresh transport per render would hand useChat a new
     // identity on every keystroke.
+    //
+    // The custom `fetch` is how the quota gate reaches the UI. The SDK turns a
+    // non-2xx into a thrown error whose message is the raw body — useless to
+    // read and impossible to branch on — so the 402 is intercepted here,
+    // BEFORE it becomes an opaque error: the upgrade overlay opens for users
+    // who can still upgrade, and either way a readable sentence is thrown.
+    // (This is vercel/ai-chatbot's `fetchWithErrorHandlers` idea.)
     const transport = useMemo(
         () =>
             new DefaultChatTransport({
@@ -87,8 +101,25 @@ export function AskSurface({
                 prepareSendMessagesRequest: ({ messages, body }) => ({
                     body: { messages, path: window.location.pathname, ...body },
                 }),
+                fetch: async (input, init) => {
+                    const res = await fetch(input as RequestInfo, init);
+                    if (res.status === 402) {
+                        const detail = (await res.json().catch(() => null)) as
+                            | { error?: string; upgrade?: boolean }
+                            | null;
+                        // Only for people who aren't already paying — showing a
+                        // subscriber a "subscribe" sheet they're inside of is
+                        // nonsense. They've hit their tier ceiling instead.
+                        if (detail?.upgrade) {
+                            usePremiumOverlay.getState().openOverlay("premium");
+                        }
+                        void utils.assistant.quota.invalidate();
+                        throw new Error(detail?.error ?? "you've used your ai allowance");
+                    }
+                    return res;
+                },
             }),
-        [],
+        [utils],
     );
 
     const { messages, sendMessage, status, stop, error, setMessages, clearError } = useChat({
@@ -97,9 +128,13 @@ export function AskSurface({
         // React commit, which is what makes streaming chat feel janky on a
         // loaded machine.
         throttle: 50,
+        // Each answer spends a message and some tokens; re-read so the counter
+        // in the header is right without polling for it.
+        onFinish: () => void utils.assistant.quota.invalidate(),
     });
 
     const busy = status === "submitted" || status === "streaming";
+    const exhausted = !!quota && (quota.remaining <= 0 || quota.tokenCeilingHit);
 
     const submit = () => {
         const text = input.trim();
@@ -121,7 +156,19 @@ export function AskSurface({
             <StarOutline className="size-5 shrink-0" />
             <div className="min-w-0 flex-1">
                 <p className="font-pixel text-[13px] leading-none text-flexwhite">ask watchparty</p>
-                <p className="mt-1.5 text-[11px] leading-none text-postgray">powered by glm</p>
+                {/* Doubles as the upsell surface: a free user watching "3 left
+                    today" tick down learns the limit exists before they hit it,
+                    which is the difference between an upgrade prompt that reads
+                    as an offer and one that reads as a wall. Hidden entirely
+                    when Redis is down (`degraded`) rather than showing a count
+                    that isn't being enforced. */}
+                <p className="mt-1.5 text-[11px] leading-none text-postgray">
+                    {quota && !quota.degraded
+                        ? quota.entitled
+                            ? `${quota.remaining.toLocaleString()} of ${quota.limit.toLocaleString()} left this period`
+                            : `${quota.remaining} of ${quota.limit} free left today`
+                        : "powered by glm"}
+                </p>
             </div>
             <button
                 type="button"
@@ -257,6 +304,35 @@ export function AskSurface({
         </div>
     );
 
+    // Out of allowance: replace the composer entirely rather than leaving a
+    // dead input to type into. Free users get the upgrade path; subscribers who
+    // hit their tier ceiling get the reset time, because there's nothing for
+    // them to buy.
+    const exhaustedComposer = (
+        <div className="shrink-0 border-t border-flexborder p-3">
+            <div className="flex flex-col items-center gap-2.5 px-3 py-3 text-center">
+                <p className="text-sm leading-relaxed text-zinc-400">
+                    {quota?.entitled
+                        ? "you've used your ai allowance for this billing period."
+                        : "you've used today's free ai messages."}
+                </p>
+                {quota?.entitled ? (
+                    <p className="text-xs text-zinc-600">
+                        resets {quota.resetAt ? new Date(quota.resetAt).toLocaleDateString() : "soon"}
+                    </p>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => usePremiumOverlay.getState().openOverlay("premium")}
+                        className="flex h-11 cursor-pointer items-center rounded-full bg-white px-5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+                    >
+                        upgrade for more
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     const composer = (
         <div className="shrink-0 border-t border-flexborder p-3">
             <PromptInput
@@ -292,7 +368,7 @@ export function AskSurface({
             {header}
             {suggestions}
             {thread}
-            {composer}
+            {exhausted ? exhaustedComposer : composer}
         </>
     );
 
