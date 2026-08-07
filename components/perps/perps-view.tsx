@@ -61,9 +61,25 @@ const fmtPrice = (n: number) => {
 function useTradeAuthority(): { authority: string | null; isSwig: boolean } {
     const { data: session } = useAuthSession();
     const wallet = useWallet();
+    // `source`, not truthiness. user.wallet_address mirrors whichever linked
+    // wallet is PRIMARY, and setPrimaryWallet lets someone promote an
+    // extension — after which the old `if (custodial) isSwig = true` reported
+    // isSwig for an extension address, so signing took the Swig relay path
+    // against a wallet that has no Swig. Only a row with source "swig" is one.
+    const { data: linked } = trpc.wallet.listLinkedWallets.useQuery(undefined, {
+        enabled: !!session?.user,
+        staleTime: 60_000,
+    });
+
     const custodial = session?.user?.wallet_address ?? null;
-    if (custodial) return { authority: custodial, isSwig: true };
-    return { authority: wallet.publicKey?.toBase58() ?? null, isSwig: false };
+    const isSwig =
+        !!custodial && !!linked?.wallets?.some((w) => w.address === custodial && w.source === "swig");
+
+    if (custodial && isSwig) return { authority: custodial, isSwig: true };
+    // Extension primary, or the list hasn't loaded yet. Falling back to the
+    // adapter is the safe default: worst case the user gets a wallet popup,
+    // rather than a relay path that can't produce a signature.
+    return { authority: wallet.publicKey?.toBase58() ?? custodial, isSwig: false };
 }
 
 /** Followed perp markets (Phantom's Follow button) — localStorage, feeds the rail's Follows tab. */
