@@ -10,6 +10,7 @@ import { SearchIcon, PinkStarLogo } from '../icons'
 import { MorphMenuIcon } from '@/components/marketing/morph-menu-icon'
 import { useClipsOverlay } from '@/hooks/use-clips-overlay'
 import { useHomeFeedOverlay } from '@/hooks/use-home-feed-overlay'
+import { useAskOverlay } from '@/hooks/use-ask-overlay'
 import { CreateMenu } from './create-menu'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
@@ -63,6 +64,11 @@ export function AppHeader2() {
     if (clipsOpen) closeClips()
     else if (homeFeedOpen) closeHomeFeed()
   }
+  // Deliberately NOT folded into homeOverlayOpen: that one drives the menu
+  // morph and the search hide, and the assistant is closed by its own control,
+  // not the hamburger. This is only for the scroll backdrop below.
+  const askOverlayOpen = useAskOverlay((s) => s.open)
+  const fullBleedOverlayOpen = homeOverlayOpen || askOverlayOpen
   const [mounted, setMounted] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
@@ -143,8 +149,17 @@ export function AppHeader2() {
           gets a whisper of theme background; /settings goes near-solid (85%).
           On /home it resolves to the app canvas once scrolled, joining the
           sticky category and column headers into one uninterrupted surface.
-          Other pages have no scroll backdrop at all. */}
-      {showScrollBackdrop && (
+          Other pages have no scroll backdrop at all.
+
+          Suppressed while a full-bleed overlay (clips, home feed, assistant) is
+          up. Those cover the page the backdrop exists to separate the header
+          from, so it has nothing left to do — but `scrollY` is whatever the
+          page underneath was left at, so it keeps painting: on /home that's
+          100% canvas plus a 24px blur, a band across the top of the overlay.
+          It goes unnoticed on Clips only because that surface happens to be the
+          same rgb(5,5,5); the blur is there regardless, and any overlay that
+          isn't exactly canvas-coloured shows the seam. */}
+      {showScrollBackdrop && !fullBleedOverlayOpen && (
         <div
           className="absolute inset-0 transition-colors"
           style={{

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { AnimatePresence } from "motion/react";
 import { Squircle, type SquircleCorners } from "@/components/ui/squircle";
 import { StarMorphIcon } from "@/components/ai/star-morph-icon";
+import { useAskOverlay } from "@/hooks/use-ask-overlay";
 
 // The dock's AI button and the surface it opens (docs/TODO.md's "docked panel
 // anchored above the button rather than a route").
@@ -38,8 +39,22 @@ export function AskWatchparty({
     glow?: { offsetX: number; offsetY: number; blur: number; spread: number; color: string; opacity: number };
 }) {
     const [open, setOpen] = useState(false);
-    const [expanded, setExpanded] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
+
+    // Overlay mode lives in a store, not local state, because the app header
+    // has to know about it — it suppresses its scroll backdrop while a
+    // full-bleed overlay is up (see app-header2.tsx). The header is an ancestor
+    // rendered by (app)/layout.tsx, so there's no shared provider to thread it
+    // through. Same reason use-clips-overlay exists.
+    const expanded = useAskOverlay((s) => s.open);
+    const expand = useAskOverlay((s) => s.onOpen);
+    const collapse = useAskOverlay((s) => s.onClose);
+    const setExpanded = (next: boolean) => (next ? expand() : collapse());
+
+    // Navigating away unmounts the dock without anything calling close(), and a
+    // store left `true` would suppress the header's backdrop on every page from
+    // then on.
+    useEffect(() => collapse, [collapse]);
 
     // Escape and click-away, both scoped to while it's open so a closed panel
     // costs nothing in listeners.
@@ -49,7 +64,9 @@ export function AskWatchparty({
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== "Escape") return;
             // Escape unwinds one level at a time: overlay → docked → closed.
-            if (expanded) setExpanded(false);
+            // `collapse` rather than the setExpanded wrapper — it's the store's
+            // own action, so it's referentially stable and can be a real dep.
+            if (expanded) collapse();
             else setOpen(false);
         };
 
@@ -72,13 +89,13 @@ export function AskWatchparty({
             document.removeEventListener("keydown", onKey);
             document.removeEventListener("pointerdown", onPointer);
         };
-    }, [open, expanded]);
+    }, [open, expanded, collapse]);
 
     const close = () => {
         setOpen(false);
         // Reset the mode too, so reopening always lands on the docked panel
         // rather than silently restoring a fullscreen overlay.
-        setExpanded(false);
+        collapse();
     };
 
     return (

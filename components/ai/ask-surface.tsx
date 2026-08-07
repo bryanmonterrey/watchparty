@@ -373,41 +373,44 @@ export function AskSurface({
     );
 
     if (expanded) {
-        // Portalled to the body so the overlay escapes the dock's sticky
-        // stacking context entirely, rather than trying to out-z-index the
-        // page from inside a 60px column.
+        // Modelled on the Clips overlay (components/home/clips-overlay.tsx),
+        // which is this app's overlay convention: the canvas is INSTANT and
+        // edge to edge — no scrim, no backdrop-blur, no floating rounded card —
+        // and only the content inside it animates in. `bg-canvas` is the same
+        // fill the sidebar and Clips paint, so the surface reads as the app
+        // going full-screen rather than as a modal sitting on top of it.
+        //
+        // z-40 and `md:pt-[var(--header-height)]` are both from Clips too: the
+        // fill runs behind the header band while the content clears it, which
+        // keeps the header live instead of sealing the app off. That's also why
+        // there's no backdrop click-to-close — there is no backdrop. Escape
+        // unwinds (overlay → docked → closed) and the morphed X shrinks.
+        //
+        // Portalled anyway, unlike Clips: this is triggered from inside the
+        // dock's sticky column, and a `fixed` element there would be trapped in
+        // that stacking context.
         //
         // No `mounted` guard before touching `document`: this whole module is
         // loaded with `ssr: false`, so it only ever renders on the client.
         return createPortal(
-            <motion.div
-                initial={reduced ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: reduced ? 0 : 0.18 }}
-                className="fixed inset-0 z-[200] grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
-                // Backdrop closes out completely — the header's X only shrinks
-                // back to the docked panel, so this is the way out.
-                onPointerDown={(e) => {
-                    if (e.target === e.currentTarget) onClose();
-                }}
+            <div
+                className="fixed inset-0 z-40 bg-canvas md:pt-[var(--header-height)]"
                 role="dialog"
                 aria-modal="true"
                 aria-label="ask watchparty"
             >
                 <motion.div
-                    initial={reduced ? false : { scale: 0.97, y: 8 }}
-                    animate={{ scale: 1, y: 0 }}
-                    transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 30, mass: 0.7 }}
-                    className="h-[min(680px,86vh)] w-[min(720px,92vw)]"
+                    initial={reduced ? false : { opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={reduced ? { duration: 0 } : { duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                    // Full-bleed black, readable column. A chat line running the
+                    // width of an ultra-wide display is unreadable, so the FILL
+                    // is edge to edge and the content is capped and centred.
+                    className="mx-auto flex h-full w-full max-w-[760px] flex-col"
                 >
-                    <Squircle asChild radius={28}>
-                        <div className="flex h-full w-full flex-col overflow-hidden border border-flexborder bg-[#111]">
-                            {body}
-                        </div>
-                    </Squircle>
+                    {body}
                 </motion.div>
-            </motion.div>,
+            </div>,
             document.body,
         );
     }
