@@ -38,7 +38,7 @@ Tracked live in-session too; update statuses here as they move.
    Boards: copycat collapse (one row per symbol+name, best copy wins) +
    server-computed `risky` flag with hide-risky toggles (memescope dialog +
    discover pill). Thresholds live in lib/coin-feed/quality.ts; 37 tests.
-5. **Security housekeeping — NOT STARTED.** Rotate CLOUDFLARE_API_TOKEN (two
+5. **Security housekeeping — SCHEDULED 2026-08-20 (user's call).** Rotate CLOUDFLARE_API_TOKEN (two
    flagged pastes: 2026-06-20, 2026-08-06) per docs/cloudflare-token-rotation.md;
    rotate .env.production:54 secret; DMARC p=none → quarantine after reviewing
    rua reports. Mostly needs the user's dashboards.
