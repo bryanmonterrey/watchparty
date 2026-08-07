@@ -87,6 +87,18 @@ the direct host. Use the SESSION POOLER string instead (IPv4):
     console.log("connectivity: ok");
 }
 
+// ── 1c. Start from a clean slate ────────────────────────────────────────────
+// The dev project is disposable; a partially-populated public schema makes
+// drizzle-kit's diff ask interactive "renamed or new?" questions (no TTY →
+// crash). Empty schema = pure CREATE plan, no prompts. The prod-ref guard
+// above is what makes this safe to automate.
+{
+    const wipe = postgres(devUrl, { max: 1, prepare: false, onnotice: () => {} });
+    await wipe.unsafe(`DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO anon, authenticated, service_role, public;`);
+    await wipe.end();
+    console.log("public schema reset");
+}
+
 // ── 2. Schema from drizzle ──────────────────────────────────────────────────
 console.log("\n→ drizzle-kit push (creates the full schema on the empty project)…");
 execSync("bunx drizzle-kit push --force", {
