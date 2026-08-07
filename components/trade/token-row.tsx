@@ -31,41 +31,14 @@ function formatCount(count: number): string {
     return String(count);
 }
 
-function ringColor(progress: number, status: TradeToken["status"]): string {
-    if (status === "migrated") return "#00ED89";
-    if (progress >= 80) return "#FFCC00"; // sunset — close to migration
-    return "#00ED89"; // lantern
-}
-
+// Plain tile — the bonding-progress ring is gone by request, in every state.
 function TokenAvatar({ token }: { token: TradeToken }) {
-    const color = ringColor(token.bondingProgress, token.status);
-    const size = 48;
-    const stroke = 2.5;
     return (
-        <div className="relative shrink-0" style={{ width: size, height: size }}>
-            <svg className="pointer-events-none absolute inset-0 -rotate-90 size-full" viewBox={`0 0 ${size} ${size}`}>
-                <rect
-                    x={stroke / 2} y={stroke / 2}
-                    width={size - stroke} height={size - stroke}
-                    rx={14} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke}
-                />
-                <rect
-                    x={stroke / 2} y={stroke / 2}
-                    width={size - stroke} height={size - stroke}
-                    rx={14} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-                    pathLength="100" strokeDasharray="100"
-                    strokeDashoffset={100 - (token.status === "migrated" ? 100 : token.bondingProgress)}
-                    className="transition-all duration-500"
-                />
-            </svg>
-            <div className="absolute inset-[5px] overflow-hidden rounded-[10px] bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">
-                {token.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
-                ) : (
-                    null
-                )}
-            </div>
+        <div className="size-12 shrink-0 overflow-hidden rounded-[14px] bg-zinc-800">
+            {token.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
+            ) : null}
         </div>
     );
 }

@@ -28,8 +28,8 @@ import type { TokenStatus, TradeToken } from "./types";
 // (new/migrating/migrated) live on /trade/memescope as columns. "Live" is
 // tokens whose creator is streaming on watchparty right now — the native
 // counterpart of Axiom's "Pump Live". Every number shown is a real cached
-// market column; nothing decorative. The bonding ring around each token image
-// carries migration progress, so there's no separate progress column.
+// market column; nothing decorative. (The avatar bonding ring is gone by
+// request — migration progress lives in the memescope columns, not here.)
 
 const EMPTY: Record<TokenStatus, TradeToken[]> = { new: [], migrating: [], migrated: [] };
 
@@ -109,12 +109,6 @@ function formatCount(count: number): string {
     return String(count);
 }
 
-function ringColor(progress: number, status: TokenStatus): string {
-    if (status === "migrated") return "#00ED89";
-    if (progress >= 80) return "#FFCC00"; // sunset — close to migration
-    return "#00ED89"; // lantern
-}
-
 function XIcon({ className }: { className?: string }) {
     return (
         <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
@@ -123,35 +117,14 @@ function XIcon({ className }: { className?: string }) {
     );
 }
 
+// Plain tile — the bonding-progress ring is gone by request, in every state.
 function TokenAvatar({ token }: { token: TradeToken }) {
-    const color = ringColor(token.bondingProgress, token.status);
-    const size = 48;
-    const stroke = 2.5;
     return (
-        <div className="relative shrink-0" style={{ width: size, height: size }}>
-            <svg className="pointer-events-none absolute inset-0 -rotate-90 size-full" viewBox={`0 0 ${size} ${size}`}>
-                <rect
-                    x={stroke / 2} y={stroke / 2}
-                    width={size - stroke} height={size - stroke}
-                    rx={14} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke}
-                />
-                <rect
-                    x={stroke / 2} y={stroke / 2}
-                    width={size - stroke} height={size - stroke}
-                    rx={14} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-                    pathLength="100" strokeDasharray="100"
-                    strokeDashoffset={100 - (token.status === "migrated" ? 100 : token.bondingProgress)}
-                    className="transition-all duration-500"
-                />
-            </svg>
-            <div className="absolute inset-[5px] overflow-hidden rounded-[10px] bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-300">
-                {token.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
-                ) : (
-                    null
-                )}
-            </div>
+        <div className="size-12 shrink-0 overflow-hidden rounded-[14px] bg-zinc-800">
+            {token.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
+            ) : null}
         </div>
     );
 }
