@@ -12,6 +12,7 @@
 
 import { db } from "@/db";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
+import { clearsBrandBar } from "./quality";
 import { tokens } from "@/db/schema/content/token";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { CallBudget, fetchNewPools, fetchTrendingPools, type DiscoveredPool } from "./geckoterminal";
@@ -43,6 +44,10 @@ function qualifies(pool: DiscoveredPool): boolean {
     const net = networkById(pool.network);
     if (!net) return false;
     if (isExcludedCoin(pool.symbol, pool.marketCapUsd)) return false;
+    // Brand-squatting names ($CLAUDE, $ANTHROPIC…) clear the volume floor on
+    // launch-day pumps; they get a much higher LIQUIDITY bar instead — see
+    // lib/coin-feed/quality.ts.
+    if (!clearsBrandBar(pool.symbol, pool.name, pool.liquidityUsd)) return false;
     const liquidity = pool.liquidityUsd ?? 0;
     const volume = pool.volume24hUsd ?? 0;
     return liquidity >= net.minLiquidityUsd && volume >= net.minVolume24hUsd;

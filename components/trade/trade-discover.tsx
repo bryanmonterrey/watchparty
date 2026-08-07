@@ -20,6 +20,7 @@ import { Squircle } from "@/components/ui/squircle";
 import { SolanaIcon } from "@/components/icons";
 import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
 import { CHAIN_OPTIONS, type TradeChain } from "./chains";
+import { collapseCopycats } from "./collapse-copycats";
 import type { TokenStatus, TradeToken } from "./types";
 
 // Discover: the /trade landing (per the Axiom reference, in watchparty's
@@ -386,13 +387,13 @@ export function TradeDiscover() {
             txCount: (a, b) => b.txCount - a.txCount,
             newest: (a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0),
         };
-        return base.sort((a, b) =>
+        return collapseCopycats(base.sort((a, b) =>
             // Live tab: most-watched streams first; Surge: hottest 5m move
             // first, 5m volume as tiebreaker; market sort breaks remaining ties.
             tab === "live" ? b.liveViewerCount - a.liveViewerCount || by[sort](a, b)
             : tab === "surge" ? (b.changePercent5m ?? 0) - (a.changePercent5m ?? 0) || (b.volume5m ?? 0) - (a.volume5m ?? 0)
             : by[sort](a, b),
-        );
+        ));
     }, [data, all, externalRows, onSolana, tab, sort]);
 
     const selectTab = (t: Tab) => {

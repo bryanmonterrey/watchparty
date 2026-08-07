@@ -10,6 +10,7 @@ import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/re
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { CHAIN_OPTIONS, type TradeChain } from "./chains";
+import { collapseCopycats } from "./collapse-copycats";
 import {
     MemescopeFilterDialog,
     applyMemescopeFilters,
@@ -101,25 +102,27 @@ export function TradeFeed() {
         .flatMap((q) => q.data?.tokens ?? [])
         .filter((t) => !inHouseMints.has(t.tokenAddress));
     const byNewest = (a: TradeToken, b: TradeToken) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0);
+    // Copycat collapse runs AFTER the filters: if the strongest copy gets
+    // filtered out, a surviving copy should still represent the name.
     const columns: Record<TokenStatus, TradeToken[]> = {
-        new: applyMemescopeFilters(
+        new: collapseCopycats(applyMemescopeFilters(
             [
                 ...inHouse.new,
                 ...externalRows.filter((t) => t.status === "migrating" && t.bondingProgress < FINAL_STRETCH_AT),
             ].sort(byNewest),
             filters,
-        ),
-        migrating: applyMemescopeFilters(
+        )),
+        migrating: collapseCopycats(applyMemescopeFilters(
             [
                 ...inHouse.migrating,
                 ...externalRows.filter((t) => t.status === "migrating" && t.bondingProgress >= FINAL_STRETCH_AT),
             ].sort((a, b) => b.bondingProgress - a.bondingProgress),
             filters,
-        ),
-        migrated: applyMemescopeFilters(
+        )),
+        migrated: collapseCopycats(applyMemescopeFilters(
             [...inHouse.migrated, ...externalRows.filter((t) => t.status === "migrated")].sort(byNewest),
             filters,
-        ),
+        )),
     };
     // Skeletons only while NOTHING has answered. This was `some(isLoading)`,
     // which let one hung chain (bnb, 2026-08-06 — upstream hangs minutes on
