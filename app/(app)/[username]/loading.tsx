@@ -12,7 +12,9 @@ import { staggerPulse } from "@/lib/skeleton-stagger";
 //
 // Numbers below are lifted from the components themselves — profile-banner
 // (h-[176px]), profile-avatar (size-24 border-[6px]), user-profile (px-4 py-4,
-// gap-6, px-8 py-4) and profile-tabs (mt-5, gap-9, six tabs).
+// gap-6) and profile-tabs (mt-5, gap-9, six tabs). The skeleton stops at the
+// tab row: below it belongs to whichever tab loads, and that tab brings its
+// own mirrored skeletons.
 
 /** Tab labels are different lengths; matching them keeps the rail from resizing. */
 const TAB_WIDTHS = [44, 48, 62, 48, 52, 84];
@@ -70,15 +72,12 @@ export default function SlugLoading() {
                     </div>
                 </div>
 
-                {/* Tab content — the Home tab's hero + card row. */}
-                <div className="w-full px-8 py-4">
-                    <div style={pulse(9)} className="aspect-[16/6] w-full rounded-2xl shimmer-skeleton" />
-                    <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
-                        {[0, 1, 2].map((i) => (
-                            <div key={i} style={pulse(i + 4)} className="aspect-video w-full rounded-2xl shimmer-skeleton" />
-                        ))}
-                    </div>
-                </div>
+                {/* NOTHING below the tabs — deliberately. The skeleton ends at
+                    the chrome (banner, identity, tab row); guessing at a tab's
+                    content shape here painted a hero + card grid that most
+                    tabs don't have, so the guess itself was the layout jump.
+                    Each tab paints its own mirrored skeletons once it knows
+                    what it's loading (profile-tab-content). */}
             </main>
 
             {/* Right rail */}
