@@ -6,7 +6,9 @@ import { motion, useReducedMotion } from "motion/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Squircle } from "@/components/ui/squircle";
-import { ArrowUpIcon, AudioWavesIcon } from "@/components/icons";
+import { ArrowUpIcon, AudioWavesIcon, CloseIcon, HistoryIcon } from "@/components/icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PlusSignSquareIcon } from "@hugeicons/core-free-icons";
 import { ExpandMorphIcon } from "@/components/ai/expand-morph-icon";
 import {
     ChatContainerContent,
@@ -63,9 +65,11 @@ const SUGGESTIONS = [
 export function AskSurface({
     expanded,
     onExpandedChange,
+    onClose,
 }: {
     expanded: boolean;
     onExpandedChange: (next: boolean) => void;
+    onClose: () => void;
 }) {
     const [input, setInput] = useState("");
     // Which wallet the assistant is talking about. Null = the user's primary,
@@ -119,7 +123,7 @@ export function AskSurface({
         [utils],
     );
 
-    const { messages, sendMessage, status, stop, error, clearError } = useChat({
+    const { messages, sendMessage, status, stop, error, setMessages, clearError } = useChat({
         transport,
         // Coalesce render work while tokens land. Without it every delta is a
         // React commit, which is what makes streaming chat feel janky on a
@@ -136,6 +140,13 @@ export function AskSurface({
     const canSend = input.trim().length > 0;
     const exhausted = !!quota && (quota.remaining <= 0 || quota.tokenCeilingHit);
 
+    const newChat = () => {
+        stop();
+        clearError();
+        setMessages([]);
+        setInput("");
+    };
+
     const submit = () => {
         const text = input.trim();
         if (!text || busy) return;
@@ -147,12 +158,41 @@ export function AskSurface({
     };
 
 
-    // NO HEADER. It held a title, an avatar-ish star, a quota line, a rewind,
-    // a resize and a close — and every one of those was either duplicated
-    // elsewhere or noise. The app header already provides the X (the hamburger
-    // morphs to it for full-bleed overlays), and clicking the dock star closes
-    // the docked panel. What survived moved into the composer's action row,
-    // which is the only chrome this surface needs.
+    // Chrome only — no title, no avatar, no username. Four controls, right
+    // aligned, left to right: history, resize, new chat, close. The app
+    // header's morphed X handles the OVERLAY; this X is the docked panel's own
+    // exit, which is why both can exist without reading as duplicates.
+    const ICON_BTN =
+        "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-soft-gray-15 hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500";
+
+    const header = (
+        <div className="flex shrink-0 items-center justify-end gap-0.5 px-2 pt-2">
+            <button type="button" aria-label="chat history" className={ICON_BTN}>
+                <HistoryIcon className="size-4" />
+            </button>
+            <button
+                type="button"
+                onClick={() => onExpandedChange(!expanded)}
+                aria-label={expanded ? "shrink to panel" : "expand to overlay"}
+                aria-pressed={expanded}
+                className={ICON_BTN}
+            >
+                <ExpandMorphIcon expanded={expanded} className="size-4" />
+            </button>
+            <button
+                type="button"
+                onClick={newChat}
+                disabled={messages.length === 0}
+                aria-label="new chat"
+                className={ICON_BTN}
+            >
+                <HugeiconsIcon icon={PlusSignSquareIcon} className="size-4" strokeWidth={2} />
+            </button>
+            <button type="button" onClick={onClose} aria-label="close" className={ICON_BTN}>
+                <CloseIcon className="size-4" />
+            </button>
+        </div>
+    );
 
     // Starter prompts, following zola: BELOW the composer, and only on an
     // empty thread. Above the messages they were permanent chrome competing
@@ -199,17 +239,6 @@ export function AskSurface({
                 DOM, perfect contrast, completely unreachable. */}
             <ChatContainerRoot className="relative h-full w-full flex-col">
                 <ChatContainerContent className="flex w-full flex-col gap-5 px-4 py-4">
-                {messages.length === 0 && !busy && (
-                    // zola's empty state: one heading, nothing else. No icon,
-                    // no explanatory paragraph — the starter pills under the
-                    // input already say what this can do.
-                    <div className="flex flex-1 items-center justify-center px-6 py-10">
-                        <h1 className="font-pixel text-xl leading-tight tracking-tight text-white">
-                            what&apos;s on your mind?
-                        </h1>
-                    </div>
-                )}
-
                 {messages.map((m) =>
                     m.role === "assistant" ? (
                         <Message
@@ -368,18 +397,6 @@ export function AskSurface({
 
                 <PromptInputActions className="w-full items-center justify-between p-2 pt-1">
                     <div className="flex min-w-0 items-center gap-2">
-                        {/* Resize lives here now that the header is gone. Same
-                            brackets-to-X morph, just rehomed. */}
-                        <button
-                            type="button"
-                            onClick={() => onExpandedChange(!expanded)}
-                            aria-label={expanded ? "shrink to panel" : "expand to overlay"}
-                            aria-pressed={expanded}
-                            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-soft-gray-15 hover:text-white"
-                        >
-                            <ExpandMorphIcon expanded={expanded} className="size-4" />
-                        </button>
-
                         <WalletPill value={wallet} onChange={setWallet} />
 
                         {/* The allowance, in the composer rather than a header
@@ -420,9 +437,28 @@ export function AskSurface({
 
     const body = (
         <>
-            {thread}
-            {exhausted ? exhaustedComposer : composer}
-            {suggestions}
+            {header}
+            {/* EMPTY: heading + composer sit together in the vertical middle,
+                like zola. The thread is skipped entirely rather than rendered
+                at zero height, so nothing pins the composer to the bottom.
+                ACTIVE: thread takes the space and the composer returns to the
+                foot, where it belongs once there's something to scroll. */}
+            {messages.length === 0 && !busy ? (
+                <div className="flex flex-1 flex-col justify-center">
+                    <div className="px-6 pb-5 text-center">
+                        <h1 className="font-pixel text-xl leading-tight tracking-tight text-white">
+                            what&apos;s on your mind?
+                        </h1>
+                    </div>
+                    {exhausted ? exhaustedComposer : composer}
+                    {suggestions}
+                </div>
+            ) : (
+                <>
+                    {thread}
+                    {exhausted ? exhaustedComposer : composer}
+                </>
+            )}
         </>
     );
 
