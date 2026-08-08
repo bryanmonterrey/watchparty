@@ -147,6 +147,63 @@ try {
         ? ok(`visible text after ${secs}s: "${seen.slice(0, 90)}…"`)
         : bad(`NO VISIBLE TEXT after ${secs}s — this is the regression that shipped 8x`);
 
+    // ── CONTRAST, not just presence ─────────────────────────────────────────
+    // The reason this test went green four times while the panel was blank for
+    // a real user: the assistant/user text was styled with theme-flipping
+    // tokens (--flexwhite is near-BLACK in light mode) on a hardcoded dark
+    // panel. The DOM had the text; nobody could read it. textContent
+    // assertions are structurally blind to that, so check luminance too.
+    console.log("\n6. checking the text is actually VISIBLE (not same-on-same)");
+    const contrast = await page.evaluate(() => {
+        // Resolve ANY css colour through a canvas pixel. getComputedStyle now
+        // returns lab()/oklch() for tailwind's palette, and hand-parsing those
+        // as rgb yields nonsense — the first version of this check called
+        // perfectly readable text "unreadable" because lab(90.7 ...) parsed as
+        // rgb(90, 0.4, -1.5). Painting the colour and reading the pixel back is
+        // the only parser that is always right.
+        const cv = document.createElement("canvas");
+        cv.width = cv.height = 1;
+        const ctx = cv.getContext("2d", { willReadFrequently: true });
+        const toRgb = (css) => {
+            ctx.clearRect(0, 0, 1, 1);
+            ctx.fillStyle = "#000";
+            ctx.fillStyle = css;
+            ctx.fillRect(0, 0, 1, 1);
+            const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+            return [r, g, b];
+        };
+        const lum = (css) => {
+            const [r, g, b] = toRgb(css);
+            const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+            return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+        };
+        const bgOf = (el) => {
+            for (let n = el; n; n = n.parentElement) {
+                const bg = getComputedStyle(n).backgroundColor;
+                if (bg && !/rgba?\(0, 0, 0, 0\)|transparent/.test(bg)) return bg;
+            }
+            return getComputedStyle(document.body).backgroundColor || "rgb(0,0,0)";
+        };
+        const out = [];
+        for (const el of document.querySelectorAll("[data-assistant-message]")) {
+            const target = [...el.querySelectorAll("p, div")].find((n) => (n.textContent ?? "").trim().length > 20) ?? el;
+            const fg = getComputedStyle(target).color;
+            const bg = bgOf(target);
+            const L1 = lum(fg), L2 = lum(bg);
+            const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+            out.push({ fg, bg, ratio: Math.round(ratio * 100) / 100 });
+        }
+        return out;
+    });
+    for (const c of contrast) {
+        // 4.5:1 is the WCAG AA floor for body text. Anything near 1:1 is
+        // same-colour-on-same-colour, i.e. invisible.
+        c.ratio >= 4.5
+            ? ok(`contrast ${c.ratio}:1 (${c.fg} on ${c.bg})`)
+            : bad(`UNREADABLE — contrast ${c.ratio}:1 (${c.fg} on ${c.bg})`);
+    }
+    if (!contrast.length) bad("no assistant message to contrast-check");
+
     if (consoleErrors.length) {
         console.log(`\n  \x1b[2mconsole errors (${consoleErrors.length}):\x1b[0m`);
         for (const e of consoleErrors.slice(0, 5)) console.log(`  \x1b[2m  ${e}\x1b[0m`);
