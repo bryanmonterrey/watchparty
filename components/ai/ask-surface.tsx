@@ -62,6 +62,22 @@ function textOf(message: UIMessage) {
         .join("");
 }
 
+// GLM-5.2 is a reasoning model: it streams 200-700 `reasoning_content` deltas
+// BEFORE the first content token (measured — see scripts/ai/smoke-assistant.mjs).
+// @ai-sdk/openai-compatible maps those to `type: "reasoning"` parts, so the
+// client can tell "thinking" from "stalled" — without this the panel shows a
+// bare typing dot for several seconds and looks broken.
+//
+// Reasoning is deliberately NOT rendered as prose. It's the model's scratchpad,
+// it contradicts itself mid-stream, and `textOf` filters it out of the answer
+// for the same reason.
+function isThinking(message: UIMessage) {
+    const hasAnswer = message.parts.some(
+        (p) => p.type === "text" && (p as { text?: string }).text?.trim(),
+    );
+    return !hasAnswer && message.parts.some((p) => p.type === "reasoning");
+}
+
 // What the assistant is looking up, in the user's words rather than the tool's.
 const TOOL_LABELS: Record<string, string> = {
     getHotCoins: "checking what's running",
@@ -282,6 +298,15 @@ export function AskSurface({
                                             {label}…
                                         </p>
                                     ))}
+                                </div>
+                            ) : isThinking(m) ? (
+                                // No sweep/shimmer — the app dropped those on
+                                // 2026-07-28 and they shouldn't come back. The
+                                // dots plus a word are enough to say "working",
+                                // which is the only thing the user needs here.
+                                <div className="flex min-w-0 flex-1 items-center gap-2 py-1">
+                                    <Loader variant="typing" className="text-zinc-500" />
+                                    <span className="text-xs text-zinc-500">thinking…</span>
                                 </div>
                             ) : null}
                             {/* Markdown is styled with explicit child
