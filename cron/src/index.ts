@@ -20,13 +20,35 @@ interface Env extends MonitorEnv {
     TARGET_BASE_URL: string;
 }
 
+// Every cron call hits the app over its PUBLIC url, so each one is an inbound
+// connection to the container. Unbounded, that is a leak with a clock on it:
+// this fires every minute, and any endpoint that hangs (all of them did while
+// the Helius key was exhausted and /api/rpc 502'd) leaves its connection open
+// forever. One per minute, per endpoint, with zero users — which is how
+// production hit Cloudflare's 4096 concurrent-connection ceiling on
+// 2026-08-08 and started 500-ing every route at the proxy.
+//
+// 120s is generous for these jobs and still bounded. A cron that genuinely
+// needs longer should return early and continue its own work, not hold the
+// request open.
+const CALL_TIMEOUT_MS = 120_000;
+
 async function call(env: Env, path: string): Promise<void> {
-    const res = await fetch(`${env.TARGET_BASE_URL}${path}`, {
-        headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
-    });
-    const body = await res.text();
-    console.log(`${path} -> ${res.status} ${body.slice(0, 300)}`);
-    if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
+    try {
+        const res = await fetch(`${env.TARGET_BASE_URL}${path}`, {
+            headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
+            signal: controller.signal,
+        });
+        const body = await res.text();
+        console.log(`${path} -> ${res.status} ${body.slice(0, 300)}`);
+        if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+    } finally {
+        clearTimeout(timer);
+        // Unconditional — releases the connection on the throw path too.
+        controller.abort();
+    }
 }
 
 export default {

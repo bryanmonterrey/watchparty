@@ -45,20 +45,40 @@ interface MonitorState {
     lastAlert?: number;
 }
 
-// Manual race, not AbortSignal.timeout — observed on workerd (2026-08-06)
-// that an aborted upstream fetch can still hang far past its signal.
+// BOTH an abort AND the race — each covers what the other cannot.
+//
+// The race alone (what this was) RETURNS after TIMEOUT_MS but never cancels the
+// fetch, so the request keeps running and its connection stays open. Against a
+// container that is exactly a leak: this probes the live site on a schedule, so
+// every slow response left a connection behind until the container hit
+// Cloudflare's 4096 concurrent-connection ceiling and 500'd the whole site
+// (2026-08-08). The abort is what actually frees it.
+//
+// The race stays because of the 2026-08-06 note below it: on workerd an aborted
+// upstream fetch has been seen to hang past its signal, so the race is what
+// guarantees this function RETURNS. The abort is what guarantees the connection
+// CLOSES. Neither alone is sufficient.
 async function probe(p: { name: string; url: string }): Promise<ProbeResult> {
     const started = Date.now();
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
         const res = await Promise.race([
-            fetch(p.url, { headers: { "user-agent": "watchparty-monitor/1" } }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS)),
+            fetch(p.url, { headers: { "user-agent": "watchparty-monitor/1" }, signal: controller.signal }),
+            // Slightly after the abort, so a working abort wins the race and we
+            // report the real error rather than a generic "timeout".
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS + 500)),
         ]);
         // Drain so the connection is reusable; body content doesn't matter.
         await res.text().catch(() => {});
         return { name: p.name, ok: res.ok, status: res.status, ms: Date.now() - started };
     } catch (err) {
         return { name: p.name, ok: false, status: 0, ms: Date.now() - started, note: (err as Error).message };
+    } finally {
+        clearTimeout(abortTimer);
+        // Unconditional: when the RACE wins, the fetch is still in flight and
+        // still holding a connection. This is the line that stops the leak.
+        controller.abort();
     }
 }
 
