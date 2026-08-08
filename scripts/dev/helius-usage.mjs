@@ -77,7 +77,12 @@ if (!res.ok) {
 
 const u = await res.json();
 const sub = u.subscriptionDetails ?? {};
-const cycle = sub.billingCycle ?? {};
+// The LIVE response disagrees with the SDK's own TypeScript types: it returns
+// `creditCycle` and `credits`, while the types declare `billingCycle` and
+// `usage`. On the free plan `subscriptionDetails.billingCycle` is null
+// outright. Both shapes are read so this keeps working whichever one a given
+// plan returns — and so a silent {} doesn't masquerade as "no usage".
+const cycle = u.creditCycle ?? sub.billingCycle ?? {};
 const used = u.creditsUsed ?? 0;
 const limit = sub.creditsLimit ?? 0;
 const pct = limit > 0 ? (used / limit) * 100 : 0;
@@ -109,7 +114,7 @@ if (cycle.start && cycle.end) {
     }
 }
 
-const breakdown = Object.entries(u.usage ?? {})
+const breakdown = Object.entries(u.credits ?? u.usage ?? {})
     .filter(([, v]) => Number(v) > 0)
     .sort((a, b) => Number(b[1]) - Number(a[1]));
 
