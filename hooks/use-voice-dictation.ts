@@ -54,13 +54,19 @@ export function useVoiceDictation({
 
     // Read inside socket callbacks, which are created once and would otherwise
     // capture the first render's closure and append into a stale composer.
+    // Assigned in an effect, not during render: a render can be discarded under
+    // concurrent rendering, and writing the ref inline would publish a callback
+    // from a render that never committed.
     const onFinal = useRef(onFinalText);
-    onFinal.current = onFinalText;
+    useEffect(() => {
+        onFinal.current = onFinalText;
+    }, [onFinalText]);
 
     const teardown = useCallback(() => {
         // Order matters: stop producing audio, tell Deepgram we're done so it
         // flushes whatever it's holding, THEN drop the socket.
-        recorder.current?.state !== "inactive" && recorder.current?.stop();
+        const rec = recorder.current;
+        if (rec && rec.state !== "inactive") rec.stop();
         recorder.current = null;
 
         const ws = socket.current;
