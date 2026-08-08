@@ -315,8 +315,16 @@ right from memory and all of which fail on `ai@7`:
 The model is Cloudflare Workers AI over its **OpenAI-compatible** endpoint via
 `@ai-sdk/openai-compatible`, i.e. the same account API as
 `lib/predictions/factory.ts` and `server/routers/discover.ts` — there is no
-standalone GLM URL to point a provider at. `workers-ai-provider` was rejected:
-it wants a native `Ai` binding, which OpenNext doesn't expose here.
+standalone GLM URL to point a provider at. `workers-ai-provider` was passed over
+because it wants a native `Ai` binding, which is **not declared** in
+`wrangler.jsonc` — NOT because OpenNext can't expose one. This note used to say
+the latter and it was wrong, which steered us away from a working option:
+OpenNext exports `getCloudflareContext`, and `db/index.ts:132` already uses it
+to read `HYPERDRIVE`. Adding `"ai": { "binding": "AI" }` makes `env.AI` work
+the same way — and that's the only route to the things the HTTP account API
+can't do: **WebSocket STT** (`@cf/deepgram/flux`, `@cf/deepgram/nova-3`) and
+`returnRawResponse` streaming TTS. Declare it if voice ships; the account API
+stays correct for plain chat completions.
 
 ### GLM-5.2 is a REASONING model — budget for thinking, not just the answer
 
