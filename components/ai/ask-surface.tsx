@@ -27,6 +27,8 @@ import { ScrollButton } from "@/components/prompt-kit/scroll-button";
 import { WalletPill, type PickedWallet } from "@/components/ai/wallet-pill";
 import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
+import { useVoiceDictation } from "@/hooks/use-voice-dictation";
+import { cn } from "@/lib/utils";
 // Pure part-reading logic lives in its own module so it can be unit-tested
 // without a browser — see tests/assistant-message-parts.test.ts.
 import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-parts";
@@ -72,6 +74,18 @@ export function AskSurface({
     onClose: () => void;
 }) {
     const [input, setInput] = useState("");
+
+    // Live dictation. Settled phrases append to `input` so they're editable
+    // like anything typed; the in-flight phrase stays in `voice.interim` until
+    // Deepgram calls it final, because interim results are REVISIONS of the
+    // same phrase rather than new words — committing them would stutter the
+    // text. Running out of messages opens the same upgrade path a typed send
+    // would, so voice can't be used to route around the quota.
+    const voice = useVoiceDictation({
+        onFinalText: (text) => setInput((prev) => (prev ? `${prev} ${text}` : text)),
+        onQuotaExhausted: () => usePremiumOverlay.getState().openOverlay("premium"),
+    });
+
     // Which wallet the assistant is talking about. Null = the user's primary,
     // resolved server-side; the pill only appears when there's a real choice.
     const [wallet, setWallet] = useState<PickedWallet | null>(null);
@@ -138,6 +152,9 @@ export function AskSurface({
     // Drives the composer's one button: empty input shows the mic, typed input
     // shows send.
     const canSend = input.trim().length > 0;
+    // "starting" counts: the token fetch and the permission prompt happen in
+    // it, and during that window the button must already be a stop control.
+    const micActive = voice.listening || voice.state === "starting";
     const exhausted = !!quota && (quota.remaining <= 0 || quota.tokenCeilingHit);
 
     const newChat = () => {
@@ -388,6 +405,9 @@ export function AskSurface({
                 it competed with the controls for a cramped 380px; out here it's
                 a quiet label over the thing it describes. Hidden when Redis is
                 down rather than showing a count nothing is enforcing. */}
+            {voice.error && (
+                <p className="mb-1.5 pl-1 text-[11px] leading-none text-pastelred">{voice.error}</p>
+            )}
             {quota && !quota.degraded && (
                 <p className="mb-1.5 pl-1 text-[11px] leading-none text-zinc-600">
                     {quota.entitled
@@ -396,8 +416,13 @@ export function AskSurface({
                 </p>
             )}
             <PromptInput
-                value={input}
-                onValueChange={setInput}
+                value={voice.interim ? `${input} ${voice.interim}`.trim() : input}
+                // While the mic owns the input, keystrokes are ignored rather
+                // than fighting it — otherwise typing mid-phrase commits the
+                // interim text early and the next final duplicates it. The
+                // button is a stop control throughout, so taking back control
+                // is one click.
+                onValueChange={(v) => { if (!voice.listening) setInput(v); }}
                 onSubmit={submit}
                 isLoading={busy}
                 maxHeight={200}
@@ -418,18 +443,35 @@ export function AskSurface({
 
                     </div>
 
-                    {/* Mic when there's nothing to send, send once you type —
-                        one button, two jobs, so the row never grows. Speaking
-                        only makes sense on an empty input: with text present the
-                        obvious action is to send it. */}
+                    {/* One button, four jobs, so the row never grows.
+                        Precedence is deliberate: stop-the-stream, then
+                        stop-dictating, then send, then speak. Dictation has to
+                        outrank `canSend` — settled phrases land in `input` as
+                        you talk, so ranking send higher would flip the control
+                        to an arrow mid-sentence and leave the mic with no off
+                        switch. */}
                     <button
                         type="button"
-                        onClick={busy ? () => stop() : canSend ? submit : undefined}
-                        disabled={!busy && !canSend}
-                        aria-label={busy ? "stop" : canSend ? "send" : "speak"}
-                        className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all duration-300 ease-out hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-soft-gray-15 disabled:text-zinc-500"
+                        onClick={
+                            busy
+                                ? () => stop()
+                                : micActive
+                                  ? voice.stop
+                                  : canSend
+                                    ? submit
+                                    : voice.start
+                        }
+                        aria-label={
+                            busy ? "stop" : micActive ? "stop dictating" : canSend ? "send" : "speak"
+                        }
+                        className={cn(
+                            "flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full transition-all duration-300 ease-out",
+                            micActive
+                                ? "bg-pastelred text-white hover:bg-pastelred/90"
+                                : "bg-white text-black hover:bg-white/90",
+                        )}
                     >
-                        {busy ? (
+                        {busy || micActive ? (
                             <span className="size-3 rounded-[3px] bg-current" />
                         ) : canSend ? (
                             <ArrowUpIcon className="size-4" />
