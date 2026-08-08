@@ -46,12 +46,26 @@ try {
 
 // ── session ──────────────────────────────────────────────────────────────────
 console.log("\n1. minting a session");
+const IS_HTTPS = BASE.startsWith("https://");
 let cookieValue;
+let cookieName;
 try {
-    const raw = execSync("bun scripts/dev/mint-test-session.mjs --json", { encoding: "utf8" });
+    // --yes-production when the target is https, because the cookie NAME
+    // differs by target: better-auth sets `useSecureCookies` in production and
+    // prefixes with `__Secure-`. This script used to hardcode the dev name, so
+    // pointing it at production produced a rejected cookie that looked exactly
+    // like a failed login — which meant every "smoke green" it ever reported
+    // was localhost, never the deployed app.
+    const raw = execSync(
+        `bun scripts/dev/mint-test-session.mjs --json${IS_HTTPS ? " --yes-production" : ""}`,
+        { encoding: "utf8" },
+    );
     const parsed = JSON.parse(raw.trim().split("\n").pop());
-    cookieValue = parsed.cookie.split("=").slice(1).join("=");
-    ok(`session for ${parsed.email}`);
+    cookieValue = parsed.cookie.slice(parsed.cookieName.length + 1);
+    // Taken from the mint script rather than restated here, so the two can't
+    // drift.
+    cookieName = parsed.cookieName;
+    ok(`session for ${parsed.email} (${cookieName})`);
 } catch (e) {
     bad(`could not mint a session: ${e.message}`);
     process.exit(1);
@@ -71,7 +85,15 @@ try {
     page.setDefaultTimeout(TIMEOUT);
 
     const { hostname } = new URL(BASE);
-    await page.setCookie({ name: "better-auth.session_token", value: cookieValue, domain: hostname, path: "/" });
+    // secure:true is required for a __Secure- prefixed cookie to be stored at
+    // all — Chrome silently drops it otherwise.
+    await page.setCookie({
+        name: cookieName,
+        value: cookieValue,
+        domain: hostname,
+        path: "/",
+        secure: IS_HTTPS,
+    });
 
     const consoleErrors = [];
     page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text().slice(0, 200)); });
