@@ -78,7 +78,7 @@ function systemPrompt(path: string | undefined, wallet: string | undefined) {
         "You may use markdown: short lists, bold for emphasis, links, and code blocks when code is genuinely the answer. Do not use headings.",
         "Never give financial advice, never predict a price, and never promise a coin will go up. If someone asks whether to buy something, explain how to evaluate it instead.",
         "If you do not know something about this specific app, say so plainly rather than guessing at a feature name or a menu path.",
-        "Write in lowercase, in plain sentences. No emoji.",
+        "Write in plain sentences with ordinary capitalisation. No emoji.",
         path ? `The user is currently on the page ${path}.` : "",
         // Quoted back so answers name the right wallet. It grants NOTHING —
         // there are no wallet tools yet, and when there are, authority will

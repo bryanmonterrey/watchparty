@@ -43,7 +43,8 @@ import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-p
 // see the note in scroll-button.tsx for why they're vendored instead of
 // installed through the shadcn CLI. Restyled to watchparty's language: no
 // gradients, no drop shadows (flat fill + one slate hairline), squircled
-// panels, rounded-full pills, h-11 controls, font-pixel brand line, lowercase.
+// panels, rounded-full pills, h-11 controls. Copy is sentence case and the
+// display face is the project font (Geist), not font-pixel.
 //
 // COLOURS ARE FIXED, NOT THEMED. This panel paints its own dark surface
 // (bg-[#111], both docked and expanded) on every theme, so it must not
@@ -59,11 +60,11 @@ import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-p
 // conversation every time you resized.
 
 const SUGGESTIONS = [
-    "what's running today?",
-    "how do creator subs work?",
-    "what is a first buy?",
-    "how do i go live?",
-    "explain coins to me",
+    "What's running today?",
+    "How do creator subs work?",
+    "What is a first buy?",
+    "How do I go live?",
+    "Explain coins to me",
 ];
 
 export function AskSurface({
@@ -131,7 +132,7 @@ export function AskSurface({
                             usePremiumOverlay.getState().openOverlay("premium");
                         }
                         void utils.assistant.quota.invalidate();
-                        throw new Error(detail?.error ?? "you've used your ai allowance");
+                        throw new Error(detail?.error ?? "You've used your AI allowance");
                     }
                     return res;
                 },
@@ -470,7 +471,7 @@ export function AskSurface({
                 className="rounded-3xl border-white/10 bg-soft-gray-10 p-0 pt-1 shadow-none"
             >
                 <PromptInputTextarea
-                    placeholder="ask anything…"
+                    placeholder="Ask anything…"
                     className="min-h-[44px] bg-transparent px-4 pt-3 text-sm leading-[1.3] text-white placeholder:text-zinc-500"
                 />
 
@@ -541,8 +542,8 @@ export function AskSurface({
             {messages.length === 0 && !busy ? (
                 <div className="flex flex-1 flex-col justify-center">
                     <div className="px-6 pb-5 text-center">
-                        <h1 className="font-pixel text-xl leading-tight tracking-tight text-white">
-                            what&apos;s on your mind?
+                        <h1 className="text-xl font-semibold leading-tight tracking-tight text-white">
+                            What&apos;s on your mind?
                         </h1>
                     </div>
                     {exhausted ? exhaustedComposer : composer}
@@ -622,7 +623,7 @@ export function AskSurface({
             <Squircle asChild radius={24}>
                 {/* Flat fill + one hairline, per docs/design-principles.md — a
                     floating panel here does NOT get a drop shadow. */}
-                <div className="flex h-[520px] w-full flex-col overflow-hidden bg-[#111]">
+                <div className="flex h-[520px] w-full flex-col overflow-hidden border border-flexborder bg-[#111]">
                     {body}
                 </div>
             </Squircle>

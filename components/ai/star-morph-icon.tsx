@@ -26,8 +26,15 @@ const STAR =
 // Diagonals drawn in the star's own 554×564 canvas and centred on its visual
 // middle (~277, 282), so the collapse reads as the star folding into the X
 // rather than the star vanishing and an X arriving somewhere else.
-const CROSS_A = "M183 188L371 376";
-const CROSS_B = "M371 188L183 376";
+//
+// Sized to MATCH the dock's other icons, which is not the same as sizing them
+// to the star. The star fills ~92% of this padded viewBox; the X previously
+// spanned 183→371, i.e. 31%, so at the 26px the dock renders it reached about
+// 8px of visible glyph next to 20px+ neighbours and read as a different, tinier
+// control. 424 units is ~70% of the box, which lands the X at the same optical
+// size as BookmarkIcon and MessagesIcon beside it.
+const CROSS_A = "M65 70L489 494";
+const CROSS_B = "M489 70L65 494";
 
 // The source path's control points run slightly outside 0 0 554 564, and a
 // stroke adds another half-width on top, so the box is padded rather than

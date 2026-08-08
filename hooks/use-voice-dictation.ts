@@ -189,7 +189,7 @@ export function useVoiceDictation({
             };
 
             ws.onerror = () => {
-                setError("voice connection failed");
+                setError("Voice connection failed");
                 setState("error");
                 teardown();
             };
@@ -201,7 +201,7 @@ export function useVoiceDictation({
             };
         } catch (e) {
             const denied = e instanceof DOMException && e.name === "NotAllowedError";
-            setError(denied ? "microphone access was blocked" : "couldn't start voice");
+            setError(denied ? "Microphone access was blocked" : "Couldn't start voice");
             setState("error");
             teardown();
         }

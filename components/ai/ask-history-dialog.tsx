@@ -25,15 +25,15 @@ import { cn } from "@/lib/utils";
 //     remove anything becomes a liability the moment somebody asks the
 //     assistant about their portfolio.
 
-function groupFor(updatedAt: Date): "today" | "this week" | "earlier" {
+function groupFor(updatedAt: Date): "Today" | "This week" | "Earlier" {
     const now = Date.now();
     const age = now - updatedAt.getTime();
-    if (age < 24 * 60 * 60 * 1000) return "today";
-    if (age < 7 * 24 * 60 * 60 * 1000) return "this week";
-    return "earlier";
+    if (age < 24 * 60 * 60 * 1000) return "Today";
+    if (age < 7 * 24 * 60 * 60 * 1000) return "This week";
+    return "Earlier";
 }
 
-const GROUP_ORDER = ["today", "this week", "earlier"] as const;
+const GROUP_ORDER = ["Today", "This week", "Earlier"] as const;
 
 const HEADING =
     "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-zinc-500";
@@ -91,7 +91,7 @@ export function AskHistoryDialog({
                             value={query}
                             onValueChange={setQuery}
                             autoFocus
-                            placeholder="search your conversations…"
+                            placeholder="Search your conversations…"
                             className="h-14 w-full rounded-[18px] bg-white/[0.06] px-5 text-[16px] font-semibold tracking-tight text-white outline-none transition-colors placeholder:text-zinc-600 focus:bg-white/[0.1]"
                         />
                     </div>
@@ -103,12 +103,12 @@ export function AskHistoryDialog({
                         {!isLoading && (
                             <Command.Empty className="py-10 text-center">
                                 <p className="text-[14px] font-bold text-zinc-400">
-                                    {threads.length === 0 ? "no conversations yet" : "nothing matches that"}
+                                    {threads.length === 0 ? "No conversations yet" : "Nothing matches that"}
                                 </p>
                                 <p className="mt-0.5 text-[12px] font-medium text-zinc-600">
                                     {threads.length === 0
-                                        ? "ask something and it'll show up here"
-                                        : "try a different word"}
+                                        ? "Ask something and it'll show up here"
+                                        : "Try a different word"}
                                 </p>
                             </Command.Empty>
                         )}
