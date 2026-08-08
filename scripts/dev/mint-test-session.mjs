@@ -93,6 +93,20 @@ if (!user) {
     if (!has("json") && !has("raw")) console.log(`created test user ${email}`);
 }
 
+// A user with no handle gets the "WELCOME TO WATCHPARTY — Claim your handle"
+// onboarding dialog, whose Radix overlay swallows every click on the page.
+// That is correct app behaviour and it silently broke the browser smoke test:
+// the assistant button was found, visible and unblocked by its own styles, but
+// elementFromPoint resolved to the overlay. Give the fixture a handle so the
+// test exercises the app rather than onboarding.
+if (!user.username) {
+    await ctx.internalAdapter.updateUser(user.id, {
+        username: `e2etest`,
+        displayUsername: `e2etest`,
+    }).catch(() => { /* column may not exist in every environment */ });
+    if (!has("json") && !has("raw")) console.log("set handle @e2etest (skips the onboarding dialog)");
+}
+
 const session = await ctx.internalAdapter.createSession(user.id, undefined, false);
 if (!session?.token) { console.error("createSession returned no token"); process.exit(1); }
 
@@ -103,9 +117,16 @@ const key = await crypto.subtle.importKey(
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
 );
 const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(session.token));
-const b64url = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+// STANDARD base64, WITH padding. better-call rejects anything else outright:
+//   if (signature.length !== 44 || !signature.endsWith("=")) return null;
+// (node_modules/better-call/dist/context.mjs). Note this differs from the
+// session-DATA cache cookie, which better-auth signs as base64urlnopad — using
+// that encoding here yields a cookie that is silently ignored, which is exactly
+// how the first version of this script produced a token the server rejected
+// while the session sat valid in Redis.
+const signature = btoa(String.fromCharCode(...new Uint8Array(sig)));
 // useSecureCookies is false outside production, so no __Secure- prefix here.
-const cookie = `better-auth.session_token=${session.token}.${b64url}`;
+const cookie = `better-auth.session_token=${session.token}.${signature}`;
 
 if (has("json")) {
     console.log(JSON.stringify({ cookie, token: session.token, userId: user.id, email, expiresAt: session.expiresAt }));

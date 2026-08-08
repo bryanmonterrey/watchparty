@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Squircle } from "@/components/ui/squircle";
 import { ArrowUpIcon, CloseIcon, RefreshIcon } from "@/components/icons";
@@ -24,6 +24,9 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { WalletPill, type PickedWallet } from "@/components/ai/wallet-pill";
 import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
+// Pure part-reading logic lives in its own module so it can be unit-tested
+// without a browser — see tests/assistant-message-parts.test.ts.
+import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-parts";
 
 // The assistant's chat surface. Lazy-loaded (ssr: false) by ask-watchparty.tsx,
 // so the AI SDK, the markdown renderer and shiki are all paid for on first
@@ -51,58 +54,6 @@ const SUGGESTIONS = [
 
 const HEADER_BTN =
     "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-soft-gray-15 hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500";
-
-// `parts` is the SDK's tagged union. Joining rather than taking [0] means a
-// reasoning part landing later degrades to "renders the prose" rather than
-// "renders nothing".
-function textOf(message: UIMessage) {
-    return message.parts
-        .filter((p): p is { type: "text"; text: string } => p.type === "text")
-        .map((p) => p.text)
-        .join("");
-}
-
-// GLM-5.2 is a reasoning model: it streams 200-700 `reasoning_content` deltas
-// BEFORE the first content token (measured — see scripts/ai/smoke-assistant.mjs).
-// @ai-sdk/openai-compatible maps those to `type: "reasoning"` parts, so the
-// client can tell "thinking" from "stalled" — without this the panel shows a
-// bare typing dot for several seconds and looks broken.
-//
-// Reasoning is deliberately NOT rendered as prose. It's the model's scratchpad,
-// it contradicts itself mid-stream, and `textOf` filters it out of the answer
-// for the same reason.
-function isThinking(message: UIMessage) {
-    const hasAnswer = message.parts.some(
-        (p) => p.type === "text" && (p as { text?: string }).text?.trim(),
-    );
-    return !hasAnswer && message.parts.some((p) => p.type === "reasoning");
-}
-
-// What the assistant is looking up, in the user's words rather than the tool's.
-const TOOL_LABELS: Record<string, string> = {
-    getHotCoins: "checking what's running",
-    lookupCoin: "looking up that coin",
-    getLiveStreams: "checking who's live",
-    getMarketTrending: "checking the market",
-};
-
-// Tool calls arrive as parts typed `tool-<name>`, and prompt-kit has no
-// renderer for them — left alone they'd render as nothing, so a question that
-// triggers a lookup would sit blank until the prose arrived. This surfaces the
-// in-flight ones only; once a tool returns, the answer it produced is the
-// feedback, and a stale "checking…" line next to a finished reply reads as
-// stuck. (AI Elements ships a full tool-part renderer with input/output states
-// — worth cherry-picking if these ever need to show their results.)
-function pendingToolLabels(message: UIMessage): string[] {
-    return message.parts
-        .filter((p) => {
-            if (!p.type.startsWith("tool-")) return false;
-            const state = (p as { state?: string }).state;
-            return state !== "output-available" && state !== "output-error";
-        })
-        .map((p) => TOOL_LABELS[p.type.slice("tool-".length)] ?? "looking that up")
-        .filter((label, i, all) => all.indexOf(label) === i);
-}
 
 export function AskSurface({
     expanded,
@@ -289,7 +240,19 @@ export function AskSurface({
 
                 {messages.map((m) =>
                     m.role === "assistant" ? (
-                        <Message key={m.id} className="items-start gap-2.5">
+                        <Message
+                            key={m.id}
+                            className="items-start gap-2.5"
+                            // Stable hook for scripts/ai/browser-smoke-chat.mjs.
+                            // It lives on Message, not MessageContent: with
+                            // `markdown` set, MessageContent renders prompt-kit's
+                            // <Markdown>, which accepts only {children, id,
+                            // className, components} and DROPS everything else —
+                            // so the attribute never reached the DOM and the
+                            // browser test reported "no visible text" while the
+                            // reply was rendering perfectly well.
+                            data-assistant-message=""
+                        >
                             <StarOutline className="mt-1 size-4 shrink-0" />
                             {pendingToolLabels(m).length > 0 && textOf(m).length === 0 ? (
                                 <div className="flex min-w-0 flex-1 flex-col gap-1 py-1">
