@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Squircle } from "@/components/ui/squircle";
 import { ArrowUpIcon, CloseIcon, RefreshIcon } from "@/components/icons";
 import { StarOutline } from "@/components/ai/star-morph-icon";
@@ -24,7 +23,6 @@ import {
 } from "@/components/prompt-kit/prompt-input";
 import { PromptSuggestion } from "@/components/prompt-kit/prompt-suggestion";
 import { ScrollButton } from "@/components/prompt-kit/scroll-button";
-import { useAuthSession } from "@/hooks/use-auth-session";
 import { WalletPill, type PickedWallet } from "@/components/ai/wallet-pill";
 import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
@@ -80,17 +78,11 @@ export function AskSurface({
     // resolved server-side; the pill only appears when there's a real choice.
     const [wallet, setWallet] = useState<PickedWallet | null>(null);
     const reduced = useReducedMotion();
-    const { data: session } = useAuthSession();
     const utils = trpc.useUtils();
 
     // What's left in this window. Read-only — the quota is charged server-side
     // when a message is actually sent, so opening the panel costs nothing.
     const { data: quota } = trpc.assistant.quota.useQuery(undefined, { staleTime: 30_000 });
-
-    const avatar =
-        (session?.user as { avatar_url?: string | null; image?: string | null } | undefined)?.avatar_url ??
-        session?.user?.image ??
-        undefined;
 
     // Built once. A fresh transport per render would hand useChat a new
     // identity on every keystroke.
@@ -215,18 +207,31 @@ export function AskSurface({
         </div>
     );
 
-    const suggestions = (
-        <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-white/10 px-4 py-3">
-            {SUGGESTIONS.map((s) => (
-                <PromptSuggestion
+    // Starter prompts, following zola: BELOW the composer, and only on an
+    // empty thread. Above the messages they were permanent chrome competing
+    // with the conversation; below the input they read as what they are — a
+    // way to begin — and get out of the way the moment there is one.
+    //
+    // Motion is zola's: a staggered scale + blur-in at 0.02s per item. Gated on
+    // reduced motion like everything else here.
+    const suggestions = messages.length === 0 && (
+        <div className="flex shrink-0 flex-wrap gap-2 px-3 pb-3">
+            {SUGGESTIONS.map((s, i) => (
+                <motion.div
                     key={s}
-                    onClick={() => setInput(s)}
-                    size="sm"
-                    variant="outline"
-                    className="h-8 shrink-0 whitespace-nowrap border-white/10 bg-soft-gray-10 px-3.5 text-xs font-medium text-zinc-300 hover:bg-soft-gray-15 hover:text-white"
+                    initial={reduced ? false : { opacity: 0, scale: 0.8, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                    transition={reduced ? { duration: 0 } : { duration: 0.25, ease: [0.23, 1, 0.32, 1], delay: i * 0.02 }}
                 >
-                    {s}
-                </PromptSuggestion>
+                    <PromptSuggestion
+                        onClick={() => setInput(s)}
+                        size="sm"
+                        variant="outline"
+                        className="h-8 whitespace-nowrap border-white/10 bg-soft-gray-10 px-3.5 text-xs font-medium text-zinc-300 hover:bg-soft-gray-15 hover:text-white"
+                    >
+                        {s}
+                    </PromptSuggestion>
+                </motion.div>
             ))}
         </div>
     );
@@ -260,7 +265,10 @@ export function AskSurface({
                     m.role === "assistant" ? (
                         <Message
                             key={m.id}
-                            className="w-full items-start gap-2.5"
+                            // zola's shape: no avatar, full-width column.
+                            // A 380px panel has no room for a gutter, and the
+                            // star already identifies the surface in the header.
+                            className="w-full flex-col gap-2"
                             // Stable hook for scripts/ai/browser-smoke-chat.mjs.
                             // It lives on Message, not MessageContent: with
                             // `markdown` set, MessageContent renders prompt-kit's
@@ -271,9 +279,8 @@ export function AskSurface({
                             // reply was rendering perfectly well.
                             data-assistant-message=""
                         >
-                            <StarOutline className="mt-1 size-4 shrink-0" />
                             {pendingToolLabels(m).length > 0 && textOf(m).length === 0 ? (
-                                <div className="flex min-w-0 flex-1 flex-col gap-1 py-1">
+                                <div className="flex w-full flex-col gap-1 py-1">
                                     {pendingToolLabels(m).map((label) => (
                                         <p key={label} className="text-xs text-zinc-500">
                                             {label}…
@@ -285,7 +292,7 @@ export function AskSurface({
                                 // 2026-07-28 and they shouldn't come back. The
                                 // dots plus a word are enough to say "working",
                                 // which is the only thing the user needs here.
-                                <div className="flex min-w-0 flex-1 items-center gap-2 py-1">
+                                <div className="flex w-full items-center gap-2 py-1">
                                     <Loader variant="typing" className="text-zinc-500" />
                                     <span className="text-xs text-zinc-500">thinking…</span>
                                 </div>
@@ -299,7 +306,7 @@ export function AskSurface({
                             <MessageContent
                                 markdown
                                 className={[
-                                    "min-w-0 flex-1 bg-transparent p-0 text-sm leading-relaxed text-zinc-200",
+                                    "w-full min-w-full bg-transparent p-0 text-sm leading-relaxed text-zinc-200",
                                     "[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
                                     "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
                                     "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
@@ -314,12 +321,11 @@ export function AskSurface({
                             </MessageContent>
                         </Message>
                     ) : (
-                        <Message key={m.id} className="w-full flex-row-reverse items-end gap-2.5">
-                            <Avatar className="size-6 shrink-0">
-                                <AvatarImage src={avatar} alt="" className="object-cover" />
-                                <AvatarFallback />
-                            </Avatar>
-                            <MessageContent className="max-w-[80%] rounded-2xl bg-soft-gray-15 px-3.5 py-2 text-sm leading-relaxed text-white">
+                        // zola's user message: no avatar, a right-aligned
+                        // rounded-3xl bubble in a full-width column. max-w
+                        // scaled to this panel rather than zola's max-w-xl.
+                        <Message key={m.id} className="w-full flex-col items-end gap-0.5">
+                            <MessageContent className="max-w-[85%] rounded-3xl bg-soft-gray-15 px-4 py-2.5 text-sm leading-relaxed text-white">
                                 {textOf(m)}
                             </MessageContent>
                         </Message>
@@ -329,9 +335,9 @@ export function AskSurface({
                 {/* Only until the first token lands — after that the reply
                     itself is the progress indicator. */}
                 {status === "submitted" && (
-                    <Message className="w-full items-start gap-2.5">
-                        <StarOutline className="mt-1 size-4 shrink-0" />
+                    <Message className="w-full items-center gap-2">
                         <Loader variant="typing" className="text-zinc-500" />
+                        <span className="text-xs text-zinc-500">thinking…</span>
                     </Message>
                 )}
 
@@ -435,9 +441,9 @@ export function AskSurface({
     const body = (
         <>
             {header}
-            {suggestions}
             {thread}
             {exhausted ? exhaustedComposer : composer}
+            {suggestions}
         </>
     );
 
