@@ -7,25 +7,26 @@ import { useGSAP } from "@gsap/react";
 
 gsap.registerPlugin(MorphSVGPlugin);
 
-// The panel header's resize control: expand-to-overlay, path-morphing into an X
-// once you're in the overlay. Third use of the house MorphSVG idiom, after
+// The panel header's resize control: expand-to-overlay, path-morphing into a
+// shrink glyph once you're in the overlay. Third use of the house MorphSVG idiom, after
 // components/morph-icons.tsx (player controls) and
 // components/marketing/morph-menu-icon.tsx (landing menu) — and structurally
 // closest to the menu icon, since both states are plain stroked polylines.
 //
-// The two corner brackets that read as "expand" ARE the X's two diagonals:
-// each bracket unfolds from an L into a straight line rather than
-// cross-fading, so the control visibly reverses itself instead of swapping to
-// a different glyph.
+// The two corner brackets that read as "expand" simply FLIP to face inward,
+// so the control visibly reverses itself rather than swapping to a different
+// glyph. Same two paths, same point count, so the morph is exact.
 
-// Opposite corners of the standard expand-diagonal glyph.
+// Collapsed: corners at the OUTER edges, arms opening outward — "expand".
 const BRACKET_TL = "M9 4H4V9";
 const BRACKET_BR = "M15 20H20V15";
 
-// ╲ and ╱. Same start corner as the bracket each one takes over from, so the
-// top-left bracket straightens along the diagonal it already pointed down.
-const DIAGONAL_A = "M6 6L18 18";
-const DIAGONAL_B = "M18 6L6 18";
+// Expanded: the same two corners flipped to face INWARD — "shrink back down".
+// Not an X: an X reads as "close", and this control has never closed anything.
+// Pairing it with the panel's own close button made the header look like it had
+// two ways to dismiss the same surface. A shrink glyph says what it does.
+const SHRINK_TL = "M4 9H9V4";
+const SHRINK_BR = "M20 15H15V20";
 
 const DURATION = 0.4;
 const EASE = "power3.inOut";
@@ -37,8 +38,8 @@ export function ExpandMorphIcon({ expanded, className }: { expanded: boolean; cl
 
     // Frozen at first render so React keeps rendering the same `d` and leaves
     // the attribute for GSAP to drive — see morph-icons.tsx for why.
-    const baseA = useRef(expanded ? DIAGONAL_A : BRACKET_TL);
-    const baseB = useRef(expanded ? DIAGONAL_B : BRACKET_BR);
+    const baseA = useRef(expanded ? SHRINK_TL : BRACKET_TL);
+    const baseB = useRef(expanded ? SHRINK_BR : BRACKET_BR);
 
     useGSAP(
         () => {
@@ -54,13 +55,13 @@ export function ExpandMorphIcon({ expanded, className }: { expanded: boolean; cl
             const duration = reduced ? 0 : DURATION;
 
             gsap.to(pathA, {
-                morphSVG: expanded ? DIAGONAL_A : BRACKET_TL,
+                morphSVG: expanded ? SHRINK_TL : BRACKET_TL,
                 duration,
                 ease: EASE,
                 overwrite: true,
             });
             gsap.to(pathB, {
-                morphSVG: expanded ? DIAGONAL_B : BRACKET_BR,
+                morphSVG: expanded ? SHRINK_BR : BRACKET_BR,
                 duration,
                 ease: EASE,
                 overwrite: true,

@@ -188,9 +188,15 @@ export function AskSurface({
             >
                 <HugeiconsIcon icon={PlusSignSquareIcon} className="size-4" strokeWidth={2} />
             </button>
-            <button type="button" onClick={onClose} aria-label="close" className={ICON_BTN}>
-                <CloseIcon className="size-4" />
-            </button>
+            {/* Docked only. In the OVERLAY the app header's morphed hamburger
+                is the way out, and the shrink control to the left already
+                returns you to the panel — a third dismissal here was the
+                duplicate X. */}
+            {!expanded && (
+                <button type="button" onClick={onClose} aria-label="close" className={ICON_BTN}>
+                    <CloseIcon className="size-4" />
+                </button>
+            )}
         </div>
     );
 
