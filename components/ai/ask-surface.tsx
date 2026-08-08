@@ -384,6 +384,17 @@ export function AskSurface({
     // slate hairline and no drop shadow.
     const composer = (
         <div className="shrink-0 p-3">
+            {/* Above the input and OUTSIDE it, top-left. Inside the action row
+                it competed with the controls for a cramped 380px; out here it's
+                a quiet label over the thing it describes. Hidden when Redis is
+                down rather than showing a count nothing is enforcing. */}
+            {quota && !quota.degraded && (
+                <p className="mb-1.5 pl-1 text-[11px] leading-none text-zinc-600">
+                    {quota.entitled
+                        ? `${quota.remaining.toLocaleString()} left`
+                        : `${quota.remaining} of ${quota.limit} free today`}
+                </p>
+            )}
             <PromptInput
                 value={input}
                 onValueChange={setInput}
@@ -405,16 +416,6 @@ export function AskSurface({
                     <div className="flex min-w-0 items-center gap-2">
                         <WalletPill value={wallet} onChange={setWallet} />
 
-                        {/* The allowance, in the composer rather than a header
-                            line of its own. Hidden when Redis is down, so a
-                            count that isn't being enforced is never shown. */}
-                        {quota && !quota.degraded && (
-                            <span className="truncate text-[11px] leading-none text-zinc-600">
-                                {quota.entitled
-                                    ? `${quota.remaining.toLocaleString()} left`
-                                    : `${quota.remaining} of ${quota.limit} free today`}
-                            </span>
-                        )}
                     </div>
 
                     {/* Mic when there's nothing to send, send once you type —
