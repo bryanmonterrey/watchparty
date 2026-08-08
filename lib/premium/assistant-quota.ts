@@ -27,7 +27,13 @@ export type AssistantQuota = {
 // whether the thing is useful, which is the only way a free user ever decides
 // to pay for it. Resets daily rather than monthly so the upgrade prompt is a
 // recurring nudge instead of a one-time wall.
-export const FREE_QUOTA: AssistantQuota = { messages: 5, tokens: 25_000 };
+//
+// Was 5/day, which was far too low and actively misleading: a reasoning model
+// spends most of its tokens thinking, so a handful of real questions exhausted
+// it in minutes — and once exhausted the SDK discards the optimistic user
+// message on the 402, so the chat looks EMPTY rather than rate-limited. 50 is
+// still a taste; the token ceiling is what actually bounds cost.
+export const FREE_QUOTA: AssistantQuota = { messages: 50, tokens: 400_000 };
 
 // Paid tiers, per BILLING PERIOD (renews with the bill, not the calendar).
 export const TIER_QUOTAS: Record<TierKey, AssistantQuota> = {
