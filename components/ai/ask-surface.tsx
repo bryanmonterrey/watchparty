@@ -33,7 +33,9 @@ import { cn } from "@/lib/utils";
 import { AskHistoryDialog } from "@/components/ai/ask-history-dialog";
 // Pure part-reading logic lives in its own module so it can be unit-tested
 // without a browser — see tests/assistant-message-parts.test.ts.
-import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-parts";
+import { textOf, isThinking, pendingToolLabels, streamKeyCards, pendingApprovals } from "@/components/ai/message-parts";
+import { StreamKeyCard } from "@/components/ai/stream-key-card";
+import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 
 // The assistant's chat surface. Lazy-loaded (ssr: false) by ask-watchparty.tsx,
 // so the AI SDK, the markdown renderer and shiki are all paid for on first
@@ -140,7 +142,16 @@ export function AskSurface({
         [utils],
     );
 
-    const { messages, sendMessage, status, stop, error, setMessages, clearError } = useChat({
+    const {
+        messages,
+        sendMessage,
+        status,
+        stop,
+        error,
+        setMessages,
+        clearError,
+        addToolApprovalResponse,
+    } = useChat({
         transport,
         // Coalesce render work while tokens land. Without it every delta is a
         // React commit, which is what makes streaming chat feel janky on a
@@ -382,6 +393,56 @@ export function AskSurface({
                             >
                                 {textOf(m)}
                             </MessageContent>
+
+                            {/* Rendered by the CLIENT, from a marker in the
+                                tool result. The key itself never travelled
+                                through the model, so it is not in this
+                                message's parts and not in the row that
+                                persisted them. */}
+                            {streamKeyCards(m).map((card) => (
+                                <StreamKeyCard key={card.id} rotated={card.rotated} />
+                            ))}
+
+                            {/* The model can PROPOSE a rotation; only this can
+                                perform one. Hold rather than click, because the
+                                action is destructive and irreversible — it kills
+                                a live broadcast — and a hold cannot be produced
+                                by a stray click on a moving surface. */}
+                            {pendingApprovals(m).map((a) => (
+                                <div
+                                    key={a.approvalId}
+                                    className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-3"
+                                >
+                                    <p className="mb-2.5 text-[12px] leading-snug text-zinc-300">
+                                        This generates a new stream key and invalidates the current
+                                        one. Anything broadcasting with the old key disconnects.
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <HoldToConfirm
+                                            label="Hold to generate"
+                                            holdingLabel="Keep holding…"
+                                            onConfirm={() =>
+                                                void addToolApprovalResponse({
+                                                    id: a.approvalId,
+                                                    approved: true,
+                                                })
+                                            }
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                void addToolApprovalResponse({
+                                                    id: a.approvalId,
+                                                    approved: false,
+                                                })
+                                            }
+                                            className="h-11 shrink-0 cursor-pointer rounded-full px-4 text-[13px] font-semibold text-zinc-400 transition-colors hover:text-white"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </Message>
                     ) : (
                         // zola's user message: no avatar, a right-aligned

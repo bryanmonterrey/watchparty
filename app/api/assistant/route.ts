@@ -9,7 +9,7 @@ import {
     toUIMessageStream,
     type UIMessage,
 } from "ai";
-import { assistantTools } from "@/server/lib/assistant-tools";
+import { assistantToolsFor } from "@/server/lib/assistant-tools";
 import { z } from "zod";
 import { auth } from "@/lib/auth/server";
 import { getPremiumEntitlement } from "@/server/lib/premium-entitlement";
@@ -171,7 +171,11 @@ export async function POST(request: Request) {
                 // reasoning) is what the token quota bills, so ordinary replies
                 // still cost what they cost.
                 maxOutputTokens: 6000,
-                tools: assistantTools,
+                // Built PER REQUEST, closed over the authenticated user id.
+                // Account tools therefore have no userId parameter at all, so
+                // "read someone else's stream key" is not expressible — there
+                // is no field to put another id in, and nothing to validate.
+                tools: assistantToolsFor(session.user.id),
                 // Enough for look-up → answer, or two look-ups → answer.
                 // Unbounded stepping is how one message quietly becomes a
                 // dozen model round-trips against a metered account.

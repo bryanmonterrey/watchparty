@@ -60,3 +60,48 @@ export function pendingToolLabels(message: UIMessage): string[] {
         .map((p) => TOOL_LABELS[p.type.slice("tool-".length)] ?? "looking that up")
         .filter((label, i, all) => all.indexOf(label) === i);
 }
+
+/**
+ * Account-tool parts that render as UI rather than prose.
+ *
+ * These carry NO secret — the tool returns `{ kind: "stream_key_card" }` and the
+ * component fetches the real value itself (see components/ai/stream-key-card.tsx
+ * for why). So this reads a marker, not a payload.
+ */
+export function streamKeyCards(message: UIMessage): { id: string; rotated: boolean }[] {
+    return (message.parts ?? [])
+        .filter((p) => p.type === "tool-getStreamKey" || p.type === "tool-rotateStreamKey")
+        .flatMap((p) => {
+            const part = p as { toolCallId?: string; state?: string; output?: unknown };
+            if (part.state !== "output-available") return [];
+            const out = part.output as { kind?: string; rotated?: boolean } | undefined;
+            if (out?.kind !== "stream_key_card") return [];
+            return [{ id: part.toolCallId ?? "key", rotated: !!out.rotated }];
+        });
+}
+
+/**
+ * Tool calls waiting on the user's approval.
+ *
+ * `needsApproval` pauses the run and emits these; nothing executes server-side
+ * until the client answers. That is the gate that keeps a destructive action out
+ * of the model's hands — the assistant's context contains attacker-controlled
+ * stream titles, so the decision has to belong to the account owner.
+ */
+export function pendingApprovals(
+    message: UIMessage,
+): { approvalId: string; toolName: string }[] {
+    return (message.parts ?? []).flatMap((p) => {
+        // `approval.id` — NOT `approvalId`. That field name only exists on the
+        // server-side ToolApprovalRequestOutput; the UI part nests it as
+        // `approval: { id }`. The distinction is invisible to tsc here because
+        // the part is narrowed by hand, and getting it wrong renders no
+        // approval prompt at all — the run just hangs waiting for an answer
+        // the user was never asked for.
+        const part = p as { type: string; state?: string; approval?: { id?: string } };
+        if (!part.type.startsWith("tool-") || part.state !== "approval-requested") return [];
+        const approvalId = part.approval?.id;
+        if (!approvalId) return [];
+        return [{ approvalId, toolName: part.type.slice("tool-".length) }];
+    });
+}

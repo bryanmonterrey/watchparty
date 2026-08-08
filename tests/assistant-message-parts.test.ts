@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-parts";
+import {
+    textOf,
+    isThinking,
+    pendingToolLabels,
+    streamKeyCards,
+    pendingApprovals,
+} from "@/components/ai/message-parts";
 import type { UIMessage } from "ai";
 
 // These three functions ARE the assistant's render path. When `textOf` returns
@@ -94,5 +100,81 @@ describe("pendingToolLabels", () => {
 
     test("ignores non-tool parts", () => {
         expect(pendingToolLabels(msg([text("hi"), reasoning("hmm")]))).toEqual([]);
+    });
+});
+
+// ── account tools ────────────────────────────────────────────────────────────
+//
+// These two decide whether a security-relevant control appears at all. A wrong
+// field name renders NOTHING and fails open in the worst way: no key card, or —
+// worse — no approval prompt, leaving a destructive tool call waiting on an
+// answer the user was never asked for. Both shapes are pinned here because they
+// are narrowed by hand in the reader, so tsc cannot check them.
+
+const cardPart = (name: string, output: unknown, state = "output-available") => ({
+    type: `tool-${name}`,
+    state,
+    toolCallId: "call-1",
+    output,
+});
+
+describe("streamKeyCards", () => {
+    test("reads a finished getStreamKey call", () => {
+        const got = streamKeyCards(msg([cardPart("getStreamKey", { kind: "stream_key_card", hasKey: true })]));
+        expect(got).toHaveLength(1);
+        expect(got[0].rotated).toBe(false);
+    });
+
+    test("marks a rotation so the card can warn about the old key", () => {
+        const got = streamKeyCards(
+            msg([cardPart("rotateStreamKey", { kind: "stream_key_card", rotated: true })]),
+        );
+        expect(got[0].rotated).toBe(true);
+    });
+
+    test("ignores calls that haven't produced output yet", () => {
+        expect(streamKeyCards(msg([cardPart("getStreamKey", undefined, "input-available")]))).toHaveLength(0);
+    });
+
+    test("ignores an error result rather than rendering an empty card", () => {
+        expect(
+            streamKeyCards(msg([cardPart("rotateStreamKey", { kind: "error", message: "nope" })])),
+        ).toHaveLength(0);
+    });
+
+    test("never renders for an unrelated tool", () => {
+        expect(streamKeyCards(msg([cardPart("getHotCoins", { kind: "stream_key_card" })]))).toHaveLength(0);
+    });
+});
+
+describe("pendingApprovals", () => {
+    // The field is approval.id. `approvalId` is the SERVER-side name
+    // (ToolApprovalRequestOutput); the UI part nests it. Reading the wrong one
+    // silently shows no prompt, which is how a rotation would hang forever.
+    const approvalPart = (id: string) => ({
+        type: "tool-rotateStreamKey",
+        state: "approval-requested",
+        approval: { id },
+    });
+
+    test("surfaces a request waiting on the user", () => {
+        const got = pendingApprovals(msg([approvalPart("appr-1")]));
+        expect(got).toEqual([{ approvalId: "appr-1", toolName: "rotateStreamKey" }]);
+    });
+
+    test("stops showing it once answered", () => {
+        expect(
+            pendingApprovals(
+                msg([{ type: "tool-rotateStreamKey", state: "approval-responded", approval: { id: "a", approved: true } }]),
+            ),
+        ).toHaveLength(0);
+    });
+
+    test("ignores a request with no id rather than rendering a dead button", () => {
+        expect(pendingApprovals(msg([{ type: "tool-rotateStreamKey", state: "approval-requested", approval: {} }]))).toHaveLength(0);
+    });
+
+    test("ignores non-tool parts", () => {
+        expect(pendingApprovals(msg([text("hi")]))).toHaveLength(0);
     });
 });

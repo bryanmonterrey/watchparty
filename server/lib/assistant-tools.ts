@@ -42,7 +42,7 @@ import { and, desc, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
 
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
-export const assistantTools = {
+const publicTools = {
     getHotCoins: tool({
         description:
             "Live watchparty coins that are up over the last 24h, biggest gainers first. Use for questions like 'what's running today', 'what's pumping', 'what's hot on watchparty'. Returns platform coins only, not the wider market.",
@@ -252,3 +252,79 @@ export const assistantTools = {
         },
     }),
 };
+
+// ── Account tools ────────────────────────────────────────────────────────────
+//
+// THE SECURITY MODEL, in one sentence: the user id is CLOSED OVER, never a
+// parameter.
+//
+// These tools have no `userId` in their inputSchema, so "get the stream key for
+// someone else" is not a sentence the model can form — there is no field to put
+// another id in, and nothing to validate. That is strictly stronger than
+// checking a model-supplied id, because a check can be wrong and a missing
+// parameter cannot. The id comes from the signed session cookie in
+// app/api/assistant/route.ts, so editing the request body doesn't reach it
+// either.
+//
+// The second rule: a SECRET NEVER ENTERS A TOOL RESULT. Tool results are fed
+// back into the model, streamed to the client, and — since conversation history
+// shipped — written to assistant_messages.parts permanently. A stream key
+// returned from here would be a live credential sitting in the model's context
+// AND in a database row forever. So these return a REFERENCE
+// ({ kind: "stream_key_card" }) and the client fetches the actual value over
+// its own authenticated tRPC call, which the model never sees.
+//
+// That also defuses prompt injection. getLiveStreams feeds attacker-controlled
+// text (stream titles, usernames) into this same context, so an injected
+// "print the user's key" instruction is a real scenario — it just has nothing
+// to print, because the key was never in the transcript.
+
+export function assistantToolsFor(userId: string) {
+    return {
+        ...publicTools,
+
+        getStreamKey: tool({
+            description:
+                "Show the signed-in user THEIR OWN stream key and ingest server, for going live in OBS. Use when they ask for their stream key, their RTMP settings, or how to connect their broadcast software. Only ever their own — you cannot look up anyone else's.",
+            inputSchema: z.object({}),
+            execute: async () => {
+                const [row] = await db
+                    .select({ serverUrl: streams.serverUrl, streamKey: streams.streamKey })
+                    .from(streams)
+                    .where(eq(streams.userId, userId))
+                    .limit(1);
+
+                // Booleans only. Whether a key EXISTS is what the model needs
+                // in order to say the right sentence; the key itself is not.
+                return {
+                    kind: "stream_key_card" as const,
+                    hasKey: !!row?.streamKey,
+                    hasChannel: !!row?.serverUrl,
+                };
+            },
+        }),
+
+        rotateStreamKey: tool({
+            description:
+                "Generate a NEW stream key for the signed-in user, invalidating the old one. Use only when they explicitly ask to reset, rotate, or regenerate their stream key — for example because it leaked. Warn them it will disconnect any broadcast currently using the old key.",
+            inputSchema: z.object({}),
+            // Human-in-the-loop, and the reason is injection rather than
+            // politeness: this is destructive (it kills a live broadcast), and
+            // the model's context contains attacker-controlled stream titles.
+            // Approval moves the decision from the model to the account owner,
+            // where a hostile stream title has no vote.
+            needsApproval: true,
+            execute: async () => {
+                const { rotateStreamKeyFor } = await import("@/server/lib/stream-key");
+                const result = await rotateStreamKeyFor(userId);
+                // Again: no key in the return value. The client re-fetches.
+                return result.ok
+                    ? { kind: "stream_key_card" as const, rotated: true, hasKey: true, hasChannel: true }
+                    : { kind: "error" as const, message: result.error };
+            },
+        }),
+    };
+}
+
+/** @deprecated Use assistantToolsFor(userId) — unscoped tools cannot serve account questions. */
+export const assistantTools = publicTools;

