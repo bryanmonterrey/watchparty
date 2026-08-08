@@ -59,16 +59,19 @@ export function AppHeader2() {
   // The coin overlay used to be a third closable surface here. It's gone —
   // coins have a real page now, and a page is closed by navigating, not by the
   // hamburger morphing into an X.
-  const homeOverlayOpen = clipsOpen || homeFeedOpen
+  // The assistant overlay is a full-bleed home overlay like the others, so it
+  // gets the same three behaviours: hamburger morphs to X and closes it, the
+  // search bar hides (it targets the covered page, which nobody can see), and
+  // the scroll backdrop is suppressed.
+  const askOverlayOpen = useAskOverlay((s) => s.open)
+  const closeAsk = useAskOverlay((s) => s.onClose)
+  const homeOverlayOpen = clipsOpen || homeFeedOpen || askOverlayOpen
   const closeHomeOverlay = () => {
     if (clipsOpen) closeClips()
     else if (homeFeedOpen) closeHomeFeed()
+    else if (askOverlayOpen) closeAsk()
   }
-  // Deliberately NOT folded into homeOverlayOpen: that one drives the menu
-  // morph and the search hide, and the assistant is closed by its own control,
-  // not the hamburger. This is only for the scroll backdrop below.
-  const askOverlayOpen = useAskOverlay((s) => s.open)
-  const fullBleedOverlayOpen = homeOverlayOpen || askOverlayOpen
+  const fullBleedOverlayOpen = homeOverlayOpen
   const [mounted, setMounted] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])

@@ -467,7 +467,11 @@ export function AskSurface({
         // loaded with `ssr: false`, so it only ever renders on the client.
         return createPortal(
             <div
-                className="fixed inset-0 z-40 bg-canvas md:pt-[var(--header-height)]"
+                // 100svh, not inset-0: `inset-0` resolves to the LARGE viewport
+                // on mobile, so the composer sits under the browser's collapsing
+                // chrome. svh is the small-viewport unit, which is the one that
+                // keeps the input reachable while the address bar is showing.
+                className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-canvas md:pt-[var(--header-height)]"
                 role="dialog"
                 aria-modal="true"
                 aria-label="ask watchparty"
