@@ -234,8 +234,15 @@ export function AskSurface({
     // button parked at the bottom edge (this is prompt-kit's own structure).
     const thread = (
         <div className="relative min-h-0 flex-1">
-            <ChatContainerRoot className="h-full">
-                <ChatContainerContent className="flex flex-col gap-5 px-4 py-4">
+            {/* flex-col is REQUIRED. prompt-kit's ChatContainerRoot is
+                `cn("flex overflow-y-auto", className)` — no direction, so it
+                defaults to a flex ROW. In a row, the content child never gets
+                a width and every message computed w=0; text then wrapped one
+                character per line, making a single reply 22,548px tall and
+                pushing it ~22,000px above the scroll viewport. Present in the
+                DOM, perfect contrast, completely unreachable. */}
+            <ChatContainerRoot className="relative h-full w-full flex-col">
+                <ChatContainerContent className="flex w-full flex-col gap-5 px-4 py-4">
                 {messages.length === 0 && !busy && (
                     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
                         <StarOutline className="size-8" />
@@ -249,7 +256,7 @@ export function AskSurface({
                     m.role === "assistant" ? (
                         <Message
                             key={m.id}
-                            className="items-start gap-2.5"
+                            className="w-full items-start gap-2.5"
                             // Stable hook for scripts/ai/browser-smoke-chat.mjs.
                             // It lives on Message, not MessageContent: with
                             // `markdown` set, MessageContent renders prompt-kit's
@@ -303,7 +310,7 @@ export function AskSurface({
                             </MessageContent>
                         </Message>
                     ) : (
-                        <Message key={m.id} className="flex-row-reverse items-end gap-2.5">
+                        <Message key={m.id} className="w-full flex-row-reverse items-end gap-2.5">
                             <Avatar className="size-6 shrink-0">
                                 <AvatarImage src={avatar} alt="" className="object-cover" />
                                 <AvatarFallback />
@@ -318,7 +325,7 @@ export function AskSurface({
                 {/* Only until the first token lands — after that the reply
                     itself is the progress indicator. */}
                 {status === "submitted" && (
-                    <Message className="items-start gap-2.5">
+                    <Message className="w-full items-start gap-2.5">
                         <StarOutline className="mt-1 size-4 shrink-0" />
                         <Loader variant="typing" className="text-zinc-500" />
                     </Message>
