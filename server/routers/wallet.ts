@@ -1015,7 +1015,7 @@ export const walletRouter = router({
     frostCommit: protectedProcedure
         .input(z.object({
             signingSessionId: z.string().uuid(),
-            purpose: z.enum(["session", "tx", "copyEnable", "copyDisable", "copyUpdateCap"]),
+            purpose: z.enum(["session", "sessionAuthority", "tx", "copyEnable", "copyDisable", "copyUpdateCap"]),
             // For purpose='tx': the raw transaction to wrap in Swig execute instructions
             rawTransaction: z.string().optional(),
             // For purpose='copyEnable': the on-chain daily USDC cap (whole dollars)
@@ -1060,6 +1060,19 @@ export const walletRouter = router({
                     walletData.frost_public_key,
                 );
                 await redis.set(redisKey, { nonces, serverCommitment, txBase64, sessionKeypairBase64, slot, purpose: 'session' }, { ex: 300 });
+                return { serverCommitment, txBase64 };
+            } else if (input.purpose === "sessionAuthority") {
+                // Root-signed add-authority that makes SESSIONS POSSIBLE AT ALL
+                // on this Swig. The root is AuthorityType.Ed25519 (not
+                // session-based), so CreateSessionV1 throws against it; this
+                // adds a second, Ed25519Session authority carrying the same
+                // FROST key. Relayed by frostSign's generic tx branch.
+                const { prepareAddSessionAuthorityTransaction } = await import("@/lib/swig/swig-server");
+                const { txBase64 } = await prepareAddSessionAuthorityTransaction(
+                    walletData.swig_address,
+                    walletData.frost_public_key,
+                );
+                await redis.set(redisKey, { nonces, serverCommitment, txBase64, purpose: 'tx' }, { ex: 300 });
                 return { serverCommitment, txBase64 };
             } else if (input.purpose === "copyEnable") {
                 // Root-signed add-authority granting the copy executor its

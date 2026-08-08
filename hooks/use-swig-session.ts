@@ -84,7 +84,46 @@ export function useSwigSession(): UseSwigSessionReturn {
 
             // Round 1: client commits locally, server commits + builds session tx
             const { nonces, clientCommitment } = await clientCommit(frostData.clientShare);
-            const round1 = await frostCommit.mutateAsync({ signingSessionId, purpose: 'session' });
+
+            let round1;
+            try {
+                round1 = await frostCommit.mutateAsync({ signingSessionId, purpose: 'session' });
+            } catch (err: any) {
+                // The Swig root is AuthorityType.Ed25519 — NOT session-based —
+                // so CreateSessionV1 throws against it. Wallets created before
+                // the session authority existed need it added once, root-signed
+                // via FROST. Add it, then retry.
+                //
+                // The outer nonces are reused for the retry deliberately: the
+                // failed call threw before the server stored any round-1 state,
+                // so they were never consumed by a signature share. The
+                // add-authority signing below gets its OWN commitment pair —
+                // two concurrent FROST exchanges must not share nonces.
+                if (!String(err?.message ?? '').includes('NO_SESSION_AUTHORITY')) throw err;
+
+                const addId = crypto.randomUUID();
+                const add1 = await clientCommit(frostData.clientShare);
+                const addRound1 = await frostCommit.mutateAsync({ signingSessionId: addId, purpose: 'sessionAuthority' });
+                const { serverCommitment: addServerCommitment, txBase64: addTx } =
+                    addRound1 as { serverCommitment: any; txBase64: string };
+                const addMsg = await extractClientMessageBytes(addTx);
+                const addShare = await clientSignShare(
+                    frostData.clientShare,
+                    frostData.publicInfo,
+                    add1.nonces,
+                    add1.clientCommitment,
+                    addServerCommitment,
+                    addMsg,
+                );
+                await frostSign.mutateAsync({
+                    signingSessionId: addId,
+                    clientCommitment: add1.clientCommitment,
+                    clientSigShare: addShare,
+                });
+
+                round1 = await frostCommit.mutateAsync({ signingSessionId, purpose: 'session' });
+            }
+
             const { serverCommitment, txBase64 } = round1 as { serverCommitment: any; txBase64: string };
 
             // Compute client signature share over the session tx message

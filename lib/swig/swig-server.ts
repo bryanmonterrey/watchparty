@@ -5,6 +5,7 @@
 import {
     Actions,
     createEd25519AuthorityInfo,
+    createEd25519SessionAuthorityInfo,
     fetchSwig,
     findSwigPda,
     getAddAuthorityInstructions,
@@ -151,8 +152,90 @@ export interface SwigSessionInfo {
     treasuryPubkey: string;    // base58 — client sets this as fee payer in txs
 }
 
-// ~1 year at 400ms/slot. Treasury pays once; new device = new session.
-const SESSION_DURATION_SLOTS = 78_840_000;
+// 7 days at 400ms/slot. Was ~1 year, which isn't a session — it's a second
+// root key with a distant expiry, sitting in browser IndexedDB, and
+// `clearSwigSession` has no callers so nothing ever revoked it. A week is long
+// enough that re-signing is rare and short enough that a stolen device stops
+// mattering. Renewal is one FROST round trip.
+const SESSION_DURATION_SLOTS = 1_512_000;
+
+// The ceiling the session AUTHORITY permits, set once when the authority is
+// added. Individual sessions ask for SESSION_DURATION_SLOTS; this just has to
+// be >= that, and can't be lowered later without replacing the authority.
+const SESSION_MAX_DURATION_SLOTS = 1_512_000;
+
+/**
+ * Add a SESSION-CAPABLE authority for the FROST group key.
+ *
+ * Why this exists: the Swig root is created with `createEd25519AuthorityInfo`,
+ * i.e. `AuthorityType.Ed25519` — which is NOT session-based. `CreateSessionV1`
+ * checks `role.isSessionBased()` and throws "Role is not a session-based"
+ * before it ever reaches the chain, so `prepareSessionTransaction` against the
+ * root could never have worked. It failed silently everywhere (ensureSession
+ * swallows, and use-wallet-signing falls through to FROST 2-of-2) except in
+ * perps, where `submitCosigned` treats a missing session as fatal.
+ *
+ * The fix is additive: keep the root exactly as it is — it's what authorises
+ * this very transaction, and sessions can't change authorities — and add a
+ * SECOND authority carrying the same FROST pubkey, declared `Ed25519Session`.
+ * Existing on-chain Swigs don't need recreating.
+ *
+ * Root-signed via FROST, like the copy-authority grant next to it.
+ */
+export async function prepareAddSessionAuthorityTransaction(
+    swigAddress: string,
+    frostGroupPubkeyBase64: string,
+): Promise<{ txBase64: string }> {
+    const treasury = getTreasury();
+    const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
+    const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
+
+    // TWO DIFFERENT LOOKUPS, and mixing them up is the whole trap here
+    // (verified on devnet — scripts/swig/verify-session-authority.mjs):
+    //
+    //   findRolesByEd25519SignerPk matches `authority.signer`. On a SESSION
+    //   authority `signer` is the sessionKey — all zeros until a session
+    //   actually exists — so a session role NEVER comes back from it.
+    //   findRolesByAuthorityAddress matches `authority.address`, which is the
+    //   authority pubkey on both types.
+    //
+    // So: signer lookup for the root, address lookup to see the session role.
+    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey).find((r) => !r.isSessionBased());
+    if (!rootRole) throw new Error('FROST root role not found on Swig wallet');
+    if (swig.findRolesByAuthorityAddress(frostPubkey.toBytes()).some((r) => r.isSessionBased())) {
+        throw new Error('Session authority already present');
+    }
+
+    const { blockhash } = await getRpc().getLatestBlockhash('confirmed');
+
+    const ixs = await getAddAuthorityInstructions(
+        swig,
+        rootRole.id,
+        createEd25519SessionAuthorityInfo(frostPubkey, BigInt(SESSION_MAX_DURATION_SLOTS)),
+        // Same power as the root, minus authority management (which Swig
+        // withholds from sessions regardless). This is the user's own wallet
+        // acting for the user — the scoping that matters for DELEGATES is the
+        // copy executor's tokenRecurringLimit, not this.
+        Actions.set().all().get(),
+        { payer: treasury.publicKey },
+    );
+
+    const tx = new Transaction({ recentBlockhash: blockhash, feePayer: treasury.publicKey }).add(...ixs);
+    tx.partialSign(treasury);
+
+    return { txBase64: tx.serialize({ requireAllSignatures: false }).toString('base64') };
+}
+
+/** Does this Swig already carry a session-capable authority for the FROST key? */
+export async function hasSessionAuthority(
+    swigAddress: string,
+    frostGroupPubkeyBase64: string,
+): Promise<boolean> {
+    const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
+    const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
+    // Address lookup, not signer — see prepareAddSessionAuthorityTransaction.
+    return swig.findRolesByAuthorityAddress(frostPubkey.toBytes()).some((r) => r.isSessionBased());
+}
 
 /**
  * Build a session creation transaction, pre-signed by treasury as fee payer.
@@ -167,9 +250,22 @@ export async function prepareSessionTransaction(
     const treasury = getTreasury();
     const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
     const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
-    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey)[0];
 
-    if (!rootRole) throw new Error('FROST root role not found on Swig wallet');
+    // findRolesByAuthorityAddress, NOT findRolesByEd25519SignerPk: the latter
+    // matches `authority.signer`, and a session authority's signer is its
+    // sessionKey (zeros until a session exists), so it never appears there.
+    // Devnet-verified — the signer lookup returns 1 role where the address
+    // lookup returns 2 (scripts/swig/verify-session-authority.mjs).
+    const sessionRole = swig
+        .findRolesByAuthorityAddress(frostPubkey.toBytes())
+        .find((r) => r.isSessionBased());
+
+    if (!sessionRole) {
+        // Caller is expected to run prepareAddSessionAuthorityTransaction
+        // first. Recognisable message — use-swig-session matches on it to add
+        // the authority and retry rather than surfacing a dead end.
+        throw new Error('NO_SESSION_AUTHORITY');
+    }
 
     const sessionKeypair = Keypair.generate();
     const { blockhash } = await getRpc().getLatestBlockhash('confirmed');
@@ -177,7 +273,7 @@ export async function prepareSessionTransaction(
 
     const sessionIxs = await getCreateSessionInstructions(
         swig,
-        rootRole.id,
+        sessionRole.id,
         sessionKeypair.publicKey,
         BigInt(durationSlots),
         { payer: treasury.publicKey },
@@ -236,7 +332,11 @@ export async function prepareSwigExecuteTransaction(
     const treasury = getTreasury();
     const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
     const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
-    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey)[0];
+    // Explicitly the non-session role. A signer lookup can't return a session
+    // authority anyway (its signer is the zeroed sessionKey), so [0] was never
+    // truly ambiguous — but stating the intent means this keeps working if the
+    // SDK ever indexes session authorities by their authority pubkey.
+    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey).find((r) => !r.isSessionBased());
     if (!rootRole) throw new Error('FROST root role not found on Swig wallet');
 
     const txBytes = Buffer.from(rawTransactionBase64, 'base64');
@@ -338,7 +438,11 @@ export async function prepareAddCopyAuthorityTransaction(
     if (!executor) throw new Error('COPY_EXECUTOR_SECRET not set — auto-copy is disabled');
     const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
     const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
-    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey)[0];
+    // Explicitly the non-session role. A signer lookup can't return a session
+    // authority anyway (its signer is the zeroed sessionKey), so [0] was never
+    // truly ambiguous — but stating the intent means this keeps working if the
+    // SDK ever indexes session authorities by their authority pubkey.
+    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey).find((r) => !r.isSessionBased());
     if (!rootRole) throw new Error('FROST root role not found on Swig wallet');
     if (swig.findRolesByEd25519SignerPk(executor.publicKey)[0]) {
         throw new Error('Auto-copy already enabled on this wallet');
@@ -377,7 +481,11 @@ export async function prepareUpdateCopyAuthorityTransaction(
     const { updateAuthorityReplaceAllActions } = await import('@swig-wallet/lib');
     const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
     const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
-    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey)[0];
+    // Explicitly the non-session role. A signer lookup can't return a session
+    // authority anyway (its signer is the zeroed sessionKey), so [0] was never
+    // truly ambiguous — but stating the intent means this keeps working if the
+    // SDK ever indexes session authorities by their authority pubkey.
+    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey).find((r) => !r.isSessionBased());
     if (!rootRole) throw new Error('FROST root role not found on Swig wallet');
     const executorRole = swig.findRolesByEd25519SignerPk(executor.publicKey)[0];
     if (!executorRole) throw new Error('Auto-copy is not enabled on this wallet');
@@ -408,7 +516,11 @@ export async function prepareRemoveCopyAuthorityTransaction(
     if (!executor) throw new Error('COPY_EXECUTOR_SECRET not set — auto-copy is disabled');
     const swig = await fetchSwig(getRpc(), new PublicKey(swigAddress));
     const frostPubkey = new PublicKey(Buffer.from(frostGroupPubkeyBase64, 'base64'));
-    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey)[0];
+    // Explicitly the non-session role. A signer lookup can't return a session
+    // authority anyway (its signer is the zeroed sessionKey), so [0] was never
+    // truly ambiguous — but stating the intent means this keeps working if the
+    // SDK ever indexes session authorities by their authority pubkey.
+    const rootRole = swig.findRolesByEd25519SignerPk(frostPubkey).find((r) => !r.isSessionBased());
     if (!rootRole) throw new Error('FROST root role not found on Swig wallet');
     const executorRole = swig.findRolesByEd25519SignerPk(executor.publicKey)[0];
     if (!executorRole) throw new Error('Auto-copy is not enabled on this wallet');
