@@ -42,7 +42,7 @@ import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-p
 // panels, rounded-full pills, h-11 controls, font-pixel brand line, lowercase.
 //
 // COLOURS ARE FIXED, NOT THEMED. This panel paints its own dark surface
-// (bg-[#111] docked, bg-canvas in the overlay) on every theme, so it must not
+// (bg-[#111], both docked and expanded) on every theme, so it must not
 // use theme-flipping tokens. `text-flexwhite` is #e7e9ea in dark but #0f1419 —
 // near-black — in LIGHT, which rendered the title, the user's own messages and
 // the input as black-on-black: present in the DOM, completely invisible. Same
@@ -208,7 +208,7 @@ export function AskSurface({
     // Motion is zola's: a staggered scale + blur-in at 0.02s per item. Gated on
     // reduced motion like everything else here.
     const suggestions = messages.length === 0 && (
-        <div className="flex shrink-0 flex-wrap gap-2 px-3 pb-3">
+        <div className="flex shrink-0 flex-wrap justify-center gap-2 px-3 pb-3">
             {SUGGESTIONS.map((s, i) => (
                 <motion.div
                     key={s}
@@ -470,12 +470,12 @@ export function AskSurface({
     );
 
     if (expanded) {
-        // Modelled on the Clips overlay (components/home/clips-overlay.tsx),
-        // which is this app's overlay convention: the canvas is INSTANT and
-        // edge to edge — no scrim, no backdrop-blur, no floating rounded card —
-        // and only the content inside it animates in. `bg-canvas` is the same
-        // fill the sidebar and Clips paint, so the surface reads as the app
-        // going full-screen rather than as a modal sitting on top of it.
+        // Clips' SHAPE — instant, edge to edge, no scrim, no backdrop-blur, no
+        // floating rounded card, only the content animating in. But NOT its
+        // fill: #111 is the panel's own colour, so expanding reads as the same
+        // surface growing rather than swapping to a different one. bg-canvas
+        // (rgb(5,5,5)) made the overlay visibly darker than the popup it came
+        // from.
         //
         // z-40 and `md:pt-[var(--header-height)]` are both from Clips too: the
         // fill runs behind the header band while the content clears it, which
@@ -495,7 +495,7 @@ export function AskSurface({
                 // on mobile, so the composer sits under the browser's collapsing
                 // chrome. svh is the small-viewport unit, which is the one that
                 // keeps the input reachable while the address bar is showing.
-                className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-canvas"
+                className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-[#111]"
                 role="dialog"
                 aria-modal="true"
                 aria-label="ask chat"
