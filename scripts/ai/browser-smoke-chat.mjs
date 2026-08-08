@@ -204,6 +204,39 @@ try {
     }
     if (!contrast.length) bad("no assistant message to contrast-check");
 
+    // ── GEOMETRY ────────────────────────────────────────────────────────────
+    // The check that was missing. querySelector finds elements regardless of
+    // layout and getComputedStyle reports colours regardless of size, so this
+    // test passed for hours while every message rendered 0px WIDE — text
+    // wrapping one character per line, 22,548px tall, shoved ~22,000px above
+    // the scroll viewport. Present, readable, and completely unreachable.
+    console.log("\n7. checking the message has real geometry and is in view");
+    const geom = await page.evaluate(() => {
+        const msg = document.querySelector("[data-assistant-message]");
+        if (!msg) return null;
+        const scroller = msg.closest(".overflow-y-auto") ?? msg.parentElement;
+        const m = msg.getBoundingClientRect();
+        const s = scroller.getBoundingClientRect();
+        return {
+            w: Math.round(m.width), h: Math.round(m.height),
+            scrollerW: Math.round(s.width), scrollerH: Math.round(s.height),
+            // Does any part of the message fall inside the scroll viewport?
+            intersects: m.top < s.bottom && m.bottom > s.top,
+        };
+    });
+    if (!geom) bad("no assistant message to measure");
+    else {
+        geom.w > 50
+            ? ok(`width ${geom.w}px (scroller ${geom.scrollerW}px)`)
+            : bad(`ZERO-WIDTH message (${geom.w}px) — text wraps per character and leaves the viewport`);
+        geom.h < 5000
+            ? ok(`height ${geom.h}px — sane`)
+            : bad(`absurd height ${geom.h}px — the classic zero-width wrap signature`);
+        geom.intersects
+            ? ok("message intersects the scroll viewport (actually on screen)")
+            : bad("message is OUTSIDE the scroll viewport — nobody can see it");
+    }
+
     if (consoleErrors.length) {
         console.log(`\n  \x1b[2mconsole errors (${consoleErrors.length}):\x1b[0m`);
         for (const e of consoleErrors.slice(0, 5)) console.log(`  \x1b[2m  ${e}\x1b[0m`);

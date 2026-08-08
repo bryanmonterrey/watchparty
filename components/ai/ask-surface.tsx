@@ -17,7 +17,11 @@ import {
 } from "@/components/prompt-kit/chat-container";
 import { Loader } from "@/components/prompt-kit/loader";
 import { Message, MessageContent } from "@/components/prompt-kit/message";
-import { PromptInput, PromptInputTextarea } from "@/components/prompt-kit/prompt-input";
+import {
+    PromptInput,
+    PromptInputActions,
+    PromptInputTextarea,
+} from "@/components/prompt-kit/prompt-input";
 import { PromptSuggestion } from "@/components/prompt-kit/prompt-suggestion";
 import { ScrollButton } from "@/components/prompt-kit/scroll-button";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -379,6 +383,15 @@ export function AskSurface({
         </div>
     );
 
+    // Composition follows zola (ibelick/zola), prompt-kit's own author: the
+    // textarea gets its OWN full-width row, and controls live in a second row
+    // beneath it — left group, send on the right — all inside one surface.
+    // The previous version put the textarea and button side by side, which
+    // reads as "a box next to a button" rather than one control, and squeezed
+    // the text as soon as anything else joined the row.
+    //
+    // zola's palette is not carried over: this keeps the flat fill, the single
+    // slate hairline and no drop shadow.
     const composer = (
         <div className="shrink-0 border-t border-white/10 p-3">
             <PromptInput
@@ -386,29 +399,35 @@ export function AskSurface({
                 onValueChange={setInput}
                 onSubmit={submit}
                 isLoading={busy}
-                // prompt-kit ships this with `shadow-xs`; stripped, because a
-                // neutral drop shadow is the one depth cue this app never uses.
-                className="rounded-3xl border-white/10 bg-soft-gray-10 p-2 shadow-none"
+                maxHeight={200}
+                // p-0 pt-1: padding belongs to the rows inside, not the shell,
+                // so the textarea can run the full width. `shadow-none` strips
+                // prompt-kit's shadow-xs — a neutral drop shadow is the one
+                // depth cue this app never uses.
+                className="rounded-3xl border-white/10 bg-soft-gray-10 p-0 pt-1 shadow-none"
             >
-                <div className="flex items-end gap-2">
-                    <PromptInputTextarea
-                        placeholder="ask anything…"
-                        className="min-h-[44px] flex-1 bg-transparent px-2 text-sm text-white placeholder:text-zinc-500"
-                    />
-                    {/* Hidden entirely for anyone with one wallet — see the
-                        component. side="top" because the composer sits at the
-                        bottom edge of both the docked panel and the overlay. */}
-                    <WalletPill value={wallet} onChange={setWallet} />
+                <PromptInputTextarea
+                    placeholder="ask anything…"
+                    className="min-h-[44px] bg-transparent px-4 pt-3 text-sm leading-[1.3] text-white placeholder:text-zinc-500"
+                />
+
+                <PromptInputActions className="w-full items-center justify-between p-2 pt-1">
+                    {/* Left group. The pill hides itself for anyone with a
+                        single wallet, and the row stays balanced without it. */}
+                    <div className="flex items-center gap-2">
+                        <WalletPill value={wallet} onChange={setWallet} />
+                    </div>
+
                     <button
                         type="button"
                         onClick={busy ? () => stop() : submit}
                         disabled={!busy && !input.trim()}
                         aria-label={busy ? "stop" : "send"}
-                        className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-soft-gray-15 disabled:text-zinc-600"
+                        className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all duration-300 ease-out hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-soft-gray-15 disabled:text-zinc-600"
                     >
-                        {busy ? <span className="size-3 rounded-[3px] bg-current" /> : <ArrowUpIcon className="size-5" />}
+                        {busy ? <span className="size-3 rounded-[3px] bg-current" /> : <ArrowUpIcon className="size-4" />}
                     </button>
-                </div>
+                </PromptInputActions>
             </PromptInput>
         </div>
     );
