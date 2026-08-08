@@ -68,7 +68,7 @@ export function HomeLeftRail() {
         } catch { /* not worth failing the toggle over */ }
     };
 
-    // Collapsing behaves differently on /feed, and it has to.
+    // Collapsing behaves differently on the FeedFrame routes, and it has to.
     //
     // Home and the token page give the reclaimed 244px to a column that can use
     // it. Home's centre is NOT flex-1 any more — it's the feed's 628px measure —
@@ -83,9 +83,13 @@ export function HomeLeftRail() {
     // control, and nothing outside this aside moves.
     //
     // Read from the pathname rather than taken as a prop because the rail is
-    // mounted ONCE, by (rails)/layout.tsx, for all three routes — there's no
-    // per-page call site left to pass a flag from.
-    const keepsWidth = pathname?.startsWith("/feed") ?? false;
+    // mounted ONCE, by (rails)/layout.tsx, for all the routes — there's no
+    // per-page call site left to pass a flag from. The list must cover every
+    // route that renders FeedFrame: /status is the post page, which shares the
+    // feed's exact columns via feed-frame.tsx — checking only /feed is how the
+    // post page regressed to sliding sideways after posts moved off /feed/post.
+    const keepsWidth =
+        (pathname?.startsWith("/feed") || pathname?.startsWith("/status")) ?? false;
 
     if (collapsed) {
         return (
