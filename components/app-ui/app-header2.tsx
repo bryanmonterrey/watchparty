@@ -76,15 +76,23 @@ export function AppHeader2() {
   const [scrollY, setScrollY] = useState(0)
   useEffect(() => setMounted(true), [])
 
-  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'feed', 'notifications'];
+  // Routes whose 2nd/3rd segment is an ID, not a username — so the length
+  // heuristic below must not read them as profile pages.
+  //
+  // 'status' is here for the same reason 'feed' is: /status/<id> is a post
+  // permalink, and the search bar was rendering over it. Adding a segment here
+  // only ever REMOVES the bar from that route, so this stays a per-route
+  // decision — see APP_ROOT_SEGMENTS below for why the two lists aren't merged.
+  const PROTECTED_FIRST_SEGMENTS = ['settings', 'communities', 'messages', 'shorts', 'feed', 'notifications', 'status'];
   // Every top-level route the app owns. A single-segment path that ISN'T one of
   // these is a username — which is the only way to tell a profile from a page,
   // since both are one segment.
   //
   // Deliberately separate from PROTECTED_FIRST_SEGMENTS, which is missing most
-  // of these (home, trade, search, quests, premium, category, status) and is
-  // also what gates the search bar. Widening that list to fix the backdrop would
-  // have silently pulled the search bar off pages that have it today.
+  // of these (home, trade, search, quests, premium, category) and is also what
+  // gates the search bar. Widening that list wholesale to fix the backdrop would
+  // silently pull the search bar off pages that have it today — so segments are
+  // added there one at a time, only when that route genuinely shouldn't show it.
   const APP_ROOT_SEGMENTS = [
     'category', 'coin', 'communities', 'feed', 'home', 'messages', 'notifications',
     'premium', 'quests', 'search', 'settings', 'shorts', 'status', 'trade', 'video',
