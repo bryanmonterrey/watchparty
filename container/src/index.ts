@@ -1,4 +1,4 @@
-import { Container, getContainer } from "@cloudflare/containers";
+import { Container, getRandom } from "@cloudflare/containers";
 
 /**
  * The door onto the Next app.
@@ -48,12 +48,37 @@ export class NextApp extends Container {
     ) as Record<string, string>;
 }
 
+/**
+ * How many instances requests spread across. Must match `max_instances` in
+ * container/wrangler.jsonc.
+ *
+ * Was 1, addressed by a fixed name. That is a single point of failure with a
+ * HARD CEILING: Cloudflare rejects at 4096 concurrent inbound connections per
+ * instance, and the rejection happens in the proxy — before the request ever
+ * reaches Next — so the whole site 500s at once with
+ * "There are more than 4096 concurrent connections inbound to the container".
+ *
+ * That is exactly what took production down on 2026-08-08, and it did NOT take
+ * real traffic to do it: the Helius key was exhausted, every /api/rpc call
+ * 502'd, and ~52 polling queries retrying (TanStack's default is 3 attempts)
+ * plus long-lived assistant streams was enough from a single user. One
+ * saturated instance had nowhere to spill.
+ *
+ * Three is headroom, not scale — it turns a hard ceiling into a soft one.
+ * Instances sleep when idle (see sleepAfter), so the cost floor barely moves;
+ * they only all wake under the kind of load that used to break the site.
+ */
+const INSTANCES = 3;
+
 export default {
     async fetch(request: Request, env: { NEXT_APP: DurableObjectNamespace<NextApp> }) {
-        // One instance, addressed by a fixed name. Containers have no
-        // autoscaling yet — scaling is choosing a number of instances and
-        // routing across them yourself — and at this traffic one is right.
-        // When that changes, this is the line that changes: getRandom(env.NEXT_APP, N).
-        return getContainer(env.NEXT_APP, "app").fetch(request);
+        // getRandom, not a fixed name: spreads connections across INSTANCES so
+        // one saturated container cannot take the site with it.
+        //
+        // AWAITED — getRandom returns a Promise<DurableObjectStub>, unlike
+        // getContainer which returns the stub directly. Chaining .fetch() off
+        // the promise compiles fine and fails at runtime.
+        const stub = await getRandom(env.NEXT_APP, INSTANCES);
+        return stub.fetch(request);
     },
 };
