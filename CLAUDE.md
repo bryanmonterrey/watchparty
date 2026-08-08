@@ -248,6 +248,21 @@ in the summary after the fact — by which point the file is already gone. Nothi
 in tsc catches it either: the app still compiles until something imports one of
 the missing helpers.
 
+### `@beui` AI components: SIX collisions, not one (checked 2026-08-07)
+
+Every component under beui's "AI Agents" set (`streaming-response`,
+`agent-activity`, `message`, `message-bubble`, `tool-result`, `approval-card`,
+`citations`) ships its **own** `lib/utils.ts` (166 chars, just `cn`) and
+`lib/ease.ts`. Installing any one of them via the CLI would overwrite:
+
+    lib/utils.ts   lib/ease.ts   components/motion/action-swap.tsx (333 lines)
+    components/motion/magnetic.tsx   lib/hooks/use-hover-capable.ts
+
+That's the 2026-08-03 incident, eight times over. They also all import lucide,
+against the house rule. **Vendor them by hand** like `components/prompt-kit/`:
+fetch `https://beui.dev/r/<name>.json`, write only the files you want, skip
+their `lib/*`, swap lucide for HugeIcons.
+
 ### Corollary: `registryDependencies` can clobber our primitives too
 
 The `lib/utils.ts` trap is the famous one, but a registry item's
@@ -302,6 +317,59 @@ The model is Cloudflare Workers AI over its **OpenAI-compatible** endpoint via
 `lib/predictions/factory.ts` and `server/routers/discover.ts` — there is no
 standalone GLM URL to point a provider at. `workers-ai-provider` was rejected:
 it wants a native `Ai` binding, which OpenNext doesn't expose here.
+
+### GLM-5.2 is a REASONING model — budget for thinking, not just the answer
+
+It streams its chain of thought as `reasoning_content` and the answer as
+`content`, **sharing one token budget**. Measured against the live endpoint:
+"say hello in 3 words" costs 861 chars of reasoning and 278 completion tokens;
+a one-sentence product question streams **709 reasoning deltas before the first
+of 44 content deltas**.
+
+`maxOutputTokens: 900` therefore produced **completely empty replies** — the
+stream died mid-thought and emitted zero content deltas. It is 6000 now. If you
+lower it, or swap the model, run `bun scripts/ai/smoke-assistant.mjs` first.
+`@ai-sdk/openai-compatible` maps the thinking to `type: "reasoning"` parts,
+which is what drives the "thinking…" state.
+
+## Verification: tsc and CI cannot see the bugs this app actually ships
+
+Every real defect found on 2026-08-07 passed tsc, `bun test` and a green deploy.
+Three scripts exist because of that, and they are the gate that matters:
+
+```bash
+bun scripts/ai/smoke-assistant.mjs        # real model: visible text? tools fire?
+bun scripts/ai/browser-smoke-chat.mjs     # real browser: text in the DOM, readable?
+bun scripts/swig/verify-session-authority.mjs   # real devnet transactions
+bun scripts/dev/mint-test-session.mjs     # a signed session, so the above can log in
+```
+
+What each caught that nothing else could:
+
+- **smoke-assistant** — empty replies (the reasoning-budget bug above).
+- **verify-session-authority** — a *fix* that compiled clean and was wrong:
+  `findRolesByEd25519SignerPk` matches `authority.signer`, and a SESSION
+  authority's signer is its sessionKey (zeros until a session exists), so the
+  session role never appears there. Use `findRolesByAuthorityAddress`.
+- **browser-smoke-chat** — and this one is the lesson: it went green **four
+  times** on `textContent` while the panel was blank for a real user. Text was
+  in the DOM and unreadable. It now asserts **WCAG contrast** (resolving colours
+  through a canvas pixel, because `getComputedStyle` returns `lab()`/`oklch()`
+  and hand-parsing those gives nonsense).
+
+**A surface that paints its own background must not use theme-flipping tokens.**
+`--flexwhite` is `#e7e9ea` in dark but **`#0f1419` (near-black) in light**;
+`--flexborder` inverts the same way. On the assistant's hardcoded-dark panel
+that rendered the title, the user's own messages and the composer as
+black-on-black. Use fixed values (`text-white`, `border-white/10`) on any
+self-coloured surface.
+
+**Minting a session: the cookie name differs by target.** `useSecureCookies` is
+on in production, so better-auth uses the **`__Secure-`** prefix; the dev name
+is silently ignored there and looks exactly like a rejected login. The
+signature is **padded standard base64** — better-call rejects anything else
+outright (`signature.length !== 44 || !signature.endsWith("=")`), which is *not*
+the `base64urlnopad` better-auth uses for the session-data cache cookie.
 
 ## `@beui/table` has no scrollbar (checked 2026-08-03)
 
