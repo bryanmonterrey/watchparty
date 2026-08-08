@@ -53,7 +53,7 @@ export function WalletPill({
             itemHeight={44}
             triggerAriaLabel="choose wallet"
             trigger={
-                <span className="flex h-8 max-w-[160px] items-center gap-1.5 rounded-full border border-flexborder bg-soft-gray-10 px-3 text-xs font-medium text-zinc-300 transition-colors hover:bg-soft-gray-15 hover:text-white">
+                <span className="flex h-8 max-w-[160px] items-center gap-1.5 rounded-full border border-white/10 bg-soft-gray-10 px-3 text-xs font-medium text-zinc-300 transition-colors hover:bg-soft-gray-15 hover:text-white">
                     <WalletIcon className="size-3.5 shrink-0" />
                     <span className="truncate">{active?.name ?? "wallet"}</span>
                 </span>

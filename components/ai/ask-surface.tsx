@@ -38,6 +38,13 @@ import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-p
 // gradients, no drop shadows (flat fill + one slate hairline), squircled
 // panels, rounded-full pills, h-11 controls, font-pixel brand line, lowercase.
 //
+// COLOURS ARE FIXED, NOT THEMED. This panel paints its own dark surface
+// (bg-[#111] docked, bg-canvas in the overlay) on every theme, so it must not
+// use theme-flipping tokens. `text-flexwhite` is #e7e9ea in dark but #0f1419 —
+// near-black — in LIGHT, which rendered the title, the user's own messages and
+// the input as black-on-black: present in the DOM, completely invisible. Same
+// trap with `border-flexborder` (near-white in light). Fixed values only here.
+//
 // Docked and overlay are two renderings of ONE component instance on purpose.
 // `useChat` lives here, above the branch, so expanding mid-answer keeps the
 // thread and the in-flight stream — hoisting it any higher would drag the SDK
@@ -154,17 +161,17 @@ export function AskSurface({
     };
 
     const header = (
-        <div className="flex shrink-0 items-center gap-3 border-b border-flexborder px-4 py-3.5">
+        <div className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3.5">
             <StarOutline className="size-5 shrink-0" />
             <div className="min-w-0 flex-1">
-                <p className="font-pixel text-[13px] leading-none text-flexwhite">ask chat</p>
+                <p className="font-pixel text-[13px] leading-none text-white">ask chat</p>
                 {/* Doubles as the upsell surface: a free user watching "3 left
                     today" tick down learns the limit exists before they hit it,
                     which is the difference between an upgrade prompt that reads
                     as an offer and one that reads as a wall. Hidden entirely
                     when Redis is down (`degraded`) rather than showing a count
                     that isn't being enforced. */}
-                <p className="mt-1.5 text-[11px] leading-none text-postgray">
+                <p className="mt-1.5 text-[11px] leading-none text-zinc-500">
                     {quota && !quota.degraded
                         ? quota.entitled
                             ? `${quota.remaining.toLocaleString()} of ${quota.limit.toLocaleString()} left this period`
@@ -205,14 +212,14 @@ export function AskSurface({
     );
 
     const suggestions = (
-        <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-flexborder px-4 py-3">
+        <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-white/10 px-4 py-3">
             {SUGGESTIONS.map((s) => (
                 <PromptSuggestion
                     key={s}
                     onClick={() => setInput(s)}
                     size="sm"
                     variant="outline"
-                    className="h-8 shrink-0 whitespace-nowrap border-flexborder bg-soft-gray-10 px-3.5 text-xs font-medium text-zinc-300 hover:bg-soft-gray-15 hover:text-white"
+                    className="h-8 shrink-0 whitespace-nowrap border-white/10 bg-soft-gray-10 px-3.5 text-xs font-medium text-zinc-300 hover:bg-soft-gray-15 hover:text-white"
                 >
                     {s}
                 </PromptSuggestion>
@@ -287,7 +294,7 @@ export function AskSurface({
                                     "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
                                     "[&_li]:my-1 [&_li]:pl-0.5",
                                     "[&_a]:text-bleu [&_a]:underline [&_a]:underline-offset-2",
-                                    "[&_strong]:font-semibold [&_strong]:text-flexwhite",
+                                    "[&_strong]:font-semibold [&_strong]:text-white",
                                     "[&_code]:rounded [&_code]:bg-soft-gray-15 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[12px]",
                                     "[&_pre]:my-2 [&_pre]:overflow-x-auto",
                                 ].join(" ")}
@@ -301,7 +308,7 @@ export function AskSurface({
                                 <AvatarImage src={avatar} alt="" className="object-cover" />
                                 <AvatarFallback />
                             </Avatar>
-                            <MessageContent className="max-w-[80%] rounded-2xl bg-soft-gray-15 px-3.5 py-2 text-sm leading-relaxed text-flexwhite">
+                            <MessageContent className="max-w-[80%] rounded-2xl bg-soft-gray-15 px-3.5 py-2 text-sm leading-relaxed text-white">
                                 {textOf(m)}
                             </MessageContent>
                         </Message>
@@ -330,7 +337,7 @@ export function AskSurface({
                     StickToBottom. It's the containing block that has to be
                     outside the scroller, not the element. */}
                 <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
-                    <ScrollButton className="pointer-events-auto border-flexborder bg-soft-gray-15 text-zinc-300 hover:bg-soft-gray-20 hover:text-white" />
+                    <ScrollButton className="pointer-events-auto border-white/10 bg-soft-gray-15 text-zinc-300 hover:bg-soft-gray-20 hover:text-white" />
                 </div>
             </ChatContainerRoot>
         </div>
@@ -341,7 +348,7 @@ export function AskSurface({
     // hit their tier ceiling get the reset time, because there's nothing for
     // them to buy.
     const exhaustedComposer = (
-        <div className="shrink-0 border-t border-flexborder p-3">
+        <div className="shrink-0 border-t border-white/10 p-3">
             <div className="flex flex-col items-center gap-2.5 px-3 py-3 text-center">
                 <p className="text-sm leading-relaxed text-zinc-400">
                     {quota?.entitled
@@ -366,7 +373,7 @@ export function AskSurface({
     );
 
     const composer = (
-        <div className="shrink-0 border-t border-flexborder p-3">
+        <div className="shrink-0 border-t border-white/10 p-3">
             <PromptInput
                 value={input}
                 onValueChange={setInput}
@@ -374,12 +381,12 @@ export function AskSurface({
                 isLoading={busy}
                 // prompt-kit ships this with `shadow-xs`; stripped, because a
                 // neutral drop shadow is the one depth cue this app never uses.
-                className="rounded-3xl border-flexborder bg-soft-gray-10 p-2 shadow-none"
+                className="rounded-3xl border-white/10 bg-soft-gray-10 p-2 shadow-none"
             >
                 <div className="flex items-end gap-2">
                     <PromptInputTextarea
                         placeholder="ask anything…"
-                        className="min-h-[44px] flex-1 bg-transparent px-2 text-sm text-flexwhite placeholder:text-zinc-500"
+                        className="min-h-[44px] flex-1 bg-transparent px-2 text-sm text-white placeholder:text-zinc-500"
                     />
                     {/* Hidden entirely for anyone with one wallet — see the
                         component. side="top" because the composer sits at the
@@ -434,7 +441,7 @@ export function AskSurface({
                 // on mobile, so the composer sits under the browser's collapsing
                 // chrome. svh is the small-viewport unit, which is the one that
                 // keeps the input reachable while the address bar is showing.
-                className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-canvas md:pt-[var(--header-height)]"
+                className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-canvas"
                 role="dialog"
                 aria-modal="true"
                 aria-label="ask chat"
@@ -473,7 +480,7 @@ export function AskSurface({
             <Squircle asChild radius={24}>
                 {/* Flat fill + one hairline, per docs/design-principles.md — a
                     floating panel here does NOT get a drop shadow. */}
-                <div className="flex h-[520px] w-full flex-col overflow-hidden border border-flexborder bg-[#111]">
+                <div className="flex h-[520px] w-full flex-col overflow-hidden border border-white/10 bg-[#111]">
                     {body}
                 </div>
             </Squircle>

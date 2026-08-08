@@ -38,7 +38,13 @@ function readEnv(file) {
     } catch { /* absent */ }
     return out;
 }
-const env = { ...readEnv(".env"), ...readEnv(".env.local") };
+// `.env.local` normally overrides `.env` (dev DB wins), exactly like the app.
+// With --yes-production we deliberately read `.env` alone, which IS the
+// production config — otherwise the flag would be meaningless, since the local
+// override would keep pointing at dev.
+const env = has("yes-production")
+    ? readEnv(".env")
+    : { ...readEnv(".env"), ...readEnv(".env.local") };
 const dbUrl = env.DATABASE_URL ?? env.DIRECT_URL ?? process.env.DATABASE_URL;
 const secret = env.BETTER_AUTH_SECRET ?? process.env.BETTER_AUTH_SECRET;
 
@@ -64,15 +70,37 @@ if (!activeRef) {
     console.error("The prod guard can't verify the target, so it won't proceed.\n");
     process.exit(1);
 }
+// Production requires an explicit, typed-out opt-in. Even then it will ONLY
+// ever create/sign-in the dedicated e2e identity — never a real account.
+//
+// This exists so nobody is ever asked to hand over their own session cookie to
+// debug prod. A cookie for a real account is a full login: replayable by
+// anyone who sees it, permanent in a chat log, and revocable only by nuking
+// your own sessions. A throwaway identity with no wallet, no funds and no
+// premium has almost no blast radius, and you can delete the row afterwards.
+const PROD_OPT_IN = "--yes-production";
 if (prodRef && activeRef === prodRef) {
-    console.error(`\nREFUSING: DATABASE_URL is the PRODUCTION project (${mask(activeRef)}).`);
-    console.error("Point .env.local at the dev Supabase project first.\n");
-    process.exit(1);
+    if (!has("yes-production")) {
+        console.error(`\nREFUSING: DATABASE_URL is the PRODUCTION project (${mask(activeRef)}).`);
+        console.error(`\nIf that's deliberate, re-run with ${PROD_OPT_IN}. It will only ever`);
+        console.error("create/sign in the dedicated e2e test identity, never a real user.\n");
+        process.exit(1);
+    }
+    if (flag("email")) {
+        console.error("\nREFUSING: --email is not allowed against production.");
+        console.error("Prod may only mint the dedicated e2e identity.\n");
+        process.exit(1);
+    }
+    if (!has("json") && !has("raw")) console.error(`\n!! PRODUCTION (${mask(activeRef)}) — e2e identity only\n`);
 }
 if (!has("json") && !has("raw")) console.log(`\ndb project: ${mask(activeRef)} (prod is ${mask(prodRef)} — not this)`);
 
 // ── mint ─────────────────────────────────────────────────────────────────────
 const email = flag("email", "e2e-test@watchparty.local");
+
+// The auth instance reads process.env, not our parsed copy — so when we've
+// deliberately selected a different target above, push it in before importing.
+for (const [k, v] of Object.entries(env)) if (v) process.env[k] = v;
 
 const { auth } = await import("../../lib/auth/server.ts");
 const ctx = await auth.$context;
@@ -125,11 +153,18 @@ const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(sessi
 // how the first version of this script produced a token the server rejected
 // while the session sat valid in Redis.
 const signature = btoa(String.fromCharCode(...new Uint8Array(sig)));
-// useSecureCookies is false outside production, so no __Secure- prefix here.
-const cookie = `better-auth.session_token=${session.token}.${signature}`;
+// COOKIE NAME DEPENDS ON THE TARGET. lib/auth/server.ts sets
+// `useSecureCookies: process.env.NODE_ENV === "production"`, and better-auth
+// prefixes secure cookies with `__Secure-`. Minting for prod with the dev name
+// produces a cookie the server silently ignores — it looks exactly like a
+// rejected login.
+const cookieName = has("yes-production")
+    ? "__Secure-better-auth.session_token"
+    : "better-auth.session_token";
+const cookie = `${cookieName}=${session.token}.${signature}`;
 
 if (has("json")) {
-    console.log(JSON.stringify({ cookie, token: session.token, userId: user.id, email, expiresAt: session.expiresAt }));
+    console.log(JSON.stringify({ cookie, cookieName, token: session.token, userId: user.id, email, expiresAt: session.expiresAt }));
 } else if (has("raw")) {
     process.stdout.write(cookie);
 } else {
