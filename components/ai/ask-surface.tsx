@@ -206,7 +206,7 @@ export function AskSurface({
         <div className="flex shrink-0 items-center gap-3 border-b border-flexborder px-4 py-3.5">
             <StarOutline className="size-5 shrink-0" />
             <div className="min-w-0 flex-1">
-                <p className="font-pixel text-[13px] leading-none text-flexwhite">ask watchparty</p>
+                <p className="font-pixel text-[13px] leading-none text-flexwhite">ask chat</p>
                 {/* Doubles as the upsell surface: a free user watching "3 left
                     today" tick down learns the limit exists before they hit it,
                     which is the difference between an upgrade prompt that reads
@@ -218,7 +218,7 @@ export function AskSurface({
                         ? quota.entitled
                             ? `${quota.remaining.toLocaleString()} of ${quota.limit.toLocaleString()} left this period`
                             : `${quota.remaining} of ${quota.limit} free left today`
-                        : "powered by glm"}
+                        : "powered by askchat.fun"}
                 </p>
             </div>
             <button
@@ -474,7 +474,7 @@ export function AskSurface({
                 className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-canvas md:pt-[var(--header-height)]"
                 role="dialog"
                 aria-modal="true"
-                aria-label="ask watchparty"
+                aria-label="ask chat"
             >
                 <motion.div
                     initial={reduced ? false : { opacity: 0, y: 14 }}
@@ -502,7 +502,7 @@ export function AskSurface({
             style={{ transformOrigin: "bottom right" }}
             className="absolute bottom-full right-0 z-50 mb-3 w-[380px]"
             role="dialog"
-            aria-label="ask watchparty"
+            aria-label="ask chat"
             // Read by the trigger's click-away handler to tell "pressed inside
             // the panel" from "pressed the page".
             data-ask-panel=""

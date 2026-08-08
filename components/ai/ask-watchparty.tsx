@@ -105,7 +105,7 @@ export function AskWatchparty({
                     ref={buttonRef}
                     type="button"
                     onClick={() => (open ? close() : setOpen(true))}
-                    aria-label={open ? "close ask watchparty" : "ask ai"}
+                    aria-label={open ? "close ask chat" : "ask chat"}
                     aria-expanded={open}
                     className={className}
                 >

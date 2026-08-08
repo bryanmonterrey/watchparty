@@ -353,7 +353,13 @@ export const auth = betterAuth({
       create: {
         before: async (userData: any, ctx: any) => {
           // SIWS sends `address`; EVM SIWE sends `walletAddress`.
-          const walletAddress = ctx.body?.address ?? ctx.body?.walletAddress;
+          //
+          // `ctx?.` — the hook also fires for users created OUTSIDE an HTTP
+          // request (internalAdapter.createUser from a script, a seed, a
+          // migration), where better-auth passes no context at all. Without the
+          // optional chain that path throws "null is not an object" before any
+          // user can be made; surfaced by scripts/dev/mint-test-session.mjs.
+          const walletAddress = ctx?.body?.address ?? ctx?.body?.walletAddress;
           const now = new Date();
 
           const isPasskeyOrEmailAuth = !walletAddress && userData.email;
@@ -437,7 +443,10 @@ export const auth = betterAuth({
               .set({ last_signed_in: new Date(), updatedAt: new Date() })
               .where(eq(user.id, sessionData.userId));
 
-            const address = ctx.context?.address ?? ctx.body?.address ?? ctx.body?.walletAddress;
+            // `ctx?.` for the same reason as the user-create hook above: a
+            // session made outside an HTTP request (scripts, seeds) gets no
+            // context, and an unguarded deref throws before the session exists.
+            const address = ctx?.context?.address ?? ctx?.body?.address ?? ctx?.body?.walletAddress;
 
             if (!address) {
               return { data: sessionData };
