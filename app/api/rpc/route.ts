@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { redis, TTL } from '@/lib/cache';
+import { recordRpcCall, type RpcOutcome } from '@/server/lib/rpc-usage';
 
 // Read-only methods that are safe to serve a few seconds stale — account/token
 // data changes on-chain anyway, so short TTLs are invisible to chart/wallet
@@ -106,11 +107,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'RPC request failed' }, { status: 500 });
     };
 
+    // Counted in `after()`, so accounting never sits between the caller and
+    // its response — this proxy is on the critical path of every wallet and
+    // chart screen. Records the SAME string as the x-rpc-cache header, from one
+    // place, so the header and the metric cannot drift apart.
+    const tally = (method: string | undefined, outcome: RpcOutcome) => {
+        after(() => recordRpcCall(method ?? 'unknown', outcome));
+    };
+
     const passthrough = async () => {
         try {
             const data = await upstream();
+            // A batch has no single method; label it so it can't be mistaken
+            // for a cheap unary call when reading the breakdown.
+            tally(Array.isArray(body) ? 'batch' : body.method, 'bypass');
             return NextResponse.json(data, { headers: { 'x-rpc-cache': 'bypass' } });
         } catch (error) {
+            tally(Array.isArray(body) ? 'batch' : body.method, 'error');
             return failure(error);
         }
     };
@@ -130,6 +143,7 @@ export async function POST(request: NextRequest) {
     try {
         const cached = await redis.get(key);
         if (cached !== null) {
+            tally(body.method, 'hit');
             return NextResponse.json(
                 { jsonrpc: '2.0', id: body.id ?? null, result: cached },
                 { headers: { 'x-rpc-cache': 'hit' } }
@@ -144,6 +158,7 @@ export async function POST(request: NextRequest) {
         // Never cache errors, and never cache null results — a null
         // getTransaction just means "not confirmed yet".
         if (data?.error || data?.result === null || data?.result === undefined) {
+            tally(body.method, 'skip');
             return NextResponse.json(data, { headers: { 'x-rpc-cache': 'skip' } });
         }
         try {
@@ -151,8 +166,10 @@ export async function POST(request: NextRequest) {
         } catch {
             // Redis unavailable — response still goes out
         }
+        tally(body.method, 'miss');
         return NextResponse.json(data, { headers: { 'x-rpc-cache': 'miss' } });
     } catch (error) {
+        tally(body.method, 'error');
         // Same treatment as the passthrough path — the cached path was the one
         // actually hit by getSlot/getBalance, so leaving it opaque here would
         // have kept the real cause hidden.
