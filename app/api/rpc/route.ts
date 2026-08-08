@@ -60,6 +60,15 @@ export async function POST(request: NextRequest) {
         ? baseUrl
         : `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}api-key=${apiKey}`;
 
+    // Thrown when the upstream answers with something that isn't JSON-RPC, so
+    // the reason survives all the way to the log and the client instead of
+    // being flattened into a bare "RPC request failed".
+    class UpstreamError extends Error {
+        constructor(readonly status: number, readonly snippet: string) {
+            super(`upstream ${status}: ${snippet}`);
+        }
+    }
+
     const upstream = async () => {
         const response = await fetch(upstreamUrl, {
             method: 'POST',
@@ -68,15 +77,41 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify(body),
         });
-        return response.json();
+
+        // Read as TEXT first. Helius answers quota exhaustion with the plain
+        // string "max usage reached" and a 2xx — so response.json() throws a
+        // SyntaxError, the old catch logged that SyntaxError, and every
+        // on-chain surface in the app failed with no clue why. Diagnosing it
+        // took a browser session; it should take one glance at the log.
+        const raw = await response.text();
+        try {
+            return JSON.parse(raw);
+        } catch {
+            throw new UpstreamError(response.status, raw.slice(0, 200));
+        }
     };
+
+    const failure = (error: unknown) => {
+        if (error instanceof UpstreamError) {
+            console.error(`RPC proxy: upstream ${error.status} returned non-JSON: ${error.snippet}`);
+            // 502, not 500: the proxy is fine, the provider isn't. And surface
+            // the upstream's own words — "max usage reached" is actionable,
+            // "RPC request failed" is not.
+            return NextResponse.json(
+                { error: 'Upstream RPC error', upstream: error.snippet, status: error.status },
+                { status: 502 },
+            );
+        }
+        console.error('RPC proxy error:', error);
+        return NextResponse.json({ error: 'RPC request failed' }, { status: 500 });
+    };
+
     const passthrough = async () => {
         try {
             const data = await upstream();
             return NextResponse.json(data, { headers: { 'x-rpc-cache': 'bypass' } });
         } catch (error) {
-            console.error('RPC proxy error:', error);
-            return NextResponse.json({ error: 'RPC request failed' }, { status: 500 });
+            return failure(error);
         }
     };
 
@@ -118,7 +153,9 @@ export async function POST(request: NextRequest) {
         }
         return NextResponse.json(data, { headers: { 'x-rpc-cache': 'miss' } });
     } catch (error) {
-        console.error('RPC proxy error:', error);
-        return NextResponse.json({ error: 'RPC request failed' }, { status: 500 });
+        // Same treatment as the passthrough path — the cached path was the one
+        // actually hit by getSlot/getBalance, so leaving it opaque here would
+        // have kept the real cause hidden.
+        return failure(error);
     }
 }
