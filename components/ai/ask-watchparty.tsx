@@ -109,10 +109,11 @@ export function AskWatchparty({
                     aria-expanded={open}
                     className={className}
                 >
-                    {/* The star strokes itself peach rather than riding on
-                        currentColor like its two neighbours, so it keeps the
-                        brand colour through the button's zinc-400 → white
-                        hover — this is the one branded action in the dock. */}
+                    {/* The star sets its own stroke (flexwhite/75) rather than
+                        riding currentColor, so it doesn't pick up the button's
+                        zinc-400 → white hover. It used to be a fixed peach,
+                        which made this the only warm mark in a dock of neutral
+                        ones. */}
                     <StarMorphIcon open={open} className="size-6.5" />
                 </button>
             </Squircle>

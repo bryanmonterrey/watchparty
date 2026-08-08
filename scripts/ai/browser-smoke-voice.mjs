@@ -126,15 +126,28 @@ const browser = await puppeteer.launch({
         "--disable-dev-shm-usage",
         // Auto-accept getUserMedia instead of showing the permission prompt.
         "--use-fake-ui-for-media-stream",
-        // Replace the capture device with our file. --use-fake-device is
-        // implied and would otherwise emit a beep tone, which transcribes to
-        // nothing and makes this look broken.
+        // Substitute a synthetic capture device for the real hardware. NOT
+        // implied by the flags around it: without this, headless Chrome hands
+        // back a device that produces silence, --use-file-for-fake-audio-capture
+        // is ignored, and the whole chain looks broken while actually working —
+        // audio flows, Deepgram parses it, and stays silent because there is no
+        // speech in it.
+        "--use-fake-device-for-media-stream",
+        // Play our WAV through that device instead of the default 440Hz beep,
+        // which would also transcribe to nothing.
         `--use-file-for-fake-audio-capture=${wavPath}`,
     ],
 });
 
 try {
     const page = await browser.newPage();
+    // Every console line, not just errors — a silent failure here is exactly
+    // the case where the useful signal is a warning or a close code.
+    const logs = [];
+    page.on("console", (m) => logs.push(`[${m.type()}] ${m.text().slice(0, 200)}`));
+    page.on("pageerror", (e) => logs.push(`[pageerror] ${String(e).slice(0, 200)}`));
+    page.on("requestfailed", (r) => logs.push(`[reqfail] ${r.url().slice(0, 90)} ${r.failure()?.errorText ?? ""}`));
+    globalThis.__logs = logs;
     await page.setViewport({ width: 1440, height: 900 });
     page.setDefaultTimeout(TIMEOUT);
     const { hostname } = new URL(BASE);
@@ -207,6 +220,12 @@ try {
 } catch (e) {
     bad(`threw: ${e.message}`);
 } finally {
+    const logs = globalThis.__logs ?? [];
+    const relevant = logs.filter((l) => /voice|deepgram|websocket|socket|media|mic|assistant|error/i.test(l));
+    if (relevant.length) {
+        console.log("\n  page console (filtered):");
+        for (const l of relevant.slice(0, 14)) console.log(`    ${l}`);
+    }
     await browser.close();
 }
 

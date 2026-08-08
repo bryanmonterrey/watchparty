@@ -194,7 +194,13 @@ export function useVoiceDictation({
                 teardown();
             };
 
-            ws.onclose = () => {
+            ws.onclose = (ev) => {
+                // Kept deliberately: a silent socket is this feature's failure
+                // mode, and the close code is the only thing that distinguishes
+                // "Deepgram rejected us" from "no speech was detected".
+                if (ev.code !== 1000) {
+                    console.warn("[voice] socket closed", ev.code, ev.reason);
+                }
                 // Only a surprise close matters. A close we asked for has
                 // already moved state to idle.
                 setState((s) => (s === "listening" || s === "starting" ? "idle" : s));

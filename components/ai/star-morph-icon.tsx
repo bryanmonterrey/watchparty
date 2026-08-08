@@ -52,7 +52,12 @@ const EASE = "power3.inOut";
 export function StarMorphIcon({
     open,
     className,
-    color = "#FCE0CB",
+    // flexwhite at 75%. Was a fixed peach (#FCE0CB), which made this the
+    // only warm-stroked mark in a dock of neutral ones. flexwhite is the
+    // right token rather than a hardcoded value because the dock is a
+    // THEMED surface (bg-canvas), unlike the assistant panel — so the mark
+    // has to invert with the theme the way its neighbours do.
+    color = "color-mix(in srgb, var(--flexwhite) 75%, transparent)",
 }: {
     open: boolean;
     className?: string;
@@ -128,7 +133,10 @@ export function StarMorphIcon({
 // need the mark: the panel header and every assistant message row. Mounting
 // the morphing one per message would register a tween per bubble for an icon
 // that never changes state.
-export function StarOutline({ className, color = "#FCE0CB" }: { className?: string; color?: string }) {
+export function StarOutline({
+    className,
+    color = "color-mix(in srgb, var(--flexwhite) 75%, transparent)",
+}: { className?: string; color?: string }) {
     return (
         <svg
             viewBox={VIEW_BOX}
