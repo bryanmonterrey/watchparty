@@ -1,41 +1,70 @@
-// Apply a .sql file to the database using DIRECT_URL (direct, non-pooled — best
-// for DDL). Reads connection from .env. Usage:
-//   node scripts/db/apply-sql.mjs db/some-file.sql
-import fs from "node:fs";
+#!/usr/bin/env node
+// Applies a committed .sql file from db/ to ONE explicitly-named target.
+//
+// Exists because of the 2026-08-07 incident: a dev-targeted `drizzle-kit push`
+// hit production and dropped two tables, because .env.local's `override: true`
+// clobbered the injected env. The lesson encoded here is that the target must
+// be chosen deliberately and PRINTED before anything runs — never inherited
+// from ambient config.
+//
+//   node scripts/db/apply-sql.mjs db/assistant-threads.sql dev
+//   node scripts/db/apply-sql.mjs db/assistant-threads.sql prod
+//
+// `dev` reads DIRECT_URL from .env.local, `prod` from .env.production. Both use
+// the DIRECT (5432) url, not the 6543 pooler — DDL belongs on a session
+// connection.
+
+import { readFileSync } from "node:fs";
 import postgres from "postgres";
 
-function envVal(key) {
-  for (const line of fs.readFileSync(".env", "utf8").split("\n")) {
-    const t = line.trim();
-    if (!t || t.startsWith("#")) continue;
-    const i = t.indexOf("=");
-    if (i < 0 || t.slice(0, i).trim() !== key) continue;
-    let v = t.slice(i + 1).trim();
-    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-    return v;
-  }
-  return undefined;
+const [, , sqlPath, target] = process.argv;
+
+if (!sqlPath || !["dev", "prod"].includes(target ?? "")) {
+    console.error("usage: node scripts/db/apply-sql.mjs <file.sql> <dev|prod>");
+    process.exit(1);
 }
 
-const file = process.argv[2];
-if (!file) {
-  console.error("usage: node scripts/db/apply-sql.mjs <file.sql>");
-  process.exit(1);
-}
-const conn = envVal("DIRECT_URL") || envVal("DATABASE_URL");
-if (!conn) {
-  console.error("No DIRECT_URL/DATABASE_URL in .env");
-  process.exit(1);
+const envFile = target === "dev" ? ".env.local" : ".env.production";
+
+function readEnv(file, key) {
+    let text;
+    try {
+        text = readFileSync(file, "utf8");
+    } catch {
+        return null;
+    }
+    const line = text.split("\n").find((l) => l.startsWith(`${key}=`));
+    return line ? line.slice(key.length + 1).replace(/^["']|["']$/g, "").trim() : null;
 }
 
-const sql = fs.readFileSync(file, "utf8");
-const client = postgres(conn, { max: 1, prepare: false });
+const url = readEnv(envFile, "DIRECT_URL") ?? readEnv(envFile, "DATABASE_URL");
+if (!url) {
+    console.error(`no DIRECT_URL or DATABASE_URL in ${envFile}`);
+    process.exit(1);
+}
+
+// Print what we're about to touch, with credentials stripped. The project ref
+// is the part of the username after "postgres." and is what actually
+// distinguishes the two Supabase projects.
+const host = url.replace(/.*@([^/?]+).*/, "$1");
+const ref = decodeURIComponent(url.replace(/.*\/\/([^:]+):.*/, "$1")).split(".")[1] ?? "?";
+
+console.log(`  file   : ${sqlPath}`);
+console.log(`  target : ${target}  (${envFile})`);
+console.log(`  host   : ${host}`);
+console.log(`  project: ${ref}`);
+
+const sql = postgres(url, { max: 1, prepare: false, onnotice: () => {} });
+
 try {
-  await client.unsafe(sql);
-  console.log(`Applied ${file}`);
-} catch (e) {
-  console.error("Failed:", e.message);
-  process.exitCode = 1;
+    // simple:true so the whole file runs as one multi-statement script.
+    await sql.unsafe(readFileSync(sqlPath, "utf8"), [], { simple: true });
+    console.log("  ✓ applied");
+} catch (err) {
+    // .cause carries the real driver message; drizzle/postgres.js surface only
+    // "Failed query" without it.
+    console.error("  ✗ FAILED:", err.message, err.cause ?? "");
+    process.exitCode = 1;
 } finally {
-  await client.end();
+    await sql.end();
 }

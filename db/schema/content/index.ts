@@ -1,3 +1,4 @@
+export * from './assistant';
 export * from "./post"
 export * from "./playlist";
 export * from "./escrow";

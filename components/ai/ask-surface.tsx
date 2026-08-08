@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { Squircle } from "@/components/ui/squircle";
 import { ArrowUpIcon, AudioWavesIcon, CloseIcon, HistoryIcon } from "@/components/icons";
@@ -29,6 +30,7 @@ import { trpc } from "@/lib/trpc/client";
 import { usePremiumOverlay } from "@/lib/premium/overlay-store";
 import { useVoiceDictation } from "@/hooks/use-voice-dictation";
 import { cn } from "@/lib/utils";
+import { AskHistoryDialog } from "@/components/ai/ask-history-dialog";
 // Pure part-reading logic lives in its own module so it can be unit-tested
 // without a browser — see tests/assistant-message-parts.test.ts.
 import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-parts";
@@ -157,21 +159,51 @@ export function AskSurface({
     const micActive = voice.listening || voice.state === "starting";
     const exhausted = !!quota && (quota.remaining <= 0 || quota.tokenCeilingHit);
 
+    // Which conversation this is. Minted on the first SEND, not on mount, so
+    // opening and closing the panel without asking anything leaves no empty
+    // thread in the history list. Client-generated on purpose — see
+    // server/lib/assistant-threads.ts for why that's safe.
+    const [threadId, setThreadId] = useState<string | null>(null);
+    const [historyOpen, setHistoryOpen] = useState(false);
+
     const newChat = () => {
         stop();
         clearError();
         setMessages([]);
         setInput("");
+        setThreadId(null);
+    };
+
+    // Replaying a stored thread. The saved `parts` go back verbatim rather than
+    // being flattened to text: they carry tool calls and reasoning, and a
+    // reloaded conversation has to render what the live one rendered.
+    const loadThread = async (id: string) => {
+        stop();
+        clearError();
+        setInput("");
+        const thread = await utils.assistant.thread.fetch({ id });
+        setMessages(
+            thread.messages.map((m) => ({
+                id: m.id,
+                role: m.role as "user" | "assistant",
+                parts: m.parts as UIMessage["parts"],
+            })),
+        );
+        setThreadId(id);
     };
 
     const submit = () => {
         const text = input.trim();
         if (!text || busy) return;
+        // crypto.randomUUID needs a secure context, which production is; the
+        // fallback keeps localhost-over-http working rather than throwing.
+        const id = threadId ?? (globalThis.crypto?.randomUUID?.() ?? null);
+        if (id && id !== threadId) setThreadId(id);
         setInput("");
         clearError();
         // Wallet rides per-message, not in the transport — see the
         // prepareSendMessagesRequest note above.
-        void sendMessage({ text }, { body: { wallet: wallet?.name } });
+        void sendMessage({ text }, { body: { wallet: wallet?.name, threadId: id ?? undefined } });
     };
 
 
@@ -184,7 +216,12 @@ export function AskSurface({
 
     const header = (
         <div className="flex shrink-0 items-center justify-end gap-0.5 px-2 pt-2">
-            <button type="button" aria-label="chat history" className={ICON_BTN}>
+            <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                aria-label="chat history"
+                className={ICON_BTN}
+            >
                 <HistoryIcon className="size-4" />
             </button>
             <button
@@ -486,6 +523,15 @@ export function AskSurface({
 
     const body = (
         <>
+            {/* Renders in both modes because it portals to the body — the
+                docked panel is only 380px and clipped, so an in-flow dialog
+                would be unusable there. */}
+            <AskHistoryDialog
+                open={historyOpen}
+                onOpenChange={setHistoryOpen}
+                onPick={(id) => void loadThread(id)}
+                activeThreadId={threadId ?? undefined}
+            />
             {header}
             {/* EMPTY: heading + composer sit together in the vertical middle,
                 like zola. The thread is skipped entirely rather than rendered
