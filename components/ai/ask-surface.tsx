@@ -6,8 +6,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Squircle } from "@/components/ui/squircle";
-import { ArrowUpIcon, CloseIcon, RefreshIcon } from "@/components/icons";
-import { StarOutline } from "@/components/ai/star-morph-icon";
+import { ArrowUpIcon, AudioWavesIcon } from "@/components/icons";
 import { ExpandMorphIcon } from "@/components/ai/expand-morph-icon";
 import {
     ChatContainerContent,
@@ -61,17 +60,12 @@ const SUGGESTIONS = [
     "explain coins to me",
 ];
 
-const HEADER_BTN =
-    "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-soft-gray-15 hover:text-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500";
-
 export function AskSurface({
     expanded,
     onExpandedChange,
-    onClose,
 }: {
     expanded: boolean;
     onExpandedChange: (next: boolean) => void;
-    onClose: () => void;
 }) {
     const [input, setInput] = useState("");
     // Which wallet the assistant is talking about. Null = the user's primary,
@@ -125,7 +119,7 @@ export function AskSurface({
         [utils],
     );
 
-    const { messages, sendMessage, status, stop, error, setMessages, clearError } = useChat({
+    const { messages, sendMessage, status, stop, error, clearError } = useChat({
         transport,
         // Coalesce render work while tokens land. Without it every delta is a
         // React commit, which is what makes streaming chat feel janky on a
@@ -137,6 +131,9 @@ export function AskSurface({
     });
 
     const busy = status === "submitted" || status === "streaming";
+    // Drives the composer's one button: empty input shows the mic, typed input
+    // shows send.
+    const canSend = input.trim().length > 0;
     const exhausted = !!quota && (quota.remaining <= 0 || quota.tokenCeilingHit);
 
     const submit = () => {
@@ -149,63 +146,13 @@ export function AskSurface({
         void sendMessage({ text }, { body: { wallet: wallet?.name } });
     };
 
-    const reset = () => {
-        stop();
-        clearError();
-        setMessages([]);
-        setInput("");
-    };
 
-    const header = (
-        <div className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3.5">
-            <StarOutline className="size-5 shrink-0" />
-            <div className="min-w-0 flex-1">
-                <p className="font-pixel text-[13px] leading-none text-white">ask chat</p>
-                {/* Doubles as the upsell surface: a free user watching "3 left
-                    today" tick down learns the limit exists before they hit it,
-                    which is the difference between an upgrade prompt that reads
-                    as an offer and one that reads as a wall. Hidden entirely
-                    when Redis is down (`degraded`) rather than showing a count
-                    that isn't being enforced. */}
-                <p className="mt-1.5 text-[11px] leading-none text-zinc-500">
-                    {quota && !quota.degraded
-                        ? quota.entitled
-                            ? `${quota.remaining.toLocaleString()} of ${quota.limit.toLocaleString()} left this period`
-                            : `${quota.remaining} of ${quota.limit} free left today`
-                        : "powered by askchat.fun"}
-                </p>
-            </div>
-            <button
-                type="button"
-                onClick={reset}
-                disabled={messages.length === 0}
-                aria-label="new chat"
-                className={HEADER_BTN}
-            >
-                <RefreshIcon className="size-4" />
-            </button>
-            {/* Resize. The icon IS the state: brackets docked, X in the
-                overlay, morphed rather than swapped — so the control reads as
-                reversing itself. Pressing the X returns to the docked panel;
-                the backdrop closes out entirely. */}
-            <button
-                type="button"
-                onClick={() => onExpandedChange(!expanded)}
-                aria-label={expanded ? "shrink to panel" : "expand to overlay"}
-                aria-pressed={expanded}
-                className={HEADER_BTN}
-            >
-                <ExpandMorphIcon expanded={expanded} className="size-4" />
-            </button>
-            {/* Only docked — in the overlay the morphed X is the exit, and two
-                X's side by side would be two ways to guess at the same thing. */}
-            {!expanded && (
-                <button type="button" onClick={onClose} aria-label="close" className={HEADER_BTN}>
-                    <CloseIcon className="size-4" />
-                </button>
-            )}
-        </div>
-    );
+    // NO HEADER. It held a title, an avatar-ish star, a quota line, a rewind,
+    // a resize and a close — and every one of those was either duplicated
+    // elsewhere or noise. The app header already provides the X (the hamburger
+    // morphs to it for full-bleed overlays), and clicking the dock star closes
+    // the docked panel. What survived moved into the composer's action row,
+    // which is the only chrome this surface needs.
 
     // Starter prompts, following zola: BELOW the composer, and only on an
     // empty thread. Above the messages they were permanent chrome competing
@@ -253,11 +200,13 @@ export function AskSurface({
             <ChatContainerRoot className="relative h-full w-full flex-col">
                 <ChatContainerContent className="flex w-full flex-col gap-5 px-4 py-4">
                 {messages.length === 0 && !busy && (
-                    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-                        <StarOutline className="size-8" />
-                        <p className="max-w-[36ch] text-sm leading-relaxed text-zinc-500">
-                            ask me anything about watchparty — coins, streams, subscriptions, or how any of it works.
-                        </p>
+                    // zola's empty state: one heading, nothing else. No icon,
+                    // no explanatory paragraph — the starter pills under the
+                    // input already say what this can do.
+                    <div className="flex flex-1 items-center justify-center px-6 py-10">
+                        <h1 className="font-pixel text-xl leading-tight tracking-tight text-white">
+                            what&apos;s on your mind?
+                        </h1>
                     </div>
                 )}
 
@@ -365,7 +314,7 @@ export function AskSurface({
     // hit their tier ceiling get the reset time, because there's nothing for
     // them to buy.
     const exhaustedComposer = (
-        <div className="shrink-0 border-t border-white/10 p-3">
+        <div className="shrink-0 p-3">
             <div className="flex flex-col items-center gap-2.5 px-3 py-3 text-center">
                 <p className="text-sm leading-relaxed text-zinc-400">
                     {quota?.entitled
@@ -399,7 +348,7 @@ export function AskSurface({
     // zola's palette is not carried over: this keeps the flat fill, the single
     // slate hairline and no drop shadow.
     const composer = (
-        <div className="shrink-0 border-t border-white/10 p-3">
+        <div className="shrink-0 p-3">
             <PromptInput
                 value={input}
                 onValueChange={setInput}
@@ -418,20 +367,51 @@ export function AskSurface({
                 />
 
                 <PromptInputActions className="w-full items-center justify-between p-2 pt-1">
-                    {/* Left group. The pill hides itself for anyone with a
-                        single wallet, and the row stays balanced without it. */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                        {/* Resize lives here now that the header is gone. Same
+                            brackets-to-X morph, just rehomed. */}
+                        <button
+                            type="button"
+                            onClick={() => onExpandedChange(!expanded)}
+                            aria-label={expanded ? "shrink to panel" : "expand to overlay"}
+                            aria-pressed={expanded}
+                            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-soft-gray-15 hover:text-white"
+                        >
+                            <ExpandMorphIcon expanded={expanded} className="size-4" />
+                        </button>
+
                         <WalletPill value={wallet} onChange={setWallet} />
+
+                        {/* The allowance, in the composer rather than a header
+                            line of its own. Hidden when Redis is down, so a
+                            count that isn't being enforced is never shown. */}
+                        {quota && !quota.degraded && (
+                            <span className="truncate text-[11px] leading-none text-zinc-600">
+                                {quota.entitled
+                                    ? `${quota.remaining.toLocaleString()} left`
+                                    : `${quota.remaining} of ${quota.limit} free today`}
+                            </span>
+                        )}
                     </div>
 
+                    {/* Mic when there's nothing to send, send once you type —
+                        one button, two jobs, so the row never grows. Speaking
+                        only makes sense on an empty input: with text present the
+                        obvious action is to send it. */}
                     <button
                         type="button"
-                        onClick={busy ? () => stop() : submit}
-                        disabled={!busy && !input.trim()}
-                        aria-label={busy ? "stop" : "send"}
-                        className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all duration-300 ease-out hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-soft-gray-15 disabled:text-zinc-600"
+                        onClick={busy ? () => stop() : canSend ? submit : undefined}
+                        disabled={!busy && !canSend}
+                        aria-label={busy ? "stop" : canSend ? "send" : "speak"}
+                        className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-all duration-300 ease-out hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-soft-gray-15 disabled:text-zinc-500"
                     >
-                        {busy ? <span className="size-3 rounded-[3px] bg-current" /> : <ArrowUpIcon className="size-4" />}
+                        {busy ? (
+                            <span className="size-3 rounded-[3px] bg-current" />
+                        ) : canSend ? (
+                            <ArrowUpIcon className="size-4" />
+                        ) : (
+                            <AudioWavesIcon className="size-4" />
+                        )}
                     </button>
                 </PromptInputActions>
             </PromptInput>
@@ -440,7 +420,6 @@ export function AskSurface({
 
     const body = (
         <>
-            {header}
             {thread}
             {exhausted ? exhaustedComposer : composer}
             {suggestions}
@@ -512,7 +491,7 @@ export function AskSurface({
             <Squircle asChild radius={24}>
                 {/* Flat fill + one hairline, per docs/design-principles.md — a
                     floating panel here does NOT get a drop shadow. */}
-                <div className="flex h-[520px] w-full flex-col overflow-hidden border border-white/10 bg-[#111]">
+                <div className="flex h-[520px] w-full flex-col overflow-hidden bg-[#111]">
                     {body}
                 </div>
             </Squircle>

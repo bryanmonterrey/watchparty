@@ -126,7 +126,6 @@ export function AskWatchparty({
                         key="ask-surface"
                         expanded={expanded}
                         onExpandedChange={setExpanded}
-                        onClose={close}
                     />
                 )}
             </AnimatePresence>
