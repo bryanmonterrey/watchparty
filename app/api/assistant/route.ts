@@ -146,7 +146,24 @@ export async function POST(request: Request) {
                 system: systemPrompt(body.path, body.wallet),
                 messages: await convertToModelMessages(uiMessages),
                 temperature: 0.6,
-                maxOutputTokens: 900,
+                // GLM-5.2 IS A REASONING MODEL. It streams its chain of thought
+                // as `reasoning_content` deltas and the actual answer as
+                // `content` deltas — and the budget is shared. Measured against
+                // the live endpoint: "say hello in 3 words" spends 861 chars of
+                // reasoning and 278 completion tokens; a one-sentence product
+                // question streams 709 reasoning deltas before the first of 44
+                // content deltas.
+                //
+                // At the 900 this used to be, the stream was cut off mid-
+                // reasoning and produced ZERO content deltas, so every reply
+                // rendered as an empty message. That was the "text doesn't show
+                // up in the chat" bug — not a UI fault at all.
+                //
+                // 6000 leaves room for reasoning plus a real answer. It is a
+                // ceiling, not a target: `usage.totalTokens` (which includes
+                // reasoning) is what the token quota bills, so ordinary replies
+                // still cost what they cost.
+                maxOutputTokens: 6000,
                 tools: assistantTools,
                 // Enough for look-up → answer, or two look-ups → answer.
                 // Unbounded stepping is how one message quietly becomes a
