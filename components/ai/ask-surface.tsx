@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { useChat } from "@ai-sdk/react";
@@ -47,7 +47,7 @@ import { textOf, isThinking, pendingToolLabels } from "@/components/ai/message-p
 // display face is the project font (Geist), not font-pixel.
 //
 // COLOURS ARE FIXED, NOT THEMED. This panel paints its own dark surface
-// (bg-[#111], both docked and expanded) on every theme, so it must not
+// (bg-[#111] docked, bg-canvas expanded) on every theme, so it must not
 // use theme-flipping tokens. `text-flexwhite` is #e7e9ea in dark but #0f1419 —
 // near-black — in LIGHT, which rendered the title, the user's own messages and
 // the input as black-on-black: present in the DOM, completely invisible. Same
@@ -167,6 +167,29 @@ export function AskSurface({
     const [threadId, setThreadId] = useState<string | null>(null);
     const [historyOpen, setHistoryOpen] = useState(false);
 
+    // Cmd/Ctrl+K opens conversation history — but only while the panel is up.
+    //
+    // That key is already global: app-sidebar routes it to /search. Overriding
+    // it here is deliberate rather than a collision, because navigating away to
+    // a site-wide search page is close to the last thing someone wants while
+    // they're mid-conversation with the assistant; in this context "search"
+    // means these threads.
+    //
+    // CAPTURE phase, which is what actually makes the override work. Both
+    // listeners are on `document`, so stopPropagation during bubbling would not
+    // stop the other one — capture runs first, and stopping there prevents the
+    // bubble listener from ever seeing the event.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== "k" || !(e.metaKey || e.ctrlKey)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setHistoryOpen((v) => !v);
+        };
+        document.addEventListener("keydown", onKey, true);
+        return () => document.removeEventListener("keydown", onKey, true);
+    }, []);
+
     const newChat = () => {
         stop();
         clearError();
@@ -220,7 +243,8 @@ export function AskSurface({
             <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
-                aria-label="chat history"
+                aria-label="chat history (⌘K)"
+                title="Chat history  ⌘K"
                 className={ICON_BTN}
             >
                 <HistoryIcon className="size-4" />
@@ -559,12 +583,15 @@ export function AskSurface({
     );
 
     if (expanded) {
-        // Clips' SHAPE — instant, edge to edge, no scrim, no backdrop-blur, no
-        // floating rounded card, only the content animating in. But NOT its
-        // fill: #111 is the panel's own colour, so expanding reads as the same
-        // surface growing rather than swapping to a different one. bg-canvas
-        // (rgb(5,5,5)) made the overlay visibly darker than the popup it came
-        // from.
+        // Modelled on the Clips overlay (components/home/clips-overlay.tsx):
+        // instant, edge to edge, no scrim, no backdrop-blur, no floating
+        // rounded card — only the content inside animates in.
+        //
+        // bg-canvas, matching Clips and the sidebar, so going fullscreen reads
+        // as the APP expanding rather than a modal on top of it. The docked
+        // panel keeps #111 on purpose: it's a card floating over the page and
+        // needs to sit slightly above the canvas behind it, which is the
+        // opposite thing from a full-bleed surface that IS the page.
         //
         // z-40 and `md:pt-[var(--header-height)]` are both from Clips too: the
         // fill runs behind the header band while the content clears it, which
@@ -584,7 +611,7 @@ export function AskSurface({
                 // on mobile, so the composer sits under the browser's collapsing
                 // chrome. svh is the small-viewport unit, which is the one that
                 // keeps the input reachable while the address bar is showing.
-                className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-[#111]"
+                className="fixed inset-x-0 top-0 z-40 h-[100svh] bg-canvas"
                 role="dialog"
                 aria-modal="true"
                 aria-label="ask chat"
