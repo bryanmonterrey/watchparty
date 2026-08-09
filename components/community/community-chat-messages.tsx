@@ -8,6 +8,7 @@ import { useCommunityScroll } from "@/hooks/use-community-scroll";
 import { useEffect } from "react";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { CommunityChatItem } from "./community-chat-item";
+import { COMMUNITY_PAGE_LIMIT } from "@/hooks/use-community-reaction";
 import { CommunityChatWelcome } from "./community-chat-welcome";
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm";
@@ -57,7 +58,9 @@ export function CommunityChatMessages({
         isFetchingNextPage,
         status,
     } = trpc.community.getMessages.useInfiniteQuery(
-        { channelId, limit: 50 },
+        // Shared constant: this input is the query KEY, and the optimistic
+        // reaction patch has to address the identical entry.
+        { channelId, limit: COMMUNITY_PAGE_LIMIT },
         {
             getNextPageParam: (lastPage) => lastPage.nextCursor,
         }
@@ -144,6 +147,7 @@ export function CommunityChatMessages({
                         <Fragment key={message.id}>
                             <CommunityChatItem
                                 id={message.id}
+                                channelId={channelId}
                                 content={message.content}
                                 memberRole={message.memberRole}
                                 userName={message.userName}

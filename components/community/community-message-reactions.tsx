@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SmileIcon } from "@hugeicons/core-free-icons";
 import { EmojiPicker } from "@/components/messages/emoji-picker";
-import { trpc } from "@/lib/trpc/client";
+import { useCommunityReaction } from "@/hooks/use-community-reaction";
 import { cn } from "@/lib/utils";
 
 export type MessageReaction = { emoji: string; count: number; reactedByMe: boolean };
@@ -13,18 +13,18 @@ export type MessageReaction = { emoji: string; count: number; reactedByMe: boole
 // button opens the emoji picker. Renders nothing when there are no reactions
 // (the hover toolbar owns the first-reaction entry point).
 export function CommunityMessageReactions({
+    channelId,
     messageId,
     reactions,
     showAddButton = true,
 }: {
+    /** Needed to address the right cache entry for the optimistic patch. */
+    channelId: string;
     messageId: string;
     reactions: MessageReaction[];
     showAddButton?: boolean;
 }) {
-    const utils = trpc.useUtils();
-    const toggle = trpc.community.toggleReaction.useMutation({
-        onSuccess: () => utils.community.getMessages.invalidate(),
-    });
+    const toggle = useCommunityReaction(channelId);
 
     if (!reactions.length) return null;
 
@@ -34,7 +34,6 @@ export function CommunityMessageReactions({
                 <button
                     key={r.emoji}
                     onClick={() => toggle.mutate({ messageId, emoji: r.emoji })}
-                    disabled={toggle.isPending}
                     className={cn(
                         "flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-2 text-[12px] font-bold tabular-nums transition-colors",
                         r.reactedByMe

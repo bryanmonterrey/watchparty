@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { chatItemPropsEqual } from "./community-chat-item-equality";
+import { useCommunityReaction } from "@/hooks/use-community-reaction";
 import { CommunityMessageActions } from "./community-message-actions";
 
 type Props = {
@@ -76,6 +77,8 @@ type Props = {
     deleted: boolean;
     isUpdated: boolean;
     serverId: string;
+    /** Scopes cache updates + invalidation to this channel. */
+    channelId: string;
     pinned?: boolean;
     replyTo?: { userName: string | null; content: string; deleted: boolean } | null;
     reactions?: MessageReaction[];
@@ -117,6 +120,7 @@ function CommunityChatItemImpl({
     deleted,
     isUpdated,
     serverId,
+    channelId,
     pinned = false,
     replyTo = null,
     reactions = [],
@@ -135,18 +139,16 @@ function CommunityChatItemImpl({
     const updateMessage = trpc.community.updateMessage.useMutation({
         onSuccess: () => {
             setIsEditing(false);
-            utils.community.getMessages.invalidate();
+            utils.community.getMessages.invalidate({ channelId });
         },
     });
     const deleteMessage = trpc.community.deleteMessage.useMutation({
-        onSuccess: () => utils.community.getMessages.invalidate(),
+        onSuccess: () => utils.community.getMessages.invalidate({ channelId }),
     });
     const setPinned = trpc.community.setMessagePinned.useMutation({
-        onSuccess: () => utils.community.getMessages.invalidate(),
+        onSuccess: () => utils.community.getMessages.invalidate({ channelId }),
     });
-    const toggleReaction = trpc.community.toggleReaction.useMutation({
-        onSuccess: () => utils.community.getMessages.invalidate(),
-    });
+    const toggleReaction = useCommunityReaction(channelId);
     const setReplyTo = useCommunityReply((s) => s.setReplyTo);
 
     const isOwner = userId === currentUserId;
@@ -298,7 +300,7 @@ function CommunityChatItemImpl({
                     )}
 
                     {!deleted && (
-                        <CommunityMessageReactions messageId={id} reactions={reactions} />
+                        <CommunityMessageReactions channelId={channelId} messageId={id} reactions={reactions} />
                     )}
                 </div>
             </div>
