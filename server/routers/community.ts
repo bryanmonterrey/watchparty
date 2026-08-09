@@ -27,6 +27,7 @@ import { BOOST_PACKS, getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { boostLevelFor } from "@/lib/premium/boost-levels";
 import { isEntitled } from "@/server/lib/premium-entitlement";
 import { takePage } from "@/server/lib/paginate";
+import { DELETED_MESSAGE_TEXT } from "@/lib/community/constants";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { eq, and, or, desc, asc, sql, lt, ne, count, inArray, gt, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -2690,7 +2691,7 @@ export const communityRouter = router({
 
             const [updated] = await db
                 .update(communityMessages)
-                .set({ deleted: true, content: "This message has been deleted.", fileUrl: null, updatedAt: new Date() })
+                .set({ deleted: true, content: DELETED_MESSAGE_TEXT, fileUrl: null, updatedAt: new Date() })
                 .where(eq(communityMessages.id, input.messageId))
                 .returning();
 

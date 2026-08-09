@@ -61,6 +61,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { trpc } from "@/lib/trpc/client";
 import { chatItemPropsEqual } from "./community-chat-item-equality";
 import { useCommunityReaction } from "@/hooks/use-community-reaction";
+import { useMessagePatch } from "@/hooks/use-message-patch";
+import { DELETED_MESSAGE_TEXT } from "@/lib/community/constants";
 import { MessageActions } from "@/components/messages/message-actions";
 
 type Props = {
@@ -135,18 +137,46 @@ function CommunityChatItemImpl({
     const [editContent, setEditContent] = useState(content);
     const [revealed, setRevealed] = useState(false);
 
-    const utils = trpc.useUtils();
+    // Every message action patches the cached row first and reconciles after —
+    // pin, edit and delete used to wait out a round trip plus a full refetch.
+    const { snapshot, restore, patch, invalidate } = useMessagePatch(channelId);
+
     const updateMessage = trpc.community.updateMessage.useMutation({
-        onSuccess: () => {
+        onMutate: ({ messageId, content: next }) => {
+            const previous = snapshot();
             setIsEditing(false);
-            utils.community.getMessages.invalidate({ channelId });
+            patch(messageId, (m) => ({ ...m, content: next, updatedAt: new Date() }));
+            return { previous };
         },
+        onError: (_e, _v, ctx) => { restore(ctx?.previous); setIsEditing(true); },
+        onSettled: invalidate,
     });
     const deleteMessage = trpc.community.deleteMessage.useMutation({
-        onSuccess: () => utils.community.getMessages.invalidate({ channelId }),
+        onMutate: ({ messageId }) => {
+            const previous = snapshot();
+            // Mirror the server's write EXACTLY — deleted + tombstone text +
+            // no file. Setting only `deleted` left the original text on screen
+            // in italics until the refetch swapped it, so the row changed twice
+            // (measured: the second change landed 1.7s later).
+            patch(messageId, (m) => ({
+                ...m,
+                deleted: true,
+                content: DELETED_MESSAGE_TEXT,
+                fileUrl: null,
+            }));
+            return { previous };
+        },
+        onError: (_e, _v, ctx) => restore(ctx?.previous),
+        onSettled: invalidate,
     });
     const setPinned = trpc.community.setMessagePinned.useMutation({
-        onSuccess: () => utils.community.getMessages.invalidate({ channelId }),
+        onMutate: ({ messageId, pinned: next }) => {
+            const previous = snapshot();
+            patch(messageId, (m) => ({ ...m, pinned: next }));
+            return { previous };
+        },
+        onError: (_e, _v, ctx) => restore(ctx?.previous),
+        onSettled: invalidate,
     });
     const toggleReaction = useCommunityReaction(channelId);
     const setReplyTo = useCommunityReply((s) => s.setReplyTo);
