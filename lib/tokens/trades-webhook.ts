@@ -87,8 +87,47 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
     const accountAddresses = [
         ...new Set([...rows, ...trending].map((r) => r.poolAddress).filter(Boolean) as string[]),
     ].slice(0, MAX_ADDRESSES);
+
+    const list = await (await fetch(`https://api.helius.xyz/v0/webhooks?api-key=${apiKey}`)).json();
+    const existing = Array.isArray(list)
+        ? list.find((w: { webhookURL?: string }) => w.webhookURL === webhookURL)
+        : null;
+
+    // Nothing to watch. Returning here USED to be right — it meant "nothing
+    // launched yet" — and it is a trap now that display pools default to 0: an
+    // early return leaves whatever is already registered in place, so the wide
+    // 15-trending-pool config would survive forever in exactly the case this
+    // cap exists to prevent.
+    //
+    // Helius rejects an empty address list, so the way to say "watch nothing"
+    // is to keep exactly one address. Same trick as
+    // `scripts/shrink-trades-webhook.mjs`, and it keeps the webhook alive to be
+    // re-widened later.
     if (!accountAddresses.length) {
-        return { webhookID: "", watching: 0, created: false }; // nothing launched yet
+        if (!existing) return { webhookID: "", watching: 0, created: false };
+
+        // The LIST response omits accountAddresses — every webhook comes back
+        // looking like it watches 0, which is how the shrink script once
+        // believed the flood was already stopped. Fetch by ID for the real list.
+        const hook = await (
+            await fetch(`https://api.helius.xyz/v0/webhooks/${existing.webhookID}?api-key=${apiKey}`)
+        ).json();
+        const keep = (hook.accountAddresses ?? []).slice(0, 1);
+        if (!keep.length) return { webhookID: existing.webhookID, watching: 0, created: false };
+
+        const res = await fetch(`https://api.helius.xyz/v0/webhooks/${existing.webhookID}?api-key=${apiKey}`, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                webhookURL,
+                transactionTypes: ["ANY"],
+                accountAddresses: keep,
+                webhookType: "enhanced",
+                ...(process.env.HELIUS_WEBHOOK_SECRET ? { authHeader: process.env.HELIUS_WEBHOOK_SECRET } : {}),
+            }),
+        });
+        if (!res.ok) throw new Error(`Helius API error: ${JSON.stringify(await res.json())}`);
+        return { webhookID: existing.webhookID, watching: keep.length, created: false };
     }
 
     // ANY (not SWAP): Helius's enhanced parser doesn't classify Meteora DBC
@@ -101,11 +140,6 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
         webhookType: "enhanced",
         ...(process.env.HELIUS_WEBHOOK_SECRET ? { authHeader: process.env.HELIUS_WEBHOOK_SECRET } : {}),
     };
-
-    const list = await (await fetch(`https://api.helius.xyz/v0/webhooks?api-key=${apiKey}`)).json();
-    const existing = Array.isArray(list)
-        ? list.find((w: { webhookURL?: string }) => w.webhookURL === webhookURL)
-        : null;
 
     const res = existing
         ? await fetch(`https://api.helius.xyz/v0/webhooks/${existing.webhookID}?api-key=${apiKey}`, {
