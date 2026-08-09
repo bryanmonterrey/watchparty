@@ -12,15 +12,47 @@ export async function publishToRoom(room: string, event: ServerEvent): Promise<v
   const host = process.env.REALTIME_HOST ?? process.env.NEXT_PUBLIC_REALTIME_HOST;
   const secret = process.env.REALTIME_SECRET;
   // Realtime not configured (e.g. local dev without the worker) → no-op.
-  if (!host || !secret) return;
+  if (!host || !secret) {
+    // Was a silent return. Silence here is indistinguishable from a delivered
+    // event, which is how a dead realtime layer stays invisible.
+    console.warn("[realtime] not configured — event dropped", { room, host: !!host, secret: !!secret });
+    return;
+  }
 
-  const url = `https://${host}/parties/${PARTY}/${encodeURIComponent(room)}`;
+  // The room goes in the path RAW, exactly as PartySocket sends it on the
+  // client (`partysocket` builds `/parties/<party>/<room>` with no encoding).
+  //
+  // This used to be `encodeURIComponent(room)`, and every room name contains a
+  // colon (`community-channel:<id>`, `dm:<id>`, `inbox:<id>`), so the publisher
+  // addressed `community-channel%3A<id>` while every subscriber sat in
+  // `community-channel:<id>`. Those are DIFFERENT Durable Objects. The worker
+  // happily created the encoded one, accepted the event, and returned 200 with
+  // nobody connected — so every server→client realtime publish in the app
+  // silently went nowhere, with no error anywhere to show for it.
+  //
+  // Verified 2026-08-09 against the deployed worker with a real subscriber:
+  // encoded → HTTP 200, 0 frames delivered; raw → HTTP 200, frame delivered.
+  //
+  // Room names come from `rooms.*`, which interpolate ids into fixed prefixes.
+  // A `/` or `?` would still break the path, so guard rather than trust.
+  if (/[/?#]/.test(room)) {
+    console.error("[realtime] refusing to publish to unsafe room name", room);
+    return;
+  }
+
+  const url = `https://${host}/parties/${PARTY}/${room}`;
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", "x-realtime-secret": secret },
       body: JSON.stringify(event),
     });
+    // Status was previously ignored, which is why the bug above had no signal:
+    // a rejected publish (rotated secret, bad room) looked exactly like a
+    // delivered one. Still best-effort — log, never throw into the mutation.
+    if (!res.ok) {
+      console.error("[realtime] publish rejected", room, res.status, (await res.text()).slice(0, 200));
+    }
   } catch (err) {
     console.error("[realtime] publish failed", room, err);
   }

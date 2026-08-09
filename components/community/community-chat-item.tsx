@@ -175,7 +175,7 @@ function CommunityChatItemImpl({
     // System rows (joins, boosts): one quiet line, no avatar, no toolbar.
     if (system) {
         return (
-            <div className="flex items-center gap-2.5 px-4 py-1.5">
+            <div data-message-id={id} className="flex items-center gap-2.5 px-4 py-1.5">
                 <span aria-hidden className="ml-1 inline-block size-2 shrink-0 rounded-full bg-lantern/70" />
                 <p className="min-w-0 truncate text-[13px] font-medium text-zinc-500">
                     {content}
@@ -186,7 +186,7 @@ function CommunityChatItemImpl({
     }
 
     return (
-        <div className={cn(
+        <div data-message-id={id} className={cn(
             "relative group flex items-center px-4 py-2 transition w-full",
             !deleted && currentUsername && (content.includes(`@${currentUsername}`) || content.includes("@everyone"))
                 ? "bg-sunset/[0.07] shadow-[inset_2px_0_0_var(--color-sunset)] hover:bg-sunset/10"

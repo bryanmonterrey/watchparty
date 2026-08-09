@@ -108,12 +108,17 @@ const ctx = await auth.$context;
 let user = await ctx.internalAdapter.findUserByEmail(email).catch(() => null);
 user = user?.user ?? user;
 
+// Dedicated test identities only — `e2e-test@` and `e2e-test-N@`. Multi-user
+// flows (two people in one channel) need more than one fixture, but the guard
+// that matters is unchanged: an arbitrary email is still never auto-created.
+const FIXTURE_EMAIL = /^e2e-test(-\d+)?@watchparty\.local$/;
+
 if (!user) {
-    if (flag("email")) { console.error(`no user with email ${email}`); process.exit(1); }
-    // Only ever auto-create the dedicated test identity, never an arbitrary one.
+    if (!FIXTURE_EMAIL.test(email)) { console.error(`no user with email ${email}`); process.exit(1); }
+    const suffix = email.match(/^e2e-test-(\d+)@/)?.[1];
     user = await ctx.internalAdapter.createUser({
         email,
-        name: "e2e test",
+        name: suffix ? `e2e test ${suffix}` : "e2e test",
         emailVerified: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -128,11 +133,16 @@ if (!user) {
 // elementFromPoint resolved to the overlay. Give the fixture a handle so the
 // test exercises the app rather than onboarding.
 if (!user.username) {
+    // Derived from the fixture number — `username` is unique, so a hardcoded
+    // handle makes the SECOND fixture collide and silently keep no handle,
+    // which puts it straight back into the onboarding dialog this exists to
+    // avoid.
+    const handle = `e2etest${email.match(/^e2e-test-(\d+)@/)?.[1] ?? ""}`;
     await ctx.internalAdapter.updateUser(user.id, {
-        username: `e2etest`,
-        displayUsername: `e2etest`,
+        username: handle,
+        displayUsername: handle,
     }).catch(() => { /* column may not exist in every environment */ });
-    if (!has("json") && !has("raw")) console.log("set handle @e2etest (skips the onboarding dialog)");
+    if (!has("json") && !has("raw")) console.log(`set handle @${handle} (skips the onboarding dialog)`);
 }
 
 const session = await ctx.internalAdapter.createSession(user.id, undefined, false);

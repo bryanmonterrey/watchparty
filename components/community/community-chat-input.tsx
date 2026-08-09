@@ -197,6 +197,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                     }}
                     onBlur={() => onStopTyping?.()}
                     disabled={sendMessage.isPending}
+                    data-testid="community-composer"
                     className="flex-1 min-w-0 bg-transparent py-3.5 pr-2 text-md text-flexwhite outline-none placeholder:text-flexwhite/35"
                     placeholder={`Message #${channelName}`}
                 />
