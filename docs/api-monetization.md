@@ -5,7 +5,10 @@ an x402 payment challenge. External callers pay one of two ways (the hybrid,
 decided 2026-08-09):
 
 - **API key** (`x-api-key`) funded with credits — for regular integrators.
-  1 credit = $1 = 1 USDC; default price is `$0.001`/request (env-tunable).
+  1 credit = $1 = 1 USDC. **Per-surface pricing lives in `lib/api-pricing.ts`**
+  (X-developer-style: coin reads $0.001, content reads $0.005, social-graph
+  reads $0.01, RPC/charts $0.005, link previews $0.01; tRPC batches sum per
+  procedure). `API_402_PRICE_USD` only moves the default bucket.
 - **x402** (`X-PAYMENT` header) — anonymous per-request USDC payment via a
   facilitator. Off until a facilitator is configured; the 402 body still
   advertises the API-key path.

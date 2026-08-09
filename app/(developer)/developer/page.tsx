@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Developers" };
 // pill CTAs, dark code cards with the lantern accent.
 
 const FAQ = [
-    { q: "What does it cost?", a: "A flat $0.001 per billed request, paid from a USDC credit balance. 1 credit = $1 = 1,000 requests. No monthly fee, no minimum, no caps." },
+    { q: "What does it cost?", a: "Priced per surface, from $0.001 a call — cached coin reads are cheapest, upstream-metered calls like RPC and link previews cost more. Paid from a USDC credit balance; 1 credit = $1. No monthly fee, no minimum, no caps." },
     { q: "Is using the app billed?", a: "No. Browsing, the mobile app, embeds, and anything a signed-in user does is free — billing only applies to programmatic callers hitting the API from outside the app." },
     { q: "What is x402?", a: "An open standard built on HTTP 402. Call without a key and the response is a payment challenge; retry with a signed USDC payment in the X-PAYMENT header and the request settles on-chain — no account needed." },
     { q: "How do I get credits?", a: "Create a key in the console, then fund it. Self-serve funding in USDC is on the way; until then keys are funded on request." },
@@ -57,7 +57,7 @@ function CalculatorSection() {
                         Price out your usage
                     </h2>
                     <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">
-                        One flat price across the whole API. Drag the sliders — the total is the whole bill.
+                        Priced per surface, and the sheet below is the same one the gate bills from. Drag the sliders — the total is the whole bill.
                     </p>
                 </Reveal>
                 <Reveal delay={0.1} className="mt-14">
@@ -87,7 +87,7 @@ export default function DeveloperPage() {
                     title="Pay for what you use"
                     sub="Consumption-based from the first request — the meter is the whole pricing model."
                     items={[
-                        { icon: FlashIcon, title: "No monthly fees", body: "No tiers, no seats, no minimum spend. Your usage is your bill — $0.001 a request, and a rejected request costs nothing.", bg: "bg-white", accent: "text-black", span: "big" },
+                        { icon: FlashIcon, title: "No monthly fees", body: "No tiers, no seats, no minimum spend. Your usage is your bill — priced per surface from $0.001 a call, and a rejected request costs nothing.", bg: "bg-white", accent: "text-black", span: "big" },
                         { icon: CoinsDollarIcon, title: "Credits in USDC", body: "1 credit = $1, settled on Solana. Fund a key and start calling.", bg: "bg-pastel-yellow", accent: "text-black" },
                         { icon: Key01Icon, title: "One header", body: "Send x-api-key. No OAuth dance, no app review.", bg: "bg-soft-pink", accent: "text-black" },
                         { icon: Robot01Icon, title: "Built for agents", body: "x402-native: agents can pay per request on-chain with no account at all.", bg: "bg-black", accent: "text-lantern", span: "wide" },
@@ -138,7 +138,7 @@ export default function DeveloperPage() {
                     ctaLabel="Open the console"
                     ctaHref="/developer/console"
                     tiles={[
-                        { title: "$0.001", body: "Flat price per billed request, across the whole API." },
+                        { title: "From $0.001", body: "Per-surface pricing that matches what a call actually costs to serve." },
                         { title: "USDC-settled", body: "Credits are dollars on-chain, not points in a dashboard." },
                         { title: "x402-native", body: "The first social API where an agent can pay its own way." },
                     ]}

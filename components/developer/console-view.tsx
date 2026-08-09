@@ -196,7 +196,7 @@ export function ConsoleView() {
                     <div>
                         <h1 className="text-4xl font-extrabold tracking-tight text-black sm:text-5xl">Developer console</h1>
                         <p className="mt-3 max-w-md text-lg font-semibold leading-snug text-black/60">
-                            Keys, balances, and spend. $0.001 per billed request, from your credit balance.
+                            Keys, balances, and spend. Priced per surface from $0.001 a call, billed from your credit balance.
                         </p>
                     </div>
                     {!creating && (

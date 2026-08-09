@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { CodeCard, K, S, P } from "@/components/developer/dev-mocks";
+import { PRICE_SHEET } from "@/lib/api-pricing";
 
 export const metadata: Metadata = { title: "API docs" };
 
@@ -90,15 +91,31 @@ export default function DocsPage() {
 
                     <Section id="pricing" title="Pricing">
                         <p>
-                            A flat <strong>$0.001 per billed request</strong>, deducted from your
-                            key&apos;s credit balance. 1 credit = $1 = 1 USDC = 1,000 requests. No
-                            monthly fee, no minimum, no rate-limit tiers to buy. Balances and
-                            lifetime spend are always visible in the console.
+                            Priced per surface, deducted from your key&apos;s credit balance.
+                            1 credit = $1 = 1 USDC. No monthly fee, no minimum, no rate-limit
+                            tiers to buy. Balances and lifetime spend are always visible in the
+                            console.
                         </p>
+                        <div className="overflow-hidden rounded-2xl ring-1 ring-black/[0.08]">
+                            {PRICE_SHEET.map((row, i) => (
+                                <div
+                                    key={row.key}
+                                    className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-5 py-4 ${i > 0 ? "border-t border-black/[0.06]" : ""}`}
+                                >
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-black">{row.name}</p>
+                                        <p className="mt-0.5 text-[13px] font-semibold text-black/50">{row.desc}</p>
+                                    </div>
+                                    <p className="shrink-0 font-mono text-[14px] font-bold text-black">${row.usd.toFixed(3)}</p>
+                                </div>
+                            ))}
+                        </div>
                         <p>
-                            Responses to a request you didn&apos;t pay for (bad key, empty balance)
-                            are free and answer <Mono>402</Mono> — you are never charged for a
-                            rejection.
+                            The unit is a <strong>procedure, not an HTTP request</strong>: a tRPC
+                            batch URL (<Mono>/api/trpc/a,b,c</Mono>) is priced as the sum of its
+                            procedures — batching saves connections, not money. Responses to a
+                            request you didn&apos;t pay for (bad key, empty balance) are free and
+                            answer <Mono>402</Mono> — you are never charged for a rejection.
                         </p>
                     </Section>
 
@@ -127,7 +144,8 @@ export default function DocsPage() {
                             the signed payment (any x402 client library builds it from the
                             challenge). On success the response includes an{" "}
                             <Mono>X-PAYMENT-RESPONSE</Mono> header with the settlement receipt.
-                            <Mono>maxAmountRequired</Mono> is in USDC base units — 1000 = $0.001.
+                            <Mono>maxAmountRequired</Mono> is in USDC base units and reflects the
+                            price of the resource you called — 1000 = $0.001.
                         </p>
                     </Section>
 

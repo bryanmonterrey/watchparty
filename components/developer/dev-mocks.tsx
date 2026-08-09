@@ -125,7 +125,7 @@ export function HeroApiMock({ className }: { className?: string }) {
             <CurlCard className="relative z-[1] -rotate-1" />
             <div className="relative z-[2] -mt-2 flex justify-end pr-6">
                 <span className="rounded-full bg-lantern px-4 py-1.5 text-[13px] font-bold text-black">
-                    $0.001 per request
+                    from $0.001 per call
                 </span>
             </div>
             <FeedCard className="relative -mt-2 rotate-1" />

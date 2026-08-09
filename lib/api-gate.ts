@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import { NextResponse, type NextRequest } from "next/server";
+import { priceForPathMicro } from "@/lib/api-pricing";
 
 // The 402 gate for external API callers — the hybrid x402 model.
 //
@@ -48,11 +49,8 @@ export function gateMode(): GateMode {
     return m === "log" || m === "enforce" ? m : "off";
 }
 
-/** Price per request in micro-USD (== USDC base units). Min 1 micro. */
-export function priceMicro(): number {
-    const usd = parseFloat(process.env.API_402_PRICE_USD ?? "0.001");
-    return Math.max(1, Math.round((Number.isFinite(usd) ? usd : 0.001) * 1_000_000));
-}
+// Pricing lives in lib/api-pricing.ts (per-surface, X-developer-style; tRPC
+// batches sum per procedure). API_402_PRICE_USD only moves the default bucket.
 
 // Never gated: login flows (web + Expo), self-authed cron endpoints, every
 // webhook provider (Helius, Alchemy, IVS, community), IVS caption delivery,
@@ -133,13 +131,13 @@ export async function verifyApiKeySig(key: string): Promise<string | null> {
 
 // ── x402 ─────────────────────────────────────────────────────────────────────
 
-function paymentRequirements(resource: string) {
+function paymentRequirements(resource: string, priceMicro: number) {
     const payTo = process.env.X402_PAY_TO;
     if (!payTo) return null;
     return {
         scheme: "exact",
         network: process.env.X402_NETWORK ?? "solana",
-        maxAmountRequired: String(priceMicro()),
+        maxAmountRequired: String(priceMicro),
         resource,
         description: "watchparty API access (per request)",
         mimeType: "application/json",
@@ -150,8 +148,8 @@ function paymentRequirements(resource: string) {
     };
 }
 
-function respond402(resource: string, error: string): NextResponse {
-    const reqs = paymentRequirements(resource);
+function respond402(resource: string, error: string, priceMicro: number): NextResponse {
+    const reqs = paymentRequirements(resource, priceMicro);
     return NextResponse.json(
         {
             x402Version: 1,
@@ -171,9 +169,9 @@ function respond402(resource: string, error: string): NextResponse {
  * Returns the base64 X-PAYMENT-RESPONSE header value on success, else null.
  * Any facilitator error fails CLOSED — an unverifiable payment is no payment.
  */
-async function verifyAndSettle(paymentHeader: string, resource: string): Promise<string | null> {
+async function verifyAndSettle(paymentHeader: string, resource: string, priceMicro: number): Promise<string | null> {
     const fac = process.env.X402_FACILITATOR_URL?.replace(/\/$/, "");
-    const reqs = paymentRequirements(resource);
+    const reqs = paymentRequirements(resource, priceMicro);
     if (!fac || !reqs) return null;
     const body = JSON.stringify({ x402Version: 1, paymentHeader, paymentRequirements: reqs });
     const post = (path: string) =>
@@ -240,11 +238,12 @@ export async function apiGate(
         return null;
     }
 
+    const price = priceForPathMicro(pathname);
+
     if (apiKey) {
         const id = await verifyApiKeySig(apiKey);
-        if (!id) return { block: respond402(request.nextUrl.href, "Invalid API key") };
+        if (!id) return { block: respond402(request.nextUrl.href, "Invalid API key", price) };
         const r = gateRedis();
-        const price = priceMicro();
         try {
             const [revoked, bal] = await Promise.all([
                 r.get(revokedKey(id)),
@@ -252,11 +251,11 @@ export async function apiGate(
             ]);
             if (revoked) {
                 await r.incrby(balKey(id), price);
-                return { block: respond402(request.nextUrl.href, "API key revoked") };
+                return { block: respond402(request.nextUrl.href, "API key revoked", price) };
             }
             if (bal < 0) {
                 await r.incrby(balKey(id), price);
-                return { block: respond402(request.nextUrl.href, "Insufficient credits") };
+                return { block: respond402(request.nextUrl.href, "Insufficient credits", price) };
             }
             await r.incrby(spentKey(id), price);
             return null;
@@ -269,15 +268,16 @@ export async function apiGate(
     }
 
     if (payment) {
-        const settle = await verifyAndSettle(payment, request.nextUrl.href);
+        const settle = await verifyAndSettle(payment, request.nextUrl.href, price);
         if (settle) return { settleHeader: settle };
-        return { block: respond402(request.nextUrl.href, "Payment verification failed") };
+        return { block: respond402(request.nextUrl.href, "Payment verification failed", price) };
     }
 
     return {
         block: respond402(
             request.nextUrl.href,
             "Payment or API key required — this endpoint is free from the watchparty app, billed for external callers",
+            price,
         ),
     };
 }

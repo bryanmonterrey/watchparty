@@ -112,9 +112,11 @@ all present → `isMediaEnabled()` returns true in prod → `getMediaToken` mint
 **Remaining (manual, can't automate): two-browser/mic test** — open a LIVE Space in two
 browsers, join audio, confirm SFU connect + mic publish + speaking rings. Ping to debug.
 
-(Note for future deploys: `DOTENV_PRODUCTION` secret is the source of truth, built from
-the merge of .env + .env.local + .env.production.local. Do NOT `gh secret set
-DOTENV_PRODUCTION < .env.production` — that file lacks ALERT_WEBHOOK_URL.)
+(Note for future deploys: `DOTENV_PRODUCTION` secret is the source of truth. It
+historically held keys .env.production lacked (ALERT_WEBHOOK_URL,
+CAPTIONS_WEBHOOK_SECRET, CLOUDFLARE_API_TOKEN); `scripts/dev/enable-api-402.mjs`
+copies those in, and once it has run, `gh secret set DOTENV_PRODUCTION
+< .env.production` is the correct ship command again.)
 
 ## 🐞 Spaces — known issues (investigate)
 - **`__name is not defined` on the spaces route (prod only).** Console throws
