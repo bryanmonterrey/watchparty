@@ -1194,43 +1194,71 @@ Retry amplification — the documented 2026-08-08 trigger — is **already
 mitigated** (`components/react-query-provider.tsx` never retries 4xx and caps
 attempts). That is not this.
 
-## Root cause: the app asks for far too much
+## ⚠️ Correction: it is NOT the app's polling
 
-**40 polling queries** (`refetchInterval`), roughly: 1 at 5s, 7 at 15s, 12 at
-30s, 16 at 60s. That's **~80 requests per minute per open tab**, before any
-navigation or user action. A handful of tabs is thousands of requests a minute,
-which is precisely what the numbers above show.
+An earlier version of this section claimed **~80 requests/min per open tab**,
+reasoned by summing the 40 `refetchInterval` values. **That was wrong, and
+measurement killed it.**
 
-**And the reason it polls that hard is that realtime was dead** — see Phase 10:
-`publishToRoom` percent-encoded the room name, so no server→client event ever
-reached a subscriber. Polling was the app's only working freshness mechanism.
-That fix landed today (`9fb55b13`), which makes the reduction possible.
+Measured in a real signed-in browser, steady state, 120s each:
+
+| Page | procedure calls/min |
+|---|---|
+| `/home` | **4** |
+| `/trade` | **8** |
+
+The 40 pollers are spread across components that are mostly **not mounted at
+the same time**, so summing their intervals produces a number that has nothing
+to do with reality. To reach the observed 1,400–5,700 req/min you would need
+roughly 700–1,400 concurrent tabs.
+
+Keep the lesson, not the number: **an estimate assembled from config is not a
+measurement.** It was plausible, it pointed at a satisfying culprit, and it was
+off by an order of magnitude.
+
+Two real inefficiencies did surface and are still worth fixing, just not as the
+outage's cause:
+
+- `components/ui/online-indicator.tsx` calls `user.getOnlineStatus` **per
+  user**, so a list of avatars mounts one polling query per row. tRPC's batch
+  link merges the simultaneous ones, which is why it doesn't show up in the
+  measurements above — but it is still N queries where 1 would do.
+- `components/profile/profile-avatar.tsx` (and its `components/video/` twin)
+  poll `stream.getByUserId` every 30s **per user**, for a live badge.
+- `components/community/space-room.tsx` polls every 5s as an explicit "safety
+  net" for missed realtime events. Now that realtime actually delivers
+  (Phase 10), that net can be widened a lot.
 
 ## Actions
 
-1. **Stay on `watchparty`.** It handles the load. Do not move domains back to
-   the container until the request rate is down — the container will just
-   saturate again.
-2. **Cut polling now that realtime works.** Every poller whose data has a
-   corresponding realtime event should drop to `refetchInterval: false` and
-   refresh on the event instead. Biggest wins first: the 5s and 15s pollers.
-3. **Fix the latency multiplier.** `trending.list` at 3.8s is a concurrency
-   amplifier on every poll. Phase 9c (one round trip per view) applies here.
-4. **Grant the API token `Analytics:Read` on the zone.** Not having it meant no
-   per-path or per-user-agent data during a live outage — the single biggest
-   gap in diagnosing this. Fold it into the scheduled token rotation.
-5. **Raise `INSTANCES` only as a stopgap.** 3 instances turned a hard ceiling
-   into a soft one on 2026-08-08; it did not stop this. Rate is the fix.
+1. **Stay on `watchparty`.** It handles the load cleanly. Do not move domains
+   back to the container until the traffic source is understood — the container
+   will just saturate again.
+2. **Grant the API token `Analytics:Read` on the zone — do this first.** With
+   per-path and per-user-agent data, the question below is a five-minute query.
+   Without it, it is unanswerable. This is now the top item, not a nice-to-have.
+   Fold it into the scheduled token rotation.
+3. **Fix the latency multiplier.** `trending.list` measured 3.8s. Since
+   concurrency = rate × latency, every slow endpoint is a saturation multiplier
+   regardless of where the traffic comes from. Phase 9c applies directly.
+4. **Fix the per-row polling** listed above (`online-indicator`,
+   `profile-avatar`, `space-room`). Not the outage's cause, but real waste, and
+   the realtime fix makes it cheap to do.
+5. **Raise `INSTANCES` only as a stopgap.** 3 turned a hard ceiling into a soft
+   one on 2026-08-08 and did not prevent this.
 
-## ⚠️ Unresolved
+## ⚠️ Unresolved — the actual open question
 
-What took traffic from ~33/min (03:00) to sustained thousands/min (04:00
-onward) is **not established**. It coincides with a deploy of mine at ~03:59,
-and I could not find a mechanism — the pagination change preserves termination
-in every branch I traced, and the memo change strictly reduces work. It is
-equally consistent with real users arriving. **Resolving this needs the
-per-path/user-agent data the token can't currently read** (action 4). Do not
-treat "probably users" as settled.
+**Where does 1,400–5,700 req/min come from?** Per-tab steady state measures 4–8
+calls/min, so the app's own polling does not explain it by three orders of
+magnitude. Candidates, none confirmed: genuinely high concurrent usage; crawler
+or bot traffic (Bot Fight Mode is deliberately **off** — see CLAUDE.md — and
+`ai_bots_protection` only covers AI crawlers); or something retrying off-app.
+
+It also coincides with a deploy of mine at ~03:59, when traffic went from
+~33/min to thousands. I traced the pagination change through every branch and
+termination is preserved; the memo change strictly reduces work. **No mechanism
+found — which is not the same as cleared.** Action 2 is what settles it.
 
 ---
 
