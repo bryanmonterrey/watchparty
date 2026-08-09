@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useComposerDraft } from "@/hooks/use-composer-drafts";
+import { useComposerKeys } from "@/hooks/use-composer-keys";
 import { trpc } from "@/lib/trpc/client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon, Cancel01Icon, StickerIcon } from "@hugeicons/core-free-icons";
@@ -23,10 +25,15 @@ type Props = {
     locked?: boolean;
 };
 
+/** Grows with the text, then scrolls. ~6 lines before it stops growing. */
+const MAX_COMPOSER_HEIGHT = 160;
+
 export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyping, mentionables = [], stickers = [], locked = false }: Props) {
-    const [content, setContent] = useState("");
+    // Draft is the source of truth for the text, so switching channels
+    // mid-sentence keeps what you were writing.
+    const { value: content, setValue: setContent, clear: clearDraft } = useComposerDraft(channelId);
     const [stickersOpen, setStickersOpen] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
     // @autocomplete: the token being typed after the last "@" (null = closed)
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const mentionMatches = mentionQuery !== null
@@ -37,7 +44,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
         : [];
 
     const insertMention = (username: string) => {
-        setContent((c) => c.replace(/@[a-zA-Z0-9_-]*$/, `@${username} `));
+        setContent(content.replace(/@[a-zA-Z0-9_-]*$/, `@${username} `));
         setMentionQuery(null);
         inputRef.current?.focus();
     };
@@ -52,7 +59,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
 
     const sendMessage = trpc.community.sendMessage.useMutation({
         onSuccess: () => {
-            setContent("");
+            clearDraft();
             setReplyTo(null);
             onStopTyping?.();
             lastTypingRef.current = 0;
@@ -78,11 +85,38 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
         }
     };
 
+    const submit = () => {
+        if (!content.trim() || sendMessage.isPending) return false;
+        sendMessage.mutate({ channelId, content, replyToId: replyTo?.id });
+        return true;
+    };
+
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!content.trim()) return;
-        sendMessage.mutate({ channelId, content, replyToId: replyTo?.id });
+        submit();
     };
+
+    const onKeyDown = useComposerKeys({
+        onSubmit: submit,
+        getValue: () => content,
+        isAutocompleteOpen: () => mentionQuery !== null && mentionMatches.length > 0,
+        onAcceptAutocomplete: () => insertMention(mentionMatches[0].username),
+        onCloseAutocomplete: () => setMentionQuery(null),
+        onCancelReply: () => {
+            if (!replyTo) return false;
+            setReplyTo(null);
+            return true;
+        },
+    });
+
+    // Autosize: reset to `auto` first so the box can SHRINK — measuring
+    // scrollHeight against the current height only ever grows it.
+    useEffect(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.style.height = "auto";
+        el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
+    }, [content]);
 
     if (locked) {
         return (
@@ -116,7 +150,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                     </button>
                 </div>
             )}
-            <div className="relative flex items-center bg-zinc-800/50 rounded-2xl border border-flexwhite/10 focus-within:ring-1 focus-within:ring-white/20 transition-all">
+            <div className="relative flex items-end bg-zinc-800/50 rounded-2xl border border-flexwhite/10 focus-within:ring-1 focus-within:ring-white/20 transition-all">
                 {mentionQuery !== null && mentionMatches.length > 0 && (
                     <div className="absolute bottom-full left-0 z-20 mb-2 w-64 overflow-hidden rounded-2xl bg-[#101011] p-1.5 ring-1 ring-white/10">
                         {mentionMatches.map((m, i) => (
@@ -183,22 +217,19 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                     </>
                 )}
 
-                <input
+                {/* textarea, not input: an <input> cannot hold a newline at
+                    all, so Shift+Enter had nothing to insert and multi-line
+                    messages were impossible to compose. */}
+                <textarea
                     ref={inputRef}
+                    rows={1}
                     value={content}
                     onChange={(e) => onChange(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (mentionQuery !== null && mentionMatches.length > 0 && (e.key === "Tab" || e.key === "Enter")) {
-                            e.preventDefault();
-                            insertMention(mentionMatches[0].username);
-                        } else if (e.key === "Escape") {
-                            setMentionQuery(null);
-                        }
-                    }}
+                    onKeyDown={onKeyDown}
                     onBlur={() => onStopTyping?.()}
                     disabled={sendMessage.isPending}
                     data-testid="community-composer"
-                    className="flex-1 min-w-0 bg-transparent py-3.5 pr-2 text-md text-flexwhite outline-none placeholder:text-flexwhite/35"
+                    className="flex-1 min-w-0 resize-none bg-transparent py-3.5 pr-2 text-md leading-6 text-flexwhite outline-none hidden-scrollbar placeholder:text-flexwhite/35"
                     placeholder={`Message #${channelName}`}
                 />
 
