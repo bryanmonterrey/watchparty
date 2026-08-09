@@ -129,6 +129,12 @@ export default function ChannelPage() {
                 <CommunityRulesGate serverId={serverId} rules={serverData.server.rules} />
             ) : (
                 <CommunityChatInput
+                    author={{
+                        userId: session.user.id,
+                        userName: serverData.currentMember.nickname ?? session.user.name ?? "You",
+                        userImage: session.user.avatar_url ?? null,
+                        memberRole: serverData.currentMember.role,
+                    }}
                     channelId={channelId}
                     channelName={channel.name}
                     locked={!!channel.readOnly && serverData.currentMember.role === "GUEST"}

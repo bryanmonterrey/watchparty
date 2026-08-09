@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { CommunityChatItem } from "./community-chat-item";
 import { COMMUNITY_PAGE_LIMIT } from "@/hooks/use-community-reaction";
+import { renderKeyFor } from "@/lib/community/local-keys";
 import { CommunityChatWelcome } from "./community-chat-welcome";
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm";
@@ -144,7 +145,7 @@ export function CommunityChatMessages({
                             const older = group.items[idx + 1] ?? data.pages[i + 1]?.items?.[0];
                             const isNewDay = !older || new Date(older.createdAt).toDateString() !== new Date(message.createdAt).toDateString();
                             return (
-                        <Fragment key={message.id}>
+                        <Fragment key={renderKeyFor(message)}>
                             <CommunityChatItem
                                 id={message.id}
                                 channelId={channelId}

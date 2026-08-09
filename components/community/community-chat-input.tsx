@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon, Cancel01Icon, StickerIcon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
+import { useCommunitySend } from "@/hooks/use-community-send";
 import { ArrowUpIcon, CreateIcon, LockIcon } from "../icons";
 
 type Mentionable = { username: string; name: string | null };
@@ -23,12 +24,20 @@ type Props = {
     stickers?: Sticker[];
     /** read-only channel + guest role → show the locked bar instead of the input */
     locked?: boolean;
+    /** Identity the optimistic row renders with, before the server confirms. */
+    author?: {
+        userId: string;
+        userName: string;
+        userImage: string | null;
+        memberRole: string;
+        roleColor?: string | null;
+    } | null;
 };
 
 /** Grows with the text, then scrolls. ~6 lines before it stops growing. */
 const MAX_COMPOSER_HEIGHT = 160;
 
-export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyping, mentionables = [], stickers = [], locked = false }: Props) {
+export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyping, mentionables = [], stickers = [], locked = false, author = null }: Props) {
     // Draft is the source of truth for the text, so switching channels
     // mid-sentence keeps what you were writing.
     const { value: content, setValue: setContent, clear: clearDraft } = useComposerDraft(channelId);
@@ -57,15 +66,17 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
         setReplyTo(null);
     }, [channelId, setReplyTo]);
 
-    const sendMessage = trpc.community.sendMessage.useMutation({
-        onSuccess: () => {
-            clearDraft();
-            setReplyTo(null);
-            onStopTyping?.();
-            lastTypingRef.current = 0;
-            utils.community.getMessages.invalidate({ channelId });
-        },
-    });
+    // Optimistic + stable-keyed. `author` is what the optimistic row renders
+    // as; without it we skip the optimistic insert rather than paint a message
+    // with the wrong name on it.
+    const sendMessage = useCommunitySend(channelId, author ?? null);
+    useEffect(() => {
+        if (!sendMessage.isSuccess) return;
+        clearDraft();
+        setReplyTo(null);
+        onStopTyping?.();
+        lastTypingRef.current = 0;
+    }, [sendMessage.isSuccess, clearDraft, setReplyTo, onStopTyping]);
 
     const onChange = (value: string) => {
         setContent(value);
