@@ -753,6 +753,59 @@ all cheap, and several are exactly where ⌘F matters.
    inline image attachments — those need their lazy thumbnail to load before the
    full-resolution request.
 
+### Step 1 status: ✅ community chat memoized (2026-08-08, `aaf1097a`)
+
+`CommunityChatItem` is now `memo`'d with `chatItemPropsEqual`. Three separate
+things had to be true before the memo could ever bail — worth knowing because
+the same three recur on every other list:
+
+1. The row wasn't memoized at all.
+2. `emojiMap` was built inline in the channel page's render body
+   (`Object.fromEntries` over `expressions`) — a new object on **every**
+   keystroke, typing indicator and presence tick, handed to every row.
+   `useMemo`'d, and hoisted above the early returns because hooks can't run
+   conditionally.
+3. `reactions` and `replyTo` get fresh identities by construction (per-page
+   aggregation; an inline object literal). Value-compared now.
+
+Also: `useQuery(...) = []` allocates a new array each render while data is
+undefined. Module-level constant.
+
+The comparator is key-driven rather than an explicit prop list, so a prop added
+later is compared by default. An explicit list silently stops comparing new
+props — a memo bug that presents as a rendering bug.
+
+### Step 3 design: windowing community chat (NOT yet done)
+
+⚠️ **Needs manual verification in a real channel.** There is no chat E2E test,
+and this touches scroll position, live message arrival, and pagination at once
+— the three things a unit test can't see. Do it as its own pass, not tacked
+onto other work.
+
+The house pattern (from `browse-feed.tsx`) is: keep the **full** ordered dataset
+in a ref, hand `BidirectionalList` a window over it, and only hit the network
+when `onLoadMore` runs off the end of what's loaded. Chat is the easy case —
+it only pages upward.
+
+- `renderItem` receives **`(item)` only, no index** — so the day-divider
+  decision (which depends on the previous message) must be **precomputed onto
+  each item** when flattening pages, not derived at render. Same for the
+  grouping/continuation flag from step 2.
+- Flatten to chronological order (oldest → newest) and drop the current
+  `flex-col-reverse` + reversed-pages arrangement.
+- `hasPrevious` = `hasNextPage` (scrolling **up** loads **older** — the naming
+  inverts here and is easy to get backwards). `hasNext` = `false`: new messages
+  arrive at the bottom via the subscription's invalidate, not via paging.
+- `onLoadMore("up", refItem)` slices older items out of the full ref, and calls
+  `fetchNextPage()` only when the ref is exhausted.
+- Keep `viewCount` comfortably above a session's normal scrollback so the
+  window doesn't trim messages a user just read and re-fetch them as they
+  scroll back down — that reads as "new messages appeared above". `browse-feed`
+  uses 120 for the same reason.
+- The welcome block, "Load previous messages" button and `useCommunityScroll`
+  all need re-homing: the library owns the scroller, so anything currently
+  positioned by `mt-auto`/`flex-1` inside it has to move out.
+
 **Done when:** a 5,000-message community channel scrolls at 60fps; scrolling up
 through media doesn't jump; a new message arriving while scrolled up doesn't
 move the viewport; React DevTools shows only the changed row re-rendering when
