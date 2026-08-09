@@ -267,6 +267,13 @@ export function RailScrollbar({
             scroller.addEventListener("scroll", onScroll, { passive: true });
             scroller.addEventListener("pointerenter", onEnter);
             scroller.addEventListener("pointerleave", onLeave);
+            // The track is an absolutely-positioned SIBLING of the scroller,
+            // not a descendant, so the scroller's pointerenter never fires for
+            // the bar itself. Without these, moving the cursor toward the thumb
+            // to grab it would read as leaving the rail and collapse it back to
+            // 48px under the pointer — the exact opposite of an affordance.
+            track.addEventListener("pointerenter", onEnter);
+            track.addEventListener("pointerleave", onLeave);
             thumb.addEventListener("pointerdown", onPointerDown);
             thumb.addEventListener("pointermove", onPointerMove);
             thumb.addEventListener("pointerup", onPointerUp);
@@ -287,6 +294,8 @@ export function RailScrollbar({
             scroller?.removeEventListener("scroll", onScroll);
             scroller?.removeEventListener("pointerenter", onEnter);
             scroller?.removeEventListener("pointerleave", onLeave);
+            track.removeEventListener("pointerenter", onEnter);
+            track.removeEventListener("pointerleave", onLeave);
             thumb.removeEventListener("pointerdown", onPointerDown);
             thumb.removeEventListener("pointermove", onPointerMove);
             thumb.removeEventListener("pointerup", onPointerUp);
