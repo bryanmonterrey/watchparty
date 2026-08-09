@@ -782,10 +782,151 @@ a baseline is committed.
 
 ---
 
+---
+
+# Phase 9 — Data layer: pagination correctness & round trips
+
+**Goal:** the non-UI half. Nothing here is design; it's correctness and
+round-trip count.
+
+**Why:** buzz's channel-window spec (`docs/bridge-channel-window.md`, and
+`docs/nips/NIP-CW.md`) is unusually strict about pagination, and reading it
+against our routers surfaced a live bug. Their two governing rules:
+
+> The next-page cursor is the `(created_at, id)` of the **last retained row**.
+> `has_more` is a **server fact** … Clients must not infer exhaustion from row
+> count.
+
+> `top_level` with `until` but no `before_id` is rejected (`400`): the window
+> path has **no timestamp-only fallback, ever.**
+
+## 9a. ⚠️ Cursor off-by-one — one row lost per page boundary (LIVE BUG)
+
+Seven paginated procedures probe with `limit + 1`, `pop()` the extra row, and
+then use **the popped row's** timestamp as `nextCursor`. The next page filters
+`lt(createdAt, cursor)` — strictly older — so **the popped row is never
+delivered to the client.**
+
+```ts
+// ✗ current — rows[limit] is popped, becomes the cursor, then excluded by `lt`
+if (rows.length > input.limit) {
+  const next = rows.pop();
+  nextCursor = next?.createdAt.toISOString();
+}
+
+// ✓ post.ts already does it right — cursor is the last RETURNED row
+const hasMore  = rows.length > input.limit;
+const rawItems = hasMore ? rows.slice(0, input.limit) : rows;
+nextCursor = hasMore ? rawItems[rawItems.length - 1].createdAt.toISOString() : undefined;
+```
+
+| File | Line | Status |
+|---|---|---|
+| `server/routers/comment.ts` | ~90 | ✗ drops a reply per page |
+| `server/routers/content.ts` | ~1277 | ✗ |
+| `server/routers/content.ts` | ~1440 | ✗ |
+| `server/routers/community.ts` | ~2460 | ✗ drops a chat message per page |
+| `server/routers/notification.ts` | ~42 | ✗ drops a notification per page |
+| `server/routers/feed.ts` | ~161 | ✗ |
+| `server/routers/feed.ts` | ~187 | ✗ |
+| `server/routers/post.ts` | 287–288, 358–360 | ✓ correct — copy this shape |
+| `server/routers/post.ts` (bookmarks) | 419–420, 452 | ✓ correct |
+| `server/routers/message.ts` | ~100 | ⚠️ id cursor — audit separately |
+
+At `limit: 30` that's one item silently missing every 30 on every infinite
+scroll in the app. It reads as "the feed skipped something", which is
+unfalsifiable from the UI and would never show up in tsc, tests, or a deploy.
+
+**Fix:** normalize all of them onto `post.ts`'s shape. Add a `tests/` unit test
+over a `paginate()` helper — this is pure logic, so it fits the existing
+`bun test ./tests` gate perfectly.
+
+## 9b. Composite keyset cursors
+
+Every cursor in the app is **timestamp-only** (`lt(createdAt, cursor)`), which
+buzz forbids outright. On a timestamp tie at a page boundary, rows are skipped.
+
+Our `createdAt` columns are `.defaultNow()` → Postgres `now()`, which is
+**transaction-scoped**: every row written in one transaction gets the *identical*
+timestamp. So ties are guaranteed for any multi-row insert (`assistantMessages`
+writes two rows in one statement; `callout.ts` and `trade-fanout.ts` insert
+notifications in 500-row chunks) and merely unlikely elsewhere.
+
+⚠️ Honest severity: I could not confirm a *currently firing* instance — the
+fan-outs write one row per recipient, so a single user rarely holds two rows
+from one transaction. Treat 9b as hardening, not an outage. 9a is the live one.
+
+**Fix:** cursor becomes `(createdAt, id)`, ordering becomes
+`ORDER BY created_at DESC, id ASC`, predicate becomes:
+
+```ts
+or(lt(t.createdAt, ts), and(eq(t.createdAt, ts), gt(t.id, id)))
+```
+
+Encode the cursor as `${iso}|${id}`. ⚠️ Remember the project's `sql` template
+rule: pass Dates through `lt()`/`gt()`/`eq()`, **never** interpolate a JS `Date`
+into a `` sql`` `` template — it 500s on Workers and works fine locally.
+
+## 9c. One round trip per view (the "channel window")
+
+Buzz serves a channel page as **one** request returning rows + every reaction,
+edit and deletion targeting those rows + thread summaries + a bounds event
+carrying `next_cursor` and `has_more`. No client-side `#e` fan-out.
+
+`community.getMessages` is already close — it batches reactions and role colors
+rather than N+1'ing them — but it's three sequential DB round trips (messages →
+reactions → role colors) on a Hyperdrive connection. Fold the reactions and role
+colors into the messages query as lateral joins / aggregated subqueries so a
+channel open is one trip.
+
+Audit the other timeline-shaped procedures for the same pattern.
+
+## 9d. Materialized counters
+
+Buzz materializes `reply_count` and `descendant_count` onto the thread root at
+ingest, so the top-level view never counts at read time; their AGENTS.md makes
+it a rule that any code inserting a reply must update them.
+
+Where we count replies/reactions per row at read time, do the same: a counter
+column updated in the same transaction as the insert. Cheap write, removes an
+aggregate from every read.
+
+## 9e. Bounded caches
+
+Buzz caps every module-level cache (`shared/lib/trimMapToSize.ts`) and recovers
+from `QuotaExceededError` on localStorage writes by evicting pure-cache keys and
+retrying once (`shared/lib/localStorageQuota.ts`) — because draft and read-state
+writes happen inside click handlers, where a throw becomes a broken UI.
+
+Ours that grow without bound: `lib/perps/flash.ts` `referralExists`,
+`lib/chains/solana/subscriptions/collector.ts` `signerCache`,
+`components/wallet/use-header-wallet.ts` `assetsChannels` (holds Realtime
+channels **and** listener sets — the leak-prone one), `lib/feed-autoplay.ts`
+`entries` (a `Map` keyed by object; a `WeakMap` would collect).
+
+Port `trimMapToSize`, cap each, and add the quota-recovery wrapper before
+Phase 3 starts writing drafts to localStorage.
+
+## 9f. Idle-time mounting
+
+`shared/hooks/useDeferredStartup.ts` — `useDeferredLoad()` gates work behind
+`requestIdleCallback` with a 2s timeout fallback, with `immediate: true` when
+the content is already in view. Good fit for below-the-fold rails and panels
+that currently mount eagerly.
+
+**Done when:** 9a is fixed everywhere with a unit test; cursors are composite;
+a channel open is one DB round trip; module caches are bounded.
+
+**Commit:** 9a on its own, immediately — it's a user-visible bug fix and should
+not wait behind the rest.
+
+---
+
 # Order of work
 
 ```
-Phase 0  Motion foundation            ░ small    no deps      ← start here
+Phase 9a Cursor off-by-one            ░ small    no deps      ← LIVE BUG, do first
+Phase 0  Motion foundation            ░ small    no deps      ✅ done 2026-08-08
 Phase 1  Reduced motion everywhere    ███ large  no deps      needs 0
 Phase 2  Shared style constants       ██ medium  no deps      needs 0
 Phase 3  Composer UX rules            ██ medium  no deps
