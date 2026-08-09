@@ -15,6 +15,7 @@ const RESERVED_SLUGS = new Set([
   "login", "signup", "home", "feed", "search", "settings", "messages",
   "premium", "quests", "trade", "shorts", "video", "communities", "coin",
   "category", "status", "notifications", "wallet", "explore", "about",
+  "developer",
 ]);
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
@@ -88,6 +89,22 @@ export async function middleware(request: NextRequest) {
     for (const c of cleanup) res.headers.append("Set-Cookie", c);
     return res;
   };
+
+  // developer.watchparty.xyz is the developer portal, served by THIS worker:
+  // everything except /api rewrites onto the /developer tree (same pages that
+  // answer at watchparty.xyz/developer — no separate repo or deploy). /api
+  // stays un-rewritten so keys and docs curl examples work identically on
+  // either host. Turning the subdomain on is DNS + attach-domains only.
+  const host = request.headers.get("host")?.toLowerCase() ?? "";
+  if (
+    host === "developer.watchparty.xyz" &&
+    !pathname.startsWith("/api") &&
+    !pathname.startsWith("/developer")
+  ) {
+    return withCleanup(
+      NextResponse.rewrite(new URL(`/developer${pathname === "/" ? "" : pathname}`, request.url)),
+    );
+  }
 
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the
   // app's own traffic — external (session-less, off-site) callers go through

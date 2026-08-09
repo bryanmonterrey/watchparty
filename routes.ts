@@ -12,11 +12,13 @@ export const publicRoutes: string[] = [
   "/community",
   "/safety",
   "/about",
+  "/developer",
 ];
 
 // Public PREFIXES (dynamic public pages, e.g. the embeddable server widget
-// and the post-embed iframes).
-export const publicPrefixes: string[] = ["/widget/", "/embed/"];
+// and the post-embed iframes). /developer/ covers the portal's docs; the
+// console under it gates itself server-side (session check in its page).
+export const publicPrefixes: string[] = ["/widget/", "/embed/", "/developer/"];
 
 // Auth routes — a signed-in user hitting these is sent to the app instead.
 export const authRoutes: string[] = ["/login"];
