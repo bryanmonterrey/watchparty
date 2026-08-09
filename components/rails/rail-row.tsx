@@ -103,7 +103,8 @@ export function RailRow({
     // the real button or link. The pseudo-element carries no content and isn't
     // focusable, so keyboard and screen-reader behaviour are untouched.
     //
-    // The extras line is lifted above it — see the z-10 there.
+    // The extras line stays UNDER it; only its controls are lifted (z-10
+    // there), so the empty space beside them still selects the row.
     const hasExtras = !!menu || views != null;
     const target = cn(RAIL_ROW, "cursor-pointer p-0", "after:absolute after:inset-0 after:content-['']");
 
@@ -166,18 +167,29 @@ export function RailRow({
                     ::after — without it the overlay would swallow the menu's
                     clicks and opening a row's menu would just select the row. */}
                 {hasExtras && (
-                    <div
-                        // The menu lives here, so a click that lands on it must
-                        // not also select the row on its way up to the wrapper.
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn("relative z-10 flex items-center justify-end gap-1.5", INFO_INDENT)}
-                    >
-                        <ViewsStat
-                            views={views}
-                            className="text-sm font-medium text-flexwhite/50"
-                            iconClassName="size-5"
-                        />
-                        {menu}
+                    // Layout only. This line used to carry `z-10` and
+                    // `stopPropagation` ITSELF, and because it is a full-width
+                    // block that made the whole bottom strip of every row dead:
+                    // too high for the target's stretched ::after to catch, and
+                    // swallowed before it could bubble to the wrapper. The
+                    // controls sit at the right end, so everything left of them
+                    // — most of the row's width — stopped selecting anything.
+                    <div className={cn("flex items-center justify-end gap-1.5", INFO_INDENT)}>
+                        {/* Only the controls opt out. w-fit so the exemption is
+                            exactly as wide as the things being exempted, and
+                            z-10 lifts just those above the ::after so the menu
+                            stays clickable. */}
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative z-10 flex w-fit items-center gap-1.5"
+                        >
+                            <ViewsStat
+                                views={views}
+                                className="text-sm font-medium text-flexwhite/50"
+                                iconClassName="size-5"
+                            />
+                            {menu}
+                        </div>
                     </div>
                 )}
 
