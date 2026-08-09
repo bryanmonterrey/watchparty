@@ -4,7 +4,10 @@ import { getServerSession } from "@/lib/auth/get-session";
 import { ReactQueryProvider } from "@/components/react-query-provider";
 import { ConsoleView } from "@/components/developer/console-view";
 
-export const metadata: Metadata = { title: "Developer console" };
+export const metadata: Metadata = {
+    title: "Developer console",
+    description: "Manage watchparty API keys — create, fund, and revoke, with live balances and spend.",
+};
 
 // The console is the one signed-in surface in the (developer) group, so it
 // gates itself (the group layout deliberately doesn't redirect either way).

@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 
-// Code-card visuals for the developer pages. These are SELF-COLOURED dark
-// surfaces on a hardcoded-light marketing shell, so every colour here is fixed
-// (white/lantern/etc.), never a theme token — the CLAUDE.md black-on-black
-// lesson. One accent per surface: lantern plays the terminal green.
+// Code-card visuals for the developer pages. The whole portal is a
+// SELF-COLOURED dark shell, so every colour here is fixed (white/lantern/etc.),
+// never a theme token — the CLAUDE.md black-on-black lesson. One accent per
+// surface: lantern plays the terminal green.
 
 /** Dark terminal/code panel with a chrome row. */
 export function CodeCard({

@@ -37,33 +37,33 @@ export function PricingCalculator() {
     const totalUsd = PRICE_SHEET.reduce((a, r) => a + (usage[r.key] ?? 0) * r.usd, 0);
 
     return (
-        // The slider primitive is built on theme tokens, and this page is a
-        // hardcoded-light shell — pin the tokens it reads so a dark app theme
-        // can't paint a white thumb on the white card.
+        // The slider primitive is built on theme tokens, and this portal is a
+        // hardcoded-DARK shell — pin the tokens it reads so a light app theme
+        // can't paint a black thumb on the black card.
         <div
-            className="overflow-hidden rounded-[32px] bg-white ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
-            style={{ "--color-muted": "rgba(0,0,0,0.06)", "--color-foreground": "#000" } as React.CSSProperties}
+            className="overflow-hidden rounded-[32px] bg-white/[0.04] ring-1 ring-white/10"
+            style={{ "--color-muted": "rgba(255,255,255,0.1)", "--color-foreground": "#fff" } as React.CSSProperties}
         >
-            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(200px,320px)] gap-8 border-b border-black/[0.06] px-8 py-4 sm:grid">
-                <p className="text-[13px] font-bold uppercase tracking-wide text-black/40">Resource · unit cost</p>
-                <p className="text-[13px] font-bold uppercase tracking-wide text-black/40">Estimated usage per month</p>
+            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(200px,320px)] gap-8 border-b border-white/[0.06] px-8 py-4 sm:grid">
+                <p className="text-[13px] font-bold tracking-wide text-white/40">Resource · unit cost</p>
+                <p className="text-[13px] font-bold tracking-wide text-white/40">Estimated usage per month</p>
             </div>
-            <div className="divide-y divide-black/[0.06]">
+            <div className="divide-y divide-white/[0.06]">
                 {PRICE_SHEET.map((row) => {
                     const req = usage[row.key] ?? 0;
                     return (
                         <div key={row.key} className="grid gap-4 p-6 sm:grid-cols-[minmax(0,1fr)_minmax(200px,320px)] sm:items-center sm:gap-8 sm:p-8">
                             <div>
                                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                                    <p className="text-lg font-extrabold tracking-tight text-black">{row.name}</p>
-                                    <p className="font-mono text-[13px] font-semibold text-black/45">{unit(row.usd)} / each</p>
+                                    <p className="text-lg font-extrabold tracking-tight text-white">{row.name}</p>
+                                    <p className="font-mono text-[13px] font-semibold text-lantern/80">{unit(row.usd)} / each</p>
                                 </div>
-                                <p className="mt-1 text-[15px] font-semibold leading-snug text-black/55">{row.desc}</p>
+                                <p className="mt-1 text-[15px] font-semibold leading-snug text-white/50">{row.desc}</p>
                             </div>
                             <div>
                                 <div className="mb-2 flex items-baseline justify-between font-mono text-[13px] font-semibold">
-                                    <span className="text-black/45">{compactCount(req)} calls</span>
-                                    <span className="text-black">{money(req * row.usd)}</span>
+                                    <span className="text-white/45">{compactCount(req)} calls</span>
+                                    <span className="text-white">{money(req * row.usd)}</span>
                                 </div>
                                 <RangeSlider
                                     value={req}
@@ -82,14 +82,14 @@ export function PricingCalculator() {
                 })}
             </div>
 
-            <div className="flex flex-col gap-2 bg-black p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div className="flex flex-col gap-2 bg-lantern p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
                 <div>
-                    <p className="text-sm font-bold text-white/55">Estimated monthly total</p>
-                    <p className="mt-1 font-mono text-[13px] font-semibold text-white/40">
+                    <p className="text-sm font-bold text-black/55">Estimated monthly total</p>
+                    <p className="mt-1 font-mono text-[13px] font-semibold text-black/45">
                         {compactCount(totalReq)} calls · billed from your credit balance · rejections free
                     </p>
                 </div>
-                <p className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">{money(totalUsd)}</p>
+                <p className="text-4xl font-extrabold tracking-tight text-black sm:text-5xl">{money(totalUsd)}</p>
             </div>
         </div>
     );

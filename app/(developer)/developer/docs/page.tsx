@@ -3,17 +3,22 @@ import Link from "next/link";
 import { CodeCard, K, S, P } from "@/components/developer/dev-mocks";
 import { PRICE_SHEET } from "@/lib/api-pricing";
 
-export const metadata: Metadata = { title: "API docs" };
+export const metadata: Metadata = {
+    title: "API docs",
+    description:
+        "watchparty API documentation — x-api-key auth, per-surface USDC pricing, and the x402 pay-per-request flow.",
+};
 
 // Public API documentation for the 402 gate. Static on purpose — this page is
 // the contract, and a contract shouldn't need a client bundle. Content mirrors
 // docs/api-monetization.md minus the ops half (secrets, rollout, exemptions).
+// Dark like the rest of the portal shell; every colour fixed, lantern accent.
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
     return (
-        <section id={id} className="scroll-mt-28 border-t border-black/[0.08] py-12 first:border-t-0 first:pt-0">
-            <h2 className="text-2xl font-extrabold tracking-tight text-black sm:text-3xl">{title}</h2>
-            <div className="mt-4 flex flex-col gap-4 text-[15px] font-semibold leading-relaxed text-black/65">
+        <section id={id} className="scroll-mt-28 border-t border-white/[0.08] py-12 first:border-t-0 first:pt-0">
+            <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">{title}</h2>
+            <div className="mt-4 flex flex-col gap-4 text-[15px] font-semibold leading-relaxed text-white/60">
                 {children}
             </div>
         </section>
@@ -21,7 +26,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 function Mono({ children }: { children: React.ReactNode }) {
-    return <code className="rounded-md bg-black/[0.06] px-1.5 py-0.5 font-mono text-[13px] font-semibold text-black">{children}</code>;
+    return <code className="rounded-md bg-white/[0.08] px-1.5 py-0.5 font-mono text-[13px] font-semibold text-white">{children}</code>;
 }
 
 const TOC = [
@@ -34,20 +39,20 @@ const TOC = [
 
 export default function DocsPage() {
     return (
-        <div className="bg-white pb-24 pt-28 sm:pt-32">
+        <div className="pb-24 pt-28 sm:pt-32">
             <div className="mx-auto w-full max-w-3xl px-6">
-                <p className="text-sm font-bold text-black/45">
-                    <Link href="/developer" className="hover:text-black">Developers</Link>
+                <p className="text-sm font-bold text-white/40">
+                    <Link href="/developer" className="transition-colors hover:text-white">Developers</Link>
                     <span className="mx-2">/</span>Docs
                 </p>
-                <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-black sm:text-5xl">API documentation</h1>
-                <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">
+                <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">API documentation</h1>
+                <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-white/55">
                     Everything billed, priced, and authenticated in one page. If something here surprises you, the page is wrong — tell us.
                 </p>
 
                 <nav className="mt-8 flex flex-wrap gap-2">
                     {TOC.map(([id, label]) => (
-                        <a key={id} href={`#${id}`} className="rounded-full bg-black/[0.05] px-4 py-2 text-[13px] font-bold text-black/70 transition-colors hover:bg-black/[0.09] hover:text-black">
+                        <a key={id} href={`#${id}`} className="rounded-full bg-white/[0.06] px-4 py-2 text-[13px] font-bold text-white/65 transition-colors hover:bg-white/[0.12] hover:text-white">
                             {label}
                         </a>
                     ))}
@@ -59,8 +64,8 @@ export default function DocsPage() {
                             The API is the same one the app runs on, served from{" "}
                             <Mono>https://watchparty.xyz/api</Mono>. Using the app — web, mobile,
                             embeds — is free. Programmatic access from outside the app is billed
-                            per request, and there are two ways to pay: a funded <strong>API key</strong>,
-                            or <strong>x402</strong> — a per-request USDC payment with no account at all.
+                            per request, and there are two ways to pay: a funded <strong className="text-white">API key</strong>,
+                            or <strong className="text-white">x402</strong> — a per-request USDC payment with no account at all.
                         </p>
                         <p>
                             Data reads go through tRPC at{" "}
@@ -82,8 +87,8 @@ export default function DocsPage() {
                         </p>
                         <p>
                             Keys look like <Mono>wp_live_&lt;id&gt;.&lt;secret&gt;</Mono> and are shown{" "}
-                            <strong>once</strong>, at creation, in the{" "}
-                            <Link href="/developer/console" className="font-bold text-black underline underline-offset-4">console</Link>.
+                            <strong className="text-white">once</strong>, at creation, in the{" "}
+                            <Link href="/developer/console" className="font-bold text-white underline underline-offset-4">console</Link>.
                             We store a hash, never the key. Revoking a key stops it within seconds;
                             treat a leaked key like leaked money, because it is.
                         </p>
@@ -101,22 +106,22 @@ export default function DocsPage() {
                             tiers to buy. Balances and lifetime spend are always visible in the
                             console.
                         </p>
-                        <div className="overflow-hidden rounded-2xl ring-1 ring-black/[0.08]">
+                        <div className="overflow-hidden rounded-2xl ring-1 ring-white/10">
                             {PRICE_SHEET.map((row, i) => (
                                 <div
                                     key={row.key}
-                                    className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-5 py-4 ${i > 0 ? "border-t border-black/[0.06]" : ""}`}
+                                    className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-5 py-4 ${i > 0 ? "border-t border-white/[0.06]" : ""}`}
                                 >
                                     <div className="min-w-0">
-                                        <p className="font-bold text-black">{row.name}</p>
-                                        <p className="mt-0.5 text-[13px] font-semibold text-black/50">{row.desc}</p>
+                                        <p className="font-bold text-white">{row.name}</p>
+                                        <p className="mt-0.5 text-[13px] font-semibold text-white/45">{row.desc}</p>
                                     </div>
-                                    <p className="shrink-0 font-mono text-[14px] font-bold text-black">${row.usd.toFixed(3)}</p>
+                                    <p className="shrink-0 font-mono text-[14px] font-bold text-lantern">${row.usd.toFixed(3)}</p>
                                 </div>
                             ))}
                         </div>
                         <p>
-                            The unit is a <strong>procedure, not an HTTP request</strong>: a tRPC
+                            The unit is a <strong className="text-white">procedure, not an HTTP request</strong>: a tRPC
                             batch URL (<Mono>/api/trpc/a,b,c</Mono>) is priced as the sum of its
                             procedures — batching saves connections, not money. Responses to a
                             request you didn&apos;t pay for (bad key, empty balance) are free and
@@ -128,7 +133,7 @@ export default function DocsPage() {
                         <p>
                             No key? Call anyway. The response is <Mono>402 Payment Required</Mono>{" "}
                             with an{" "}
-                            <a href="https://www.x402.org" className="font-bold text-black underline underline-offset-4" rel="noreferrer" target="_blank">x402</a>{" "}
+                            <a href="https://www.x402.org" className="font-bold text-white underline underline-offset-4" rel="noreferrer" target="_blank">x402</a>{" "}
                             challenge describing exactly what to pay, in USDC on Solana:
                         </p>
                         <CodeCard label="402 · payment required">

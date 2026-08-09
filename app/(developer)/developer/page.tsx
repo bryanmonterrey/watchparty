@@ -1,19 +1,26 @@
 import { Metadata } from "next";
-import { MarketingHero, BentoGrid, TwoUpBold, StepFlow, Faq, ClosingCta } from "@/components/marketing/sections";
 import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-page";
 import { Reveal } from "@/components/marketing/motion";
+import {
+    DevHero, DevBento, DevTwoUp, DevSteps, DevFaq, DevClosing, DevSectionHead,
+} from "@/components/developer/dev-sections";
 import {
     HeroApiMock, ChallengeCard, CoinCard, CurlCard, FeedCard, LiveCard, SettleCard,
 } from "@/components/developer/dev-mocks";
 import { PricingCalculator } from "@/components/developer/pricing-calculator";
 import { FlashIcon, CoinsDollarIcon, Key01Icon, Robot01Icon } from "@hugeicons/core-free-icons";
 
-export const metadata: Metadata = { title: "Developers" };
+export const metadata: Metadata = {
+    title: "Developers",
+    description:
+        "Build on watchparty — one API for streams, coins, and markets. Pay per request in USDC, no monthly fees, x402-native for agents.",
+};
 
 // The developer landing — X's developer-console page anatomy (hero →
-// pay-per-use benefits → response wall → usage calculator → model comparison →
-// CTA), rebuilt in watchparty's identity: pastel bands, big Geist headlines,
-// pill CTAs, dark code cards with the lantern accent.
+// pay-per-use bento → response wall → usage calculator → model comparison →
+// CTA) on the portal's dark shell: flat fills, white hairlines, lantern as the
+// single accent, dark code cards. Background shifts between near-black tints
+// per zone (bands are tints within ONE theme — never a light/dark flip).
 
 const FAQ = [
     { q: "What does it cost?", a: "Priced per surface, from $0.001 a call — cached coin reads are cheapest, upstream-metered calls like RPC and link previews cost more. Paid from a USDC credit balance; 1 credit = $1. No monthly fee, no minimum, no caps." },
@@ -27,14 +34,10 @@ function ResponseWall() {
     return (
         <section className="flex min-h-[92svh] flex-col justify-center px-6 py-12">
             <div className="mx-auto w-full max-w-6xl">
-                <Reveal className="max-w-3xl">
-                    <h2 className="font-extrabold text-3xl leading-[1.06] tracking-tight text-black sm:text-5xl lg:text-6xl">
-                        Real responses, lightning quick
-                    </h2>
-                    <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">
-                        Streams, coins, and markets straight from the app — one header away. No key? The response is a payment challenge, not a dead end.
-                    </p>
-                </Reveal>
+                <DevSectionHead
+                    title="Real responses, lightning quick"
+                    sub="Streams, coins, and markets straight from the app — one header away. No key? The response is a payment challenge, not a dead end."
+                />
                 <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <Reveal delay={0}><CurlCard /></Reveal>
                     <Reveal delay={0.06}><FeedCard /></Reveal>
@@ -52,14 +55,10 @@ function CalculatorSection() {
     return (
         <section className="flex min-h-[92svh] flex-col justify-center px-6 py-12">
             <div className="mx-auto w-full max-w-6xl">
-                <Reveal className="max-w-3xl">
-                    <h2 className="font-extrabold text-3xl leading-[1.06] tracking-tight text-black sm:text-5xl lg:text-6xl">
-                        Price out your usage
-                    </h2>
-                    <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">
-                        Priced per surface, and the sheet below is the same one the gate bills from. Drag the sliders — the total is the whole bill.
-                    </p>
-                </Reveal>
+                <DevSectionHead
+                    title="Price out your usage"
+                    sub="Priced per surface, and the sheet below is the same one the gate bills from. Drag the sliders — the total is the whole bill."
+                />
                 <Reveal delay={0.1} className="mt-14">
                     <PricingCalculator />
                 </Reveal>
@@ -70,9 +69,9 @@ function CalculatorSection() {
 
 export default function DeveloperPage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-blue)">
-            <BgZone bg="var(--color-soft-blue)">
-                <MarketingHero
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#0b0b0d">
+            <BgZone bg="#0b0b0d">
+                <DevHero
                     eyebrow="Developers"
                     title={<>Build on watchparty</>}
                     sub="One API for streams, coins, and markets. Pay per request in USDC — no monthly fees, no caps, no waiting for approval."
@@ -83,56 +82,52 @@ export default function DeveloperPage() {
                     visual={<HeroApiMock />}
                 />
 
-                <BentoGrid
+                <DevBento
                     title="Pay for what you use"
                     sub="Consumption-based from the first request — the meter is the whole pricing model."
                     items={[
-                        { icon: FlashIcon, title: "No monthly fees", body: "No tiers, no seats, no minimum spend. Your usage is your bill — priced per surface from $0.001 a call, and a rejected request costs nothing.", bg: "bg-white", accent: "text-black", span: "big" },
-                        { icon: CoinsDollarIcon, title: "Credits in USDC", body: "1 credit = $1, settled on Solana. Fund a key and start calling.", bg: "bg-pastel-yellow", accent: "text-black" },
-                        { icon: Key01Icon, title: "One header", body: "Send x-api-key. No OAuth dance, no app review.", bg: "bg-soft-pink", accent: "text-black" },
-                        { icon: Robot01Icon, title: "Built for agents", body: "x402-native: agents can pay per request on-chain with no account at all.", bg: "bg-black", accent: "text-lantern", span: "wide" },
+                        { icon: FlashIcon, title: "No monthly fees", body: "No tiers, no seats, no minimum spend. Your usage is your bill — priced per surface from $0.001 a call, and a rejected request costs nothing.", span: "big" },
+                        { icon: CoinsDollarIcon, title: "Credits in USDC", body: "1 credit = $1, settled on Solana. Fund a key and start calling." },
+                        { icon: Key01Icon, title: "One header", body: "Send x-api-key. No OAuth dance, no app review." },
+                        { icon: Robot01Icon, title: "Built for agents", body: "x402-native: agents can pay per request on-chain with no account at all.", accent: true, span: "wide" },
                     ]}
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-gray)">
+            <BgZone bg="#0e1013">
                 <ResponseWall />
                 <CalculatorSection />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-pink)">
-                <TwoUpBold
+            <BgZone bg="#0b0f0d">
+                <DevTwoUp
                     items={[
                         {
                             title: "Keys for builders",
                             body: "Create a key, fund it with credits, and ship. Balances, spend, and revocation live in the console — rotate in one click.",
-                            bg: "bg-white",
                             visual: <CurlCard className="max-w-[400px]" />,
                         },
                         {
                             title: "x402 for agents",
                             body: "No signup, no key. A bare request gets a 402 with payment terms; pay in USDC on the retry and it settles on-chain.",
-                            bg: "bg-black",
-                            dark: true,
+                            accent: true,
                             visual: <SettleCard className="max-w-[400px]" />,
                         },
                     ]}
                 />
 
-                <StepFlow
+                <DevSteps
                     title="Start in three steps"
                     steps={[
                         { title: "Create a key", body: "Open the console and name a key. The secret is shown once — store it well." },
-                        { title: "Fund it", body: "Load credits in USDC. A dollar is a thousand requests." },
+                        { title: "Fund it", body: "Load credits in USDC. A dollar is a thousand calls." },
                         { title: "Call anything", body: "Send x-api-key with any API request. That's the whole integration." },
                     ]}
                 />
 
-                <Faq items={FAQ} />
-            </BgZone>
+                <DevFaq items={FAQ} />
 
-            <BgZone bg="var(--color-soft-gray)">
-                <ClosingCta
+                <DevClosing
                     title="Ready to build?"
                     sub="Create a key and make your first call in the next five minutes."
                     ctaLabel="Open the console"
