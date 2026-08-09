@@ -1,0 +1,22 @@
+# Known violations of "never render a wallet address in UI", as of 2026-08-09.
+#
+# These are NOT approved — they are the ratchet's starting line. The guard blocks
+# NEW violations while these four wait on a product decision about what to show
+# instead. Shrink this file; never grow it.
+#
+# Each one renders a truncated address directly to the user:
+#
+#   account-linking.tsx:150   the linked wallet's own row. May genuinely need an
+#                             identifier — a name/handle would have to come from
+#                             somewhere before the address can go.
+#   send-crypto-tray.tsx:93   under the recipient's name, so the name is already
+#                             there and the address is additive.
+#   sent-state.tsx:36 (x2)    "sent to <name> (addr…addr)" — again the name is
+#                             already shown; the parenthetical is the violation.
+#                             Two copies: wallet-drawer and wallet-drawer2.
+#
+# Removing an entry and fixing the call site is the intended direction.
+components/auth/account-linking.tsx:wallet_address.slice(
+components/messages/trays/send-crypto-tray.tsx:walletAddress.slice(
+components/wallet/wallet-drawer/views/nft-status/sent-state.tsx:recipientAddress.slice(
+components/wallet/wallet-drawer2/views/nft-status/sent-state.tsx:recipientAddress.slice(

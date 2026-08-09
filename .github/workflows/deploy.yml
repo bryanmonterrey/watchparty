@@ -29,6 +29,14 @@ jobs:
       - name: Run tests
         run: bun test ./tests
 
+      # Rules tsc and the test suite structurally cannot see. Both are
+      # RATCHETS: existing violations are allowlisted, so these block new ones
+      # without demanding a repo-wide cleanup first.
+      - name: Repo guards
+        run: |
+          node scripts/guards/check-wallet-address-display.mjs
+          node scripts/guards/check-file-sizes.mjs
+
   deploy:
     needs: [test]
     runs-on: ubuntu-latest
