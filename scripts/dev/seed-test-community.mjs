@@ -112,7 +112,48 @@ for (const [i, u] of users.entries()) {
     memberIds.push(member.id);
 }
 
+// ── a DM conversation between the two fixtures ───────────────────────────────
+// DM bubbles and the DM composer only render inside an open conversation, so
+// without this there is nothing to drive on /messages.
+const { conversations, conversationParticipants, messages } = await import("../../db/schema/messaging/index.ts");
+const { inArray } = await import("drizzle-orm");
+
+let conversationId = null;
+const mine = await db.select({ conversationId: conversationParticipants.conversationId })
+    .from(conversationParticipants).where(eq(conversationParticipants.userId, users[0].id));
+for (const row of mine) {
+    const parts = await db.select({ userId: conversationParticipants.userId })
+        .from(conversationParticipants).where(eq(conversationParticipants.conversationId, row.conversationId));
+    const ids = parts.map((x) => x.userId);
+    if (ids.length === 2 && ids.includes(users[1].id)) { conversationId = row.conversationId; break; }
+}
+if (!conversationId) {
+    const [conv] = await db.insert(conversations).values({ isGroup: false }).returning();
+    conversationId = conv.id;
+    await db.insert(conversationParticipants).values([
+        { conversationId, userId: users[0].id },
+        { conversationId, userId: users[1].id },
+    ]);
+    // One plaintext message so a bubble actually renders. `isEncrypted: false`
+    // keeps the client from trying to decrypt a fixture it has no key for.
+    await db.insert(messages).values({
+        conversationId,
+        senderId: users[0].id,
+        content: "e2e fixture message",
+        encryptionIv: "",
+        isEncrypted: false,
+        messageType: "text",
+    });
+    say(`created DM conversation ${conversationId}`);
+} else {
+    say(`reusing DM conversation ${conversationId}`);
+}
+
 const out = {
+    conversationId,
+    // The DM thread is selected by query param, not a path segment —
+    // `/messages/<id>` falls through to a different route entirely.
+    dmUrl: `/messages?c=${conversationId}`,
     serverId: server.id,
     channelId: channel.id,
     inviteCode: INVITE_CODE,

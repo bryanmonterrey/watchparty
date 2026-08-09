@@ -1,12 +1,9 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { EmojiPicker } from './emoji-picker';
-import { useState } from 'react';
+import { MessageActions } from './message-actions';
 import { PlayIcon, PauseIcon, ReplyIcon } from '@/components/icons';
-import { Check, CheckCheck, Plus, Smile } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
+import { Check, CheckCheck } from 'lucide-react';
 import { TransactionBubble } from './transaction-bubble';
 import { AudioMessagePlayer } from './audio-message-player';
 
@@ -55,7 +52,6 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ message, isSent, onReact, onReply, onImageLoad, currentUserId, isFirstInSequence = true }: MessageBubbleProps) {
-    const [isReactionOpen, setIsReactionOpen] = useState(false);
 
     const formatTime = (timestamp: string) => {
         const date = new Date(timestamp);
@@ -256,67 +252,19 @@ export function MessageBubble({ message, isSent, onReact, onReply, onImageLoad, 
                     "flex flex-row gap-1 items-center self-end mb-1",
                     isTransaction && "self-center mb-0 translate-y-2" // Center vertically relative to bubble or just align better
                 )}>
-                    {/* Actions Group (Reply + React) */}
-                    <div className={cn(
-                        "flex items-center gap-1 transition-opacity duration-200 opacity-0 group-hover:opacity-100",
-                        (isReactionOpen) ? "opacity-100" : ""
-                    )}>
-                        {/* Reply Button */}
-                        {onReply && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 rounded-full text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
-                                onClick={() => onReply(message)}
-                            >
-                                <ReplyIcon className="size-3.5" />
-                            </Button>
-                        )}
-
-                        {/* Reaction Trigger Button */}
-                        {onReact && (
-                            <Popover open={isReactionOpen} onOpenChange={setIsReactionOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 rounded-full text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
-                                    >
-                                        <Smile className="size-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    className="w-auto p-1 bg-zinc-800 border-zinc-700/50 rounded-full shadow-xl"
-                                    side="top"
-                                    align={isSent ? "end" : "start"}
-                                    sideOffset={4}
-                                >
-                                    <div className="flex items-center gap-0.5">
-                                        {['❤️', '😂', '😮', '😢', '😡', '👍'].map((emoji) => (
-                                            <button
-                                                key={emoji}
-                                                onClick={() => {
-                                                    onReact(emoji);
-                                                    setIsReactionOpen(false);
-                                                }}
-                                                className="p-1.5 hover:scale-125 transition text-xl leading-none"
-                                            >
-                                                {emoji}
-                                            </button>
-                                        ))}
-                                        <EmojiPicker onEmojiSelect={(emoji) => {
-                                            onReact(emoji.native);
-                                            setIsReactionOpen(false);
-                                        }}>
-                                            <button className="p-1.5 rounded-full hover:bg-zinc-700/50 transition">
-                                                <Plus className="size-5 text-zinc-400" />
-                                            </button>
-                                        </EmojiPicker>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                    </div>
+                    {/* Shared with community rows — same anatomy, same
+                        frecency-ranked quick reactions, same keyboard and
+                        touch behaviour. Replaces a bespoke cluster with six
+                        hardcoded emoji that was mouse-only, and that stayed
+                        clickable while invisible (opacity-0 with no
+                        pointer-events guard). */}
+                    {(onReact || onReply) && (
+                        <MessageActions
+                            align={isSent ? "right" : "left"}
+                            onReact={(emoji) => onReact?.(emoji)}
+                            onReply={() => onReply?.(message)}
+                        />
+                    )}
 
                     {/* Checkmark (Only for sent messages) */}
                     {isSent && (

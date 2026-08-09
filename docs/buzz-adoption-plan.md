@@ -1262,6 +1262,46 @@ found — which is not the same as cleared.** Action 2 is what settles it.
 
 ---
 
+---
+
+# Phase 12 — Shared message toolbar (community + DMs)
+
+`components/messages/message-actions.tsx` is now used by **both** community rows
+and DM bubbles. Optional actions: pass `onEdit`/`onDelete`/`onTogglePin` and the
+control appears; omit it and it doesn't. DMs pass none of the three.
+
+Quick reactions are scoped by `reactionScope` — a community id keeps per-server
+frecency separate, `null` is the app-wide bucket DMs share.
+
+What the DM cluster it replaced got wrong, beyond the community list:
+- **`opacity-0` with no `pointer-events` guard** — invisible buttons that still
+  intercepted clicks.
+- Six hardcoded emoji rather than the four you actually use.
+- No keyboard path, no touch path.
+
+## ⚠️ The DM path is NOT browser-verified
+
+`/messages?c=<id>` renders the **encryption gate** ("your wallet is the key")
+for any account without a provisioned wallet — which every test fixture is. So
+the DM bubble and DM composer never mount, and neither the shared toolbar nor
+the draft hook could be exercised there.
+
+What IS verified for DMs: tsc clean, and the page mounts with no page errors
+after the refactor. What is not: that the toolbar renders correctly on a bubble,
+that quick reactions fire, that drafts persist. The code is the same component
+and the same hooks already verified on community chat, but that is an argument,
+not a measurement — treat it as unverified.
+
+Two ways to close this, in increasing cost: provision a wallet + messaging key
+for the fixture in `seed-test-community.mjs`, or add a dev-only bypass to
+`EncryptionGate`. Neither is done.
+
+**This also confirms `messages-connect-wallet-gate`:** a perfectly normal
+signed-in account cannot reach DMs at all. Two routes exist to a surface that is
+unreachable without a wallet nobody is prompted to create at signup.
+
+---
+
 # Order of work
 
 ```

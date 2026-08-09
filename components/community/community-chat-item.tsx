@@ -61,7 +61,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { trpc } from "@/lib/trpc/client";
 import { chatItemPropsEqual } from "./community-chat-item-equality";
 import { useCommunityReaction } from "@/hooks/use-community-reaction";
-import { CommunityMessageActions } from "./community-message-actions";
+import { MessageActions } from "@/components/messages/message-actions";
 
 type Props = {
     id: string;
@@ -307,18 +307,15 @@ function CommunityChatItemImpl({
 
             {!deleted && (
                 <TooltipProvider delayDuration={50}>
-                    <CommunityMessageActions
-                        canDelete={canDelete}
-                        canEdit={canEdit}
-                        canPin={canPin}
-                        serverId={serverId}
+                    <MessageActions
+                        reactionScope={serverId}
                         isPinned={pinned}
                         pinPending={setPinned.isPending}
-                        onDelete={() => deleteMessage.mutate({ messageId: id, serverId })}
-                        onEdit={() => setIsEditing(true)}
+                        onDelete={canDelete ? () => deleteMessage.mutate({ messageId: id, serverId }) : undefined}
+                        onEdit={canEdit ? () => setIsEditing(true) : undefined}
                         onReact={(emoji) => toggleReaction.mutate({ messageId: id, emoji })}
                         onReply={() => setReplyTo({ id, userName: userName ?? "", content })}
-                        onTogglePin={() => setPinned.mutate({ serverId, messageId: id, pinned: !pinned })}
+                        onTogglePin={canPin ? () => setPinned.mutate({ serverId, messageId: id, pinned: !pinned }) : undefined}
                     />
                 </TooltipProvider>
             )}

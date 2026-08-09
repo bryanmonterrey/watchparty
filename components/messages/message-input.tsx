@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useComposerDraft } from '@/hooks/use-composer-drafts';
+import { useComposerKeys } from '@/hooks/use-composer-keys';
 import { ClipIcon, ArrowUpIcon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Send, Paperclip, X } from 'lucide-react';
@@ -19,7 +21,9 @@ interface MessageInputProps {
 }
 
 export function MessageInput({ conversationId }: MessageInputProps) {
-    const [message, setMessage] = useState('');
+    // Per-conversation draft, so leaving a thread mid-sentence and coming back
+    // keeps what you were writing. Same hook the community composer uses.
+    const { value: message, setValue: setMessage, clear: clearDraft } = useComposerDraft(conversationId);
     const { attachment, setAttachment, replyToMessage, setReplyToMessage } = useChat();
     const { sendMessage, isSending } = useSendMessage(conversationId);
 
@@ -99,7 +103,7 @@ export function MessageInput({ conversationId }: MessageInputProps) {
         }
 
         // Optimistic UI: Clear immediately
-        setMessage('');
+        clearDraft();
         const fileToSend = attachment; // Capture ref
         setAttachment(null);
 
@@ -126,12 +130,17 @@ export function MessageInput({ conversationId }: MessageInputProps) {
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
+    // Shared keyboard contract. Replaces a bare `Enter && !shiftKey` check,
+    // which also sent on Cmd/Ctrl/Alt+Enter and had no Escape handling at all.
+    const handleKeyDown = useComposerKeys({
+        onSubmit: () => { handleSend(); },
+        getValue: () => message,
+        onCancelReply: () => {
+            if (!replyToMessage) return false;
+            setReplyToMessage(null);
+            return true;
+        },
+    });
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -168,7 +177,9 @@ export function MessageInput({ conversationId }: MessageInputProps) {
             : "Recipient hasn't set up encryption yet. Ask them to open the chat.";
 
     const handleEmojiSelect = (emoji: any) => {
-        setMessage((prev) => prev + emoji.native);
+        // The draft hook takes a value, not an updater — `message` is already
+        // the current text.
+        setMessage(message + emoji.native);
         adjustHeight();
     };
 

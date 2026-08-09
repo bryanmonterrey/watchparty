@@ -11,14 +11,14 @@ import {
     SmileIcon,
 } from "@hugeicons/core-free-icons";
 
-import { EmojiPicker } from "@/components/messages/emoji-picker";
+import { EmojiPicker } from "./emoji-picker";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { recordQuickReaction, useQuickReactions } from "@/hooks/use-quick-reactions";
 import { cn } from "@/lib/utils";
 
 /**
- * The hover toolbar on a chat message. Anatomy ported from buzz's
- * `MessageActionBar`, in watchparty's own chrome.
+ * The hover toolbar on a chat message — community rows AND DM bubbles.
+ * Anatomy ported from buzz's `MessageActionBar`, in watchparty's own chrome.
  *
  * What the previous inline version got wrong, and why each matters:
  *
@@ -52,51 +52,54 @@ const ICON = "h-4 w-4";
 const BTN =
     "grid size-7 shrink-0 place-items-center rounded-full text-flexwhite/55 transition-colors hover:bg-flexwhite/10 hover:text-flexwhite disabled:opacity-40 disabled:pointer-events-none";
 
-export type CommunityMessageActionsProps = {
-    canDelete: boolean;
-    canEdit: boolean;
-    canPin: boolean;
-    /** Scopes the quick-reaction frecency store to this community. */
-    serverId: string;
-    isPinned: boolean;
-    pinPending?: boolean;
-    onDelete: () => void;
-    onEdit: () => void;
+export type MessageActionsProps = {
+    /**
+     * Scopes the quick-reaction frecency store. A community id keeps the emoji
+     * you reach for in one server separate from another's; `null` is the
+     * app-wide bucket that DMs and stream chat share.
+     */
+    reactionScope?: string | null;
     onReact: (emoji: string) => void;
     onReply: () => void;
-    onTogglePin: () => void;
+    /** Omit any of these and the control simply isn't rendered. */
+    onEdit?: () => void;
+    onDelete?: () => void;
+    onTogglePin?: () => void;
+    isPinned?: boolean;
+    pinPending?: boolean;
+    /** Which side of the row it sits on — DM bubbles alternate. */
+    align?: "left" | "right";
 };
 
-export function CommunityMessageActions({
-    canDelete,
-    canEdit,
-    canPin,
-    serverId,
-    isPinned,
-    pinPending = false,
-    onDelete,
-    onEdit,
+export function MessageActions({
+    reactionScope = null,
     onReact,
     onReply,
+    onEdit,
+    onDelete,
     onTogglePin,
-}: CommunityMessageActionsProps) {
+    isPinned = false,
+    pinPending = false,
+    align = "right",
+}: MessageActionsProps) {
     const [pickerOpen, setPickerOpen] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
-    const quickReactions = useQuickReactions(4, serverId);
+    const quickReactions = useQuickReactions(4, reactionScope);
 
     // Any open surface pins the bar; otherwise moving the pointer toward it
     // closes the thing you were reaching for.
     const pinnedOpen = pickerOpen || confirmingDelete;
 
     const react = (emoji: string) => {
-        recordQuickReaction(emoji, serverId);
+        recordQuickReaction(emoji, reactionScope);
         onReact(emoji);
     };
 
     return (
         <div
             className={cn(
-                "absolute -top-3 right-4 z-10 flex items-center gap-0.5 rounded-full",
+                "absolute -top-3 z-10 flex items-center gap-0.5 rounded-full",
+                align === "right" ? "right-4" : "left-4",
                 "border border-flexwhite/12 bg-black3/95 p-1 backdrop-blur-sm",
                 // Hidden state keeps layout but takes no clicks. Always visible
                 // on touch, where there is no hover to reveal it.
@@ -115,7 +118,7 @@ export function CommunityMessageActions({
                     <span className="text-[11px] font-medium text-flexwhite/70">Delete?</span>
                     <button
                         type="button"
-                        onClick={() => { setConfirmingDelete(false); onDelete(); }}
+                        onClick={() => { setConfirmingDelete(false); onDelete?.(); }}
                         className="rounded-full bg-sunset/90 px-2 py-0.5 text-[11px] font-semibold text-white transition-colors hover:bg-sunset"
                     >
                         Delete
@@ -163,7 +166,7 @@ export function CommunityMessageActions({
                         <TooltipContent side="top"><p className="text-xs">Reply</p></TooltipContent>
                     </Tooltip>
 
-                    {canPin && (
+                    {onTogglePin && (
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
@@ -180,7 +183,7 @@ export function CommunityMessageActions({
                         </Tooltip>
                     )}
 
-                    {canEdit && (
+                    {onEdit && (
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button type="button" aria-label="Edit message" onClick={onEdit} className={BTN}>
@@ -191,7 +194,7 @@ export function CommunityMessageActions({
                         </Tooltip>
                     )}
 
-                    {canDelete && (
+                    {onDelete && (
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
