@@ -3,6 +3,7 @@ import { z } from "zod";
 import { tool } from "ai";
 import { db } from "@/db";
 import { withCache } from "@/lib/cache";
+import { ANNUAL_MONTHS_FREE, TIERS, priceUsd } from "@/lib/premium/tiers";
 import { tokens } from "@/db/schema/content/token";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { streams } from "@/db/schema/content/stream";
@@ -87,13 +88,91 @@ const publicTools = {
 
     lookupCoin: tool({
         description:
-            "Look up ONE specific coin by ticker or name. Checks watchparty's own coins first, then the wider multi-chain market. Use whenever the user names a coin. Returns null if no coin matches — say so rather than guessing.",
+            "Look up ONE specific coin by ticker, name, or contract/mint address. Checks watchparty's own coins first, then the wider multi-chain market. Use whenever the user names or pastes a coin. Returns null if no coin matches — say so rather than guessing.",
         inputSchema: z.object({
-            query: z.string().min(1).max(32).describe("Ticker or name, with or without a leading $."),
+            query: z
+                .string()
+                .min(1)
+                .max(64)
+                .describe("Ticker or name (with or without a leading $), or a full contract/mint address."),
         }),
         execute: async ({ query }) => {
-            const q = query.trim().replace(/^\$/, "").toLowerCase();
-            if (!q) return null;
+            const raw = query.trim().replace(/^\$/, "");
+            if (!raw) return null;
+
+            // A pasted contract address is a lookup by identity, not a name
+            // search — and it must be shape-detected BEFORE lowercasing,
+            // because base58 is case-sensitive. Solana mints are 32-44 base58
+            // chars; EVM addresses are 0x + 40 hex (compared lowercased, since
+            // checksum casing varies by source).
+            const isSolanaMint = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(raw);
+            const isEvmAddress = /^0x[0-9a-fA-F]{40}$/.test(raw);
+            if (isSolanaMint || isEvmAddress) {
+                const addr = isEvmAddress ? raw.toLowerCase() : raw;
+
+                return withCache(`assistant:coin:addr:v1:${addr}`, 60, async () => {
+                    const [own] = await db
+                        .select({
+                            ticker: tokens.ticker,
+                            name: tokens.name,
+                            priceUsd: tokens.priceUsd,
+                            priceChange24h: tokens.priceChange24h,
+                            marketCapUsd: tokens.marketCapUsd,
+                        })
+                        .from(tokens)
+                        .where(
+                            and(
+                                eq(tokens.status, "live"),
+                                isEvmAddress
+                                    ? sql`lower(${tokens.tokenAddress}) = ${addr}`
+                                    : eq(tokens.tokenAddress, addr),
+                            ),
+                        )
+                        .limit(1);
+
+                    if (own) {
+                        return {
+                            source: "watchparty" as const,
+                            ticker: own.ticker,
+                            name: own.name,
+                            priceUsd: num(own.priceUsd),
+                            change24hPct: num(own.priceChange24h),
+                            marketCapUsd: num(own.marketCapUsd),
+                        };
+                    }
+
+                    const [market] = await db
+                        .select({
+                            symbol: trendingCoins.symbol,
+                            name: trendingCoins.name,
+                            network: trendingCoins.network,
+                            priceUsd: trendingCoins.priceUsd,
+                            priceChange24h: trendingCoins.priceChange24h,
+                            marketCapUsd: trendingCoins.marketCapUsd,
+                        })
+                        .from(trendingCoins)
+                        .where(
+                            isEvmAddress
+                                ? sql`lower(${trendingCoins.tokenAddress}) = ${addr}`
+                                : eq(trendingCoins.tokenAddress, addr),
+                        )
+                        .limit(1);
+
+                    if (!market) return null;
+
+                    return {
+                        source: "market" as const,
+                        ticker: market.symbol,
+                        name: market.name,
+                        network: market.network,
+                        priceUsd: num(market.priceUsd),
+                        change24hPct: num(market.priceChange24h),
+                        marketCapUsd: num(market.marketCapUsd),
+                    };
+                });
+            }
+
+            const q = raw.toLowerCase();
             // Escape LIKE wildcards so a "%" doesn't match everything — same
             // guard the trade router uses.
             const esc = q.replace(/[%_\\]/g, (c) => `\\${c}`);
@@ -165,6 +244,29 @@ const publicTools = {
                 };
             });
         },
+    }),
+
+    getPremiumTiers: tool({
+        description:
+            "watchparty's platform premium tiers and pricing, billed in USDC. Use for any question about premium cost, what a tier includes, the annual discount, or which tier fits someone. This IS the live pricing — quote it confidently, don't hedge about it being outdated.",
+        inputSchema: z.object({}),
+        // No DB and no cache: TIERS is a compile-time constant
+        // (lib/premium/tiers.ts), so this can't be stale and costs nothing.
+        execute: async () => ({
+            billing: "USDC on Solana; prices are fixed USD",
+            annualMonthsFree: ANNUAL_MONTHS_FREE,
+            tiers: Object.values(TIERS).map((t) => ({
+                name: t.name,
+                group: t.group,
+                tagline: t.tagline,
+                monthlyUsd: t.selfServe ? t.monthlyUsd : null,
+                annualUsd: t.selfServe ? priceUsd(t.key, "annual") : null,
+                ...(t.selfServe ? {} : { contactSales: true }),
+                adCreditsMonthly: t.adCreditsMonthly,
+                boostSlots: t.boostSlots,
+                features: t.features,
+            })),
+        }),
     }),
 
     getLiveStreams: tool({
