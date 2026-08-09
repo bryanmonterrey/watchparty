@@ -1296,9 +1296,17 @@ Two ways to close this, in increasing cost: provision a wallet + messaging key
 for the fixture in `seed-test-community.mjs`, or add a dev-only bypass to
 `EncryptionGate`. Neither is done.
 
-**This also confirms `messages-connect-wallet-gate`:** a perfectly normal
-signed-in account cannot reach DMs at all. Two routes exist to a surface that is
-unreachable without a wallet nobody is prompted to create at signup.
+**⚠️ Do NOT read the gate as a product finding.** I originally wrote here that
+it proved normal accounts can't reach DMs. That was wrong and the reasoning was
+sloppy: the fixture is created by `internalAdapter.createUser()` in
+`mint-test-session.mjs`, which **bypasses the real signup flow**. Whatever
+signup does — including any wallet provisioning — never ran for it. Hitting the
+gate is therefore evidence about the fixture, not about users.
+
+Corrected 2026-08-09 after the repo owner flagged it. The lesson is worth more
+than the claim: a synthetic fixture that skips the real onboarding path cannot
+be used to reason about what real accounts experience. Verify DM behaviour with
+a genuinely onboarded account.
 
 ---
 
