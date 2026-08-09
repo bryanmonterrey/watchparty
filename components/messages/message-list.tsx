@@ -3,6 +3,7 @@
 import { useEffect, useRef, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './message-bubble';
+import { DM_PAGE_LIMIT } from "@/components/messages/messages-provider";
 import { useMessages } from '@/hooks/use-messages';
 import { useChat } from './chat-context';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -22,10 +23,48 @@ export function MessageList({ conversationId }: MessageListProps) {
     const { setReplyToMessage } = useChat();
     const utils = trpc.useUtils();
 
+    // Optimistic, like every other message action. DM reactions are a FLAT list
+    // of {id, emoji, userId} rather than the aggregated {emoji, count} shape
+    // community chat uses, so the toggle adds or drops one entry for the
+    // current user instead of moving a counter.
+    const listInput = { conversationId, limit: DM_PAGE_LIMIT };
     const toggleReaction = trpc.message.toggleReaction.useMutation({
-        onSuccess: () => {
+        onMutate: async ({ messageId, emoji }) => {
+            const me = session?.user?.id;
+            if (!me) return;
+            await utils.message.list.cancel(listInput);
+            const previous = utils.message.list.getData(listInput);
+            utils.message.list.setData(listInput, (old) => {
+                if (!old?.messages) return old;
+                return {
+                    ...old,
+                    messages: old.messages.map((m: any) => {
+                        if (m.id !== messageId) return m;
+                        const existing = (m.reactions ?? []).find(
+                            (r: any) => r.emoji === emoji && r.userId === me,
+                        );
+                        return {
+                            ...m,
+                            reactions: existing
+                                ? (m.reactions ?? []).filter((r: any) => r !== existing)
+                                : [
+                                    ...(m.reactions ?? []),
+                                    // `optimistic-` id so it's obvious in a
+                                    // dump which row hasn't been confirmed.
+                                    { id: `optimistic-${Date.now()}`, emoji, userId: me, messageId },
+                                ],
+                        };
+                    }),
+                };
+            });
+            return { previous };
+        },
+        onError: (_err, _vars, context) => {
+            if (context?.previous) utils.message.list.setData(listInput, context.previous);
+        },
+        onSettled: () => {
             utils.message.list.invalidate({ conversationId });
-        }
+        },
     });
 
     const handleReaction = (messageId: string, emoji: string) => {
