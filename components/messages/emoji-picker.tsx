@@ -50,9 +50,21 @@ export function EmojiPicker({ onEmojiSelect, className, iconClassName, children,
             </PopoverTrigger>
             <PopoverContent 
                 className="w-[319px] p-0 border-flexborder/75 bg-neutral-950 shadow-[0_0_15px_5px_rgba(255,255,255,0.1)] ring ring-white/10 overflow-visible rounded-3xl z-50 transition-all duration-200" 
-                side="top" 
-                align="start"
+                side="top"
+                // `align="start"` pinned the picker's LEFT edge to the
+                // trigger's left edge, so a 319px panel opened from a
+                // right-hand trigger (the message hover toolbar, a right-
+                // aligned DM bubble) overflowed the viewport and Radix shifted
+                // it bodily left — landing it far from the button that opened
+                // it. `center` keeps it anchored under its trigger and makes
+                // any collision correction symmetric and small.
+                align="center"
                 sideOffset={12}
+                // Without this the panel sits flush against the viewport edge
+                // (measured: right = 1440 on a 1440px viewport, zero gutter).
+                // Also keeps the 435px-tall panel off the top edge on short
+                // windows.
+                collisionPadding={12}
                 onInteractOutside={(e) => {
                     // Prevent closing when clicking the emoji picker web component
                     // which often doesn't trigger standard "inside click" logic in Radix
@@ -62,7 +74,13 @@ export function EmojiPicker({ onEmojiSelect, className, iconClassName, children,
                 }}
             >
                 <div
-                    className="relative z-50 w-full h-[435px] overflow-y-auto text-sm rounded-3xl"
+                    // Height is capped to the viewport, not fixed. At 435px flat
+                    // the panel is simply taller than the space above its
+                    // trigger on a short window (measured: top = -35px on a
+                    // 600px-tall viewport), and no amount of collision padding
+                    // can fit a box that doesn't fit — Radix can only shift it,
+                    // so it hung off the top edge.
+                    className="relative z-50 w-full h-[min(435px,60vh)] overflow-y-auto text-sm rounded-3xl"
                     onWheel={(e) => e.stopPropagation()}
                     onTouchMove={(e) => e.stopPropagation()}
                 >
