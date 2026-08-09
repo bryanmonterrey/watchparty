@@ -87,6 +87,11 @@ export default function DocsPage() {
                             We store a hash, never the key. Revoking a key stops it within seconds;
                             treat a leaked key like leaked money, because it is.
                         </p>
+                        <p>
+                            CORS is open for paying callers — keyed and x402 requests work from
+                            browser apps, not just servers, and the <Mono>402</Mono> challenge is
+                            readable cross-origin so the payment flow can start anywhere.
+                        </p>
                     </Section>
 
                     <Section id="pricing" title="Pricing">

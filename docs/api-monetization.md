@@ -78,10 +78,16 @@ edge gate verifies with **no lookup**. Plaintext is returned once by
 - Redis outage **fails open** for signature-valid keys (drop micro-billing,
   don't 402 paying integrators) and **fails closed** for x402.
 
-Funding is admin-only for now: `apiKeys.grant({keyId, amountUsd})` (role
-`admin`). Self-serve USDC purchase + the developer portal
-(developer.watchparty.xyz) are the follow-on work; wire purchases through the
-same primitive.
+Funding is admin-only for now — two equivalent paths:
+
+- tRPC: `apiKeys.grant({keyId, amountUsd})` (requires role `admin`);
+- CLI: `node scripts/api/key-admin.mjs <create|fund|revoke|list> …` — talks
+  straight to the prod DB + Redis from `.env.production`, mirrors the router's
+  fold-unflushed-spend invariant, and is how the 2026-08-09 E2E money test ran
+  (create → fund $1 → live requests debiting $0.001/$0.006 exactly → revoke →
+  402 within seconds).
+
+Self-serve USDC purchase is the follow-on; wire it through the same primitive.
 
 ## Verifying
 

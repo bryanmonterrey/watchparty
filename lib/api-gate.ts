@@ -160,7 +160,9 @@ function respond402(resource: string, error: string, priceMicro: number): NextRe
                 note: "Session-less API access is billed. Send a funded watchparty API key, or pay per request via x402 (X-PAYMENT).",
             },
         },
-        { status: 402 },
+        // CORS on the rejection too — a browser-based caller must be able to
+        // READ the 402 challenge, or the x402 retry flow can never start.
+        { status: 402, headers: corsHeaders() },
     );
 }
 
@@ -200,6 +202,23 @@ export interface GateOutcome {
     block?: NextResponse;
     /** Set on a successful x402 settle — middleware echoes it as X-PAYMENT-RESPONSE. */
     settleHeader?: string;
+    /** Extra response headers for pass-through outcomes (CORS for paid callers). */
+    headers?: Record<string, string>;
+}
+
+// CORS for PAYING callers. A key- or x402-authenticated request carries no
+// cookies, so `*` is safe — and without these headers a browser-based
+// integrator's request dies at preflight and the paid API is server-only by
+// accident. Applied ONLY to external outcomes (keyed/settled passes and 402s);
+// the app's own same-origin traffic never sees them.
+function corsHeaders(): Record<string, string> {
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "content-type, x-api-key, x-payment",
+        "Access-Control-Expose-Headers": "X-PAYMENT-RESPONSE",
+        "Access-Control-Max-Age": "86400",
+    };
 }
 
 export async function apiGate(
@@ -213,8 +232,17 @@ export async function apiGate(
     if (!pathname.startsWith("/api/")) return null;
     if (isExemptApiPath(pathname)) return null;
     // CORS preflight carries no credentials by design; 402ing it would stop a
-    // paying cross-origin caller from ever sending its key.
-    if (request.method === "OPTIONS") return null;
+    // paying cross-origin caller from ever sending its key. When the preflight
+    // announces our payment headers, ANSWER it here — route handlers don't
+    // speak CORS, so without this a browser integrator fails before the gate
+    // ever sees the real request.
+    if (request.method === "OPTIONS") {
+        const acrh = request.headers.get("access-control-request-headers")?.toLowerCase() ?? "";
+        if (acrh.includes("x-api-key") || acrh.includes("x-payment")) {
+            return { block: new NextResponse(null, { status: 204, headers: corsHeaders() }) };
+        }
+        return null;
+    }
 
     const bypass = process.env.API_GATE_BYPASS_SECRET || process.env.CRON_SECRET;
     if (bypass && request.headers.get("x-gate-bypass") === bypass) return null;
@@ -223,6 +251,20 @@ export async function apiGate(
 
     const sfs = request.headers.get("sec-fetch-site");
     if (sfs === "same-origin" || sfs === "same-site") return null;
+
+    // Older browsers (pre-16.4 Safari, notably) never send sec-fetch-site, and
+    // a signed-out public-browsing visitor on one would 402 out of the app.
+    // Fall back to the Origin/Referer they DO send. Spoofable — like the whole
+    // "from the app" test, this prices honest traffic, it doesn't authenticate.
+    const from = request.headers.get("origin") ?? request.headers.get("referer");
+    if (!sfs && from) {
+        try {
+            const h = new URL(from).hostname;
+            if (h === "watchparty.xyz" || h.endsWith(".watchparty.xyz")) return null;
+        } catch {
+            /* malformed header — fall through to billing */
+        }
+    }
 
     const apiKey = request.headers.get("x-api-key");
     const payment = request.headers.get("x-payment");
@@ -258,18 +300,18 @@ export async function apiGate(
                 return { block: respond402(request.nextUrl.href, "Insufficient credits", price) };
             }
             await r.incrby(spentKey(id), price);
-            return null;
+            return { headers: corsHeaders() };
         } catch {
             // Redis down: fail OPEN for signature-valid keys. The signature is
             // real authentication; dropping a fraction of a cent of billing
             // beats 402ing paying integrators during an Upstash blip.
-            return null;
+            return { headers: corsHeaders() };
         }
     }
 
     if (payment) {
         const settle = await verifyAndSettle(payment, request.nextUrl.href, price);
-        if (settle) return { settleHeader: settle };
+        if (settle) return { settleHeader: settle, headers: corsHeaders() };
         return { block: respond402(request.nextUrl.href, "Payment verification failed", price) };
     }
 

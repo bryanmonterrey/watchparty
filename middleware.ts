@@ -90,20 +90,28 @@ export async function middleware(request: NextRequest) {
     return res;
   };
 
-  // developer.watchparty.xyz is the developer portal, served by THIS worker:
-  // everything except /api rewrites onto the /developer tree (same pages that
-  // answer at watchparty.xyz/developer — no separate repo or deploy). /api
-  // stays un-rewritten so keys and docs curl examples work identically on
-  // either host. Turning the subdomain on is DNS + attach-domains only.
+  // developer.watchparty.xyz serves the developer portal from THIS worker:
+  // portal paths rewrite onto the /developer tree; /api stays un-rewritten so
+  // keys and docs curl examples work identically on either host; and every
+  // OTHER path REDIRECTS to the apex — a blanket rewrite manufactured 404s
+  // (the console's signed-out redirect went to /login on the subdomain, which
+  // rewrote to the nonexistent /developer/login). Redirecting keeps the whole
+  // app reachable from portal links, and login's callbackUrl is path-relative,
+  // so the login round-trip lands on watchparty.xyz/developer/console.
   const host = request.headers.get("host")?.toLowerCase() ?? "";
-  if (
-    host === "developer.watchparty.xyz" &&
-    !pathname.startsWith("/api") &&
-    !pathname.startsWith("/developer")
-  ) {
-    return withCleanup(
-      NextResponse.rewrite(new URL(`/developer${pathname === "/" ? "" : pathname}`, request.url)),
-    );
+  if (host === "developer.watchparty.xyz" && !pathname.startsWith("/api")) {
+    const isPortalPath =
+      pathname === "/" || pathname === "/console" || pathname === "/docs" ||
+      pathname.startsWith("/console/") || pathname.startsWith("/docs/");
+    if (isPortalPath) {
+      return withCleanup(
+        NextResponse.rewrite(new URL(`/developer${pathname === "/" ? "" : pathname}`, request.url)),
+      );
+    }
+    if (!pathname.startsWith("/developer")) {
+      const apex = new URL(pathname + request.nextUrl.search, "https://watchparty.xyz");
+      return withCleanup(NextResponse.redirect(apex, 307));
+    }
   }
 
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the
@@ -115,6 +123,7 @@ export async function middleware(request: NextRequest) {
     const gate = await apiGate(request, !!session);
     if (gate?.block) return withCleanup(gate.block);
     const res = NextResponse.next();
+    if (gate?.headers) for (const [k, v] of Object.entries(gate.headers)) res.headers.set(k, v);
     if (gate?.settleHeader) res.headers.set("X-PAYMENT-RESPONSE", gate.settleHeader);
     return withCleanup(res);
   }
