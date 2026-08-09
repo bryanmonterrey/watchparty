@@ -14,14 +14,24 @@ interface EmojiPickerProps {
     className?: string;
     iconClassName?: string;
     children?: React.ReactNode;
+    /**
+     * Fires when the picker opens or closes. Optional, so every existing
+     * uncontrolled caller is unaffected.
+     *
+     * A hover-revealed trigger needs this: without it the owner can't know the
+     * picker is open, so moving the pointer off the row hides the trigger and
+     * takes the open picker with it — you can never reach the emoji you were
+     * aiming at.
+     */
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function EmojiPicker({ onEmojiSelect, className, iconClassName, children }: EmojiPickerProps) {
+export function EmojiPicker({ onEmojiSelect, className, iconClassName, children, onOpenChange }: EmojiPickerProps) {
     const { resolvedTheme } = useTheme();
     const theme = resolvedTheme === 'dark' ? 'dark' : 'light'; // Fallback logic
 
     return (
-        <Popover>
+        <Popover onOpenChange={onOpenChange}>
             <PopoverTrigger asChild>
                 {children ? (
                     children

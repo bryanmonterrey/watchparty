@@ -1,13 +1,11 @@
 "use client";
 
-import { ShieldAlert, ShieldCheck, Edit, Trash } from "lucide-react";
+import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowTurnBackwardIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
+import { ArrowTurnBackwardIcon, PinIcon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
 import { CommunityLinkEmbed, extractFirstUrl } from "./community-link-embed";
 import { CommunityMessageReactions, type MessageReaction } from "./community-message-reactions";
-import { EmojiPicker } from "@/components/messages/emoji-picker";
-import { SmileIcon } from "@hugeicons/core-free-icons";
 
 // Render @mentions as chips, URLs as links, and :name: custom emoji inline;
 // plain text otherwise.
@@ -62,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { chatItemPropsEqual } from "./community-chat-item-equality";
+import { CommunityMessageActions } from "./community-message-actions";
 
 type Props = {
     id: string;
@@ -305,69 +304,21 @@ function CommunityChatItemImpl({
             </div>
 
             {!deleted && (
-                <div className="hidden group-hover:flex items-center gap-x-1 absolute p-1 -top-3 right-5 bg-black3 border border-flexwhite/15 rounded-lg shadow-lg">
-                    <EmojiPicker onEmojiSelect={(e) => toggleReaction.mutate({ messageId: id, emoji: e.native })}>
-                        <button className="cursor-pointer" title="React">
-                            <HugeiconsIcon icon={SmileIcon} className="w-4 h-4 text-zinc-400 hover:text-zinc-300 transition" strokeWidth={2} />
-                        </button>
-                    </EmojiPicker>
-
-                    <TooltipProvider delayDuration={50}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button onClick={() => setReplyTo({ id, userName: userName ?? "", content })} className="cursor-pointer">
-                                    <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="w-4 h-4 text-zinc-400 hover:text-zinc-300 transition scale-y-[-1]" strokeWidth={2} />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top"><p className="text-xs">Reply</p></TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
-                    {canPin && (
-                        <TooltipProvider delayDuration={50}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <button
-                                        onClick={() => setPinned.mutate({ serverId, messageId: id, pinned: !pinned })}
-                                        disabled={setPinned.isPending}
-                                        className="cursor-pointer disabled:opacity-50"
-                                    >
-                                        <HugeiconsIcon icon={pinned ? PinOffIcon : PinIcon} className="w-4 h-4 text-zinc-400 hover:text-zinc-300 transition" strokeWidth={2} />
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p className="text-xs">{pinned ? "Unpin" : "Pin"}</p></TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-
-                    {canEdit && (
-                        <TooltipProvider delayDuration={50}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Edit
-                                        onClick={() => setIsEditing(true)}
-                                        className="cursor-pointer w-4 h-4 text-zinc-400 hover:text-zinc-300 transition"
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p className="text-xs">Edit</p></TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-
-                    {canDelete && (
-                        <TooltipProvider delayDuration={50}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Trash
-                                        onClick={() => deleteMessage.mutate({ messageId: id, serverId })}
-                                        className="cursor-pointer w-4 h-4 text-zinc-400 hover:text-zinc-300 transition"
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent side="top"><p className="text-xs">Delete</p></TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                </div>
+                <TooltipProvider delayDuration={50}>
+                    <CommunityMessageActions
+                        canDelete={canDelete}
+                        canEdit={canEdit}
+                        canPin={canPin}
+                        serverId={serverId}
+                        isPinned={pinned}
+                        pinPending={setPinned.isPending}
+                        onDelete={() => deleteMessage.mutate({ messageId: id, serverId })}
+                        onEdit={() => setIsEditing(true)}
+                        onReact={(emoji) => toggleReaction.mutate({ messageId: id, emoji })}
+                        onReply={() => setReplyTo({ id, userName: userName ?? "", content })}
+                        onTogglePin={() => setPinned.mutate({ serverId, messageId: id, pinned: !pinned })}
+                    />
+                </TooltipProvider>
             )}
         </div>
     );
