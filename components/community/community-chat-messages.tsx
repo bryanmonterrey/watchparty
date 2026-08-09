@@ -10,6 +10,8 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { CommunityChatItem } from "./community-chat-item";
 import { COMMUNITY_PAGE_LIMIT } from "@/hooks/use-community-reaction";
 import { renderKeyFor } from "@/lib/community/local-keys";
+import { readChatSnapshot } from "@/lib/community/chat-snapshot";
+import { useChatSnapshot } from "@/hooks/use-chat-snapshot";
 import { CommunityChatWelcome } from "./community-chat-welcome";
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm";
@@ -57,6 +59,7 @@ export function CommunityChatMessages({
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
+        isPlaceholderData,
         status,
     } = trpc.community.getMessages.useInfiniteQuery(
         // Shared constant: this input is the query KEY, and the optimistic
@@ -64,8 +67,16 @@ export function CommunityChatMessages({
         { channelId, limit: COMMUNITY_PAGE_LIMIT },
         {
             getNextPageParam: (lastPage) => lastPage.nextCursor,
+            // Paint last visit's newest page immediately instead of seven
+            // skeleton rows, and let the real fetch replace it. `placeholderData`
+            // rather than `initialData` on purpose: placeholder data is never
+            // written to the cache, so it can't inherit `staleTime` and suppress
+            // the request. See `lib/community/chat-snapshot.ts`.
+            placeholderData: () => readChatSnapshot(channelId),
         }
     );
+
+    useChatSnapshot(channelId, data, isPlaceholderData);
 
     const allMessages = data?.pages?.flatMap((page) => page.items) ?? [];
 

@@ -775,6 +775,41 @@ The comparator is key-driven rather than an explicit prop list, so a prop added
 later is compared by default. An explicit list silently stops comparing new
 props — a memo bug that presents as a rendering bug.
 
+### ✅ Snapshot painting — community chat opens instantly (2026-08-09)
+
+`lib/community/chat-snapshot.ts` + `hooks/use-chat-snapshot.ts`. The newest page
+of each channel is mirrored to localStorage and handed to the infinite query as
+`placeholderData`, so reopening a channel paints last visit's messages
+immediately and the real fetch replaces them behind it.
+
+Four things that decided the design, all of which are easy to get wrong:
+
+- **`placeholderData`, not `initialData`.** `initialData` is written into the
+  cache as if the server had returned it, so it inherits `staleTime` (5 min
+  app-wide) and can suppress the request entirely — the stale snapshot would
+  then be the only thing you ever see. Placeholder data is never cached, is
+  replaced the instant the query resolves, and flags itself via
+  `isPlaceholderData`.
+- **superjson, not `JSON`.** Rows carry `createdAt`/`updatedAt` as real `Date`s
+  and the row renders `updatedAt.getTime() !== createdAt.getTime()`. A JSON
+  round trip makes both strings, `.getTime()` is `undefined`, and the first
+  restored row throws — the cache built to make the channel faster would be the
+  thing that breaks it, and tsc cannot see it because the stored type still says
+  `Date`. superjson is already this app's tRPC transformer, so the snapshot is
+  stored in the encoding the data arrived in, and a `Date` added later needs no
+  new handling. `tests/chat-snapshot.test.ts` asserts that exact expression.
+- **Optimistic rows are never persisted.** A `local-` id or `pending: true` row
+  is a client invention; painting one back from storage shows a message that may
+  never have been sent, with no mutation in flight to resolve or roll it back.
+- **Don't write while showing a placeholder.** That re-persists what was just
+  read and refreshes its `savedAt`, so an entry that never successfully refetches
+  could outlive its max age forever and stay first in line to be painted.
+
+Bounded by construction: 8 channels (LRU by `savedAt`), 7-day max age, 256 KB
+per channel, a version guard, and a quota-exceeded path that evicts and retries
+once before giving up. Writes are debounced 1s — `data` gets a fresh identity on
+every refetch, reaction and typing-driven invalidate.
+
 ### Step 3 design: windowing community chat (NOT yet done)
 
 ⚠️ **Needs manual verification in a real channel.** There is no chat E2E test,
@@ -1397,6 +1432,90 @@ change is even sufficient.
    which is why Helius burn is 241k credits/day against a 1M monthly plan —
    99.5% of it webhooks, projecting ~7.5M. Fix the 500s and the retries stop.
 
+## ✅ Measured again 2026-08-09 ~20:15 UTC — with `scripts/cf/zone-analytics.mjs`
+
+The query is a script now, so this is repeatable:
+`node scripts/cf/zone-analytics.mjs --hours 12` (top paths) or
+`--path /pipeline` (status breakdown). It scales sampled counts by
+`sampleInterval`, and it says so explicitly when the token lacks
+**Zone → Analytics → Read**, because the API answers that with an empty zone
+list rather than an error — indistinguishable from "no traffic", and it cost an
+hour before.
+
+**`/pipeline` — the flood is over.**
+
+| window | rate | statuses |
+|---|---|---|
+| last 12h | 8,834/min | 6,360,219 × 200 |
+| last 3h | 12.9/min | 2,310 × 200 |
+| **last 1h** | **8.8/min** | 522 × 200 |
+
+It peaked far higher than the 2,191/min recorded yesterday and then stopped. The
+12h figure is almost entirely the earlier part of the window.
+
+**The negative-cache guard demonstrably works, on repeat requests:**
+
+```
+/phpmyadmin  req1 → 200  94,559 bytes  3.45s     ← first miss pays, and records
+             req2 → 404       9 bytes  0.20s
+             req3 → 404       9 bytes  0.20s
+/pipeline    req1..3 → 404    9 bytes  ~0.1s     ← already recorded
+```
+
+Upstash is healthy (`slugmiss:v1:pipeline` present, TTL counting down) and
+`recordSlugMiss` is properly awaited before `notFound()`.
+
+⚠️ **Unexplained, and stated as such:** the residual ~522 requests/hour to
+`/pipeline` still answered **200**, while my own probes to the identical path
+answered 404 throughout. Traffic-shape variants were ruled out —
+`/pipeline?x=1` → 404, `/PIPELINE` → 404, `/pipeline/` → 308 then 404. I could
+not account for it and did not want to invent a mechanism. Worth another look if
+the volume ever climbs again.
+
+### 🔴 The soft-404 is app-wide; the guard only closed single-segment paths
+
+`middleware.ts` matches `/^\/[^/]+$/`, so **any multi-segment junk path still
+gets a full ~93 KB SSR render at 200 OK** — which is precisely the signal that
+told the scanner it had found something:
+
+```
+/wp-admin/setup-config.php   200   92,928 bytes   1.87s
+/.git/config                 200   92,870 bytes   1.97s
+/.env                        200   94,547 bytes   2.40s
+/api/does-not-exist          200   92,908 bytes   0.23s
+```
+
+These are the most-probed paths on the internet. The mechanism that caused the
+outage is still open on every path shape except the one that was fixed. The
+single-segment case genuinely needed the negative cache (a slug *might* be a
+real username); these do not — nothing under `/wp-admin/` or `/.git/` is ever a
+route, so middleware can 404 them outright with no cache and no lookup.
+
+### 🔴 `/api/rpc` is 100% failing right now
+
+370 requests in 3h, **every one a 502**. That is the Helius RPC proxy, and it is
+the same failure that opened the 2026-08-08 outage ("the Helius key was
+exhausted, every /api/rpc call 502'd"). Low volume, so it is not a saturation
+risk — but every on-chain read behind it is broken.
+
+### 🟡 helius-trades: the 500s are fixed, the timeouts are not
+
+| | 2026-08-08 | 2026-08-09 (12h) |
+|---|---|---|
+| 200 | — | 1,175,315 (79.4%) |
+| 499 | 83,777 | **304,356 (20.6%)** |
+| 500 | 37,536 | **0** |
+
+`0dfc1aa1` (acknowledge before syncing) **eliminated the 500s completely**.
+What is left is 499 — Helius hanging up before the origin answers — at 423/min,
+and total volume is up to 2,055/min from 738/min. Retries on a timeout look the
+same to Helius as retries on an error, so the credit burn does not stop until
+the ack itself is fast. That is the next thing to measure.
+
+Also visible: `/api/auth/get-session` is 25% errors, **475 × 429** (rate
+limited), and `/price/v2` is 134 × 404 from some client calling a path that does
+not exist.
+
 ## Superseded — what I guessed before the data
 
 **Where does 1,400–5,700 req/min come from?** Per-tab steady state measures 4–8
@@ -1483,6 +1602,42 @@ that deserves a careful review; Phase 6 is the one that deserves numbers.
 
 Append decisions here as you go — especially anything that surprised you. That's
 what makes this document worth more than the plan it started as.
+
+- **2026-08-09** — **DM reactions were never optimistic**, and the reason is a
+  layer the community-chat work doesn't have. DMs do **not** render from the
+  query cache: `MessagesProvider` decrypts `message.list` into a
+  `decryptedMessages` state array and the UI reads that. `decryptAll` memoized
+  each row under `${id}-${updatedAt || createdAt}` and returned the **cached
+  object whole** on a hit — but `reactions`/`readReceipts` are plaintext and not
+  in that key, and `toggleReaction` only writes the join table, so a reaction
+  never moves `updatedAt`. Every projection replayed the reactions captured at
+  first decrypt and discarded both the optimistic patch and the refetched truth.
+  The reaction only appeared when the realtime frame patched local state
+  directly — a full round trip.
+  - Fix: the cache memoizes **decryption**, not the row. Plaintext fields are
+    re-projected from the fresh row on every hit.
+  - That made a second bug reachable: `decryptAll` now overwrites `reactions`
+    from the query row, which would revert a reaction that lived only in local
+    state. `handleReactionChange` patches the query cache too, and reconciles on
+    **(emoji, userId)** rather than id — your own reaction is already present
+    under an `optimistic-` id, so an id-keyed dedupe appends a second entry and
+    the chip reads 2 until the refetch.
+  - Generalisable: **an optimistic patch is only optimistic if the UI reads the
+    thing you patched.** Anywhere a projection sits between the cache and the
+    render, check what the projection memoizes on.
+- **2026-08-09** — Two of my own measurement errors this session, both of which
+  looked exactly like code bugs:
+  - `cd` in a Bash call **persists**. A `cd node_modules/@trpc/react-query` left
+    every later command in that directory, which reported "no node_modules" and
+    "no .env files" for a repo that had both, and ran a stray `bun install`
+    inside a package. Use absolute paths.
+  - A first GET to `/pipeline` returned 200 and I nearly wrote up "the 404 fix
+    doesn't work in production". It was the **cold miss** — request 2 was 404,
+    exactly as designed. One sample of a two-state system proves nothing.
+  - Third one, in a test I'd just written: nudging `savedAt` to `1000 + i` to
+    order LRU entries dated them all to 1970, so the staleness guard dropped
+    every one and the eviction assertion failed. The *code* was right. Check the
+    test first.
 
 - **2026-08-08** — **Phase 0 done.** `DURATION`/`DISTANCE` in `lib/ease.ts`,
   `--motion-*` mirror in `globals.css`, `hooks/use-reduced-motion.ts`, and the
