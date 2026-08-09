@@ -9,6 +9,7 @@ import { eq, desc, and, asc, sql, inArray, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
+import { takePage } from "@/server/lib/paginate";
 import { recordQuestEvent } from "@/server/lib/quests";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { follows } from "@/db/schema/content/follow";
@@ -85,12 +86,9 @@ export const commentRouter = router({
                 )
                 .limit(input.limit + 1);
 
-            let nextCursor: string | undefined;
-            if (rows.length > input.limit) {
-                const next = rows.pop();
-                nextCursor = next?.createdAt.toISOString();
-            }
-            return { comments: rows, nextCursor };
+            const { items, hasMore, lastItem } = takePage(rows, input.limit);
+            const nextCursor = hasMore ? lastItem!.createdAt.toISOString() : undefined;
+            return { comments: items, nextCursor };
         }),
 
     getReplies: publicProcedure

@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { withCache, invalidateCache, TTL } from "@/lib/cache";
 import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
+import { takePage } from "@/server/lib/paginate";
 import { recordQuestEvent } from "@/server/lib/quests";
 import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
@@ -1272,13 +1273,13 @@ export const contentRouter = router({
                 .offset(offset)
                 .limit(input.limit + 1);
 
-            let nextCursor: string | undefined;
-            if (results.length > input.limit) {
-                const nextItem = results.pop();
-                nextCursor = dateSort
-                    ? nextItem?.createdAt.toISOString()
-                    : String(offset + input.limit);
-            }
+            const page = takePage(results, input.limit);
+            const resultsPage = page.items;
+            const nextCursor = page.hasMore
+                ? dateSort
+                    ? page.lastItem!.createdAt.toISOString()
+                    : String(offset + input.limit)
+                : undefined;
 
             // Total for the toolbar count — first page only (no cursor).
             let total: number | undefined;
@@ -1295,7 +1296,7 @@ export const contentRouter = router({
                 total = t?.n ?? 0;
             }
 
-            const mappedResults = results.map(mapPostRow);
+            const mappedResults = resultsPage.map(mapPostRow);
 
             return { posts: mappedResults, nextCursor, total };
         }),
@@ -1435,13 +1436,14 @@ export const contentRouter = router({
                 .orderBy(desc(posts.baseScore), desc(posts.createdAt))
                 .limit(input.limit + 1);
 
-            let nextCursor: string | undefined;
-            if (results.length > input.limit) {
-                const next = results.pop();
-                nextCursor = next?.createdAt.toISOString();
-            }
+            // NOTE: ordered by baseScore then createdAt, but the cursor is
+            // createdAt only — the cursor key doesn't match the sort key, so
+            // paging can still skip/repeat rows regardless of the fix below.
+            // Tracked as the sort/cursor mismatch in docs/buzz-adoption-plan.md.
+            const { items, hasMore, lastItem } = takePage(results, input.limit);
+            const nextCursor = hasMore ? lastItem!.createdAt.toISOString() : undefined;
 
-            return { videos: results, nextCursor };
+            return { videos: items, nextCursor };
         }),
 
     // ─── Get videos by a specific user ───────────────────────────────────────

@@ -5,6 +5,7 @@ import { notifications } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
 import { eq, desc, and, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { takePage } from "@/server/lib/paginate";
 
 export const notificationRouter = router({
     getNotifications: protectedProcedure
@@ -37,13 +38,10 @@ export const notificationRouter = router({
                 .orderBy(desc(notifications.createdAt))
                 .limit(input.limit + 1);
 
-            let nextCursor: string | undefined;
-            if (rows.length > input.limit) {
-                const next = rows.pop();
-                nextCursor = next?.createdAt.toISOString();
-            }
+            const { items, hasMore, lastItem } = takePage(rows, input.limit);
+            const nextCursor = hasMore ? lastItem!.createdAt.toISOString() : undefined;
 
-            return { notifications: rows, nextCursor };
+            return { notifications: items, nextCursor };
         }),
 
     getUnreadCount: protectedProcedure.query(async ({ ctx }) => {

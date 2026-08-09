@@ -12,6 +12,7 @@ import { retrieveOutOfNetwork } from "@/lib/feed-ranker/retrieval";
 import { FEED_RANKER_ENABLED } from "@/lib/feed-ranker/config";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { postSelectFields, mapPostRow } from "@/server/lib/post-shape";
+import { takePage } from "@/server/lib/paginate";
 import { withCache, TTL } from "@/lib/cache";
 
 // Candidate pool size sourced for ranking (then re-ranked + paginated client-side).
@@ -157,11 +158,14 @@ export const feedRouter = router({
 
                     const filtered = results.filter((p: any) => !mutedIds.has(p.userId) && !blockedIds.has(p.userId));
 
-                    if (filtered.length > input.limit) {
-                        const nextItem = filtered[input.limit];
-                        nextCursor = nextItem?.createdAt.toISOString();
-                    }
-                    postsResults = filtered.slice(0, input.limit);
+                    // <any>: the ternary above unions a drizzle result with a
+                    // superjson-parsed cache hit, which widens the element to
+                    // `{}`. `postsResults` is `any[]` for the same reason.
+                    const page = takePage<any>(filtered, input.limit);
+                    nextCursor = page.hasMore
+                        ? page.lastItem.createdAt.toISOString()
+                        : undefined;
+                    postsResults = page.items;
                 }
             } else if (input.type === "following") {
                 if (!ctx.user) return { posts: [], nextCursor: undefined };
@@ -183,11 +187,11 @@ export const feedRouter = router({
                 )).orderBy(desc(posts.createdAt))
                     .limit(input.limit + 1);
 
-                if (results.length > input.limit) {
-                    const nextItem = results[input.limit];
-                    nextCursor = nextItem?.createdAt.toISOString();
-                }
-                postsResults = results.slice(0, input.limit);
+                const page = takePage<any>(results, input.limit);
+                nextCursor = page.hasMore
+                    ? page.lastItem.createdAt.toISOString()
+                    : undefined;
+                postsResults = page.items;
             }
 
             const mappedPosts = postsResults.map(mapPostRow);

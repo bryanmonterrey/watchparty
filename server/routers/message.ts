@@ -3,8 +3,9 @@ import { z } from "zod";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { messages, conversationParticipants, conversations, messageReactions, messageReadReceipts } from "@/db/schema/messaging";
-import { eq, and, ne, desc, inArray, getTableColumns, aliasedTable } from "drizzle-orm";
+import { eq, and, ne, desc, asc, or, lt, gt, inArray, getTableColumns, aliasedTable } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { takePage } from "@/server/lib/paginate";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { rooms, INBOX_CONVERSATION_EVENT, type InboxConversationPayload } from "@/lib/realtime/protocol";
 
@@ -74,6 +75,28 @@ export const messageRouter = router({
                 });
             }
 
+            // Resolve the cursor message's sort position. The cursor is an id
+            // (the API's shape), but the list is ordered by createdAt — so the
+            // id has to be turned into a (createdAt, id) pair before it can
+            // filter anything. PK lookup, so it's sub-millisecond.
+            //
+            // This procedure accepted `cursor` and never applied it: the WHERE
+            // clause was `conversationId` alone, so every page returned the
+            // newest `limit` messages while still handing back a nextCursor.
+            // DM history past the first page was unreachable, and an infinite
+            // scroll would re-request forever — the same shape as the coinFeed
+            // cursor bug in CLAUDE.md, minus the error that made that one
+            // visible.
+            let cursorRow: { createdAt: Date; id: string } | undefined;
+            if (input.cursor) {
+                const [row] = await db
+                    .select({ createdAt: messages.createdAt, id: messages.id })
+                    .from(messages)
+                    .where(eq(messages.id, input.cursor))
+                    .limit(1);
+                cursorRow = row;
+            }
+
             // Fetch messages with replyTo content
             const replyMessage = aliasedTable(messages, "replyMessage");
 
@@ -90,18 +113,36 @@ export const messageRouter = router({
                 })
                 .from(messages)
                 .leftJoin(replyMessage, eq(messages.replyToId, replyMessage.id))
-                .where(eq(messages.conversationId, input.conversationId))
-                .orderBy(desc(messages.createdAt))
+                .where(and(
+                    eq(messages.conversationId, input.conversationId),
+                    // Composite keyset: strictly "after" the cursor row under
+                    // `createdAt DESC, id ASC`. A timestamp-only `lt` would
+                    // skip every message sharing the cursor's timestamp —
+                    // Postgres `now()` is transaction-scoped, so rows written
+                    // together tie exactly.
+                    cursorRow
+                        ? or(
+                            lt(messages.createdAt, cursorRow.createdAt),
+                            and(
+                                eq(messages.createdAt, cursorRow.createdAt),
+                                gt(messages.id, cursorRow.id),
+                            ),
+                        )
+                        : undefined,
+                ))
+                // id ASC is the tiebreak the composite cursor above needs; a
+                // createdAt-only sort leaves ties in arbitrary order, which
+                // makes any keyset cursor non-deterministic.
+                .orderBy(desc(messages.createdAt), asc(messages.id))
                 .limit(input.limit + 1)) as any[];
 
-            let nextCursor: string | undefined = undefined;
-            if (conversationMessages.length > input.limit) {
-                const nextItem = conversationMessages.pop();
-                nextCursor = nextItem.id;
-            }
+            const messagePage = takePage<any>(conversationMessages, input.limit);
+            const nextCursor = messagePage.hasMore
+                ? messagePage.lastItem.id
+                : undefined;
 
             // Fetch reactions for these messages
-            const messageIds = conversationMessages.map((m: any) => m.id);
+            const messageIds = messagePage.items.map((m: any) => m.id);
             let reactionsRecord: Record<string, typeof messageReactions.$inferSelect[]> = {};
             let readReceiptsRecord: Record<string, typeof messageReadReceipts.$inferSelect[]> = {};
 
@@ -134,7 +175,7 @@ export const messageRouter = router({
 
             return {
                 success: true,
-                messages: conversationMessages.reverse().map((msg: any) => {
+                messages: messagePage.items.reverse().map((msg: any) => {
                     const {
                         reply_id, reply_content, reply_senderId, reply_messageType,
                         reply_attachmentUrl, reply_encryptionIv, reply_isEncrypted,

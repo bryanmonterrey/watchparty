@@ -26,6 +26,7 @@ import { TIERS, USDC_MINT, type TierKey } from "@/lib/premium/tiers";
 import { BOOST_PACKS, getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { boostLevelFor } from "@/lib/premium/boost-levels";
 import { isEntitled } from "@/server/lib/premium-entitlement";
+import { takePage } from "@/server/lib/paginate";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { eq, and, or, desc, asc, sql, lt, ne, count, inArray, gt, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -2455,15 +2456,15 @@ export const communityRouter = router({
                 .orderBy(desc(communityMessages.createdAt))
                 .limit(input.limit + 1);
 
-            let nextCursor: string | undefined;
-            if (msgs.length > input.limit) {
-                const nextItem = msgs.pop()!;
-                nextCursor = nextItem.createdAt.toISOString();
-            }
+            const page = takePage(msgs, input.limit);
+            const msgsPage = page.items;
+            const nextCursor = page.hasMore
+                ? page.lastItem!.createdAt.toISOString()
+                : undefined;
 
             // Reactions for this page, aggregated per message+emoji with
             // whether the current member reacted.
-            const ids = msgs.map((m) => m.id);
+            const ids = msgsPage.map((m) => m.id);
             const reactionsByMessage = new Map<string, { emoji: string; count: number; reactedByMe: boolean }[]>();
             if (ids.length) {
                 const rows = await db
@@ -2485,7 +2486,7 @@ export const communityRouter = router({
 
             // Custom-role name colors for this page's authors (highest role wins)
             const roleColorByMember = new Map<string, string>();
-            const memberIds = [...new Set(msgs.map((m) => m.memberId).filter((id): id is string => !!id))];
+            const memberIds = [...new Set(msgsPage.map((m) => m.memberId).filter((id): id is string => !!id))];
             if (memberIds.length) {
                 const colorRows = await db
                     .select({
@@ -2503,7 +2504,7 @@ export const communityRouter = router({
             }
 
             return {
-                items: msgs.map((m) => ({
+                items: msgsPage.map((m) => ({
                     ...m,
                     reactions: reactionsByMessage.get(m.id) ?? [],
                     roleColor: (m.memberId && roleColorByMember.get(m.memberId)) || null,
