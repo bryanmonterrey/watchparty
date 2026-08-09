@@ -38,6 +38,21 @@ import { cn } from "@/lib/utils";
  *  can become a tick. 40px is roughly where a thumb stops reading as a handle,
  *  and matches what browsers themselves clamp to. */
 const MIN_THUMB_PX = 40;
+/** Resting height, used whenever the pointer ISN'T over the rail.
+ *
+ *  This is the resolution to the fixed-vs-proportional argument rather than a
+ *  compromise between them, because the two states want different things:
+ *
+ *    - While you're just scrolling past, the only question is "where am I".
+ *      A constant 48px answers that and — crucially — never degenerates, so an
+ *      infinite list can't shrink it to a tick no matter how much loads in.
+ *    - On hover you're about to interact, and now "how much is there" matters
+ *      and the thumb has to be worth grabbing. So it expands to its true
+ *      proportional height.
+ *
+ *  Same trick as macOS, which swaps a thin overlay bar for a fatter draggable
+ *  one when the pointer approaches. */
+const RESTING_THUMB_PX = 48;
 /** Inset from the scroller's top and bottom edges. */
 const TRACK_INSET_PX = 6;
 /** How long the bar stays up after the last scroll before fading out.
@@ -135,10 +150,15 @@ export function RailScrollbar({
             // that the viewport covers of the content. Clamped so a very long
             // list still leaves something grabbable.
             const trackH = track.clientHeight;
-            thumbH = Math.max(
+            // True proportional height — what the thumb shows on hover.
+            const trueH = Math.max(
                 MIN_THUMB_PX,
                 Math.round(trackH * (scroller.clientHeight / scroller.scrollHeight)),
             );
+            // Resting is a flat 48 unless the content is SHORT enough that the
+            // honest thumb is already smaller; expanding on hover should never
+            // shrink it, which would read as the bar recoiling from the cursor.
+            thumbH = hovering || dragging ? trueH : Math.min(RESTING_THUMB_PX, trueH);
             thumb.style.height = `${thumbH}px`;
 
             const progress = Math.max(0, Math.min(1, scroller.scrollTop / distance));
@@ -214,13 +234,21 @@ export function RailScrollbar({
             show();
         };
 
+        // Both re-measure: changing the thumb's height changes the travel
+        // (trackH - thumbH), so the position has to be recomputed or the thumb
+        // would sit at the wrong offset for its new size — most visibly at the
+        // bottom of a list, where it would overhang the track.
         const onEnter = () => {
             hovering = true;
+            measure();
             show();
+            start();
         };
         const onLeave = () => {
             hovering = false;
+            measure();
             show();
+            start();
         };
 
         // The list can grow under us (pagination) without a scroll event, which
@@ -295,8 +323,11 @@ export function RailScrollbar({
                 affordance that says "this is grabbable". */}
             <div
                 ref={thumbRef}
-                style={{ height: MIN_THUMB_PX }}
-                className="pointer-events-auto w-full cursor-grab touch-none rounded-full bg-flexwhite/25 transition-colors hover:bg-flexwhite/40 active:cursor-grabbing active:bg-flexwhite/50"
+                style={{ height: RESTING_THUMB_PX }}
+                // height transitions with the colour: the resting→true growth
+                // should read as the bar offering itself, not as a jump. Kept
+                // to 200ms so it lands before a deliberate move to grab it.
+                className="pointer-events-auto w-full cursor-grab touch-none rounded-full bg-flexwhite/25 transition-[height,background-color] duration-200 ease-out hover:bg-flexwhite/40 active:cursor-grabbing active:bg-flexwhite/50"
             />
         </div>
     );
