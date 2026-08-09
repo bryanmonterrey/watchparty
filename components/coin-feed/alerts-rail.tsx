@@ -11,7 +11,7 @@ import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/re
 import { RailShell } from "@/components/rails/rail-shell";
 import { RailScrollbar } from "@/components/rails/rail-scrollbar";
 import { AlertRow } from "./alert-row";
-import { AlertListSkeleton } from "./alert-row-skeleton";
+import { AlertListSkeleton, AlertRowSkeleton } from "./alert-row-skeleton";
 import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
 import { DEFAULT_FILTERS, filtersToInput, type AlertEvent, type AlertFilters } from "./types";
 
@@ -286,7 +286,19 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         if (newCountData?.count) setNewCount(newCountData.count);
     }, [newCountData]);
 
+    /** Skeleton rows standing in for alerts that are on their way in. */
+    const [incomingCount, setIncomingCount] = useState(0);
+
     const loadNewAlerts = useCallback(async () => {
+        // Held BEFORE the count is cleared, because the pill disappears the
+        // instant it's clicked and the fetch below is a real network round
+        // trip. Without this the rail sat unchanged with no sign anything was
+        // happening, and the alerts then appeared with no transition.
+        //
+        // Capped at 5: the pill can say 99+, and 99 skeletons would push the
+        // list out of the viewport to preview rows that land in one paint
+        // anyway. A few rows read as "loading", which is the whole job.
+        setIncomingCount(Math.min(Math.max(newCount, 1), 5));
         setNewCount(0);
         // A plain fetch, NOT fetchInfinite: fetchInfinite writes the shared
         // infinite cache, and without a `pages` option it replaces every loaded
@@ -305,8 +317,9 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
             if (full[0]) setSince(new Date(full[0].occurredAt).toISOString());
             setListItems((prev) => dedupeNewestFirst([...incoming, ...prev]).slice(0, VIEW_COUNT));
         }
+        setIncomingCount(0);
         listRef.current?.scrollToTop("smooth");
-    }, [filterInput, utils]);
+    }, [filterInput, utils, newCount]);
 
     // ── Realtime ─────────────────────────────────────────────────────────────
     // An INSERT triggers an authoritative newCount refetch rather than an
@@ -543,10 +556,23 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                     <button
                         type="button"
                         onClick={loadNewAlerts}
-                        className="shrink-0 cursor-pointer bg-canvas border-b border-sidebar-hover py-2.5 text-[13px] font-medium text-twitter2 transition-colors"
+                        className="shrink-0 cursor-pointer bg-soft-gray-5 hover:bg-soft-gray-10 active:bg-soft-gray-15 border-b border-sidebar-hover py-2.5 text-[13px] font-medium text-twitter2 transition-colors"
                     >
                         Show {newCount === 99 ? "99+" : newCount} new alert{newCount === 1 ? "" : "s"}
                     </button>
+                )}
+
+                {/* Placeholders for the alerts being fetched, at the top of the
+                    shell because that is exactly where they will land. Outside
+                    the scroller (BidirectionalList owns that) so they can't
+                    disturb its windowing maths — they occupy the same spot the
+                    real rows will, then swap out. */}
+                {incomingCount > 0 && (
+                    <div className="shrink-0" aria-hidden>
+                        {Array.from({ length: incomingCount }).map((_, i) => (
+                            <AlertRowSkeleton key={i} index={i} count={incomingCount} />
+                        ))}
+                    </div>
                 )}
 
                 {/* The error state is for having NOTHING to show — not merely
