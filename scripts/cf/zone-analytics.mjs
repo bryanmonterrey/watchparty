@@ -22,7 +22,30 @@
  * `--path` switches to a status breakdown for that one path, which is what you
  * want for a failing endpoint: a webhook that 500s gets retried by its sender,
  * so the error rate and the request rate are the same conversation.
+ *
+ * `--by` adds dimensions, and it is the flag that actually solves things:
+ *
+ *   node scripts/cf/zone-analytics.mjs --path /pipeline --by method,userAgent
+ *
+ * Status alone said `/pipeline` was answering 200 while every probe of mine
+ * answered 404, and no amount of re-probing the URL explained it. One query
+ * with `method,userAgent` did: the traffic was POST from an empty user agent,
+ * a shape that never renders the page and so never populates the negative
+ * cache. **When a measurement disagrees with a probe, the probe is usually a
+ * different KIND of request, not a different path** — reach for `--by` early.
  */
+
+/** Friendly names → the GraphQL dimension. Anything else is passed through. */
+const DIMENSION_ALIASES = {
+    method: "clientRequestHTTPMethodName",
+    ua: "userAgent",
+    status: "edgeResponseStatus",
+    path: "clientRequestPath",
+    host: "clientRequestHTTPHost",
+    country: "clientCountryName",
+    colo: "coloCode",
+    scheme: "clientRequestScheme",
+};
 
 import { readFileSync } from "node:fs";
 
@@ -114,9 +137,15 @@ async function main() {
     const filter = { datetime_geq: since, datetime_leq: new Date().toISOString() };
     if (path) filter.clientRequestPath = path;
 
-    const dimensions = path
-        ? "edgeResponseStatus"
-        : "clientRequestPath edgeResponseStatus";
+    const extra = (arg("by", "") || "")
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean)
+        .map((d) => DIMENSION_ALIASES[d] ?? d);
+
+    const base = path ? ["edgeResponseStatus"] : ["clientRequestPath", "edgeResponseStatus"];
+    const dimensionList = [...new Set([...base, ...extra])];
+    const dimensions = dimensionList.join(" ");
 
     const data = await gql(
         token,
@@ -160,14 +189,16 @@ async function main() {
 
     if (path) {
         console.log(`${path}\n`);
-        console.log("   status        count      share     rate/min");
+        console.log("   status        count      share     rate/min" + (extra.length ? "   " + extra.join("  ") : ""));
         for (const g of groups) {
             const n = estimate(g);
+            const tail = extra.map((d) => String(g.dimensions[d] ?? "").trim() || "(empty)").join("  ");
             console.log(
                 `   ${String(g.dimensions.edgeResponseStatus).padEnd(6)}` +
                 `${n.toLocaleString().padStart(12)}` +
                 `${((n / total) * 100).toFixed(1).padStart(9)}%` +
-                `${rate(n, hours).padStart(13)}`,
+                `${rate(n, hours).padStart(13)}` +
+                (tail ? `   ${tail.slice(0, 90)}` : ""),
             );
         }
         return;
