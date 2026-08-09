@@ -168,8 +168,28 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
                 // Check cache first
                 // We use a composite key of ID + UpdatedAt (if available) to invalidate on edits
                 const cacheKey = `${msg.id}-${msg.updatedAt || msg.createdAt}`;
-                if (decryptionCache.current.has(cacheKey)) {
-                    return decryptionCache.current.get(cacheKey)!;
+                const cached = decryptionCache.current.get(cacheKey);
+                if (cached) {
+                    // This cache memoizes DECRYPTION, not the row.
+                    //
+                    // `reactions` and `readReceipts` are plaintext, and neither
+                    // is part of the cache key — `message.toggleReaction` only
+                    // writes the join table, so a reaction never moves
+                    // `messages.updatedAt`. Returning the cached object whole
+                    // therefore replayed the reactions captured at FIRST
+                    // decrypt and threw away every later version, including the
+                    // optimistic patch `message-list.tsx` writes into the query
+                    // cache. That is why a DM reaction only appeared once the
+                    // realtime frame came back — a full round trip — while the
+                    // identical action in community chat paints immediately.
+                    //
+                    // Re-project the plaintext fields from the fresh row so the
+                    // query cache stays the single source of truth for them.
+                    return {
+                        ...cached,
+                        reactions: (msg as any).reactions || [],
+                        readReceipts: (msg as any).readReceipts || [],
+                    };
                 }
 
                 try {
@@ -313,20 +333,77 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
         const handleReactionChange = (payload: any) => {
             const { eventType, new: newRecord, old: oldRecord } = payload;
 
+            // Patch the QUERY CACHE as well as local state.
+            //
+            // `decryptAll` now re-projects `reactions` from the query row on
+            // every run (see the decryption-cache note above), so a reaction
+            // that lives only in local state is reverted the next time anything
+            // touches `data.messages` — e.g. your own optimistic reaction on a
+            // different message. Writing both keeps them from disagreeing.
+            //
+            // The local patch stays because it also covers messages delivered
+            // by `handleNewMessage`, which are in state but not yet in the
+            // query cache.
+            utils.message.list.setData({ conversationId, limit: DM_PAGE_LIMIT }, (old) => {
+                if (!old?.messages) return old;
+                return {
+                    ...old,
+                    messages: old.messages.map((m: any) => {
+                        if (eventType === 'INSERT' && newRecord?.message_id === m.id) {
+                            const incoming = {
+                                id: newRecord.id,
+                                emoji: newRecord.emoji,
+                                userId: newRecord.user_id,
+                                messageId: newRecord.message_id,
+                            };
+                            // Reconcile on (emoji, userId), not on id: your own
+                            // reaction is already here under an `optimistic-`
+                            // id, so an id-keyed dedupe would append a SECOND
+                            // entry and the chip would read 2 until the refetch.
+                            // Replacing also adopts the real id, which is what
+                            // the DELETE path matches on.
+                            const existing = (m.reactions ?? []).findIndex(
+                                (r: any) => r.emoji === incoming.emoji && r.userId === incoming.userId,
+                            );
+                            if (existing !== -1) {
+                                const next = [...(m.reactions ?? [])];
+                                next[existing] = incoming;
+                                return { ...m, reactions: next };
+                            }
+                            return { ...m, reactions: [...(m.reactions ?? []), incoming] };
+                        }
+                        if (eventType === 'DELETE' && oldRecord?.id) {
+                            if (!(m.reactions ?? []).some((r: any) => r.id === oldRecord.id)) return m;
+                            return {
+                                ...m,
+                                reactions: (m.reactions ?? []).filter((r: any) => r.id !== oldRecord.id),
+                            };
+                        }
+                        return m;
+                    }),
+                };
+            });
+
             setDecryptedMessages(prev => prev.map(msg => {
                 if (eventType === 'INSERT' && newRecord.message_id === msg.id) {
-                    // Prevent duplicates
-                    if (msg.reactions?.some(r => r.id === newRecord.id)) return msg;
-
-                    return {
-                        ...msg,
-                        reactions: [...(msg.reactions || []), {
-                            id: newRecord.id,
-                            emoji: newRecord.emoji,
-                            userId: newRecord.user_id,
-                            messageId: newRecord.message_id
-                        }]
+                    const incoming = {
+                        id: newRecord.id,
+                        emoji: newRecord.emoji,
+                        userId: newRecord.user_id,
+                        messageId: newRecord.message_id,
                     };
+                    // Same (emoji, userId) reconcile as the query-cache patch
+                    // above — an id-keyed dedupe misses your own optimistic
+                    // entry and shows the reaction twice.
+                    const existing = (msg.reactions ?? []).findIndex(
+                        (r) => r.emoji === incoming.emoji && r.userId === incoming.userId,
+                    );
+                    if (existing !== -1) {
+                        const next = [...(msg.reactions ?? [])];
+                        next[existing] = incoming;
+                        return { ...msg, reactions: next };
+                    }
+                    return { ...msg, reactions: [...(msg.reactions || []), incoming] };
                 }
 
                 if (eventType === 'DELETE' && oldRecord.id) {
