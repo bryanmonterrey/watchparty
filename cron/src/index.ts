@@ -8,7 +8,10 @@
 //
 // Schedules (wrangler.jsonc): collect "0 * * * *" (hourly), sweep "*/30 * * * *",
 // feed-corpus "17 * * * *" (hourly, Phoenix ranker corpus refresh),
-// sync-assets-webhook "30 4 * * *" (daily, re-sync Helius watched wallets),
+// sync-assets-webhook "17 * * * *" (hourly) AND "30 4 * * *" (daily) — re-syncs
+//   the Helius watched wallets and, critically, re-applies the trades-webhook
+//   pool cap; hourly because that cap only lands when the Helius call succeeds,
+//   see the note at the call site,
 // predictions-factory "7 * * * *" (hourly, AI market generation + auto-resolve),
 // coin-alerts "* * * * *" (per-minute, the /home alert rail's ingestion pass),
 // trending-sync "* * * * *" (per-minute slice of the /trending board's chains).
@@ -60,8 +63,26 @@ export default {
             // Phoenix feed ranker: refresh the candidate corpus (embed recent
             // posts + live streams into post_embeddings).
             ctx.waitUntil(call(env, "/api/cron/feed-corpus"));
+            // 402 gate: fold Redis spend counters into the api_keys ledger and
+            // repair lost balances/revocations (lib/api-gate.ts).
+            ctx.waitUntil(call(env, "/api/cron/api-credits-flush"));
+            // HOURLY as well as daily, and the reason is recovery time.
+            //
+            // The Helius plan was exhausted on 2026-08-09 (webhooks = 99.8% of
+            // 1M credits in ~1.5 days), and the cap that prevents a repeat lives
+            // in `syncTradesWebhook()` — which only applies when the call
+            // SUCCEEDS. That call is on the same exhausted key, so while the
+            // plan is out the wide registration simply stays live.
+            //
+            // On the daily schedule alone, the moment quota returns the old
+            // config resumes at ~2,055 deliveries/min for up to 24 hours before
+            // the next sync — which at 541k credits/day re-exhausts a fresh
+            // plan almost immediately. Hourly bounds that window to ~1 hour.
+            // Idempotent and cheap; a failed call costs nothing.
+            ctx.waitUntil(call(env, "/api/cron/sync-assets-webhook"));
         } else if (event.cron === "30 4 * * *") {
             // Re-sync the Helius wallet-assets webhook with newly linked wallets.
+            // Kept as a daily belt-and-braces alongside the hourly call above.
             ctx.waitUntil(call(env, "/api/cron/sync-assets-webhook"));
         } else if (event.cron === "7 * * * *") {
             // AI market factory: auto-resolve due prediction markets and top the

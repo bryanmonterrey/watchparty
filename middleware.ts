@@ -19,6 +19,7 @@ const RESERVED_SLUGS = new Set([
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
 import { allowsAnonymous } from "./lib/auth/public-browsing";
+import { apiGate } from "./lib/api-gate";
 
 // Edge middleware. Next 16 deprecated `middleware` in favor of `proxy`, BUT
 // `proxy` is locked to the Node.js runtime, which OpenNext/Cloudflare Workers
@@ -88,9 +89,17 @@ export async function middleware(request: NextRequest) {
     return res;
   };
 
-  // Always allow better-auth + internal API routes (tRPC, webhooks).
+  // Always allow better-auth + internal API routes (tRPC, webhooks) for the
+  // app's own traffic — external (session-less, off-site) callers go through
+  // the 402 gate first (lib/api-gate.ts). API_402_MODE=off|log|enforce,
+  // default off, so this is inert until deliberately flipped; see
+  // docs/api-monetization.md before enforcing.
   if (pathname.startsWith(apiAuthPrefix) || pathname.startsWith("/api/")) {
-    return withCleanup(NextResponse.next());
+    const gate = await apiGate(request, !!session);
+    if (gate?.block) return withCleanup(gate.block);
+    const res = NextResponse.next();
+    if (gate?.settleHeader) res.headers.set("X-PAYMENT-RESPONSE", gate.settleHeader);
+    return withCleanup(res);
   }
 
   // Paths that are provably not routes, 404'd outright with no lookup.

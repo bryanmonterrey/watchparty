@@ -18,6 +18,13 @@ export interface MonitorEnv {
     UPSTASH_REDIS_REST_TOKEN?: string;
     /** Where alerts go. A var, not a secret — it's just an address. */
     ALERT_EMAIL?: string;
+    /**
+     * Shared with the app worker. Doubles as the 402 gate's bypass
+     * (x-gate-bypass) so the anonymous tRPC probe below keeps reaching the DB
+     * once API_402_MODE=enforce — without it the gate would 402 the probe in
+     * middleware and the DB path would go unwatched.
+     */
+    CRON_SECRET?: string;
 }
 
 const PROBES: { name: string; url: string }[] = [
@@ -58,13 +65,19 @@ interface MonitorState {
 // upstream fetch has been seen to hang past its signal, so the race is what
 // guarantees this function RETURNS. The abort is what guarantees the connection
 // CLOSES. Neither alone is sufficient.
-async function probe(p: { name: string; url: string }): Promise<ProbeResult> {
+async function probe(p: { name: string; url: string }, gateBypass?: string): Promise<ProbeResult> {
     const started = Date.now();
     const controller = new AbortController();
     const abortTimer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
         const res = await Promise.race([
-            fetch(p.url, { headers: { "user-agent": "watchparty-monitor/1" }, signal: controller.signal }),
+            fetch(p.url, {
+                headers: {
+                    "user-agent": "watchparty-monitor/1",
+                    ...(gateBypass ? { "x-gate-bypass": gateBypass } : {}),
+                },
+                signal: controller.signal,
+            }),
             // Slightly after the abort, so a working abort wins the race and we
             // report the real error rather than a generic "timeout".
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS + 500)),
@@ -135,7 +148,7 @@ function describe(results: ProbeResult[]): string[] {
 
 export async function runMonitor(env: MonitorEnv): Promise<void> {
     try {
-        const results = await Promise.all(PROBES.map(probe));
+        const results = await Promise.all(PROBES.map((p) => probe(p, env.CRON_SECRET)));
         const failing = results.filter((r) => !r.ok);
         const now = Date.now();
         // Heartbeat, unconditionally: a healthy monitor is otherwise silent
