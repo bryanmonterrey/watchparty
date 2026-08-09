@@ -179,6 +179,25 @@ real nausea), and it's also the single cheapest way to make the app feel
 deliberate. Buzz has a `prefers-reduced-motion` branch on *every* animation;
 we have 32 files out of ~500 animated ones.
 
+### ⚠️ Scope: this phase is ADDITIVE (user constraint, 2026-08-08)
+
+**Do not rewrite, retune, or replace existing animations.** Phase 1 adds a
+reduced-motion branch to what's already there — it does not touch how anything
+moves for a normal user. Concretely:
+
+- ✅ Append `motion-reduce:transition-none` / `motion-reduce:animate-none`.
+- ✅ Add a `prefers-reduced-motion` branch to an existing `@keyframes`.
+- ✅ Add a `reduced ?` ternary to a `motion.*` `transition` / `initial`.
+- ❌ Change an existing duration, easing, distance, or spring.
+- ❌ Swap a hand-tuned animation for a token'd one "for consistency".
+- ❌ Delete an animation because a token equivalent exists.
+
+The `DURATION` / `DISTANCE` tokens from Phase 0 are for **new** code and for
+surfaces we deliberately consolidate later. They are not a mandate to migrate
+the ~442 existing `transition-*` users. If a token genuinely fits an existing
+animation, leave it alone anyway — the diff isn't worth the risk of retuning
+something that was tuned by eye.
+
 **Scope, measured 2026-08-08:**
 
 | Surface | Count | Handling |
@@ -786,6 +805,22 @@ that deserves a careful review; Phase 6 is the one that deserves numbers.
 Append decisions here as you go — especially anything that surprised you. That's
 what makes this document worth more than the plan it started as.
 
+- **2026-08-08** — **Phase 0 done.** `DURATION`/`DISTANCE` in `lib/ease.ts`,
+  `--motion-*` mirror in `globals.css`, `hooks/use-reduced-motion.ts`, and the
+  reduced-motion floor at the end of `globals.css`.
+  - The floor uses `*:not(:where(.motion-keep, .motion-keep *))`. `:where()`
+    contributes **zero** specificity, so the selector stays 0,0,0 and any
+    class-level `!important` still outranks it — the escape hatch works two
+    ways (add `motion-keep`, or write a class rule).
+  - First attempt used `revert-layer` to restore authored timing on
+    `.motion-keep`. That's wrong: from an unlayered rule it reverts to the **UA**
+    value, not the author's. Exclusion via `:not(:where(…))` is the correct
+    construction.
+  - `.star-loader > svg` keeps its fade under reduced motion, now with
+    `!important` so the floor can't freeze it. **A frozen loader reads as a hung
+    app** — that judgment call recurs for every spinner.
+- **2026-08-08** — User constraint: **Phase 1 is additive.** No retuning or
+  replacing existing animations; see the scope block in that phase.
 - **2026-08-08** — Plan written. Buzz surveyed at `desktop/src` (1,321 files,
   ~270k LOC). Confirmed our composers are plain textareas; confirmed
   reduced-motion coverage is 32 files against ~160 motion importers, ~442

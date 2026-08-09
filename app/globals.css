@@ -45,6 +45,23 @@
   --digit-dir-x: 0;
   --digit-dir-y: 1;
 
+  /* ── Motion tokens ──────────────────────────────────────────────────────
+     The CSS mirror of `lib/ease.ts`. Same four durations and two easings, in
+     ms rather than seconds — CSS-only animations read these, motion/framer
+     components import the TS ones. Change both or neither, or the app starts
+     moving at two different speeds depending on who wrote the animation.
+
+     Distances stay short on purpose: motion supports hierarchy here, it isn't
+     the point. See docs/buzz-adoption-plan.md, Phase 0. */
+  --motion-duration-instant: 120ms;
+  --motion-duration-fast: 180ms;
+  --motion-duration-standard: 240ms;
+  --motion-duration-arrival: 500ms;
+  --motion-ease-standard: cubic-bezier(0.16, 1, 0.3, 1); /* == EASE_OUT */
+  --motion-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* == EASE_IN_OUT */
+  --motion-distance-nudge: 0.25rem;
+  --motion-distance-arrival: 0.75rem;
+
   --radius: 0.625rem;
   /* AppHeader height (h-11 content + py-3 = 68px). The header pins itself to
      this via h-(--header-height); pages offset under it with
@@ -474,8 +491,10 @@
     animation: none;
   }
 
+  /* Keeps breathing (a frozen loader reads as a hung app) — !important so it
+     outranks the app-wide reduced-motion floor at the end of this file. */
   .star-loader > svg {
-    animation: star-loader-fade 1.8s ease-in-out infinite;
+    animation: star-loader-fade 1.8s ease-in-out infinite !important;
   }
 }
 
@@ -1074,5 +1093,37 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
   [class*="border-border"],
   [class*="border-input"] {
     border-color: var(--wp-border);
+  }
+}
+
+/* ── Reduced-motion floor ───────────────────────────────────────────────────
+   ONLY applies when the OS setting is on (Accessibility → Display → Reduce
+   motion). Normal rendering is completely untouched — this cannot change how
+   the app looks or moves for anyone who hasn't asked for it.
+
+   It's a floor, not the policy. It catches CSS animations nobody remembered to
+   handle; JS-driven motion (motion/framer-motion rewrite inline styles every
+   frame) is unaffected and is handled per-component via `useReducedMotion`.
+
+   `1ms`, never `0s` — a zero-duration animation never fires `animationend`, so
+   anything awaiting that event would hang forever.
+
+   TO EXEMPT AN ANIMATION, either:
+     1. add `motion-keep` to the element — it and its subtree are skipped
+        entirely, keeping their authored timing; or
+     2. write a class-level rule with `!important`. The `:not(:where(…))` below
+        contributes ZERO specificity (that's what `:where` is for), so the whole
+        selector stays 0,0,0 and any class-level rule outranks it.
+   Exempt anything that reads as broken when frozen — loaders, progress bars,
+   live indicators. Do NOT exempt decorative motion; that's the setting's
+   entire purpose. */
+@media (prefers-reduced-motion: reduce) {
+  *:not(:where(.motion-keep, .motion-keep *)),
+  *:not(:where(.motion-keep, .motion-keep *))::before,
+  *:not(:where(.motion-keep, .motion-keep *))::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
 }
