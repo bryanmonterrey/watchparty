@@ -1,5 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isKnownSlugMiss } from "@/lib/security/slug-miss-cache";
+import { isJunkPath, isWriteToProfilePath } from "@/lib/security/junk-paths";
+
+/** A real 404, with a body small enough that probing costs the prober more than us. */
+function notFound() {
+  return new NextResponse("Not Found", {
+    status: 404,
+    headers: { "content-type": "text/plain; charset=utf-8" },
+  }) as NextResponse;
+}
 
 /** Top-level paths that are real routes, never usernames. */
 const RESERVED_SLUGS = new Set([
@@ -84,6 +93,24 @@ export async function middleware(request: NextRequest) {
     return withCleanup(NextResponse.next());
   }
 
+  // Paths that are provably not routes, 404'd outright with no lookup.
+  //
+  // The single-segment guard below needed a negative cache because a slug
+  // *might* be a real username. Nothing here might be anything: there is no
+  // route under `/wp-admin/`, no `.php` anywhere in this app, and `/.env` and
+  // `/.git/config` are asking for files that must never be served. Measured on
+  // production 2026-08-09, every one of them returned **200 with ~93 KB** —
+  // a full SSR soft-404, uncacheable, ~2s of origin time each:
+  //
+  //     /wp-admin/setup-config.php   200   92,928 bytes   1.87s
+  //     /.git/config                 200   92,870 bytes   1.97s
+  //     /.env                        200   94,547 bytes   2.40s
+  //
+  // A 200 is what tells a scanner it found something. That is the exact
+  // mechanism behind the 2026-08-09 saturation, which was only ever closed for
+  // single-segment paths — every other shape was still wide open.
+  if (isJunkPath(pathname)) return withCleanup(notFound());
+
   // A single-segment path is a USERNAME (app/(app)/[username]), so an unknown
   // one still renders the whole app and answers 200 — Next cannot set a 404
   // once streaming has begun (see docs/buzz-adoption-plan.md). Middleware runs
@@ -93,14 +120,14 @@ export async function middleware(request: NextRequest) {
   // the lookup fails open, so this can never 404 a real profile.
   const singleSegment = /^\/[^/]+$/.test(pathname) ? pathname.slice(1) : null;
   if (singleSegment && !RESERVED_SLUGS.has(singleSegment.toLowerCase())) {
-    if (await isKnownSlugMiss(singleSegment)) {
-      return withCleanup(
-        new NextResponse("Not Found", {
-          status: 404,
-          headers: { "content-type": "text/plain; charset=utf-8" },
-        }) as NextResponse,
-      );
-    }
+    // A WRITE to a profile URL is always a probe — and it is the shape the
+    // negative cache structurally cannot catch, because the cache only learns
+    // when the page renders and this traffic never renders it. That is why
+    // `/pipeline` kept answering 200: it is POST, from an empty user agent.
+    // Checked before the cache lookup so it costs nothing at all.
+    if (isWriteToProfilePath(pathname, request.method)) return withCleanup(notFound());
+
+    if (await isKnownSlugMiss(singleSegment)) return withCleanup(notFound());
   }
 
   // /feed/post/<id> is /status/<id> now.

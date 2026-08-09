@@ -1465,12 +1465,40 @@ It peaked far higher than the 2,191/min recorded yesterday and then stopped. The
 Upstash is healthy (`slugmiss:v1:pipeline` present, TTL counting down) and
 `recordSlugMiss` is properly awaited before `notFound()`.
 
-⚠️ **Unexplained, and stated as such:** the residual ~522 requests/hour to
-`/pipeline` still answered **200**, while my own probes to the identical path
-answered 404 throughout. Traffic-shape variants were ruled out —
-`/pipeline?x=1` → 404, `/PIPELINE` → 404, `/pipeline/` → 308 then 404. I could
-not account for it and did not want to invent a mechanism. Worth another look if
-the volume ever climbs again.
+### ✅ Root cause of the residual 200s: it is POST, and the cache can't learn
+
+Adding `userAgent` + `clientRequestHTTPMethodName` to the query answered in one
+shot what an hour of reasoning had not. Two hours of `/pipeline`:
+
+| count | status | method | user agent |
+|---|---|---|---|
+| **2,048** | **200** | **POST** | *(empty)* |
+| 5 | 404 | GET | curl/8.7.1 (mine) |
+| 1 | 404 | HEAD | curl/8.7.1 (mine) |
+
+The traffic is a **write with no user agent**, and it never renders the page —
+so `recordSlugMiss()` never runs, so the negative-cache entry is absent every
+time the next POST arrives, so every one pays a full ~93 KB soft-404 render.
+My GET probes wrote the entry and then saw 404s, which is why the guard looked
+like it worked while the graph said otherwise.
+
+**A cache that learns by rendering cannot defend against traffic that never
+triggers a render.** That is the whole bug, and no amount of tuning the TTL or
+the cache tiers would have touched it.
+
+Fixed by refusing the shape instead of caching it: a profile URL is only ever
+**read**, so `isWriteToProfilePath()` 404s any non-GET/HEAD single-segment
+request outright — no lookup, no cache, before anything else. Safe here
+specifically because this app has **no server actions** (the one thing that
+legitimately POSTs to a page's own URL); `grep -rl '"use server"'` returns
+nothing, and the data layer is tRPC by design. ⚠️ If server actions are ever
+adopted, this check has to go.
+
+**Method lesson:** three dimensions (`status`, `method`, `userAgent`) cost one
+query and settled it. I had been reasoning from `status` alone and testing
+variants of the URL — casing, query string, trailing slash — all of which were
+the wrong axis entirely. When a measurement disagrees with a probe, the probe is
+usually a different *kind* of request, not a different path.
 
 ### 🔴 The soft-404 is app-wide; the guard only closed single-segment paths
 
@@ -1497,6 +1525,38 @@ route, so middleware can 404 them outright with no cache and no lookup.
 the same failure that opened the 2026-08-08 outage ("the Helius key was
 exhausted, every /api/rpc call 502'd"). Low volume, so it is not a saturation
 risk — but every on-chain read behind it is broken.
+
+### 🔴 …because the Helius plan is exhausted, and webhooks ate all of it
+
+```
+plan: free   cycle: 2026-08-08 → 2026-09-08
+used 1,008,554 of 1,000,000 credits  (100.9%)   remaining: 0
+burn: 541,577/day → ~16,788,885 projected
+  webhooks  1,006,323  99.8%      rpc  1,491  0.1%      das  740  0.1%
+```
+
+The whole monthly quota went in ~1.5 days. When it runs out Helius answers
+`{"code":-32429,"message":"max usage reached"}` to **everything on that key**,
+so `/api/rpc` 502s — and `scripts/shrink-trades-webhook.mjs`, the emergency
+lever, **cannot run either**, because the management API is on the same key.
+Watch it with `bun scripts/dev/helius-usage.mjs`.
+
+**The arithmetic that decided the fix.** Retries were real — 20.6% of deliveries
+hung up as 499 and Helius redelivers — but at 2,055 deliveries/min even a
+**100% success rate** is ~16x the monthly plan. Latency was never going to fix a
+volume problem, so both had to change:
+
+1. **Volume.** `MAX_DISPLAY_POOLS` now defaults to **0**
+   (`HELIUS_TRADES_DISPLAY_POOLS` to re-widen on a paid plan). Ordering trending
+   pools by rank selects literally the busiest pools on Solana, so 15 of them is
+   a firehose while our own launched pools are a trickle. Display coins fall
+   back to the cached polling path; our launches are unaffected.
+2. **Latency.** The receiver now acks **before doing anything at all**. The
+   previous shape moved only the price sync behind `after()` and still did two
+   Redis reads and the tape INSERT on Helius's clock. Reading the body is the
+   only thing left pre-response; everything else is one `after()` task. (The
+   nested `after()` inside it is gone — `after()` registers work against the
+   *request*, so calling it once the response is sent is at best a no-op.)
 
 ### 🟡 helius-trades: the 500s are fixed, the timeouts are not
 

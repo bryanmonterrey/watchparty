@@ -76,7 +76,26 @@ export async function POST(req: NextRequest) {
     } catch {
         return NextResponse.json({ ok: true });
     }
+    if (!events.length) return NextResponse.json({ ok: true, synced: 0 });
 
+    // ACKNOWLEDGE FIRST — NOTHING BILLABLE HAPPENS ON HELIUS'S CLOCK.
+    //
+    // The previous shape moved only the price sync behind `after()` and still
+    // did two Redis reads and the tape INSERT before responding. That was
+    // enough: 304,356 deliveries (20.6% of 1.48M over 12h) still hung up as
+    // 499, and Helius redelivers a failure — so the timeouts were generating
+    // their own billable load on a product that charges per call.
+    //
+    // Reading the body is the only thing that must happen before the response,
+    // because the request stream doesn't outlive it. Everything after this line
+    // runs in `after()`, where a slow database or a slow pricing API can cost a
+    // log line and nothing else.
+    after(() => processDelivery(events));
+
+    return NextResponse.json({ ok: true });
+}
+
+async function processDelivery(events: HeliusEvent[]) {
     // Every account touched by the batch → which are pools we track?
     const touched = new Set<string>();
     for (const ev of events) {
@@ -84,7 +103,7 @@ export async function POST(req: NextRequest) {
             if (a.account) touched.add(a.account);
         }
     }
-    if (touched.size === 0) return NextResponse.json({ ok: true, synced: 0 });
+    if (touched.size === 0) return;
 
     // CACHED, then filtered in memory — the same treatment displayPools got,
     // and for the same reason. Capping registration at 15 pools was not enough
@@ -116,7 +135,7 @@ export async function POST(req: NextRequest) {
     // takes a 200 as delivered and won't redeliver, which is the point — a
     // retry storm on a database that's already struggling is what we're
     // getting away from.
-    if (!liveTokens) return NextResponse.json({ ok: true, skipped: "db" });
+    if (!liveTokens) return;
 
     const rows = liveTokens
         .filter((t) => t.poolAddress && touched.has(t.poolAddress))
@@ -145,7 +164,7 @@ export async function POST(req: NextRequest) {
     const displayHits = (displayPools ?? []).filter((p) => p.poolAddress && touched.has(p.poolAddress));
 
     if (rows.length === 0 && displayHits.length === 0) {
-        return NextResponse.json({ ok: true, synced: 0 });
+        return;
     }
 
     // RECORD THE TAPE — deliberately before, and outside, the throttle below.
@@ -153,7 +172,6 @@ export async function POST(req: NextRequest) {
     // than once every few seconds; individual swaps are the opposite case, and
     // dropping them is exactly what left the transactions table with nothing to
     // show but a 30s poll of a rate-limited upstream. Every swap gets written.
-    let recorded = 0;
     try {
         const poolsByAddress = new Map<string, { network: string; tokenAddress: string }>();
         for (const r of rows) {
@@ -166,46 +184,33 @@ export async function POST(req: NextRequest) {
                 poolsByAddress.set(p.poolAddress, { network: "solana", tokenAddress: p.tokenAddress });
             }
         }
-        recorded = await recordSwaps(events as HeliusSwapEvent[], poolsByAddress);
+        await recordSwaps(events as HeliusSwapEvent[], poolsByAddress);
     } catch (err) {
         // The tape is additive. If it fails, the price sync below must still
         // run — that's the path that keeps headline numbers correct.
         console.error("[helius-trades] recordSwaps failed:", err instanceof Error ? err.message : err);
     }
 
-    // ACKNOWLEDGE FIRST, SYNC AFTER.
+    // Price work: a per-row Redis claim, then syncMarketData and
+    // syncCurveProgress, both of which call external pricing APIs.
     //
-    // Everything below is price work: a per-row Redis claim, then syncMarketData
-    // and syncCurveProgress, both of which call external pricing APIs. Doing it
-    // before responding put third-party latency on Helius's clock, and Helius
-    // hangs up when a delivery is slow — 83,777 of those (status 499) in nine
-    // hours, plus 37,536 500s from throws in exactly this tail, which was
-    // outside every try/catch. 30.4% of deliveries failed.
-    //
-    // A failed delivery is REDELIVERED, so the failures were also generating
-    // their own load: ~738 req/min against a webhook product that bills per
-    // call, and the reason Helius burn projects ~7.5M credits against a 1M plan.
-    //
-    // `after()` runs once the response is sent, so Helius sees a fast 200 and
-    // stops retrying, and the sync still happens. Errors in here can no longer
-    // become a delivery failure — they're logged.
-    after(async () => {
-        try {
-            // Per-token claim throttle (same identity trick as trade.syncToken).
-            const toSync: SyncableToken[] = [];
-            for (const row of rows) {
-                const claim = `${Date.now()}:${Math.random()}`;
-                const winner = await withCache(`token:sync-req:${row.id}`, THROTTLE_SECONDS, async () => claim);
-                if (winner === claim) toSync.push({ ...row, poolAddress: row.poolAddress! });
-            }
-            if (toSync.length === 0) return;
-
-            await syncMarketData(toSync);
-            await syncCurveProgress(toSync);
-        } catch (err) {
-            console.error("[helius-trades] post-ack sync failed:", err instanceof Error ? err.message : err);
+    // This used to be wrapped in its own `after()`. It isn't any more, because
+    // the whole function already runs inside one — `after()` registers work
+    // against the *request*, and calling it once the response is sent is at best
+    // a no-op. Plain awaits here, inside the same background task.
+    try {
+        // Per-token claim throttle (same identity trick as trade.syncToken).
+        const toSync: SyncableToken[] = [];
+        for (const row of rows) {
+            const claim = `${Date.now()}:${Math.random()}`;
+            const winner = await withCache(`token:sync-req:${row.id}`, THROTTLE_SECONDS, async () => claim);
+            if (winner === claim) toSync.push({ ...row, poolAddress: row.poolAddress! });
         }
-    });
+        if (toSync.length === 0) return;
 
-    return NextResponse.json({ ok: true, recorded, queued: rows.length });
+        await syncMarketData(toSync);
+        await syncCurveProgress(toSync);
+    } catch (err) {
+        console.error("[helius-trades] post-ack sync failed:", err instanceof Error ? err.message : err);
+    }
 }
