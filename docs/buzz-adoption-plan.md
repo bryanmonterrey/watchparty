@@ -1282,7 +1282,64 @@ outage's cause:
 5. **Raise `INSTANCES` only as a stopgap.** 3 turned a hard ceiling into a soft
    one on 2026-08-08 and did not prevent this.
 
-## ✅ RESOLVED 2026-08-09 — it was a scanner hitting a route that never 404s
+## 🛑 CORRECTION 2026-08-09 21:50 UTC — `/pipeline` was never a scanner. It is us.
+
+Everything below this heading, and the entire "resolved" section that follows,
+identified `/pipeline` as an external scanner probing a CI/CD path. **That is
+wrong.** One more dimension on the query settled it:
+
+```
+node scripts/cf/zone-analytics.mjs --hours 0.3 --path /pipeline --by method,host
+
+   status   count   method  host
+   200        192   POST    uncommon-bengal-85848.upstash.io
+   404          1   POST    watchparty.xyz          ← my own probe
+```
+
+`uncommon-bengal-85848.upstash.io` is **our `UPSTASH_REDIS_REST_URL`**, and
+`/pipeline` is Upstash's REST **pipeline** endpoint — the batched command API
+`@upstash/redis` uses. These are the Worker's own outbound Redis subrequests,
+attributed to the zone that made them. There is no scanner and never was.
+
+The correlation is exact:
+
+| window | `/pipeline` (Redis) | `/api/webhooks/helius-trades` |
+|---|---|---|
+| last 12h | 1,775,958 | 421,140 |
+| last 3h | 2,523 | 0 |
+| last 1h | 461 | 0 |
+
+~4.2 Redis pipeline calls per webhook delivery — which is exactly what the
+receiver did (breaker check + two `readOrSkip` reads + per-token claim writes).
+And when Helius stopped delivering, `/pipeline` collapsed from ~8,800/min to
+~10/min **on its own**. The webhook firehose *was* the `/pipeline` traffic,
+amplified ~4x through Redis.
+
+**So the container saturation had one cause, not two:** the helius-trades
+webhook. The cap in `lib/tokens/trades-webhook.ts` addresses it at the source;
+`MAX_TOKENS_PER_CALL`-style Redis work per delivery is the multiplier.
+
+### What survives this correction, and what doesn't
+
+- ❌ "A scanner sent 1.18M requests to `/pipeline`." No. Our Redis client did.
+- ❌ "`/pipeline` costs a DB lookup, a full SSR render and 93 KB each." No —
+  that was measured by **me curling `watchparty.xyz/pipeline` by hand**, which
+  really does render a soft 404. The 1.18M were never that request.
+- ✅ **The soft-404 itself is real and was worth fixing.** `/wp-admin/setup-config.php`,
+  `/.git/config` and `/.env` genuinely answered **200 with ~93 KB**, and now
+  answer 404 with 9 bytes. That is a real reduction in origin cost and a real
+  hardening — it just wasn't the outage.
+- ✅ `isWriteToProfilePath()` is still correct (a POST to a profile URL is
+  meaningless in this app) and is unaffected by this: middleware only sees
+  requests *into* the zone, never the Worker's outbound subrequests.
+
+**Lesson, and it is the same one twice in one day:** an unexplained number is
+not an explained number with a plausible story attached. The previous pass had
+the right instinct — measure, don't theorise — and then stopped one dimension
+short. `--by host` was always available and would have answered it immediately.
+When traffic looks like an attack, check whether it is *you* first.
+
+## ⚠️ SUPERSEDED (kept for the reasoning) — "it was a scanner hitting a route that never 404s"
 
 Zone analytics (once the token got `Zone → Analytics → Read`) answered it in one
 query. Top paths over 9 hours:
@@ -1542,6 +1599,39 @@ route, so middleware can 404 them outright with no cache and no lookup.
 the same failure that opened the 2026-08-08 outage ("the Helius key was
 exhausted, every /api/rpc call 502'd"). Low volume, so it is not a saturation
 risk — but every on-chain read behind it is broken.
+
+### ✅ `/api/auth/get-session` — 24.8% of session reads were being 429'd
+
+Same `--by` technique. 12h, one Mac Chrome user agent: **894 × 200 and 491 ×
+429**. `watchparty-monitor/1` alongside it got 929 × 200 and one 429, so it was
+not a global limiter problem — it was one browser bursting.
+
+`hooks/use-auth-session.ts` had `refetchOnMount: "always"` and **94 components
+call it**. TanStack only dedupes fetches that are actually *concurrent*, so
+staggered mounts — navigating, opening a dropdown, rendering rows — each fired
+their own `/api/auth/get-session` against better-auth's
+`rateLimit: { window: 60, max: 100 }`. Then `retry: 2` retried the 429, spending
+the very budget that produced it: three requests per rejection.
+
+A 429 here is worse than a slow answer. An errored session read is exactly the
+"signed out" misreport the hook's own comments exist to prevent — the header
+offers Sign In to a signed-in user.
+
+Fixed without losing the guarantee `"always"` was protecting: `refetchOnMount:
+true` with a **30s** staleTime bounds this to one request per 30s per tab while
+still capping how long a wrong `null` can survive, and sign-in paths already
+invalidate `["session"]` explicitly. `retry` and `refetchInterval` now both back
+off on 4xx — the same rule `components/react-query-provider.tsx` applies
+app-wide, which this query had overridden. The error also carries its status now,
+because throwing a bare message made 429 and "connection dropped"
+indistinguishable.
+
+### ✅ `/price/v2` — not ours, already handled
+
+138 requests / 12h, **100% 404, GET, empty user agent**. Our own Jupiter call in
+`server/lib/mint-prices.ts:68` is absolute (`https://lite-api.jup.ag/price/v2`),
+so this is an outside prober guessing at a price API. It already 404s cheaply.
+No action.
 
 ### 🔴 …because the Helius plan is exhausted, and webhooks ate all of it
 
