@@ -1279,12 +1279,45 @@ Cloudflare cannot absorb any of it. All of it lands on the origin.
 That is the container saturation: not the app's polling (measured at 4–8
 calls/min per tab), not a deploy of mine, and not real users.
 
-### ⚠️ First fix attempt FAILED — don't repeat it
+### Root cause narrowed: `notFound()` returns 200 APP-WIDE
 
-I assumed the 200 came from `[username]/loading.tsx` committing the status
-before `notFound()` ran. Removing it locally changed nothing: still 200, still
-~152 KB. The file is restored. Whatever commits the status happens earlier —
-worth finding, but it is NOT the loading boundary.
+Four hypotheses tested and eliminated, in order:
+
+1. ❌ `[username]/loading.tsx` commits the status before `notFound()` runs.
+   Removed it — still 200.
+2. ❌ The root `app/loading.tsx` does. Removed it — still 200.
+3. ❌ `middleware.ts` rewrites in a way that forces 200. It only ever returns
+   `NextResponse.next()`/`redirect()`; no rewrite.
+4. ❌ Something specific to the `[username]` route or its DB lookup.
+
+The isolating test: a **minimal probe page whose entire body is
+`notFound()`** — no data, no Suspense, no loading boundary — placed both inside
+`(app)` and at the app root.
+
+```
+notFound() inside (app) group  → 200
+notFound() at app root         → 200
+unknown username /pipeline     → 200
+```
+
+So **every `notFound()` in this app answers 200** on Next 16.3. It is not this
+route, and no amount of editing `[username]` will fix it. (Probe routes were
+deleted; both `loading.tsx` files are restored.)
+
+That reframes the options:
+
+- **Routing change:** move profiles to `/u/<username>` so unknown top-level
+  paths hit a genuine unmatched-route 404 instead of a dynamic segment that
+  matches everything. This is the real fix and it is a product decision — it
+  changes every profile URL in the wild.
+- **Middleware 404:** middleware runs before the response starts, so it *can*
+  set a status. It cannot know which usernames exist without a lookup, and
+  `/pipeline` is a validly-shaped username, so shape checks don't help.
+- **Edge rule:** blocks the bleeding today, fixes nothing.
+
+Next step is to confirm whether the 200 is inherent to streaming RSC responses
+in 16.3 or something this app configures — that determines whether the routing
+change is even sufficient.
 
 ### Actions, in order
 
