@@ -658,10 +658,81 @@ inserts.
    chrome. Apply the same rule in DMs, community chat, and stream chat so they
    don't drift.
 
-3. **Virtualize** with `virtua` (buzz's choice; `VList` handles reverse/chat
-   ordering, which is the hard part) or `@tanstack/react-virtual` if we'd rather
-   keep one virtualization dependency with `browse-feed.tsx`. Decide once,
-   write it down here.
+3. **Windowing: use `broad-infinite-list`, which is already installed.**
+
+   ⚠️ Correcting an earlier note in this doc: `browse-feed.tsx` is **not**
+   virtualized, and **no virtualization library is installed**. It uses
+   `broad-infinite-list/react`'s `BidirectionalList` — a sliding window that
+   keeps a fixed count of rows in the DOM (`VIEW_COUNT = 120`) with dynamic
+   heights and no per-row measurement config. 2 KB gzipped, bidirectional,
+   explicitly built for chat. `components/coin-feed/alerts-rail.tsx` uses it too.
+
+   **Decision: extend the library already in use.** Adding `virtua` or
+   `@tanstack/react-virtual` would make three windowing approaches in one app
+   and spend bundle against the 10 MiB worker ceiling for capability we have.
+   Revisit only if we hit something `broad-infinite-list` genuinely can't do
+   (pinned day dividers inside the window is the likeliest candidate).
+
+### ⚠️ Policy: virtualize unbounded lists, NOT every list
+
+"Everything is a list, so virtualize everything" is the wrong rule — windowing
+is a trade, not a free win. What it costs:
+
+- **Browser find (⌘F) stops working** past the window. Off-screen rows aren't
+  in the DOM, so ⌘F, "select all → copy", and in-page search miss them.
+- **Screen readers lose the list.** `aria-setsize`/`aria-posinset` have to be
+  set by hand or the list announces the wrong length.
+- **Scroll restoration and deep links get harder** — jumping to a row that
+  isn't mounted needs an index lookup and a programmatic scroll.
+- **Short lists get *slower*.** Observers, measurement, and window bookkeeping
+  cost more than just rendering 20 rows.
+- **It fights page flow.** A window needs a bounded-height scroll container;
+  lists that currently grow with the page have to be restructured.
+
+So the rule:
+
+| Virtualize | Don't |
+|---|---|
+| Unbounded — grows via pagination with no ceiling | Bounded by a fixed cap |
+| Routinely 200+ rows in one session | Under ~100 rows realistically |
+| Rows are expensive (media, markdown, embeds) | Rows are a line of text |
+| Its own scroll container already | Grows with page scroll |
+
+**And do the memo pass (step 1) BEFORE windowing.** Buzz's note is explicit:
+their re-render storm came from unstable props, not row count. Windowing a list
+whose every row re-renders on every event just re-renders fewer rows more often
+— it hides the bug instead of fixing it, and costs you ⌘F to do it.
+
+### Inventory (measured 2026-08-08)
+
+18 surfaces use `useInfiniteQuery`, i.e. are unbounded by construction:
+
+**Tier 1 — windowing clearly pays (long-lived, expensive rows, own scroller):**
+- `components/community/community-chat-messages.tsx` — `limit: 50`/page, chat,
+  grows all session. **Best first candidate.**
+- `components/messages/message-list.tsx` — DMs. Not infinite *yet*: it's a
+  plain query capped at 50 with no "load older" UI at all. Pagination now works
+  server-side (9a), so this needs the client half before windowing means
+  anything.
+- `components/home/video-feed/index.tsx`, `components/shorts/shorts-feed.tsx` —
+  media rows, the most expensive in the app.
+- `components/browse/bookmarks-feed.tsx`, `components/profile/profile-tab-content.tsx`,
+  `components/browse/search-results-view.tsx`, `app/(app)/search/page.tsx`,
+  `components/categories/category-detail.tsx` — same post rows as browse-feed,
+  which already windows. Reuse that setup directly.
+
+**Tier 2 — measure first:**
+- `components/trending/trending-table.tsx` — a table; windowing rows inside a
+  `<table>` needs care with column alignment.
+- `components/notifications/notifications-panel.tsx` — `limit: 30`, cheap rows,
+  a panel people rarely scroll far in. Memo pass may be all it needs.
+- `components/profile/followers-following-dialog.tsx`, `components/coin-feed/alerts-rail.tsx`
+  (already windowed), `components/search/search-landing.tsx`,
+  `components/home/*` variants.
+
+**Tier 3 — do NOT virtualize:** community channel/member sidebars, settings
+rails, tab bars, emoji/GIF picker grids, dropdown menus, rail rows. All bounded,
+all cheap, and several are exactly where ⌘F matters.
 
 4. **Row height estimation** — port `lib/rowHeightEstimate.ts`. It estimates a
    row's height **without touching the DOM or parsing markdown**: row chrome +
