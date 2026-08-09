@@ -1145,6 +1145,95 @@ assume it isn't, either.
 
 ---
 
+---
+
+# Phase 11 — Container saturation (outage 2026-08-09 ~05:00 UTC)
+
+Site 500'd with *"more than 4096 concurrent connections inbound to the
+container"*. Domains rolled back to the plain `watchparty` worker
+(`node scripts/cf/attach-domains.mjs`), verified healthy **including a
+DB-touching tRPC call** first, per the 2026-08-06 rule. Service restored.
+
+## What the data actually shows
+
+Measured from `workersInvocationsAdaptive` (account-level; the API token
+**cannot read zone analytics**, so per-path and per-user-agent breakdowns were
+unavailable — see the gap below).
+
+| Window | `watchparty-app` (container) | `watchparty` (plain) |
+|---|---|---|
+| 03:00 UTC | ~2.0k req/hr (~33/min) | — (no domains) |
+| 04:00 UTC | ~47k req/hr, 21k clientDisconnected | — |
+| 05:00–05:37 | ~800–1,000/min, heavy clientDisconnected | — |
+| 05:39+ (after flip) | 0 | **1,400–5,700/min, all 200** |
+
+The decisive number is the last row. After the flip the plain worker carries
+**more** traffic than the container ever did and serves it cleanly. So:
+
+- This was **not** a traffic spike or an attack. The load is real, sustained,
+  and still running.
+- The container's ~800/min was not its load — it was its **throughput ceiling**.
+  It was shedding the rest by failing.
+
+## Mechanism
+
+Concurrency = **arrival rate × latency**. The container's ceiling is 4,096
+concurrent connections *per instance* (`INSTANCES = 3` in
+`container/src/index.ts`), enforced in Cloudflare's proxy — *before* the request
+reaches Next, which is why the whole site 500s at once rather than degrading.
+
+At ~80 req/s with sub-second responses, concurrency sits in the hundreds and
+everything is fine. Let latency rise — a slow query, a cold start (measured 4.0s
+in `container/src/index.ts`), a DB hiccup — and concurrency rises linearly with
+it. `trending.list` measured **3.8s** on a healthy worker today. At 80 req/s a
+30s stall is ~2,400 concurrent, and two of those saturate an instance. Then
+500s make clients retry, which raises the arrival rate, which raises
+concurrency: congestion collapse.
+
+Retry amplification — the documented 2026-08-08 trigger — is **already
+mitigated** (`components/react-query-provider.tsx` never retries 4xx and caps
+attempts). That is not this.
+
+## Root cause: the app asks for far too much
+
+**40 polling queries** (`refetchInterval`), roughly: 1 at 5s, 7 at 15s, 12 at
+30s, 16 at 60s. That's **~80 requests per minute per open tab**, before any
+navigation or user action. A handful of tabs is thousands of requests a minute,
+which is precisely what the numbers above show.
+
+**And the reason it polls that hard is that realtime was dead** — see Phase 10:
+`publishToRoom` percent-encoded the room name, so no server→client event ever
+reached a subscriber. Polling was the app's only working freshness mechanism.
+That fix landed today (`9fb55b13`), which makes the reduction possible.
+
+## Actions
+
+1. **Stay on `watchparty`.** It handles the load. Do not move domains back to
+   the container until the request rate is down — the container will just
+   saturate again.
+2. **Cut polling now that realtime works.** Every poller whose data has a
+   corresponding realtime event should drop to `refetchInterval: false` and
+   refresh on the event instead. Biggest wins first: the 5s and 15s pollers.
+3. **Fix the latency multiplier.** `trending.list` at 3.8s is a concurrency
+   amplifier on every poll. Phase 9c (one round trip per view) applies here.
+4. **Grant the API token `Analytics:Read` on the zone.** Not having it meant no
+   per-path or per-user-agent data during a live outage — the single biggest
+   gap in diagnosing this. Fold it into the scheduled token rotation.
+5. **Raise `INSTANCES` only as a stopgap.** 3 instances turned a hard ceiling
+   into a soft one on 2026-08-08; it did not stop this. Rate is the fix.
+
+## ⚠️ Unresolved
+
+What took traffic from ~33/min (03:00) to sustained thousands/min (04:00
+onward) is **not established**. It coincides with a deploy of mine at ~03:59,
+and I could not find a mechanism — the pagination change preserves termination
+in every branch I traced, and the memo change strictly reduces work. It is
+equally consistent with real users arriving. **Resolving this needs the
+per-path/user-agent data the token can't currently read** (action 4). Do not
+treat "probably users" as settled.
+
+---
+
 # Order of work
 
 ```
