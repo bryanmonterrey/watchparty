@@ -7,6 +7,7 @@ import { streams, tokens } from "@/db/schema/content";
 import { follows } from "@/db/schema/content/follow";
 import { count, eq, or } from "drizzle-orm";
 import { UserProfile } from "@/components/profile/user-profile";
+import { recordSlugMiss } from "@/lib/security/slug-miss-cache";
 
 // A top-level slug is a USERNAME and nothing else. Coins used to share this
 // route — one string resolving to either a user or a token — and now live at
@@ -103,6 +104,12 @@ export default async function UsernamePage({ params }: { params: Promise<{ usern
     if (tokenProfile) {
         permanentRedirect(`/coin/${tokenProfile.tokenAddress ?? tokenProfile.id}`);
     }
+
+    // Record the proven miss BEFORE 404ing, so middleware can answer the next
+    // request for this slug with a real 404 instead of a full soft-404 render.
+    // Only reached once both lookups have failed — a real username can never
+    // land here, which is what makes a stale cache harmless.
+    await recordSlugMiss(slug);
 
     notFound();
 }

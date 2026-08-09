@@ -1,4 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isKnownSlugMiss } from "@/lib/security/slug-miss-cache";
+
+/** Top-level paths that are real routes, never usernames. */
+const RESERVED_SLUGS = new Set([
+  "login", "signup", "home", "feed", "search", "settings", "messages",
+  "premium", "quests", "trade", "shorts", "video", "communities", "coin",
+  "category", "status", "notifications", "wallet", "explore", "about",
+]);
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
 import { allowsAnonymous } from "./lib/auth/public-browsing";
@@ -56,7 +64,9 @@ function hostOnlyCookieCleanup(request: NextRequest): string[] {
 // Optimistic edge auth gate: checks only for the presence of the session cookie
 // (the real validation stays in (app)/layout via getServerSession). Ported from
 // sidebar and adapted to watchparty's routes (/login, /home).
-export function middleware(request: NextRequest) {
+// async now: the slug-miss lookup below is a network call. Next supports an
+// async middleware; every existing branch still returns synchronously.
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const session = getSessionCookie(request);
 
@@ -72,6 +82,25 @@ export function middleware(request: NextRequest) {
   // Always allow better-auth + internal API routes (tRPC, webhooks).
   if (pathname.startsWith(apiAuthPrefix) || pathname.startsWith("/api/")) {
     return withCleanup(NextResponse.next());
+  }
+
+  // A single-segment path is a USERNAME (app/(app)/[username]), so an unknown
+  // one still renders the whole app and answers 200 — Next cannot set a 404
+  // once streaming has begun (see docs/buzz-adoption-plan.md). Middleware runs
+  // BEFORE the response streams, so it still can.
+  //
+  // Only slugs already PROVEN missing by the page itself are 404'd here, and
+  // the lookup fails open, so this can never 404 a real profile.
+  const singleSegment = /^\/[^/]+$/.test(pathname) ? pathname.slice(1) : null;
+  if (singleSegment && !RESERVED_SLUGS.has(singleSegment.toLowerCase())) {
+    if (await isKnownSlugMiss(singleSegment)) {
+      return withCleanup(
+        new NextResponse("Not Found", {
+          status: 404,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        }) as NextResponse,
+      );
+    }
   }
 
   // /feed/post/<id> is /status/<id> now.
