@@ -1,5 +1,10 @@
 # file-size guard — pre-existing violations, generated with --write-allowlist.
 # New entries should be rare and explained. Shrink this file, don't grow it.
+#
+# community.ts 2726 -> 2727 on 2026-08-09: one import line, adding
+# DELETED_MESSAGE_TEXT so the router and the client's optimistic delete cannot
+# drift. A +1 that removes a duplicated string literal is a trade worth making;
+# bumping a number to dodge the guard is not.
 components/app-ui/create-dialog.tsx:1134
 components/app-ui/create-dialog/video-details-step.backup.tsx:1490
 components/community/server-settings.tsx:3232
@@ -8,6 +13,6 @@ components/perps/perps-view.tsx:1477
 components/ui/slider.tsx:1549
 components/video/player/settings-menu.tsx:1129
 components/video/player/use-player.ts:1049
-server/routers/community.ts:2726
+server/routers/community.ts:2727
 server/routers/content.ts:1578
 server/routers/wallet.ts:3668
