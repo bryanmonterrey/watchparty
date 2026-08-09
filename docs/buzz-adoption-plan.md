@@ -1279,7 +1279,72 @@ Cloudflare cannot absorb any of it. All of it lands on the origin.
 That is the container saturation: not the app's polling (measured at 4–8
 calls/min per tab), not a deploy of mine, and not real users.
 
-### Root cause narrowed: `notFound()` returns 200 APP-WIDE
+### ✅ Root cause, from Next's own docs
+
+`node_modules/next/dist/docs/01-app/02-guides/streaming.md`:
+
+> Once streaming begins, the HTTP response headers (including the status code)
+> have already been sent to the client. **You cannot change the status code or
+> headers after streaming starts.**
+>
+> The response body begins streaming when a Suspense fallback renders (for
+> example, a `loading.tsx`) or when a component suspends under a `<Suspense>`
+> boundary. To get a real HTTP status code for errors, place `notFound()`
+> **before** any `await` or `<Suspense>` boundary.
+
+And on `notFound()` specifically:
+
+> Because the check runs inside the `<Suspense>` boundary, the response has
+> already begun streaming as a `200` … The `noindex` tag keeps a soft 404 out of
+> search results.
+
+So this is **documented, inherent behaviour**, not a bug and not misconfiguration.
+`/pipeline` gets a *soft 404*: correct page, `noindex`, status 200. Google is
+handled. A scanner is not — it reads the status line.
+
+Six hypotheses eliminated getting here, each with a test:
+
+| # | Hypothesis | Result |
+|---|---|---|
+| 1 | `[username]/loading.tsx` commits the status | removed → still 200 |
+| 2 | root `app/loading.tsx` does | removed → still 200 |
+| 3 | `middleware.ts` forces 200 | removed entirely → still 200 |
+| 4 | specific to `[username]` / its DB lookup | minimal `notFound()`-only probe → 200 |
+| 5 | missing `app/not-found.tsx` | added one → still 200 |
+| 6 | Cache Components streaming a shell | not enabled in `next.config.ts` |
+
+(All probes removed; every file restored.)
+
+### The fix that does NOT change profile URLs
+
+The docs name the escape hatch: reject **before** the page renders.
+
+> You can also reject requests early using `proxy` … or `next.config.js`
+> redirects. Both run before the page renders, so HTTP status codes are still
+> available.
+
+`proxy.ts` is unavailable here — it is Node-runtime-only and OpenNext hard-fails
+on it (see CLAUDE.md). **`middleware.ts` is the same pre-render hook** and can
+return a real 404.
+
+Middleware can't know which usernames exist, and 404-ing on absence from a list
+risks 404-ing a real profile if that list is ever stale — an unacceptable
+failure mode. So invert it into a **negative cache**:
+
+1. `[username]` already knows when a slug misses. Before calling `notFound()`,
+   fire-and-forget a `miss:<slug>` key into Upstash (HTTP, edge-safe, already a
+   dependency) with a TTL.
+2. Middleware, for single-segment paths only, checks `miss:<slug>` and returns a
+   real 404 with a tiny body when present.
+
+Self-healing by construction: a real username is never recorded as a miss, so a
+stale cache can only ever *fail open*. And it targets the actual shape of the
+abuse — 1.18M requests to **one** path, so the first request pays full price and
+every subsequent one is a cheap 404.
+
+⚠️ Cost to weigh before building: one Upstash round trip on every single-segment
+path, including real profile views. Consider an in-isolate LRU in front of it,
+or scoping the check to paths seen missing recently.
 
 Four hypotheses tested and eliminated, in order:
 
