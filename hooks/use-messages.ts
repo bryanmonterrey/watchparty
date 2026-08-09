@@ -3,7 +3,7 @@ import { useEncryption } from './use-encryption';
 import { useOfflineQueue } from './use-offline-queue';
 import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
-import { useMessagesContext } from '@/components/messages/messages-provider';
+import { useMessagesContext, DM_PAGE_LIMIT } from '@/components/messages/messages-provider';
 import { useAuthSession } from '@/hooks/use-auth-session';
 
 interface DecryptedMessage {
@@ -69,8 +69,17 @@ export function useSendMessage(conversationId: string) {
 
     const sendMessage = useCallback(
         async (content: string, recipientPublicKey: string, messageType: 'text' | 'image' | 'file' | 'audio' | 'system' | 'transaction_send' | 'transaction_request' = 'text', attachmentFile?: File, replyToId?: string) => {
-            // Snapshot the previous value
-            const previousMessages = utils.message.list.getInfiniteData({ conversationId });
+            // The cache entry to patch. `message.list` is a REGULAR query
+            // (`messages-provider.tsx`), not an infinite one, and its key
+            // includes the limit — so this input has to match that call
+            // exactly. It previously used `getInfiniteData/setInfiniteData`
+            // with `{ conversationId }`, which missed on both counts: the
+            // optimistic message was written to an entry nothing subscribed
+            // to, so a sent DM only appeared after the server round trip and
+            // the invalidate-driven refetch, and this snapshot was always
+            // `undefined`, so the catch below rolled back nothing.
+            const listInput = { conversationId, limit: DM_PAGE_LIMIT };
+            const previousMessages = utils.message.list.getData(listInput);
 
             try {
                 // ... (optimistic logic stays same)
@@ -107,8 +116,8 @@ export function useSendMessage(conversationId: string) {
                 const fallbackContent = messageType === 'image' ? 'Sent an image' : (messageType === 'audio' ? 'Sent a voice message' : 'Sent a file');
                 const optimisticContent = content || fallbackContent;
 
-                utils.message.list.setInfiniteData({ conversationId }, (old) => {
-                    if (!old) return { pages: [], pageParams: [] };
+                utils.message.list.setData(listInput, (old) => {
+                    if (!old) return old;
 
                     const optimisticMessage = {
                         id: `optimistic-${Date.now()}`,
@@ -126,18 +135,15 @@ export function useSendMessage(conversationId: string) {
                         editedAt: null,
                         replyToId: replyToId || null,
                         reactions: [],
-                        readReceipts: []
+                        readReceipts: [],
+                        replyToMessage: null,
                     };
 
-                    const newPages = [...old.pages];
-                    if (newPages.length > 0) {
-                        newPages[0] = {
-                            ...newPages[0],
-                            messages: [optimisticMessage, ...newPages[0].messages],
-                        };
-                    }
-
-                    return { ...old, pages: newPages };
+                    // APPEND, don't prepend: `message.list` reverses its rows
+                    // to oldest-first before returning, so the newest message
+                    // is the LAST element. (The old code prepended — invisible
+                    // then, because none of this reached the cache at all.)
+                    return { ...old, messages: [...old.messages, optimisticMessage] };
                 });
 
                 // 3. Encrypt (Async)
@@ -209,7 +215,7 @@ export function useSendMessage(conversationId: string) {
                 logger.error('Failed to send message', error as Error, { conversationId });
                 // Rollback
                 if (previousMessages) {
-                    utils.message.list.setInfiniteData({ conversationId }, previousMessages);
+                    utils.message.list.setData(listInput, previousMessages);
                 }
                 throw error;
             }

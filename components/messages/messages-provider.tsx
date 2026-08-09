@@ -54,6 +54,15 @@ interface MessagesContextType {
     conversationId: string;
 }
 
+/**
+ * Page size for `message.list`. Exported because it is part of the query KEY:
+ * anything reading or writing this query's cache (optimistic sends in
+ * `useSendMessage`) must pass the identical input or it addresses a different
+ * entry and silently no-ops. That is exactly what happened before — see
+ * `hooks/use-messages.ts`.
+ */
+export const DM_PAGE_LIMIT = 50;
+
 const MessagesContext = createContext<MessagesContextType | undefined>(undefined);
 
 interface MessagesProviderProps {
@@ -89,7 +98,7 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
 
     // Fetch messages from server
     const { data, isLoading, error } = trpc.message.list.useQuery(
-        { conversationId, limit: 50 },
+        { conversationId, limit: DM_PAGE_LIMIT },
         {
             enabled: !!conversationId,
             refetchOnWindowFocus: false,
