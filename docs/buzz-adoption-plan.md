@@ -1094,6 +1094,57 @@ not wait behind the rest.
 
 ---
 
+---
+
+# Phase 10 — Browser verification (two real accounts)
+
+Unblocked 2026-08-09. `scripts/dev/browser-smoke-community-chat.mjs` drives
+**two** signed-in users in one channel via puppeteer-core, on the dev DB.
+
+```bash
+bun dev                                          # terminal 1
+bun scripts/dev/browser-smoke-community-chat.mjs # terminal 2  (--headed to watch)
+```
+
+Fixtures: `bun scripts/dev/mint-test-session.mjs --email e2e-test-2@watchparty.local`
+then `bun scripts/dev/seed-test-community.mjs`. Both refuse the production DB.
+
+**It found a dead realtime layer on its first run** (`9fb55b13`): `publishToRoom`
+percent-encoded the room name, so the server published to
+`community-channel%3A<id>` while every client sat in `community-channel:<id>`.
+Different Durable Objects — the worker created the encoded one, accepted the
+event, returned 200, and delivered it to nobody. **Every** server→client
+realtime publish in the app had been going nowhere.
+
+Three lessons worth keeping:
+
+- **Assert on WebSocket frames, not just the DOM.** "B didn't see it" can't
+  distinguish "the server never published" from "the frame arrived and the
+  client ignored it" — opposite fixes. The test reads frames over CDP.
+- **Count the specific event.** Presence and typing share the connection, so a
+  raw frame count says "something arrived" and proves nothing. Filter for
+  `message-change`.
+- **Take the baseline before the action.** I first captured the frame count
+  *after* the send, so the very frame under test landed inside the baseline and
+  read as "0 delivered" — which pointed the blame squarely at the server, where
+  the bug wasn't. Two measurement bugs of my own before a real one.
+
+### ⚠️ Open: live-update flake
+
+The `message-change` frame arrives on **every** run, but B's UI updates only
+about half the time locally within a 20s budget. When it works, the refetch does
+fire (one `getMessages` request) and the row renders. So this is downstream of
+the routing fix, in the invalidate→refetch→render path.
+
+Suspects, in order: `invalidate({ channelId })` refetches **every** page of the
+infinite query by default, which on this machine is slow enough to blow the
+budget; a race between the invalidate and the message being visible to the next
+read; or dev-server load (two Chrome contexts + Next dev on an 8 GB machine that
+swaps). Rerun on a quiet machine before assuming it's app code — but don't
+assume it isn't, either.
+
+---
+
 # Order of work
 
 ```
