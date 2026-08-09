@@ -800,7 +800,55 @@ against our routers surfaced a live bug. Their two governing rules:
 > `top_level` with `until` but no `before_id` is rejected (`400`): the window
 > path has **no timestamp-only fallback, ever.**
 
-## 9a. ⚠️ Cursor off-by-one — one row lost per page boundary (LIVE BUG)
+## 9a. ✅ DONE (2026-08-08) — cursor off-by-one, one row lost per page boundary
+
+Fixed in `f16a6e67`. `server/lib/paginate.ts` (`takePage`) is now the one place
+the rule lives; `tests/pagination.test.ts` walks every page the way production
+does — including the SQL `LIMIT limit + 1` — and fails on the old shape.
+
+Measured before/after over 95 rows at `limit: 10`: **87 of 95 delivered**,
+losing r10, r21, r32, r43, r54, r65, r76, r87 — one per page boundary. After:
+95 of 95.
+
+Two things worth keeping:
+
+- **Model the SQL `LIMIT` in the test.** My first simulation passed the whole
+  table to the handler, so `pop()` removed the oldest row *in the table* rather
+  than the probe row — it "failed" spectacularly (10 of 95) for entirely the
+  wrong reason and would have sent someone chasing a fantasy. The probe slice
+  is what makes the test reproduce the real defect.
+- **`message.list` was worse than the off-by-one** and is fixed in the same
+  commit: it accepted a `cursor` and never applied it — the `WHERE` was
+  `conversationId` alone. Every page returned the newest 50 messages while
+  still handing back a `nextCursor`, so **DM history past the first page was
+  unreachable**. It now resolves the id cursor to its `(createdAt, id)` sort
+  position and pages with a composite keyset (9b, done for this route),
+  with `id ASC` added as the tiebreak a keyset cursor requires.
+
+### ⚠️ Follow-on found while fixing this: DM optimistic sends never render
+
+`message.list` has exactly one consumer — `components/messages/messages-provider.tsx:91`
+— and it's a plain `useQuery({ conversationId, limit: 50 })`. But
+`hooks/use-messages.ts` writes its optimistic update through
+`utils.message.list.setInfiniteData({ conversationId })` and snapshots via
+`getInfiniteData`.
+
+Those address a **different cache entry** on two counts: infinite queries carry
+a distinct key from regular ones, and the input `{ conversationId }` doesn't
+match the query's `{ conversationId, limit: 50 }`. So:
+
+- the optimistic message is written somewhere no component subscribes to — it
+  **never appears**, and the sent message only shows up after the server round
+  trip and the invalidate-driven refetch;
+- `previousMessages` is always `undefined`, so the error rollback restores
+  nothing.
+
+Fix is `setData`/`getData` with the exact input the query uses, and reshaping
+the updater from `{ pages, pageParams }` to the flat `{ success, messages }`
+this procedure returns. Worth pairing with hoisting `limit: 50` into a shared
+constant so the key can't drift again.
+
+### The original defect, for reference
 
 Seven paginated procedures probe with `limit + 1`, `pop()` the extra row, and
 then use **the popped row's** timestamp as `nextCursor`. The next page filters
@@ -925,7 +973,7 @@ not wait behind the rest.
 # Order of work
 
 ```
-Phase 9a Cursor off-by-one            ░ small    no deps      ← LIVE BUG, do first
+Phase 9a Cursor off-by-one            ░ small    no deps      ✅ done 2026-08-08
 Phase 0  Motion foundation            ░ small    no deps      ✅ done 2026-08-08
 Phase 1  Reduced motion everywhere    ███ large  no deps      needs 0
 Phase 2  Shared style constants       ██ medium  no deps      needs 0
