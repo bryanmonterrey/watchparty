@@ -23,15 +23,30 @@ import { cn } from "@/lib/utils";
 // globals.css hides scrollbars everywhere (`* { scrollbar-width: none }`).
 // Deliberate, and scoped to the two rails that opt in.
 
-/** Constant thumb height. The stable property — never scales with content.
- *  90 rather than the library's 70: these rails run close to the viewport's
- *  full height, so 70 sat at roughly 9% of the track and read as a tick rather
- *  than a thumb. Raising it also shortens the travel (trackHeight - THUMB_PX),
- *  so the same scroll moves it slightly less far — which is the calmer half of
- *  why a taller thumb feels steadier. */
-const THUMB_PX = 90;
+/** Floor for the thumb, not its size.
+ *
+ *  This used to be a CONSTANT 90px height that never scaled — taken from the
+ *  library this was modelled on, to stop an infinite list shrinking the thumb
+ *  toward a dot. That problem is real; a fixed height is the wrong fix for it.
+ *
+ *  A proportional thumb carries information a fixed one throws away: how much
+ *  content there is. Every native scrollbar (macOS, iOS, Windows) is
+ *  proportional for exactly that reason, and a fixed thumb is why this felt
+ *  un-native — it reads as a position dot, not a scrollbar.
+ *
+ *  A MINIMUM keeps both: proportional wherever there's room, clamped before it
+ *  can become a tick. 40px is roughly where a thumb stops reading as a handle,
+ *  and matches what browsers themselves clamp to. */
+const MIN_THUMB_PX = 40;
 /** Inset from the scroller's top and bottom edges. */
 const TRACK_INSET_PX = 6;
+/** How long the bar stays up after the last scroll before fading out.
+ *
+ *  Auto-hide is the modern default — macOS/iOS/Android all show the indicator
+ *  while scrolling and fade it when idle, so it answers "where am I" without
+ *  permanently spending a strip of the design on chrome. 1200ms is long enough
+ *  to still be there when you glance down after a flick. */
+const IDLE_HIDE_MS = 1200;
 
 // Spring, ported from the library's { damping: 30, stiffness: 500 } and
 // integrated per frame. Snappy and barely overshooting: with mass 1, critical
@@ -73,6 +88,15 @@ export function RailScrollbar({
         let velocity = 0;
         let last = 0;
         let running = false;
+        // Measured each pass now that the thumb is proportional, and read by
+        // both the travel maths and the drag handler.
+        let thumbH = MIN_THUMB_PX;
+        let scrollable = false;
+        let hovering = false;
+        let dragging = false;
+        let dragStartY = 0;
+        let dragStartScroll = 0;
+        let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
         const reduceMotion =
             typeof window !== "undefined" &&
@@ -82,21 +106,45 @@ export function RailScrollbar({
             thumb.style.transform = `translate3d(0, ${y}px, 0)`;
         };
 
+        // Visible while scrolling, faded when idle — unless the pointer is over
+        // the rail, in which case it stays up because the user is plainly
+        // looking at this column.
+        const show = () => {
+            if (!scrollable) return;
+            track.style.opacity = "1";
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                if (!hovering) track.style.opacity = "0";
+            }, IDLE_HIDE_MS);
+        };
+
         const measure = () => {
             if (!scroller) return;
-            const scrollable = scroller.scrollHeight - scroller.clientHeight;
+            const distance = scroller.scrollHeight - scroller.clientHeight;
             // Nothing to scroll: hide entirely rather than parking a thumb that
-            // can't move. The library dims to 0.3 here; a rail that simply has
-            // few rows shouldn't advertise a scrollbar at all.
-            if (scrollable <= 1) {
+            // can't move. A rail that simply has few rows shouldn't advertise a
+            // scrollbar at all.
+            if (distance <= 1) {
+                scrollable = false;
                 track.style.opacity = "0";
                 return;
             }
-            track.style.opacity = "1";
-            const progress = Math.max(0, Math.min(1, scroller.scrollTop / scrollable));
+            scrollable = true;
+
+            // Proportional: the thumb covers the same fraction of the track
+            // that the viewport covers of the content. Clamped so a very long
+            // list still leaves something grabbable.
+            const trackH = track.clientHeight;
+            thumbH = Math.max(
+                MIN_THUMB_PX,
+                Math.round(trackH * (scroller.clientHeight / scroller.scrollHeight)),
+            );
+            thumb.style.height = `${thumbH}px`;
+
+            const progress = Math.max(0, Math.min(1, scroller.scrollTop / distance));
             // Travel is the track minus the thumb, so a full scroll lands the
             // thumb exactly at the bottom instead of running past it.
-            target = progress * Math.max(0, track.clientHeight - THUMB_PX);
+            target = progress * Math.max(0, trackH - thumbH);
         };
 
         const tick = (now: number) => {
@@ -131,7 +179,48 @@ export function RailScrollbar({
 
         const onScroll = () => {
             measure();
+            show();
             start();
+        };
+
+        // Dragging the thumb. A pure indicator was the old behaviour and it is
+        // the main thing that made this feel unlike a scrollbar — every native
+        // one can be grabbed. Only the THUMB takes pointer events (the track
+        // stays transparent to clicks), so this cannot swallow presses meant for
+        // the rail underneath it.
+        const onPointerDown = (e: PointerEvent) => {
+            if (!scroller || !scrollable) return;
+            e.preventDefault();
+            thumb.setPointerCapture(e.pointerId);
+            dragging = true;
+            dragStartY = e.clientY;
+            dragStartScroll = scroller.scrollTop;
+            show();
+        };
+
+        const onPointerMove = (e: PointerEvent) => {
+            if (!dragging || !scroller) return;
+            const travel = Math.max(1, track.clientHeight - thumbH);
+            const distance = scroller.scrollHeight - scroller.clientHeight;
+            // Map thumb pixels to content pixels, so the content keeps pace with
+            // the cursor rather than lagging or racing it.
+            scroller.scrollTop = dragStartScroll + ((e.clientY - dragStartY) / travel) * distance;
+        };
+
+        const onPointerUp = (e: PointerEvent) => {
+            if (!dragging) return;
+            dragging = false;
+            thumb.releasePointerCapture?.(e.pointerId);
+            show();
+        };
+
+        const onEnter = () => {
+            hovering = true;
+            show();
+        };
+        const onLeave = () => {
+            hovering = false;
+            show();
         };
 
         // The list can grow under us (pagination) without a scroll event, which
@@ -148,6 +237,12 @@ export function RailScrollbar({
                 return;
             }
             scroller.addEventListener("scroll", onScroll, { passive: true });
+            scroller.addEventListener("pointerenter", onEnter);
+            scroller.addEventListener("pointerleave", onLeave);
+            thumb.addEventListener("pointerdown", onPointerDown);
+            thumb.addEventListener("pointermove", onPointerMove);
+            thumb.addEventListener("pointerup", onPointerUp);
+            thumb.addEventListener("pointercancel", onPointerUp);
             observer.observe(scroller);
             if (scroller.firstElementChild) observer.observe(scroller.firstElementChild);
             measure();
@@ -159,8 +254,15 @@ export function RailScrollbar({
         return () => {
             cancelAnimationFrame(raf);
             cancelAnimationFrame(attachRaf);
+            clearTimeout(idleTimer);
             observer.disconnect();
             scroller?.removeEventListener("scroll", onScroll);
+            scroller?.removeEventListener("pointerenter", onEnter);
+            scroller?.removeEventListener("pointerleave", onLeave);
+            thumb.removeEventListener("pointerdown", onPointerDown);
+            thumb.removeEventListener("pointermove", onPointerMove);
+            thumb.removeEventListener("pointerup", onPointerUp);
+            thumb.removeEventListener("pointercancel", onPointerUp);
         };
     }, [getScroller]);
 
@@ -170,22 +272,31 @@ export function RailScrollbar({
             aria-hidden
             style={{ top: topPx, bottom: TRACK_INSET_PX }}
             className={cn(
-                // pointer-events-none: an indicator, not a control. Dragging it
-                // would need hit-testing and a grab affordance, and neither rail
-                // wants a second way to scroll.
+                // The TRACK stays pointer-events-none so it can never swallow a
+                // press meant for the rail beneath it; the thumb below opts
+                // back in, which is what makes dragging possible without
+                // putting an 8px dead strip down the side of the column.
+                //
                 // w-[8px]: the thumb is w-full, so the track's width IS the
                 // indicator's. 8px is roughly a native scrollbar thumb — what
-                // `scrollbar-width: thin` renders, and the weight the @beui
-                // table shows on beui.dev (that table styles nothing; it just
-                // doesn't hide the OS scrollbar the way this app does).
-                "pointer-events-none absolute right-0.5 z-10 w-[8px] opacity-0 transition-opacity duration-200",
+                // `scrollbar-width: thin` renders.
+                //
+                // Starts at opacity-0 and is raised by show() on scroll or
+                // hover: auto-hide is what macOS/iOS/Android all do, so the
+                // indicator answers "where am I" without permanently spending a
+                // strip of the layout on chrome.
+                "pointer-events-none absolute right-0.5 z-10 w-[8px] opacity-0 transition-opacity duration-300",
                 className,
             )}
         >
+            {/* Height is set in measure(), not here — it's proportional now.
+                touch-action-none so a drag on the thumb doesn't also scroll the
+                page on touch devices. Widens slightly on hover, the one bit of
+                affordance that says "this is grabbable". */}
             <div
                 ref={thumbRef}
-                style={{ height: THUMB_PX }}
-                className="w-full rounded-full bg-flexwhite/25"
+                style={{ height: MIN_THUMB_PX }}
+                className="pointer-events-auto w-full cursor-grab touch-none rounded-full bg-flexwhite/25 transition-colors hover:bg-flexwhite/40 active:cursor-grabbing active:bg-flexwhite/50"
             />
         </div>
     );
