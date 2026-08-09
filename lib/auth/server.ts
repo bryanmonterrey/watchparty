@@ -7,6 +7,7 @@
 
 // @ts-ignore - betterAuth is exported but TS's bundler resolution intermittently misses it
 import { betterAuth } from "better-auth";
+import { clearSlugMiss } from "@/lib/security/slug-miss-cache";
 import { dash } from "@better-auth/infra";
 import { siwsPlugin } from "better-auth-siws";
 import { siwe } from "better-auth/plugins/siwe";
@@ -430,6 +431,22 @@ export const auth = betterAuth({
               last_signed_in: now,
             },
           };
+        },
+      },
+
+      // A slug that 404'd is remembered by `lib/security/slug-miss-cache.ts` so
+      // middleware can answer a real 404 instead of a full soft-404 render.
+      // That cache would otherwise keep 404ing a handle for up to its TTL after
+      // someone actually CLAIMS it — the one case where the negative cache can
+      // be wrong. Usernames are written through this adapter rather than a tRPC
+      // mutation, so this hook is the single call site that sees every claim.
+      update: {
+        after: async (updatedUser: any) => {
+          const username = updatedUser?.username;
+          if (typeof username === "string" && username) {
+            // Best-effort: never let cache bookkeeping fail a profile update.
+            await clearSlugMiss(username).catch(() => {});
+          }
         },
       },
     },

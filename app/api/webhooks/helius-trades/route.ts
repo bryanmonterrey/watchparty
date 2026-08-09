@@ -5,7 +5,7 @@
 // existing Supabase realtime channel to every open trade surface, so external
 // activity lands in seconds — the minute cron is only the self-heal behind
 // this.
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { trendingCoins } from "@/db/schema/content/trending";
@@ -173,17 +173,39 @@ export async function POST(req: NextRequest) {
         console.error("[helius-trades] recordSwaps failed:", err instanceof Error ? err.message : err);
     }
 
-    // Per-token claim throttle (same identity trick as trade.syncToken).
-    const toSync: SyncableToken[] = [];
-    for (const row of rows) {
-        const claim = `${Date.now()}:${Math.random()}`;
-        const winner = await withCache(`token:sync-req:${row.id}`, THROTTLE_SECONDS, async () => claim);
-        if (winner === claim) toSync.push({ ...row, poolAddress: row.poolAddress! });
-    }
-    if (toSync.length === 0) return NextResponse.json({ ok: true, synced: 0, recorded, throttled: rows.length });
+    // ACKNOWLEDGE FIRST, SYNC AFTER.
+    //
+    // Everything below is price work: a per-row Redis claim, then syncMarketData
+    // and syncCurveProgress, both of which call external pricing APIs. Doing it
+    // before responding put third-party latency on Helius's clock, and Helius
+    // hangs up when a delivery is slow — 83,777 of those (status 499) in nine
+    // hours, plus 37,536 500s from throws in exactly this tail, which was
+    // outside every try/catch. 30.4% of deliveries failed.
+    //
+    // A failed delivery is REDELIVERED, so the failures were also generating
+    // their own load: ~738 req/min against a webhook product that bills per
+    // call, and the reason Helius burn projects ~7.5M credits against a 1M plan.
+    //
+    // `after()` runs once the response is sent, so Helius sees a fast 200 and
+    // stops retrying, and the sync still happens. Errors in here can no longer
+    // become a delivery failure — they're logged.
+    after(async () => {
+        try {
+            // Per-token claim throttle (same identity trick as trade.syncToken).
+            const toSync: SyncableToken[] = [];
+            for (const row of rows) {
+                const claim = `${Date.now()}:${Math.random()}`;
+                const winner = await withCache(`token:sync-req:${row.id}`, THROTTLE_SECONDS, async () => claim);
+                if (winner === claim) toSync.push({ ...row, poolAddress: row.poolAddress! });
+            }
+            if (toSync.length === 0) return;
 
-    const synced = await syncMarketData(toSync);
-    await syncCurveProgress(toSync);
+            await syncMarketData(toSync);
+            await syncCurveProgress(toSync);
+        } catch (err) {
+            console.error("[helius-trades] post-ack sync failed:", err instanceof Error ? err.message : err);
+        }
+    });
 
-    return NextResponse.json({ ok: true, synced, recorded });
+    return NextResponse.json({ ok: true, recorded, queued: rows.length });
 }
