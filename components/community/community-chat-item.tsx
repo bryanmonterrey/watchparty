@@ -55,12 +55,13 @@ function MessageContent({
         </p>
     );
 }
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
+import { chatItemPropsEqual } from "./community-chat-item-equality";
 
 type Props = {
     id: string;
@@ -103,7 +104,7 @@ const roleColorMap: Record<string, string> = {
     GUEST: "text-flexwhite",
 };
 
-export function CommunityChatItem({
+function CommunityChatItemImpl({
     id,
     content,
     memberRole,
@@ -371,3 +372,11 @@ export function CommunityChatItem({
         </div>
     );
 }
+
+/**
+ * Memoized: a channel subscription invalidates `getMessages` on every incoming
+ * message, so without this every row in the channel re-renders whenever anyone
+ * says anything. See `community-chat-item-equality.ts` for why the comparator
+ * is custom.
+ */
+export const CommunityChatItem = memo(CommunityChatItemImpl, chatItemPropsEqual);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
@@ -21,6 +21,11 @@ const VoiceRoom = dynamic(
     { ssr: false, loading: () => <ChannelChatSkeleton /> },
 );
 
+// A stable identity for the empty case. `useQuery({ ... }) = []` allocates a
+// fresh array on every render while data is undefined, which propagates a new
+// `emojiMap` down to every chat row and defeats their memo.
+const NO_EXPRESSIONS: { id: string; kind: string; name: string; imageUrl: string }[] = [];
+
 // Port of sidebar's (browse)/communities/[serverId]/channels/[channelId]/page.tsx.
 export default function ChannelPage() {
     const params = useParams();
@@ -35,9 +40,27 @@ export default function ChannelPage() {
         { serverId },
         { enabled: !!serverId }
     );
-    const { data: expressions = [] } = trpc.community.listExpressions.useQuery(
+    const { data: expressions = NO_EXPRESSIONS } = trpc.community.listExpressions.useQuery(
         { serverId },
         { enabled: !!serverId }
+    );
+
+    // Derived from `expressions`, memoized because they are PROPS to the chat
+    // list and every row below it. Built inline in the render body they were a
+    // new object/array on every keystroke, typing indicator, and presence tick
+    // — one unstable prop is enough to defeat React.memo on every row.
+    // Declared above the early returns below: hooks cannot run conditionally.
+    const emojiMap = useMemo(
+        () => Object.fromEntries(
+            expressions.filter((e) => e.kind === "emoji").map((e) => [e.name, e.imageUrl]),
+        ),
+        [expressions],
+    );
+    const stickers = useMemo(
+        () => expressions
+            .filter((e) => e.kind === "sticker")
+            .map((e) => ({ id: e.id, name: e.name, imageUrl: e.imageUrl })),
+        [expressions],
     );
 
     const { onlineUserIds, typingUsers, sendTyping, sendStopTyping } = useCommunityChannel({
@@ -78,12 +101,6 @@ export default function ChannelPage() {
     }
 
     const canInvite = serverData.currentMember.role !== "GUEST";
-    const emojiMap = Object.fromEntries(
-        expressions.filter((e) => e.kind === "emoji").map((e) => [e.name, e.imageUrl]),
-    );
-    const stickers = expressions
-        .filter((e) => e.kind === "sticker")
-        .map((e) => ({ id: e.id, name: e.name, imageUrl: e.imageUrl }));
 
     return (
         <div className="flex flex-col h-full min-w-0">
