@@ -1247,7 +1247,59 @@ outage's cause:
 5. **Raise `INSTANCES` only as a stopgap.** 3 turned a hard ceiling into a soft
    one on 2026-08-08 and did not prevent this.
 
-## ⚠️ Unresolved — the actual open question
+## ✅ RESOLVED 2026-08-09 — it was a scanner hitting a route that never 404s
+
+Zone analytics (once the token got `Zone → Analytics → Read`) answered it in one
+query. Top paths over 9 hours:
+
+| count | status | path |
+|---|---|---|
+| **1,183,094** | 200 | `/pipeline` |
+| 277,210 | 200 | `/api/webhooks/helius-trades` |
+| 83,777 | **499** | `/api/webhooks/helius-trades` |
+| 37,536 | **500** | `/api/webhooks/helius-trades` |
+| 1,244 | 200 | `/api/auth/get-session` |
+
+`/pipeline` alone is **2,191 req/min** — which is the mystery traffic, exactly.
+Everything the app itself does is in the noise below it.
+
+### Why it never stops
+
+`/pipeline` is not a route. It matches `app/(app)/[username]`, the single-segment
+dynamic route. That page *does* call `notFound()` — and the response is still
+**HTTP 200 with a 93 KB body containing the 404 page**. Verified: the body greps
+for "404", the status line says 200.
+
+So a scanner probing a common CI/CD path gets `200 OK` and a full page. A 404
+tells a scanner to stop; a 200 tells it it found something. It has been going
+for at least nine hours. Every hit costs a DB lookup (`getUserBySlug`), a full
+SSR render, and 93 KB — and `cache-control: private, no-cache, no-store` means
+Cloudflare cannot absorb any of it. All of it lands on the origin.
+
+That is the container saturation: not the app's polling (measured at 4–8
+calls/min per tab), not a deploy of mine, and not real users.
+
+### ⚠️ First fix attempt FAILED — don't repeat it
+
+I assumed the 200 came from `[username]/loading.tsx` committing the status
+before `notFound()` ran. Removing it locally changed nothing: still 200, still
+~152 KB. The file is restored. Whatever commits the status happens earlier —
+worth finding, but it is NOT the loading boundary.
+
+### Actions, in order
+
+1. **Immediate, at the edge:** a Cloudflare rule for `/pipeline` (block, or
+   respond 404) takes 1.18M origin requests to zero without touching code. This
+   is the lever that ends the incident; everything else is hygiene.
+2. **Make unknown usernames return a real 404 status.** Needs investigation
+   after the failed attempt above. Until then every scanner probe is a full
+   render.
+3. **`/api/webhooks/helius-trades` is a second, separate storm:** 738 req/min
+   with **30.4% failing** (84k × 499, 38k × 500). A failing webhook gets retried,
+   which is why Helius burn is 241k credits/day against a 1M monthly plan —
+   99.5% of it webhooks, projecting ~7.5M. Fix the 500s and the retries stop.
+
+## Superseded — what I guessed before the data
 
 **Where does 1,400–5,700 req/min come from?** Per-tab steady state measures 4–8
 calls/min, so the app's own polling does not explain it by three orders of
