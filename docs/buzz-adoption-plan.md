@@ -1500,6 +1500,23 @@ variants of the URL — casing, query string, trailing slash — all of which we
 the wrong axis entirely. When a measurement disagrees with a probe, the probe is
 usually a different *kind* of request, not a different path.
 
+### ✅ Verified on production 2026-08-09 21:25 UTC
+
+```
+/wp-admin/setup-config.php   404   9 bytes      (was 200, 92,928 bytes, 1.87s)
+/.git/config                 404   9 bytes      (was 200, 92,870 bytes, 1.97s)
+/xmlrpc.php                  404   9 bytes
+/vendor/phpunit/…/eval-stdin.php  404  9 bytes
+
+POST /pipeline               404   9 bytes  0.07s   (was 200, ~93 KB)
+POST /somebrandnewslug12475  404   9 bytes  0.09s   ← never seen before
+GET  /  /login  /home        200                    ← unaffected
+```
+
+The second POST is the one that proves it. A slug the app has never seen 404s
+immediately with **no cache entry**, so the defence no longer depends on having
+rendered the page once — which was the whole failure mode.
+
 ### 🔴 The soft-404 is app-wide; the guard only closed single-segment paths
 
 `middleware.ts` matches `/^\/[^/]+$/`, so **any multi-segment junk path still
@@ -1540,6 +1557,25 @@ The whole monthly quota went in ~1.5 days. When it runs out Helius answers
 so `/api/rpc` 502s — and `scripts/shrink-trades-webhook.mjs`, the emergency
 lever, **cannot run either**, because the management API is on the same key.
 Watch it with `bun scripts/dev/helius-usage.mjs`.
+
+⚠️ **STILL OPEN, and it is a trap.** The code cap above only takes effect when
+`syncTradesWebhook()` **succeeds**, and that call is on the same exhausted key —
+so the webhook is *still registered with the wide config right now*. Helius has
+stopped delivering (`/api/webhooks/helius-trades`: zero requests in the last
+hour), which is why the burn has stopped: exhaustion, not the fix.
+
+The moment the plan resets (2026-09-08) or is upgraded, the **old wide
+registration resumes at ~2,055/min** and the next sync is the daily cron at
+**04:30 UTC** — up to 24 hours of firehose, which at 541k credits/day would
+re-exhaust a fresh 1M plan almost immediately.
+
+**So the first thing to do after restoring quota is force the sync**, before
+anything else:
+
+```bash
+node scripts/shrink-trades-webhook.mjs 1     # immediate, no deploy needed
+# or hit /api/cron/sync-assets-webhook, which now registers 0 display pools
+```
 
 **The arithmetic that decided the fix.** Retries were real — 20.6% of deliveries
 hung up as 499 and Helius redelivers — but at 2,055 deliveries/min even a
