@@ -12,8 +12,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group rounded-3xl"
       toastOptions={{
         classNames: {
+          // No gray drop shadow (house rule) — the hairline border carries
+          // the elevation; motion is the global transitions.dev override in
+          // globals.css.
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg rounded-3xl",
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-none rounded-3xl",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground font-medium",
