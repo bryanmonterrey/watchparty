@@ -197,8 +197,93 @@ we ever expose; (3) intents that are self-serve below a usage threshold and
 review-gated above it — the model for gating expensive event subscriptions
 (e.g. firehose-style feeds) without a blanket approval queue.
 
+## 5. Emojis
+
+- H1 only — no explainer sentence under it (the empty state carries the copy).
+- Centered empty state: bold "**0 Emojis Uploaded**" + "Get the party started
+  by uploading an emoji. Up to 2,000 custom emojis can be uploaded by an app".
+- **Upload Requirements** bullet list, all constraints upfront: File Type
+  JPEG/PNG/GIF/WEBP/AVIF · Max file size 256 KB · Recommended dimensions
+  128×128 · Naming: ≥2 characters, alphanumeric + underscores only.
+- Primary **Upload Emoji** button centered below.
+
+→ watchparty mapping: app-owned custom emoji for chat/stream surfaces —
+registry-tier, and the count-up header ("0 Emojis Uploaded") + requirements-
+before-upload anatomy is the reusable part.
+
+## 6. Webhooks (app-scoped)
+
+- H1 + "Configure webhooks for your app to receive via HTTP".
+- **Endpoint** card: "Set a public endpoint URL to receive webhooks. Learn
+  more" → single **Endpoint URL** input ("Add your endpoint"). ONE endpoint
+  per app — not a table of webhooks like X's account-level page.
+- **Events** card with a master on/off toggle in its header ("Send specific
+  events to your application"), then a checkbox catalog grouped by domain:
+  - *Applications*: Application Authorized, Application Deauthorized
+  - *Entitlements*: Entitlement Create, Entitlement Update, Entitlement Delete
+  - *Messages*: Activity Invite Create
+  - *Users*: Relationship Add, Relationship Update, Relationship Remove,
+    User Activity Action
+  - *Quests*: Quest User Enrollment
+  - *Games*: Game Direct Message Create/Update/Delete, Lobby Message
+    Create/Update/Delete, Game Relationship Add, Game Relationship Remove
+
+→ watchparty mapping: THE shape for our developer webhooks page — one
+endpoint + a grouped event-type catalog with per-event checkboxes and a
+master toggle. Groups for us: Coins (launch, trade, price), Streams
+(live/offline), Users (follow), Predictions, Perps. Contrast deliberately
+with X's model (webhook rows in a table, per-app); Discord's
+single-endpoint-plus-event-menu is simpler and matches how our
+community-webhooks prior art already works.
+
+## 7. Rich Presence (group: Art Assets · Visualizer)
+
+The sidebar item expands into two sub-pages — the only nav item with
+children; the active child gets the left accent bar.
+
+### Art Assets
+
+- H1 + "Integrate your game deeply with Discord and let players jump
+  directly into your client and share your game." + "Learn more about Rich
+  Presence Best Practices" link.
+- **Rich Presence Invite Image**: "This is the default image for chat
+  invites, so make sure it's pretty! Put your best face forward :)" —
+  **Cover Image** drag/click uploader (1024×576, 16:9, PNG/JPG/WEBP, 10MB)
+  next to a live **"IRL Invite Image Example"** preview: a real rendered
+  invite card (app icon, "partyclaw · Playing for 2h", member avatars
+  "3 of 6", Join button) that shows the upload in context.
+- **Rich Presence Assets**: "add multiple assets that are paired with keys
+  to dynamically update rich presence data… images of maps, modes, or
+  whatever works best for your game."
+  - Orange warning banner: "Due to caching, asset keys are not editable once
+    they are saved. Delete and re-upload assets if you need to change a key
+    name." (Immutability taught at the moment it matters.)
+  - **Add Image(s)** button + inline constraints ".png, .jpg, or .jpeg —
+    1024×1024 recommended, 512×512 minimum" · counter "Assets (0 of 300)".
+
+### Visualizer (top half captured)
+
+- H1 + "Rich Presence lets your game surface exciting game data on your
+  players' profiles… See exactly how your text and art will look on a
+  user's profile."
+- Blue info banner: "This is only a visualizer… Rich presence configuration
+  needs to be programmed in your application. Learn more…"
+- Left: the full presence payload as a form, every field with a ⓘ tooltip —
+  state, details, start/end Timestamp, large/small Image Key (dropdowns fed
+  by Art Assets) + large/small Image Text, party Id, party Size, party Max,
+  join Secret…
+- Right: live preview panel with tabs **Full Profile / User Popout / Show
+  Code** rendering an actual profile card ("PLAYING A GAME", Ask to Join
+  button) that updates as the form changes.
+
+→ watchparty mapping: presence on watchparty profiles ("watching X",
+"streaming Y") is a future social feature; the durable lesson is the
+**live-preview playground** — form on the left, pixel-accurate render +
+Show Code on the right. That's the shape for a webhook-payload tester or
+embed-preview surface in our console.
+
 ## Pages not yet captured
 
-Emojis, Webhooks, Rich Presence, App Testers, App Verification, the
-Games/Activities/Premium Apps groups, and the top-level Applications list.
-Transcribe them here as screenshots arrive.
+Visualizer bottom, App Testers, App Verification, the Games/Activities/
+Premium Apps groups, and the top-level Applications list. Transcribe them
+here as screenshots arrive.
