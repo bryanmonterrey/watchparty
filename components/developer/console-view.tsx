@@ -119,8 +119,93 @@ function CreatePanel({ onDone }: { onDone: () => void }) {
     );
 }
 
+function FundPanel({ keyId, onDone }: { keyId: string; onDone: () => void }) {
+    const [amount, setAmount] = useState("10");
+    const [signature, setSignature] = useState("");
+    const utils = trpc.useUtils();
+    const info = trpc.apiKeys.depositInfo.useQuery();
+    const redeem = trpc.apiKeys.redeemDeposit.useMutation({
+        onSuccess: () => void utils.apiKeys.list.invalidate(),
+    });
+    const usd = Number(amount);
+
+    if (redeem.data) {
+        return (
+            <div className="mt-5 rounded-2xl bg-lantern/10 p-5 ring-1 ring-lantern/30">
+                <p className="text-[15px] font-extrabold text-white">
+                    Credits added — balance is now <span className="text-lantern">${redeem.data.balanceUsd.toFixed(2)}</span>
+                </p>
+                <button
+                    type="button"
+                    onClick={() => { redeem.reset(); onDone(); }}
+                    className="mt-3 inline-flex h-11 items-center rounded-full px-5 text-sm font-bold text-white ring-1 ring-white/15 transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                >
+                    Done
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <form
+            className="mt-5 rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10"
+            onSubmit={(e) => {
+                e.preventDefault();
+                if (usd >= 1 && signature.trim() && !redeem.isPending) {
+                    redeem.mutate({ keyId, signature: signature.trim(), amountUsd: usd });
+                }
+            }}
+        >
+            <p className="text-[15px] font-extrabold text-white">Fund with USDC</p>
+            <p className="mt-1 text-[13px] font-semibold leading-snug text-white/50">
+                Send USDC on Solana from any wallet to the address below, then paste the transaction signature. 1 USDC = $1 of credits.
+            </p>
+            {info.data && (
+                <p className="mt-3 select-all break-all rounded-xl bg-black px-4 py-3 font-mono text-[12px] leading-relaxed text-lantern ring-1 ring-white/10">
+                    {info.data.address}
+                </p>
+            )}
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    inputMode="decimal"
+                    aria-label="Amount in USDC"
+                    placeholder="Amount (USDC)"
+                    className="h-11 w-full rounded-full bg-white/[0.06] px-4 font-mono text-[13px] font-semibold text-white placeholder:text-white/30 outline-none ring-1 ring-transparent focus:ring-white/25 sm:max-w-[140px]"
+                />
+                <input
+                    value={signature}
+                    onChange={(e) => setSignature(e.target.value)}
+                    aria-label="Transaction signature"
+                    placeholder="Transaction signature"
+                    className="h-11 w-full rounded-full bg-white/[0.06] px-4 font-mono text-[13px] font-semibold text-white placeholder:text-white/30 outline-none ring-1 ring-transparent focus:ring-white/25"
+                />
+                <div className="flex gap-2">
+                    <button
+                        type="submit"
+                        disabled={!(usd >= 1) || !signature.trim() || redeem.isPending}
+                        className="inline-flex h-11 shrink-0 items-center rounded-full bg-white px-5 text-sm font-bold text-black transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97] disabled:opacity-40"
+                    >
+                        {redeem.isPending ? "Verifying…" : "Redeem"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onDone}
+                        className="inline-flex h-11 shrink-0 items-center rounded-full px-5 text-sm font-bold text-white ring-1 ring-white/15 transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+            {redeem.error && <p className="mt-3 text-sm font-bold text-pastelred">{redeem.error.message}</p>}
+        </form>
+    );
+}
+
 function KeyRow({ k }: { k: { id: string; name: string; prefix: string; revoked: boolean; createdAt: Date | string; lastUsedAt: Date | string | null; balanceUsd: number; spentUsd: number } }) {
     const [confirming, setConfirming] = useState(false);
+    const [funding, setFunding] = useState(false);
     const utils = trpc.useUtils();
     const revoke = trpc.apiKeys.revoke.useMutation({
         onSuccess: () => void utils.apiKeys.list.invalidate(),
@@ -162,13 +247,22 @@ function KeyRow({ k }: { k: { id: string; name: string; prefix: string; revoked:
                             </button>
                         </div>
                     ) : (
-                        <button
-                            type="button"
-                            onClick={() => setConfirming(true)}
-                            className="inline-flex h-11 items-center rounded-full bg-white/[0.08] px-5 text-sm font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
-                        >
-                            Revoke
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setFunding((f) => !f)}
+                                className="inline-flex h-11 items-center rounded-full bg-white px-5 text-sm font-bold text-black transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                            >
+                                Fund
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setConfirming(true)}
+                                className="inline-flex h-11 items-center rounded-full bg-white/[0.08] px-5 text-sm font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                            >
+                                Revoke
+                            </button>
+                        </div>
                     )
                 )}
             </div>
@@ -182,6 +276,7 @@ function KeyRow({ k }: { k: { id: string; name: string; prefix: string; revoked:
                     <p className="mt-0.5 font-mono text-lg font-extrabold text-white">{money(k.spentUsd)}</p>
                 </div>
             </div>
+            {funding && !k.revoked && <FundPanel keyId={k.id} onDone={() => setFunding(false)} />}
         </div>
     );
 }

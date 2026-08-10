@@ -2,8 +2,11 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
-import { apiKeys } from "@/db/schema/content/api-key";
+import { apiKeys, apiCreditDeposits } from "@/db/schema/content/api-key";
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
+import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
+import { USDC_MINT } from "@/lib/premium/tiers";
 import {
     balKey,
     gateRedis,
@@ -123,9 +126,88 @@ export const apiKeysRouter = router({
         }),
 
     /**
-     * Admin credit grant — the manual funding path until a self-serve USDC
-     * purchase flow ships. Folds unflushed Redis spend into the ledger first
-     * so the SET below can't resurrect already-spent credits.
+     * Self-serve funding, step 1: where to send USDC. The address is the same
+     * treasury that receives boost packs and prediction bets — send from any
+     * wallet, no in-portal wallet stack needed (the portal bundle stays light
+     * on purpose).
+     */
+    depositInfo: protectedProcedure.query(() => ({
+        address: getBoostTreasuryOwner(),
+        mint: USDC_MINT,
+        network: "solana" as const,
+        minUsd: 1,
+    })),
+
+    /**
+     * Self-serve funding, step 2: redeem a confirmed USDC transfer by its
+     * transaction signature. The deposit row is inserted BEFORE verification —
+     * its tx_signature primary key is the double-spend gate (predictions-bet
+     * pattern), so a replay conflicts instead of racing the verifier; a failed
+     * verification deletes the row again. Credits the CLAIMED amount after
+     * verifying the on-chain transfer covers it (overpay is the sender's
+     * loss, underpay is rejected).
+     */
+    redeemDeposit: protectedProcedure
+        .input(z.object({
+            keyId: z.string().min(1).max(64),
+            signature: z.string().min(64).max(96),
+            amountUsd: z.number().min(1).max(100_000),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const [key] = await db
+                .select({ id: apiKeys.id })
+                .from(apiKeys)
+                .where(and(eq(apiKeys.id, input.keyId), eq(apiKeys.userId, ctx.user.id), isNull(apiKeys.revokedAt)))
+                .limit(1);
+            if (!key) throw new TRPCError({ code: "NOT_FOUND", message: "No active key with that id" });
+
+            const micro = Math.round(input.amountUsd * 1_000_000);
+            try {
+                await db.insert(apiCreditDeposits).values({
+                    txSignature: input.signature,
+                    keyId: key.id,
+                    amountMicro: micro,
+                });
+            } catch {
+                throw new TRPCError({ code: "CONFLICT", message: "That transaction was already redeemed" });
+            }
+
+            try {
+                const treasuryAta = await getTreasuryUsdcAta(getBoostTreasuryOwner());
+                await verifyUsdcPaymentToTreasury(input.signature, BigInt(micro), treasuryAta);
+            } catch (err) {
+                await db.delete(apiCreditDeposits).where(eq(apiCreditDeposits.txSignature, input.signature));
+                throw err;
+            }
+
+            // Same fold-then-set dance as grant: unflushed Redis spend goes
+            // into the ledger first so the balance SET can't resurrect it.
+            let unflushed = 0;
+            try {
+                unflushed = Number((await gateRedis().getdel(spentKey(key.id))) ?? 0);
+            } catch {
+                /* flush cron will reconcile */
+            }
+            const [row] = await db
+                .update(apiKeys)
+                .set({
+                    spentMicro: sql`${apiKeys.spentMicro} + ${unflushed}`,
+                    balanceMicro: sql`${apiKeys.balanceMicro} - ${unflushed} + ${micro}`,
+                })
+                .where(eq(apiKeys.id, key.id))
+                .returning({ balanceMicro: apiKeys.balanceMicro });
+            try {
+                await gateRedis().set(balKey(key.id), row!.balanceMicro);
+            } catch {
+                /* flush cron reseeds from the ledger */
+            }
+            return { balanceUsd: row!.balanceMicro / 1_000_000 };
+        }),
+
+    /**
+     * Admin credit grant — comped credits and ops corrections (self-serve
+     * funding is redeemDeposit above). Folds unflushed Redis spend into the
+     * ledger first so the SET below can't resurrect already-spent credits.
      */
     grant: protectedProcedure
         .input(z.object({ keyId: z.string().min(1).max(64), amountUsd: z.number().min(1).max(100_000) }))

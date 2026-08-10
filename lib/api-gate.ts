@@ -131,25 +131,60 @@ export async function verifyApiKeySig(key: string): Promise<string | null> {
 
 // ── x402 ─────────────────────────────────────────────────────────────────────
 
-function paymentRequirements(resource: string, priceMicro: number) {
-    const payTo = process.env.X402_PAY_TO;
+// The facilitator's fee payer, from its /supported listing, cached per
+// isolate. The Solana "exact" scheme REQUIRES this inside the challenge's
+// `extra` — without it clients build transactions the facilitator won't
+// co-sign, so every x402 attempt would die at verify. Cached 10 minutes;
+// fails soft (challenge ships without extra, keys still work).
+let feePayerCache: { value: string | null; at: number } | null = null;
+async function facilitatorFeePayer(): Promise<string | null> {
+    const fac = process.env.X402_FACILITATOR_URL?.replace(/\/$/, "");
+    if (!fac) return null;
+    if (feePayerCache && Date.now() - feePayerCache.at < 10 * 60_000) return feePayerCache.value;
+    let value: string | null = null;
+    try {
+        const res = await fetch(`${fac}/supported`, { signal: AbortSignal.timeout(5_000) });
+        const json = (await res.json()) as { kinds?: { network?: string; extra?: { feePayer?: string } }[] };
+        const network = process.env.X402_NETWORK ?? "solana";
+        value = json.kinds?.find((k) => k.network === network)?.extra?.feePayer ?? null;
+    } catch {
+        value = null;
+    }
+    feePayerCache = { value, at: Date.now() };
+    return value;
+}
+
+async function paymentRequirements(resource: string, priceMicro: number) {
+    // Same env chain as getBoostTreasuryOwner() (lib/premium/boosts.ts),
+    // inlined because this bundles into edge middleware: x402 payments land in
+    // the SAME treasury that receives boost packs and prediction bets.
+    // X402_PAY_TO stays as an explicit override.
+    const payTo =
+        process.env.X402_PAY_TO ??
+        process.env.NEXT_PUBLIC_COLLECTION_DESTINATION ??
+        process.env.NEXT_PUBLIC_PREMIUM_MERCHANT_PUBKEY ??
+        process.env.NEXT_PUBLIC_TREASURY_PUBKEY;
     if (!payTo) return null;
+    const feePayer = await facilitatorFeePayer();
     return {
         scheme: "exact",
         network: process.env.X402_NETWORK ?? "solana",
+        // Both spellings on purpose: x402 v1 clients read maxAmountRequired,
+        // v2 clients read amount. A superset challenge serves both.
         maxAmountRequired: String(priceMicro),
+        amount: String(priceMicro),
         resource,
         description: "watchparty API access (per request)",
         mimeType: "application/json",
         payTo,
         maxTimeoutSeconds: 60,
         asset: USDC_MINT,
-        extra: null,
+        extra: feePayer ? { feePayer } : null,
     };
 }
 
-function respond402(resource: string, error: string, priceMicro: number): NextResponse {
-    const reqs = paymentRequirements(resource, priceMicro);
+async function respond402(resource: string, error: string, priceMicro: number): Promise<NextResponse> {
+    const reqs = await paymentRequirements(resource, priceMicro);
     return NextResponse.json(
         {
             x402Version: 1,
@@ -170,12 +205,25 @@ function respond402(resource: string, error: string, priceMicro: number): NextRe
  * Verify + settle an X-PAYMENT header against the configured facilitator.
  * Returns the base64 X-PAYMENT-RESPONSE header value on success, else null.
  * Any facilitator error fails CLOSED — an unverifiable payment is no payment.
+ *
+ * The X-PAYMENT header is base64 JSON; facilitators (verified against PayAI
+ * 2026-08-09) take the DECODED object as `paymentPayload`, not the raw header.
  */
 async function verifyAndSettle(paymentHeader: string, resource: string, priceMicro: number): Promise<string | null> {
     const fac = process.env.X402_FACILITATOR_URL?.replace(/\/$/, "");
-    const reqs = paymentRequirements(resource, priceMicro);
+    const reqs = await paymentRequirements(resource, priceMicro);
     if (!fac || !reqs) return null;
-    const body = JSON.stringify({ x402Version: 1, paymentHeader, paymentRequirements: reqs });
+    let paymentPayload: { x402Version?: number } | null = null;
+    try {
+        paymentPayload = JSON.parse(atob(paymentHeader)) as { x402Version?: number };
+    } catch {
+        return null;
+    }
+    const body = JSON.stringify({
+        x402Version: paymentPayload?.x402Version ?? 1,
+        paymentPayload,
+        paymentRequirements: reqs,
+    });
     const post = (path: string) =>
         fetch(`${fac}${path}`, {
             method: "POST",
@@ -284,7 +332,7 @@ export async function apiGate(
 
     if (apiKey) {
         const id = await verifyApiKeySig(apiKey);
-        if (!id) return { block: respond402(request.nextUrl.href, "Invalid API key", price) };
+        if (!id) return { block: await respond402(request.nextUrl.href, "Invalid API key", price) };
         const r = gateRedis();
         try {
             const [revoked, bal] = await Promise.all([
@@ -293,11 +341,11 @@ export async function apiGate(
             ]);
             if (revoked) {
                 await r.incrby(balKey(id), price);
-                return { block: respond402(request.nextUrl.href, "API key revoked", price) };
+                return { block: await respond402(request.nextUrl.href, "API key revoked", price) };
             }
             if (bal < 0) {
                 await r.incrby(balKey(id), price);
-                return { block: respond402(request.nextUrl.href, "Insufficient credits", price) };
+                return { block: await respond402(request.nextUrl.href, "Insufficient credits", price) };
             }
             await r.incrby(spentKey(id), price);
             return { headers: corsHeaders() };
@@ -312,11 +360,11 @@ export async function apiGate(
     if (payment) {
         const settle = await verifyAndSettle(payment, request.nextUrl.href, price);
         if (settle) return { settleHeader: settle, headers: corsHeaders() };
-        return { block: respond402(request.nextUrl.href, "Payment verification failed", price) };
+        return { block: await respond402(request.nextUrl.href, "Payment verification failed", price) };
     }
 
     return {
-        block: respond402(
+        block: await respond402(
             request.nextUrl.href,
             "Payment or API key required — this endpoint is free from the watchparty app, billed for external callers",
             price,

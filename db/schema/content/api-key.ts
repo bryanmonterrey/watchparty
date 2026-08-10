@@ -1,4 +1,4 @@
-import { pgTable, pgPolicy, text, timestamp, bigint, index } from 'drizzle-orm/pg-core';
+import { pgTable, pgPolicy, text, timestamp, bigint, index, date, primaryKey } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { user } from '../auth/user';
 
@@ -33,5 +33,41 @@ export const apiKeys = pgTable('api_keys', {
         for: 'all',
         to: 'authenticated',
         using: sql`user_id = (SELECT auth.uid()::text)`,
+    }),
+]).enableRLS();
+
+// Per-day spend per key — written by the flush cron as it folds Redis spend
+// into the ledger. Hourly flush granularity = the chart's precision.
+export const apiKeyUsageDays = pgTable('api_key_usage_days', {
+    keyId: text('key_id')
+        .references(() => apiKeys.id, { onDelete: 'cascade' })
+        .notNull(),
+    day: date('day').notNull(),
+    spentMicro: bigint('spent_micro', { mode: 'number' }).default(0).notNull(),
+}, (table) => [
+    primaryKey({ columns: [table.keyId, table.day] }),
+    pgPolicy('api_key_usage_days_own', {
+        for: 'select',
+        to: 'authenticated',
+        using: sql`EXISTS (SELECT 1 FROM api_keys k WHERE k.id = api_key_usage_days.key_id AND k.user_id = (SELECT auth.uid()::text))`,
+    }),
+]).enableRLS();
+
+// One row per redeemed USDC deposit. tx_signature as PRIMARY KEY is the
+// double-spend gate (predictions-bet pattern): insert BEFORE on-chain
+// verification so a replay conflicts instead of racing the verifier.
+export const apiCreditDeposits = pgTable('api_credit_deposits', {
+    txSignature: text('tx_signature').primaryKey(),
+    keyId: text('key_id')
+        .references(() => apiKeys.id, { onDelete: 'cascade' })
+        .notNull(),
+    amountMicro: bigint('amount_micro', { mode: 'number' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_api_credit_deposits_key').on(table.keyId),
+    pgPolicy('api_credit_deposits_own', {
+        for: 'select',
+        to: 'authenticated',
+        using: sql`EXISTS (SELECT 1 FROM api_keys k WHERE k.id = api_credit_deposits.key_id AND k.user_id = (SELECT auth.uid()::text))`,
     }),
 ]).enableRLS();

@@ -10,7 +10,7 @@
 // backstop for a revoke whose Redis write was lost.
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { apiKeys } from "@/db/schema/content/api-key";
+import { apiKeys, apiKeyUsageDays } from "@/db/schema/content/api-key";
 import { eq, sql } from "drizzle-orm";
 import { balKey, gateRedis, revokedKey, spentKey } from "@/lib/api-gate";
 
@@ -52,6 +52,16 @@ export async function GET(req: NextRequest) {
                     .returning({ balanceMicro: apiKeys.balanceMicro });
                 ledgerBal = u?.balanceMicro ?? ledgerBal - spent;
                 flushedMicro += spent;
+
+                // Per-day rollup for console usage charts — attributed to the
+                // flush day (hourly cadence = the chart's precision).
+                await db
+                    .insert(apiKeyUsageDays)
+                    .values({ keyId: row.id, day: new Date().toISOString().slice(0, 10), spentMicro: spent })
+                    .onConflictDoUpdate({
+                        target: [apiKeyUsageDays.keyId, apiKeyUsageDays.day],
+                        set: { spentMicro: sql`${apiKeyUsageDays.spentMicro} + ${spent}` },
+                    });
             }
 
             if (ledgerBal > 0) {

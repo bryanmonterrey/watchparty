@@ -125,6 +125,15 @@ pooler-wedge postmortem). Until then the portal is fully live at
   Helius-credit-burning kind); abuse-hardening is a different project.
 - Flat per-request price. Per-route pricing (e.g. `/api/rpc` costing more)
   slots into `priceMicro()` when wanted.
-- x402 facilitator is unchosen. Candidates: CDP's facilitator (Base +
-  Solana), PayAI, Corbits. `X402_FACILITATOR_URL` + `X402_PAY_TO` is all it
-  takes once picked.
+- x402 facilitator: **PayAI** (`X402_FACILITATOR_URL=https://facilitator.payai.network`,
+  chosen 2026-08-09 — no API keys, Solana mainnet, fees covered by them; probed
+  live: `/supported` lists `solana` kinds with `extra.feePayer`, which the gate
+  fetches and caches per isolate). `payTo` defaults to the boost/predictions
+  treasury env chain; `X402_PAY_TO` overrides. The facilitator API takes the
+  DECODED X-PAYMENT as `paymentPayload` — not the raw base64 header — and the
+  challenge carries both `maxAmountRequired` (v1) and `amount` (v2).
+- Self-serve funding is LIVE: console "Fund" → send USDC to the treasury from
+  any wallet → paste the tx signature → `apiKeys.redeemDeposit` verifies
+  on-chain (shared `verifyUsdcPaymentToTreasury`) with `api_credit_deposits.tx_signature`
+  as the replay gate. Per-day spend rollups land in `api_key_usage_days` via
+  the flush cron (chart UI still to come).
