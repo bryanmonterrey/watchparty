@@ -27,10 +27,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Home01Icon,
+  Notification03Icon,
+  SparklesIcon,
+  Folder01Icon,
+  DashboardSquare01Icon,
   Analytics01Icon,
   Key01Icon,
+  ZapIcon,
+  WebhookIcon,
+  ConnectIcon,
+  FilterIcon,
   Coins01Icon,
   Invoice01Icon,
+  CreditCardIcon,
   Book02Icon,
   LinkSquare02Icon,
   Logout01Icon,
@@ -39,9 +48,10 @@ import {
 import { StarMark } from "@/components/icons";
 import { useSession, useSignOut } from "@/lib/session";
 
-// The X-console shell anatomy (docs/console-plan.md): grouped nav, active
-// item highlighted, avatar + sign-out in the footer. Only surfaces with a
-// live backend get a nav item — nothing here is a mock.
+// The full X-console IA (docs/console-x-reference.md shell section): grouped
+// nav, active item highlighted, avatar + sign-out in the footer. Surfaces
+// whose backend isn't live yet render their production empty state — no mock
+// rows, no dead buttons.
 const NAV_GROUPS: {
   label?: string;
   items: { icon: typeof Home01Icon; label: string; href: string }[];
@@ -49,18 +59,34 @@ const NAV_GROUPS: {
   {
     items: [
       { icon: Home01Icon, label: "Dashboard", href: "/" },
-      { icon: Analytics01Icon, label: "Usage", href: "/usage" },
+      { icon: Notification03Icon, label: "Notifications", href: "/notifications" },
+      { icon: SparklesIcon, label: "Agent", href: "/agent" },
     ],
   },
   {
     label: "Access",
-    items: [{ icon: Key01Icon, label: "Keys", href: "/keys" }],
+    items: [
+      { icon: Folder01Icon, label: "Projects", href: "/projects" },
+      { icon: DashboardSquare01Icon, label: "Apps", href: "/apps" },
+      { icon: Key01Icon, label: "Keys", href: "/keys" },
+      { icon: Analytics01Icon, label: "Usage", href: "/usage" },
+    ],
+  },
+  {
+    label: "Toolbox",
+    items: [
+      { icon: ZapIcon, label: "Event subscriptions", href: "/event-subscriptions" },
+      { icon: WebhookIcon, label: "Webhooks", href: "/webhooks" },
+      { icon: ConnectIcon, label: "Connections", href: "/connections" },
+      { icon: FilterIcon, label: "Streaming rules", href: "/streaming-rules" },
+    ],
   },
   {
     label: "Billing",
     items: [
       { icon: Coins01Icon, label: "Credits", href: "/credits" },
       { icon: Invoice01Icon, label: "Payments", href: "/payments" },
+      { icon: CreditCardIcon, label: "Billing information", href: "/billing" },
     ],
   },
 ];

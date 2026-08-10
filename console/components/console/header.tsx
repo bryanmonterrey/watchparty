@@ -10,10 +10,19 @@ import { Book02Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
-  "/usage": "Usage",
+  "/notifications": "Notifications",
+  "/agent": "Agent",
+  "/projects": "Projects",
+  "/apps": "Apps",
   "/keys": "Keys",
+  "/usage": "Usage",
+  "/event-subscriptions": "Event subscriptions",
+  "/webhooks": "Webhooks",
+  "/connections": "Connections",
+  "/streaming-rules": "Streaming rules",
   "/credits": "Credits",
   "/payments": "Payments",
+  "/billing": "Billing information",
 };
 
 export function ConsoleHeader() {

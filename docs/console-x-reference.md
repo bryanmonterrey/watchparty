@@ -223,7 +223,9 @@ USDC-on-Solana, amount, date, Solscan link instead of invoice.
 
 ## Build status key
 
-Live today: Dashboard, Usage, Keys(+detail), Credits, Payments, Billing
-info, Notifications, Agent — see `docs/console-plan.md` build order for the
-registry-tier remainder (Projects, Apps-proper, Webhooks, Event
-subscriptions, Connections, Streaming rules).
+The full 14-item nav is shipped (2026-08-10). Live on real data: Dashboard,
+Usage, Keys(+detail), Credits, Payments, Billing information
+(`apiKeys.depositInfo`). The rest — Notifications, Agent, Projects, Apps, and
+the Toolbox four — render their production empty states via
+`components/console/empty-view.tsx` until their backends land; see
+`docs/console-plan.md` build order for that registry-tier remainder.
