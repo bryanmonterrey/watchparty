@@ -134,7 +134,12 @@ async function main() {
         return zone.id;
     })();
 
-    const filter = { datetime_geq: since, datetime_leq: new Date().toISOString() };
+    // Cloudflare rejects a window "wider than 1d", and it means it: `--hours 24`
+    // spans 1d plus the few hundred ms between computing the two bounds, and the
+    // query errors out entirely rather than clamping. Pull the end back a minute
+    // so the default actually works.
+    const until = new Date(Date.now() - 60_000).toISOString();
+    const filter = { datetime_geq: since, datetime_leq: until };
     if (path) filter.clientRequestPath = path;
 
     const extra = (arg("by", "") || "")

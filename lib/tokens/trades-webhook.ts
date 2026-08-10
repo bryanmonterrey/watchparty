@@ -133,6 +133,27 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
     // ANY (not SWAP): Helius's enhanced parser doesn't classify Meteora DBC
     // curve swaps as SWAP; any tx touching a pool is trade-relevant anyway,
     // and the receiver throttles per token.
+    //
+    // ⚠️ THIS IS THE OTHER HALF OF THE 2026-08-09 CREDIT BURN. Measured:
+    //
+    //   the 15 registered pools     ~687,880 swaps/day  =    478 deliveries/min
+    //   actually delivered                                 2,518 deliveries/min
+    //
+    // A 5.3x multiplier, because ANY fires on EVERY transaction touching a
+    // watched pool — liquidity ops, transfers, failed transactions — not just
+    // the swaps the receiver cares about. Combined with watching the busiest
+    // pools on Solana (rank 1 was HOOD at 222,914 txns/day on its own), that is
+    // 3.47M delivery attempts in 23 hours against a 1M/month plan.
+    //
+    // ANY is still correct for OUR pools: Meteora DBC curve swaps genuinely
+    // aren't classified as SWAP, and a launch we own is low-volume. It is wrong
+    // for display pools, which are ordinary AMM pairs where SWAP works fine.
+    //
+    // A Helius webhook carries ONE transactionTypes for all its addresses, so
+    // the two cannot be mixed — separating them means a second webhook. Until
+    // that exists, re-widening HELIUS_TRADES_DISPLAY_POOLS re-creates the burn
+    // at roughly 5x whatever the raw swap rate of those pools is. Do not raise
+    // it without splitting the webhook first.
     const payload = {
         webhookURL,
         transactionTypes: ["ANY"],
