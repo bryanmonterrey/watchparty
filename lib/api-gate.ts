@@ -329,10 +329,15 @@ export async function apiGate(
     }
 
     const price = priceForPathMicro(pathname);
+    // NOT nextUrl.href: on the container runtime that reflects the internal
+    // bind address (https://0.0.0.0:3000/…), and x402 clients validate
+    // `resource` against the URL they actually called. The Host header is the
+    // public hostname on every deployment shape (Cloudflare sets it).
+    const resource = `https://${request.headers.get("host") ?? "watchparty.xyz"}${pathname}${request.nextUrl.search}`;
 
     if (apiKey) {
         const id = await verifyApiKeySig(apiKey);
-        if (!id) return { block: await respond402(request.nextUrl.href, "Invalid API key", price) };
+        if (!id) return { block: await respond402(resource, "Invalid API key", price) };
         const r = gateRedis();
         try {
             const [revoked, bal] = await Promise.all([
@@ -341,11 +346,11 @@ export async function apiGate(
             ]);
             if (revoked) {
                 await r.incrby(balKey(id), price);
-                return { block: await respond402(request.nextUrl.href, "API key revoked", price) };
+                return { block: await respond402(resource, "API key revoked", price) };
             }
             if (bal < 0) {
                 await r.incrby(balKey(id), price);
-                return { block: await respond402(request.nextUrl.href, "Insufficient credits", price) };
+                return { block: await respond402(resource, "Insufficient credits", price) };
             }
             await r.incrby(spentKey(id), price);
             return { headers: corsHeaders() };
@@ -358,14 +363,14 @@ export async function apiGate(
     }
 
     if (payment) {
-        const settle = await verifyAndSettle(payment, request.nextUrl.href, price);
+        const settle = await verifyAndSettle(payment, resource, price);
         if (settle) return { settleHeader: settle, headers: corsHeaders() };
-        return { block: await respond402(request.nextUrl.href, "Payment verification failed", price) };
+        return { block: await respond402(resource, "Payment verification failed", price) };
     }
 
     return {
         block: await respond402(
-            request.nextUrl.href,
+            resource,
             "Payment or API key required — this endpoint is free from the watchparty app, billed for external callers",
             price,
         ),

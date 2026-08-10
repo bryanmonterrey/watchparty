@@ -1397,9 +1397,32 @@ outage's cause:
    per-path and per-user-agent data, the question below is a five-minute query.
    Without it, it is unanswerable. This is now the top item, not a nice-to-have.
    Fold it into the scheduled token rotation.
-3. **Fix the latency multiplier.** `trending.list` measured 3.8s. Since
-   concurrency = rate × latency, every slow endpoint is a saturation multiplier
-   regardless of where the traffic comes from. Phase 9c applies directly.
+3. ~~**Fix the latency multiplier.** `trending.list` measured 3.8s.~~
+   ❌ **Not a query problem — measured 2026-08-10.**
+
+   `trending_coins` holds **211 rows / 336 kB**. The whole table is a couple of
+   pages. `EXPLAIN (ANALYZE, BUFFERS)` on the *worst* case — `gainers` sorted by
+   `price_change_5m`, the one timeframe with no index — plans a seq scan and a
+   top-N heapsort:
+
+   ```
+   Execution Time: 0.382 ms      Buffers: shared hit=22   (all cached)
+   ```
+
+   And `/trade` itself measures **0.21–0.40s** over five probes. The single 4.6s
+   sample that prompted this was a cold start, exactly like the one-off
+   `/premium` 500 the same evening.
+
+   So there is nothing to optimise here, Phase 9c does **not** apply, and the
+   indexes already on this table (`idx_trending_volume`, `idx_trending_liquidity`,
+   …) are themselves close to pointless at 211 rows — Postgres seq-scans it
+   regardless. **Do not add indexes for the unindexed timeframes.** They would
+   cost write amplification on a wholesale refresh to save nothing.
+
+   ⚠️ The general point survives: concurrency = rate × latency, so a genuinely
+   slow endpoint is still a saturation multiplier. This just isn't one. Find the
+   next candidate by measuring, not by reading the query — a single sample is
+   how this one got on the list.
 4. **Fix the per-row polling** listed above (`online-indicator`,
    `profile-avatar`, `space-room`). Not the outage's cause, but real waste, and
    the realtime fix makes it cheap to do.
