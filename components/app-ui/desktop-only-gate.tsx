@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth/client";
+import { signOutAndClearSnapshots } from "@/lib/auth/client";
 import { PinkStarLogo } from "@/components/icons";
 import { Squircle } from "@/components/ui/squircle";
 
@@ -44,7 +44,7 @@ export function DesktopOnlyGate() {
                     disabled={busy}
                     onClick={async () => {
                         setBusy(true);
-                        await authClient.signOut();
+                        await signOutAndClearSnapshots();
                         router.push("/login");
                         router.refresh();
                     }}

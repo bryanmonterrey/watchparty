@@ -17,6 +17,9 @@ import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
 import { TradeRow } from "@/components/trades/trade-row";
 import { ProfilePnlCard } from "./profile-pnl-card";
 import { ProfileMediaGrid } from "./profile-media-grid";
+import { profilePostsSnapshotStore } from "@/lib/snapshot/surfaces";
+import { viewerKey } from "@/lib/snapshot/keys";
+import { useSnapshot } from "@/hooks/use-snapshot";
 // Lazy: the predictions tab is rarely the landing tab, and this pulls in
 // market cards + charts the rest of the profile never needs.
 const PredictionsView = dynamic(
@@ -88,11 +91,28 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
         return () => clearTimeout(t);
     }, [searchInput]);
 
-    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    // Keyed by BOTH the profile being viewed and the viewer: `getPostsByUser`
+    // goes through `postSelectFields`, so these rows carry the *viewer's*
+    // isLiked/isBookmarked/isReposted for someone else's posts.
+    //
+    // A search is deliberately never snapshotted. Every query string would mint
+    // its own entry, evicting the profiles you actually revisit to cache a
+    // one-off search you are unlikely to repeat.
+    const { data: viewerSession } = useAuthSession();
+    const snapshotKey = search
+        ? ""
+        : viewerKey(viewerSession?.user?.id, "profile-posts", userId, type, show, sort);
+
+    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isPlaceholderData } =
         trpc.content.getPostsByUser.useInfiniteQuery(
             { userId, limit: 20, type, show, sort, search: search || undefined },
-            { getNextPageParam: (last) => last.nextCursor }
+            {
+                getNextPageParam: (last) => last.nextCursor,
+                placeholderData: () => profilePostsSnapshotStore.read(snapshotKey),
+            }
         );
+
+    useSnapshot(profilePostsSnapshotStore, snapshotKey, data, isPlaceholderData);
 
     const seen = new Set<string>();
     const allPosts = (data?.pages.flatMap(p => p.posts) ?? []).filter(p => {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth/client";
+import { signOutAndClearSnapshots } from "@/lib/auth/client";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export function SignOutButton() {
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        await authClient.signOut();
+        await signOutAndClearSnapshots();
         router.push("/login");
         router.refresh();
       }}

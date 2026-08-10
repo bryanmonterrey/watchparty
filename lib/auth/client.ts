@@ -10,6 +10,7 @@ import {
 import { passkeyClient } from "@better-auth/passkey/client";
 import { sentinelClient } from "@better-auth/infra/client";
 import { siwsClientPlugin } from "better-auth-siws/client";
+import { clearAllSnapshots } from "@/lib/snapshot/store";
 import type { auth } from "./server";
 
 // EVM SIWE client (Base/Hyperliquid) joins next, alongside this Solana SIWS client.
@@ -100,4 +101,25 @@ export function setActiveDeviceSession(sessionToken: string) {
 /** Sign ONE account out, leaving the rest signed in. `signOut()` clears them all. */
 export function revokeDeviceSession(sessionToken: string) {
   return multiSession.revoke({ sessionToken });
+}
+
+/**
+ * Sign out, and drop every paint-instantly snapshot on the way.
+ *
+ * Use this instead of `authClient.signOut()` directly. Snapshots are keyed by
+ * viewer (`lib/snapshot/keys.ts`), so the next account can never be *painted*
+ * with the previous one's data — but keying alone leaves that data sitting in
+ * localStorage after they leave, which on a shared machine is the whole
+ * problem. Feed pages carry the signed-out user's own like state; notifications
+ * and bookmarks are theirs outright.
+ *
+ * Cleared BEFORE the request, so a signOut that throws or navigates mid-flight
+ * still leaves nothing behind. The cost of clearing a session that then fails
+ * to end is one slower paint.
+ */
+export async function signOutAndClearSnapshots(
+  ...args: Parameters<typeof authClient.signOut>
+) {
+  clearAllSnapshots();
+  return authClient.signOut(...args);
 }

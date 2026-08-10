@@ -7,6 +7,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUp02Icon, AtIcon, MinusSignIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { alertsSnapshotStore } from "@/lib/snapshot/surfaces";
+import { viewerKey } from "@/lib/snapshot/keys";
+import { useSnapshot } from "@/hooks/use-snapshot";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { RailShell } from "@/components/rails/rail-shell";
 import { RailScrollbar } from "@/components/rails/rail-scrollbar";
@@ -91,6 +95,14 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
     );
     const utils = trpc.useUtils();
 
+    // `coinFeed.list` runs buildFilters(input, ctx.user?.id), so the rows depend
+    // on the viewer as well as the filters — both belong in the key.
+    const { data: railSession } = useAuthSession();
+    const alertsSnapshotKey = useMemo(
+        () => viewerKey(railSession?.user?.id, "alerts", JSON.stringify(filterInput)),
+        [railSession?.user?.id, filterInput],
+    );
+
     const {
         data,
         fetchNextPage,
@@ -105,12 +117,18 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         // /coin since the rails group). This is the flag that actually reports
         // it.
         isFetchNextPageError,
+        isPlaceholderData,
         refetch,
     } = trpc.coinFeed.list.useInfiniteQuery(
         { ...filterInput, limit: PAGE_SIZE },
         {
             getNextPageParam: (last) => last.nextCursor,
             staleTime: 30_000,
+            // Paint the last page we held for this viewer+filter instead of
+            // skeletons. The store's max age is 30 minutes, deliberately short:
+            // these are market events, and one old enough to mislead is never
+            // painted at all. See lib/snapshot/surfaces.ts.
+            placeholderData: () => alertsSnapshotStore.read(alertsSnapshotKey),
             // A rail that sits open for hours will hit the occasional dropped
             // request; back off and recover rather than surfacing the first
             // blip. Errors no longer blank the feed either — see the render.
@@ -140,6 +158,8 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         const id = setInterval(() => void refetch(), 30_000);
         return () => clearInterval(id);
     }, [isError, isFetchNextPageError, refetch]);
+
+    useSnapshot(alertsSnapshotStore, alertsSnapshotKey, data, isPlaceholderData);
 
     const { data: coverage } = trpc.coinFeed.coverage.useQuery(undefined, { staleTime: 300_000 });
 

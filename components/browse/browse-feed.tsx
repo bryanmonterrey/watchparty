@@ -18,6 +18,9 @@ import { getRealtimeClient } from "@/lib/supabase/realtime-client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useFeedDwell } from "@/hooks/use-feed-dwell";
 import { retryTransient } from "@/lib/query-retry";
+import { feedSnapshotStore, readFeedSnapshot } from "@/lib/feed/feed-snapshot";
+import { viewerKey } from "@/lib/snapshot/keys";
+import { useSnapshot } from "@/hooks/use-snapshot";
 
 type FeedType = "for-you" | "following" | "news";
 type FeedItem = { type: "post"; createdAt: Date; data: any };
@@ -179,17 +182,28 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
 
     // ── Feed queries ──────────────────────────────────────────────────────────
     const utils = trpc.useUtils();
+    // Per tab AND per account: a feed row's isLiked/isBookmarked/isReposted are
+    // EXISTS subqueries against the viewer, so one account's page is wrong for
+    // the next — and multi-session switches accounts with no sign-out between.
+    const feedSnapshotKey = viewerKey(session?.user?.id, "feed", activeTab);
+
     const {
         data: postData,
         fetchNextPage: fetchNextPosts,
         hasNextPage: hasNextPosts,
         isLoading: isLoadingPosts,
         isError,
+        isPlaceholderData: isFeedPlaceholder,
         refetch: refetchPosts,
     } = trpc.content.getFeed.useInfiniteQuery(
         { type: activeTab, limit: 20 },
         {
             getNextPageParam: (lastPage) => lastPage.nextCursor,
+            // Paint the last page we saw for this tab instead of skeletons, and
+            // let the real fetch replace it. `placeholderData`, never
+            // `initialData`: the latter is cached as though the server sent it,
+            // so it inherits staleTime and can suppress the fetch entirely.
+            placeholderData: () => readFeedSnapshot(feedSnapshotKey),
             // "Failed to load feed" used to be TERMINAL. There was no retry and
             // no recovery, so a single dropped request — which production does
             // produce, on worker memory — replaced the whole feed with that
@@ -208,6 +222,11 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
         const id = setInterval(() => void refetchPosts(), 20_000);
         return () => clearInterval(id);
     }, [isError, refetchPosts]);
+
+    // Mirror the first page back to storage for the next visit. Skipped while
+    // the query is showing a snapshot, or every visit would refresh savedAt on
+    // an entry that never successfully refetched and it would never age out.
+    useSnapshot(feedSnapshotStore, feedSnapshotKey, postData, isFeedPlaceholder);
 
     const isLoading = isLoadingPosts;
 

@@ -3,6 +3,10 @@
 import { AnimatePresence, motion } from "motion/react"
 import { trpc } from "@/lib/trpc/client"
 import React from "react"
+import { useAuthSession } from "@/hooks/use-auth-session"
+import { notificationsSnapshotStore } from "@/lib/snapshot/surfaces"
+import { privateViewerKey } from "@/lib/snapshot/keys"
+import { useSnapshot } from "@/hooks/use-snapshot"
 import { Tab } from "./types"
 import { NotificationHeader } from "./components/notification-header"
 import { NotificationSearch } from "./components/notification-search"
@@ -19,11 +23,26 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
     const [searchQuery, setSearchQuery] = React.useState("")
     const utils = trpc.useUtils()
 
-    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    // Private surface: no viewer, no key, and every store treats "" as inert —
+    // so a signed-out render can neither read nor write someone's notifications.
+    const { data: notifSession } = useAuthSession()
+    const notifSnapshotKey = privateViewerKey(notifSession?.user?.id, "notifications")
+
+    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isPlaceholderData } =
         trpc.notification.getNotifications.useInfiniteQuery(
             { limit: 30 },
-            { getNextPageParam: (last) => last.nextCursor, enabled: open }
+            {
+                getNextPageParam: (last) => last.nextCursor,
+                enabled: open,
+                // Placeholder data paints even while the query is disabled, so
+                // the list is on screen the instant the bell opens instead of
+                // after a round trip. The unread BADGE is not painted from here
+                // — that's `getUnreadCount`, a separate live query.
+                placeholderData: () => notificationsSnapshotStore.read(notifSnapshotKey),
+            }
         )
+
+    useSnapshot(notificationsSnapshotStore, notifSnapshotKey, data, isPlaceholderData)
 
     const { data: unreadData } = trpc.notification.getUnreadCount.useQuery(undefined, { enabled: open })
 

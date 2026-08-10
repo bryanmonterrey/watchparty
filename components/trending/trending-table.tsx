@@ -7,6 +7,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDownRight01Icon, ArrowUpRight01Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
+import { trendingSnapshotStore } from "@/lib/snapshot/surfaces";
+import { viewerKey } from "@/lib/snapshot/keys";
+import { useSnapshot } from "@/hooks/use-snapshot";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
@@ -324,14 +327,23 @@ export function TrendingTable({ className }: { className?: string }) {
     // that is fifty subscriptions for a button most rows never press.
     const { quickBuy, buyingId } = useQuickBuy();
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
+    const snapshotKey = useMemo(() => viewerKey(null, "trending", JSON.stringify(input)), [input]);
+
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, isPlaceholderData } =
         trpc.trending.list.useInfiniteQuery(input, {
             getNextPageParam: (last) => last.nextCursor,
             // The board is refreshed by cron every few minutes; anything tighter
             // just re-renders the same rows.
             staleTime: 60_000,
             refetchInterval: 120_000,
+            // Painted from the last board we held, which the store refuses to
+            // hand back once it is 15 minutes old — the shortest max age of any
+            // surface, because both the prices AND the ordering go stale, and a
+            // row in the wrong position still looks authoritative.
+            placeholderData: () => trendingSnapshotStore.read(snapshotKey),
         });
+
+    useSnapshot(trendingSnapshotStore, snapshotKey, data, isPlaceholderData);
 
     const rows = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
     const { sentinelRef: labelsSentinel, stuck: labelsStuck } = useStuck();

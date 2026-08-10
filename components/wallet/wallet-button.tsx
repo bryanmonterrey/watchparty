@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { authClient } from "@/lib/auth/client";
+import { signOutAndClearSnapshots } from "@/lib/auth/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { signInWithSolana } from "@/lib/solana/sign-in";
 import { appToast } from "@/components/app-ui/app-toast";
@@ -147,7 +147,7 @@ function WalletButtonInner() {
 
         try {
             isSigningOut.current = true;
-            await authClient.signOut();
+            await signOutAndClearSnapshots();
 
             // Invalidate session cache to immediately update UI
             queryClient.invalidateQueries({ queryKey: ["session"] });

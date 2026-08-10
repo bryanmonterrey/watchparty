@@ -5,13 +5,28 @@ import { PostCard } from "./post-card";
 import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { BookmarkIcon } from "@/components/icons";
+import { useAuthSession } from "@/hooks/use-auth-session";
+import { bookmarksSnapshotStore } from "@/lib/snapshot/surfaces";
+import { privateViewerKey } from "@/lib/snapshot/keys";
+import { useSnapshot } from "@/hooks/use-snapshot";
 
 export function BookmarksFeed() {
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    // The safest surface in the app to paint from a snapshot: the list is yours,
+    // it only changes when you change it, and you arrive here on purpose — so a
+    // week-old page is almost always still exactly right.
+    const { data: session } = useAuthSession();
+    const snapshotKey = privateViewerKey(session?.user?.id, "bookmarks");
+
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isPlaceholderData } =
         trpc.content.getBookmarks.useInfiniteQuery(
             { limit: 20 },
-            { getNextPageParam: (last) => last.nextCursor }
+            {
+                getNextPageParam: (last) => last.nextCursor,
+                placeholderData: () => bookmarksSnapshotStore.read(snapshotKey),
+            }
         );
+
+    useSnapshot(bookmarksSnapshotStore, snapshotKey, data, isPlaceholderData);
 
     const posts = data?.pages.flatMap(p => p.posts) ?? [];
 
