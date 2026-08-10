@@ -11,6 +11,8 @@ import { withCache, invalidateCache, TTL } from "@/lib/cache";
 import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
 import { takePage } from "@/server/lib/paginate";
+import { encodeKeysetCursor, parseKeysetCursor } from "@/lib/pagination/keyset";
+import { keysetAfter } from "@/server/lib/keyset";
 import { recordQuestEvent } from "@/server/lib/quests";
 import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
@@ -1211,7 +1213,7 @@ export const contentRouter = router({
             // Cursor semantics per sort: date sorts page on createdAt; the
             // rank sorts (top/views) page on a plain row offset.
             const dateSort = input.sort === "newest" || input.sort === "oldest";
-            const cursorDate = dateSort && input.cursor ? new Date(input.cursor) : undefined;
+            const dateKey = dateSort ? parseKeysetCursor(input.cursor, "date") : null; // composite (createdAt, id) — see server/lib/keyset.ts
             const offset = !dateSort && input.cursor ? parseInt(input.cursor, 10) || 0 : 0;
 
             const hasMedia = or(
@@ -1239,11 +1241,11 @@ export const contentRouter = router({
                 : undefined;
 
             const orderBy =
-                input.sort === "oldest" ? [asc(posts.createdAt)]
+                input.sort === "oldest" ? [asc(posts.createdAt), asc(posts.id)]
                 : input.sort === "top" ? [desc(posts.likes), desc(posts.createdAt)]
                 : input.sort === "views" ? [desc(posts.views), desc(posts.createdAt)]
-                // Pinned-first only makes sense on the default newest view.
-                : [desc(posts.isPinned), desc(posts.createdAt)];
+                // Pinned-first here; `id ASC` is the tiebreak keysetAfter() needs.
+                : [desc(posts.isPinned), desc(posts.createdAt), asc(posts.id)];
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
             const parentPosts = alias(posts, "parent_posts");
@@ -1261,9 +1263,7 @@ export const contentRouter = router({
                     and(
                         eq(posts.userId, input.userId),
                         eq(posts.status, "published"),
-                        cursorDate
-                            ? (input.sort === "oldest" ? gt(posts.createdAt, cursorDate) : lt(posts.createdAt, cursorDate))
-                            : undefined,
+                        keysetAfter(posts.createdAt, posts.id, dateKey, input.sort === "oldest" ? "asc" : "desc"),
                         typeFilter,
                         showFilter,
                         searchFilter,
@@ -1277,7 +1277,7 @@ export const contentRouter = router({
             const resultsPage = page.items;
             const nextCursor = page.hasMore
                 ? dateSort
-                    ? page.lastItem!.createdAt.toISOString()
+                    ? encodeKeysetCursor(page.lastItem!.createdAt, page.lastItem!.id)
                     : String(offset + input.limit)
                 : undefined;
 

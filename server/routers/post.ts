@@ -6,6 +6,7 @@ import { follows } from "@/db/schema/content/follow";
 import { eq, and, asc, desc, gt, lt, sql, ilike, or, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { encodeKeysetCursor, parseKeysetCursor } from "@/lib/pagination/keyset";
+import { keysetAfter } from "@/server/lib/keyset";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
 export const postRouter = router({
@@ -295,12 +296,7 @@ export const postRouter = router({
                     // reached those, nextCursor was "0" and page 2 asked for
                     // `baseScore < 0` — which matches nothing, ever. "latest"
                     // had the milder version of the same bug via timestamp ties.
-                    sortKey
-                        ? or(
-                            lt(sortCol, sortKey.value as any),
-                            and(eq(sortCol, sortKey.value as any), gt(posts.id, sortKey.id)),
-                        )
-                        : undefined,
+                    keysetAfter(sortCol, posts.id, sortKey),
                 ))
                 // id ASC is the tiebreak the composite cursor needs; without it
                 // tied rows come back in arbitrary order and the cursor is
