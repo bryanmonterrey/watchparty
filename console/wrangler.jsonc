@@ -1,0 +1,23 @@
+// The developer console's own worker (docs/console-plan.md "Deploy shape"):
+// deliberately separate from the main app so it never competes with the
+// 10 MiB bundle budget. No DB, no secrets — every /api call is served by the
+// MAIN worker via the console.watchparty.xyz/api/* zone route (with the
+// next.config rewrite as fallback).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "console-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-04-15",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Direct probe target for the cutover protocol (pooler-wedge rule: verify
+  // the target worker BEFORE flipping a domain).
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

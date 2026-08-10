@@ -90,6 +90,8 @@ const config = {
     "https://watchparty.xyz",
     // Ads dashboard subdomain — delegates login here; OAuth callbackURL returns to it.
     "https://ads.watchparty.xyz",
+    // Developer console subdomain (console/ app) — same delegation model.
+    "https://console.watchparty.xyz",
     // React Native app (mobile/): release scheme + Expo Go dev client.
     "watchparty://",
     "exp://",

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cloudflare (OpenNext worker build)
+/.open-next/
+/.wrangler/
+.cf-secrets.json

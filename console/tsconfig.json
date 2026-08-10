@@ -23,8 +23,16 @@
       }
     ],
     "paths": {
+      // Fallback into the parent repo (the mobile/ pattern) so type-only
+      // imports like `import type { AppRouter } from "@/server/routers"`
+      // resolve — and so do the `@/…` imports inside those parent files.
+      // TYPES ONLY: console files win on collisions, and anything the
+      // bundler must ship (cn, the price sheet) is vendored locally in
+      // console/lib — Turbopack refuses runtime imports outside the app
+      // root (next.config.ts pins it).
       "@/*": [
-        "./*"
+        "./*",
+        "../*"
       ]
     }
   },

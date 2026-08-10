@@ -2,8 +2,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
-import { apiKeys, apiCreditDeposits } from "@/db/schema/content/api-key";
-import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { apiKeys, apiCreditDeposits, apiKeyUsageDays } from "@/db/schema/content/api-key";
+import { and, asc, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { USDC_MINT } from "@/lib/premium/tiers";
@@ -203,6 +203,61 @@ export const apiKeysRouter = router({
             }
             return { balanceUsd: row!.balanceMicro / 1_000_000 };
         }),
+
+    /**
+     * Per-day spend across the caller's keys for the console's usage chart.
+     * Reads the flush cron's rollup, so "today" trails live spend by up to an
+     * hour — the same freshness the ledger balances have. Days with no spend
+     * simply have no row; the client fills the gaps.
+     */
+    usageSeries: protectedProcedure.query(async ({ ctx }) => {
+        const since = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+        const rows = await db
+            .select({
+                day: apiKeyUsageDays.day,
+                keyId: apiKeyUsageDays.keyId,
+                keyName: apiKeys.name,
+                spentMicro: apiKeyUsageDays.spentMicro,
+            })
+            .from(apiKeyUsageDays)
+            .innerJoin(apiKeys, eq(apiKeyUsageDays.keyId, apiKeys.id))
+            .where(and(eq(apiKeys.userId, ctx.user.id), gte(apiKeyUsageDays.day, since)))
+            .orderBy(asc(apiKeyUsageDays.day));
+        return rows.map((r) => ({
+            day: r.day,
+            keyId: r.keyId,
+            keyName: r.keyName,
+            spentUsd: r.spentMicro / 1_000_000,
+        }));
+    }),
+
+    /**
+     * Deposit history across the caller's keys — the console's Payments table.
+     * Every row is a verified on-chain USDC transfer (redeemDeposit refuses to
+     * keep unverified rows), so the UI can render them all as succeeded.
+     */
+    deposits: protectedProcedure.query(async ({ ctx }) => {
+        const rows = await db
+            .select({
+                txSignature: apiCreditDeposits.txSignature,
+                keyId: apiCreditDeposits.keyId,
+                keyName: apiKeys.name,
+                amountMicro: apiCreditDeposits.amountMicro,
+                createdAt: apiCreditDeposits.createdAt,
+            })
+            .from(apiCreditDeposits)
+            .innerJoin(apiKeys, eq(apiCreditDeposits.keyId, apiKeys.id))
+            .where(eq(apiKeys.userId, ctx.user.id))
+            .orderBy(desc(apiCreditDeposits.createdAt))
+            .limit(200);
+        return rows.map((r) => ({
+            txSignature: r.txSignature,
+            keyId: r.keyId,
+            keyName: r.keyName,
+            amountUsd: r.amountMicro / 1_000_000,
+            createdAt: r.createdAt,
+        }));
+    }),
 
     /**
      * Admin credit grant — comped credits and ops corrections (self-serve

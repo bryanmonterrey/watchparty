@@ -188,6 +188,45 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+  # Developer console (console/ sibling app) → its own OpenNext worker,
+  # console-app. Standalone on purpose: never competes with the main worker's
+  # 10 MiB bundle budget. No .env restore — the console bakes no secrets and
+  # serves no /api (the zone route hands console.watchparty.xyz/api/* to the
+  # main worker). TWO installs: root deps first, because `next build`
+  # type-checks the type-only AppRouter import against ../server, whose types
+  # resolve from the ROOT node_modules; then the console's own lockfile.
+  deploy-console:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install root dependencies (types for the AppRouter bridge)
+        run: bun install --frozen-lockfile
+
+      - name: Install console dependencies
+        run: bun install --frozen-lockfile
+        working-directory: console
+
+      - name: Build (OpenNext → Workers)
+        run: bunx opennextjs-cloudflare build
+        working-directory: console
+
+      - name: Deploy console worker
+        run: bunx wrangler deploy
+        working-directory: console
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   # THE ONE THAT SERVES THE SITE.
   #
   # watchparty.xyz is attached to `watchparty-app`, the Worker that fronts the
@@ -240,7 +279,7 @@ jobs:
   # sticky GitHub issue so a broken build can't silently leave production stale.
   # A failed deploy means prod keeps serving the last *successful* build.
   notify-failure:
-    needs: [deploy, deploy-realtime, deploy-cron, deploy-container]
+    needs: [deploy, deploy-realtime, deploy-cron, deploy-container, deploy-console]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
