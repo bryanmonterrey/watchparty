@@ -12,13 +12,29 @@ import { cn } from "@/lib/utils";
  * content. A pill is one object. DMs had already arrived at a pill
  * independently; this is the two agreeing.
  *
- * ## Sticky is the part worth copying
+ * ## Sticky is the part worth copying — and it is BLOCKED on flex-col-reverse
  *
  * The label pins to the top of the scroller while its day is on screen, so
- * scrolling back through a channel always answers "what day am I reading" — you
- * never have to scroll UP to find the divider you already passed. `sticky` is
- * opt-in because it needs a positioned scroll container to stick to, and not
- * every list has one.
+ * scrolling back always answers "what day am I reading" without scrolling UP to
+ * find a divider you already passed. That is the best thing about buzz's
+ * version.
+ *
+ * ⚠️ It is off in community chat, deliberately. That list is
+ * `flex flex-col-reverse`, and measured in the live DOM the two orders are
+ * exactly inverted:
+ *
+ *     DOM order:    Yesterday -> July 30th -> July 16th
+ *     visual order: July 16th -> July 30th -> Yesterday
+ *
+ * `position: sticky` derives its stuck range from FLOW position, not visual
+ * position, so each label would pin over the wrong day's messages — the newest
+ * divider pinning while you read the oldest. Reversed-flex is a rendering trick
+ * for "start scrolled at the bottom"; sticky is one of the things it costs.
+ *
+ * Phase 6's windowing step already plans to flatten that list to chronological
+ * order and drop the reverse (see docs/buzz-adoption-plan.md). Turn `sticky` on
+ * for community chat then, not before — and check it against a channel with
+ * enough history to actually scroll.
  *
  * `pointer-events-none` on the wrapper so a pinned label never eats a click
  * meant for the message underneath it.

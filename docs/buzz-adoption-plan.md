@@ -939,6 +939,12 @@ it only pages upward.
   grouping/continuation flag from step 2.
 - Flatten to chronological order (oldest → newest) and drop the current
   `flex-col-reverse` + reversed-pages arrangement.
+- **This also unblocks the sticky day divider.** Measured in the live DOM
+  2026-08-10, the reversed list has DOM order exactly inverted from visual order
+  (`Yesterday → Jul 30 → Jul 16` in flow, the reverse on screen), and
+  `position: sticky` derives its stuck range from FLOW position — so each label
+  would pin over the wrong day. `components/ui/day-divider.tsx` supports
+  `sticky` and community chat deliberately does not pass it until this lands.
 - `hasPrevious` = `hasNextPage` (scrolling **up** loads **older** — the naming
   inverts here and is easy to get backwards). `hasNext` = `false`: new messages
   arrive at the bottom via the subscription's invalidate, not via paging.
