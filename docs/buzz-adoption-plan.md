@@ -2002,6 +2002,32 @@ that deserves a careful review; Phase 6 is the one that deserves numbers.
 Append decisions here as you go — especially anything that surprised you. That's
 what makes this document worth more than the plan it started as.
 
+- **2026-08-10** — 🔴 **Community chat could only ever load TWO pages** — and
+  finding it out is what makes Phase 6 step 3 (windowing) meaningful at all.
+  - `use-community-scroll.ts` triggered on `scrollTop === 0` inside a scroll
+    listener. That needs a scroll EVENT landing on exactly zero: you scroll up,
+    hit 0, page 2 prepends, nothing moves the scroller afterwards, so
+    `scrollTop` is *still* 0 — and a scroller already at 0 emits no further
+    scroll events however hard you scroll. `loadMore` was never called again.
+  - **Measured, on a channel seeded to 832 messages:** exactly 100 rows / 4453
+    DOM nodes, unchanged across TWENTY scroll-to-top attempts, while
+    `community.getMessages` served pages 3 and 4 on request without complaint
+    (799→750, 749→700, 699→650, 649→600). Server clean, client stuck.
+  - Fix is a threshold instead of an equality, **plus scroll anchoring** — and
+    both are load-bearing. Anchoring isn't only the visible "view jumps" bug:
+    restoring the offset is what moves `scrollTop` off 0 so the next scroll-up
+    can trigger at all. After: 4451 → 6453 → 8454 → 12451 → 16453 nodes,
+    scrollHeight 4353 → 16953.
+  - ⚠️ **This inverts the windowing plan.** Step 3 called community chat the
+    "best first candidate", but while the DOM was capped at 100 rows there was
+    nothing to virtualize — windowing would have optimised a ceiling the bug
+    already enforced. Now that history actually loads, ~400 messages is **16k
+    DOM nodes** and the full 832 would be ~33k. *That* is the case for
+    windowing, and it only exists as of this fix. Re-measure before building it.
+  - The "Load previous messages" button was the only thing keeping older
+    history reachable, which is presumably why this survived: the surface
+    looked functional as long as you clicked.
+
 - **2026-08-10** — **Two authenticated fixtures work; the DM surface still
   can't be driven.** `scripts/dev/mint-test-session.mjs` already supports
   `e2e-test@` *and* `e2e-test-N@` (its own comment says multi-user flows need
