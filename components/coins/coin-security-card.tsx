@@ -10,6 +10,7 @@
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import type { CoinViewData } from "./coin-detail";
+import { retryTransient } from "@/lib/query-retry";
 
 function pct(v: number | null): string {
     if (v == null) return "—";
@@ -44,7 +45,7 @@ function Row({
 export function CoinSecurityCard({ coin, cardClassName }: { coin: CoinViewData; cardClassName: string }) {
     const { data } = trpc.trade.coinSecurity.useQuery(
         { network: coin.network, address: coin.tokenAddress },
-        { staleTime: 120_000, retry: 1 },
+        { staleTime: 120_000, retry: retryTransient(1) },
     );
     if (!data) return null;
 

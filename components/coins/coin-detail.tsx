@@ -25,6 +25,7 @@ import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
 import { HomeActionDock } from "@/components/home/home-action-dock";
 import { coinTag, logClient } from "@/lib/client-log";
 import { Squircle } from "@/components/ui/squircle";
+import { retryTransient } from "@/lib/query-retry";
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
  *  ResolvedCoin — declared here because that module is server-only and this
@@ -344,7 +345,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
         // The server cache (mobulaCadence) governs actual freshness per plan;
         // this poll just picks fresh windows up promptly, and it's nearly
         // always answered from Redis.
-        { staleTime: 10_000, refetchInterval: 15_000, retry: 1 },
+        { staleTime: 10_000, refetchInterval: 15_000, retry: retryTransient(1) },
     );
 
     const rows = React.useMemo(() => foldTraders(trades, coin.priceUsd), [trades, coin.priceUsd]);

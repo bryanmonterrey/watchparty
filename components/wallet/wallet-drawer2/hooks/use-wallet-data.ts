@@ -9,6 +9,7 @@ import type { ChainId } from "@/lib/chains/types";
 import { getChainOrDefault } from "@/lib/chains/registry";
 import { hideSmallBalancesAtom, hideUnknownTokensAtom, hideReportedActivityAtom } from "../store/wallet-settings";
 import { readWalletAssetsSnapshot, isUpstreamRefusal } from "@/components/wallet/use-header-wallet";
+import { retryTransient } from "@/lib/query-retry";
 
 
 interface UseWalletDataProps {
@@ -43,7 +44,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
                 staleTime: 60000,
                 gcTime: 5 * 60 * 1000,
                 placeholderData: keepPreviousData,
-                retry: 1,
+                retry: retryTransient(1),
             }
         );
 
@@ -55,7 +56,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
             staleTime: 30000,
             gcTime: 5 * 60 * 1000,
             placeholderData: keepPreviousData,
-            retry: 1,
+            retry: retryTransient(1),
         });
 
     const hideSmallBalances = useAtomValue(hideSmallBalancesAtom);

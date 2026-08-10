@@ -12,6 +12,7 @@ import {
     UTCTimestamp,
 } from "lightweight-charts";
 import { trpc } from "@/lib/trpc/client";
+import { retryTransient } from "@/lib/query-retry";
 
 // Pump.fun-style candlestick chart on lightweight-charts (v5). Candles on the
 // main scale, a volume histogram overlaid in the bottom ~22%, an OHLC legend
@@ -39,7 +40,7 @@ export function TokenCandlestickChart({ mint, className }: TokenCandlestickChart
 
     const { data: chartData = [], isLoading } = trpc.wallet.getChartData.useQuery(
         { mint: mint!, timeframe },
-        { enabled: !!mint, staleTime: 60_000, refetchInterval: 60_000, retry: 1 }
+        { enabled: !!mint, staleTime: 60_000, refetchInterval: 60_000, retry: retryTransient(1) }
     );
 
     // Build the chart once.

@@ -13,6 +13,7 @@ import {
 } from "lightweight-charts";
 import { Token } from "../../types";
 import { trpc } from "@/lib/trpc/client";
+import { retryTransient } from "@/lib/query-retry";
 
 interface TokenChartProps {
     token: Token;
@@ -50,7 +51,7 @@ export function TokenChart({ token, onHoverPrice, onPeriodStart }: TokenChartPro
 
     const { data: chartData, isLoading: isLoadingChart } = trpc.wallet.getChartData.useQuery(
         { mint: token.mint, timeframe: activeTimeframe },
-        { staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, retry: 1 }
+        { staleTime: 5 * 60 * 1000, refetchInterval: 5 * 60 * 1000, retry: retryTransient(1) }
     );
     const hasNoData = !isLoadingChart && (!chartData || chartData.length === 0);
 

@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { Token } from "@/db/schema/content"
 import { trpc } from "@/lib/trpc/client"
+import { retryTransient } from "@/lib/query-retry";
 
 interface TokenHoldersTableProps {
     token: Token
@@ -24,7 +25,7 @@ export function TokenHoldersTable({ token }: TokenHoldersTableProps) {
 
     const { data, isLoading } = trpc.trade.getHolders.useQuery(
         { mint: token.tokenAddress! },
-        { enabled: !!token.tokenAddress, staleTime: 60_000, refetchInterval: 60_000, retry: 1 },
+        { enabled: !!token.tokenAddress, staleTime: 60_000, refetchInterval: 60_000, retry: retryTransient(1) },
     )
     const holders = data?.holders ?? []
 

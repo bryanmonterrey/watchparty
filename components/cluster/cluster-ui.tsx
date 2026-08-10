@@ -10,6 +10,7 @@ import { useCluster } from './cluster-data-access'
 import { GooDropdown } from '@/components/ui/goo-dropdown'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { AppAlert } from '@/components/app-ui/app-alert'
+import { retryTransient } from "@/lib/query-retry";
 
 export function ExplorerLink({ path, label, className }: { path: string; label: string; className?: string }) {
   const { getExplorerUrl } = useCluster()
@@ -32,7 +33,7 @@ export function ClusterChecker({ children }: { children: ReactNode }) {
   const query = useQuery({
     queryKey: ['version', { cluster, endpoint: connection.rpcEndpoint }],
     queryFn: () => connection.getVersion(),
-    retry: 1,
+    retry: retryTransient(1),
   })
   return (
     <>

@@ -6,6 +6,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
 import { Token, NFT, TabId, NFTCollection } from "../types";
 import { hideSmallBalancesAtom, hideUnknownTokensAtom, hideReportedActivityAtom } from "../store/wallet-settings";
+import { retryTransient } from "@/lib/query-retry";
 
 
 interface UseWalletDataProps {
@@ -56,7 +57,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
             staleTime: 15000,
             gcTime: 5 * 60 * 1000,
             placeholderData: keepPreviousData,
-            retry: 1,
+            retry: retryTransient(1),
         }
     );
 

@@ -3,6 +3,7 @@
 
 import { isServer, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { trpc, trpcClient } from '@/lib/trpc/client'
+import { retryTransient } from '@/lib/query-retry'
 import { useState } from 'react'
 
 function makeQueryClient() {
@@ -26,13 +27,12 @@ function makeQueryClient() {
         //     were being retried 3x for nothing.
         //   - one retry instead of three, with a floor of 1s and a longer cap,
         //     so a broken dependency degrades instead of compounding.
-        retry: (failureCount, error) => {
-          const status =
-            (error as { data?: { httpStatus?: number } })?.data?.httpStatus ??
-            (error as { status?: number })?.status
-          if (typeof status === 'number' && status >= 400 && status < 500) return false
-          return failureCount < 1
-        },
+        // The predicate itself lives in lib/query-retry.ts, because `retry: <n>`
+        // REPLACES this policy rather than extending it — 14 call sites were
+        // passing a bare number and silently opting back into retrying 4xx,
+        // which is the behaviour this exists to prevent. They now compose with
+        // it via retryTransient(n).
+        retry: retryTransient(1),
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
       },
       mutations: {

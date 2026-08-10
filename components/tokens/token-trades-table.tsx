@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { trpc } from "@/lib/trpc/client"
 import { subscribeTrades, type LiveTrade } from "@/lib/coins/trade-stream"
 import { coinTag, logClient } from "@/lib/client-log"
+import { retryTransient } from "@/lib/query-retry";
 
 export function TokenTradesTable({ token }: { token: Token }) {
     const [filterSize, setFilterSize] = useState(false)
@@ -20,7 +21,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
     // socket missed while the tab was backgrounded.
     const { data: trades = [], isLoading } = trpc.wallet.getTokenTrades.useQuery(
         { mint: token.tokenAddress! },
-        { enabled: !!token.tokenAddress, staleTime: 30_000, refetchInterval: 60_000, retry: 1 }
+        { enabled: !!token.tokenAddress, staleTime: 30_000, refetchInterval: 60_000, retry: retryTransient(1) }
     )
 
     // Swaps that landed since the last fetch, newest first.

@@ -26,12 +26,23 @@ type Props = {
 export function SpaceRoom({ spaceId, onLeave }: Props) {
     const { data: session } = useAuthSession();
     const utils = trpc.useUtils();
-    // Realtime roster-change is the fast path, but never rely on it alone: poll as
-    // a safety net so promotions/raised hands sync within a few seconds even if a
-    // client's WS event is missed.
+    // Realtime roster-change is the fast path; this is only the safety net for a
+    // missed WS event.
+    //
+    // It was 5s, chosen when server->client realtime was silently dead: every
+    // publish went to `community-channel%3A<id>` while clients sat in
+    // `community-channel:<id>`, so the poll WAS the transport (see Phase 10 in
+    // docs/buzz-adoption-plan.md). That routing bug is fixed, so a 12x/minute
+    // poll per participant is now paying for a path that already works —
+    // pure amplification of exactly the kind that saturated the container.
+    //
+    // 30s keeps the net (a dropped event still self-heals well inside a
+    // conversation) at a sixth of the cost, and every local action already
+    // invalidates immediately via `refetchRoster`, so the actor never waits for
+    // it. Widen further only with a measurement, not a guess.
     const { data, isLoading } = trpc.spaces.get.useQuery(
         { spaceId },
-        { refetchInterval: 5000, refetchOnWindowFocus: true },
+        { refetchInterval: 30_000, refetchOnWindowFocus: true },
     );
 
     // Refetch immediately after my own action so the actor sees instant feedback

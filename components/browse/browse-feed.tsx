@@ -17,6 +17,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useFeedDwell } from "@/hooks/use-feed-dwell";
+import { retryTransient } from "@/lib/query-retry";
 
 type FeedType = "for-you" | "following" | "news";
 type FeedItem = { type: "post"; createdAt: Date; data: any };
@@ -194,7 +195,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
             // produce, on worker memory — replaced the whole feed with that
             // message for the rest of the session, and only a manual reload
             // cleared it. Back off, then keep trying quietly in the background.
-            retry: 3,
+            retry: retryTransient(3),
             retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15_000),
         }
     );

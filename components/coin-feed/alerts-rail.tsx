@@ -14,6 +14,7 @@ import { AlertRow } from "./alert-row";
 import { AlertListSkeleton, AlertRowSkeleton } from "./alert-row-skeleton";
 import { AlertFiltersButton, activeFilterSummary } from "./alert-filters";
 import { DEFAULT_FILTERS, filtersToInput, type AlertEvent, type AlertFilters } from "./types";
+import { retryTransient } from "@/lib/query-retry";
 
 // The coin alert rail — /home's left column.
 //
@@ -113,13 +114,13 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
             // A rail that sits open for hours will hit the occasional dropped
             // request; back off and recover rather than surfacing the first
             // blip. Errors no longer blank the feed either — see the render.
-            retry: 3,
+            retry: retryTransient(3),
             retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15_000),
         },
     );
 
     // Recover from the error status on our own. Without this it is TERMINAL:
-    // an infinite query stays in `error` until a fetch succeeds, `retry: 3` is
+    // an infinite query stays in `error` until a fetch succeeds, `retry: retryTransient(3)` is
     // already spent by the time we get here, and `hasNext` goes false while
     // isError (see the render) so the list stops asking for pages too. The
     // result was the "couldn't refresh" bar sitting there for the rest of the
