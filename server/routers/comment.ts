@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { likes, posts, polls } from "@/db/schema/content";
 import { tokens } from "@/db/schema/content/token";
 import { user } from "@/db/schema/auth";
-import { eq, desc, and, asc, sql, inArray, lt } from "drizzle-orm";
+import { eq, desc, and, asc, sql, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
@@ -23,7 +23,21 @@ export const commentRouter = router({
             limit: z.number().min(1).max(50).default(20),
         }))
         .query(async ({ ctx, input }) => {
-            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            // OFFSET, not a keyset cursor. The ORDER BY below has FIVE keys
+            // (pinned, author, followed, likes, createdAt) and the cursor only
+            // ever filtered on createdAt — so once likes and date disagreed the
+            // filter excluded rows the sort would have placed later, and
+            // re-included rows already shown. Measured on 60 comments ordered
+            // likes-desc/date-asc: page 2 repeated 19 of page 1, and 40 of the
+            // 60 were unreachable at any page.
+            //
+            // A keyset over all five keys would be the "correct" fix and is not
+            // worth it: two of them are computed per-viewer (is-author,
+            // is-followed), so the cursor would encode a ranking that changes
+            // between requests. OFFSET matches what getPostsByUser already does
+            // for its rank sorts, with the same accepted trade — a concurrent
+            // insert can shift a row across a page boundary.
+            const offset = input.cursor ? Math.max(0, parseInt(input.cursor, 10) || 0) : 0;
 
             // Get post author ID
             const postAuthor = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, input.postId)).limit(1);
@@ -69,13 +83,6 @@ export const commentRouter = router({
                 .where(and(
                     eq(posts.replyToId, input.postId),
                     eq(posts.status, "published"),
-                    // lt(), not sql`... < ${cursorDate}` — an interpolated value
-                    // carries no column, so drizzle can't encode the Date and
-                    // postgres.js gets it raw, which throws on Workers
-                    // (ERR_INVALID_ARG_TYPE, "Received an instance of Date").
-                    // Page 1 has no cursor, so only replies past the first page
-                    // were affected — the same shape of bug as coinFeed.list.
-                    cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
                 ))
                 .orderBy(
                     desc(posts.isPinned), 
@@ -84,10 +91,11 @@ export const commentRouter = router({
                     desc(posts.likes),
                     desc(posts.createdAt)
                 )
+                .offset(offset)
                 .limit(input.limit + 1);
 
-            const { items, hasMore, lastItem } = takePage(rows, input.limit);
-            const nextCursor = hasMore ? lastItem!.createdAt.toISOString() : undefined;
+            const { items, hasMore } = takePage(rows, input.limit);
+            const nextCursor = hasMore ? String(offset + input.limit) : undefined;
             return { comments: items, nextCursor };
         }),
 

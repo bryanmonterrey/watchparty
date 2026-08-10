@@ -3,15 +3,16 @@ import { router, protectedProcedure } from "../trpc";
 import { db } from "@/db";
 import { notifications } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq, desc, and, lt } from "drizzle-orm";
+import { eq, desc, and, asc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { takePage } from "@/server/lib/paginate";
+import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from "@/server/lib/keyset";
 
 export const notificationRouter = router({
     getNotifications: protectedProcedure
         .input(z.object({ cursor: z.string().optional(), limit: z.number().min(1).max(50).default(30) }))
         .query(async ({ ctx, input }) => {
-            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            const key = parseKeysetCursor(input.cursor, "date"); // composite (createdAt, id) — server/lib/keyset.ts
 
             const rows = await db
                 .select({
@@ -33,13 +34,13 @@ export const notificationRouter = router({
                 .leftJoin(user, eq(notifications.actorId, user.id))
                 .where(and(
                     eq(notifications.userId, ctx.user.id),
-                    cursorDate ? lt(notifications.createdAt, cursorDate) : undefined,
+                    keysetAfter(notifications.createdAt, notifications.id, key),
                 ))
-                .orderBy(desc(notifications.createdAt))
+                .orderBy(desc(notifications.createdAt), asc(notifications.id))
                 .limit(input.limit + 1);
 
             const { items, hasMore, lastItem } = takePage(rows, input.limit);
-            const nextCursor = hasMore ? lastItem!.createdAt.toISOString() : undefined;
+            const nextCursor = hasMore ? encodeKeysetCursor(lastItem!.createdAt, lastItem!.id) : undefined;
 
             return { notifications: items, nextCursor };
         }),

@@ -2,6 +2,10 @@ import { and, eq, gt, lt, or, type SQL } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import type { KeysetCursor } from "@/lib/pagination/keyset";
 
+// Re-exported so a procedure needs one import, not two: every server caller
+// that builds this WHERE also encodes and parses the cursor.
+export { encodeKeysetCursor, parseKeysetCursor } from "@/lib/pagination/keyset";
+
 /**
  * The WHERE half of a composite keyset cursor.
  *

@@ -36,6 +36,7 @@ import { nanoid } from "nanoid";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { rooms } from "@/lib/realtime/protocol";
 import { isMediaEnabled, createMeeting, addParticipant, REALTIMEKIT_PRESETS } from "@/lib/realtime/media/realtimekit";
+import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from "@/server/lib/keyset";
 
 // In-memory OG unfurl cache (per isolate). Small + TTL'd; misses just refetch.
 type LinkPreviewData = { title: string | null; description: string | null; image: string | null; siteName: string | null };
@@ -2414,9 +2415,8 @@ export const communityRouter = router({
             }
 
             const conditions = [eq(communityMessages.channelId, input.channelId)];
-            if (input.cursor) {
-                conditions.push(lt(communityMessages.createdAt, new Date(input.cursor)));
-            }
+            const after = keysetAfter(communityMessages.createdAt, communityMessages.id, parseKeysetCursor(input.cursor, "date"));
+            if (after) conditions.push(after);
 
             const replyMsg = alias(communityMessages, "reply_msg");
             const replyMember = alias(communityMembers, "reply_member");
@@ -2454,13 +2454,13 @@ export const communityRouter = router({
                 .leftJoin(replyMember, eq(replyMsg.memberId, replyMember.id))
                 .leftJoin(replyUser, eq(replyMember.userId, replyUser.id))
                 .where(and(...conditions))
-                .orderBy(desc(communityMessages.createdAt))
+                .orderBy(desc(communityMessages.createdAt), asc(communityMessages.id))
                 .limit(input.limit + 1);
 
             const page = takePage(msgs, input.limit);
             const msgsPage = page.items;
             const nextCursor = page.hasMore
-                ? page.lastItem!.createdAt.toISOString()
+                ? encodeKeysetCursor(page.lastItem!.createdAt, page.lastItem!.id)
                 : undefined;
 
             // Reactions for this page, aggregated per message+emoji with

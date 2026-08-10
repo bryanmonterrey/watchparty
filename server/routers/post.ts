@@ -5,8 +5,7 @@ import { posts, user, bookmarks } from "@/db/schema";
 import { follows } from "@/db/schema/content/follow";
 import { eq, and, asc, desc, gt, lt, sql, ilike, or, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { encodeKeysetCursor, parseKeysetCursor } from "@/lib/pagination/keyset";
-import { keysetAfter } from "@/server/lib/keyset";
+import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from "@/server/lib/keyset";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
 export const postRouter = router({
@@ -391,7 +390,7 @@ export const postRouter = router({
     getBookmarks: protectedProcedure
         .input(z.object({ cursor: z.string().optional(), limit: z.number().min(1).max(50).default(20) }))
         .query(async ({ ctx, input }) => {
-            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            const bmKey = parseKeysetCursor(input.cursor, "date"); // composite (bookmarks.createdAt, posts.id)
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
 
@@ -436,9 +435,9 @@ export const postRouter = router({
                 .where(and(
                     eq(bookmarks.userId, ctx.user.id),
                     eq(bookmarks.contentType, "post"),
-                    cursorDate ? lt(bookmarks.createdAt, cursorDate) : undefined,
+                    keysetAfter(bookmarks.createdAt, posts.id, bmKey),
                 ))
-                .orderBy(desc(bookmarks.createdAt))
+                .orderBy(desc(bookmarks.createdAt), asc(posts.id))
                 .limit(input.limit + 1);
 
             const hasMore = results.length > input.limit;
@@ -474,7 +473,7 @@ export const postRouter = router({
 
             return {
                 posts: items,
-                nextCursor: hasMore ? rawItems[rawItems.length - 1].bookmarkCreatedAt.toISOString() : undefined,
+                nextCursor: hasMore ? encodeKeysetCursor(rawItems[rawItems.length - 1].bookmarkCreatedAt, rawItems[rawItems.length - 1].id) : undefined,
             };
         }),
 
