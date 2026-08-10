@@ -15,7 +15,7 @@ const RESERVED_SLUGS = new Set([
   "login", "signup", "home", "feed", "search", "settings", "messages",
   "premium", "quests", "trade", "shorts", "video", "communities", "coin",
   "category", "status", "notifications", "wallet", "explore", "about",
-  "developer",
+  "developer", "studio",
 ]);
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
@@ -109,6 +109,14 @@ export async function middleware(request: NextRequest) {
   if (host === "docs.watchparty.xyz" && !pathname.startsWith("/api")) {
     return withCleanup(
       NextResponse.rewrite(new URL(`/developer/docs${pathname === "/" ? "" : pathname}`, request.url)),
+    );
+  }
+  // studio.watchparty.xyz IS the creator studio: every non-/api path rewrites
+  // under /studio (the (studio) route group self-gates on the session cookie).
+  // /api passes through so the studio's tRPC calls reach the app's own handler.
+  if (host === "studio.watchparty.xyz" && !pathname.startsWith("/api")) {
+    return withCleanup(
+      NextResponse.rewrite(new URL(`/studio${pathname === "/" ? "" : pathname}`, request.url)),
     );
   }
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the
