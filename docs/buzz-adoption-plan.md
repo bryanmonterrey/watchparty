@@ -975,10 +975,23 @@ a reaction lands.
 
 ### Steps
 
-1. **Port `SkeletonReveal`.** The technique: the skeleton and the real content
-   occupy the **same CSS grid cell** and cross-fade, with the outgoing skeleton
-   picking up a 2px blur. Zero layout shift on reveal, because the content was
-   always occupying its final space.
+1. ✅ **`SkeletonReveal` ported 2026-08-10** — `components/ui/skeleton-reveal.tsx`,
+   in Tailwind rather than buzz's `t-skel` stylesheet. Both children share
+   `[grid-area:1/1]`, so they overlap and cross-fade; the outgoing skeleton takes
+   a 2px blur so it reads as dissolving rather than dimming. Reduced motion gets
+   a straight swap.
+
+   ⚠️ **Correcting the claim above:** "zero layout shift because the content was
+   always occupying its final space" is only true when the skeleton MIRRORS the
+   content's chrome. A grid cell is as tall as its tallest child, so a skeleton
+   shorter than its content still grows on reveal. The component removes the
+   SWAP, not the size difference — which is why step 3 targets the surfaces whose
+   skeletons already wear the real shape, and why adopting it anywhere else would
+   just hide a shift behind a fade.
+
+   Not yet adopted anywhere: the surfaces worth it need checking one at a time
+   against their real skeleton, and a fade over a mismatched skeleton is worse
+   than the hard swap it replaces.
 
    Keep our flat fill — **no shimmer sweep** (removed 2026-07-28, don't re-add).
    Buzz's opacity pulse is optional; if we use one, it's a still fill pulsing
@@ -998,11 +1011,18 @@ a reaction lands.
    shaped right for it. `?debug-loading` should keep working to pin the loading
    state.
 
-4. **Scroll-boundary lock** — buzz's `shared/hooks/useScrollBoundaryLock.ts`
-   stops a scroll gesture inside a panel from chaining to the page behind it.
-   We hide scrollbars app-wide, which makes accidental scroll-chaining more
-   confusing, not less. Apply to modals, sheets, dropdowns, and the messages
-   pane.
+4. ✅ **Scroll-boundary lock done 2026-08-10 — as ONE CSS rule, not buzz's hook.**
+
+   Buzz hand-rolls a capturing `wheel` listener
+   (`shared/hooks/useScrollBoundaryLock.ts`). That is a Tauri/WKWebView
+   workaround; a browser has `overscroll-behavior: contain`, which is native and
+   also covers touch, momentum and keyboard, none of which a wheel handler sees.
+
+   Applied in `globals.css` to the overflow utility classes rather than per
+   component, because "owns a scroll region" is exactly what those classes mean —
+   and dialog/sheet/popover don't own their scrollers, their consumers do, so a
+   per-component pass would have missed most of them. `.overscroll-chain` opts
+   out.
 
 **Done when:** loading→loaded transitions cause no layout shift; scrolling to
 the end of a dropdown doesn't scroll the page behind it; reduced motion gives a

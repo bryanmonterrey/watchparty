@@ -1179,3 +1179,27 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     filter: none !important;
   }
 }
+
+/* ── Scroll containment ───────────────────────────────────────────────────────
+   An element that owns a scroll region should not hand the leftover scroll to
+   the page behind it. Reaching the end of a dropdown, a modal or the message
+   list and having the whole app start moving is disorienting anywhere; here it
+   is worse, because scrollbars are hidden app-wide (see the rule above), so
+   there is no visual cue that you have hit the end of the inner region — the
+   page just takes over.
+
+   `overscroll-behavior: contain` is the native answer and covers wheel, touch,
+   momentum and keyboard alike. Buzz hand-rolls a `wheel` listener for this
+   (shared/hooks/useScrollBoundaryLock.ts), which is a Tauri/WKWebView
+   workaround, not something a browser needs.
+
+   Matched on the utility classes rather than per component, because "owns a
+   scroll region" is exactly what those classes mean. Opt out with
+   `.overscroll-chain` on the rare element that genuinely should continue the
+   page scroll. */
+.overflow-auto:not(.overscroll-chain),
+.overflow-y-auto:not(.overscroll-chain),
+.overflow-x-auto:not(.overscroll-chain),
+.overflow-y-scroll:not(.overscroll-chain) {
+  overscroll-behavior: contain;
+}
