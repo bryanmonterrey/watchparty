@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { eq } from "drizzle-orm";
+import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import { timingSafeEqual } from "crypto";
 
 // IVS → EventBridge rule → API destination posts here; this is what flips
@@ -47,14 +48,25 @@ export async function POST(req: NextRequest) {
     }
 
     const eventName = event.detail?.event_name;
+    // IVS state changes are edge-triggered but can re-fire (EventBridge is
+    // at-least-once) — webhook consumers dedupe on sessionId.
+    const sessionId = event.detail?.stream_id ?? null;
     if (eventName === "Stream Start") {
-        await db.update(streams)
+        const rows = await db.update(streams)
             .set({ isLive: true, viewerCount: 0, updatedAt: new Date() })
-            .where(eq(streams.channelArn, channelArn));
+            .where(eq(streams.channelArn, channelArn))
+            .returning({ id: streams.id, userId: streams.userId });
+        for (const row of rows) {
+            await dispatchDeveloperEvent(row.userId, "stream.online", { streamId: row.id, sessionId });
+        }
     } else if (eventName === "Stream End" || eventName === "Stream Failure") {
-        await db.update(streams)
+        const rows = await db.update(streams)
             .set({ isLive: false, viewerCount: 0, updatedAt: new Date() })
-            .where(eq(streams.channelArn, channelArn));
+            .where(eq(streams.channelArn, channelArn))
+            .returning({ id: streams.id, userId: streams.userId });
+        for (const row of rows) {
+            await dispatchDeveloperEvent(row.userId, "stream.offline", { streamId: row.id, sessionId });
+        }
     }
 
     return NextResponse.json({ ok: true });

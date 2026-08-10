@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { eq, and, inArray, notInArray, isNotNull } from "drizzle-orm";
+import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import { IvsClient, ListStreamsCommand } from "@aws-sdk/client-ivs";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
     if (liveByArn.size > 0) {
         const arns = [...liveByArn.keys()];
         const rows = await db
-            .select({ id: streams.id, channelArn: streams.channelArn, isLive: streams.isLive, viewerCount: streams.viewerCount })
+            .select({ id: streams.id, userId: streams.userId, channelArn: streams.channelArn, isLive: streams.isLive, viewerCount: streams.viewerCount })
             .from(streams)
             .where(inArray(streams.channelArn, arns));
         for (const row of rows) {
@@ -57,13 +58,18 @@ export async function GET(req: NextRequest) {
                     .set({ isLive: true, viewerCount: count, updatedAt: new Date() })
                     .where(eq(streams.id, row.id));
                 updated++;
+                // A healed missed Stream Start is a real transition — the
+                // viewer-count-only refresh (isLive already true) is not.
+                if (!row.isLive) {
+                    await dispatchDeveloperEvent(row.userId, "stream.online", { streamId: row.id, sessionId: null });
+                }
             }
         }
     }
 
     // DB thinks live, IVS doesn't → offline (covers missed Stream End webhooks)
     const stale = await db
-        .select({ id: streams.id })
+        .select({ id: streams.id, userId: streams.userId })
         .from(streams)
         .where(and(
             eq(streams.isLive, true),
@@ -75,6 +81,9 @@ export async function GET(req: NextRequest) {
             .set({ isLive: false, viewerCount: 0, updatedAt: new Date() })
             .where(inArray(streams.id, stale.map((s) => s.id)));
         healedOffline = stale.length;
+        for (const row of stale) {
+            await dispatchDeveloperEvent(row.userId, "stream.offline", { streamId: row.id, sessionId: null });
+        }
     }
 
     return NextResponse.json({ liveOnIvs: liveByArn.size, updated, healedOffline });

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { predictionBets, predictionMarkets, predictionOutcomes } from "@/db/schema/content/predictions";
+import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 
 // Resolution core, shared by the admin tRPC procedure and the AI factory
 // cron. Marks the winner and credits referral rewards (the rake comes from
@@ -45,6 +46,29 @@ export async function resolveMarketCore(
         }
     } catch (err) {
         console.error("prediction referral rewards failed:", err);
+    }
+
+    // Webhooks for everyone with a stake in the outcome: the market creator
+    // plus each bettor. The status='open' guard above makes this single-fire.
+    // resolveMarketCore also runs from cron (no request scope) — dispatch
+    // handles that by delivering inline.
+    try {
+        const bettors = await db
+            .selectDistinct({ userId: predictionBets.userId })
+            .from(predictionBets)
+            .where(eq(predictionBets.marketId, updated.id));
+        await dispatchDeveloperEvent(
+            [updated.creatorId, ...bettors.map((b) => b.userId)],
+            "prediction.resolved",
+            {
+                marketId: updated.id,
+                question: updated.question,
+                winningOutcome: updated.winningOutcome,
+                resolvedAt: updated.resolvedAt?.toISOString() ?? new Date().toISOString(),
+            },
+        );
+    } catch (err) {
+        console.error("prediction webhook dispatch failed:", err);
     }
 
     return updated;

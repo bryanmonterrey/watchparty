@@ -14,6 +14,7 @@
 import { db } from "@/db";
 import { coinFeedEvents, type NewCoinFeedEvent } from "@/db/schema/content/coin-feed";
 import { nanoid } from "nanoid";
+import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 
 /** Insert events, ignoring any whose dedupeKey already landed. */
 export async function emitCoinFeedEvents(rows: NewCoinFeedEvent[]): Promise<number> {
@@ -91,6 +92,16 @@ export function emitPredictionEvent(opts: {
 
 /** A watchparty coin went live (bonding curve deployed). */
 export function emitLaunchEvent(opts: { token: TokenSnapshot; creatorId?: string | null }): Promise<number> {
+    // The creator's developer webhook, if subscribed. Best-effort like
+    // everything in this file; the launch flow never waits on delivery.
+    if (opts.creatorId) {
+        void dispatchDeveloperEvent(opts.creatorId, "coin.launched", {
+            tokenId: opts.token.wpTokenId,
+            tokenAddress: opts.token.tokenAddress,
+            ticker: opts.token.ticker.toUpperCase(),
+            imageUrl: opts.token.imageUrl,
+        });
+    }
     return emitCoinFeedEvents([
         {
             id: nanoid(),

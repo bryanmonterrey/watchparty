@@ -77,7 +77,7 @@ const NAV_GROUPS: {
     label: "Toolbox",
     items: [
       { icon: ZapIcon, label: "Event subscriptions", href: "/event-subscriptions", soon: true },
-      { icon: WebhookIcon, label: "Webhooks", href: "/webhooks", soon: true },
+      { icon: WebhookIcon, label: "Webhooks", href: "/webhooks" },
       { icon: ConnectIcon, label: "Connections", href: "/connections", soon: true },
       { icon: FilterIcon, label: "Streaming rules", href: "/streaming-rules", soon: true },
     ],

@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
 import { withCache } from "@/lib/cache";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { emitLaunchEvent } from "@/lib/coin-feed/emit";
+import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import {
     fetchMobulaChainPairs,
     fetchMobulaTokenTrades,
@@ -597,11 +598,19 @@ export const tradeRouter = router({
                     eq(tokens.isCreatorCoin, true),
                     eq(tokens.status, "draft"),
                 ))
-                .returning({ id: tokens.id });
+                .returning({ id: tokens.id, ticker: tokens.ticker, imageUrl: tokens.imageUrl });
 
             if (!updated.length) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "No draft creator coin to launch" });
             }
+            // Creator coins don't route through emitLaunchEvent (no coin-feed
+            // entry, deliberately), so the creator's webhook fires here.
+            await dispatchDeveloperEvent(ctx.user.id, "coin.launched", {
+                tokenId: updated[0].id,
+                tokenAddress: input.tokenAddress,
+                ticker: updated[0].ticker.toUpperCase(),
+                imageUrl: updated[0].imageUrl,
+            });
             return { id: updated[0].id };
         }),
 

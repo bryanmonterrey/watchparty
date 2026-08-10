@@ -3,7 +3,8 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
-import { and, eq, desc, inArray, sql } from "drizzle-orm";
+import { and, eq, desc, inArray, ne, sql } from "drizzle-orm";
+import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import { follows } from "@/db/schema/content/follow";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { TRPCError } from "@trpc/server";
@@ -447,7 +448,18 @@ export const streamRouter = router({
     setLiveStatus: protectedProcedure
         .input(z.object({ isLive: z.boolean() }))
         .mutation(async ({ ctx, input }) => {
-            await db.update(streams).set({ isLive: input.isLive, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
+            // The ne() guard makes this a real transition or a no-op, so the
+            // developer webhook can't re-fire from same-state calls.
+            const rows = await db.update(streams)
+                .set({ isLive: input.isLive, updatedAt: new Date() })
+                .where(and(eq(streams.userId, ctx.user.id), ne(streams.isLive, input.isLive)))
+                .returning({ id: streams.id });
+            for (const row of rows) {
+                await dispatchDeveloperEvent(ctx.user.id, input.isLive ? "stream.online" : "stream.offline", {
+                    streamId: row.id,
+                    sessionId: null,
+                });
+            }
             return { success: true };
         }),
 

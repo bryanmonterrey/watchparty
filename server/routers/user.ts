@@ -12,6 +12,7 @@ import { recordQuestEvent } from '@/server/lib/quests';
 import { upsertUser } from '@/lib/typesense/sync';
 import { effectiveVerifiedTier } from '@/lib/verified-tier';
 import { claimQueuedGiftForNewFollower } from '@/server/lib/gift-credits';
+import { dispatchDeveloperEvent } from '@/lib/developer/webhooks';
 import { socialLinksSchema } from '@/lib/profile/socials';
 
 export const userRouter = router({
@@ -139,7 +140,19 @@ export const userRouter = router({
         .input(z.object({ followingId: z.string() }))
         .mutation(async ({ ctx, input }) => {
             if (ctx.user.id === input.followingId) throw new Error("Cannot follow yourself");
-            await db.insert(follows).values({ followerId: ctx.user.id, followingId: input.followingId }).onConflictDoNothing();
+            const inserted = await db
+                .insert(follows)
+                .values({ followerId: ctx.user.id, followingId: input.followingId })
+                .onConflictDoNothing()
+                .returning({ id: follows.id });
+            // Only a genuine new follow (not a re-follow hitting the conflict)
+            // reaches the followee's webhook.
+            if (inserted.length) {
+                await dispatchDeveloperEvent(input.followingId, "user.followed", {
+                    followerId: ctx.user.id,
+                    followerUsername: ctx.user.username ?? null,
+                });
+            }
             await createNotification({ userId: input.followingId, actorId: ctx.user.id, type: "follow" });
             await awardXP(input.followingId, "follow_received", ctx.user.id);
             await recordQuestEvent(input.followingId, "follow_received");

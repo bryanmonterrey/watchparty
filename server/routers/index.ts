@@ -41,6 +41,7 @@ import { discoverRouter } from "./discover";
 import { coinFeedRouter } from "./coinFeed";
 import { trendingRouter } from "./trending";
 import { apiKeysRouter } from "./apiKeys";
+import { developerWebhooksRouter } from "./developerWebhooks";
 
 /**
  * Root application router
@@ -87,6 +88,7 @@ export const appRouter = router({
     coinFeed: coinFeedRouter,
     trending: trendingRouter,
     apiKeys: apiKeysRouter,
+    developerWebhooks: developerWebhooksRouter,
 });
 
 /**

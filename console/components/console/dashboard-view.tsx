@@ -14,7 +14,7 @@ import {
   CheckmarkCircle02Icon,
   FlashIcon,
   Analytics01Icon,
-  ZapIcon,
+  WebhookIcon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc";
@@ -139,12 +139,11 @@ const CROSS_SELL: {
     href: "/usage",
   },
   {
-    icon: ZapIcon,
-    title: "Event subscriptions",
-    desc: "Real-time coins, trades, and user events pushed straight to your servers.",
-    cta: "Preview",
-    href: "/event-subscriptions",
-    soon: true,
+    icon: WebhookIcon,
+    title: "Webhooks",
+    desc: "Signed HTTP callbacks the moment your stream goes live, someone follows you, or your coin launches.",
+    cta: "Set up",
+    href: "/webhooks",
   },
   {
     icon: SparklesIcon,

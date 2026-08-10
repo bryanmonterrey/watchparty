@@ -634,10 +634,24 @@ First build pass over the mappings above, in `console/`:
   surfaces (Agent, Projects, Apps, Event subscriptions, Webhooks,
   Connections, Streaming rules).
 
-Not buildable yet (no backend): §6 webhooks page (`apiKeys` is the only
-developer-platform router — there is no developer-webhooks surface), §1 app
-detail (no app registry), §2/§3 scopes & OAuth (keys are unscoped), §7
-payload tester (needs webhooks first).
+**Second pass (same day): §6 + §7 built for real.** Outbound developer
+webhooks now exist end-to-end — `developer_webhooks` schema
+(db/developer-webhooks.sql), `developerWebhooks` tRPC router, Stripe-style
+`t=,v1=` HMAC dispatch (`lib/developer/webhooks.ts`, payload built only if
+the user is subscribed, `after()` with inline fallback for cron contexts),
+wired at seven chokepoints (IVS webhook + cron heals + setLiveStatus,
+follow, emitLaunchEvent + launchCreatorCoin, resolveMarketCore). Scope
+rule: v1 events are about the subscriber's OWN account — no firehose (the
+Helius arithmetic). The console page is the §6 anatomy (endpoint card,
+master toggle in the Events header, grouped per-event checkboxes,
+"(n of cap)" subscribed counter) plus the §7 playground (payload preview
+per event type + signed `webhook.test` delivery on demand) and a
+30-day delivery log. Docs: `#webhooks` section on docs.watchparty.xyz with
+the verification snippet. Catalog vendored to the console with a drift
+test (tests/console-webhook-events.test.ts).
+
+Still not buildable (no backend): §1 app detail (no app registry), §2/§3
+scopes & OAuth (keys are unscoped).
 
 ## Pages not yet captured
 

@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { CodeCard, K, S, P } from "@/components/developer/dev-mocks";
 import { PRICE_SHEET } from "@/lib/api-pricing";
+import { WEBHOOK_EVENTS } from "@/lib/developer/webhook-events";
 
 export const metadata: Metadata = {
     title: "API docs",
@@ -34,6 +35,7 @@ const TOC = [
     ["auth", "Authentication"],
     ["pricing", "Pricing"],
     ["x402", "Paying per request (x402)"],
+    ["webhooks", "Webhooks"],
     ["errors", "Errors"],
 ] as const;
 
@@ -156,6 +158,50 @@ export default function DocsPage() {
                             <Mono>X-PAYMENT-RESPONSE</Mono> header with the settlement receipt.
                             <Mono>maxAmountRequired</Mono> is in USDC base units and reflects the
                             price of the resource you called — 1000 = $0.001.
+                        </p>
+                    </Section>
+
+                    <Section id="webhooks" title="Webhooks">
+                        <p>
+                            One outbound endpoint per account, configured in the{" "}
+                            <a href="https://console.watchparty.xyz/webhooks" className="font-bold text-white underline underline-offset-4">console</a>.
+                            We POST JSON to it the moment an event happens. Every event is about{" "}
+                            <strong className="text-white">your own account</strong> — your streams, your
+                            followers, your coins, your markets.
+                        </p>
+                        <div className="overflow-hidden rounded-2xl ring-1 ring-white/10">
+                            {WEBHOOK_EVENTS.map((row, i) => (
+                                <div
+                                    key={row.type}
+                                    className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-5 py-4 ${i > 0 ? "border-t border-white/[0.06]" : ""}`}
+                                >
+                                    <p className="font-mono text-[14px] font-bold text-white">{row.type}</p>
+                                    <p className="min-w-0 text-[13px] font-semibold text-white/45">{row.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <p>
+                            Deliveries are signed. The{" "}
+                            <Mono>x-watchparty-signature</Mono> header is{" "}
+                            <Mono>t=&lt;unix seconds&gt;,v1=&lt;hex&gt;</Mono> where{" "}
+                            <Mono>v1</Mono> is HMAC-SHA256 of{" "}
+                            <Mono>{"`${t}.${rawBody}`"}</Mono> under your signing secret
+                            (shown once at creation). Verify before trusting anything:
+                        </p>
+                        <CodeCard label="node · verify">
+                            <K>import</K> {"{ createHmac, timingSafeEqual }"} <K>from</K> <S>&quot;node:crypto&quot;</S><P>;</P>{"\n\n"}
+                            <K>const</K> [t, v1] = sig.<P>split</P>(<S>&quot;,&quot;</S>).<P>map</P>((p) {"=>"} p.<P>slice</P>(p.<P>indexOf</P>(<S>&quot;=&quot;</S>) + 1))<P>;</P>{"\n"}
+                            <K>const</K> expected = <P>createHmac</P>(<S>&quot;sha256&quot;</S>, secret).<P>update</P>(<S>{"`${t}.${rawBody}`"}</S>).<P>digest</P>(<S>&quot;hex&quot;</S>)<P>;</P>{"\n"}
+                            <K>const</K> ok = <P>timingSafeEqual</P>(Buffer.<P>from</P>(expected), Buffer.<P>from</P>(v1))<P>;</P>
+                        </CodeCard>
+                        <p>
+                            Semantics: delivery is <strong className="text-white">at-least-once</strong> with a
+                            5-second timeout and no retries — answer fast with a <Mono>2xx</Mono>{" "}
+                            and do your work async. Payloads carry a unique <Mono>id</Mono>{" "}
+                            (and stream events a <Mono>sessionId</Mono>) to dedupe on. Reject
+                            anything older than a few minutes of clock skew via <Mono>t</Mono>.
+                            The console&apos;s webhooks page previews every payload shape and
+                            sends signed <Mono>webhook.test</Mono> deliveries on demand.
                         </p>
                     </Section>
 
