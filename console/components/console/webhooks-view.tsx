@@ -110,27 +110,19 @@ function SecretPanel({ secret, onDone }: { secret: string; onDone: () => void })
   );
 }
 
-function CreateCard() {
+function CreateCard({ onCreated }: { onCreated: (secret: string) => void }) {
   const utils = trpc.useUtils();
   const [url, setUrl] = React.useState("");
-  const [secret, setSecret] = React.useState<string | null>(null);
+  // The secret must be lifted OUT of this card: invalidating `get` swaps the
+  // page to the configured branch, unmounting us — an inner secret panel
+  // would flash and vanish before anyone could read a view-once value.
+  // (Caught in live testing 2026-08-10.)
   const create = trpc.developerWebhooks.create.useMutation({
     onSuccess: (data) => {
-      setSecret(data.secret);
+      onCreated(data.secret);
       void utils.developerWebhooks.get.invalidate();
     },
   });
-
-  if (secret) {
-    return (
-      <div className="rounded-xl border bg-card p-4 sm:p-5">
-        <p className="text-sm font-medium">Endpoint created</p>
-        <div className="mt-3">
-          <SecretPanel secret={secret} onDone={() => setSecret(null)} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <form
@@ -268,11 +260,37 @@ function EndpointCard({ hook }: { hook: { url: string; createdAt: Date } }) {
 
 function EventsCard({ hook }: { hook: { events: string[]; enabled: boolean } }) {
   const utils = trpc.useUtils();
+  // Both mutations update the cache optimistically. Without this, two quick
+  // checkbox clicks race: each builds its event list from the server state
+  // at render time, and the second overwrites the first (caught in live
+  // testing 2026-08-10 — "subscribe to A and B" ended as just B).
   const setEnabled = trpc.developerWebhooks.setEnabled.useMutation({
-    onSuccess: () => void utils.developerWebhooks.get.invalidate(),
+    onMutate: async (vars) => {
+      await utils.developerWebhooks.get.cancel();
+      const prev = utils.developerWebhooks.get.getData();
+      utils.developerWebhooks.get.setData(undefined, (old) =>
+        old ? { ...old, enabled: vars.enabled } : old,
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx) utils.developerWebhooks.get.setData(undefined, ctx.prev);
+    },
+    onSettled: () => void utils.developerWebhooks.get.invalidate(),
   });
   const setEvents = trpc.developerWebhooks.setEvents.useMutation({
-    onSuccess: () => void utils.developerWebhooks.get.invalidate(),
+    onMutate: async (vars) => {
+      await utils.developerWebhooks.get.cancel();
+      const prev = utils.developerWebhooks.get.getData();
+      utils.developerWebhooks.get.setData(undefined, (old) =>
+        old ? { ...old, events: vars.events } : old,
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx) utils.developerWebhooks.get.setData(undefined, ctx.prev);
+    },
+    onSettled: () => void utils.developerWebhooks.get.invalidate(),
   });
 
   const groups = [...new Set(WEBHOOK_EVENTS.map((e) => e.group))];
@@ -301,7 +319,6 @@ function EventsCard({ hook }: { hook: { events: string[]; enabled: boolean } }) 
           </span>
           <Switch
             checked={hook.enabled}
-            disabled={setEnabled.isPending}
             onToggle={(next) => setEnabled.mutate({ enabled: next })}
             label="Deliver events"
           />
@@ -324,7 +341,6 @@ function EventsCard({ hook }: { hook: { events: string[]; enabled: boolean } }) 
                 >
                   <Checkbox
                     checked={subscribed.has(e.type)}
-                    disabled={setEvents.isPending}
                     onToggle={(next) => toggle(e.type, next)}
                     label={e.type}
                   />
@@ -477,6 +493,9 @@ function DeliveriesCard() {
 
 export function WebhooksView() {
   const hook = trpc.developerWebhooks.get.useQuery();
+  // The just-created signing secret, lifted here so it survives the
+  // create-card → endpoint-card swap (view-once must actually be viewable).
+  const [freshSecret, setFreshSecret] = React.useState<string | null>(null);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
@@ -499,7 +518,7 @@ export function WebhooksView() {
         </div>
       ) : hook.data === null ? (
         <>
-          <CreateCard />
+          <CreateCard onCreated={setFreshSecret} />
           <div className="flex flex-col items-center gap-3 rounded-xl border bg-card p-10 text-center">
             <div className="flex size-10 items-center justify-center rounded-lg border">
               <HugeiconsIcon icon={WebhookIcon} className="size-4 text-muted-foreground" />
@@ -513,6 +532,14 @@ export function WebhooksView() {
         </>
       ) : (
         <>
+          {freshSecret ? (
+            <div className="rounded-xl border bg-card p-4 sm:p-5">
+              <p className="text-sm font-medium">Endpoint created</p>
+              <div className="mt-3">
+                <SecretPanel secret={freshSecret} onDone={() => setFreshSecret(null)} />
+              </div>
+            </div>
+          ) : null}
           <EndpointCard hook={hook.data} />
           <EventsCard hook={hook.data} />
           <TestCard />
