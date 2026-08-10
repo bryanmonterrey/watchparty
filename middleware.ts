@@ -90,16 +90,23 @@ export async function middleware(request: NextRequest) {
     return res;
   };
 
-  // developer.watchparty.xyz serves the developer portal from THIS worker:
-  // portal paths rewrite onto the /developer tree; /api stays un-rewritten so
-  // keys and docs curl examples work identically on either host; and every
-  // OTHER path REDIRECTS to the apex — a blanket rewrite manufactured 404s
-  // (the console's signed-out redirect went to /login on the subdomain, which
-  // rewrote to the nonexistent /developer/login). Redirecting keeps the whole
-  // app reachable from portal links, and login's callbackUrl is path-relative,
-  // so the login round-trip lands on watchparty.xyz/developer/console.
+  // console.watchparty.xyz serves the developer portal from THIS worker
+  // (renamed from developer.watchparty.xyz 2026-08-09; the old host 308s here
+  // so shipped links keep working): portal paths rewrite onto the /developer
+  // tree; /api stays un-rewritten so keys and docs curl examples work
+  // identically on either host; and every OTHER path REDIRECTS to the apex —
+  // a blanket rewrite manufactured 404s (the console's signed-out redirect
+  // went to /login on the subdomain, which rewrote to the nonexistent
+  // /developer/login). Redirecting keeps the whole app reachable from portal
+  // links, and login's callbackUrl is path-relative, so the login round-trip
+  // lands on watchparty.xyz/developer/console.
   const host = request.headers.get("host")?.toLowerCase() ?? "";
-  if (host === "developer.watchparty.xyz" && !pathname.startsWith("/api")) {
+  if (host === "developer.watchparty.xyz") {
+    return withCleanup(
+      NextResponse.redirect(new URL(pathname + request.nextUrl.search, "https://console.watchparty.xyz"), 308),
+    );
+  }
+  if (host === "console.watchparty.xyz" && !pathname.startsWith("/api")) {
     const isPortalPath =
       pathname === "/" || pathname === "/console" || pathname === "/docs" ||
       pathname.startsWith("/console/") || pathname.startsWith("/docs/");

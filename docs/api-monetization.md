@@ -108,11 +108,11 @@ curl -s 'https://watchparty.xyz/api/trpc/trade.getFeed?batch=1&input=%7B%7D' \
 
 Lives in this repo at `app/(developer)/` — landing `/developer`, console
 `/developer/console` (session-gated key management over the `apiKeys` router),
-docs `/developer/docs`. **`developer.watchparty.xyz` needs no separate repo or
+docs `/developer/docs`. **`console.watchparty.xyz` needs no separate repo or
 deploy**: `middleware.ts` rewrites that host onto the `/developer` tree (`/api`
 is left alone so keys work identically on either host), and the cross-subdomain
 session cookie (2026-08-06) signs the console in automatically. To light up the
-subdomain: add the DNS record and attach `developer.watchparty.xyz` as a custom
+subdomain: add the DNS record and attach `console.watchparty.xyz` as a custom
 domain on whichever worker currently serves `watchparty.xyz`
 (`scripts/cf/attach-domains.mjs` — verify tRPC on the target first, per the
 pooler-wedge postmortem). Until then the portal is fully live at
