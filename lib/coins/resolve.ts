@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { coinIndex } from "@/db/schema/content/coin-index";
+import { tokens } from "@/db/schema/content/token";
 import { fetchTokenPairs, normalizeAddress } from "@/lib/coins/dexscreener";
 
 /** What /coin/<address> needs to render a coin we did not launch. Deliberately
@@ -25,6 +26,8 @@ export type ResolvedCoin = {
     buys24h: number | null;
     sells24h: number | null;
     txns24h: number | null;
+    /** Present only for coins WE launched; Mobula covers the rest. */
+    socials?: { twitter: string | null; telegram: string | null; website: string | null } | null;
 };
 
 const txns = (buys: number | null, sells: number | null) =>
@@ -51,7 +54,7 @@ const txns = (buys: number | null, sells: number | null) =>
  * Returns null only when Dexscreener has never heard of the address either, at
  * which point the page really is a 404.
  */
-export async function resolveCoin(raw: string, network?: string): Promise<ResolvedCoin | null> {
+async function resolveCoinBase(raw: string, network?: string): Promise<ResolvedCoin | null> {
     // EVM addresses arrive checksummed from Dexscreener, from a copy/paste out
     // of Etherscan, or from a shared link — while every table here stores the
     // lower-case form GeckoTerminal gave us. Normalising the INPUT is what makes
@@ -245,4 +248,41 @@ export async function resolveCoin(raw: string, network?: string): Promise<Resolv
         sells24h: pair.sells24h,
         txns24h: txns(pair.buys24h, pair.sells24h),
     };
+}
+
+/**
+ * Social links for a coin, preferring OURS.
+ *
+ * The coin page is converging on `CoinDetail` for every coin, including the ones
+ * we launch — and those keep their socials in `tokens.twitterUrl` /
+ * `telegramUrl` / `websiteUrl`, entered by the creator in the ticker dialog.
+ * Mobula is the source for everything else, but it will not know a token minted
+ * ten minutes ago, so asking it about our own launch returns nothing at exactly
+ * the moment the links matter most.
+ *
+ * So this looks in our table first. One indexed lookup on a page render, and it
+ * also lets the client SKIP the Mobula query entirely when we already have the
+ * answer.
+ */
+async function ownSocials(tokenAddress: string) {
+    const row = await db.query.tokens.findFirst({
+        where: eq(tokens.tokenAddress, tokenAddress),
+        columns: { twitterUrl: true, telegramUrl: true, websiteUrl: true },
+    });
+    if (!row) return null;
+    const { twitterUrl, telegramUrl, websiteUrl } = row;
+    if (!twitterUrl && !telegramUrl && !websiteUrl) return null;
+    return { twitter: twitterUrl ?? null, telegram: telegramUrl ?? null, website: websiteUrl ?? null };
+}
+
+export async function resolveCoin(raw: string, network?: string): Promise<ResolvedCoin | null> {
+    const coin = await resolveCoinBase(raw, network);
+    if (!coin) return null;
+    try {
+        const socials = await ownSocials(coin.tokenAddress);
+        return socials ? { ...coin, socials } : coin;
+    } catch {
+        // Socials are decoration. A failed lookup must not cost the page.
+        return coin;
+    }
 }

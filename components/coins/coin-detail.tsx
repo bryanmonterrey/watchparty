@@ -46,6 +46,8 @@ export type CoinViewData = {
     buys24h: number | null;
     sells24h: number | null;
     txns24h: number | null;
+    /** Set for coins WE launched (lib/coins/resolve). Mobula covers the rest. */
+    socials?: { twitter: string | null; telegram: string | null; website: string | null } | null;
 };
 
 function compactUsd(value: number | null) {
@@ -138,7 +140,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                                 <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" strokeWidth={2} />
                             </a>
                         )}
-                        <CoinSocials network={coin.network} address={coin.tokenAddress} />
+                        <CoinSocials coin={coin} />
                     </div>
                 </div>
             </div>
@@ -692,12 +694,16 @@ export function CoinDetail({ coin }: { coin: CoinViewData }) {
  * `socials`, and this is the same tRPC input — so TanStack serves both
  * components from one query.
  */
-function CoinSocials({ network, address }: { network: string; address: string }) {
+function CoinSocials({ coin }: { coin: CoinViewData }) {
+    // Ours wins, and skips the request entirely. A coin we launched has its
+    // links in `tokens` and Mobula has never heard of it — asking anyway would
+    // spend a call to be told nothing, at exactly the moment the links matter.
+    const own = coin.socials ?? null;
     const { data } = trpc.trade.coinSecurity.useQuery(
-        { network, address },
-        { staleTime: 120_000 },
+        { network: coin.network, address: coin.tokenAddress },
+        { staleTime: 120_000, enabled: !own },
     );
-    const socials = data?.socials;
+    const socials = own ?? data?.socials;
     if (!socials) return null;
 
     const links = [
