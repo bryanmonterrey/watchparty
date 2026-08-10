@@ -1,8 +1,9 @@
 import { after } from "next/server";
-import { and, arrayContains, eq, inArray, lt } from "drizzle-orm";
+import { and, arrayContains, count, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { developerWebhookDeliveries, developerWebhooks } from "@/db/schema/content/developer-webhook";
 import { hmacHex, randHex } from "@/lib/api-gate";
+import { openSecret } from "@/lib/developer/secret-box";
 import { WEBHOOK_TEST_EVENT, type WebhookEventType } from "@/lib/developer/webhook-events";
 
 // Outbound developer-webhook dispatch. Design constraints, in order:
@@ -20,6 +21,12 @@ import { WEBHOOK_TEST_EVENT, type WebhookEventType } from "@/lib/developer/webho
 
 const DELIVERY_TIMEOUT_MS = 5_000;
 const PRUNE_BEFORE_DAYS = 30;
+// Egress cap: an account's endpoint hears at most this many deliveries per
+// minute. Own-account events sit far below it; what it actually bounds is a
+// user manufacturing events in a loop to make us hammer a URL they chose.
+// Counted from the deliveries log (already indexed on user_id+created_at) so
+// background dispatch never depends on Redis; fail-open on count errors.
+const DELIVERY_CAP_PER_MIN = 60;
 
 export type DeliveryResult = { ok: boolean; status: number | null; durationMs: number };
 
@@ -28,6 +35,24 @@ async function deliver(
     type: string,
     data: unknown,
 ): Promise<DeliveryResult> {
+    try {
+        const [{ n }] = await db
+            .select({ n: count() })
+            .from(developerWebhookDeliveries)
+            .where(and(
+                eq(developerWebhookDeliveries.userId, row.userId),
+                gte(developerWebhookDeliveries.createdAt, new Date(Date.now() - 60_000)),
+            ));
+        if (n >= DELIVERY_CAP_PER_MIN) {
+            // Skipped deliveries are not logged — a logged row would extend
+            // the window and wedge the endpoint at the cap forever.
+            console.warn(`webhook delivery cap hit for ${row.userId}, dropping ${type}`);
+            return { ok: false, status: null, durationMs: 0 };
+        }
+    } catch {
+        // Fail open: a broken count query must not stop deliveries.
+    }
+
     const body = JSON.stringify({
         id: `evt_${randHex(8)}`,
         type,
@@ -35,7 +60,7 @@ async function deliver(
         data,
     });
     const t = Math.floor(Date.now() / 1000);
-    const sig = await hmacHex(row.secret, `${t}.${body}`);
+    const sig = await hmacHex(await openSecret(row.secret), `${t}.${body}`);
 
     const started = Date.now();
     let status: number | null = null;
@@ -49,6 +74,11 @@ async function deliver(
                 "x-watchparty-signature": `t=${t},v1=${sig}`,
             },
             body,
+            // Never follow redirects: the URL blocklist only vets the saved
+            // endpoint, so a 3xx could bounce this signed POST to a blocked
+            // host (our own API, loopback). A webhook receiver has no reason
+            // to redirect — treat any 3xx as a failed delivery.
+            redirect: "manual",
             signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
         });
         status = res.status;

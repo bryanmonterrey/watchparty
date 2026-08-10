@@ -51,6 +51,34 @@ export const fileUploadLimiter = new Ratelimit({
     prefix: 'ratelimit:file:upload',
 });
 
+// Webhook console mutations (create/reset/toggle/etc.): 30 per minute per user
+export const webhookMutationLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(30, '1 m'),
+    analytics: true,
+    prefix: 'ratelimit:webhook:mutate',
+});
+
+// Signed test deliveries (each one makes us POST at a user-chosen URL): 6/min
+export const webhookTestLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(6, '1 m'),
+    analytics: true,
+    prefix: 'ratelimit:webhook:test',
+});
+
+/**
+ * Fail-open limit check: only a genuine "limited" verdict returns false.
+ * Redis being down or unconfigured must never take the feature down with it.
+ */
+export async function limitOrPass(limiter: Ratelimit, identifier: string): Promise<boolean> {
+    try {
+        return (await limiter.limit(identifier)).success;
+    } catch {
+        return true;
+    }
+}
+
 /**
  * Helper function to check rate limit
  */

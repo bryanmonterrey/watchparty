@@ -7,6 +7,9 @@ import { developerWebhookDeliveries, developerWebhooks } from "@/db/schema/conte
 import { randHex } from "@/lib/api-gate";
 import { sendTestDelivery } from "@/lib/developer/webhooks";
 import { WEBHOOK_EVENT_TYPES } from "@/lib/developer/webhook-events";
+import { isAllowedWebhookUrl } from "@/lib/developer/webhook-url";
+import { sealSecret } from "@/lib/developer/secret-box";
+import { limitOrPass, webhookMutationLimiter, webhookTestLimiter } from "@/lib/rate-limit";
 
 // One outbound webhook endpoint per account (the Discord app-webhook model:
 // an endpoint + an event menu — see docs/console-discord-reference.md §6).
@@ -18,10 +21,23 @@ const urlSchema = z
     .trim()
     .max(2048)
     .url()
-    .refine((u) => u.startsWith("https://"), { message: "Endpoint must be https" });
+    .refine((u) => u.startsWith("https://"), { message: "Endpoint must be https" })
+    .refine(isAllowedWebhookUrl, {
+        message: "This host can't receive webhooks — use a public https endpoint you control",
+    });
 
 function newSecret(): string {
     return `whsec_${randHex(24)}`;
+}
+
+/** Per-user mutation throttle (fail-open — Redis being down never blocks). */
+async function throttleMutation(userId: string): Promise<void> {
+    if (!(await limitOrPass(webhookMutationLimiter, userId))) {
+        throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many webhook changes — wait a minute and try again",
+        });
+    }
 }
 
 export const developerWebhooksRouter = router({
@@ -44,10 +60,17 @@ export const developerWebhooksRouter = router({
     create: protectedProcedure
         .input(z.object({ url: urlSchema }))
         .mutation(async ({ ctx, input }) => {
+            if (!process.env.API_GATE_SECRET) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "Webhooks are not enabled on this deployment",
+                });
+            }
+            await throttleMutation(ctx.user.id);
             const secret = newSecret();
             const inserted = await db
                 .insert(developerWebhooks)
-                .values({ userId: ctx.user.id, url: input.url, secret })
+                .values({ userId: ctx.user.id, url: input.url, secret: await sealSecret(secret) })
                 .onConflictDoNothing()
                 .returning({ userId: developerWebhooks.userId });
             if (!inserted.length) {
@@ -63,6 +86,7 @@ export const developerWebhooksRouter = router({
     setUrl: protectedProcedure
         .input(z.object({ url: urlSchema }))
         .mutation(async ({ ctx, input }) => {
+            await throttleMutation(ctx.user.id);
             const updated = await db
                 .update(developerWebhooks)
                 .set({ url: input.url, updatedAt: new Date() })
@@ -74,10 +98,11 @@ export const developerWebhooksRouter = router({
 
     /** Roll the signing secret (returns the new one — shown once). */
     resetSecret: protectedProcedure.mutation(async ({ ctx }) => {
+        await throttleMutation(ctx.user.id);
         const secret = newSecret();
         const updated = await db
             .update(developerWebhooks)
-            .set({ secret, updatedAt: new Date() })
+            .set({ secret: await sealSecret(secret), updatedAt: new Date() })
             .where(eq(developerWebhooks.userId, ctx.user.id))
             .returning({ userId: developerWebhooks.userId });
         if (!updated.length) throw new TRPCError({ code: "NOT_FOUND" });
@@ -88,6 +113,7 @@ export const developerWebhooksRouter = router({
     setEnabled: protectedProcedure
         .input(z.object({ enabled: z.boolean() }))
         .mutation(async ({ ctx, input }) => {
+            await throttleMutation(ctx.user.id);
             const updated = await db
                 .update(developerWebhooks)
                 .set({ enabled: input.enabled, updatedAt: new Date() })
@@ -101,6 +127,7 @@ export const developerWebhooksRouter = router({
     setEvents: protectedProcedure
         .input(z.object({ events: z.array(z.enum(WEBHOOK_EVENT_TYPES)).max(32) }))
         .mutation(async ({ ctx, input }) => {
+            await throttleMutation(ctx.user.id);
             const updated = await db
                 .update(developerWebhooks)
                 .set({ events: [...new Set(input.events)], updatedAt: new Date() })
@@ -118,6 +145,12 @@ export const developerWebhooksRouter = router({
 
     /** Deliver a signed webhook.test to the configured endpoint, now. */
     sendTest: protectedProcedure.mutation(async ({ ctx }) => {
+        if (!(await limitOrPass(webhookTestLimiter, ctx.user.id))) {
+            throw new TRPCError({
+                code: "TOO_MANY_REQUESTS",
+                message: "Wait a moment between test deliveries",
+            });
+        }
         const result = await sendTestDelivery(ctx.user.id);
         if (!result) {
             throw new TRPCError({
