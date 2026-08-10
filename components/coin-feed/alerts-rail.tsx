@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { alertsSnapshotStore } from "@/lib/snapshot/surfaces";
-import { viewerKey } from "@/lib/snapshot/keys";
+import { viewerKey, queryInputKey } from "@/lib/snapshot/keys";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { RailShell } from "@/components/rails/rail-shell";
@@ -99,7 +99,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
     // on the viewer as well as the filters — both belong in the key.
     const { data: railSession } = useAuthSession();
     const alertsSnapshotKey = useMemo(
-        () => viewerKey(railSession?.user?.id, "alerts", JSON.stringify(filterInput)),
+        () => viewerKey(railSession?.user?.id, "alerts", queryInputKey(filterInput)),
         [railSession?.user?.id, filterInput],
     );
 

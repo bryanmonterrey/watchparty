@@ -8,7 +8,7 @@ import { ArrowDownRight01Icon, ArrowUpRight01Icon, StarIcon } from "@hugeicons/c
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { trendingSnapshotStore } from "@/lib/snapshot/surfaces";
-import { viewerKey } from "@/lib/snapshot/keys";
+import { viewerKey, queryInputKey } from "@/lib/snapshot/keys";
 import { useSnapshot } from "@/hooks/use-snapshot";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useBurst } from "@/hooks/use-burst";
@@ -327,7 +327,7 @@ export function TrendingTable({ className }: { className?: string }) {
     // that is fifty subscriptions for a button most rows never press.
     const { quickBuy, buyingId } = useQuickBuy();
 
-    const snapshotKey = useMemo(() => viewerKey(null, "trending", JSON.stringify(input)), [input]);
+    const snapshotKey = useMemo(() => viewerKey(null, "trending", queryInputKey(input)), [input]);
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, isPlaceholderData } =
         trpc.trending.list.useInfiniteQuery(input, {

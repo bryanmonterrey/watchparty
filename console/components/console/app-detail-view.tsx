@@ -9,8 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc";
-import { formatDate } from "@/lib/format";
+import { formatDate, money } from "@/lib/format";
 import { CopyButton } from "@/components/console/copy-button";
+import { Chip } from "@/components/console/chip";
 
 // The Discord General Information page (docs/console-discord-reference.md §1):
 // identity (icon/name/description/tags), read-only IDs with copy buttons
@@ -219,6 +220,108 @@ function CredentialsCard({ app }: { app: App }) {
   );
 }
 
+function KeysCard({ appId }: { appId: string }) {
+  const utils = trpc.useUtils();
+  const keys = trpc.apiKeys.list.useQuery();
+  const [creating, setCreating] = React.useState(false);
+  const [name, setName] = React.useState("");
+  const create = trpc.apiKeys.create.useMutation({
+    onSuccess: () => {
+      void utils.apiKeys.list.invalidate();
+      setName("");
+    },
+  });
+
+  const appKeys = (keys.data ?? []).filter((k) => k.appId === appId && !k.revoked);
+
+  return (
+    <div className="rounded-xl border bg-card p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">Keys</p>
+        {!creating && !create.data ? (
+          <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+            New key
+          </Button>
+        ) : null}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Keys filed under this app. They send <span className="font-mono">x-api-key</span>{" "}
+        and draw down their own credit balance.
+      </p>
+
+      {create.data ? (
+        <div className="mt-3 rounded-lg border bg-muted/40 p-3">
+          <p className="text-xs text-muted-foreground">
+            Your new key — shown once. Store it somewhere safe.
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="min-w-0 flex-1 select-all break-all font-mono text-xs">
+              {create.data.key}
+            </code>
+            <CopyButton value={create.data.key} />
+          </div>
+          <div className="mt-2 flex justify-end">
+            <Button size="sm" variant="outline" onClick={() => create.reset()}>
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : creating ? (
+        <form
+          className="mt-3 flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (name.trim()) create.mutate({ name: name.trim(), appId });
+          }}
+        >
+          <Input
+            autoFocus
+            maxLength={64}
+            placeholder="Production key"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Button type="submit" disabled={!name.trim() || create.isPending}>
+            {create.isPending ? "Creating…" : "Create"}
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setCreating(false)}>
+            Cancel
+          </Button>
+        </form>
+      ) : null}
+      {create.error ? (
+        <p className="mt-2 text-xs text-destructive">{create.error.message}</p>
+      ) : null}
+
+      <div className="mt-3 flex flex-col divide-y">
+        {keys.isPending ? (
+          <Skeleton className="h-12 rounded-lg" />
+        ) : appKeys.length === 0 ? (
+          <p className="py-4 text-center text-xs text-muted-foreground">
+            No keys under this app yet.
+          </p>
+        ) : (
+          appKeys.map((k) => (
+            <Link
+              key={k.id}
+              href="/keys"
+              className="flex items-center gap-3 py-2.5 transition-colors hover:text-foreground"
+            >
+              <span className="min-w-0 flex-1 truncate text-sm">{k.name}</span>
+              <Chip>
+                <span className="font-mono">{k.prefix}</span>
+              </Chip>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {money(k.balanceUsd)}
+              </span>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DangerZone({ app }: { app: App }) {
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -310,6 +413,7 @@ export function AppDetailView({ id }: { id: string }) {
 
           <IdentityCard app={app.data} />
           <CredentialsCard app={app.data} />
+          <KeysCard appId={app.data.id} />
           <DangerZone app={app.data} />
         </>
       )}

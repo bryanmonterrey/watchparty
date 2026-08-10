@@ -43,3 +43,25 @@ export function privateViewerKey(viewerId: string | null | undefined, ...parts: 
     if (!viewerId) return "";
     return [viewerId, ...parts].join(SEP);
 }
+
+/**
+ * A stable string for a query's input object, for surfaces keyed by their
+ * filters (the coin rail, the trending board).
+ *
+ * Plain `JSON.stringify` emits properties in insertion order, so the same
+ * logical input can serialize two ways — `{sort, limit}` and `{limit, sort}`
+ * are one query but two snapshot keys. TanStack's own `hashKey` sorts keys for
+ * exactly this reason, and a snapshot key that disagrees with the query key it
+ * mirrors fails in the quietest possible way: never a wrong paint, just a
+ * permanent cache miss that looks like the feature was never wired up.
+ *
+ * `undefined` members are dropped, which matches both `JSON.stringify` and
+ * tRPC — an absent input and an explicitly-undefined one are the same request.
+ */
+export function queryInputKey(input: unknown): string {
+    return JSON.stringify(input, (_k, v) =>
+        v && typeof v === "object" && !Array.isArray(v)
+            ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+            : v,
+    ) ?? "";
+}

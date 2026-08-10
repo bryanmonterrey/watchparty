@@ -22,6 +22,10 @@ export const apiKeys = pgTable('api_keys', {
     name: text('name').notNull(),
     keyHash: text('key_hash').notNull().unique(),
     prefix: text('prefix').notNull(),
+    // Optional owning app (phase 2). Nullable — account-level keys predate the
+    // app registry and stay valid. developer_apps soft-deletes, so this FK's
+    // set-null never actually fires, but it's the correct safety net.
+    appId: text('app_id'),
     balanceMicro: bigint('balance_micro', { mode: 'number' }).default(0).notNull(),
     spentMicro: bigint('spent_micro', { mode: 'number' }).default(0).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),

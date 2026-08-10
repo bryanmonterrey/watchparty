@@ -173,5 +173,12 @@ liveness attestation beats validate-once:
 
 - Phase 0 (interim console + outbound webhooks + hardening): **shipped**
   (`50962a08`, `9fbbaa25`, `20b995a1`, `ed62e021`).
-- Phase 1: **in progress** (this plan's first execution step).
-- Phases 2–6: specced above; build in order (each depends on the prior).
+- Phase 1 (app registry): **shipped** (`5e942a94`; DDL applied to both DBs).
+- Phase 2a (per-app API key association): **shipped** — `api_keys.app_id`
+  nullable, `apiKeys.create` takes an optional owned `appId`, app-detail page
+  has a Keys section. **Not** a security boundary (organization only), so no
+  fake-gate risk. Scope *enforcement* (2b) is deliberately separate: it
+  touches the edge-gate hot path + Redis and needs the live-gate smoke
+  scripts, so it doesn't ride a tsc-only pass.
+- Phase 2b+ (scopes with enforcement, per-app webhooks) and 3–6: specced
+  above; build in order.

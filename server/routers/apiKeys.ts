@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { apiKeys, apiCreditDeposits, apiKeyUsageDays } from "@/db/schema/content/api-key";
+import { developerApps } from "@/db/schema/content/developer-app";
 import { and, asc, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
@@ -29,7 +30,11 @@ const MAX_ACTIVE_KEYS = 10;
 
 export const apiKeysRouter = router({
     create: protectedProcedure
-        .input(z.object({ name: z.string().trim().min(1).max(64) }))
+        .input(z.object({
+            name: z.string().trim().min(1).max(64),
+            // Optionally scope the key to one of the caller's apps (phase 2).
+            appId: z.string().optional(),
+        }))
         .mutation(async ({ ctx, input }) => {
             const secret = process.env.API_GATE_SECRET;
             if (!secret) {
@@ -37,6 +42,21 @@ export const apiKeysRouter = router({
                     code: "PRECONDITION_FAILED",
                     message: "API keys are not enabled on this deployment",
                 });
+            }
+
+            // An appId must belong to the caller and not be soft-deleted —
+            // otherwise a key could be filed under someone else's app.
+            if (input.appId) {
+                const [app] = await db
+                    .select({ id: developerApps.id })
+                    .from(developerApps)
+                    .where(and(
+                        eq(developerApps.id, input.appId),
+                        eq(developerApps.ownerId, ctx.user.id),
+                        isNull(developerApps.deletedAt),
+                    ))
+                    .limit(1);
+                if (!app) throw new TRPCError({ code: "NOT_FOUND", message: "App not found" });
             }
 
             const [{ n }] = await db
@@ -58,6 +78,7 @@ export const apiKeysRouter = router({
                 id,
                 userId: ctx.user.id,
                 name: input.name,
+                appId: input.appId ?? null,
                 keyHash: await sha256Hex(plaintext),
                 prefix: `wp_live_${id.slice(0, 4)}…`,
             });
@@ -72,6 +93,7 @@ export const apiKeysRouter = router({
                 id: apiKeys.id,
                 name: apiKeys.name,
                 prefix: apiKeys.prefix,
+                appId: apiKeys.appId,
                 balanceMicro: apiKeys.balanceMicro,
                 spentMicro: apiKeys.spentMicro,
                 revokedAt: apiKeys.revokedAt,
@@ -96,6 +118,7 @@ export const apiKeysRouter = router({
             id: r.id,
             name: r.name,
             prefix: r.prefix,
+            appId: r.appId,
             revoked: !!r.revokedAt,
             createdAt: r.createdAt,
             lastUsedAt: r.lastUsedAt,

@@ -50,7 +50,7 @@ afterEach(() => {
 
 const { createSnapshotStore, clearAllSnapshots } = await import("@/lib/snapshot/store");
 const { createInfiniteSnapshotStore } = await import("@/lib/snapshot/infinite");
-const { viewerKey, privateViewerKey } = await import("@/lib/snapshot/keys");
+const { viewerKey, privateViewerKey, queryInputKey } = await import("@/lib/snapshot/keys");
 
 type Row = { id: string; at: Date };
 
@@ -248,6 +248,20 @@ describe("snapshot keys", () => {
         expect(viewerKey(null, "feed", "forYou")).toBe("anon:feed:forYou");
         // The point: one can never be read as the other.
         expect(viewerKey("user-1", "feed")).not.toBe(viewerKey("user-2", "feed"));
+    });
+
+    test("queryInputKey is stable under property order", () => {
+        // The failure this prevents is silent: a key that disagrees with the
+        // query key it mirrors never paints a wrong row, it just never hits —
+        // which looks exactly like the feature was never wired up.
+        expect(queryInputKey({ sort: "volume", limit: 50 })).toBe(queryInputKey({ limit: 50, sort: "volume" }));
+        expect(queryInputKey({ a: 1, b: { y: 2, x: 1 } })).toBe(queryInputKey({ b: { x: 1, y: 2 }, a: 1 }));
+        // Different inputs must still differ.
+        expect(queryInputKey({ sort: "volume" })).not.toBe(queryInputKey({ sort: "trending" }));
+        // Arrays are ordered data, not a bag of properties — order is meaning.
+        expect(queryInputKey({ chains: ["sol", "base"] })).not.toBe(queryInputKey({ chains: ["base", "sol"] }));
+        // An absent member and an explicitly-undefined one are one request.
+        expect(queryInputKey({ a: 1, b: undefined })).toBe(queryInputKey({ a: 1 }));
     });
 
     test("privateViewerKey refuses to key anything when signed out", () => {
