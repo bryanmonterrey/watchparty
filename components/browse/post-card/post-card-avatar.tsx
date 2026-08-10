@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { OnlineIndicator } from "@/components/ui/online-indicator";
 import type { PostCardUser } from "./post-card.types";
 
 interface PostCardAvatarProps {

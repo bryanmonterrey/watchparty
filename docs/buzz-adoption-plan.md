@@ -1320,12 +1320,22 @@ off by an order of magnitude.
 Two real inefficiencies did surface and are still worth fixing, just not as the
 outage's cause:
 
-- `components/ui/online-indicator.tsx` calls `user.getOnlineStatus` **per
-  user**, so a list of avatars mounts one polling query per row. tRPC's batch
-  link merges the simultaneous ones, which is why it doesn't show up in the
-  measurements above — but it is still N queries where 1 would do.
-- `components/profile/profile-avatar.tsx` (and its `components/video/` twin)
-  poll `stream.getByUserId` every 30s **per user**, for a live badge.
+- ❌ **Corrected 2026-08-09: `online-indicator.tsx` is DEAD CODE.** It is
+  imported by three files (`profile/profile-avatar`, `video/profile-avatar`,
+  `browse/post-card/post-card-avatar`) and **rendered by none** — `<OnlineIndicator`
+  has zero matches in the repo. So the per-row `user.getOnlineStatus` polling
+  described here never happens. The claim was made by reading the component, not
+  by checking whether anything mounts it. The three dead imports are removed;
+  the component is left in place as a working thing nobody wired up yet.
+  (`getOnlineStatus` *is* a DB query per user, so it would have been real — it
+  just isn't running.)
+- ⚠️ **Half-corrected: `profile-avatar` polls, but not per row.**
+  `components/profile/profile-avatar.tsx` is live and renders **twice** on a
+  profile page; both instances share one query key, so TanStack dedupes them
+  into a single `stream.getByUserId` every 30s. `components/video/profile-avatar.tsx`
+  is a **dead file** — nothing imports it. The real defect was a missing
+  `staleTime`, so every remount refetched immediately regardless of freshness:
+  the same shape as the get-session burst. Fixed.
 - `components/community/space-room.tsx` polls every 5s as an explicit "safety
   net" for missed realtime events. Now that realtime actually delivers
   (Phase 10), that net can be widened a lot.

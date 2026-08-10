@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { UserType } from "@/db/schema/auth/user";
-import { OnlineIndicator } from "@/components/ui/online-indicator";
 import { LiveBadge } from "@/components/streaming/live-badge";
 import { trpc } from "@/lib/trpc/client";
 
@@ -14,7 +13,15 @@ interface ProfileAvatarProps {
 }
 
 export function ProfileAvatar({ user, isMinimized }: ProfileAvatarProps) {
-    const { data: stream } = trpc.stream.getByUserId.useQuery({ userId: user.id }, { refetchInterval: 30_000 });
+    const { data: stream } = trpc.stream.getByUserId.useQuery(
+        { userId: user.id },
+        // staleTime matches the interval on purpose. Without it every
+        // remount refetches immediately regardless of how fresh the data
+        // is — the same shape as the get-session burst, where 94 mounts
+        // of one hook produced 24.8% 429s. This renders twice on a
+        // profile page already.
+        { refetchInterval: 30_000, staleTime: 30_000 },
+    );
     const isLive = stream?.isLive ?? false;
 
     return (

@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { UserType } from "@/db/schema/auth/user";
-import { OnlineIndicator } from "@/components/ui/online-indicator";
 import { LiveBadge } from "@/components/streaming/live-badge";
 import { trpc } from "@/lib/trpc/client";
 
