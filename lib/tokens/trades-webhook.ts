@@ -27,12 +27,36 @@ const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before shard
  * depending on what happened to be trending — which is exactly how a 1M/month
  * plan went in 1.5 days.
  *
- * A free plan is 1M/month = **23 deliveries/min** in total. 12 leaves room for
- * the assets and user-trades webhooks and for the estimate being an estimate;
- * `txns_24h` is a 24-hour average and real activity is bursty.
+ * ## The unit is deliveries, but the BILL is credits — measured, ~3x apart
  *
- * Raise it with `HELIUS_TRADES_BUDGET_PER_MIN` on a bigger plan. The selection
- * adapts on its own — more budget simply admits more pools, cheapest first.
+ * A first pass here assumed 1 credit per delivery and set the free plan's
+ * ceiling at "23 deliveries/min". Measured on the live tape 2026-08-10, over a
+ * clean 10-minute window:
+ *
+ *     budget 12  ->  7 pools  ->  2.1 deliveries/min  ->  6.43 CREDITS/min
+ *
+ * That is **~3 credits per delivery**, so 277,776/month — **27.8% of a free
+ * plan** — for seven of the quietest pools on the board. Deliveries are simply
+ * not what Helius charges for.
+ *
+ * The estimate is still expressed in deliveries because that is what `txns_24h`
+ * can predict. The conversion is what makes the number mean anything:
+ *
+ *     credits/min  ~=  0.54 x budget
+ *     % of a 1M plan/month  ~=  budget x 2.3
+ *
+ *     budget 12 -> 27.8%     budget 18 -> 41.7%
+ *     budget 24 -> 55.6%     budget 40 -> 92.6%
+ *
+ * 18 is ~42%, which leaves better than 2x headroom for bursts — `txns_24h` is a
+ * 24-hour average and real activity is not. I had raised this to 40 on the
+ * strength of the delivery rate alone; at 92.6% of plan that was one busy
+ * afternoon from repeating the outage this whole exercise was about.
+ *
+ * ⚠️ Re-measure the ratio before trusting it after any change to the receiver or
+ * to `transactionTypes` — it is a property of what Helius bills, not of us:
+ *
+ *     bun scripts/dev/helius-usage.mjs        (needs HELIUS_PROJECT_ID)
  */
 const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 12) || 0);
 
