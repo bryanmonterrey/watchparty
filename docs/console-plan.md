@@ -18,9 +18,13 @@ should build from THIS, not re-request images.
 - **Zero-CORS API**: route `console.watchparty.xyz/api/*` to the MAIN worker at
   the zone level; the console calls `/api` same-origin and the cross-subdomain
   session cookie (2026-08-06) just works. No second auth system.
-- **Hosts**: `console.watchparty.xyz` = the console (serves the interim
-  `(developer)` portal until this app ships). `docs.watchparty.xyz` = docs.
-  `developer.watchparty.xyz` 308s to console.
+- **Hosts** (cut over 2026-08-10): `console.watchparty.xyz` = the console app's
+  own worker `console-app` (`scripts/cf/attach-console-domain.mjs` is the
+  cutover/rollback lever; `/api` currently rides the console's rewrite-proxy
+  fallback — the direct zone route needs the Zone→Workers Routes token perm,
+  arriving with the 8/20 rotation). `docs.watchparty.xyz` = docs.
+  `developer.watchparty.xyz` 308s to console. The interim portal still exists
+  at watchparty.xyz/developer.
 
 ## X console anatomy (the reference, fully cataloged)
 

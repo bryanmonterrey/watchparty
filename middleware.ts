@@ -90,16 +90,12 @@ export async function middleware(request: NextRequest) {
     return res;
   };
 
-  // console.watchparty.xyz serves the developer portal from THIS worker
-  // (renamed from developer.watchparty.xyz 2026-08-09; the old host 308s here
-  // so shipped links keep working): portal paths rewrite onto the /developer
-  // tree; /api stays un-rewritten so keys and docs curl examples work
-  // identically on either host; and every OTHER path REDIRECTS to the apex —
-  // a blanket rewrite manufactured 404s (the console's signed-out redirect
-  // went to /login on the subdomain, which rewrote to the nonexistent
-  // /developer/login). Redirecting keeps the whole app reachable from portal
-  // links, and login's callbackUrl is path-relative, so the login round-trip
-  // lands on watchparty.xyz/developer/console.
+  // console.watchparty.xyz is its OWN worker now (console-app, the console/
+  // sibling app — cut over 2026-08-10). This worker sees only that host's
+  // /api/* traffic, which arrives via the zone route so keys, tRPC, and the
+  // shared session cookie work same-origin for the console; those paths pass
+  // through untouched below. developer.watchparty.xyz still 308s to console
+  // here because the old host remains attached to THIS worker.
   const host = request.headers.get("host")?.toLowerCase() ?? "";
   if (host === "developer.watchparty.xyz") {
     return withCleanup(
@@ -115,21 +111,6 @@ export async function middleware(request: NextRequest) {
       NextResponse.rewrite(new URL(`/developer/docs${pathname === "/" ? "" : pathname}`, request.url)),
     );
   }
-  if (host === "console.watchparty.xyz" && !pathname.startsWith("/api")) {
-    const isPortalPath =
-      pathname === "/" || pathname === "/console" || pathname === "/docs" ||
-      pathname.startsWith("/console/") || pathname.startsWith("/docs/");
-    if (isPortalPath) {
-      return withCleanup(
-        NextResponse.rewrite(new URL(`/developer${pathname === "/" ? "" : pathname}`, request.url)),
-      );
-    }
-    if (!pathname.startsWith("/developer")) {
-      const apex = new URL(pathname + request.nextUrl.search, "https://watchparty.xyz");
-      return withCleanup(NextResponse.redirect(apex, 307));
-    }
-  }
-
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the
   // app's own traffic — external (session-less, off-site) callers go through
   // the 402 gate first (lib/api-gate.ts). API_402_MODE=off|log|enforce,

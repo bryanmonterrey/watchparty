@@ -37,7 +37,19 @@ const SERVICE = process.argv[2] ?? "console-app";
 
 const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 
-// 1. Ensure the /api/* zone route → main worker.
+// 1. Ensure the /api/* zone route → main worker. BEST-EFFORT: the current
+// API token has account-level Workers perms but not Zone → Workers Routes
+// (verified 2026-08-10: list routes → code 10000). The console still works
+// without it — its next.config rewrite proxies /api to watchparty.xyz — the
+// route just removes that extra hop. Grant the permission at the next token
+// rotation (scheduled 2026-08-20) and re-run this script.
+try {
+  await ensureApiRoute();
+} catch (err) {
+  console.warn(`zone route skipped (${err.message}) — /api rides the rewrite proxy fallback`);
+}
+
+async function ensureApiRoute() {
 const routesRes = await fetch(
   `https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes`,
   { headers },
@@ -64,6 +76,7 @@ if (!existing) {
   console.log(`route repointed: ${API_ROUTE_PATTERN} -> ${API_SERVICE}`);
 } else {
   console.log(`route ok: ${API_ROUTE_PATTERN} -> ${API_SERVICE}`);
+}
 }
 
 // 2. Attach the hostname to the requested worker.
