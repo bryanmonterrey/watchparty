@@ -146,6 +146,16 @@ async function processDelivery(events: HeliusEvent[]) {
     // no market-row sync — syncMarketData is for tokens we own the pricing
     // model for.
     //
+    // NOT rank-limited any more, and that matters. Registration picks pools by
+    // BUDGET now (cheapest first — lib/tokens/pool-budget.ts), while this lookup
+    // used `ORDER BY rank LIMIT 50`. Two different selections over the same
+    // table: a budget-picked pool outside the rank-50 window would have its
+    // deliveries ACCEPTED and then silently dropped, so we would pay Helius for
+    // a tape we never wrote. It only worked because solana has ~45 rows.
+    //
+    // The whole board is 200-odd rows across all networks and this is cached for
+    // 60s, so dropping the limit costs nothing and removes the coupling.
+    //
     // CACHED, not queried per delivery. This endpoint runs at tens of requests
     // per SECOND on an active board, and a per-delivery query here exhausted the
     // 15-connection pool and took out unrelated pages. The trending board only
@@ -155,9 +165,7 @@ async function processDelivery(events: HeliusEvent[]) {
         db
             .select({ poolAddress: trendingCoins.poolAddress, tokenAddress: trendingCoins.tokenAddress })
             .from(trendingCoins)
-            .where(eq(trendingCoins.network, "solana"))
-            .orderBy(trendingCoins.rank)
-            .limit(50),
+            .where(eq(trendingCoins.network, "solana")),
     );
     // A missing trending list only costs display-pool tape, so this one degrades
     // rather than skipping: tokens we own the pricing model for still sync.
