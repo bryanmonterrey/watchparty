@@ -5,6 +5,7 @@ import { posts, user, bookmarks } from "@/db/schema";
 import { follows } from "@/db/schema/content/follow";
 import { eq, and, asc, desc, gt, lt, sql, ilike, or, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { encodeKeysetCursor, parseKeysetCursor } from "@/lib/pagination/keyset";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
 export const postRouter = router({
@@ -201,19 +202,12 @@ export const postRouter = router({
         )
         .query(async ({ ctx, input }) => {
             const pattern = `%${input.query}%`;
-            // `<value>|<id>`. Tolerant of a legacy value-only cursor from a
-            // client mid-session: it degrades to the old skip-ties behaviour
-            // for one page rather than throwing.
+            // Composite keyset — see lib/pagination/keyset.ts for why a
+            // value-only cursor loses tied rows, and what it cost here.
             const sortCol = input.sort === "top" ? posts.baseScore : posts.createdAt;
-            const sortKey = (() => {
-                if (!input.cursor) return null;
-                const sep = input.cursor.lastIndexOf("|");
-                const rawValue = sep === -1 ? input.cursor : input.cursor.slice(0, sep);
-                const id = sep === -1 ? "" : input.cursor.slice(sep + 1);
-                const value = input.sort === "top" ? Number(rawValue) : new Date(rawValue);
-                if (input.sort === "top" ? !Number.isFinite(value as number) : Number.isNaN((value as Date).getTime())) return null;
-                return { value, id };
-            })();
+            const sortKey = input.sort === "top"
+                ? parseKeysetCursor(input.cursor, "number")
+                : parseKeysetCursor(input.cursor, "date");
 
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
@@ -389,8 +383,10 @@ export const postRouter = router({
                 const lastItem = rawItems[rawItems.length - 1];
                 // Value AND id, so the next page can resume inside a run of
                 // tied rows instead of stepping over it.
-                const value = input.sort === "top" ? String(lastItem.baseScore ?? 0) : lastItem.createdAt.toISOString();
-                nextCursor = `${value}|${lastItem.id}`;
+                nextCursor = encodeKeysetCursor(
+                    input.sort === "top" ? (lastItem.baseScore ?? 0) : lastItem.createdAt,
+                    lastItem.id,
+                );
             }
 
             return { posts: items, hasMore, nextCursor };
