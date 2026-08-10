@@ -47,6 +47,7 @@ import { usePremiumOverlay } from "@/lib/premium/overlay-store"
 import { WithAuth } from "@/components/auth/with-auth"
 import { CreateDialog } from "./create-dialog"
 import { NotificationsPanel } from "@/components/notifications/notifications-panel"
+import { useNotificationsOverlay } from "@/lib/notifications/overlay-store"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { GooDropdown } from "@/components/ui/goo-dropdown"
 
@@ -146,7 +147,12 @@ export function AppSidebar() {
     React.useEffect(() => () => {
         if (leaveTimeout.current) clearTimeout(leaveTimeout.current)
     }, [])
-    const [notificationsOpen, setNotificationsOpen] = React.useState(false)
+    // In a store, not local state: the mobile header needs to open this same
+    // panel, and its bell used to link to `/notifications` — a route that does
+    // not exist. See lib/notifications/overlay-store.ts.
+    const notificationsOpen = useNotificationsOverlay((s) => s.open)
+    const setNotificationsOpen = (v: boolean) =>
+        useNotificationsOverlay.getState()[v ? "openNotifications" : "closeNotifications"]()
     const [moreOpen, setMoreOpen] = React.useState(false)
     const utils = trpc.useUtils()
 

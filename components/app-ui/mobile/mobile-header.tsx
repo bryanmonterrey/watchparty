@@ -7,6 +7,7 @@ import { Plus, Heart, Menu } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { cn } from "@/lib/utils";
+import { useNotificationsOverlay } from "@/lib/notifications/overlay-store";
 
 // Mobile top chrome from public/mobile designs/*.svg. Route-aware variants:
 // - home/search/trade: hamburger + logo chip left, actions right
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 // Fixed overlay (same as the desktop AppHeader), so pages keep their pt-16.
 
 function HeaderActions() {
+    const openNotifications = useNotificationsOverlay((s) => s.openNotifications);
     const { data: session } = useAuthSession();
     const user = session?.user as { avatar_url?: string | null; image?: string | null; name?: string | null } | undefined;
     const avatar = user?.avatar_url ?? user?.image ?? null;
@@ -24,19 +26,25 @@ function HeaderActions() {
             <Link href="/feed?compose=1" aria-label="Create">
                 <Plus className="size-7" />
             </Link>
-            <Link href="/notifications" aria-label="Notifications" className="relative">
+            {/* Opens the panel the sidebar mounts — NOT a link. `/notifications`
+                is not a route (the panel is the app's only notifications
+                surface), so this was a 404 for anyone who reached it. */}
+            <button
+                type="button"
+                onClick={openNotifications}
+                aria-label="Notifications"
+                className="relative cursor-pointer"
+            >
                 <Heart className="size-[26px]" />
                 <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-red-500" />
-            </Link>
+            </button>
             <Link href="/settings" aria-label="Profile" className="size-8 overflow-hidden rounded-full bg-muted ring-1 ring-border">
-                {avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatar} alt="" className="size-full object-cover" />
-                ) : (
-                    <span className="flex size-full items-center justify-center text-xs font-bold text-muted-foreground">
-                        {user?.name?.[0]?.toUpperCase() ?? "?"}
-                    </span>
-                )}
+                {/* The house rule is no letter/initial fallback anywhere — a
+                    missing avatar is the shared default image, never a
+                    generated monogram. This rendered `?` for a user with no
+                    name at all. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={avatar || "/avatar.png"} alt="" className="size-full object-cover" />
             </Link>
         </div>
     );
