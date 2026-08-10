@@ -1127,3 +1127,52 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     scroll-behavior: auto !important;
   }
 }
+/* ── Toasts: transitions.dev "toast open / close", app-wide ──────────────────
+   Owner call 2026-08-09: every toast follows this pattern. Mapped onto
+   sonner's lifecycle states rather than a .t-toast class so ALL existing
+   toast() calls inherit it with zero call-site changes. The composed
+   var(--y) keeps sonner's stacking offset intact — replacing transform
+   outright breaks the stack. !important is load-order armor: sonner injects
+   its stylesheet at runtime, after this file.
+   Open 350ms / close 250ms (slower in than out), rise + fade + cross-blur +
+   slight scale, smooth-out ease — the reference's exact tuning. */
+:root {
+  --toast-open: 350ms;
+  --toast-close: 250ms;
+  --toast-distance: 16px;
+  --toast-blur: 2px;
+  --toast-scale: 0.97;
+  --toast-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-sonner-toast] {
+  will-change: transform, opacity, filter;
+  transition:
+    transform var(--toast-close) var(--toast-ease),
+    opacity var(--toast-close) var(--toast-ease),
+    filter var(--toast-close) var(--toast-ease),
+    height var(--toast-close) var(--toast-ease) !important;
+}
+[data-sonner-toast][data-mounted="true"] {
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    transform var(--toast-open) var(--toast-ease),
+    opacity var(--toast-open) var(--toast-ease),
+    filter var(--toast-open) var(--toast-ease),
+    height var(--toast-open) var(--toast-ease) !important;
+}
+/* Entrance start + exit end share one state: below, blurred, scaled. */
+[data-sonner-toast]:not([data-mounted="true"]),
+[data-sonner-toast][data-removed="true"] {
+  opacity: 0 !important;
+  transform: var(--y, translateY(0)) translateY(var(--toast-distance)) scale(var(--toast-scale)) !important;
+  filter: blur(var(--toast-blur)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast] {
+    transition: none !important;
+    filter: none !important;
+  }
+}

@@ -9,6 +9,26 @@ import * as React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+/**
+ * A ratio over a handful of trades is noise, not signal.
+ *
+ * `buyPercent` is a percentage, so a coin with one buy and no sells reads
+ * **100%** — a perfect score for the emptiest possible token, and it would sit
+ * at the top of any buy-pressure filter. Requiring a floor of real activity
+ * before the ratio is allowed to mean anything is the whole difference between
+ * this filter working and it surfacing dust.
+ */
+const MIN_TXNS_FOR_RATIO = 20;
+
+/** Volume in the last 5 minutes, annualised to an hour, over actual 1h volume. */
+export function volumeAcceleration(t: {
+    volume5m: number | null;
+    volume1h: number | null;
+}): number | null {
+    if (t.volume5m == null || t.volume1h == null || t.volume1h <= 0) return null;
+    return (t.volume5m * 12) / t.volume1h;
+}
+
 export interface MemescopeFilters {
     minMarketCap: number | null;
     minVolume: number | null;
@@ -16,6 +36,19 @@ export interface MemescopeFilters {
     maxAgeHours: number | null;
     /** Drop rows flagged by the holder-quality thresholds (TradeToken.risky). */
     hideRisky: boolean;
+    /**
+     * Buy share of trades, 0-100. Accumulation rather than distribution — the
+     * signal traders actually read off a pair. Only applied to coins with at
+     * least MIN_TXNS_FOR_RATIO trades; below that the ratio is dust.
+     */
+    minBuyPercent: number | null;
+    /**
+     * Momentum: 1.0 means the last 5 minutes are running at exactly the hour's
+     * pace, 2.0 means twice it. "$500 five minutes ago, $5,000 now" is the
+     * thing people look for, and it beats absolute volume for finding a move
+     * while it is still happening.
+     */
+    minVolumeAccel: number | null;
 }
 
 export const NO_FILTERS: MemescopeFilters = {
@@ -24,6 +57,8 @@ export const NO_FILTERS: MemescopeFilters = {
     minHolders: null,
     maxAgeHours: null,
     hideRisky: false,
+    minBuyPercent: null,
+    minVolumeAccel: null,
 };
 
 export function filtersActive(f: MemescopeFilters): boolean {
@@ -32,24 +67,56 @@ export function filtersActive(f: MemescopeFilters): boolean {
         f.minVolume != null ||
         f.minHolders != null ||
         f.maxAgeHours != null ||
+        f.minBuyPercent != null ||
+        f.minVolumeAccel != null ||
         f.hideRisky
     );
 }
 
 export function applyMemescopeFilters<
-    T extends { marketCap: number; volume: number; holderCount: number; createdAtMs?: number | null; risky?: boolean },
+    T extends {
+        marketCap: number;
+        volume: number;
+        holderCount: number;
+        createdAtMs?: number | null;
+        risky?: boolean;
+        buyPercent?: number;
+        txCount?: number;
+        volume5m?: number | null;
+        volume1h?: number | null;
+    },
 >(list: T[], f: MemescopeFilters): T[] {
     if (!filtersActive(f)) return list;
     const now = Date.now();
-    return list.filter(
-        (t) =>
-            (!f.hideRisky || !t.risky) &&
-            (f.minMarketCap == null || t.marketCap >= f.minMarketCap) &&
-            (f.minVolume == null || t.volume >= f.minVolume) &&
-            (f.minHolders == null || t.holderCount >= f.minHolders) &&
-            (f.maxAgeHours == null ||
-                (t.createdAtMs != null && now - t.createdAtMs <= f.maxAgeHours * 3_600_000)),
-    );
+    return list.filter((t) => {
+        if (f.hideRisky && t.risky) return false;
+        if (f.minMarketCap != null && t.marketCap < f.minMarketCap) return false;
+        if (f.minVolume != null && t.volume < f.minVolume) return false;
+        if (f.minHolders != null && t.holderCount < f.minHolders) return false;
+        if (f.maxAgeHours != null) {
+            if (t.createdAtMs == null) return false;
+            if (now - t.createdAtMs > f.maxAgeHours * 3_600_000) return false;
+        }
+        if (f.minBuyPercent != null) {
+            // Unprovable is not the same as passing. Too few trades and the
+            // percentage is an artefact of the sample size.
+            if ((t.txCount ?? 0) < MIN_TXNS_FOR_RATIO) return false;
+            if ((t.buyPercent ?? 0) < f.minBuyPercent) return false;
+        }
+        if (f.minVolumeAccel != null) {
+            // Deliberately excludes coins with no 1h baseline, which mostly
+            // means the very newest. "Accelerating" is a comparison, and
+            // without a baseline there is nothing to compare to — letting them
+            // through would make the filter mean "new OR accelerating", which
+            // is not what the field says.
+            const accel = volumeAcceleration({
+                volume5m: t.volume5m ?? null,
+                volume1h: t.volume1h ?? null,
+            });
+            if (accel == null || accel < f.minVolumeAccel) return false;
+        }
+        return true;
+    });
 }
 
 function Field({
@@ -97,6 +164,8 @@ export function MemescopeFilterDialog({
     const [volume, setVolume] = React.useState("");
     const [holders, setHolders] = React.useState("");
     const [age, setAge] = React.useState("");
+    const [buyPercent, setBuyPercent] = React.useState("");
+    const [accel, setAccel] = React.useState("");
     const [hideRisky, setHideRisky] = React.useState(false);
     React.useEffect(() => {
         if (!open) return;
@@ -104,6 +173,8 @@ export function MemescopeFilterDialog({
         setVolume(filters.minVolume?.toString() ?? "");
         setHolders(filters.minHolders?.toString() ?? "");
         setAge(filters.maxAgeHours?.toString() ?? "");
+        setBuyPercent(filters.minBuyPercent?.toString() ?? "");
+        setAccel(filters.minVolumeAccel?.toString() ?? "");
         setHideRisky(filters.hideRisky);
     }, [open, filters]);
 
@@ -121,6 +192,18 @@ export function MemescopeFilterDialog({
                     <Field label="min 24h volume ($)" value={volume} onChange={setVolume} placeholder="5000" />
                     <Field label="min holders" value={holders} onChange={setHolders} placeholder="50" />
                     <Field label="max age (hours)" value={age} onChange={setAge} placeholder="24" />
+                    <Field
+                        label={`min buy pressure (%) — needs ${MIN_TXNS_FOR_RATIO}+ trades`}
+                        value={buyPercent}
+                        onChange={setBuyPercent}
+                        placeholder="60"
+                    />
+                    <Field
+                        label="min volume acceleration (5m vs 1h pace)"
+                        value={accel}
+                        onChange={setAccel}
+                        placeholder="2"
+                    />
                     <button
                         type="button"
                         onClick={() => setHideRisky((v) => !v)}
@@ -159,6 +242,8 @@ export function MemescopeFilterDialog({
                                 minVolume: parse(volume),
                                 minHolders: parse(holders),
                                 maxAgeHours: parse(age),
+                                minBuyPercent: parse(buyPercent),
+                                minVolumeAccel: parse(accel),
                                 hideRisky,
                             });
                             onOpenChange(false);
