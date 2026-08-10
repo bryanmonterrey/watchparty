@@ -171,7 +171,26 @@ export function passesSecurityBar(
     if (sec.noMintAuthority === false) return false;
     if (sec.isFreezable === true) return false;
     if ((sec.buyTaxPct ?? 0) > 10 || (sec.sellTaxPct ?? 0) > 10) return false;
-    if (sec.securityScore != null && sec.securityScore < 30) return false;
+    // ⚠️ securityScore is NOT gated on. Measured against the live Mobula API
+    // 2026-08-10, it is 0 for coins whose every granular field is healthy:
+    //
+    //   ANTHROPIC  score 0   top10 18.4%  dev 0%  noMint true  freezable false
+    //   CLAUDE     score 0   top10 18.5%  dev 0%  noMint true  freezable false
+    //   OPENAI     score 0   top10 34.8%  17,291 holders
+    //   NVDA       score 6   top10 18.3%  dev 0%  noMint true  freezable false
+    //
+    // `securityScore < 30` therefore rejected 20 of 20 audited coins — 100%,
+    // which is never a threshold working and always a metric misread. Whatever
+    // Mobula means by this field, it is not a 0-100 safety score, and 0 plainly
+    // means "not scored" rather than "maximally unsafe".
+    //
+    // This mattered more than it looks. The rule was near-inert while the gate
+    // only reached 12 coins per pass; fixing that budget (c68d5bbb) pointed a
+    // reject-everything rule at the whole intake. `scripts/coin-feed/audit-security.ts`
+    // caught it before the watch list drained.
+    //
+    // The granular fields DO discriminate and are kept: the same audit flagged a
+    // CLAUDE on base at top10 100% / insiders 100%.
     return !isRiskyHoldings(sec);
 }
 
