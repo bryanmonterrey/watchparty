@@ -2032,6 +2032,22 @@ what makes this document worth more than the plan it started as.
     unproven risk for a certain one — a brief "end of feed". Left as-is because
     chat has shipped this exact behaviour without incident; revisit only with
     evidence, not reasoning.
+  - **✅ Browser-verified on production**, 6/6: the snapshot is written
+    (`watchparty.snap.feed:anon:feed:for-you`), the payload carries superjson
+    `Date` metadata, **21 posts paint with the `getFeed` request blocked**, and a
+    backdated snapshot is refused (0 posts). The screenshot is the better proof
+    than the count: relative timestamps read "3d ago"/"6d ago", which is exactly
+    what turns into "Invalid Date" if a `Date` came back as a string.
+  - **And I called a rollout lag a code bug, again.** The first smoke run failed
+    3/6 with no snapshot written. I probed the served JS, found
+    `watchparty.snap.` in the bundle, and concluded "deployed but broken" — but
+    that probe ran *after* the smoke test, so all it proved was that the rollout
+    had finished **by then**. Re-running the identical smoke test passed 6/6 with
+    no code change. The container rollout lagging its own green deploy is
+    already written down in memory (`worker-exceeds-memory`), I predicted it in
+    the same breath as running the test, and I still overrode it on evidence
+    that couldn't distinguish the two. **A later probe cannot rule out an
+    earlier lag.**
   - **My smoke test was wrong before the code was.** First version asserted
     `<tr>` counts on `/trending` — a route that **does not exist**, in a table
     built from divs. It would have passed by asserting nothing. Now it runs on
