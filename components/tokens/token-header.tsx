@@ -54,8 +54,38 @@ export function TokenHeader({ token }: TokenHeaderProps) {
                     
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2.5 flex-wrap">
-                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">{token.name}</h1>
-                            <span className="text-lg font-black text-postgray">${token.ticker}</span>
+                            {/* One step down from text-2xl/3xl: the name shares
+                                this row with the ticker and the socials now, and
+                                at the old size a normal-length name pushed them
+                                onto a second line. Named scale steps, not an
+                                arbitrary px value — see scripts/guards/check-text-scale.mjs. */}
+                            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">{token.name}</h1>
+                            <span className="text-base font-black text-postgray">${token.ticker}</span>
+
+                            {/* Socials sit WITH the identity, not under it.
+                                Icon-only here on purpose: the labelled pills this
+                                replaces ("@ticker", "Telegram", "Website") are far
+                                too wide to share a line with a name, and the label
+                                was never the information — the mark is. The name
+                                survives in aria-label, so nothing is lost to a
+                                screen reader. */}
+                            {socials.length > 0 && (
+                                <div className="flex items-center gap-1 pl-0.5">
+                                    {socials.map(({ href, Icon, label }) => (
+                                        <a
+                                            key={href}
+                                            href={href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            aria-label={label}
+                                            title={label}
+                                            className="grid size-7 place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/5 hover:text-white motion-reduce:transition-none"
+                                        >
+                                            <Icon className="size-4" />
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-3 text-base text-zinc-400 flex-wrap">
@@ -86,23 +116,6 @@ export function TokenHeader({ token }: TokenHeaderProps) {
                     </div>
                 </div>
 
-                {/* Social pills (aligned with image left edge) — only render links that exist */}
-                {socials.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {socials.map(({ href, Icon, label }) => (
-                            <a
-                                key={href}
-                                href={href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 py-1.5 px-3.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700/50 text-zinc-300 hover:text-white rounded-full text-xs font-semibold tracking-wide transition-all"
-                            >
-                                <Icon className="size-3.5" />
-                                <span>{label}</span>
-                            </a>
-                        ))}
-                    </div>
-                )}
             </div>
 
             <div className="flex items-start justify-start gap-2 md:gap-3 flex-wrap">
