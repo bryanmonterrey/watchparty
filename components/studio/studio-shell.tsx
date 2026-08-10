@@ -38,7 +38,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold">watchparty</span>
-            <span className="text-[10px] tracking-wide text-muted-foreground">Creator Studio</span>
+            <span className="text-xs tracking-wide text-muted-foreground">Creator Studio</span>
           </div>
         </div>
 
