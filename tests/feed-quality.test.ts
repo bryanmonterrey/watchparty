@@ -122,6 +122,43 @@ describe("holdings risk + security bar", () => {
     });
 });
 
+describe("brand tickers", () => {
+    /**
+     * Squatters use the stock TICKER, and this gate listed brands by name.
+     * Measured on the live watch list: HOOD (37 rows) and NVDA (12) held 49 of
+     * 300 slots. The HOOD rows sat at $136k liquidity — below the brand bar, so
+     * they would have been rejected had the gate recognised them.
+     */
+    test("catches the tickers observed squatting production", () => {
+        expect(isBrandSquat("HOOD", "Robinhood")).toBe(true);
+        expect(isBrandSquat("NVDA", null)).toBe(true);
+        expect(isBrandSquat("TSLA", null)).toBe(true);
+        expect(isBrandSquat("MSFT", null)).toBe(true);
+    });
+
+    test("word boundaries: NEIGHBORHOOD is not Robinhood", () => {
+        // The reason these live in BRAND_WORDS and not BRAND_TERMS. A substring
+        // match here would fail a legitimate coin for containing four letters.
+        expect(isBrandSquat("NBHD", "Neighborhood")).toBe(false);
+        expect(isBrandSquat("HOODIE", null)).toBe(false);
+        expect(isBrandSquat("PINEAPPLE", null)).toBe(false);
+    });
+
+    test("COIN and META stay out — they are ordinary crypto vocabulary", () => {
+        // Gating on these would fail real coins for using a normal word. The
+        // brands stay covered by name via BRAND_TERMS instead.
+        expect(isBrandSquat("COIN", "Just A Coin")).toBe(false);
+        expect(isBrandSquat("META", "Metaverse Token")).toBe(false);
+        // ...but the names themselves are still caught.
+        expect(isBrandSquat("CB", "Coinbase Token")).toBe(true);
+    });
+
+    test("a ticker squat still passes with enough liquidity — high bar, not a ban", () => {
+        expect(clearsBrandBar("HOOD", null, 136_439)).toBe(false);
+        expect(clearsBrandBar("HOOD", null, 400_000)).toBe(true);
+    });
+});
+
 describe("contract authority flags", () => {
     /**
      * Mint authority and freeze authority — the two checks every Solana sniper

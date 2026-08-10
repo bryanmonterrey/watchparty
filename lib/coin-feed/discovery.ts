@@ -291,40 +291,26 @@ async function pruneStale(): Promise<number> {
 /** Trim the watch list back to MAX_TRACKED, dropping the thinnest coins first,
  *  so per-coin scan frequency stays high enough to actually catch clusters. */
 /**
- * ⚠️ MEASURED 2026-08-10: this policy is the inverse of what the rail is for.
+ * ⚠️ CORRECTION 2026-08-10. An earlier version of this comment claimed this
+ * policy was "the inverse of what the rail is for" — that the cap was evicting
+ * small memecoins and leaving blue chips. **That was wrong**, and it was wrong
+ * because it read VOLUME as a proxy for size without ever checking market cap:
  *
- * The list sits at 300/300 — saturated, so this runs every pass — and it
- * deletes by `volume24hUsd ASC`, i.e. the SMALLEST coins first. Compounded over
- * time that is a ratchet, and the result is not subtle:
+ *     median market cap  $1,173,897      median turnover  21.0x
+ *     p25 market cap       $150,634      over $50M mcap   8 of 300
  *
- *     tracked:            300 / 300  (saturated)
- *     min 24h volume:     $1,355,689     <- nothing smaller survives
- *     median 24h volume:  $15,083,011
- *     over $50M volume:   63 coins  (max $186M)
- *     under $1k volume:   0
- *     min liquidity:      $15,122    (so the FLOORS are not the cause)
+ * A $1.2M coin doing $15M a day is a memecoin in a frenzy — exactly the target.
+ * The list is saturated at 300/300 and `volume24hUsd ASC` keeps the most active
+ * of a set of coins that are already small. That is defensible as it stands.
  *
- * Every comment in this file says the opposite of that. `isExcludedCoin` exists
- * because blue chips "always clear a trader-count threshold, so they'd fire on
- * every scan and bury the memecoin activity the rail is for", and networks.ts
- * says plainly "alerts are a memecoin-activity rail, so a blue chip is noise".
- * A cluster of 88 buyers is a signal on a $300k coin and noise on a $50M one —
- * and the $300k coin is exactly what this function deletes first.
+ * MAX_TRACKED remains the latency dial (a pass scans 24 coins/min, so 300 is a
+ * ~12 min worst-case cycle, and at saturation we are always at worst case).
+ * Raising it buys breadth by spending freshness; a paid GeckoTerminal key buys
+ * both. Left alone deliberately.
  *
- * The floors admit small coins. The cap then evicts them. `MAX_MARKET_CAP_USD`
- * is $2B, which is not a memecoin ceiling by any reading.
- *
- * NOT changed here, because each fix is a product call with a visible effect on
- * the rail, and picking one unasked is how you change a product by accident:
- *
- *   1. Evict by something aligned with intent instead of raw volume — the
- *      cheapest real fix, and it needs a definition of "interesting".
- *   2. Lower MAX_MARKET_CAP_USD for the ALERT path (it is already separate from
- *      the board's exclusion, so this is a one-constant change).
- *   3. Raise MAX_TRACKED — but that constant IS the latency dial: a pass scans
- *      24 coins/min, so 300 is already a ~12 min worst-case cycle, and at
- *      saturation we are always at worst case. Raising it buys breadth by
- *      spending freshness. A paid GeckoTerminal key buys both.
+ * What the saturation DOES cost is slots, and the thing consuming them turned
+ * out to be brand-squat duplicates rather than the eviction order — see
+ * quality.ts BRAND_WORDS.
  */
 async function enforceCap(): Promise<number> {
     const [{ count } = { count: 0 }] = await db

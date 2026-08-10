@@ -36,10 +36,51 @@ const BRAND_TERMS = [
     "blackrock",
 ];
 
-/** Ambiguous words matched on WORD BOUNDARIES, not substrings — $APPLE and
- *  "Apple Coin" ride the brand, $PINEAPPLE is a fruit. (Reported culprits
- *  2026-08-07: nvidia, openai, apple.) */
-const BRAND_WORDS = ["apple", "aapl"];
+/**
+ * Ambiguous words matched on WORD BOUNDARIES, not substrings — $APPLE and
+ * "Apple Coin" ride the brand, $PINEAPPLE is a fruit. (Reported culprits
+ * 2026-08-07: nvidia, openai, apple.)
+ *
+ * ## Tickers, added 2026-08-10 from production
+ *
+ * `BRAND_TERMS` above lists brands by NAME, and squatters overwhelmingly use
+ * the **stock ticker**. Measured on the live watch list, 49 of 300 slots — 16%
+ * — were two tickers this gate did not recognise:
+ *
+ *     HOOD   37 rows   min liquidity $136,439   (Robinhood)
+ *     NVDA   12 rows   min liquidity $407,711   (Nvidia — "nvidia" IS in
+ *                                                BRAND_TERMS; NVDA is not)
+ *
+ * The HOOD rows are the point: at $136k liquidity they sit BELOW
+ * BRAND_SQUAT_MIN_LIQUIDITY_USD and would have been rejected outright had the
+ * gate known what they were. It didn't, so they took slots on the alert rail
+ * built to keep them off it — the same $CLAUDE/$ANTHROPIC failure from
+ * 2026-08-07, wearing a ticker.
+ *
+ * This list already anticipated the pattern (`aapl` sits beside `apple`) and
+ * then stopped at one brand. The comment above says "extend as observed"; this
+ * is the observation.
+ *
+ * ⚠️ Word boundaries are load-bearing here, far more than for names. `hood`
+ * as a substring eats NEIGHBORHOOD and ROBINHOOD; `\bhood\b` does not.
+ *
+ * ⚠️ Two tickers are deliberately ABSENT. `COIN` (Coinbase) and `META` (Meta)
+ * are ordinary crypto vocabulary — "coin" appears in a large share of token
+ * names — and gating on them would fail a real coin for using a normal word.
+ * The brands themselves stay covered by name in BRAND_TERMS, which is safe as
+ * a substring. A ticker only earns a place here when it is not also a word.
+ */
+const BRAND_WORDS = [
+    // Observed squatting the live watch list.
+    "aapl", "apple",
+    "nvda",
+    "hood", "robinhood",
+    // Completing tickers for brands already listed by name above, so the two
+    // halves of one decision don't drift apart again.
+    "tsla",
+    "msft",
+    "mstr",
+];
 const BRAND_WORD_RE = new RegExp(`\\b(${BRAND_WORDS.join("|")})\\b`, "i");
 
 export function isBrandSquat(symbol: string, name: string | null | undefined): boolean {
