@@ -78,3 +78,5 @@ skills-lock.json
 
 # Wallet ciphertext backups from master-key rotation — never commit
 .wallet-backups/
+
+.smoke/
