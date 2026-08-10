@@ -19,6 +19,10 @@ import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
 import { CoinSecurityCard } from "./coin-security-card";
+import { TokenBondingCurve } from "@/components/tokens/token-bonding-curve";
+import { TokenDescription } from "@/components/tokens/token-description";
+import { TokenChatCard } from "@/components/tokens/token-chat-card";
+import type { Token } from "@/db/schema/content";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
@@ -48,6 +52,23 @@ export type CoinViewData = {
     txns24h: number | null;
     /** Set for coins WE launched (lib/coins/resolve). Mobula covers the rest. */
     socials?: { twitter: string | null; telegram: string | null; website: string | null } | null;
+};
+
+/**
+ * A coin WE launched, when this page is rendering one.
+ *
+ * The coin page used to fork: `tokens` row -> TokenProfile, anything else ->
+ * CoinDetail. That was always meant to be one page, and the fork had already
+ * started costing — socials shipped to TokenProfile where 0 of 57 tokens have
+ * one, while every coin a user actually opens renders here and had none at all.
+ *
+ * So the row rides along as a prop rather than being flattened into
+ * CoinViewData. The three panels below are the existing TokenProfile components
+ * and take a full `Token`; reshaping it would mean maintaining a second
+ * projection of the same row for no gain.
+ */
+export type WatchpartyToken = Token & {
+    creator: { id: string; name: string; username: string | null; avatar_url: string | null; wallet_address?: string | null };
 };
 
 function compactUsd(value: number | null) {
@@ -649,7 +670,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
  * The dock is a sibling of the whole grid, so it stays a full-height gutter on
  * the right rather than becoming a grid cell.
  */
-export function CoinDetail({ coin }: { coin: CoinViewData }) {
+export function CoinDetail({ coin, wpToken }: { coin: CoinViewData; wpToken?: WatchpartyToken }) {
     // One line per coin opened. Keyed on the coin so a client-side navigation
     // between coins logs each one — this page is reached far more often by
     // in-app link than by fresh load, and a mount-only log would miss most of it.
@@ -670,9 +691,21 @@ export function CoinDetail({ coin }: { coin: CoinViewData }) {
                         chart's width and nothing else. */}
                     <div className="flex min-w-0 flex-col">
                         <CoinHeader coin={coin} />
+                        {/* Bonding curve sits ABOVE the chart, and only for our
+                            own pre-migration launches: while a coin is still on
+                            the curve, progress IS the story and the price chart
+                            is a thin line. TokenBondingCurve no-ops on any other
+                            phase, so this needs no second condition. */}
+                        {wpToken && <TokenBondingCurve token={wpToken} />}
                         <CoinChart coin={coin} />
+                        {/* Creator + description: identity a coin we launched
+                            has and a Dexscreener row never will. */}
+                        {wpToken && <TokenDescription token={wpToken} />}
                     </div>
-                    <CoinSwap coin={coin} />
+                    <div className="flex min-w-0 flex-col gap-1">
+                        <CoinSwap coin={coin} />
+                        {wpToken && <TokenChatCard token={wpToken} creatorUsername={wpToken.creator.username} />}
+                    </div>
                 </div>
             </div>
 

@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { tokens } from "@/db/schema/content";
 import { eq, or } from "drizzle-orm";
 import { TokenProfile } from "@/components/tokens/token-profile";
-import { CoinDetail } from "@/components/coins/coin-detail";
+import { CoinDetail, type CoinViewData } from "@/components/coins/coin-detail";
 import { resolveCoin } from "@/lib/coins/resolve";
 
 // Coin pages live here, not at the top level. They used to share `/[slug]` with
@@ -44,6 +44,36 @@ const getToken = cache((mint: string) =>
 // resolve per request rather than one for the title and one for the body.
 const getCoin = cache((address: string, network?: string) => resolveCoin(address, network));
 
+/**
+ * Our own token row projected into the shape CoinDetail reads.
+ *
+ * Only needed for a coin that hasn't been indexed yet — a fresh launch, or a
+ * draft with no pool. Everything else resolves through the normal path, and the
+ * full row still rides along as `wpToken` for the panels that need it.
+ */
+function coinFromToken(token: NonNullable<Awaited<ReturnType<typeof getToken>>>): CoinViewData {
+    return {
+        id: token.id,
+        network: "solana",
+        tokenAddress: token.tokenAddress ?? token.id,
+        poolAddress: token.poolAddress ?? "",
+        symbol: token.ticker,
+        name: token.name,
+        imageUrl: token.imageUrl,
+        priceUsd: token.priceUsd,
+        marketCapUsd: token.marketCapUsd,
+        liquidityUsd: null,
+        volume24hUsd: token.volume24hUsd,
+        priceChange24h: token.priceChange24h,
+        buys24h: null,
+        sells24h: null,
+        txns24h: token.txCount24h,
+        socials: token.twitterUrl || token.telegramUrl || token.websiteUrl
+            ? { twitter: token.twitterUrl, telegram: token.telegramUrl, website: token.websiteUrl }
+            : null,
+    };
+}
+
 /** `[address]` or `[chain, address]` — the address is always last. Anything
  *  longer isn't a coin URL. */
 function parseSlug(slug: string[]): { address: string; network?: string } | null {
@@ -52,9 +82,12 @@ function parseSlug(slug: string[]): { address: string; network?: string } | null
     return null;
 }
 
-type Params = { params: Promise<{ slug: string[] }> };
+type Params = {
+    params: Promise<{ slug: string[] }>;
+    searchParams: Promise<{ legacy?: string }>;
+};
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
+export async function generateMetadata({ params }: Pick<Params, "params">): Promise<Metadata> {
     const { slug } = await params;
     const parsed = parseSlug(slug);
     if (!parsed) return { title: "not found" };
@@ -85,19 +118,33 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
  * coin we hadn't launched 404'd — which was every one of the 162 coins on the
  * trending board, and every coin the alert feed reports.
  */
-export default async function CoinPage({ params }: Params) {
+export default async function CoinPage({ params, searchParams }: Params) {
     const { slug } = await params;
     const parsed = parseSlug(slug);
     if (!parsed) notFound();
 
     const token = await getToken(parsed.address);
-    if (token) return <TokenProfile token={token} />;
 
-    const coin = await getCoin(parsed.address, parsed.network);
+    // ONE page for every coin, ours included. The fork this replaces had already
+    // started costing: socials shipped to TokenProfile, where 0 of 57 tokens
+    // have one set, while every coin a user actually opens — trending board,
+    // alerts rail — renders CoinDetail and had no socials at all. Two pages
+    // meant every improvement landed on one of them.
+    //
+    // `?legacy=1` still serves TokenProfile. This is a whole-page change to
+    // something users look at and it has not been seen in a browser, so the old
+    // one stays one query param away rather than one revert away.
+    const { legacy } = await searchParams;
+    if (token && legacy === "1") return <TokenProfile token={token} />;
+
+    // A coin of ours that never made it onto the trending board or the alert
+    // watch list won't resolve — a fresh launch, or a draft with no pool yet —
+    // so its own row is the fallback rather than a 404.
+    const coin = (await getCoin(parsed.address, parsed.network)) ?? (token ? coinFromToken(token) : null);
     if (!coin) notFound();
 
     // No pt-header wrapper: the dock inside CoinDetail is a sticky h-screen
     // column, and offsetting it pushes its bottom that far past the viewport.
     // The clearance lives on the content column instead.
-    return <CoinDetail coin={coin} />;
+    return <CoinDetail coin={coin} wpToken={token ?? undefined} />;
 }
