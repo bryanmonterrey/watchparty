@@ -38,3 +38,4 @@ export * from "./coin-index";
 export * from "./coin-candles";
 export * from "./api-key";
 export * from "./developer-webhook";
+export * from "./developer-app";

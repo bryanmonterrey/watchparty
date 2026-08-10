@@ -68,7 +68,7 @@ const NAV_GROUPS: {
     label: "Access",
     items: [
       { icon: Folder01Icon, label: "Projects", href: "/projects", soon: true },
-      { icon: DashboardSquare01Icon, label: "Apps", href: "/apps", soon: true },
+      { icon: DashboardSquare01Icon, label: "Apps", href: "/apps" },
       { icon: Key01Icon, label: "Keys", href: "/keys" },
       { icon: Analytics01Icon, label: "Usage", href: "/usage" },
     ],
