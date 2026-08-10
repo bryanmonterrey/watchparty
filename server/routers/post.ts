@@ -3,7 +3,7 @@ import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { db } from "@/db";
 import { posts, user, bookmarks } from "@/db/schema";
 import { follows } from "@/db/schema/content/follow";
-import { eq, and, desc, lt, sql, ilike, or, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, gt, lt, sql, ilike, or, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 
@@ -201,7 +201,19 @@ export const postRouter = router({
         )
         .query(async ({ ctx, input }) => {
             const pattern = `%${input.query}%`;
-            const cursorValue = input.cursor;
+            // `<value>|<id>`. Tolerant of a legacy value-only cursor from a
+            // client mid-session: it degrades to the old skip-ties behaviour
+            // for one page rather than throwing.
+            const sortCol = input.sort === "top" ? posts.baseScore : posts.createdAt;
+            const sortKey = (() => {
+                if (!input.cursor) return null;
+                const sep = input.cursor.lastIndexOf("|");
+                const rawValue = sep === -1 ? input.cursor : input.cursor.slice(0, sep);
+                const id = sep === -1 ? "" : input.cursor.slice(sep + 1);
+                const value = input.sort === "top" ? Number(rawValue) : new Date(rawValue);
+                if (input.sort === "top" ? !Number.isFinite(value as number) : Number.isNaN((value as Date).getTime())) return null;
+                return { value, id };
+            })();
 
             const origPosts = alias(posts, "orig_posts");
             const origUser = alias(user, "orig_user");
@@ -279,9 +291,27 @@ export const postRouter = router({
                     // surfaced them (Videos/Media tabs came up empty).
                     or(ilike(posts.content, pattern), ilike(posts.title, pattern)),
                     input.onlyMedia ? or(sql`${posts.media} IS NOT NULL AND jsonb_array_length(${posts.media}) > 0`, sql`${posts.imageUrl} IS NOT NULL`, sql`${posts.videoUrl} IS NOT NULL`) : undefined,
-                    cursorValue ? lt(input.sort === "top" ? posts.baseScore : posts.createdAt, cursorValue as any) : undefined,
+                    // Composite keyset: strictly "after" the cursor row under
+                    // `<sort col> DESC, id ASC`.
+                    //
+                    // A value-only `lt` skipped every row TIED with the cursor,
+                    // and for `sort: "top"` that silently truncated the whole
+                    // result set: `baseScore` is `real().default(0)`, so every
+                    // post with no engagement is exactly 0. The moment page 1
+                    // reached those, nextCursor was "0" and page 2 asked for
+                    // `baseScore < 0` — which matches nothing, ever. "latest"
+                    // had the milder version of the same bug via timestamp ties.
+                    sortKey
+                        ? or(
+                            lt(sortCol, sortKey.value as any),
+                            and(eq(sortCol, sortKey.value as any), gt(posts.id, sortKey.id)),
+                        )
+                        : undefined,
                 ))
-                .orderBy(input.sort === "top" ? desc(posts.baseScore) : desc(posts.createdAt))
+                // id ASC is the tiebreak the composite cursor needs; without it
+                // tied rows come back in arbitrary order and the cursor is
+                // non-deterministic between pages.
+                .orderBy(input.sort === "top" ? desc(posts.baseScore) : desc(posts.createdAt), asc(posts.id))
                 .limit(input.limit + 1);
 
             const hasMore = rows.length > input.limit;
@@ -357,7 +387,10 @@ export const postRouter = router({
             let nextCursor: string | undefined;
             if (hasMore) {
                 const lastItem = rawItems[rawItems.length - 1];
-                nextCursor = input.sort === "top" ? lastItem.baseScore?.toString() : lastItem.createdAt.toISOString();
+                // Value AND id, so the next page can resume inside a run of
+                // tied rows instead of stepping over it.
+                const value = input.sort === "top" ? String(lastItem.baseScore ?? 0) : lastItem.createdAt.toISOString();
+                nextCursor = `${value}|${lastItem.id}`;
             }
 
             return { posts: items, hasMore, nextCursor };
