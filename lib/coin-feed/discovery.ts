@@ -120,6 +120,102 @@ async function screenSecurity(pools: DiscoveredPool[]): Promise<DiscoveredPool[]
     return pools.filter((p) => !rejected.has(trackedTokenId(p.network, p.tokenAddress)));
 }
 
+/**
+ * Circuit breaker on mass eviction, with both constants taken from a measurement
+ * rather than from taste.
+ *
+ * It exists because the failure it guards against already happened:
+ * `passesSecurityBar` gated on Mobula's `securityScore`, which reads 0 for
+ * perfectly healthy coins, so the predicate rejected **20 of 20** audited coins
+ * (02d2d7a8). A re-screen wired at that moment would have deleted the entire
+ * watch list in one pass, and the symptom — the alert rail going quiet — would
+ * have surfaced days later with the cause buried four commits back.
+ *
+ * A full audit of all 300 tracked coins (`scripts/coin-feed/audit-security.ts`)
+ * then gave the real baseline: **261 pass, 39 fail — 13.0%**, every failure a
+ * genuine one-cluster coin (top10 88-100%, dev 76-93%, bundlers up to 100%).
+ *
+ * That measurement moved both numbers. My first attempt at this used 15%, which
+ * sits directly on top of a 13% baseline: a pass screening 12 coins and failing
+ * 2 is 16.7%, so the breaker would have tripped constantly during normal
+ * operation and quietly stopped evicting anything — a safety device that fails
+ * closed on healthy input is just an outage with a good reason.
+ *
+ * So: 40%, which is nowhere near 13% and nowhere near the 100% of a broken
+ * predicate, and it cannot trip at all below a sample worth judging.
+ */
+const MAX_EVICT_FRACTION = 0.4;
+/** Below this many screened in a pass, the fraction is noise — don't judge it. */
+const MIN_SCREENED_FOR_BREAKER = 30;
+
+/**
+ * Re-apply the security gate to coins ALREADY tracked.
+ *
+ * `screenSecurity` runs on discovered pools only, so nothing ever re-checked a
+ * coin once it was adopted — and until c68d5bbb the per-pass budget counted
+ * cache hits, so only the first 12 of a deterministic ordering were screened at
+ * all. Every coin on the list predates a working gate.
+ *
+ * Cheap by construction: cached lookups cost nothing and only genuine misses
+ * spend the API budget, so a pass screens everything already cached and chips
+ * away at the rest. With a 900s security TTL the list turns over continuously
+ * rather than in one expensive sweep.
+ */
+async function rescreenTracked(): Promise<number> {
+    if (!mobulaEnabled()) return 0;
+
+    const rows = await db
+        .select({
+            id: trackedTokens.id,
+            network: trackedTokens.network,
+            tokenAddress: trackedTokens.tokenAddress,
+        })
+        .from(trackedTokens)
+        .where(and(eq(trackedTokens.pinned, false), isNull(trackedTokens.wpTokenId)));
+    if (rows.length === 0) return 0;
+
+    const doomed: string[] = [];
+    let apiCalls = 0;
+    let screened = 0;
+
+    for (const r of rows) {
+        if (apiCalls >= SECURITY_CHECKS_PER_PASS) break;
+        try {
+            const sec = await withCache(
+                `coin:security:v1:${r.network}:${r.tokenAddress}`,
+                mobulaCadence().securityTtl,
+                () => {
+                    apiCalls++;
+                    return fetchMobulaTokenSecurity(r.network, r.tokenAddress);
+                },
+            );
+            screened++;
+            if (!passesSecurityBar(sec)) doomed.push(r.id);
+        } catch {
+            // Fail-open, same as discovery: a 429 is not evidence of anything.
+        }
+    }
+
+    if (doomed.length === 0) return 0;
+
+    // Measured against what was SCREENED this pass, not the whole table: a pass
+    // that reached 40 coins and rejected 35 is exactly as alarming as one that
+    // rejected 90% of 300. But a pass that reached 5 and rejected 3 is not
+    // alarming at all, which is what MIN_SCREENED_FOR_BREAKER is for.
+    if (screened >= MIN_SCREENED_FOR_BREAKER && doomed.length / screened > MAX_EVICT_FRACTION) {
+        console.error(
+            `[coin-feed] SECURITY RE-SCREEN REFUSED: ${doomed.length}/${screened} coins failed ` +
+            `(> ${Math.round(MAX_EVICT_FRACTION * 100)}%). That is a broken predicate, not a dirty ` +
+            `list — nothing evicted. Run scripts/coin-feed/audit-security.ts --db prod.`,
+        );
+        return 0;
+    }
+
+    await db.delete(trackedTokens).where(inArray(trackedTokens.id, doomed));
+    console.log(`[coin-feed] security re-screen evicted ${doomed.length}/${screened} tracked coin(s)`);
+    return doomed.length;
+}
+
 const CHUNK = 100;
 
 /** Upsert pools into the watch list, refreshing cached market columns.
@@ -433,7 +529,7 @@ export async function runDiscovery(budget: CallBudget): Promise<DiscoveryResult>
 
     const discovered = await upsertPools(await screenSecurity(found));
     const watchparty = await syncWatchpartyTokens();
-    const evicted = (await evictExcluded()) + (await evictBrandSquats());
+    const evicted = (await evictExcluded()) + (await evictBrandSquats()) + (await rescreenTracked());
     const pruned = await pruneStale();
     const trimmed = await enforceCap();
 
