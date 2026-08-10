@@ -169,22 +169,36 @@ function KeyRow({
   );
 }
 
+// Keep in step with MAX_ACTIVE_KEYS in server/routers/apiKeys.ts.
+const KEY_CAP = 10;
+
 export function KeysView() {
   const keys = trpc.apiKeys.list.useQuery();
   const [creating, setCreating] = React.useState(false);
+  const activeCount = (keys.data ?? []).filter((k) => !k.revoked).length;
+  const atCap = !!keys.data && activeCount >= KEY_CAP;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Keys</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold">Keys</h2>
+            {/* The portal's "(n of cap)" quota counter, live wherever a cap exists. */}
+            {keys.data ? (
+              <Chip>
+                {activeCount} of {KEY_CAP} active
+              </Chip>
+            ) : null}
+          </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             A key is what your app or agent sends as{" "}
-            <span className="font-mono">x-api-key</span>. Up to 10 active keys.
+            <span className="font-mono">x-api-key</span>.
+            {atCap ? " You're at the cap — revoke a key to create another." : ""}
           </p>
         </div>
         {!creating ? (
-          <Button className="gap-1.5" onClick={() => setCreating(true)}>
+          <Button className="gap-1.5" disabled={atCap} onClick={() => setCreating(true)}>
             <HugeiconsIcon icon={Add01Icon} className="size-4" />
             Create key
           </Button>

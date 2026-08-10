@@ -51,23 +51,24 @@ import { useSession, useSignOut } from "@/lib/session";
 // The full X-console IA (docs/console-x-reference.md shell section): grouped
 // nav, active item highlighted, avatar + sign-out in the footer. Surfaces
 // whose backend isn't live yet render their production empty state — no mock
-// rows, no dead buttons.
+// rows, no dead buttons — and carry a "Soon" pill so the nav communicates
+// state, not just location (the Discord-portal badge language).
 const NAV_GROUPS: {
   label?: string;
-  items: { icon: typeof Home01Icon; label: string; href: string }[];
+  items: { icon: typeof Home01Icon; label: string; href: string; soon?: boolean }[];
 }[] = [
   {
     items: [
       { icon: Home01Icon, label: "Dashboard", href: "/" },
       { icon: Notification03Icon, label: "Notifications", href: "/notifications" },
-      { icon: SparklesIcon, label: "Agent", href: "/agent" },
+      { icon: SparklesIcon, label: "Agent", href: "/agent", soon: true },
     ],
   },
   {
     label: "Access",
     items: [
-      { icon: Folder01Icon, label: "Projects", href: "/projects" },
-      { icon: DashboardSquare01Icon, label: "Apps", href: "/apps" },
+      { icon: Folder01Icon, label: "Projects", href: "/projects", soon: true },
+      { icon: DashboardSquare01Icon, label: "Apps", href: "/apps", soon: true },
       { icon: Key01Icon, label: "Keys", href: "/keys" },
       { icon: Analytics01Icon, label: "Usage", href: "/usage" },
     ],
@@ -75,10 +76,10 @@ const NAV_GROUPS: {
   {
     label: "Toolbox",
     items: [
-      { icon: ZapIcon, label: "Event subscriptions", href: "/event-subscriptions" },
-      { icon: WebhookIcon, label: "Webhooks", href: "/webhooks" },
-      { icon: ConnectIcon, label: "Connections", href: "/connections" },
-      { icon: FilterIcon, label: "Streaming rules", href: "/streaming-rules" },
+      { icon: ZapIcon, label: "Event subscriptions", href: "/event-subscriptions", soon: true },
+      { icon: WebhookIcon, label: "Webhooks", href: "/webhooks", soon: true },
+      { icon: ConnectIcon, label: "Connections", href: "/connections", soon: true },
+      { icon: FilterIcon, label: "Streaming rules", href: "/streaming-rules", soon: true },
     ],
   },
   {
@@ -135,6 +136,11 @@ export function ConsoleSidebar({ ...props }: React.ComponentProps<typeof Sidebar
                     >
                       <HugeiconsIcon icon={item.icon} className="size-4" />
                       <span className="text-sm">{item.label}</span>
+                      {item.soon ? (
+                        <span className="ml-auto rounded-full border px-1.5 py-px text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Soon
+                        </span>
+                      ) : null}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

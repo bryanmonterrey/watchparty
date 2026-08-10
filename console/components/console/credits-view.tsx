@@ -58,8 +58,50 @@ export function CreditsView() {
   const canRedeem =
     !!selected && Number.isFinite(usd) && usd >= 1 && signature.trim().length >= 64;
 
+  // The Discord Premium Apps opener (console-discord-reference.md §13): the
+  // whole journey compressed to three numbered steps and one CTA, shown only
+  // until the first credits land.
+  const showOnboarding = !!keys.data && totalBalance === 0;
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
+      {showOnboarding ? (
+        <div className="rounded-xl border bg-card p-4 sm:p-5">
+          <p className="text-sm font-medium">Start calling the paid API</p>
+          <div className="mt-3 flex flex-col gap-3">
+            {[
+              {
+                title: "Create a key",
+                desc: "Your app or agent sends it as x-api-key on every request.",
+              },
+              {
+                title: "Fund it with USDC",
+                desc: "Send USDC on Solana from any wallet, then redeem the transaction signature below. 1 credit = $1.",
+              },
+              {
+                title: "Call the API",
+                desc: "Calls draw down the key's balance — from $0.001 each. Agents can skip all of this and pay per request with x402.",
+              },
+            ].map((s, i) => (
+              <div key={s.title} className="flex items-start gap-3">
+                <div className="flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium tabular-nums">
+                  {i + 1}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{s.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {active.length === 0 ? (
+            <Button size="sm" className="mt-4" render={<Link href="/keys" />}>
+              Create a key
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="rounded-xl border bg-card p-4 sm:p-5">
         <p className="text-xs text-muted-foreground">Remaining balance</p>
         {keys.isPending ? (

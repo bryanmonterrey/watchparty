@@ -614,6 +614,31 @@ and a support row. The Embed Debugger also legitimizes shipping our own
 single-purpose tool pages (OG/embed tester, webhook payload tester from
 §7) as first-class nav items.
 
+## Applied to the console (2026-08-10)
+
+First build pass over the mappings above, in `console/`:
+
+- **§14 Home → dashboard**: cross-sell grid (the x402 card absorbs the old
+  dismissible banner — same pitch, same link; event subscriptions + console
+  agent carry Soon pills), documentation link-cards (docs anchors + console
+  pages). Chart/keys column kept from the X blueprint.
+- **§9 checklist → dashboard "Get started"**: auto-evaluated from live key
+  data (create key → fund → first call), amber "n steps left" summary, each
+  row links to its fix; the card disappears once the journey completes.
+- **§8 "(n of cap)" → Keys**: "n of 10 active" chip in the heading, Create
+  disabled at the cap with the reason inline (cap mirrors `MAX_ACTIVE_KEYS`
+  in `server/routers/apiKeys.ts`).
+- **§13 three-step opener → Credits**: numbered create/fund/call path shown
+  until the first credits land, one CTA.
+- **Shell badge language → sidebar**: Soon pills on the seven unshipped
+  surfaces (Agent, Projects, Apps, Event subscriptions, Webhooks,
+  Connections, Streaming rules).
+
+Not buildable yet (no backend): §6 webhooks page (`apiKeys` is the only
+developer-platform router — there is no developer-webhooks surface), §1 app
+detail (no app registry), §2/§3 scopes & OAuth (keys are unscoped), §7
+payload tester (needs webhooks first).
+
 ## Pages not yet captured
 
 Only Games › Game Identity remains, and it's locked until a game claim
