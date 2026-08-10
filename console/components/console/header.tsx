@@ -18,7 +18,11 @@ const TITLES: Record<string, string> = {
 
 export function ConsoleHeader() {
   const pathname = usePathname();
-  const title = TITLES[pathname] ?? "Console";
+  // Nested routes (/keys/<id>) inherit their section's title.
+  const section = Object.keys(TITLES)
+    .filter((p) => p !== "/")
+    .find((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const title = TITLES[pathname] ?? (section ? TITLES[section] : "Console");
 
   return (
     <header className="flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2 sm:py-3 border-b bg-card sticky top-0 z-10 w-full">

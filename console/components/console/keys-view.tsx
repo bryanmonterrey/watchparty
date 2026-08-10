@@ -113,7 +113,12 @@ function KeyRow({
         <div className="flex size-8 items-center justify-center rounded-lg border">
           <HugeiconsIcon icon={Key01Icon} className="size-3.5 text-muted-foreground" />
         </div>
-        <p className="text-sm font-medium">{k.name}</p>
+        <Link
+          href={`/keys/${k.id}`}
+          className="text-sm font-medium underline-offset-2 hover:underline"
+        >
+          {k.name}
+        </Link>
         <Chip>
           <span className="font-mono">{k.prefix}</span>
         </Chip>

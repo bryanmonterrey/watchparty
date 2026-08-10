@@ -101,7 +101,10 @@ export function ConsoleSidebar({ ...props }: React.ComponentProps<typeof Sidebar
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
-                      isActive={pathname === item.href}
+                      isActive={
+                        pathname === item.href ||
+                        (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+                      }
                       className="h-9"
                     >
                       <HugeiconsIcon icon={item.icon} className="size-4" />
