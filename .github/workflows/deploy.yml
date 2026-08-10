@@ -36,6 +36,7 @@ jobs:
         run: |
           node scripts/guards/check-wallet-address-display.mjs
           node scripts/guards/check-file-sizes.mjs
+          node scripts/guards/check-text-scale.mjs
 
   deploy:
     needs: [test]

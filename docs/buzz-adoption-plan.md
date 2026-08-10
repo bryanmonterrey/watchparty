@@ -474,7 +474,26 @@ allowlist is what makes a guard survivable.
    `lib/utils.ts`, functional (non-display) uses, and explicit `path:line`
    exceptions with a comment explaining each.
 
-2. **`scripts/check-text-scale.mjs`** — ban arbitrary text-size literals
+2. ✅ **DONE 2026-08-09 — `scripts/guards/check-text-scale.mjs`.** All three
+   guards now run in the `test` job, which gates `deploy` and `deploy-container`.
+
+   Seeded at **883 allowlist entries** (2,271 raw occurrences — the "we will
+   have a lot of existing hits" prediction was right). Two decisions worth
+   keeping:
+   - **Keyed on `path:literal`, not `path:line`.** A line-numbered allowlist
+     invalidates itself the moment anyone adds an import, and then everybody
+     just regenerates it — which is the same as not having a guard.
+   - **The size regex requires a UNIT.** `text-[…]` is also how arbitrary
+     *colors* are written, and matching those would flag half the app for a rule
+     that has nothing to say about them. Comment lines are skipped too: flagging
+     a note that explains why a size was chosen just trains people to write
+     worse comments.
+
+   Ratchet verified by deliberately adding `text-[13.5px]` — fails with
+   `components/ui/skeleton.tsx:21  text-[13.5px]` and exit 1, then clean again
+   once removed.
+
+   Original scope, for reference: ban arbitrary text-size literals
    (`text-[15px]`, `text-[0.9rem]`, CSS `font-size: 15px`) so type stays on one
    named scale. Buzz's rationale is zoom (px freezes against Cmd +/-); ours is
    consistency, and it's the same fix either way: add a named token to the
@@ -869,9 +888,12 @@ a reaction lands.
 
    Reduced motion: cross-fade and pulse both off, straight swap.
 
-2. **Fix the stale comment** at the top of `components/ui/skeleton.tsx` — it
-   still describes "a soft highlight band sweeps across a flat fill", which
-   hasn't been true since July.
+2. ✅ **Stale comment — already fixed** (checked 2026-08-09). The header of
+   `components/ui/skeleton.tsx` now reads "a STILL flat fill … the sweep it
+   describes was removed on 2026-07-28 and should not come back", and
+   `.shimmer-skeleton` in `globals.css` is a plain `background-color` with no
+   keyframes. The class kept its misleading name; the behaviour is right. This
+   plan was the stale thing, not the code.
 
 3. **Adopt `SkeletonReveal`** on the surfaces where we already mirror component
    chrome in the skeleton (rails, tiles, alerts). Those are the ones already
