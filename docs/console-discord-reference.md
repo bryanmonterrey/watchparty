@@ -299,12 +299,76 @@ children; the active child gets the left accent bar.
 Show Code on the right. That's the shape for a webhook-payload tester or
 embed-preview surface in our console.
 
+## 8. App Testers
+
+The sparsest page in the portal — one input, one button, one counter.
+
+- H1 "Application Testers" + "You can invite up to 50 Discord users to
+  test your application. They must have a registered email and a positive
+  attitude :^)" (personality in the microcopy, even on a utility page).
+- **Invite**: single text input (placeholder `discord.username`) + blurple
+  **Invite** button right-aligned on the same row.
+- **Invited Testers (0 of 50)** — quota surfaced as a counter in the list
+  heading, same pattern as Emojis "(0 of 2000)" and Art Assets "(0 of 300)".
+- Nothing else. No empty-state illustration, no explainer card — the page
+  trusts the one-line description.
+
+→ watchparty mapping: when the console grows an app registry, this is the
+pre-verification distribution path — a capped allowlist of named users who
+can use an unpublished app. The durable pattern is the **"(n of cap)"
+counter in the section heading**, which the portal uses everywhere a quota
+exists; our console should adopt it for keys, webhooks, and test users.
+
+## 9. App Verification
+
+The page the sidebar's orange ⚠ has been pointing at. Two screenshots,
+full page.
+
+- H1 "Verify your App" + "In order to scale your application past 100
+  servers, we require your team owner to complete identity and application
+  verification. Learn more." — **verification is the scale gate**, not a
+  vanity badge.
+- **Verification Qualifications** card. Status line in orange:
+  "Your app is missing 3 criteria and cannot be verified" — the count is
+  computed from the rows below. Six criteria, each a row with a live ⚠/✓
+  icon and a chevron (rows are drill-downs, not static text):
+  - ⚠ Your app must belong to a Team
+  - ✓ Your app must not contain any harmful or bad language in its name,
+    description, commands, or role connection metadata
+  - ⚠ Your app must have a link to Terms of Service
+  - ⚠ Your app must have a link to your Privacy Policy
+  - ✓ Your app must have an install link
+  - ✓ All members of your developer team must have a verified email and
+    2FA set up
+  A compliance requirement rendered as an **auto-evaluated checklist** —
+  the app's actual state is checked against each criterion, so the page is
+  a to-do list, not a form you fill in and hope.
+- **App Identity** card. "Caution: After verification, you cannot modify
+  the app's name or transfer ownership without the assistance of Discord's
+  support team." — irreversibility stated before the commit point, same
+  move as Art Assets' immutable keys banner. Shows **APP NAME** (partyclaw,
+  Edit Name button) and **OWNERSHIP** (owner avatar + username, Change
+  Owner button) — i.e. your last chance to change both, presented inline.
+- Two affirmation checkboxes before the CTA: "I affirm that my application
+  abides by the Discord Developer Terms of Service and Developer Policy"
+  (both linked) and "I am the owner of this app. I recognize that after
+  verification, I cannot modify the app's name or transfer ownership…" —
+  the irreversibility warning repeated as an *active acknowledgment*, not
+  just a banner.
+- Blurple **Verify App** submit button at the bottom.
+
+→ watchparty mapping: this is the shape for any "go live" gate in the
+console (publish an app, raise a rate tier, enter the app directory):
+auto-evaluated criteria rows with ✓/⚠ + drill-down, an orange computed
+"missing n criteria" summary, the nav badge driven by the same state, and
+irreversible identity fields surfaced with an explicit checkbox
+acknowledgment at the point of no return.
+
 ## Pages not yet captured
 
-App Testers, App Verification, the Games/Activities/Premium Apps groups,
-the top-level Applications list, and the sliver of the Visualizer form
-below join Secret (spectate/match secrets). Transcribe them here as
-screenshots arrive.
+The Games/Activities/Premium Apps groups, the top-level Applications list,
+and the sliver of the Visualizer form below join Secret (spectate/match
+secrets). Transcribe them here as screenshots arrive.
 
 ## Rejected source: github.com/mooncord/devportal (evaluated 2026-08-10)
 
