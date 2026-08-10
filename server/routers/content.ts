@@ -1400,7 +1400,7 @@ export const contentRouter = router({
             cursor: z.string().optional(),
         }))
         .query(async ({ input }) => {
-            const cursorDate = input.cursor ? new Date(input.cursor) : undefined;
+            const vidOffset = input.cursor ? Math.max(0, parseInt(input.cursor, 10) || 0) : 0; // ranked sort → OFFSET
 
             const results = await db
                 .select({
@@ -1429,18 +1429,18 @@ export const contentRouter = router({
                         eq(posts.visibility, "public"),
                         isNotNull(posts.videoUrl),
                         input.excludePostId ? sql`${posts.id} != ${input.excludePostId}` : undefined,
-                        cursorDate ? lt(posts.createdAt, cursorDate) : undefined,
                     )
                 )
                 .orderBy(desc(posts.baseScore), desc(posts.createdAt))
+                .offset(vidOffset)
                 .limit(input.limit + 1);
 
-            // NOTE: ordered by baseScore then createdAt, but the cursor is
-            // createdAt only — the cursor key doesn't match the sort key, so
-            // paging can still skip/repeat rows regardless of the fix below.
-            // Tracked as the sort/cursor mismatch in docs/buzz-adoption-plan.md.
-            const { items, hasMore, lastItem } = takePage(results, input.limit);
-            const nextCursor = hasMore ? lastItem!.createdAt.toISOString() : undefined;
+            // The NOTE that used to sit here was right: a createdAt-only cursor
+            // against a baseScore-first sort skips and repeats rows. Measured on
+            // the identical shape in comment.getComments — page 2 repeated 19 of
+            // page 1 and 40 of 60 rows were unreachable. OFFSET instead.
+            const { items, hasMore } = takePage(results, input.limit);
+            const nextCursor = hasMore ? String(vidOffset + input.limit) : undefined;
 
             return { videos: items, nextCursor };
         }),

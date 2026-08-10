@@ -4,11 +4,12 @@ import { router, protectedProcedure, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { callouts, tokens, follows, notifications } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { recordQuestEvent } from "@/server/lib/quests";
 import { emitCalloutEvent } from "@/lib/coin-feed/emit";
 import { sendPushToUsers } from "@/lib/push/send";
+import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from "@/server/lib/keyset";
 
 /**
  * pump.fun-style callouts (docs/exp-callouts.md, Phase 2).
@@ -155,8 +156,8 @@ export const calloutRouter = router({
                 .from(callouts)
                 .innerJoin(user, eq(callouts.userId, user.id))
                 .innerJoin(tokens, eq(callouts.tokenId, tokens.id))
-                .where(input?.cursor ? lt(callouts.createdAt, new Date(input.cursor)) : undefined)
-                .orderBy(desc(callouts.createdAt))
+                .where(keysetAfter(callouts.createdAt, callouts.id, parseKeysetCursor(input?.cursor, "date")))
+                .orderBy(desc(callouts.createdAt), asc(callouts.id))
                 .limit(limit + 1);
 
             const hasMore = rows.length > limit;
@@ -167,7 +168,7 @@ export const calloutRouter = router({
             }));
             return {
                 items,
-                nextCursor: hasMore ? items[items.length - 1].createdAt.toISOString() : undefined,
+                nextCursor: hasMore ? encodeKeysetCursor(items[items.length - 1].createdAt, items[items.length - 1].id) : undefined,
             };
         }),
 

@@ -4,7 +4,8 @@ import { db } from '@/db';
 import { user } from '@/db/schema';
 import { follows } from '@/db/schema/content/follow';
 import { posts } from '@/db/schema/content/post';
-import { like, or, eq, count, and, desc, lt, gt, sql, inArray } from 'drizzle-orm';
+import { like, or, eq, count, and, asc, desc, lt, gt, sql, inArray } from 'drizzle-orm';
+import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from '@/server/lib/keyset';
 import { withCache, invalidateCache, TTL } from '@/lib/cache';
 import { createNotification } from '@/server/lib/notify';
 import { awardXP } from '@/server/lib/xp';
@@ -238,12 +239,12 @@ export const userRouter = router({
                 })
                 .from(follows)
                 .innerJoin(user, eq(follows.followerId, user.id))
-                .where(
-                    input.cursor
-                        ? and(eq(follows.followingId, input.userId), lt(follows.createdAt, new Date(input.cursor)))
-                        : eq(follows.followingId, input.userId)
-                )
-                .orderBy(desc(follows.createdAt))
+                .where(and(
+                    eq(follows.followingId, input.userId),
+                    // Composite (createdAt, followerId) — see server/lib/keyset.ts.
+                    keysetAfter(follows.createdAt, follows.followerId, parseKeysetCursor(input.cursor, "date")),
+                ))
+                .orderBy(desc(follows.createdAt), asc(follows.followerId))
                 .limit(input.limit + 1);
 
             const hasMore = rows.length > input.limit;
@@ -262,7 +263,7 @@ export const userRouter = router({
             return {
                 items: items.map(r => ({ ...r, isFollowing: followingSet.has(r.id) })),
                 hasMore,
-                nextCursor: hasMore ? items[items.length - 1].followedAt.toISOString() : undefined,
+                nextCursor: hasMore ? encodeKeysetCursor(items[items.length - 1].followedAt, items[items.length - 1].id) : undefined,
             };
         }),
 
@@ -284,12 +285,12 @@ export const userRouter = router({
                 })
                 .from(follows)
                 .innerJoin(user, eq(follows.followingId, user.id))
-                .where(
-                    input.cursor
-                        ? and(eq(follows.followerId, input.userId), lt(follows.createdAt, new Date(input.cursor)))
-                        : eq(follows.followerId, input.userId)
-                )
-                .orderBy(desc(follows.createdAt))
+                .where(and(
+                    eq(follows.followerId, input.userId),
+                    // Composite (createdAt, followingId) — see server/lib/keyset.ts.
+                    keysetAfter(follows.createdAt, follows.followingId, parseKeysetCursor(input.cursor, "date")),
+                ))
+                .orderBy(desc(follows.createdAt), asc(follows.followingId))
                 .limit(input.limit + 1);
 
             const hasMore = rows.length > input.limit;
@@ -307,7 +308,7 @@ export const userRouter = router({
             return {
                 items: items.map(r => ({ ...r, isFollowing: followingSet.has(r.id) })),
                 hasMore,
-                nextCursor: hasMore ? items[items.length - 1].followedAt.toISOString() : undefined,
+                nextCursor: hasMore ? encodeKeysetCursor(items[items.length - 1].followedAt, items[items.length - 1].id) : undefined,
             };
         }),
 
