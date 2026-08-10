@@ -2002,6 +2002,34 @@ that deserves a careful review; Phase 6 is the one that deserves numbers.
 Append decisions here as you go — especially anything that surprised you. That's
 what makes this document worth more than the plan it started as.
 
+- **2026-08-10** — **Two authenticated fixtures work; the DM surface still
+  can't be driven.** `scripts/dev/mint-test-session.mjs` already supports
+  `e2e-test@` *and* `e2e-test-N@` (its own comment says multi-user flows need
+  more than one), and both mint clean sessions against the **dev** project —
+  prod refuses `--email` by design, so two identities is a dev-DB-only trick.
+  - **The wall is the encryption gate, not auth.** `/messages` renders
+    `encryption-gate.tsx` ("Unlock your messages"). `needsWallet` comes from a
+    key **derived client-side from a wallet signature**, so there is no row to
+    seed — faking it means faking the wallet. Logged as task #2; it is the same
+    product gap as the memory `messages-connect-wallet-gate`.
+  - **So DM pagination was verified without the UI, against real data.** Seeded
+    120 messages into the dev conversation and called `message.list` over HTTP:
+    page 1 = **071→120**, page 2 via cursor = **021→070**, and
+    `flattenDmMessages` over those two real pages gives **021→120** ascending
+    with no duplicates across the boundary. My original (wrong) helper would
+    have produced `071…120, 021…070` here — the bug renders itself.
+  - **Composer alignment measured, not eyeballed.** Each control's centre vs
+    the textarea's last-line centre, at 1/2/3/4 lines: offset **0.00 every
+    time**, row growing exactly 24px per line. That is the assertion that
+    distinguishes `mb-2.5` from `items-center`, which would have drifted
+    12/24/36px as the box grew.
+  - ⚠️ **A vacuous assertion nearly passed.** The first DM browser check
+    reported "ok order is ascending" and "ok no duplicates" against an EMPTY
+    page — `[].every()` is `true`. Two of four checks were green while the
+    surface hadn't rendered at all. Same family as the `<tr>`-on-a-route-that-
+    doesn't-exist smoke test earlier the same day: **an order/uniqueness
+    assertion needs a non-empty guard or it is decoration.**
+
 - **2026-08-10** — **Snapshot painting generalised to six surfaces.**
   `lib/snapshot/` (store + infinite wrapper + keys), one `useSnapshot` hook, and
   per-surface declarations in `lib/snapshot/surfaces.ts`. Live on: feed, coin
