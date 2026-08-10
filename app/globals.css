@@ -1147,6 +1147,9 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 
 [data-sonner-toast] {
   will-change: transform, opacity, filter;
+  /* Aggressive rounding, house scale. Backstops the --border-radius the
+     Toaster sets — sonner's injected stylesheet otherwise wins with 13px. */
+  border-radius: 24px !important;
   transition:
     transform var(--toast-close) var(--toast-ease),
     opacity var(--toast-close) var(--toast-ease),
