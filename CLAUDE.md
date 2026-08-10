@@ -203,6 +203,56 @@ outright — that's the setting that governs whether ChatGPT/Perplexity can cite
 the site, and it's a product call, not a security one. Email/DNS posture (SPF,
 DMARC, security.txt) is documented in the memory `email-dns-hardening`.
 
+## Rotating the Helius key: FIVE variables, not one
+
+`HELIUS_API_KEY` is not the only place the key lives — **four env vars embed it
+inside a URL**, and `heliusApiKey()` falls back to parsing it out of
+`HELIUS_RPC_URL` when the standalone var is missing. Change only
+`HELIUS_API_KEY` and RPC keeps pointing at the dead key, so `/api/rpc` 502s and
+every browser on-chain read stays broken while the webhooks look fine.
+
+The full set (verified 2026-08-10 by grepping `process.env.*HELIUS*`):
+
+```
+HELIUS_API_KEY                        standalone
+HELIUS_RPC_URL                        ?api-key=<key>
+NEXT_PUBLIC_HELIUS_RPC_URL            ?api-key=<key>   ← worker secret, not in .env.production
+NEXT_PUBLIC_HELIUS_MAINNET_RPC_URL    ?api-key=<key>   ← worker secret
+NEXT_PUBLIC_HELIUS_DEVNET_RPC_URL     ?api-key=<key>   ← worker secret
+HELIUS_PROJECT_ID                     belongs to the ACCOUNT, so it changes too
+```
+
+The `NEXT_PUBLIC_*` three are live Worker secrets that are **not** in the local
+`.env.production`, so a rotation done by editing that file silently misses them.
+`scripts/dev/helius-usage.mjs` also reports the wrong account until
+`HELIUS_PROJECT_ID` is updated.
+
+**A new key means every webhook must be re-registered** — a webhook belongs to
+the account that created it. `/api/cron/sync-assets-webhook` does that
+automatically (assets + trades + user-trades) once production has the key.
+
+⚠️ **The OLD account's webhook does not stop existing.** It only went quiet
+because that plan hit its cap; when the cycle resets it resumes POSTing at the
+rate it was configured for. Delete it from the old account's dashboard — the API
+can't do it while the key is over quota. For the 2026-08-09 rotation that means
+**deleting the old trades webhook before 2026-09-08**, or ~2,500 req/min returns
+to the origin on that date with no credits involved and no obvious cause.
+
+### What a free plan can actually afford
+
+1M credits/month ÷ 30 ÷ 1440 = **23 webhook deliveries/min**. Measured against
+`trending_coins.txns_24h` × the 5.3 `ANY` multiplier:
+
+```
+HOOD  (rank 1) alone     850/min   = 37x the entire monthly budget
++ TOAD (rank 1)        1,242/min   = 54x
+top 15                ~2,500/min   = 109x
+```
+
+So `HELIUS_TRADES_DISPLAY_POOLS` stays **0** on a free plan — not as caution but
+as arithmetic, because ordering by rank always picks the busiest pools on the
+chain. Our own launched pools are a trickle and are unaffected.
+
 ## Query gotcha: never interpolate a JS `Date` into a `sql` template
 
 ```ts
