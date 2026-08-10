@@ -13,7 +13,7 @@
 import { db } from "@/db";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { clearsBrandBar, passesSecurityBar } from "./quality";
-import { fetchMobulaTokenSecurity, mobulaCadence, mobulaEnabled } from "@/lib/coins/mobula";
+import { fetchMobulaTokenSecurity, mobulaCadence, mobulaEnabled, securityCacheKey } from "@/lib/coins/mobula";
 import { withCache } from "@/lib/cache";
 import { tokens } from "@/db/schema/content/token";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
@@ -98,7 +98,7 @@ async function screenSecurity(pools: DiscoveredPool[]): Promise<DiscoveredPool[]
         if (apiCalls >= SECURITY_CHECKS_PER_PASS) break;
         try {
             const sec = await withCache(
-                `coin:security:v1:${p.network}:${p.tokenAddress}`,
+                securityCacheKey(p.network, p.tokenAddress),
                 mobulaCadence().securityTtl,
                 () => {
                     apiCalls++;
@@ -182,7 +182,7 @@ async function rescreenTracked(): Promise<number> {
         if (apiCalls >= SECURITY_CHECKS_PER_PASS) break;
         try {
             const sec = await withCache(
-                `coin:security:v1:${r.network}:${r.tokenAddress}`,
+                securityCacheKey(r.network, r.tokenAddress),
                 mobulaCadence().securityTtl,
                 () => {
                     apiCalls++;

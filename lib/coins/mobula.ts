@@ -309,6 +309,16 @@ export async function fetchMobulaTokenTrades(
         .filter((t) => t.account && t.ts > 0);
 }
 
+/**
+ * Cache key for the security block. Shared, and VERSIONED — three call sites
+ * (trade.coinSecurity, discovery's screenSecurity, rescreenTracked) read the
+ * same entry, so a shape change has to invalidate all of them at once or two of
+ * them quietly parse a payload that predates the new field.
+ */
+export function securityCacheKey(network: string, address: string): string {
+    return `coin:security:v2:${network}:${address}`;
+}
+
 export interface MobulaTokenSecurity {
     holdersCount: number | null;
     securityScore: number | null;
@@ -326,6 +336,17 @@ export interface MobulaTokenSecurity {
     buyTaxPct: number | null;
     sellTaxPct: number | null;
     honeypotFlag: boolean | null;
+    /**
+     * Social links, which this endpoint has always returned and we always threw
+     * away. External coins had no socials ANYWHERE in the app — `hasSocials` is
+     * `{}` for every chain-wide feed row and `resolveCoin` never carried them —
+     * so a coin page for anything we didn't launch showed none.
+     *
+     * Free: same response, same call, same cache entry. GeckoTerminal's
+     * `/tokens/{addr}/info` also has them (`twitter_handle`, `websites`) but
+     * that would be a second request per coin.
+     */
+    socials: { twitter: string | null; website: string | null; telegram: string | null } | null;
 }
 
 /** Holder-quality + contract-safety stats for one token — the MTT-style
@@ -374,6 +395,19 @@ export async function fetchMobulaTokenSecurity(
         buyTaxPct: tax(sec.buyTax),
         sellTaxPct: tax(sec.sellTax),
         honeypotFlag: typeof sec.isBlacklisted === "boolean" ? sec.isBlacklisted : null,
+        socials: (() => {
+            const raw = d.socials as Record<string, unknown> | undefined;
+            if (!raw) return null;
+            // Only http(s) — the payload also carries an `others` bag with
+            // arbitrary metadata (IPFS URIs, file blobs) that must never reach
+            // an href.
+            const url = (v: unknown) =>
+                typeof v === "string" && /^https?:\/\//i.test(v.trim()) ? v.trim() : null;
+            const twitter = url(raw.twitter);
+            const website = url(raw.website);
+            const telegram = url(raw.telegram);
+            return twitter || website || telegram ? { twitter, website, telegram } : null;
+        })(),
     };
 }
 

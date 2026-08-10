@@ -15,7 +15,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Clock01Icon, Copy01Icon, FavouriteIcon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import { ChainBadge } from "@/components/trending/chain-badge";
-import { PinkStarLogo } from "@/components/icons";
+import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
 import { CoinSecurityCard } from "./coin-security-card";
@@ -138,6 +138,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                                 <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" strokeWidth={2} />
                             </a>
                         )}
+                        <CoinSocials network={coin.network} address={coin.tokenAddress} />
                     </div>
                 </div>
             </div>
@@ -675,5 +676,52 @@ export function CoinDetail({ coin }: { coin: CoinViewData }) {
 
             <HomeActionDock />
         </div>
+    );
+}
+
+/**
+ * Social links for a coin we did NOT launch.
+ *
+ * External coins had none anywhere in the app: `resolveCoin` never carried
+ * them, and the chain-wide feed sets `hasSocials: {}` on every row. Only our own
+ * `tokens` rows have twitter/telegram/website columns, so a coin page for
+ * anything off the trending board or the alerts rail showed nothing.
+ *
+ * Costs no extra request. `trade.coinSecurity` already fetches Mobula's
+ * token/details for the security card below, that response has always carried
+ * `socials`, and this is the same tRPC input — so TanStack serves both
+ * components from one query.
+ */
+function CoinSocials({ network, address }: { network: string; address: string }) {
+    const { data } = trpc.trade.coinSecurity.useQuery(
+        { network, address },
+        { staleTime: 120_000 },
+    );
+    const socials = data?.socials;
+    if (!socials) return null;
+
+    const links = [
+        socials.twitter ? { href: socials.twitter, Icon: XIcon, label: "X" } : null,
+        socials.telegram ? { href: socials.telegram, Icon: TelegramIcon, label: "Telegram" } : null,
+        socials.website ? { href: socials.website, Icon: GlobeIcon, label: "Website" } : null,
+    ].filter((l): l is { href: string; Icon: typeof XIcon; label: string } => l !== null);
+    if (!links.length) return null;
+
+    return (
+        <>
+            {links.map(({ href, Icon, label }) => (
+                <a
+                    key={href}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    title={label}
+                    className="shrink-0 text-zinc-600 transition-colors hover:text-white motion-reduce:transition-none"
+                >
+                    <Icon className="size-3.5" />
+                </a>
+            ))}
+        </>
     );
 }

@@ -18,6 +18,7 @@ import {
     mobulaCadence,
     mobulaEnabled,
     type MobulaPair,
+    securityCacheKey,
 } from "@/lib/coins/mobula";
 import { resolveTraders } from "@/lib/coins/resolve-traders";
 import { isRiskyHoldings } from "@/lib/coin-feed/quality";
@@ -291,7 +292,7 @@ export const tradeRouter = router({
     coinSecurity: publicProcedure
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
-            withCache(`coin:security:v1:${input.network}:${input.address}`, mobulaCadence().securityTtl, () =>
+            withCache(securityCacheKey(input.network, input.address), mobulaCadence().securityTtl, () =>
                 fetchMobulaTokenSecurity(input.network, input.address).catch(() => null)
             )
         ),
