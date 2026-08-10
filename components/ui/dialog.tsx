@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { OVERLAY_MOTION_CLASS, MODAL_CONTENT_MOTION_CLASS } from "@/lib/surfaces";
 
 function Dialog({
   ...props
@@ -38,7 +39,8 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-[#121212]/50",
+        OVERLAY_MOTION_CLASS,
+        "fixed inset-0 z-50 bg-[#121212]/50",
         className
       )}
       {...props}
@@ -71,7 +73,8 @@ function DialogContent({
           // callers that pass their own still win through cn(). The value lands
           // on the app's standard hairline either way — globals.css remaps
           // border-soft-gray* to --wp-border.
-          "bg-[#0C0C0C] border-soft-gray/10 backdrop-blur-xl text-flexwhite data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
+          MODAL_CONTENT_MOTION_CLASS,
+          "bg-[#0C0C0C] border-soft-gray/10 backdrop-blur-xl text-flexwhite fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
           className
         )}
         {...props}

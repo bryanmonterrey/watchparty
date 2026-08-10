@@ -348,6 +348,50 @@ node, and gets forked when someone needs a variant. A string doesn't.
    This kills the class of bug where a sticky element is 4px off because
    somebody hardcoded `top-16` against a header that's now `h-[3.75rem]`.
 
+### ✅ Step 1–2 done 2026-08-09 — `lib/surfaces.ts` (motion only, on purpose)
+
+The audit the step demanded changed the shape of it. **The motion is
+duplicated; the surfaces are not.**
+
+`dialog`, `alert-dialog`, `sheet` and `drawer` carried character-for-character
+the same overlay animation, and `dialog` + `alert-dialog` + `popover` the same
+content animation — ~66 components import those primitives, so the constants are
+now the one place that behaviour lives.
+
+Their *backgrounds* are deliberately different (`#0C0C0C` dialog, `#6A6A6A/35`
+alert-dialog, `bg-background` sheet). There is no honest common denominator, so
+no `*_SURFACE_CLASS` was invented: consolidating those would be a restyle
+wearing a refactor's clothes, and the plan's own rule is that references are
+inspiration, not a mandate to restructure what the user tuned by eye.
+
+Every constant carries `motion-reduce:animate-none`, which is the whole reason
+to centralise them — `globals.css` has a global reduced-motion floor, but a
+floor is a safety net, not an intention, and the moment somebody scopes it every
+one of these silently stops honouring the OS setting. **This also lands a real
+slice of Phase 1 for free:** every dialog, sheet, drawer and popover in the app
+now has an explicit reduced-motion branch.
+
+Verified rather than assumed:
+- `npx @tailwindcss/cli -i app/globals.css -o …` emits
+  `@media (prefers-reduced-motion: reduce) { .motion-reduce\:animate-none { animation: none } }`
+  — proving Tailwind v4 auto-detection reaches `lib/*.ts`, which the whole
+  approach depends on. ⚠️ It only works because each fragment is a **complete**
+  class name in a string literal; a composed name (`` `zoom-${n}` ``) would not
+  be generated.
+- `animate-none` is safe with Radix: `Presence` reads
+  `getComputedStyle(node).animationName` and unmounts immediately when it is
+  `none`, so a suppressed exit animation cannot strand a node the way a
+  never-firing `animationend` would.
+
+Two deliberate exclusions:
+- `sheet`'s CONTENT has hand-tuned 300/500ms durations, so no shared constant
+  fits. Additive only: it got `motion-reduce:animate-none motion-reduce:transition-none`
+  and nothing else changed.
+- `dropdown-menu`, `command-menu`, `bloom-dropdown`, `hover-card`, `select`,
+  `select2` all carry the same duplication and all have **0 importers**. Not
+  touched — adopting constants into dead files is work that only makes the diff
+  look bigger. They should be deleted, separately.
+
 **Done when:** no popover/dialog/search surface carries a hand-written copy of
 the shared treatment; opening several different dropdowns shows an identical
 surface; tsc clean.

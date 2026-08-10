@@ -4,6 +4,7 @@ import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
+import { OVERLAY_MOTION_CLASS, MODAL_CONTENT_MOTION_CLASS } from "@/lib/surfaces";
 import { buttonVariants } from "@/components/ui/button"
 
 function AlertDialog({
@@ -36,7 +37,8 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        OVERLAY_MOTION_CLASS,
+        "fixed inset-0 z-50 bg-black/50",
         className
       )}
       {...props}
@@ -55,7 +57,8 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         className={cn(
           // Frosted surface matching DialogContent (see components/ui/dialog.tsx).
-          "bg-[#6A6A6A]/35 backdrop-blur-xl text-flexwhite data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
+          MODAL_CONTENT_MOTION_CLASS,
+          "bg-[#6A6A6A]/35 backdrop-blur-xl text-flexwhite fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
           className
         )}
         {...props}
