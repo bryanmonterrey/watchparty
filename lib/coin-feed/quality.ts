@@ -73,8 +73,44 @@ export function isRiskyHoldings(h: HoldingsRisk): boolean {
     );
 }
 
-/** The alert-adoption bar: contract flags plus the holdings thresholds.
- *  Fail-open on missing data — the gate exists to stop KNOWN-bad coins. */
+/**
+ * The alert-adoption bar: contract flags plus the holdings thresholds.
+ * Fail-open on missing data — the gate exists to stop KNOWN-bad coins.
+ *
+ * ## Mint authority and freeze authority (added 2026-08-10)
+ *
+ * `fetchMobulaTokenSecurity` has always returned `noMintAuthority` and
+ * `isFreezable`, and this gate ignored both — we were paying for the fields and
+ * throwing them away. They are the two checks every Solana sniper bot runs
+ * first, and unlike most of that genre they are not judgement calls:
+ *
+ * - **Mint authority still live** means the deployer can print unlimited supply
+ *   and dilute every holder to nothing, at will, after you buy.
+ * - **Freezable** means the authority can freeze your token account. You can
+ *   buy and then simply not be allowed to sell — a honeypot by a different
+ *   mechanism than the one `honeypotFlag` catches.
+ *
+ * Verified against `fdundjer/solana-sniper-bot`'s actual filter set
+ * (`CHECK_IF_MINT_IS_RENOUNCED`, `CHECK_IF_FREEZABLE`, `CHECK_IF_BURNED`,
+ * `CHECK_IF_MUTABLE`, `CHECK_IF_SOCIALS`) rather than a description of it.
+ *
+ * Compared explicitly against `false`/`true` rather than truthily, because
+ * `null` means "no data" and must keep passing — a brand-new coin reports
+ * nothing and is not thereby dangerous.
+ *
+ * ## What is deliberately NOT gated here
+ *
+ * **`liquidityBurnPct`** is fetched and stays unused on purpose. Burning LP and
+ * *locking* LP are both legitimate, and a locked pool reports 0% burned — so a
+ * burn threshold would reject well-behaved tokens with the same confidence it
+ * rejects rugs. A signal that can't separate the two isn't a gate, it's a coin
+ * flip with extra steps. Sniper bots accept that false-positive rate because
+ * they only need one good entry; a discovery feed that hides real coins is a
+ * different, worse failure.
+ *
+ * **Mutable metadata** and **socials present** are also unavailable here —
+ * Mobula's block carries neither.
+ */
 export function passesSecurityBar(
     sec:
         | (HoldingsRisk & {
@@ -82,12 +118,17 @@ export function passesSecurityBar(
               buyTaxPct: number | null;
               sellTaxPct: number | null;
               securityScore: number | null;
+              noMintAuthority?: boolean | null;
+              isFreezable?: boolean | null;
           })
         | null
         | undefined,
 ): boolean {
     if (!sec) return true;
     if (sec.honeypotFlag) return false;
+    // Unlimited supply on demand, and no-sell-allowed, respectively.
+    if (sec.noMintAuthority === false) return false;
+    if (sec.isFreezable === true) return false;
     if ((sec.buyTaxPct ?? 0) > 10 || (sec.sellTaxPct ?? 0) > 10) return false;
     if (sec.securityScore != null && sec.securityScore < 30) return false;
     return !isRiskyHoldings(sec);

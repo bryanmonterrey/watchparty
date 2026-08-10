@@ -122,6 +122,49 @@ describe("holdings risk + security bar", () => {
     });
 });
 
+describe("contract authority flags", () => {
+    /**
+     * Mint authority and freeze authority — the two checks every Solana sniper
+     * bot runs first, verified against fdundjer/solana-sniper-bot's real filter
+     * set (CHECK_IF_MINT_IS_RENOUNCED / CHECK_IF_FREEZABLE) rather than a
+     * description of it.
+     *
+     * Mobula has always returned both and the gate ignored them, so these
+     * assertions are the difference between paying for the fields and using
+     * them.
+     */
+    const base = { ...NO_RISK, honeypotFlag: false, buyTaxPct: null, sellTaxPct: null, securityScore: null };
+
+    test("a live mint authority fails — the deployer can print unlimited supply", () => {
+        expect(passesSecurityBar({ ...base, noMintAuthority: false })).toBe(false);
+    });
+
+    test("a renounced mint passes", () => {
+        expect(passesSecurityBar({ ...base, noMintAuthority: true })).toBe(true);
+    });
+
+    test("freezable fails — you can buy and then not be allowed to sell", () => {
+        expect(passesSecurityBar({ ...base, isFreezable: true })).toBe(false);
+    });
+
+    test("not freezable passes", () => {
+        expect(passesSecurityBar({ ...base, isFreezable: false })).toBe(true);
+    });
+
+    test("NULL KEEPS PASSING — no data is not the same as dangerous", () => {
+        // The whole module is fail-open: a brand-new coin reports nothing, and
+        // gating on absence would hide exactly the coins the feed is for. This
+        // is why the checks compare against false/true rather than truthily.
+        expect(passesSecurityBar({ ...base, noMintAuthority: null, isFreezable: null })).toBe(true);
+        expect(passesSecurityBar(base)).toBe(true);
+    });
+
+    test("either flag alone is enough to fail", () => {
+        expect(passesSecurityBar({ ...base, noMintAuthority: false, isFreezable: false })).toBe(false);
+        expect(passesSecurityBar({ ...base, noMintAuthority: true, isFreezable: true })).toBe(false);
+    });
+});
+
 describe("hide risky filter", () => {
     test("drops flagged rows only when the toggle is on", () => {
         const safe = tok({ id: "s" });
