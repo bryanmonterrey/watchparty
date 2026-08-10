@@ -278,8 +278,8 @@ children; the active child gets the left accent bar.
     Text** "Numbani" · **small Image Key** (None) · **small Image Text**
     "Rogue - Level 100"
   - **party Id** (uuid) · **party Size** 1 · **party Max** 5 · **join
-    Secret** (opaque base64 token). Form continues below the fold —
-    spectate/match secrets not captured.
+    Secret** (opaque base64 token) — the last row; confirmed by a
+    scrolled-to-bottom capture, there are no spectate/match secret fields.
 - Right: preview panel with tabs **Full Profile / User Popout / Show Code**.
   Full Profile renders the presence inside the *complete* profile chrome —
   blurple card, viewer avatar + username, "PLAYING A GAME" block (app icon,
@@ -541,11 +541,84 @@ the whole journey compressed to three numbered steps (eligibility →
 integrate → get paid), one CTA. The eligibility step feeding into the
 shared checklist component closes the loop with §9/§10.
 
+## 14. Portal level (outside an app): Home · Applications · Embed Debugger
+
+Above the app-scoped shell sits a second, three-item shell — sidebar
+**Home / Applications / Embed Debugger**, no back-link, no app switcher.
+A dismissible **SURVEY** toast ("Are you able to find what you need in
+the Developer Portal?" No/Yes) floats bottom-left and persists across
+these pages.
+
+### Home ("Welcome, swim")
+
+The dashboard is a hub of links out — almost no data of its own:
+
+- H1 personalized "Welcome, swim".
+- **Jump back in** + "Apps →": recent-app rows (icon, name, "Personal
+  Team", blurple **Go to app**).
+- **"More ways to make Discord work for your game"** — a 2×2 cross-sell
+  grid, each card product-render art + pitch + CTA:
+  - *Increase player engagement* — Social SDK ("longer sessions, improved
+    retention, and more frequent play"), Get Started; art is an in-game
+    invite widget.
+  - *Take control of your game's identity* — game claiming, Get Started;
+    art is an Elden Ring cover with an edit-pencil.
+  - *Unlock new revenue* — **COMING SOON** pill; "Launch your Game Shop
+    to let players buy and gift in-game items on Discord", Learn More ↗;
+    art is a $16.99 in-game item card.
+  - *Find and acquire new players* — "Advertise on Discord via rewarded
+    formats that drive discovery and gameplay", Learn More ↗; art is a
+    "Claim reward · 65% complete" quest card.
+  - Below the grid, two full-width arrow rows with pixel-art icons:
+    "Build a bot to enhance your server" and "Launch an Activity inside
+    Discord" — the two classic entry paths, demoted to compact rows.
+- **Documentation** + "Docs →": three link-list cards — *Starter
+  Tutorials* (first app / Social SDK / first Activity), *Popular Guides*
+  (Social SDK account linking, provisional accounts, Bots: Overview of
+  Interactions), *Developer Resources* (Developer Policy, Setting up your
+  developer team, API Reference). All external-arrow links.
+- **Latest News and Tutorials** + Blog ↗ / YouTube ↗ / Changelog ↗: one
+  large featured card (BLOG "Discord Patch Notes: August 4, 2026", 3D
+  robot art) beside a column of small cards, each tagged by type — BLOG
+  (Social SDK 1.10 mobile GA), CHANGELOG (file_types filter, with a
+  two-line excerpt), VIDEO (GDC account-linking booth talk).
+- **Find Support**: three cards — "Join the Developer Discord server",
+  "Report Issues on GitHub", "Get support with Help Center". Footer:
+  Changelog · Privacy Policy · Developer Policy · Developer Terms of
+  Service.
+
+### Applications
+
+- H1 "Applications" + right-aligned blurple **New Application**.
+  Subtitle "Develop apps to customize and extend Discord for millions of
+  users."
+- **Sort By:** select (Date Created) on the left; **Small / Large**
+  grid-density toggle on the right.
+- **My Applications**: square app cards — icon (or the app's name text on
+  a dark tile when no icon is set) with the name below.
+
+### Embed Debugger
+
+- One-tool page: H1 "Embed Debugger" + "Test and debug link embeds for
+  your website" + "Discord supports oEmbed, Open Graph, and Twitter Card
+  metadata formats for rendering link embeds" (all three linked).
+- **Website URL*** input (placeholder `https://discord.com`) + blurple
+  **Generate Embed**. Nothing else — a utility gets a whole page rather
+  than a modal buried somewhere.
+
+→ watchparty mapping: this is the blueprint for the console's Dashboard —
+recents row with "go to app", a cross-sell grid for the platform surfaces
+(Notifications, Agent, Predictions, Perps — coming-soon pill included),
+docs link-cards into docs.watchparty.xyz, a typed news/changelog column,
+and a support row. The Embed Debugger also legitimizes shipping our own
+single-purpose tool pages (OG/embed tester, webhook payload tester from
+§7) as first-class nav items.
+
 ## Pages not yet captured
 
-Games › Game Identity (locked pre-claim), the top-level Applications
-list, and the sliver of the Visualizer form below join Secret
-(spectate/match secrets). Transcribe them here as screenshots arrive.
+Only Games › Game Identity remains, and it's locked until a game claim
+completes — likely uncapturable for now. Everything else in the portal is
+transcribed above.
 
 ## Rejected source: github.com/mooncord/devportal (evaluated 2026-08-10)
 
