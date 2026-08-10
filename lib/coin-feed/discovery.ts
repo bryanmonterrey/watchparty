@@ -268,6 +268,51 @@ async function evictExcluded(): Promise<number> {
     return removed.length;
 }
 
+/**
+ * Re-apply the brand bar to coins ALREADY on the watch list.
+ *
+ * `clearsBrandBar` runs in `qualifies()`, which only gates ADOPTION. Nothing
+ * re-checked it afterwards, and none of the other exits reach these coins: they
+ * are not in EXCLUDED_SYMBOLS, their market caps are nowhere near
+ * MAX_MARKET_CAP_USD, `pruneStale` needs 48h of quiet on both axes, and
+ * `enforceCap` deletes by volume ASC — brand squats are among the loudest rows
+ * in the table, so they are evicted last of all.
+ *
+ * The asymmetry is the bug. A brand-riding coin is admitted only while it holds
+ * BRAND_SQUAT_MIN_LIQUIDITY_USD, and then keeps its slot no matter what happens
+ * to that liquidity — including the exact case the bar exists for, where the
+ * pool is pulled and the coin carries on alerting from the rail.
+ *
+ * Self-healing in both directions: liquidity recovers, `qualifies()` re-adopts
+ * it on the next pass. Deliberately skips pinned and watchparty coins, like
+ * every other eviction here.
+ *
+ * ⚠️ Measured 2026-08-10, this evicts **6** of the 49 ticker-squat rows on the
+ * live list — the other 43 hold $250k+ and clear the bar honestly. The point is
+ * not the six slots; it is that retention now uses the same rule as adoption.
+ */
+async function evictBrandSquats(): Promise<number> {
+    const rows = await db
+        .select({
+            id: trackedTokens.id,
+            symbol: trackedTokens.symbol,
+            name: trackedTokens.name,
+            liquidityUsd: trackedTokens.liquidityUsd,
+        })
+        .from(trackedTokens)
+        .where(and(eq(trackedTokens.pinned, false), isNull(trackedTokens.wpTokenId)));
+
+    // Filtered in JS, not SQL: clearsBrandBar is the one definition of this
+    // rule and it lives in quality.ts. Re-expressing it as a WHERE clause would
+    // be a second copy, and the first thing to drift.
+    const doomed = rows.filter((r) => !clearsBrandBar(r.symbol, r.name, r.liquidityUsd)).map((r) => r.id);
+    if (doomed.length === 0) return 0;
+
+    await db.delete(trackedTokens).where(inArray(trackedTokens.id, doomed));
+    console.log(`[coin-feed] brand bar evicted ${doomed.length} tracked coin(s)`);
+    return doomed.length;
+}
+
 /** Drop coins that stopped mattering: never-scanned rows are exempt (they just
  *  arrived), pinned and watchparty coins are exempt permanently. */
 async function pruneStale(): Promise<number> {
@@ -358,7 +403,7 @@ export async function runDiscovery(budget: CallBudget): Promise<DiscoveryResult>
 
     const discovered = await upsertPools(await screenSecurity(found));
     const watchparty = await syncWatchpartyTokens();
-    const evicted = await evictExcluded();
+    const evicted = (await evictExcluded()) + (await evictBrandSquats());
     const pruned = await pruneStale();
     const trimmed = await enforceCap();
 
