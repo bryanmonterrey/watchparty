@@ -227,3 +227,34 @@ export const COMPARISON: CompareGroup[] = [
         ],
     },
 ];
+
+/** Rank within a ladder, or -1 when the key isn't on it. */
+function rank(list: readonly TierKey[], key: TierKey | null): number {
+    return key ? list.indexOf(key) : -1;
+}
+
+/**
+ * Does `held` meet a requirement of `required`?
+ *
+ * Lives HERE, not in the component, so it stays importable without dragging
+ * React, tRPC and the whole AppRouter into the test path — `bun test ./tests`
+ * is the deploy gate and has to stay fast and side-effect free. Importing it
+ * from `premium-gate.tsx` pulled in better-auth hard enough to print a
+ * telemetry warning.
+ *
+ * ⚠️ UX only. The real gate is `server/lib/premium-entitlement.ts`.
+ */
+export function meetsTier(held: TierKey | null, required?: TierKey): boolean {
+    // No specific tier asked for: any entitlement is enough.
+    if (!required) return true;
+    if (!held) return false;
+
+    const heldBiz = rank(BUSINESS_TIERS, held);
+    const needBiz = rank(BUSINESS_TIERS, required);
+    const heldInd = rank(INDIVIDUAL_TIERS, held);
+    const needInd = rank(INDIVIDUAL_TIERS, required);
+
+    if (needBiz !== -1) return heldBiz >= needBiz; // business need → business only
+    if (needInd !== -1) return heldBiz !== -1 || heldInd >= needInd; // business clears individual
+    return false; // unknown key: refuse rather than guess
+}

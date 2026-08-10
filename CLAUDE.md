@@ -49,8 +49,17 @@ scheduled collector that auto-pulls each period. Built, tsc/build-clean, and
   There is no `premiumProcedure` middleware — server-side gates throw
   `TRPCError({ code: "FORBIDDEN" })` (or a 402 from a Route Handler); client-side,
   read `usePremium()` and call `openOverlay()` from `lib/premium/overlay-store.ts`.
-  Note `components/premium/premium-gate.tsx` exists but is imported nowhere, and
-  its `tier` prop only sets the overlay label — it does **not** enforce a tier.
+  `components/premium/premium-gate.tsx` is still imported nowhere, but its
+  `tier` prop **now genuinely filters** (fixed 2026-08-09; it previously only
+  set the overlay label, so `<PremiumGate tier="biz_pro">` admitted every paying
+  user including the cheapest plan). The comparison is `meetsTier()` in
+  `lib/premium/tiers.ts` — kept there rather than in the component so
+  `tests/premium-tier.test.ts` can import it without dragging React, tRPC and
+  the whole AppRouter into the test path. Tiers are **two ladders**, not one:
+  business clears an individual requirement, individual never clears a business
+  one, and an unrecognised key fails closed.
+  It remains **UX only** — the browser decides what renders, never what's
+  allowed. Anything worth gating needs the server-side gate above as well.
 
 ## Commands
 
