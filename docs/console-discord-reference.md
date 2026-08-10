@@ -94,8 +94,49 @@ community/channel). The provided-vs-custom install link is the shape for a
 "Connect <app>" OAuth URL. Scopes-per-context is the model to adopt WHEN keys
 grow scopes — today API keys are unscoped, so this page has no v1 surface.
 
+## 3. OAuth2
+
+- H1 + "Use Discord as an authorization system or use our API on behalf of
+  your users. Add a redirect URI, pick your scopes, roll a D20 for good luck,
+  and go!" + blue "Learn more about OAuth2" doc link under the explainer.
+- **Client information** card, two columns:
+  - **Client ID** — plaintext read-only field + copy button (public value).
+  - **Client Secret** — field literally reads "Hidden for security" + copy
+    button, with a **Reset Secret** button below. The secret is never
+    re-displayed; reset is the only recovery. (Same plaintext-once discipline
+    as our key creation flow.)
+- **Public Client** toggle, taught inline: "Public clients cannot maintain
+  the confidentiality of their client credentials (i.e. desktop/mobile
+  applications that do not use a server to make requests)."
+- **Redirects** card: "You must specify at least one URI for authentication
+  to work. If you pass a URI in an OAuth request, it must exactly match one
+  of the URIs you enter here." Empty state is just the **Add Redirect**
+  button — no table until a URI exists.
+- **OAuth2 URL Generator** card: "Generate an invite link for your
+  application by picking the scopes and permissions it needs to function.
+  Then, share the URL to others!"
+  - **Scopes**: a 3-column checkbox grid of every OAuth scope (identify,
+    email, connections, guilds, guilds.join, guilds.members.read, gdm.join,
+    bot, rpc, rpc.notifications.read, rpc.voice.read, rpc.voice.write,
+    rpc.video.read, rpc.video.write, rpc.screenshare.read,
+    rpc.screenshare.write, rpc.activities.write, webhook.incoming,
+    messages.read, applications.builds.read, applications.commands,
+    applications.store.update, applications.entitlements,
+    role_connections.write, openid,
+    applications.commands.permissions.update).
+  - **Generated URL**: read-only field + copy; placeholder "Please select at
+    least one OAuth2 scope" until something is checked, then the authorize
+    URL assembles live as scopes toggle.
+
+→ watchparty mapping: the anatomy for a future "Sign in with watchparty" /
+third-party-apps tier (client id public, secret hidden-with-reset,
+public-client/PKCE toggle, exact-match redirect URIs). The live-assembling
+URL generator is a DX pattern worth stealing for any "build your request"
+surface — and Reset Secret ≈ our key regenerate. No v1 surface today: apps
+don't act on behalf of users yet.
+
 ## Pages not yet captured
 
-OAuth2, Bot, Emojis, Webhooks, Rich Presence, App Testers, App Verification,
-the Games/Activities/Premium Apps groups, and the top-level Applications
-list. Transcribe them here as screenshots arrive.
+Bot, Emojis, Webhooks, Rich Presence, App Testers, App Verification, the
+Games/Activities/Premium Apps groups, and the top-level Applications list.
+Transcribe them here as screenshots arrive.
