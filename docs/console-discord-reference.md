@@ -261,20 +261,37 @@ children; the active child gets the left accent bar.
   - **Add Image(s)** button + inline constraints ".png, .jpg, or .jpeg —
     1024×1024 recommended, 512×512 minimum" · counter "Assets (0 of 300)".
 
-### Visualizer (top half captured)
+### Visualizer
 
 - H1 + "Rich Presence lets your game surface exciting game data on your
-  players' profiles… See exactly how your text and art will look on a
-  user's profile."
+  players' profiles, and lets them play together with chat invites, and Ask
+  to Join. See exactly how your text and art will look on a user's profile."
 - Blue info banner: "This is only a visualizer… Rich presence configuration
-  needs to be programmed in your application. Learn more…"
-- Left: the full presence payload as a form, every field with a ⓘ tooltip —
-  state, details, start/end Timestamp, large/small Image Key (dropdowns fed
-  by Art Assets) + large/small Image Text, party Id, party Size, party Max,
-  join Secret…
-- Right: live preview panel with tabs **Full Profile / User Popout / Show
-  Code** rendering an actual profile card ("PLAYING A GAME", Ask to Join
-  button) that updates as the form changes.
+  needs to be programmed in your application. Learn more about working with
+  Rich Presence."
+- Left: the full presence payload as a two-column form, every field with a
+  ⓘ tooltip, **pre-filled with an Overwatch-flavored example** so the
+  preview reads as a real profile before you touch anything:
+  - **state** "Playing Solo" · **details** "Competitive"
+  - **start Timestamp / end Timestamp** — raw unix seconds (1507665886)
+  - **large Image Key** (Select dropdown fed by Art Assets) · **large Image
+    Text** "Numbani" · **small Image Key** (None) · **small Image Text**
+    "Rogue - Level 100"
+  - **party Id** (uuid) · **party Size** 1 · **party Max** 5 · **join
+    Secret** (opaque base64 token). Form continues below the fold —
+    spectate/match secrets not captured.
+- Right: preview panel with tabs **Full Profile / User Popout / Show Code**.
+  Full Profile renders the presence inside the *complete* profile chrome —
+  blurple card, viewer avatar + username, "PLAYING A GAME" block (app icon,
+  app name, details line, state + party composed as "Playing Solo (1 of
+  5)", end Timestamp rendered as a countdown "0:0 left", **Ask to Join**
+  button), then the profile's own User Info / Mutual Servers / Mutual
+  Friends tabs and note field. The derived strings teach field semantics
+  with zero docs: party Size/Max fill "(1 of 5)", end Timestamp becomes
+  time "left".
+- Nav detail: **App Verification** carries an orange ⚠ triangle in the
+  sidebar — a needs-attention state surfaced at the nav level, before you
+  ever open the page.
 
 → watchparty mapping: presence on watchparty profiles ("watching X",
 "streaming Y") is a future social feature; the durable lesson is the
@@ -284,9 +301,10 @@ embed-preview surface in our console.
 
 ## Pages not yet captured
 
-Visualizer bottom, App Testers, App Verification, the Games/Activities/
-Premium Apps groups, and the top-level Applications list. Transcribe them
-here as screenshots arrive.
+App Testers, App Verification, the Games/Activities/Premium Apps groups,
+the top-level Applications list, and the sliver of the Visualizer form
+below join Secret (spectate/match secrets). Transcribe them here as
+screenshots arrive.
 
 ## Rejected source: github.com/mooncord/devportal (evaluated 2026-08-10)
 
