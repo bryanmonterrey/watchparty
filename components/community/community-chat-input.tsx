@@ -8,6 +8,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon, Cancel01Icon, StickerIcon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
 import { useCommunitySend } from "@/hooks/use-community-send";
+import { findLastOwnMessageId, useEditRequest } from "@/lib/community/edit-request";
+import { COMMUNITY_PAGE_LIMIT } from "@/hooks/use-community-reaction";
 import { ArrowUpIcon, CreateIcon, LockIcon } from "../icons";
 
 type Mentionable = { username: string; name: string | null };
@@ -58,6 +60,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
         inputRef.current?.focus();
     };
     const utils = trpc.useUtils();
+    const requestEdit = useEditRequest((s) => s.requestEdit);
     const lastTypingRef = useRef(0);
     const { replyTo, setReplyTo } = useCommunityReply();
 
@@ -116,6 +119,26 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
         onCancelReply: () => {
             if (!replyTo) return false;
             setReplyTo(null);
+            return true;
+        },
+        // ↑ on an empty composer edits your last message — the one behaviour the
+        // keyboard contract has declared since Phase 3 that nothing implemented,
+        // because editing is owned by the ROW and this component never sees the
+        // message list.
+        //
+        // The list is already in the query cache under the key this channel
+        // renders from, so the target is a read rather than new plumbing. The
+        // row is reached through a one-field store; returning false when there
+        // is nothing to edit lets the keystroke fall through to normal caret
+        // movement, which is what makes ↑ safe to bind at all.
+        onEditLastOwnMessage: () => {
+            const cached = utils.community.getMessages.getInfiniteData({
+                channelId,
+                limit: COMMUNITY_PAGE_LIMIT,
+            });
+            const target = findLastOwnMessageId(cached?.pages, author?.userId);
+            if (!target) return false;
+            requestEdit(target);
             return true;
         },
     });

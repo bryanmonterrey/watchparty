@@ -54,6 +54,7 @@ function MessageContent({
     );
 }
 import { memo, useState, useEffect } from "react";
+import { useEditRequest } from "@/lib/community/edit-request";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -227,6 +228,24 @@ function CommunityChatItemImpl({
             </div>
         );
     }
+
+    // A composer can ask for THIS row to open its editor (↑ on an empty box).
+    // The request is consumed on arrival, so a stale id can't re-open an editor
+    // later.
+    //
+    // The selector compares to `id` and returns a BOOLEAN rather than the raw
+    // messageId, and that is the whole difference between this and undoing the
+    // memo work: zustand re-renders a subscriber when its SELECTED VALUE
+    // changes, so selecting `messageId` would flip every row null -> "abc" ->
+    // null and re-render the entire list twice per keypress. Selecting
+    // `messageId === id` stays false for every row but one.
+    const isEditRequested = useEditRequest((s) => s.messageId === id);
+    const clearEditRequest = useEditRequest((s) => s.clearEditRequest);
+    useEffect(() => {
+        if (!isEditRequested) return;
+        clearEditRequest();
+        if (canEdit) setIsEditing(true);
+    }, [isEditRequested, canEdit, clearEditRequest]);
 
     return (
         <div data-message-id={id} className={cn(
