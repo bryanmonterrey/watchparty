@@ -5,6 +5,7 @@ import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
 import { useMessagesContext, DM_PAGE_LIMIT } from '@/components/messages/messages-provider';
 import { useAuthSession } from '@/hooks/use-auth-session';
+import { appendDmMessage } from '@/lib/messages/dm-cache';
 
 interface DecryptedMessage {
     id: string;
@@ -69,17 +70,20 @@ export function useSendMessage(conversationId: string) {
 
     const sendMessage = useCallback(
         async (content: string, recipientPublicKey: string, messageType: 'text' | 'image' | 'file' | 'audio' | 'system' | 'transaction_send' | 'transaction_request' = 'text', attachmentFile?: File, replyToId?: string) => {
-            // The cache entry to patch. `message.list` is a REGULAR query
-            // (`messages-provider.tsx`), not an infinite one, and its key
-            // includes the limit — so this input has to match that call
-            // exactly. It previously used `getInfiniteData/setInfiniteData`
-            // with `{ conversationId }`, which missed on both counts: the
-            // optimistic message was written to an entry nothing subscribed
-            // to, so a sent DM only appeared after the server round trip and
-            // the invalidate-driven refetch, and this snapshot was always
-            // `undefined`, so the catch below rolled back nothing.
+            // The cache entry to patch. `message.list` IS an infinite query as
+            // of 2026-08-10 (`messages-provider.tsx`), so this uses the
+            // `*InfiniteData` accessors — but the part that actually bites is
+            // the INPUT, not the accessor: the key includes `limit`, so this
+            // has to match the provider's call exactly.
+            //
+            // An older version used `getInfiniteData/setInfiniteData` with
+            // `{ conversationId }` alone. That was wrong then for the input,
+            // and it stays wrong now: it addresses an entry nothing subscribes
+            // to, so a sent DM only appears after the server round trip, and
+            // the snapshot below is always `undefined` so the catch rolls back
+            // nothing. Right accessor, wrong key, silent failure.
             const listInput = { conversationId, limit: DM_PAGE_LIMIT };
-            const previousMessages = utils.message.list.getData(listInput);
+            const previousMessages = utils.message.list.getInfiniteData(listInput);
 
             try {
                 // ... (optimistic logic stays same)
@@ -116,10 +120,7 @@ export function useSendMessage(conversationId: string) {
                 const fallbackContent = messageType === 'image' ? 'Sent an image' : (messageType === 'audio' ? 'Sent a voice message' : 'Sent a file');
                 const optimisticContent = content || fallbackContent;
 
-                utils.message.list.setData(listInput, (old) => {
-                    if (!old) return old;
-
-                    const optimisticMessage = {
+                const optimisticMessage = {
                         id: `optimistic-${Date.now()}`,
                         conversationId,
                         senderId: session?.user?.id || 'me',
@@ -136,15 +137,16 @@ export function useSendMessage(conversationId: string) {
                         replyToId: replyToId || null,
                         reactions: [],
                         readReceipts: [],
-                        replyToMessage: null,
-                    };
+                    replyToMessage: null,
+                };
 
-                    // APPEND, don't prepend: `message.list` reverses its rows
-                    // to oldest-first before returning, so the newest message
-                    // is the LAST element. (The old code prepended — invisible
-                    // then, because none of this reached the cache at all.)
-                    return { ...old, messages: [...old.messages, optimisticMessage] };
-                });
+                // Bottom of the conversation. `message.list` reverses each page
+                // to oldest-first, so the newest message is the LAST element of
+                // the NEWEST page — `appendDmMessage` owns that, and
+                // tests/dm-cache.test.ts pins it.
+                utils.message.list.setInfiniteData(listInput, (old) =>
+                    appendDmMessage(old, optimisticMessage),
+                );
 
                 // 3. Encrypt (Async)
                 const { ciphertext, iv } = await encryptMessage(optimisticContent, recipientPublicKey);
@@ -215,7 +217,7 @@ export function useSendMessage(conversationId: string) {
                 logger.error('Failed to send message', error as Error, { conversationId });
                 // Rollback
                 if (previousMessages) {
-                    utils.message.list.setData(listInput, previousMessages);
+                    utils.message.list.setInfiniteData(listInput, previousMessages);
                 }
                 throw error;
             }

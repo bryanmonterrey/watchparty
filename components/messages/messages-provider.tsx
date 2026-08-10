@@ -1,12 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useSupabaseRealtime } from '@/hooks/use-supabase-realtime';
 import { useEncryption } from '@/hooks/use-encryption';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { useOfflineQueue } from '@/hooks/use-offline-queue';
 import { trpc } from '@/lib/trpc/client';
 import { logger } from '@/lib/logger';
+import { flattenDmMessages, mapDmMessages } from '@/lib/messages/dm-cache';
 
 interface DecryptedMessage {
     id: string;
@@ -52,6 +53,12 @@ interface MessagesContextType {
     onlineUsers: string[];
     setTyping: (isTyping: boolean) => void;
     conversationId: string;
+    /** Load the next page of OLDER messages. No-op when there are none. */
+    loadOlder: () => void;
+    /** More history exists on the server. */
+    hasOlder: boolean;
+    /** A page of older messages is in flight. */
+    isLoadingOlder: boolean;
 }
 
 /**
@@ -96,14 +103,47 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
         { enabled: !!conversationId }
     );
 
-    // Fetch messages from server
-    const { data, isLoading, error } = trpc.message.list.useQuery(
+    // Fetch messages from server.
+    //
+    // INFINITE, so DM history past the newest 50 is reachable at all. The
+    // server has taken a keyset `cursor` for a while (composite (createdAt, id),
+    // see server/routers/message.ts) and this client never sent one — so a
+    // conversation was permanently truncated to one page with no way to look
+    // further back.
+    //
+    // The input keeps `limit` in it. An earlier attempt at infinite here used
+    // `{ conversationId }` alone, which is a DIFFERENT cache entry from the one
+    // the list subscribes to: optimistic writes went somewhere nothing read,
+    // and the rollback snapshot was always undefined. The input must match the
+    // subscription exactly.
+    const {
+        data,
+        isLoading,
+        error,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+    } = trpc.message.list.useInfiniteQuery(
         { conversationId, limit: DM_PAGE_LIMIT },
         {
             enabled: !!conversationId,
             refetchOnWindowFocus: false,
+            getNextPageParam: (last) => last.nextCursor,
         }
     );
+
+    // Pages run newest → oldest and so do the rows inside them, so this is one
+    // newest-first list — the same order the single-page version produced,
+    // which is why nothing downstream had to change.
+    const messages = useMemo(() => flattenDmMessages(data), [data]);
+
+    // Guarded here rather than at the call site: the list asks for older
+    // history from a scroll handler, which fires many times per gesture, and
+    // fetchNextPage() while a page is already in flight queues a duplicate
+    // request for the same cursor.
+    const loadOlder = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     // Helper to get correct key for decryption
     const getDecryptionKey = useCallback(async (msgSenderId: string, participants?: Array<{ userId: string }>) => {
@@ -164,7 +204,7 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
         if (!participants) return;
 
         const decrypted = await Promise.all(
-            (data?.messages || []).map(async (msg) => {
+            messages.map(async (msg) => {
                 // Check cache first
                 // We use a composite key of ID + UpdatedAt (if available) to invalidate on edits
                 const cacheKey = `${msg.id}-${msg.updatedAt || msg.createdAt}`;
@@ -272,10 +312,10 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
     };
 
     useEffect(() => {
-        if (!data?.messages || !decryptMessage || !getDecryptionKey || !session?.user?.id || !isInitialized) return;
+        if (!messages.length || !decryptMessage || !getDecryptionKey || !session?.user?.id || !isInitialized) return;
 
         decryptAll();
-    }, [data?.messages, decryptMessage, getDecryptionKey, participantsData, session?.user?.id, isInitialized]);
+    }, [messages, decryptMessage, getDecryptionKey, participantsData, session?.user?.id, isInitialized]);
 
     // Listen for new messages
     useEffect(() => {
@@ -344,11 +384,8 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
             // The local patch stays because it also covers messages delivered
             // by `handleNewMessage`, which are in state but not yet in the
             // query cache.
-            utils.message.list.setData({ conversationId, limit: DM_PAGE_LIMIT }, (old) => {
-                if (!old?.messages) return old;
-                return {
-                    ...old,
-                    messages: old.messages.map((m: any) => {
+            utils.message.list.setInfiniteData({ conversationId, limit: DM_PAGE_LIMIT }, (old) =>
+                mapDmMessages(old, (m: any) => {
                         if (eventType === 'INSERT' && newRecord?.message_id === m.id) {
                             const incoming = {
                                 id: newRecord.id,
@@ -380,9 +417,8 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
                             };
                         }
                         return m;
-                    }),
-                };
-            });
+                }),
+            );
 
             setDecryptedMessages(prev => prev.map(msg => {
                 if (eventType === 'INSERT' && newRecord.message_id === msg.id) {
@@ -461,7 +497,7 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
 
 
     // Derived loading state to prevent flash of empty state while decrypting
-    const isDecrypting = !!data?.messages?.length && decryptedMessages.length === 0;
+    const isDecrypting = !!messages.length && decryptedMessages.length === 0;
     const showLoading = isLoading || isDecrypting;
 
     return (
@@ -473,7 +509,10 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
             typingUsers,
             onlineUsers,
             setTyping,
-            conversationId
+            conversationId,
+            loadOlder,
+            hasOlder: !!hasNextPage,
+            isLoadingOlder: isFetchingNextPage,
         }}>
             {children}
         </MessagesContext.Provider>

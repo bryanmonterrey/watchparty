@@ -779,7 +779,11 @@ inserts.
    (`useMutation`/`useQuery` return a **new object every render** — depend on
    `mutation.mutateAsync`, not `mutation`).
 
-2. **Message grouping** — ✅ logic done 2026-08-09, ⚠️ **not yet rendered.**
+2. **Message grouping** — ✅ logic done 2026-08-09, ✅ **rendered 2026-08-09.**
+   `community-chat-messages.tsx` imports `withGroupFlags`, precomputes a
+   `flagsById` map, and renders `isContinuation` rows plus `<DayDivider>` on
+   `isNewDay`. (This line said "not yet rendered" until 2026-08-10 — it was
+   stale, and a status line that misreports state is worse than none.)
 
    `lib/community/message-grouping.ts` + 15 tests. `withGroupFlags()` decorates a
    chronological list with `isContinuation` and `isNewDay`.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { MessageBubble } from './message-bubble';
@@ -13,6 +13,7 @@ import { EmptyState } from './empty-state';
 import { DayDivider } from '@/components/ui/day-divider';
 import { formatDayHeading, isSameCalendarDay } from '@/lib/chat/day-heading';
 import { isContinuation } from '@/lib/community/message-grouping';
+import { mapDmMessages } from '@/lib/messages/dm-cache';
 
 interface MessageListProps {
     conversationId: string;
@@ -21,7 +22,7 @@ interface MessageListProps {
 export function MessageList({ conversationId }: MessageListProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const { data: session } = useAuthSession();
-    const { messages, isLoading, typingUsers } = useMessages(conversationId);
+    const { messages, isLoading, typingUsers, loadOlder, hasOlder, isLoadingOlder } = useMessages(conversationId);
     const { setReplyToMessage } = useChat();
     const utils = trpc.useUtils();
 
@@ -35,12 +36,12 @@ export function MessageList({ conversationId }: MessageListProps) {
             const me = session?.user?.id;
             if (!me) return;
             await utils.message.list.cancel(listInput);
-            const previous = utils.message.list.getData(listInput);
-            utils.message.list.setData(listInput, (old) => {
-                if (!old?.messages) return old;
-                return {
-                    ...old,
-                    messages: old.messages.map((m: any) => {
+            const previous = utils.message.list.getInfiniteData(listInput);
+            // mapDmMessages walks EVERY page: once older history is loaded the
+            // target message may not be on the newest one, and a page-0-only
+            // patch would silently do nothing for anything scrolled back to.
+            utils.message.list.setInfiniteData(listInput, (old) =>
+                mapDmMessages(old, (m: any) => {
                         if (m.id !== messageId) return m;
                         const existing = (m.reactions ?? []).find(
                             (r: any) => r.emoji === emoji && r.userId === me,
@@ -56,13 +57,12 @@ export function MessageList({ conversationId }: MessageListProps) {
                                     { id: `optimistic-${Date.now()}`, emoji, userId: me, messageId },
                                 ],
                         };
-                    }),
-                };
-            });
+                }),
+            );
             return { previous };
         },
         onError: (_err, _vars, context) => {
-            if (context?.previous) utils.message.list.setData(listInput, context.previous);
+            if (context?.previous) utils.message.list.setInfiniteData(listInput, context.previous);
         },
         onSettled: () => {
             utils.message.list.invalidate({ conversationId });
@@ -132,6 +132,58 @@ export function MessageList({ conversationId }: MessageListProps) {
     useEffect(() => {
         isInitialLoad.current = true;
     }, [conversationId]);
+
+    // ── Older history ────────────────────────────────────────────────────────
+    // Messages render oldest-first, so "load older" is a sentinel at the TOP.
+    const topSentinelRef = useRef<HTMLDivElement>(null);
+    // scrollHeight/scrollTop captured at the moment a fetch starts, so the
+    // restore below knows how far the content grew.
+    const olderAnchor = useRef<{ height: number; top: number } | null>(null);
+
+    const viewportOf = useCallback(
+        () => containerRef.current?.closest('[data-slot="scroll-area-viewport"]') as HTMLElement | null,
+        [],
+    );
+
+    useEffect(() => {
+        const sentinel = topSentinelRef.current;
+        const viewport = viewportOf();
+        if (!sentinel || !viewport || !hasOlder) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                // Capture BEFORE the request: once the rows arrive, the old
+                // height is gone and the offset can't be reconstructed.
+                olderAnchor.current = { height: viewport.scrollHeight, top: viewport.scrollTop };
+                loadOlder();
+            },
+            // Start a page early so history is usually already there by the
+            // time the user reaches the top.
+            { root: viewport, rootMargin: '300px 0px 0px 0px' },
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [hasOlder, loadOlder, viewportOf]);
+
+    // Pin the reading position while older messages prepend.
+    //
+    // Prepending grows the scroll content ABOVE the viewport, so without this
+    // the browser keeps scrollTop and the conversation lurches — the further
+    // back you read, the bigger the jump. useLayoutEffect so the correction
+    // lands in the same frame as the new rows and is never seen.
+    useLayoutEffect(() => {
+        const anchor = olderAnchor.current;
+        if (!anchor) return;
+        const viewport = viewportOf();
+        if (!viewport) return;
+        const grew = viewport.scrollHeight - anchor.height;
+        // Only a positive delta is a prepend. A re-render that shrinks or keeps
+        // the height is something else, and moving the scroller for it would
+        // be the bug this exists to prevent.
+        if (grew > 0) viewport.scrollTop = anchor.top + grew;
+        olderAnchor.current = null;
+    }, [messages.length, viewportOf]);
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         // For auto/instant scrolling (initial load), scrollIntoView is often more robust
@@ -265,6 +317,15 @@ export function MessageList({ conversationId }: MessageListProps) {
         <div className="flex-1 h-full min-h-0 min-w-0 overflow-y-visible">
             <ScrollArea className="h-full px-6 overflow-y-visible">
                 <div className="space-y-4 overflow-y-visible" ref={containerRef}>
+                    {/* Top sentinel: crossing it asks for the next page of
+                        older messages. Rendered only while more exist, so the
+                        observer can't re-arm at the end of history. */}
+                    {hasOlder && <div ref={topSentinelRef} aria-hidden className="h-px w-full" />}
+                    {isLoadingOlder && (
+                        <div className="py-2 text-center text-xs font-medium text-zinc-500">
+                            Loading earlier messages…
+                        </div>
+                    )}
                     {messages.map((message, index) => {
                         // Check if I have read this message
                         const isReadByMe = message.readReceipts?.some(r => r.userId === session?.user?.id);
