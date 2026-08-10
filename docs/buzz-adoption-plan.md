@@ -1998,6 +1998,47 @@ that deserves a careful review; Phase 6 is the one that deserves numbers.
 Append decisions here as you go — especially anything that surprised you. That's
 what makes this document worth more than the plan it started as.
 
+- **2026-08-10** — **Snapshot painting generalised to six surfaces.**
+  `lib/snapshot/` (store + infinite wrapper + keys), one `useSnapshot` hook, and
+  per-surface declarations in `lib/snapshot/surfaces.ts`. Live on: feed, coin
+  alerts rail, notifications, bookmarks, profile posts, trending — plus chat,
+  which was the prototype and now runs on the same store.
+  - **The feed needed no interaction payload, and I had said it would.** I read
+    `browse-feed`'s `item.data.isLiked ?? likedPostIdsRef…` and concluded the
+    hearts arrive from three separate bulk queries, so a snapshot would paint
+    posts and then pop every heart a beat later. Wrong: `postSelectFields`
+    (`server/lib/post-shape.ts`) projects `isLiked`/`isBookmarked`/`isReposted`
+    onto **every row**, and `getFeed` uses it. The bulk queries are a fallback
+    for rows the server didn't annotate. Snapshot the page, get the hearts.
+  - **Which is exactly why everything except chat is keyed by viewer.** Those
+    are `EXISTS` subqueries against `viewerId`, so a page snapshotted by one
+    account is *wrong* for the next — and multi-session (`setActiveDeviceSession`)
+    switches accounts with **no sign-out in between**. Un-keyed, the new account
+    gets the previous one's likes painted on for a frame. Keying is correctness;
+    `clearAllSnapshots()` behind `signOutAndClearSnapshots()` is privacy.
+  - **Max age is per-surface, and it replaces per-component staleness plumbing.**
+    Bookmarks 7d, notifications 1d, profile/feed shorter, coin rail 30m,
+    trending **15m** — both its prices and its *ordering* go stale, and a row in
+    the wrong position still looks authoritative. Nothing old enough to mislead
+    is painted at all, so no number needs an `isPlaceholderData` branch.
+  - **Not snapshotted, on purpose:** DMs (messages-provider decrypts
+    client-side — a snapshot writes plaintext to localStorage and undoes the
+    encryption), search (keyed by query, hit rate ~0), video/shorts feeds
+    (autoplay runs off the painted list).
+  - **Known, unverified edge:** page 0 is stored *with* its `nextCursor`, so
+    during the ~300ms the placeholder shows, `hasNextPage` is true against a
+    cursor minted in a previous session. Stripping it would close that, but
+    `hasNextPosts` gates the loader (`browse-feed:544`) so stripping trades an
+    unproven risk for a certain one — a brief "end of feed". Left as-is because
+    chat has shipped this exact behaviour without incident; revisit only with
+    evidence, not reasoning.
+  - **My smoke test was wrong before the code was.** First version asserted
+    `<tr>` counts on `/trending` — a route that **does not exist**, in a table
+    built from divs. It would have passed by asserting nothing. Now it runs on
+    `/feed` (public under `PUBLIC_BROWSING`), counts `<article>` (skeletons are
+    `<div>`, so a skeleton can't be mistaken for a paint), and proves the actual
+    claim by **blocking the feed request** and checking posts render anyway.
+
 - **2026-08-09** — **DM reactions were never optimistic**, and the reason is a
   layer the community-chat work doesn't have. DMs do **not** render from the
   query cache: `MessagesProvider` decrypts `message.list` into a
