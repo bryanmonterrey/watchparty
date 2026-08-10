@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { MotionConfigProvider } from "@/components/motion-config-provider";
 import { getServerSession } from "@/lib/auth/get-session";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -20,10 +21,12 @@ export default async function MarketingLayout({
     // lives inside each page's ColorScrollPage so the background also fills the
     // header clearance.
     return (
-        <div className="relative flex min-h-svh flex-col bg-white text-black">
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <MarketingFooter />
-        </div>
+        <MotionConfigProvider>
+            <div className="relative flex min-h-svh flex-col bg-white text-black">
+                <SiteHeader />
+                <main className="flex-1">{children}</main>
+                <MarketingFooter />
+            </div>
+        </MotionConfigProvider>
     );
 }

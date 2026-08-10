@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { MotionConfigProvider } from "@/components/motion-config-provider";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getServerSession } from "@/lib/auth/get-session";
@@ -55,6 +56,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // pin) — deliberately NOT restored from the cookie anymore.
   return (
     <AppProviders>
+      <MotionConfigProvider>
       {/* Below md every signed-in route shows the desktop-only notice.
           Remove when the responsive pass lands. */}
       <DesktopOnlyGate />
@@ -77,6 +79,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             UI in its loading state so skeletons can be designed against. */}
         <LoadingDebug />
       </MiniPlayerShell>
+      </MotionConfigProvider>
     </AppProviders>
   );
 }

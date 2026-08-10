@@ -208,6 +208,42 @@ something that was tuned by eye.
 | `@keyframes` in `globals.css` | ~14 | explicit `@media` branch |
 | Imperative rAF / canvas | a handful | `prefersReducedMotion()` early-return |
 
+### ✅ The framer-motion half is DONE in one provider (2026-08-10)
+
+`components/motion-config-provider.tsx` — `<MotionConfig reducedMotion="user">`,
+mounted in `(app)` and `(marketing)`.
+
+This phase budgeted for hand-editing ~160 motion importers. The library already
+implements exactly the policy written below: `reducedMotion="user"` reads the OS
+setting and disables **transform and layout** animations (x, y, scale, rotate)
+while letting **opacity and colour** through — which is step 3's own rule of
+thumb, "opacity may stay, movement goes". Same policy, one provider, no
+per-file diff to keep correct.
+
+It is also the half the CSS floor structurally cannot reach. `animation-duration:
+1ms !important` covers CSS animations and transitions; framer-motion interpolates
+INLINE STYLES every frame, and a 1ms transition on a value being rewritten 60
+times a second does nothing.
+
+⚠️ One instance is load-bearing: MotionConfig only reaches components from the
+same package instance, and this app imports from BOTH `framer-motion` (57 files)
+and `motion` (99). They are one instance today — `motion` depends on
+`framer-motion@^12.43.0`, both resolve to 12.43.0, and nothing is nested under
+`node_modules/motion`. If those ever diverge enough to nest, this silently stops
+covering the `motion` importers and nothing will warn.
+
+### What is LEFT of this phase, honestly
+
+The `~442 transition-*` and `~93 animate-*` rows in the table below are **largely
+already handled** by the global floor in `globals.css`, which sets
+`animation-duration`/`transition-duration` to 1ms under the media query. Adding
+`motion-reduce:` to each is belt-and-braces, not a fix — worth doing when
+touching a file, not worth a 440-file sweep.
+
+The genuinely outstanding items are the ones no blanket reaches: the `@keyframes`
+judgement calls (a spinner must keep moving or it reads as a hung app), the
+imperative rAF/canvas surfaces, and auto-advancing carousels.
+
 ### Steps
 
 Work surface by surface, not file by file — it's easier to review and easier to
