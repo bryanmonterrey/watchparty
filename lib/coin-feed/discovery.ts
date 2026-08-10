@@ -55,10 +55,13 @@ function qualifies(pool: DiscoveredPool): boolean {
     return liquidity >= net.minLiquidityUsd && volume >= net.minVolume24hUsd;
 }
 
-/** Fresh security lookups per pass — the free Mobula key is ~1 RPS and the
- *  pass runs inside a cron route's time budget. Serial on purpose; repeats are
- *  cache hits (same key + TTL as the coin page's security card), and anything
- *  past the cap adopts unscreened this pass — fail-open, screened next time. */
+/** Mobula API CALLS per pass — the free key is ~1 RPS and the pass runs inside a
+ *  cron route's time budget. Serial on purpose. Cache hits (same key + TTL as
+ *  the coin page's security card) do NOT count against this, so a token already
+ *  screened recently is re-checked for free; only genuine misses spend budget.
+ *  A token whose miss falls past the cap adopts unscreened this pass and is
+ *  picked up on a later one — which is now true, and wasn't when this counted
+ *  lookups instead of calls (see screenSecurity). */
 const SECURITY_CHECKS_PER_PASS = 12;
 
 /** Drop pools whose token/details security stats are KNOWN bad (honeypot,
@@ -71,20 +74,47 @@ async function screenSecurity(pools: DiscoveredPool[]): Promise<DiscoveredPool[]
     for (const p of pools) byToken.set(trackedTokenId(p.network, p.tokenAddress), p);
 
     const rejected = new Set<string>();
-    let checked = 0;
+    // Counts API CALLS, not lookups.
+    //
+    // This used to increment once per token before the cache was consulted, so a
+    // cache HIT spent budget identically to a network call. The cap exists for
+    // Mobula's ~1 RPS free key, and cache hits cost Mobula nothing — but worse
+    // than the waste was where the waste landed: `byToken` is built in fetch
+    // order, which is the same every pass, so the first 12 tokens burned the
+    // whole budget on cached reads and everything past position 12 was NEVER
+    // screened. Not "screened next pass" as the comment claimed — never, because
+    // the next pass made the identical choice.
+    //
+    // Discovery sweeps 2 enabled networks x (trending + new) and dedupes to well
+    // over 12 tokens, so that tail was most of the intake, adopting with no
+    // security check at all — including the mint/freeze-authority gate.
+    //
+    // Incrementing inside the loader means only a genuine miss counts, cached
+    // tokens are all screened for free, and the cap still bounds the API calls
+    // it was written to bound.
+    let apiCalls = 0;
+    let screened = 0;
     for (const [id, p] of byToken) {
-        if (checked >= SECURITY_CHECKS_PER_PASS) break;
-        checked++;
+        if (apiCalls >= SECURITY_CHECKS_PER_PASS) break;
         try {
             const sec = await withCache(
                 `coin:security:v1:${p.network}:${p.tokenAddress}`,
                 mobulaCadence().securityTtl,
-                () => fetchMobulaTokenSecurity(p.network, p.tokenAddress),
+                () => {
+                    apiCalls++;
+                    return fetchMobulaTokenSecurity(p.network, p.tokenAddress);
+                },
             );
+            screened++;
             if (!passesSecurityBar(sec)) rejected.add(id);
         } catch {
             // 429/timeout — fail-open, retried on a later pass via cache miss.
         }
+    }
+    if (screened < byToken.size) {
+        console.log(
+            `[coin-feed] security gate screened ${screened}/${byToken.size} (${apiCalls} api calls, cap ${SECURITY_CHECKS_PER_PASS})`,
+        );
     }
     if (rejected.size > 0) console.log(`[coin-feed] security gate rejected ${rejected.size} pool(s)`);
     return pools.filter((p) => !rejected.has(trackedTokenId(p.network, p.tokenAddress)));
