@@ -106,6 +106,15 @@ export async function middleware(request: NextRequest) {
       NextResponse.redirect(new URL(pathname + request.nextUrl.search, "https://console.watchparty.xyz"), 308),
     );
   }
+  // docs.watchparty.xyz IS the docs tree: every non-/api path rewrites under
+  // /developer/docs, so future doc sub-pages get subdomain URLs for free.
+  // /api passes through untouched — curl examples in the docs must behave
+  // identically on every host.
+  if (host === "docs.watchparty.xyz" && !pathname.startsWith("/api")) {
+    return withCleanup(
+      NextResponse.rewrite(new URL(`/developer/docs${pathname === "/" ? "" : pathname}`, request.url)),
+    );
+  }
   if (host === "console.watchparty.xyz" && !pathname.startsWith("/api")) {
     const isPortalPath =
       pathname === "/" || pathname === "/console" || pathname === "/docs" ||
