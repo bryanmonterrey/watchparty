@@ -2,8 +2,9 @@
 
 Owner direction 2026-08-09: an X-Developer-Console-style dashboard as **its own
 app with the main project as a harness**. This doc is the complete blueprint,
-distilled from 16 screenshots of X's console (all tabs) — future sessions
-should build from THIS, not re-request images.
+distilled from the screenshots of X's console (all tabs) — future sessions
+should build from THIS, not re-request images. The full per-page transcription
+of those screenshots lives in `docs/console-x-reference.md`.
 
 ## Architecture (decided)
 
