@@ -81,9 +81,22 @@ jobs:
       # Reconstruct the env file from a single multi-line secret. `next build`
       # bakes NEXT_PUBLIC_* and runs DB-backed static generation from this.
       - name: Restore .env
-        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        # DOTENV_OVERRIDES is appended AFTER, and later wins: gen-secrets.mjs
+        # parses line by line with `out[k] = v`, so the last occurrence of a key
+        # is the one that ships. That makes it possible to change a few values
+        # without rewriting DOTENV_PRODUCTION — which nobody can read, only
+        # replace wholesale, so a targeted edit is otherwise impossible.
+        #
+        # Used 2026-08-10 for the Helius key rotation: the key is embedded in
+        # four RPC URLs as well as HELIUS_API_KEY, and three of those live ONLY
+        # as Worker secrets, so editing .env.production would have missed them.
+        # Empty/unset is a no-op, so this is safe to leave wired up.
+        run: |
+          printf '%s\n' "$DOTENV_PRODUCTION" > .env
+          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
         env:
           DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -256,9 +269,22 @@ jobs:
       # during the image build, and the rest are pushed as Worker secrets below,
       # which is where the container reads its runtime env from.
       - name: Restore .env
-        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        # DOTENV_OVERRIDES is appended AFTER, and later wins: gen-secrets.mjs
+        # parses line by line with `out[k] = v`, so the last occurrence of a key
+        # is the one that ships. That makes it possible to change a few values
+        # without rewriting DOTENV_PRODUCTION — which nobody can read, only
+        # replace wholesale, so a targeted edit is otherwise impossible.
+        #
+        # Used 2026-08-10 for the Helius key rotation: the key is embedded in
+        # four RPC URLs as well as HELIUS_API_KEY, and three of those live ONLY
+        # as Worker secrets, so editing .env.production would have missed them.
+        # Empty/unset is a no-op, so this is safe to leave wired up.
+        run: |
+          printf '%s\n' "$DOTENV_PRODUCTION" > .env
+          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
         env:
           DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
 
       - name: Build image and deploy container worker
         run: bunx wrangler deploy --config container/wrangler.jsonc
