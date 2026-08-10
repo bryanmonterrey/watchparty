@@ -32,6 +32,8 @@ export type GroupableMessage = {
     system?: boolean | null;
     /** A reply shows its quoted parent, which needs the full header above it. */
     replyToId?: string | null;
+    /** A pinned row carries its own badge and is meant to be findable. */
+    pinned?: boolean | null;
 };
 
 export type GroupFlags = {
@@ -68,6 +70,9 @@ export function isContinuation(
     // A reply renders its quoted parent above the text; without the header that
     // quote appears to belong to whoever spoke last.
     if (message.replyToId) return false;
+    // A pinned row is meant to be spotted while scanning. Stripping its avatar
+    // and name to save a line defeats the reason it was pinned.
+    if (message.pinned) return false;
     // Webhooks and deleted-author rows can both surface as an empty userId.
     // Grouping on "" would merge two different senders into one block.
     if (!previous.userId || !message.userId) return false;

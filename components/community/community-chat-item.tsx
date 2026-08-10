@@ -75,6 +75,16 @@ type Props = {
     currentUserId: string;
     currentMemberRole: string;
     timestamp: string;
+    /**
+     * Same author, within 10 minutes, nothing forcing full chrome — drop the
+     * avatar and header so a run of messages reads as one thought instead of
+     * five table rows. Computed once when pages are flattened, never here: the
+     * decision depends on the PREVIOUS message, and a windowed list hands a row
+     * no way to see its neighbour (lib/community/message-grouping.ts).
+     */
+    isContinuation?: boolean;
+    /** HH:mm — shown in the gutter on hover where the avatar would be. */
+    shortTimestamp?: string;
     fileUrl: string | null;
     deleted: boolean;
     isUpdated: boolean;
@@ -118,6 +128,8 @@ function CommunityChatItemImpl({
     currentUserId,
     currentMemberRole,
     timestamp,
+    isContinuation = false,
+    shortTimestamp,
     fileUrl,
     deleted,
     isUpdated,
@@ -218,17 +230,32 @@ function CommunityChatItemImpl({
 
     return (
         <div data-message-id={id} className={cn(
-            "relative group flex items-center px-4 py-2 transition w-full",
+            "relative group flex items-center px-4 transition w-full",
+            // Grouped rows sit tight; a full row keeps its breathing space.
+            isContinuation ? "py-0.5" : "py-2",
             !deleted && currentUsername && (content.includes(`@${currentUsername}`) || content.includes("@everyone"))
                 ? "bg-sunset/[0.07] shadow-[inset_2px_0_0_var(--color-sunset)] hover:bg-sunset/10"
                 : "hover:bg-white/[0.03]",
         )}>
             <div className="group flex gap-x-2 items-start w-full">
-                <Avatar className="h-9 w-9 mt-0.5">
-                    <AvatarImage src={userImage ?? undefined} alt={userName ?? ""} />
-                    <AvatarFallback className="bg-zinc-700 text-flexwhite text-xs">
-                    </AvatarFallback>
-                </Avatar>
+                {isContinuation ? (
+                    // The avatar's exact footprint, kept empty so the text stays
+                    // on the same left edge as the row above it — the alignment
+                    // is what makes a run read as one block. The time fills it on
+                    // hover, which is where the timestamp goes when the header is
+                    // gone.
+                    <div className="h-9 w-9 mt-0.5 shrink-0 select-none pt-[3px] text-right" aria-hidden>
+                        <span className="pr-1 text-[10px] leading-none text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 motion-reduce:transition-none">
+                            {shortTimestamp}
+                        </span>
+                    </div>
+                ) : (
+                    <Avatar className="h-9 w-9 mt-0.5">
+                        <AvatarImage src={userImage ?? undefined} alt={userName ?? ""} />
+                        <AvatarFallback className="bg-zinc-700 text-flexwhite text-xs">
+                        </AvatarFallback>
+                    </Avatar>
+                )}
 
                 <div className="flex flex-col w-full">
                     {replyTo && (
@@ -243,6 +270,7 @@ function CommunityChatItemImpl({
                             <HugeiconsIcon icon={PinIcon} className="size-3" strokeWidth={2} /> Pinned
                         </div>
                     )}
+                    {!isContinuation && (
                     <div className="flex items-center gap-x-2">
                         <div className="flex items-center">
                             <span
@@ -272,6 +300,7 @@ function CommunityChatItemImpl({
                             {timestamp}
                         </span>
                     </div>
+                    )}
 
                     {fileUrl && (blurMedia && !revealed ? (
                         // Blur media (server safety setting): hidden until clicked

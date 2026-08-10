@@ -16,6 +16,8 @@ import { useChatSnapshot } from "@/hooks/use-chat-snapshot";
 import { CommunityChatWelcome } from "./community-chat-welcome";
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm";
+/** Gutter time on a grouped row — the header that carried the full date is gone. */
+const SHORT_TIME_FORMAT = "HH:mm";
 
 type TypingUser = { userId: string; userName: string };
 
@@ -173,7 +175,8 @@ export function CommunityChatMessages({
                 {data?.pages?.map((group, i) => (
                     <Fragment key={i}>
                         {group.items.map((message) => {
-                            const isNewDay = flagsById.get(message.id)?.isNewDay ?? true;
+                            const flags = flagsById.get(message.id);
+                            const isNewDay = flags?.isNewDay ?? true;
                             return (
                         <Fragment key={renderKeyFor(message)}>
                             <CommunityChatItem
@@ -187,6 +190,8 @@ export function CommunityChatMessages({
                                 currentUserId={currentUserId}
                                 currentMemberRole={currentMemberRole}
                                 timestamp={format(new Date(message.createdAt), DATE_FORMAT)}
+                                isContinuation={flags?.isContinuation ?? false}
+                                shortTimestamp={format(new Date(message.createdAt), SHORT_TIME_FORMAT)}
                                 fileUrl={message.fileUrl}
                                 deleted={message.deleted}
                                 isUpdated={message.updatedAt.getTime() !== message.createdAt.getTime()}

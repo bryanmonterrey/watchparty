@@ -61,6 +61,12 @@ describe("isContinuation", () => {
         expect(isContinuation(msg(), msg({ replyToId: "x", createdAt: at(1000) }))).toBe(false);
     });
 
+    test("a pinned row keeps its header", () => {
+        // Pinned means "find this while scanning". Stripping the avatar and name
+        // to save a line defeats the reason it was pinned.
+        expect(isContinuation(msg(), msg({ pinned: true, createdAt: at(1000) }))).toBe(false);
+    });
+
     test("a day boundary breaks the group even inside the window", () => {
         const lateLastNight = new Date("2026-08-09T23:59:00.000Z");
         const justAfterMidnight = new Date("2026-08-10T00:01:00.000Z");
