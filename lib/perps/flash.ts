@@ -363,7 +363,32 @@ async function sessionTokenFor(
 // ─── Referral ───────────────────────────────────────────────
 
 /** Cached per-authority: does this trader's Referral account exist on-chain? */
+/**
+ * Does this trader have a Referral PDA on chain?
+ *
+ * Keyed by TRADER, which is unbounded user input, and it had no eviction at all
+ * — every distinct trader that ever placed an order stayed in this map for the
+ * life of the isolate. The other module-level caches flagged alongside it turned
+ * out to be fine on inspection: `signerCache` is keyed by a handful of configured
+ * secrets, and `feed-autoplay`'s map and `assetsChannels` both delete on
+ * unregister. This one is the actual unbounded growth.
+ *
+ * Insertion-ordered, so the first key is the oldest. Evicting a live trader just
+ * costs one `getAccountInfo` next time — the answer is stable and cheap to
+ * re-derive, which is what makes a hard cap the right shape here rather than a
+ * TTL.
+ */
+const REFERRAL_CACHE_MAX = 500;
 const referralExists = new Map<string, boolean>();
+
+function rememberReferral(key: string, exists: boolean) {
+    referralExists.set(key, exists);
+    while (referralExists.size > REFERRAL_CACHE_MAX) {
+        const oldest = referralExists.keys().next().value;
+        if (oldest === undefined) break;
+        referralExists.delete(oldest);
+    }
+}
 
 /**
  * The referral tail for a trade: [Privilege.Referral, trader's Referral PDA,
@@ -377,7 +402,7 @@ async function referralArgs(flash: FlashSdk, connection: Connection, owner: Publ
     const [referralPda] = flash.findReferralAddress(owner as unknown as SdkPublicKey);
     if (!referralExists.get(key)) {
         const info = await connection.getAccountInfo(referralPda as unknown as PublicKey);
-        referralExists.set(key, !!info);
+        rememberReferral(key, !!info);
         if (!info) return null;
     }
     const [tokenStake] = flash.findTokenStakeAddress(new PK(REFERRER_PUBKEY) as unknown as SdkPublicKey);

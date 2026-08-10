@@ -7,6 +7,11 @@
 const MIN_RATIO = 0.6;
 
 type Entry = { ratio: number; play: () => void; pause: () => void };
+// A Map, NOT a WeakMap, and deliberately: line ~16 iterates it to find the
+// best-visible entry, which a WeakMap cannot do. Phase 9e listed this as a leak
+// on the grounds that "a WeakMap would collect" — it would also break autoplay.
+// Bounded instead by `unregister` deleting on unmount, which is the correct
+// shape for something whose keys are live DOM-bound tokens.
 const entries = new Map<object, Entry>();
 let active: object | null = null;
 
