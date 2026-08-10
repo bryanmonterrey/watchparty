@@ -11,7 +11,6 @@ import {
   Analytics01Icon,
   UserGroupIcon,
   DollarCircleIcon,
-  LinkSquare02Icon,
   ArrowLeft01Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -26,6 +25,7 @@ const NAV: { icon: IconSvgElement; label: string; href: string }[] = [
   { icon: Album02Icon, label: "Content", href: "/studio/content" },
   { icon: UserGroupIcon, label: "Community", href: "/studio/community" },
   { icon: Analytics01Icon, label: "Analytics", href: "/studio/analytics" },
+  { icon: DollarCircleIcon, label: "Revenue", href: "/studio/revenue" },
 ];
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
@@ -62,17 +62,6 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-
-          <div className="my-2 h-px bg-border/60" />
-
-          <a
-            href="https://watchparty.xyz/premium"
-            className="flex h-9 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-accent/50"
-          >
-            <HugeiconsIcon icon={DollarCircleIcon} className="size-4" />
-            Monetization
-            <HugeiconsIcon icon={LinkSquare02Icon} className="ml-auto size-3" />
-          </a>
         </nav>
 
         <div className="mt-auto">
