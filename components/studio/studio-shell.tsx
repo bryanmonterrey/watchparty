@@ -9,6 +9,7 @@ import {
   LiveStreaming01Icon,
   Album02Icon,
   Analytics01Icon,
+  UserGroupIcon,
   DollarCircleIcon,
   LinkSquare02Icon,
   ArrowLeft01Icon,
@@ -23,6 +24,7 @@ const NAV: { icon: IconSvgElement; label: string; href: string }[] = [
   { icon: Home01Icon, label: "Home", href: "/studio" },
   { icon: LiveStreaming01Icon, label: "Streams", href: "/studio/streams" },
   { icon: Album02Icon, label: "Content", href: "/studio/content" },
+  { icon: UserGroupIcon, label: "Community", href: "/studio/community" },
   { icon: Analytics01Icon, label: "Analytics", href: "/studio/analytics" },
 ];
 
