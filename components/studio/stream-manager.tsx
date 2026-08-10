@@ -6,6 +6,7 @@ import { Copy01Icon, ViewIcon, RefreshIcon, Tick02Icon } from "@hugeicons/core-f
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
+import { StreamPreview } from "@/components/studio/stream-preview";
 
 // The studio's stream cockpit (S2). A widget grid, not a form: live stat
 // tiles, the go-live control, Channel Actions (chat modes), ingest, and stream
@@ -179,6 +180,8 @@ export function StreamManager() {
       {mine.isPending ? (
         <div className="h-40 animate-pulse rounded-2xl border border-border/60 bg-muted/30" />
       ) : (
+        <>
+        <StreamPreview playbackUrl={stream?.playbackUrl ?? null} isLive={isLive} />
         <div className="grid gap-4 lg:grid-cols-2">
           {/* Go-live status card */}
           <div className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
@@ -278,6 +281,7 @@ export function StreamManager() {
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );
