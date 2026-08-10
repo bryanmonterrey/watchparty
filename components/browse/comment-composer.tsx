@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/client";
+import { useComposerKeys } from "@/hooks/use-composer-keys";
+import { useComposerDraft } from "@/hooks/use-composer-drafts";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -62,7 +64,15 @@ export function CommentComposer({
         session?.user?.image ??
         null;
 
-    const [text, setText] = useState("");
+    // Per-thread draft, so a half-written reply survives navigating away and
+    // back. Keyed by (post, parent) because a reply to a comment is a different
+    // draft from a reply to the post — filing both under `postId` would hand
+    // you the wrong text.
+    const {
+        value: text,
+        setValue: setText,
+        clear: clearDraft,
+    } = useComposerDraft(`comment:${postId}:${parentId ?? "root"}`);
     const [images, setImages] = useState<File[]>([]);
     const [gif, setGif] = useState<string | null>(null);
     const [isPosting, setIsPosting] = useState(false);
@@ -160,6 +170,22 @@ export function CommentComposer({
         setImages((prev) => [...prev, ...Array.from(files)].slice(0, MAX_IMAGES));
     };
 
+    // The app-wide composer contract, shared with the DM, community and live
+    // chat inputs. Two things this fixes beyond consolidation:
+    //   - Escape did nothing at all; it now blurs.
+    //   - Modifier+Enter posted. The old check was `!e.shiftKey`, so Cmd+Enter
+    //     — which means "newline" in about as many apps as it means "send" —
+    //     submitted a half-written reply.
+    const onKeyDown = useComposerKeys({
+        onSubmit: () => {
+            if (!canPost) return false;
+            // submit() only ever calls preventDefault on its argument, and the
+            // hook has already done that on the real keydown event.
+            void submit({ preventDefault() {} } as React.FormEvent);
+        },
+        getValue: () => text,
+    });
+
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!canPost) return;
@@ -238,7 +264,7 @@ export function CommentComposer({
                 splits: tokenLaunch.splits,
             });
 
-            setText("");
+            clearDraft();
             setImages([]);
             setGif(null);
             clearPreview();
@@ -281,12 +307,12 @@ export function CommentComposer({
                     // enough that reaching for a button every time is friction.
                     onKeyDown={(e) => {
                         // The panel owns arrows/Enter/Escape while it's open, so
-                        // Enter picks a ticker instead of posting the reply.
+                        // Enter picks a ticker instead of posting the reply. It
+                        // handles arrows too, which is richer than the shared
+                        // hook's autocomplete contract, so it keeps first refusal
+                        // rather than being expressed as isAutocompleteOpen.
                         if (cashtag && cashtagKeyHandler.current?.(e)) { e.preventDefault(); return; }
-                        if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            void submit(e as unknown as React.FormEvent);
-                        }
+                        onKeyDown(e);
                     }}
                     autoFocus={autoFocus}
                     rows={1}
@@ -436,7 +462,7 @@ export function CommentComposer({
                             </span>
                         </GifPicker>
 
-                        <EmojiPicker onEmojiSelect={(emoji) => setText((t) => t + emoji.native)}>
+                        <EmojiPicker onEmojiSelect={(emoji) => setText(text + emoji.native)}>
                             <span className="grid size-8 cursor-pointer place-items-center rounded-full text-zinc-400 transition-colors hover:bg-white/5 hover:text-white">
                                 <EmojiIcon className="size-5" />
                             </span>

@@ -481,6 +481,34 @@ and if Phase 5 ever stalls, we've already banked the wins.
    same wherever we show a typing indicator: reserve the rail, fade the content
    in and out, never grow the container.
 
+### ✅ Keyboard contract in all four composers (2026-08-09)
+
+`useComposerKeys` was in messages + community chat only; it is now in all four.
+
+- **`streaming/chat-composer.tsx`** — keyboard rules only, as this plan
+  specifies: live chat keeps its single-line `<input>`. Its inline handler was
+  `if (Enter) submit(); if (Escape) onCancelReply()`, which got three things
+  wrong. Enter didn't `preventDefault`, so it could also submit a wrapping form.
+  Escape **always** cancelled the reply rather than unwinding a layer at a time.
+  And modifier+Enter sent — ⌘/Ctrl+Enter means "newline" in about as many apps
+  as it means "send", and Enter already sends.
+- **`browse/comment-composer.tsx`** — keys *and* drafts. Escape previously did
+  nothing at all, and the Enter check was `!e.shiftKey`, so ⌘+Enter posted a
+  half-written reply. The cashtag panel keeps **first refusal** on keys rather
+  than being expressed as `isAutocompleteOpen`, because it also handles arrows,
+  which is richer than the hook's autocomplete contract.
+
+Drafts are now in three of four, keyed per thread —
+`comment:${postId}:${parentId ?? "root"}`, because a reply to a comment is a
+different draft from a reply to the post, and filing both under `postId` hands
+you the wrong text. Live chat deliberately has **no** draft: a chat line you
+didn't send isn't something you come back to.
+
+⚠️ Two of the contract's behaviours are still unimplemented anywhere: **↑ edits
+your last message** (no composer passes `onEditLastOwnMessage`) and the **shared
+reply/edit banner** (step 5). The stable-composer-height rule (step 6) is also
+outstanding.
+
 **Done when:** in all four composers — Enter sends, Shift+Enter newlines, Enter
 picks the highlighted autocomplete item instead of sending, ↑ edits your last
 message, Escape unwinds reply→edit→blur, drafts survive navigating away and

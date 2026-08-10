@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useComposerKeys } from "@/hooks/use-composer-keys";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, SmileIcon, UserMultiple02Icon, LinkBackwardIcon, ShieldEnergyIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { SettingsIcon } from "@/components/icons";
@@ -83,6 +84,31 @@ export function ChatComposer({
         onCancelReply?.();
     };
 
+    // The app-wide composer contract, same hook the DM and community inputs use.
+    //
+    // Live chat keeps its single-line <input> — minimum latency, one-line field
+    // — so this is the keyboard rules ONLY, which is what the plan asks for.
+    // Three things the inline handler it replaces got wrong:
+    //
+    //   - Enter didn't preventDefault, so it could also submit a wrapping form.
+    //   - Escape ALWAYS cancelled the reply, even mid-something-else. It now
+    //     unwinds one layer at a time and falls through to blur.
+    //   - Modifier+Enter sent. ⌘/Ctrl+Enter means "newline" in about as many
+    //     apps as it means "send", and Enter already sends, so treating it as a
+    //     newline is the safe read.
+    //
+    // No autocomplete or ArrowUp-to-edit here: the emote picker is a separate
+    // popover rather than an inline list, and stream chat has no message edit.
+    const onKeyDown = useComposerKeys({
+        onSubmit: submit,
+        getValue: () => input,
+        onCancelReply: () => {
+            if (!replyTo) return false;
+            onCancelReply?.();
+            return true;
+        },
+    });
+
     return (
         <div className="flex flex-col gap-2 pb-1 pt-1.5">
             {replyTo && <ReplyBanner replyTo={replyTo} onCancel={onCancelReply} />}
@@ -133,10 +159,7 @@ export function ChatComposer({
                         ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value.slice(0, CHAT_MAX_LEN))}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") submit();
-                            if (e.key === "Escape") onCancelReply?.();
-                        }}
+                        onKeyDown={onKeyDown}
                         placeholder={connected ? "Send a message" : "Connecting…"}
                         disabled={!connected}
                         className="min-w-0 flex-1 bg-transparent text-sm font-medium text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-50"
