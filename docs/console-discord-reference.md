@@ -135,8 +135,70 @@ URL generator is a DX pattern worth stealing for any "build your request"
 surface — and Reset Secret ≈ our key regenerate. No v1 surface today: apps
 don't act on behalf of users yet.
 
+## 4. Bot
+
+- H1 + "Bring your app to life on Discord with a Bot user. Be a part of chat
+  in your users' servers and interact with them directly." + "Learn more
+  about bot users" link.
+- **Icon** uploader — same spec block as the app icon (1024×1024, 1:1,
+  PNG/GIF/JPG/WEBP, 10MB). **Banner** uploader below it (680×240, 17:6, same
+  types/size). The bot has its own visual identity, separate from the app's.
+- **Username** input with the discriminator ("#9696") rendered as a
+  read-only suffix segment inside the same input.
+- **Token** — the strictest credential UX in either reference: NO value
+  shown, ever, not even masked. Just the sentence "For security purposes,
+  tokens can only be viewed once, when created. If you forgot or lost access
+  to your token, please regenerate a new one." and a **Reset Token** button.
+  View-once at creation, reset is the only recovery.
+- **Authorization Flow** — "These settings control how OAuth2 authorizations
+  are restricted for your bot (who can add your bot and how it is added)":
+  - **Public Bot** toggle (on): "Public apps can be installed by anyone.
+    When unchecked, only you can install this app."
+  - **Requires OAuth2 Code Grant** toggle (off): "If your application
+    requires multiple scopes then you may need the full OAuth2 flow to
+    ensure a bot doesn't join before your application is granted a token."
+- **Privileged Gateway Intents** — "Some Gateway Intents require review if
+  your bot has reached 10,000 users. If your bot has not reached 10,000
+  users, you can toggle those intents on below as needed." Three toggles,
+  each: what it unlocks (linked term), then a bold NOTE "Once your bot
+  reaches 10,000 or more users, this will require review. Read more here":
+  - **Presence Intent** (Presence Update events)
+  - **Server Members Intent** (GUILD_MEMBERS events)
+  - **Message Content Intent** (message content in most messages)
+  Self-serve below the threshold, review-gated above it — permissioning tied
+  to blast radius, not a blanket approval queue.
+- **Bot Permissions** card — "Need some help with bit math? Use the tool
+  below to calculate the permissions integer for your bot based on the
+  features it needs." Three checkbox columns:
+  - *General*: Administrator, View Audit Log, Manage Server, Manage Roles,
+    Manage Channels, Kick Members, Ban Members, Create Instant Invite,
+    Change Nickname, Manage Nicknames, Manage Expressions, Create
+    Expressions, Manage Webhooks, View Channels, Manage Events, Create
+    Events, Moderate Members, View Server Insights, View Server Subscription
+    Insights.
+  - *Text*: Send Messages, Create Public Threads, Create Private Threads,
+    Send Messages in Threads, Send TTS Messages, Manage Messages, Pin
+    Messages, Manage Threads, Embed Links, Attach Files, Read Message
+    History, Mention Everyone, Use External Emojis, Use External Stickers,
+    Add Reactions, Use Slash Commands, Use Embedded Activities, Use External
+    Apps, Create Polls, Bypass Slowmode, Send Voice Messages.
+  - *Voice*: Connect, Speak, Video, Mute Members, Deafen Members, Move
+    Members, Use Voice Activity, Priority Speaker, Request To Speak, Use
+    Embedded Activities, Use Soundboard, Use External Sounds, Set Voice
+    Channel Status.
+  - **Permissions Integer**: read-only field + copy, recomputed live as
+    boxes toggle (same live-assembly DX as the OAuth2 URL generator).
+
+→ watchparty mapping: a bot ≈ an agent/service identity attached to an app.
+Three patterns to keep: (1) token view-once + reset-only — one step stricter
+than X's masked-with-eye, and the right model for our key secrets; (2) the
+live permissions-integer calculator — the shape for any scope/bitmask config
+we ever expose; (3) intents that are self-serve below a usage threshold and
+review-gated above it — the model for gating expensive event subscriptions
+(e.g. firehose-style feeds) without a blanket approval queue.
+
 ## Pages not yet captured
 
-Bot, Emojis, Webhooks, Rich Presence, App Testers, App Verification, the
+Emojis, Webhooks, Rich Presence, App Testers, App Verification, the
 Games/Activities/Premium Apps groups, and the top-level Applications list.
 Transcribe them here as screenshots arrive.
