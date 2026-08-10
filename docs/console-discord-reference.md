@@ -287,3 +287,13 @@ embed-preview surface in our console.
 Visualizer bottom, App Testers, App Verification, the Games/Activities/
 Premium Apps groups, and the top-level Applications list. Transcribe them
 here as screenshots arrive.
+
+## Rejected source: github.com/mooncord/devportal (evaluated 2026-08-10)
+
+A fan recreation of the portal — looked promising for the uncaptured pages,
+but it's a January-2022 snapshot with stub pages (bot.tsx = 54 lines of
+hardcoded sample data, `TODO: Load applications from the API`) and a README
+that says it deliberately RESTYLES rather than clones. Its nav predates
+Installation, Emojis, app-level Webhooks, App Verification, and the
+Games/Activities/Premium Apps groups. Do not use it as a reference; the
+screenshots transcribed above are the source of truth.
