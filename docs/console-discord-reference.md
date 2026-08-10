@@ -364,11 +364,188 @@ auto-evaluated criteria rows with ✓/⚠ + drill-down, an orange computed
 irreversible identity fields surfaced with an explicit checkbox
 acknowledgment at the point of no return.
 
+## 10. Games › Claim Game
+
+First page outside Overview. The **Games** sidebar group (NEW badge)
+expands into **Claim Game** (active), **Game Identity** — with a 🔒 lock
+icon — and **Social SDK**: post-claim pages are shown in the nav but
+locked, a teaser rather than hidden.
+
+- H1 "Game Claim" + "Claim your game to control the visuals and
+  information we share with users on Discord. Learn how the claiming
+  process works." (link)
+- **Verification Requirements** card — the *same* auto-evaluated checklist
+  component as App Verification (§9), scoped to this feature with its own
+  subset and its own computed summary, "Your app is missing 1 criterion
+  and cannot be claimed.":
+  - ⚠ Your app must belong to a Team
+  - ✓ All members of your developer team must have a verified email and
+    2FA set up
+  The rows deep-link to how-to-fix docs (the 2FA row links to the
+  support-site 2FA article, per the status bar) — each criterion carries
+  its own remedy, not just a state.
+- Blurple **Claim Game** button sits below the checklist even while
+  criteria are missing.
+- **"What you'll get"** — a marketing section *inside* the console: two
+  benefit cards.
+  - Left: pixel-art gamepad icon, "Own your game's presence on Discord" —
+    ✓ "Customize how your game looks and feels across Discord",
+    ✓ "Manage your studio, developer information, and social channels",
+    console/hardware artwork below.
+  - Right: a 🔒 **Analytics** pill badge with a purple glow, "Coming soon:
+    Identify your most engaged players and what drives their activity" —
+    ✓ player demographics/engagement/patterns, ✓ "See which topics and
+    channels are trending across your community", chart artwork.
+    A locked *future* feature is sold on the claim page itself.
+
+→ watchparty mapping: this is the claim-flow shape for creator coins and
+any "claim your page" surface — gate with the shared checklist component
+(each criterion linking to its fix), keep post-claim pages visible-but-
+locked in the nav, and sell the benefits (including coming-soon ones)
+right on the claim page instead of in external marketing.
+
+## 11. Games › Social SDK (full page, three screenshots)
+
+Unlike every other page, this one configures nothing — it's a **lead-
+capture / access-request form** living inside the console.
+
+- Eyebrow "Discord Social SDK" over H1 "Getting Started".
+- Hero banner: "Discord SOCIAL SDK" wordmark, an in-game chat overlay mock
+  ("To Rose: wanna game" / "Rose: yee down" / "[DM] Rose:"), a phone
+  rendering the same conversation as Discord DMs, and a 3D rubber duck —
+  the artwork *is* the pitch: same conversation, in-game and in-app.
+- Copy: "With the Discord Social SDK, players can connect with friends,
+  share gameplay, and jump into your game with ease. Seamless
+  Discord-powered integration means effortless cross-platform
+  communications, voice chat, and other powerful social tools…" + "The
+  Social SDK can also enable your app or Activity to know a user's Discord
+  relationships. Learn more here."
+- Form card **"Tell us a bit about your game"** — "To get instant access
+  to the SDK downloads and more information, please enter the following
+  details". Required fields marked with a red asterisk:
+  - **Company Name*** (text) · **Team Location*** (select) ·
+    **Full Name*** (text) · **Work Email*** (text) · **Role*** (select)
+  - **Game website URL** (text, optional — the only unstarred input)
+  - **"If already launched, what is your estimated DAU range?"** (select)
+  - **"Do you have a publisher for your game?"** — radios: Yes · "No, the
+    game is self-published" · "Looking for publisher"
+  - **"What platforms are you building for?"** — checkboxes: PC Windows ·
+    iOS / Android · PlayStation 4/5 · Xbox Series X|S · Nintendo Switch ·
+    Steam Deck/Linux
+  Pure sales-qualification questions (DAU, publisher, platforms) — the
+  "instant access" is priced in information, not money.
+- Consent block, deliberately split in two: a marketing opt-in checkbox
+  ("Get email updates…") separate from the contact-consent checkbox ("By
+  selecting 'I consent,' I understand that Discord will use this
+  information in accordance with its Privacy Policy…"), plus a passive
+  terms line — "By clicking Submit, you agree to the Discord Social SDK
+  Terms." Blurple **Submit** button.
+
+→ watchparty mapping: the pattern for gating a heavyweight developer
+surface (SDK download, agent API, high rate tiers) — sell it with a hero +
+benefit copy *on the page*, qualify the requester with a short form, and
+keep marketing opt-in as its own checkbox, never bundled into the consent
+that unlocks the thing.
+
+## 12. Activities (group: Settings · URL Mappings · Custom Links · Art Assets)
+
+Activities are third-party iframe apps embedded in Discord; the group has
+four children.
+
+### Settings
+
+- H1 "Activity Settings" + "A place for you to configure your activity
+  settings".
+- **Enable Activities** toggle — rendered *dimmed/disabled*, with an
+  orange inline notice directly under it: "**Missing Requirement: URL
+  Mapping**" where "URL Mapping" links to the page that unblocks it. The
+  master switch is never just dead; it names its prerequisite and links
+  the fix (the checklist philosophy applied to a single control).
+- **Age Gate** toggle: "Applications with content unsuitable for children
+  under the age of 18 should be marked as Age Gated."
+- **Maximum Participants** — "The maximum participants allowed in your
+  activity" (number input, placeholder 5).
+- **Phone / Tablet Default Orientation Lock State** — two selects, both
+  "Unlocked", each scoping itself honestly: "only consumed in the Discord
+  mobile apps on phones. Desktop / Web Browsers are always sized based on
+  the app window's size."
+- **Supported Platforms** checkboxes: Web ✓ · iOS ☐ · Android ☐.
+
+### URL Mappings
+
+- H1 "Activity URL Mappings".
+- **Root Mapping** — "This points to the main entry point of your iframe
+  application. This is where your application starts when loaded." Two
+  inputs on one row: **Prefix** (pre-filled `/`) and **Target**
+  (placeholder `your-app-website.com`).
+- **Proxy Path Mappings** — "Requests are relative to your root domain by
+  default. You can create custom proxy path mappings to override this
+  behavior." + docs link. Blurple **Add Another URL Mapping** button.
+- This is the CSP story for embedding third-party apps: the activity is
+  served *through Discord's proxy*, and the mapping table is the tunnel
+  config.
+
+### Custom Links
+
+- Pure dependency empty state, centered: "**Application is not an
+  Activity**" / "You will first need to enable Activities in Settings
+  before you can create custom links." No illustration, no CTA — but it
+  names the prerequisite *and* where to satisfy it.
+
+### Art Assets
+
+- H1 "Activity Assets" + "Preview and update your assets here! Please
+  note that updates may be delayed due to caching, so be patient."
+  (caching expectation set in the page description).
+- Three uploaders, each a left spec block (**Dimensions / Aspect Ratio /
+  File Types / Max Size**) beside a dashed "Drag or click to upload"
+  dropzone:
+  - **Background** — "background overlay in Grid view. Artwork should be
+    clustered around the edges… leaving space in the center so the UI
+    does not clash with it." 1024×576, 16:9, PNG/JPG/WEBP, 10MB. Art
+    direction, not just dimensions.
+  - **Cover Art** — "main image on the Activity Shelf… suggested that
+    this image contain the title and some art in the background." Same
+    specs. Below the dropzone sits a **live shelf-card preview** —
+    "partyclaw" + an "Unlimited participants" pill — the upload shown in
+    its real context, same move as Installation's install-flow preview
+    and Art Assets' invite example.
+  - **Video Preview** — "Shown when hovering on an activity in the menu.
+    Also shown on the upsell… Can be a screen recording of the activity
+    being played." 640×360, 16:9.
+
+→ watchparty mapping: the blocked-toggle-with-named-requirement is the
+pattern for any feature switch with prerequisites (e.g. "Enable payouts —
+Missing Requirement: wallet"), and the spec-block + dropzone + in-context
+preview trio is the template for every art upload surface (channel
+banners, coin art, ad creatives).
+
+## 13. Premium Apps › Getting Started
+
+One child page; the group is an onboarding funnel, not a config surface.
+
+- Centered hero: 3D Discord-branded coins, H1 "**Monetize Your App**",
+  "Earn money with integrated premium apps offerings. Learn more".
+- One card, a numbered three-step path:
+  1. **Fulfill eligibility requirements** — "Run through our quick
+     checklist, and make sure you're ready to start monetizing your app."
+  2. **Set up and integrate** — "Create your offering, customize it to
+     your liking, and integrate our API to get ready for launch."
+  3. **Start earning** — "Go live and get paid! To learn more about our
+     payouts process visit our help center."
+- Single centered blurple **Get Started** CTA. Nothing else on the page.
+
+→ watchparty mapping: the console's monetization onboarding (API 402 /
+x402 credits, creator payouts) should open exactly like this — one hero,
+the whole journey compressed to three numbered steps (eligibility →
+integrate → get paid), one CTA. The eligibility step feeding into the
+shared checklist component closes the loop with §9/§10.
+
 ## Pages not yet captured
 
-The Games/Activities/Premium Apps groups, the top-level Applications list,
-and the sliver of the Visualizer form below join Secret (spectate/match
-secrets). Transcribe them here as screenshots arrive.
+Games › Game Identity (locked pre-claim), the top-level Applications
+list, and the sliver of the Visualizer form below join Secret
+(spectate/match secrets). Transcribe them here as screenshots arrive.
 
 ## Rejected source: github.com/mooncord/devportal (evaluated 2026-08-10)
 
