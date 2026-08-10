@@ -26,6 +26,10 @@ export const apiKeys = pgTable('api_keys', {
     // app registry and stay valid. developer_apps soft-deletes, so this FK's
     // set-null never actually fires, but it's the correct safety net.
     appId: text('app_id'),
+    // Restricted scope families (phase 2b), from lib/api-pricing API_SCOPES.
+    // NULL/empty = unscoped = full access (every pre-existing key). The edge
+    // gate enforces this via a Redis mirror written only when restricted.
+    scopes: text('scopes').array(),
     balanceMicro: bigint('balance_micro', { mode: 'number' }).default(0).notNull(),
     spentMicro: bigint('spent_micro', { mode: 'number' }).default(0).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),

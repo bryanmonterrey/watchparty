@@ -180,5 +180,11 @@ liveness attestation beats validate-once:
   fake-gate risk. Scope *enforcement* (2b) is deliberately separate: it
   touches the edge-gate hot path + Redis and needs the live-gate smoke
   scripts, so it doesn't ride a tsc-only pass.
-- Phase 2b+ (scopes with enforcement, per-app webhooks) and 3–6: specced
-  above; build in order.
+- Phase 2b (API key scopes, enforced): **shipped** — `api_keys.scopes`
+  nullable (NULL = unscoped = full access, so no existing key changes), the
+  edge gate rejects out-of-scope calls with **403 before charging** using a
+  Redis mirror written only for restricted keys and re-asserted on funding.
+  The path→scope classifier (`lib/api-pricing.ts`) is pure + unit-tested (the
+  tsc-invisible half), scopes and price families are lockstep-tested, and the
+  console Keys page has a scope picker. Fail-open throughout.
+- Phase 2c (per-app webhooks) and 3–6: specced above; build in order.

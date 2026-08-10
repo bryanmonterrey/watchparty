@@ -11,18 +11,41 @@ import { trpc } from "@/lib/trpc";
 import { money, formatDate } from "@/lib/format";
 import { Chip } from "@/components/console/chip";
 import { CopyButton } from "@/components/console/copy-button";
+import { PRICE_SHEET } from "@/lib/price-sheet";
 
 // Flows ported from the interim portal (components/developer/console-view.tsx):
 // plaintext-once creation, paste-a-signature funding (linked out to /credits),
 // and the two-step inline revoke confirm. `list` is invalidated after every
 // mutation so balances stay honest.
 
+// Scope families = the price-sheet keys (they route off the same prefixes in
+// the gate). Deriving the picker from the vendored price sheet keeps the two
+// in lockstep with zero extra drift surface.
+const SCOPE_LABELS: Record<string, string> = {
+  coins: "Coins & markets",
+  content: "Posts & streams",
+  social: "Profiles & graph",
+  charts: "Chart data",
+  rpc: "RPC proxy",
+  preview: "Link previews",
+  rest: "Everything else",
+};
+
 function CreatePanel({ onDone }: { onDone: () => void }) {
   const utils = trpc.useUtils();
   const [name, setName] = React.useState("");
+  // Empty selection = unscoped = full access (the historical default).
+  const [scopes, setScopes] = React.useState<Set<string>>(new Set());
   const create = trpc.apiKeys.create.useMutation({
     onSuccess: () => void utils.apiKeys.list.invalidate(),
   });
+  const toggleScope = (key: string) =>
+    setScopes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   if (create.data) {
     return (
@@ -44,6 +67,7 @@ function CreatePanel({ onDone }: { onDone: () => void }) {
             onClick={() => {
               create.reset();
               setName("");
+              setScopes(new Set());
               onDone();
             }}
           >
@@ -59,7 +83,11 @@ function CreatePanel({ onDone }: { onDone: () => void }) {
       className="rounded-xl border bg-card p-4 sm:p-5"
       onSubmit={(e) => {
         e.preventDefault();
-        if (name.trim()) create.mutate({ name: name.trim() });
+        if (name.trim())
+          create.mutate({
+            name: name.trim(),
+            scopes: scopes.size ? ([...scopes] as never) : undefined,
+          });
       }}
     >
       <p className="text-sm font-medium">Create a key</p>
@@ -78,6 +106,32 @@ function CreatePanel({ onDone }: { onDone: () => void }) {
           {create.isPending ? "Creating…" : "Create"}
         </Button>
       </div>
+
+      <div className="mt-4">
+        <p className="text-xs font-medium">Scopes</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Limit which surfaces this key can call. Leave all unchecked for full
+          access.
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {PRICE_SHEET.map((row) => {
+            const on = scopes.has(row.key);
+            return (
+              <button
+                key={row.key}
+                type="button"
+                onClick={() => toggleScope(row.key)}
+                className={`rounded-lg border px-2.5 py-1.5 text-left text-xs transition-colors ${
+                  on ? "border-emerald-500/40 bg-emerald-500/10" : "hover:bg-accent/50"
+                }`}
+              >
+                {SCOPE_LABELS[row.key] ?? row.key}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {create.error ? (
         <p className="mt-2 text-xs text-destructive">{create.error.message}</p>
       ) : null}
@@ -92,6 +146,7 @@ function KeyRow({
     id: string;
     name: string;
     prefix: string;
+    scopes: string[] | null;
     revoked: boolean;
     createdAt: Date;
     lastUsedAt: Date | null;
@@ -123,6 +178,15 @@ function KeyRow({
           <span className="font-mono">{k.prefix}</span>
         </Chip>
         {k.revoked ? <Chip tone="bad">Revoked</Chip> : <Chip tone="good">Active</Chip>}
+        {k.scopes && k.scopes.length ? (
+          <Chip>
+            {k.scopes.length === 1
+              ? (SCOPE_LABELS[k.scopes[0]] ?? k.scopes[0])
+              : `${k.scopes.length} scopes`}
+          </Chip>
+        ) : (
+          <Chip>Full access</Chip>
+        )}
         <div className="flex-1" />
         {!k.revoked ? (
           <div className="flex items-center gap-2">

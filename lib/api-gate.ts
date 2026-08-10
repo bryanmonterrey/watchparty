@@ -1,6 +1,6 @@
 import { Redis } from "@upstash/redis";
 import { NextResponse, type NextRequest } from "next/server";
-import { priceForPathMicro } from "@/lib/api-pricing";
+import { priceForPathMicro, isPathInScope, scopesForPath } from "@/lib/api-pricing";
 
 // The 402 gate for external API callers — the hybrid x402 model.
 //
@@ -84,6 +84,11 @@ export function gateRedis(): Redis {
 export const balKey = (id: string) => `apigate:bal:${id}`;
 export const spentKey = (id: string) => `apigate:spent:${id}`;
 export const revokedKey = (id: string) => `apigate:revoked:${id}`;
+// Present ONLY for keys created with a restricted scope set (comma-joined
+// families). Absent = unscoped = full access (every existing key). This
+// asymmetry is deliberate: a missing key can never tighten access, so the
+// enforcement can't 402 an integrator whose key predates scopes.
+export const scopeKey = (id: string) => `apigate:scope:${id}`;
 
 // ── Crypto (WebCrypto only — must run on edge and workerd) ───────────────────
 
@@ -340,6 +345,22 @@ export async function apiGate(
         if (!id) return { block: await respond402(resource, "Invalid API key", price) };
         const r = gateRedis();
         try {
+            // Scope check FIRST, before touching the balance — an out-of-scope
+            // call must never be charged. `scope` is null for every unscoped
+            // key, in which case isPathInScope() returns true (full access).
+            const scope = (await r.get(scopeKey(id))) as string | null;
+            if (scope && !isPathInScope(pathname, scope.split(","))) {
+                return {
+                    block: NextResponse.json(
+                        {
+                            error: "API key out of scope",
+                            note: `This key isn't scoped for ${scopesForPath(pathname).join(", ")}. Widen its scopes in the console.`,
+                        },
+                        { status: 403, headers: corsHeaders() },
+                    ),
+                };
+            }
+
             const [revoked, bal] = await Promise.all([
                 r.get(revokedKey(id)),
                 r.decrby(balKey(id), price),

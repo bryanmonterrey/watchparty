@@ -14,9 +14,11 @@ import {
     hmacHex,
     randHex,
     revokedKey,
+    scopeKey,
     sha256Hex,
     spentKey,
 } from "@/lib/api-gate";
+import { API_SCOPES } from "@/lib/api-pricing";
 
 // Management for the 402 gate's credits-backed API keys (lib/api-gate.ts).
 //
@@ -34,6 +36,9 @@ export const apiKeysRouter = router({
             name: z.string().trim().min(1).max(64),
             // Optionally scope the key to one of the caller's apps (phase 2).
             appId: z.string().optional(),
+            // Restrict which surface families the key may call (phase 2b).
+            // Empty/omitted = unscoped = full access (the historical default).
+            scopes: z.array(z.enum(API_SCOPES)).optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             const secret = process.env.API_GATE_SECRET;
@@ -74,14 +79,34 @@ export const apiKeysRouter = router({
             const sig = (await hmacHex(secret, id)).slice(0, 32);
             const plaintext = `wp_live_${id}.${sig}`;
 
+            // A set covering every family is not a restriction — store null so
+            // it reads as unscoped (and no Redis mirror is written).
+            const restricted =
+                input.scopes && input.scopes.length > 0 && input.scopes.length < API_SCOPES.length
+                    ? [...new Set(input.scopes)]
+                    : null;
+
             await db.insert(apiKeys).values({
                 id,
                 userId: ctx.user.id,
                 name: input.name,
                 appId: input.appId ?? null,
+                scopes: restricted,
                 keyHash: await sha256Hex(plaintext),
                 prefix: `wp_live_${id.slice(0, 4)}…`,
             });
+
+            // Mirror a RESTRICTED scope set to the gate's Redis so the edge can
+            // enforce without a DB read. Absent key = full access, so we only
+            // ever write (never need to clear) — a new key with no mirror is
+            // unscoped by construction. Best-effort: a Redis miss fails open.
+            if (restricted) {
+                try {
+                    await gateRedis().set(scopeKey(id), restricted.join(","));
+                } catch {
+                    /* fail open — the key just behaves as unscoped until re-mirrored */
+                }
+            }
 
             // Shown once, never stored. New keys have zero credits until funded.
             return { id, key: plaintext };
@@ -94,6 +119,7 @@ export const apiKeysRouter = router({
                 name: apiKeys.name,
                 prefix: apiKeys.prefix,
                 appId: apiKeys.appId,
+                scopes: apiKeys.scopes,
                 balanceMicro: apiKeys.balanceMicro,
                 spentMicro: apiKeys.spentMicro,
                 revokedAt: apiKeys.revokedAt,
@@ -119,6 +145,7 @@ export const apiKeysRouter = router({
             name: r.name,
             prefix: r.prefix,
             appId: r.appId,
+            scopes: r.scopes,
             revoked: !!r.revokedAt,
             createdAt: r.createdAt,
             lastUsedAt: r.lastUsedAt,
@@ -141,7 +168,11 @@ export const apiKeysRouter = router({
             // re-asserts this marker if the write below is lost.
             try {
                 const r = gateRedis();
-                await Promise.all([r.set(revokedKey(input.id), "1"), r.del(balKey(input.id))]);
+                await Promise.all([
+                    r.set(revokedKey(input.id), "1"),
+                    r.del(balKey(input.id)),
+                    r.del(scopeKey(input.id)),
+                ]);
             } catch {
                 /* cron backstop */
             }
@@ -178,7 +209,7 @@ export const apiKeysRouter = router({
         }))
         .mutation(async ({ ctx, input }) => {
             const [key] = await db
-                .select({ id: apiKeys.id })
+                .select({ id: apiKeys.id, scopes: apiKeys.scopes })
                 .from(apiKeys)
                 .where(and(eq(apiKeys.id, input.keyId), eq(apiKeys.userId, ctx.user.id), isNull(apiKeys.revokedAt)))
                 .limit(1);
@@ -221,6 +252,12 @@ export const apiKeysRouter = router({
                 .returning({ balanceMicro: apiKeys.balanceMicro });
             try {
                 await gateRedis().set(balKey(key.id), row!.balanceMicro);
+                // Re-assert the scope mirror at the moment the key becomes
+                // usable, so a Redis flush between create and first fund can't
+                // silently unscope it. (Only writes when restricted.)
+                if (key.scopes && key.scopes.length > 0) {
+                    await gateRedis().set(scopeKey(key.id), key.scopes.join(","));
+                }
             } catch {
                 /* flush cron reseeds from the ledger */
             }

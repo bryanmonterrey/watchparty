@@ -70,3 +70,60 @@ export const PRICE_SHEET = [
 ] as const;
 
 export type PriceSheetRow = (typeof PRICE_SHEET)[number];
+
+// ── Scopes (phase 2b) ────────────────────────────────────────────────────────
+// A key's scope set is drawn from the SAME surface families as pricing, so a
+// key scoped to "coins" bills and authorizes coherently. This is the pure
+// path→scope classifier the edge gate uses to enforce scopes; it mirrors
+// priceForPathMicro's routing exactly (change one, change both).
+
+export const API_SCOPES = ["coins", "content", "social", "charts", "rpc", "preview", "rest"] as const;
+export type ApiScope = (typeof API_SCOPES)[number];
+
+// tRPC prefix → scope family (same prefixes priceForPathMicro prices).
+const TRPC_PREFIX_SCOPES: readonly (readonly [string, ApiScope])[] = [
+    ["trade.", "coins"],
+    ["trending.", "coins"],
+    ["coinFeed.", "coins"],
+    ["feed.", "content"],
+    ["post.", "content"],
+    ["comment.", "content"],
+    ["content.", "content"],
+    ["stream.", "content"],
+    ["community.", "content"],
+    ["spaces.", "content"],
+    ["story.", "content"],
+    ["user.", "social"],
+    ["profile.", "social"],
+    ["friends.", "social"],
+];
+
+/** Every scope family a single request touches (a tRPC batch can span more). */
+export function scopesForPath(pathname: string): ApiScope[] {
+    if (pathname === "/api/rpc" || pathname.startsWith("/api/rpc/")) return ["rpc"];
+    if (pathname.startsWith("/api/udf") || pathname.startsWith("/api/pyth-udf")) return ["charts"];
+    if (pathname.startsWith("/api/og-preview")) return ["preview"];
+
+    const m = /^\/api\/trpc\/([^/?]+)/.exec(pathname);
+    if (m) {
+        const out = new Set<ApiScope>();
+        for (const proc of decodeURIComponent(m[1]).split(",")) {
+            const hit = TRPC_PREFIX_SCOPES.find(([prefix]) => proc.startsWith(prefix));
+            out.add(hit ? hit[1] : "rest");
+        }
+        return [...out];
+    }
+    return ["rest"];
+}
+
+/**
+ * Authorize a request against a key's granted scopes. `granted` empty/undefined
+ * means UNSCOPED — full access (every existing key, and any key created without
+ * a scope restriction). A scoped key must cover EVERY family the request
+ * touches (a batch spanning coins+social needs both).
+ */
+export function isPathInScope(pathname: string, granted: readonly string[] | undefined | null): boolean {
+    if (!granted || granted.length === 0) return true;
+    const set = new Set(granted);
+    return scopesForPath(pathname).every((s) => set.has(s));
+}
