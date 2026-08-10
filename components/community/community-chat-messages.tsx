@@ -14,6 +14,8 @@ import { readChatSnapshot } from "@/lib/community/chat-snapshot";
 import { withGroupFlags } from "@/lib/community/message-grouping";
 import { useChatSnapshot } from "@/hooks/use-chat-snapshot";
 import { CommunityChatWelcome } from "./community-chat-welcome";
+import { DayDivider } from "@/components/ui/day-divider";
+import { formatDayHeading } from "@/lib/chat/day-heading";
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm";
 /** Gutter time on a grouped row — the header that carried the full date is gone. */
@@ -212,15 +214,7 @@ export function CommunityChatMessages({
                             />
                             {/* AFTER the item in DOM = visually ABOVE it under
                                 flex-col-reverse — the divider heads the day. */}
-                            {isNewDay && (
-                                <div className="my-3 flex items-center gap-3 px-4" aria-hidden>
-                                    <span className="h-px flex-1 bg-white/[0.06]" />
-                                    <span className="text-[11px] font-semibold text-zinc-600">
-                                        {new Date(message.createdAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
-                                    </span>
-                                    <span className="h-px flex-1 bg-white/[0.06]" />
-                                </div>
-                            )}
+                            {isNewDay && <DayDivider label={formatDayHeading(message.createdAt)} />}
                         </Fragment>
                             );
                         })}

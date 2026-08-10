@@ -1,3 +1,13 @@
+/**
+ * ⚠️ `formatDayDivider` / `isSameDay` moved to `lib/chat/day-heading.ts` as
+ * `formatDayHeading` / `isSameCalendarDay`, and every chat surface now shares
+ * them. They lived here while DMs were the only list with dividers; community
+ * chat had a THIRD implementation inline (a bare toLocaleDateString), which is
+ * how the same question ended up with three answers.
+ *
+ * The shared version also takes an injectable `now`, so the Today/Yesterday
+ * boundary is testable instead of depending on when the suite happens to run.
+ */
 export function formatDayDivider(dateString: string): string {
     const date = new Date(dateString);
     const now = new Date();

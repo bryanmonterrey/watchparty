@@ -9,8 +9,9 @@ import { useChat } from './chat-context';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { trpc } from '@/lib/trpc/client';
 import { EmptyState } from './empty-state';
-import { DayDivider } from './day-divider';
-import { formatDayDivider, isSameDay } from '@/lib/date-utils';
+import { DayDivider } from '@/components/ui/day-divider';
+import { formatDayHeading, isSameCalendarDay } from '@/lib/chat/day-heading';
+import { isContinuation } from '@/lib/community/message-grouping';
 
 interface MessageListProps {
     conversationId: string;
@@ -273,17 +274,36 @@ export function MessageList({ conversationId }: MessageListProps) {
 
                         // Date Divider Logic
                         const prevMessage = messages[index - 1];
-                        const showDayDivider = !prevMessage || !isSameDay(prevMessage.createdAt, message.createdAt);
-                        const dayDividerText = formatDayDivider(message.createdAt);
+                        const showDayDivider = !prevMessage || !isSameCalendarDay(prevMessage.createdAt, message.createdAt);
+                        const dayDividerText = formatDayHeading(message.createdAt);
 
-                        // Grouping Logic
-                        const isFirstInSequence = !prevMessage ||
-                            prevMessage.senderId !== message.senderId ||
-                            !isSameDay(prevMessage.createdAt, message.createdAt);
+                        // The SAME grouping rule community chat uses. DMs had
+                        // their own — author + same calendar day, with no time
+                        // window — so two messages six hours apart merged into
+                        // one block. That is the failure the shared predicate
+                        // exists to refuse: a wrongly grouped message hides who
+                        // said it and when, while a wrongly ungrouped one costs
+                        // a line. It also brings replies and system rows into
+                        // line for free.
+                        const isFirstInSequence = !isContinuation(
+                            prevMessage
+                                ? {
+                                      id: prevMessage.id,
+                                      userId: prevMessage.senderId,
+                                      createdAt: prevMessage.createdAt,
+                                  }
+                                : undefined,
+                            {
+                                id: message.id,
+                                userId: message.senderId,
+                                createdAt: message.createdAt,
+                                replyToId: message.replyToMessage?.id ?? null,
+                            },
+                        );
 
                         return (
                             <div key={message.id}>
-                                {showDayDivider && <DayDivider date={dayDividerText} />}
+                                {showDayDivider && <DayDivider label={dayDividerText} />}
 
                                 <div
                                     data-message-id={message.id}
