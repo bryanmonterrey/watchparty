@@ -61,17 +61,46 @@ export async function refreshMintPrices(): Promise<{ mints: number; priced: numb
     decimalsByMint.set(WSOL_MINT, 9);
 
     // Prices: Jupiter lite, batched.
+    //
+    // ⚠️ v3, not v2. `price/v2` was RETIRED and answers 404 — silently, because
+    // the fetch succeeds and only the parse comes back empty. Measured
+    // 2026-08-10: 191 requests over 23h, 100% 404, and the consequence reached
+    // much further than PnL. `recordSwaps` prices the SOL leg of every trade
+    // through this map, so a dead price feed meant `solPrice = null` and every
+    // single row in `coin_trades` was written with `amount_usd = NULL` — 0% USD
+    // coverage on the whole tape. That is why `traderConcentration` had to be
+    // built on trade COUNTS instead of volume.
+    //
+    // It was visible in zone analytics the whole time and I misread it as an
+    // external prober. Worker subrequests are attributed to our zone, so
+    // `--by host` (lite-api.jup.ag) is what identifies them as ours.
+    //
+    // Shape changed too: v3 returns a FLAT map keyed by mint with no `data`
+    // wrapper, and the price is `usdPrice` as a NUMBER (v2 used `data[mint].price`
+    // as a string). Parsing v3 with the v2 shape yields an empty map and no
+    // error, which is the same silent failure one layer up.
     const priceByMint = new Map<string, number>();
     for (let i = 0; i < list.length; i += 100) {
         const batch = list.slice(i, i + 100);
         try {
-            const res = await fetch(`https://lite-api.jup.ag/price/v2?ids=${batch.join(",")}`, {
+            const res = await fetch(`https://lite-api.jup.ag/price/v3?ids=${batch.join(",")}`, {
                 headers: { Accept: "application/json" },
             });
-            const json = await res.json() as { data?: Record<string, { price?: string } | null> };
-            for (const [mint, p] of Object.entries(json.data ?? {})) {
-                const price = Number(p?.price);
+            if (!res.ok) {
+                // Loudly, because the last time this broke it stayed broken.
+                console.error(`[mint-prices] jupiter price/v3 ${res.status}`);
+                continue;
+            }
+            const json = await res.json() as Record<string, { usdPrice?: number; decimals?: number } | null>;
+            for (const [mint, p] of Object.entries(json ?? {})) {
+                const price = Number(p?.usdPrice);
                 if (Number.isFinite(price) && price > 0) priceByMint.set(mint, price);
+                // v3 carries decimals, so a mint priced here never needs the
+                // Helius DAS lookup above — free, and Helius credits are the
+                // scarcest thing in this system.
+                if (typeof p?.decimals === "number" && !decimalsByMint.has(mint)) {
+                    decimalsByMint.set(mint, p.decimals);
+                }
             }
         } catch { /* fall through to launchpad fallback */ }
     }
