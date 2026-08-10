@@ -27,36 +27,34 @@ const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before shard
  * depending on what happened to be trending — which is exactly how a 1M/month
  * plan went in 1.5 days.
  *
- * ## The unit is deliveries, but the BILL is credits — measured, ~3x apart
+ * ## The unit is deliveries. The bill is credits. They are not proportional.
  *
- * A first pass here assumed 1 credit per delivery and set the free plan's
- * ceiling at "23 deliveries/min". Measured on the live tape 2026-08-10, over a
- * clean 10-minute window:
+ * Two measurements, each a clean 10-minute window against the admin API:
  *
- *     budget 12  ->  7 pools  ->  2.1 deliveries/min  ->  6.43 CREDITS/min
+ *     budget 12  ->  6.43 credits/min  ->  27.8% of a 1M/month plan   (ratio 0.54)
+ *     budget 18  -> 16.20 credits/min  ->  70.0% of a 1M/month plan   (ratio 0.90)
  *
- * That is **~3 credits per delivery**, so 277,776/month — **27.8% of a free
- * plan** — for seven of the quietest pools on the board. Deliveries are simply
- * not what Helius charges for.
+ * Raising the budget 1.5x raised the bill 2.5x. The ratio is not a constant, so
+ * **do not extrapolate from one point** — I did exactly that, predicted 41.7% for
+ * budget 18, and measured 70%.
  *
- * The estimate is still expressed in deliveries because that is what `txns_24h`
- * can predict. The conversion is what makes the number mean anything:
+ * Why it bends: pools are chosen cheapest-first from an estimate
+ * (`txns_24h / 1440`), and `txns_24h` is a 24-hour average. The quietest pools
+ * are the ones whose recent activity most exceeds their daily mean, so each
+ * increment of budget admits pools that overshoot their estimate by more than
+ * the last. The estimate is systematically optimistic in the direction the
+ * selection walks.
  *
- *     credits/min  ~=  0.54 x budget
- *     % of a 1M plan/month  ~=  budget x 2.3
+ * ## So the only method that works is measure -> adjust -> measure
  *
- *     budget 12 -> 27.8%     budget 18 -> 41.7%
- *     budget 24 -> 55.6%     budget 40 -> 92.6%
+ *     bun scripts/dev/helius-usage.mjs          # needs HELIUS_PROJECT_ID
  *
- * 18 is ~42%, which leaves better than 2x headroom for bursts — `txns_24h` is a
- * 24-hour average and real activity is not. I had raised this to 40 on the
- * strength of the delivery rate alone; at 92.6% of plan that was one busy
- * afternoon from repeating the outage this whole exercise was about.
+ * Take two readings ten minutes apart, divide, and compare against
+ * `credits/min * 1440 * 30` = credits per month. Change ONE step at a time. A
+ * free plan is 1,000,000/month; anything above ~40% has no room left for a
+ * burst, and bursts are the whole reason this constant exists.
  *
- * ⚠️ Re-measure the ratio before trusting it after any change to the receiver or
- * to `transactionTypes` — it is a property of what Helius bills, not of us:
- *
- *     bun scripts/dev/helius-usage.mjs        (needs HELIUS_PROJECT_ID)
+ * 10 is the current setting, which the 0.90 ratio puts near 39%.
  */
 const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 12) || 0);
 
