@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, Fragment } from "react";
+import { useRef, useMemo, Fragment } from "react";
 import { ServerCrash } from "lucide-react";
 import { format } from "date-fns";
 import { trpc } from "@/lib/trpc/client";
@@ -11,6 +11,7 @@ import { CommunityChatItem } from "./community-chat-item";
 import { COMMUNITY_PAGE_LIMIT } from "@/hooks/use-community-reaction";
 import { renderKeyFor } from "@/lib/community/local-keys";
 import { readChatSnapshot } from "@/lib/community/chat-snapshot";
+import { withGroupFlags } from "@/lib/community/message-grouping";
 import { useChatSnapshot } from "@/hooks/use-chat-snapshot";
 import { CommunityChatWelcome } from "./community-chat-welcome";
 
@@ -79,6 +80,25 @@ export function CommunityChatMessages({
     useChatSnapshot(channelId, data, isPlaceholderData);
 
     const allMessages = data?.pages?.flatMap((page) => page.items) ?? [];
+
+    // Day dividers precomputed over the CHRONOLOGICAL list, keyed by id.
+    //
+    // Two reasons this isn't derived at render any more. It was duplicated
+    // inline with a hand-rolled "look at the next item, or the first item of the
+    // next page" walk, which is easy to get subtly wrong at a page boundary. And
+    // windowing (Phase 6 step 3) hands `renderItem` the ITEM ONLY, no index —
+    // so anything depending on a neighbour has to be precomputed or it silently
+    // stops working the moment the list is virtualised.
+    //
+    // Pages arrive newest-first and render under `flex-col-reverse`, so they are
+    // reversed into chronological order first; `withGroupFlags` says outright
+    // that a newest-first list produces flags that look plausible and are
+    // backwards.
+    const flagsById = useMemo(() => {
+        const chronological = [...allMessages].reverse();
+        return new Map(withGroupFlags(chronological).map((m) => [m.id, m]));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data]);
 
     useCommunityScroll({
         chatRef,
@@ -152,9 +172,8 @@ export function CommunityChatMessages({
             <div className="flex flex-col-reverse mt-auto">
                 {data?.pages?.map((group, i) => (
                     <Fragment key={i}>
-                        {group.items.map((message, idx) => {
-                            const older = group.items[idx + 1] ?? data.pages[i + 1]?.items?.[0];
-                            const isNewDay = !older || new Date(older.createdAt).toDateString() !== new Date(message.createdAt).toDateString();
+                        {group.items.map((message) => {
+                            const isNewDay = flagsById.get(message.id)?.isNewDay ?? true;
                             return (
                         <Fragment key={renderKeyFor(message)}>
                             <CommunityChatItem

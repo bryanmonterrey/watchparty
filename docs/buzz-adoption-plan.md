@@ -743,11 +743,31 @@ inserts.
    (`useMutation`/`useQuery` return a **new object every render** — depend on
    `mutation.mutateAsync`, not `mutation`).
 
-2. **Message grouping** — port `lib/messageGrouping.ts`. Same author within a
-   **10-minute** window renders as a continuation (timestamp only, no avatar,
-   no header); beyond it the message reads as a new thought and gets full
-   chrome. Apply the same rule in DMs, community chat, and stream chat so they
-   don't drift.
+2. **Message grouping** — ✅ logic done 2026-08-09, ⚠️ **not yet rendered.**
+
+   `lib/community/message-grouping.ts` + 15 tests. `withGroupFlags()` decorates a
+   chronological list with `isContinuation` and `isNewDay`.
+
+   It is deliberately conservative, because the asymmetry is stark: a wrongly
+   **grouped** message hides who sent it and can misattribute speech; a wrongly
+   **ungrouped** one costs a little vertical space. So every uncertain case gets
+   full chrome — different or missing `userId` (webhooks and deleted authors both
+   surface as `""`), system notices in either position, replies (the quoted
+   parent would appear to belong to whoever spoke last), a day boundary, an
+   unparseable date, and out-of-order input.
+
+   **Wired so far: day dividers only.** `community-chat-messages.tsx` now reads
+   `isNewDay` from this instead of the inline "next item, or the first item of
+   the next page" walk it had — behaviour-identical, one less hand-rolled
+   page-boundary traversal, and precomputed in exactly the shape step 3 needs
+   (`renderItem` gets the ITEM ONLY, no index, so a neighbour-dependent decision
+   must be precomputed or it silently stops working once virtualised).
+
+   ⚠️ **`isContinuation` is computed but nothing renders it yet, on purpose.**
+   Dropping avatars and headers is a visible design change to every chat row, and
+   it was not possible to check it in a browser at the time (no dev server on an
+   8 GB machine mid-session). It wants eyes before it ships. DMs and stream chat
+   are untouched for the same reason.
 
 3. **Windowing: use `broad-infinite-list`, which is already installed.**
 
