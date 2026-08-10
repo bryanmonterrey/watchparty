@@ -13,6 +13,25 @@ import { ComposerReplyBanner } from "@/components/ui/composer-reply-banner";
 import { COMMUNITY_PAGE_LIMIT } from "@/hooks/use-community-reaction";
 import { ArrowUpIcon, CreateIcon, LockIcon } from "../icons";
 
+/**
+ * Shared geometry for the composer's controls.
+ *
+ * The row is `items-end` on purpose: as the textarea grows the controls should
+ * stay with the LAST line, the way every chat app does it. On a single line
+ * that alone reads as bottom-aligned rather than centred, because a 32px button
+ * sits flush against the bottom of a 52px row (py-3.5 + leading-6) — 20px of
+ * space above it and none below.
+ *
+ * `mb-2.5` fixes it for EVERY height rather than just the one-line case. The
+ * row is 28 + 24n tall for n lines and the last line's centre sits at 24n + 2;
+ * a bottom-anchored 32px button lifted 10px centres at (28 + 24n) − 10 − 16 =
+ * 24n + 2. The same number, so the controls track the caret's line exactly.
+ *
+ * Switching the row to `items-center` would centre them against the whole box
+ * instead, which drifts further off the caret with every new line.
+ */
+const COMPOSER_CONTROL = "mb-2.5 h-8 w-8 shrink-0 flex items-center justify-center rounded-full";
+
 type Mentionable = { username: string; name: string | null };
 type Sticker = { id: string; name: string; imageUrl: string };
 
@@ -194,7 +213,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                 )}
                 <button
                     type="button"
-                    className="ml-2 h-8 w-8 shrink-0 flex items-center justify-center rounded-full text-flexwhite/40 hover:text-flexwhite hover:bg-white/5 transition-colors"
+                    className={`ml-2 ${COMPOSER_CONTROL} text-flexwhite/40 transition-colors hover:bg-white/5 hover:text-flexwhite`}
                     title="Add a file"
                 >
                     <CreateIcon className="h-5.5 w-5.5" />
@@ -214,7 +233,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                             type="button"
                             onClick={() => setStickersOpen((v) => !v)}
                             title="Send a sticker"
-                            className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full text-flexwhite/40 hover:text-flexwhite hover:bg-white/5 transition-colors"
+                            className={`${COMPOSER_CONTROL} text-flexwhite/40 transition-colors hover:bg-white/5 hover:text-flexwhite`}
                         >
                             <HugeiconsIcon icon={StickerIcon} className="size-5" strokeWidth={2} />
                         </button>
@@ -262,7 +281,7 @@ export function CommunityChatInput({ channelId, channelName, onTyping, onStopTyp
                 <button
                     type="submit"
                     disabled={sendMessage.isPending || !content.trim()}
-                    className="mr-2 h-8 w-8 shrink-0 flex items-center justify-center rounded-full bg-bleu text-white transition-all hover:bg-bleu/80 active:scale-95 disabled:opacity-0 disabled:scale-50"
+                    className={`mr-2 ${COMPOSER_CONTROL} bg-bleu text-white transition-all hover:bg-bleu/80 active:scale-95 disabled:scale-50 disabled:opacity-0`}
                     title="Send"
                 >
                     <ArrowUpIcon className="h-5.5 w-5.5" />
