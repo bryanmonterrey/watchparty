@@ -645,4 +645,17 @@ export const streamRouter = router({
                 .where(eq(streams.userId, input.creatorId));
             return { success: true };
         }),
+
+    // Studio cockpit stat tiles — follower + active-subscriber counts for the
+    // current creator. Cheap indexed counts; the live viewer count already
+    // rides getMine.viewerCount.
+    dashboardStats: protectedProcedure.query(async ({ ctx }) => {
+        const [followerRow, subRow] = await Promise.all([
+            db.select({ n: sqlCount() }).from(follows).where(eq(follows.followingId, ctx.user.id)),
+            db.select({ n: sqlCount() }).from(subscriptions).where(
+                and(eq(subscriptions.creatorId, ctx.user.id), eq(subscriptions.status, "active")),
+            ),
+        ]);
+        return { followers: followerRow[0]?.n ?? 0, subscribers: subRow[0]?.n ?? 0 };
+    }),
 });
