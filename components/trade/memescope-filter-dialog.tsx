@@ -20,6 +20,24 @@ import { Button } from "@/components/ui/button";
  */
 const MIN_TXNS_FOR_RATIO = 20;
 
+/**
+ * 24h volume over market cap — how many times the coin's whole value changed
+ * hands today.
+ *
+ * Measured on the live watch list, the median is **21x**, ranging from single
+ * digits to 50x+. That is an unusually discriminating number for something we
+ * were storing and never ranking on: a $1.2M coin doing 40x is a different
+ * animal from one doing 2x, and absolute volume cannot tell them apart because
+ * it does not know how big the coin is.
+ *
+ * Null when there is no market cap to divide by — see volumeAcceleration for
+ * why that is not 0 and not Infinity.
+ */
+export function turnover(t: { volume: number; marketCap: number }): number | null {
+    if (!Number.isFinite(t.volume) || !Number.isFinite(t.marketCap) || t.marketCap <= 0) return null;
+    return t.volume / t.marketCap;
+}
+
 /** Volume in the last 5 minutes, annualised to an hour, over actual 1h volume. */
 export function volumeAcceleration(t: {
     volume5m: number | null;
@@ -49,6 +67,11 @@ export interface MemescopeFilters {
      * while it is still happening.
      */
     minVolumeAccel: number | null;
+    /**
+     * Minimum 24h volume / market cap. Size-relative activity, which is what
+     * absolute volume can't express — the whole board's median is ~21x.
+     */
+    minTurnover: number | null;
 }
 
 export const NO_FILTERS: MemescopeFilters = {
@@ -59,6 +82,7 @@ export const NO_FILTERS: MemescopeFilters = {
     hideRisky: false,
     minBuyPercent: null,
     minVolumeAccel: null,
+    minTurnover: null,
 };
 
 export function filtersActive(f: MemescopeFilters): boolean {
@@ -69,6 +93,7 @@ export function filtersActive(f: MemescopeFilters): boolean {
         f.maxAgeHours != null ||
         f.minBuyPercent != null ||
         f.minVolumeAccel != null ||
+        f.minTurnover != null ||
         f.hideRisky
     );
 }
@@ -114,6 +139,12 @@ export function applyMemescopeFilters<
                 volume1h: t.volume1h ?? null,
             });
             if (accel == null || accel < f.minVolumeAccel) return false;
+        }
+        if (f.minTurnover != null) {
+            // Same rule as acceleration: unknown is not a pass. A coin with no
+            // market cap has no size to measure its volume against.
+            const x = turnover(t);
+            if (x == null || x < f.minTurnover) return false;
         }
         return true;
     });
@@ -166,6 +197,7 @@ export function MemescopeFilterDialog({
     const [age, setAge] = React.useState("");
     const [buyPercent, setBuyPercent] = React.useState("");
     const [accel, setAccel] = React.useState("");
+    const [turnoverMin, setTurnoverMin] = React.useState("");
     const [hideRisky, setHideRisky] = React.useState(false);
     React.useEffect(() => {
         if (!open) return;
@@ -175,6 +207,7 @@ export function MemescopeFilterDialog({
         setAge(filters.maxAgeHours?.toString() ?? "");
         setBuyPercent(filters.minBuyPercent?.toString() ?? "");
         setAccel(filters.minVolumeAccel?.toString() ?? "");
+        setTurnoverMin(filters.minTurnover?.toString() ?? "");
         setHideRisky(filters.hideRisky);
     }, [open, filters]);
 
@@ -203,6 +236,12 @@ export function MemescopeFilterDialog({
                         value={accel}
                         onChange={setAccel}
                         placeholder="2"
+                    />
+                    <Field
+                        label="min turnover (24h volume ÷ market cap)"
+                        value={turnoverMin}
+                        onChange={setTurnoverMin}
+                        placeholder="10"
                     />
                     <button
                         type="button"
@@ -244,6 +283,7 @@ export function MemescopeFilterDialog({
                                 maxAgeHours: parse(age),
                                 minBuyPercent: parse(buyPercent),
                                 minVolumeAccel: parse(accel),
+                                minTurnover: parse(turnoverMin),
                                 hideRisky,
                             });
                             onOpenChange(false);

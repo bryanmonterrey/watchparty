@@ -4,6 +4,7 @@ import {
     filtersActive,
     NO_FILTERS,
     volumeAcceleration,
+    turnover,
 } from "@/components/trade/memescope-filter-dialog";
 import { mobulaChainId, mobulaCoinBlockchain } from "@/lib/coins/mobula";
 import { compactCount } from "@/lib/utils";
@@ -111,6 +112,36 @@ describe("buy pressure filter", () => {
 
     test("is inert when unset", () => {
         expect(applyMemescopeFilters([pumping({ buyPercent: 1, txCount: 1 })], NO_FILTERS)).toHaveLength(1);
+    });
+});
+
+describe("turnover", () => {
+    /**
+     * 24h volume over market cap. Measured median across the live watch list is
+     * ~21x, which is why it is worth ranking on: absolute volume cannot tell a
+     * $1.2M coin doing 40x from one doing 2x, because it does not know how big
+     * the coin is.
+     */
+    test("expresses activity relative to size", () => {
+        expect(turnover({ volume: 10_000, marketCap: 1_000 })).toBe(10);
+        expect(turnover({ volume: 500, marketCap: 1_000 })).toBe(0.5);
+    });
+
+    test("no market cap means no answer", () => {
+        // Not 0 (ranks it last) and not Infinity (ranks it first). Both invent
+        // a fact about a coin we have no size for.
+        expect(turnover({ volume: 10_000, marketCap: 0 })).toBeNull();
+        expect(turnover({ volume: 10_000, marketCap: NaN })).toBeNull();
+    });
+
+    test("filters on it, and drops coins it cannot measure", () => {
+        const hot = pumping();                                     // 10k vol / 50k mcap = 0.2x
+        const spinning = { ...pumping(), volume: 500_000 };         // 10x
+        expect(applyMemescopeFilters([hot, spinning], { ...NO_FILTERS, minTurnover: 5 }))
+            .toHaveLength(1);
+        expect(applyMemescopeFilters([{ ...pumping(), marketCap: 0 }], { ...NO_FILTERS, minTurnover: 5 }))
+            .toHaveLength(0);
+        expect(filtersActive({ ...NO_FILTERS, minTurnover: 5 })).toBe(true);
     });
 });
 
