@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { StreamPreview } from "@/components/studio/stream-preview";
+import { StreamChat } from "@/components/studio/stream-chat";
 
 // The studio's stream cockpit (S2). A widget grid, not a form: live stat
 // tiles, the go-live control, Channel Actions (chat modes), ingest, and stream
@@ -59,6 +60,22 @@ function StatTile({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
+}
+
+function elapsedSince(start: Date | null | undefined): string {
+  if (!start) return "—";
+  const secs = Math.max(0, Math.floor((Date.now() - new Date(start).getTime()) / 1000));
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// IVS StreamHealth → badge tone. STARVING = the encoder is struggling.
+function healthBadge(health: string | null | undefined): { label: string; className: string } | null {
+  if (!health) return null;
+  if (health === "HEALTHY") return { label: "Healthy", className: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400" };
+  if (health === "STARVING") return { label: "Unstable", className: "border-amber-500/30 text-amber-600 dark:text-amber-400" };
+  return { label: "Unknown", className: "border-border/60 text-muted-foreground" };
 }
 
 const CHAT_MODES = [
@@ -120,6 +137,8 @@ export function StreamManager() {
   const userId = session?.user?.id;
   const mine = trpc.stream.getMine.useQuery(undefined, { refetchInterval: 20_000 });
   const stats = trpc.stream.dashboardStats.useQuery(undefined, { refetchInterval: 60_000 });
+  // IVS live vitals (health, start time, viewers) — polled fast while it matters.
+  const live = trpc.stream.liveInfo.useQuery(undefined, { refetchInterval: 15_000 });
   const stream = mine.data;
 
   const [title, setTitle] = React.useState("");
@@ -142,7 +161,8 @@ export function StreamManager() {
   });
 
   const provisioned = !!stream?.streamKey && !!stream?.serverUrl;
-  const isLive = !!stream?.isLive;
+  const isLive = !!stream?.isLive || !!live.data?.isLive;
+  const health = healthBadge(live.data?.health);
   const dirty = title !== (stream?.title ?? "") || category !== (stream?.category ?? "");
   const fmt = (n: number | undefined) => (n === undefined ? "—" : new Intl.NumberFormat().format(n));
 
@@ -156,25 +176,32 @@ export function StreamManager() {
             see.
           </p>
         </div>
-        {isLive ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500">
-            <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
-            Live
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-2.5 py-1 text-xs text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-muted-foreground/50" />
-            Offline
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isLive && health ? (
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${health.className}`}>
+              {health.label}
+            </span>
+          ) : null}
+          {isLive ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500">
+              <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
+              Live
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-2.5 py-1 text-xs text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-muted-foreground/50" />
+              Offline
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Stat tiles */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Viewers" value={isLive ? fmt(stream?.viewerCount ?? 0) : "—"} />
+        <StatTile label="Viewers" value={isLive ? fmt(live.data?.viewerCount ?? stream?.viewerCount ?? 0) : "—"} />
         <StatTile label="Followers" value={fmt(stats.data?.followers)} />
         <StatTile label="Subscribers" value={fmt(stats.data?.subscribers)} />
-        <StatTile label="Session" value={isLive ? "Live" : "Offline"} />
+        <StatTile label="Time live" value={isLive ? elapsedSince(live.data?.startedAt) : "—"} />
       </div>
 
       {mine.isPending ? (
@@ -215,6 +242,9 @@ export function StreamManager() {
 
           {/* Channel actions (chat modes) */}
           {userId ? <ChannelActions creatorId={userId} mode={stream?.chatMode ?? "everyone"} /> : null}
+
+          {/* Live chat */}
+          {userId ? <StreamChat hostUserId={userId} hasChatRoom={!!stream?.chatRoomArn} /> : null}
 
           {/* Ingest */}
           {provisioned ? (

@@ -658,4 +658,31 @@ export const streamRouter = router({
         ]);
         return { followers: followerRow[0]?.n ?? 0, subscribers: subRow[0]?.n ?? 0 };
     }),
+
+    // Live vitals for the studio cockpit — health + start time + viewers, read
+    // straight from IVS GetStream for the caller's own channel. startTime gives
+    // Time-Live with no DB column; health is HEALTHY | STARVING | UNKNOWN.
+    liveInfo: protectedProcedure.query(async ({ ctx }) => {
+        const [row] = await db.select({ channelArn: streams.channelArn })
+            .from(streams).where(eq(streams.userId, ctx.user.id)).limit(1);
+        if (!row?.channelArn) {
+            return { isLive: false, health: null as string | null, startedAt: null as Date | null, viewerCount: 0 };
+        }
+        try {
+            const { GetStreamCommand } = await ivsSdk();
+            const res = await (await ivsClient()).send(new GetStreamCommand({ channelArn: row.channelArn }));
+            const s = res.stream;
+            return {
+                isLive: true,
+                health: (s?.health as string | undefined) ?? null,
+                startedAt: s?.startTime ?? null,
+                viewerCount: s?.viewerCount ?? 0,
+            };
+        } catch (err) {
+            if ((err as { name?: string })?.name === "ChannelNotBroadcasting") {
+                return { isLive: false, health: null as string | null, startedAt: null as Date | null, viewerCount: 0 };
+            }
+            throw err;
+        }
+    }),
 });
