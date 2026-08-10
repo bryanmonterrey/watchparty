@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useLayoutEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { MessageBubble } from './message-bubble';
 import { DM_PAGE_LIMIT } from "@/components/messages/messages-provider";
 import { useMessages } from '@/hooks/use-messages';
@@ -247,11 +248,9 @@ export function MessageList({ conversationId }: MessageListProps) {
                 <div className="flex-1">
                     <EmptyState />
                 </div>
-                {typingUsers.length > 0 && (
-                    <div className="px-6 py-4">
-                        <TypingIndicator conversationId={conversationId} currentUserId={session?.user?.id} typingUsers={typingUsers} />
-                    </div>
-                )}
+                <div className="px-6 py-4">
+                    <TypingIndicator conversationId={conversationId} currentUserId={session?.user?.id} typingUsers={typingUsers} />
+                </div>
             </div>
         )
     }
@@ -346,18 +345,38 @@ export function MessageList({ conversationId }: MessageListProps) {
     );
 }
 
+/**
+ * Typing indicator with a RESERVED rail.
+ *
+ * It used to `return null` when nobody was typing, and it renders inside the
+ * scroll content — so the moment someone started typing the list grew by the
+ * bubble's height and everything above it moved. Reading a message while the
+ * other person begins replying is exactly when the text should not jump.
+ *
+ * The row is now always present at a fixed height and only its contents fade,
+ * so the layout is identical typing or not. Community chat already did this
+ * (`h-6 px-4 shrink-0` outside its scroller); this is DMs catching up, which is
+ * Phase 3 step 6 of docs/buzz-adoption-plan.md.
+ *
+ * `h-11` matches the bubble's own height (py-3 + 1.5 dots + border), so nothing
+ * moves when it appears.
+ */
 function TypingIndicator({ conversationId, currentUserId, typingUsers }: { conversationId: string, currentUserId?: string, typingUsers: string[] }) {
     // Filter out current user from typing list
     const otherTypingUsers = typingUsers.filter(id => id !== currentUserId);
-
-    if (otherTypingUsers.length === 0) return null;
+    const active = otherTypingUsers.length > 0;
 
     return (
-        <div className="flex justify-start">
-            <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5 w-fit">
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"></span>
+        <div className="flex h-11 items-center justify-start" aria-hidden={!active}>
+            <div
+                className={cn(
+                    "bg-zinc-800/50 border border-zinc-700/50 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5 w-fit transition-opacity duration-200 motion-reduce:transition-none",
+                    active ? "opacity-100" : "opacity-0",
+                )}
+            >
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.3s]"></span>
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:-0.15s]"></span>
+                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce motion-reduce:animate-none"></span>
             </div>
         </div>
     );

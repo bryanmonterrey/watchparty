@@ -5,13 +5,14 @@ import { useComposerDraft } from '@/hooks/use-composer-drafts';
 import { useComposerKeys } from '@/hooks/use-composer-keys';
 import { ClipIcon, ArrowUpIcon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
-import { Send, Paperclip, X } from 'lucide-react';
+import { Send, Paperclip } from "lucide-react";
 import { Textarea } from '@/components/ui/textarea';
 import { useChat } from './chat-context';
 import { useSendMessage, useMessages } from '@/hooks/use-messages';
 import { trpc } from '@/lib/trpc/client';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { cn } from '@/lib/utils';
+import { ComposerReplyBanner } from '@/components/ui/composer-reply-banner';
 import { useEncryption } from '@/hooks/use-encryption';
 import { EmojiPicker } from './emoji-picker';
 import { AudioRecorder } from './audio-recorder';
@@ -199,30 +200,21 @@ export function MessageInput({ conversationId }: MessageInputProps) {
 
     return (
         <div className="flex flex-col gap-2">
-            {/* Reply Context Banner */}
             {replyToMessage && (
-                <div className="flex items-start justify-between bg-zinc-900/40 border border-zinc-800 p-3 rounded-2xl mx-2 animate-in slide-in-from-bottom-2 fade-in duration-200">
-                    <div className="flex gap-3 items-center overflow-hidden">
-                        <div className="h-full w-1 rounded-full bg-bleu flex-shrink-0 self-stretch min-h-[32px]" />
-                        <div className="flex flex-col overflow-hidden">
-                            <span className="text-xs font-medium text-bleu">Replying to {replyToMessage.senderId === currentUserId ? 'You' : 'User'}</span>
-                            <span className="text-xs text-zinc-400 truncate max-w-[60vw]">
-                                {replyToMessage.messageType === 'image' ? '📷 Image' :
-                                    replyToMessage.messageType === 'audio' ? '🎤 Voice Message' :
-                                        replyToMessage.messageType === 'file' ? '📄 File' :
-                                            replyToMessage.content}
-                            </span>
-                        </div>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-full text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-                        onClick={() => setReplyToMessage(null)}
-                    >
-                        <X className="size-4" />
-                    </Button>
-                </div>
+                <ComposerReplyBanner
+                    name={replyToMessage.senderId === currentUserId ? "You" : "User"}
+                    // Non-text replies quote their KIND, not their payload —
+                    // "📷 Image" is the useful preview of an image, and the raw
+                    // content field would be a URL or a blob reference.
+                    preview={
+                        replyToMessage.messageType === "image" ? "📷 Image"
+                            : replyToMessage.messageType === "audio" ? "🎤 Voice Message"
+                                : replyToMessage.messageType === "file" ? "📄 File"
+                                    : replyToMessage.content
+                    }
+                    onCancel={() => setReplyToMessage(null)}
+                    className="mx-2 rounded-b-2xl border-b"
+                />
             )}
 
             <div className={cn(
