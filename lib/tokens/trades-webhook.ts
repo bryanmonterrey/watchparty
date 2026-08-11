@@ -54,9 +54,38 @@ const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before shard
  * free plan is 1,000,000/month; anything above ~40% has no room left for a
  * burst, and bursts are the whole reason this constant exists.
  *
- * 10 is the current setting, which the 0.90 ratio puts near 39%.
+ * ## Measured 2026-08-11, one day into the 08-10 → 09-10 cycle
+ *
+ * The default was 12 and nothing overrode it (the env var is unset in every
+ * environment). That produced:
+ *
+ *     27.0 deliveries/min      (Cloudflare, 38,823 over 24h)
+ *     37,637 credits/day       (Helius admin API, 97.5% of it webhooks)
+ *     → 1,174,774 per cycle    = 117% of a 1,000,000 free plan
+ *
+ * Two constants in the old model were wrong, in opposite directions:
+ *
+ *   - credits per delivery is **0.97**, not the ~3 assumed. Helius bills a
+ *     webhook delivery close to a single credit.
+ *   - deliveries run **2.25x** the budget, not near 1x. That is the bend this
+ *     comment already describes, measured: the estimate is `txns_24h / 1440`,
+ *     a daily mean, and selection walks toward pools whose recent activity most
+ *     exceeds their mean.
+ *
+ * The second error is larger than the first, so the plan overruns despite each
+ * delivery being cheaper than believed. At 6:
+ *
+ *     13.5 deliveries/min → 18,819/day → ~610,000 this cycle (61%)
+ *
+ * Not the ~40% this comment recommends, because 45,664 credits are already
+ * spent and cutting to 4 would roughly halve the trade sample that
+ * `traderConcentration` needs. 61% keeps burst room and keeps the data.
+ *
+ * ⚠️ The 2.25x is a single reading at ONE budget. Because the ratio bends,
+ * lowering the budget should lower the ratio too — so 6 may well land under
+ * 61%. RE-MEASURE before trusting the projection above.
  */
-const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 12) || 0);
+const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 6) || 0);
 
 /**
  * A pool quieter than this is watched for nothing: it never accumulates the

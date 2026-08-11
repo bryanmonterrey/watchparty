@@ -89,3 +89,34 @@ describe("traderConcentration", () => {
         expect(MIN_TRADES_FOR_VERDICT).toBe(40);
     });
 });
+
+describe("volume share", () => {
+    const base = { trades: 100, traders: 50, top5Trades: 30, roundTripTraders: 10 };
+
+    test("is null when no priced volume was supplied — not zero", () => {
+        // "We don't know" and "nobody holds any of it" are different answers,
+        // and a UI that renders 0% for the first one is lying.
+        expect(traderConcentration(base).top5VolumeSharePct).toBeNull();
+        expect(traderConcentration({ ...base, volumeUsd: 0, top5VolumeUsd: 0 }).top5VolumeSharePct).toBeNull();
+    });
+
+    test("computes the top-5 dollar share when volume is present", () => {
+        const c = traderConcentration({ ...base, volumeUsd: 1000, top5VolumeUsd: 800 });
+        expect(c.top5VolumeSharePct).toBeCloseTo(80, 5);
+    });
+
+    test("does NOT drive the verdict", () => {
+        // The measurement that decided this: volume share runs a median +35
+        // points above count share and sits at 60-100% for healthy tokens too,
+        // so a coin can be broadly traded and still show ~100% of dollars in
+        // five wallets. Counts are what separate the concentrated from the broad.
+        const c = traderConcentration({ ...base, volumeUsd: 1000, top5VolumeUsd: 1000 });
+        expect(c.top5VolumeSharePct).toBe(100);
+        expect(c.washy).toBe(false); // count share is 30%, comfortably healthy
+    });
+
+    test("cannot exceed 100 even if the caller's top5 overshoots the total", () => {
+        const c = traderConcentration({ ...base, volumeUsd: 500, top5VolumeUsd: 900 });
+        expect(c.top5VolumeSharePct).toBe(100);
+    });
+});

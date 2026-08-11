@@ -6,17 +6,33 @@
  * each other, and wash volume is cheap to manufacture precisely because every
  * naive ranking rewards it.
  *
- * ## Counts, not dollars — forced by the data
+ * ## Counts, not dollars — and NOT for the reason first assumed
  *
  * The obvious formulation is volume-weighted: what share of USD volume do the
- * top wallets hold? It is not computable here. Measured on `coin_trades`
- * 2026-08-10, **only 1,039 of 5,394 rows carry `amount_usd`** (19%) — and
- * `price_usd` is missing on the same rows. `trader` and `side` are populated on
- * **100%**.
+ * top wallets hold? Until 2026-08-10 it simply wasn't computable — only 19% of
+ * `coin_trades` carried `amount_usd`, because Jupiter's `price/v2` was 404ing.
+ * That is fixed (`price/v3`): **85.6% of the last 24h is priced**, so the
+ * dollar-weighted version became available and was expected to replace this.
  *
- * So every metric below counts TRADES. A dollar-weighted version would be
- * strictly better and is not available; writing one anyway would produce a
- * confident number from a 19% sample, which is worse than counting honestly.
+ * It should not. Measured across the 42 tokens with ≥40 trades in 7 days, top-5
+ * share by VOLUME runs a **median +35.3 points above** the same token's share
+ * by COUNT, and it is compressed against the ceiling:
+ *
+ *     trades  traders   count%   volume%
+ *        101       69     18.8      66.2     <- healthy by count
+ *         87       59     24.1     100.0     <- healthy by count, 100% by volume
+ *         92       41     38.0      81.4
+ *        108        9     96.3      99.8     <- genuinely concentrated
+ *
+ * Count share spreads 18-100% and separates the concentrated tokens from the
+ * broad ones. Volume share sits at 60-100% for nearly everything, because a
+ * handful of wallets move most of the dollars in ANY market — that is ordinary
+ * structure, not wash trading. Swapping the metric while keeping the 60%
+ * threshold would have marked almost every coin washy.
+ *
+ * So `top5VolumeSharePct` is computed and REPORTED, because it is worth
+ * showing, and `washy` still rides on counts. Making volume a verdict needs a
+ * threshold calibrated against labelled wash trading, which we do not have.
  *
  * ## The thresholds are measured, not chosen
  *
@@ -53,11 +69,23 @@ export interface TraderStats {
     top5Trades: number;
     /** Wallets that appear on both sides of the book. */
     roundTripTraders: number;
+    /** Total USD across trades that carry `amount_usd`. Optional — see below. */
+    volumeUsd?: number;
+    /** USD belonging to the five LARGEST wallets by volume (not the busiest). */
+    top5VolumeUsd?: number;
 }
 
 export interface Concentration {
     /** Share of trades held by the top five wallets, 0-100. */
     top5SharePct: number;
+    /**
+     * Share of USD volume held by the five largest wallets, 0-100, or `null`
+     * when no priced volume was supplied.
+     *
+     * ⚠️ REPORTED, NOT JUDGED. This does not drive `washy` — see the note on
+     * `TOP5_VOLUME_*` below for the measurement that decided that.
+     */
+    top5VolumeSharePct: number | null;
     /** Share of wallets that both bought and sold, 0-100. */
     roundTripPct: number;
     /** Mean trades per wallet. ~1.5-2.4 is normal; high means repetition. */
@@ -76,6 +104,7 @@ export interface Concentration {
 export function traderConcentration(stats: TraderStats | null | undefined): Concentration {
     const empty: Concentration = {
         top5SharePct: 0,
+        top5VolumeSharePct: null,
         roundTripPct: 0,
         tradesPerTrader: 0,
         hasVerdict: false,
@@ -89,6 +118,16 @@ export function traderConcentration(stats: TraderStats | null | undefined): Conc
     }
 
     const top5SharePct = (Math.min(top5Trades, trades) / trades) * 100;
+
+    // Volume share is computed when there is priced volume to compute it from,
+    // and is otherwise null rather than 0 — "we don't know" and "nobody holds
+    // any of it" are different answers.
+    const volumeUsd = stats.volumeUsd;
+    const top5VolumeUsd = stats.top5VolumeUsd;
+    const top5VolumeSharePct =
+        Number.isFinite(volumeUsd) && (volumeUsd as number) > 0 && Number.isFinite(top5VolumeUsd)
+            ? (Math.min(top5VolumeUsd as number, volumeUsd as number) / (volumeUsd as number)) * 100
+            : null;
     const roundTripPct = (Math.min(roundTripTraders, traders) / traders) * 100;
     const tradesPerTrader = trades / traders;
 
@@ -98,6 +137,7 @@ export function traderConcentration(stats: TraderStats | null | undefined): Conc
 
     return {
         top5SharePct,
+        top5VolumeSharePct,
         roundTripPct,
         tradesPerTrader,
         hasVerdict,
