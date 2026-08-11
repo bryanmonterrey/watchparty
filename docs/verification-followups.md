@@ -29,13 +29,17 @@ minutes.
    so it needs `videos.data.videos`. Uncommitted as of writing, so CI is safe —
    but `next build` type-checks, and this breaks the deploy the moment it lands.
 
-2. **Provision the e2e fixture's wallet** (task #2). Now two HTTP calls, since
-   the lockout that prevented it was fixed in `12672ccc`:
-   - `POST /api/create-wallet` with a minted session → `{ clientShare, publicInfo }`
-   - write that into IndexedDB `watchparty_frost`, store `shares`, keyed on
-     `userId` — the same record `lib/frost/frost-storage.ts` writes. Inject it
-     in puppeteer before navigating.
-   That opens the encryption gate and makes `/messages` reachable.
+2. **Provision the e2e fixture's wallet** (task #2). ⚠️ **NOT two HTTP calls —
+   that was tried on 2026-08-11 and is blocked.** `/api/create-wallet` sits
+   behind Turnstile (`route.ts:194`), so no script can obtain a token, and
+   solving a CAPTCHA is off-limits. The workable route is to click the wallet
+   setup once by hand in a headed browser against dev, then reuse that browser
+   profile with puppeteer's `userDataDir` — the IndexedDB share persists. See
+   task #2 for the alternatives and their trade-offs.
+
+   The attempt was still worth it: it found a permanent lockout (fixed,
+   `12672ccc`) and dev-database schema drift (`user.is_bot` missing, so every
+   full-row user select threw locally — applied from `db/developer-bots.sql`).
 
 3. **Decide the production fixture.** `mint-test-session.mjs --yes-production`
    creates one throwaway identity, restricted by the script to
