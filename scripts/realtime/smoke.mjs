@@ -33,8 +33,8 @@ if (!SECRET || !HOST) {
 }
 
 const key = new TextEncoder().encode(SECRET);
-const signToken = (sub, name) =>
-  new SignJWT({ name })
+const signToken = (sub, name, extraClaims = {}) =>
+  new SignJWT({ name, ...extraClaims })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(sub)
     .setIssuedAt()
@@ -113,6 +113,25 @@ async function main() {
   assert("chat identity stamped by server (not spoofable)", chatB && chatB.userId === "smoke-user-A" && chatB.name === "Alice");
   const chatA = events.A.find((e) => e.t === "chat" && e.text === "hello from Alice");
   assert("sender A also receives the authoritative message", !!chatA);
+
+  // 4.5. chat:false claim gates SENDING. This is the regression test for the
+  // dropped-claim bug: verifyRealtimeToken once returned only {sub, name},
+  // so `canChat: claims.chat !== false` saw undefined and followers-only /
+  // subscribers-only chat gating silently passed everyone.
+  {
+    events.M = [];
+    const tokenMuted = await signToken("smoke-user-M", "Muted", { chat: false });
+    const m = await connect("M", tokenMuted);
+    await wait(500);
+    events.A.length = 0;
+    m.send(JSON.stringify({ t: "chat", text: "should never broadcast" }));
+    await wait(800);
+    assert(
+      "chat:false connection cannot send chat (dropped-claim regression)",
+      !events.A.some((e) => e.t === "chat" && e.text === "should never broadcast"),
+    );
+    m.close();
+  }
 
   // 5. Typing relay: B types, A should see it (and not echo back to B).
   events.A.length = 0;
