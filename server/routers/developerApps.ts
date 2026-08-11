@@ -85,6 +85,44 @@ export const developerAppsRouter = router({
         .input(z.object({ id: z.string() }))
         .query(({ ctx, input }) => ownedApp(ctx.user.id, input.id)),
 
+    // Discord §9 verification checklist — self-evaluated trust criteria for an
+    // app before it scales or lists publicly. Computed server-side from the app
+    // + owner account so the console just renders ✓/⚠ rows and a "missing n"
+    // summary. Human review for privileged scopes is a later, queue-backed row.
+    verificationChecklist: protectedProcedure
+        .input(z.object({ appId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const [row] = await db
+                .select({
+                    name: developerApps.name,
+                    description: developerApps.description,
+                    iconUrl: developerApps.iconUrl,
+                    tosUrl: developerApps.tosUrl,
+                    privacyUrl: developerApps.privacyUrl,
+                    emailVerified: user.emailVerified,
+                    twoFactorEnabled: user.twoFactorEnabled,
+                })
+                .from(developerApps)
+                .innerJoin(user, eq(user.id, developerApps.ownerId))
+                .where(and(
+                    eq(developerApps.id, input.appId),
+                    eq(developerApps.ownerId, ctx.user.id),
+                    isNull(developerApps.deletedAt),
+                ))
+                .limit(1);
+            if (!row) throw new TRPCError({ code: "NOT_FOUND" });
+
+            const criteria = [
+                { key: "profile", label: "Complete app profile", detail: "A name, description, and icon.", met: !!(row.name && row.description?.trim() && row.iconUrl) },
+                { key: "tos", label: "Terms of Service URL", detail: "A link to your app's terms.", met: !!row.tosUrl },
+                { key: "privacy", label: "Privacy Policy URL", detail: "A link to your privacy policy.", met: !!row.privacyUrl },
+                { key: "email", label: "Verified owner email", detail: "The owner account's email is confirmed.", met: !!row.emailVerified },
+                { key: "2fa", label: "Two-factor authentication", detail: "2FA is enabled on the owner account.", met: !!row.twoFactorEnabled },
+            ];
+            const met = criteria.filter((c) => c.met).length;
+            return { criteria, met, total: criteria.length, complete: met === criteria.length };
+        }),
+
     create: protectedProcedure
         .input(z.object(identityInput))
         .mutation(async ({ ctx, input }) => {

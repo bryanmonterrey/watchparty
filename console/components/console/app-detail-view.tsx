@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc";
 import { formatDate, money } from "@/lib/format";
 import { CopyButton } from "@/components/console/copy-button";
@@ -622,6 +622,59 @@ function DangerZone({ app }: { app: App }) {
   );
 }
 
+// Discord §9 verification checklist: self-evaluated trust criteria, computed
+// server-side (developerApps.verificationChecklist). ✓ met / ⚠ missing rows and
+// a "n of m" summary — the gate an app clears before it scales or lists publicly.
+function VerificationCard({ appId }: { appId: string }) {
+  const check = trpc.developerApps.verificationChecklist.useQuery({ appId });
+
+  return (
+    <div className="rounded-xl border bg-card p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium">Verification</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Clear these before your app scales or lists publicly.
+          </p>
+        </div>
+        {check.data ? (
+          check.data.complete ? (
+            <Chip tone="good">All set</Chip>
+          ) : (
+            <Chip tone="warn">{check.data.total - check.data.met} to go</Chip>
+          )
+        ) : null}
+      </div>
+
+      {check.isPending ? (
+        <div className="mt-3 h-32 animate-pulse rounded-lg bg-muted/40" />
+      ) : check.error ? (
+        <p className="mt-3 text-xs text-destructive">{check.error.message}</p>
+      ) : check.data ? (
+        <ul className="mt-3 flex flex-col divide-y">
+          {check.data.criteria.map((c) => (
+            <li key={c.key} className="flex items-center gap-3 py-2.5">
+              <span
+                className={`flex size-5 shrink-0 items-center justify-center rounded-full ${
+                  c.met
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : "border border-amber-500/50 text-transparent"
+                }`}
+              >
+                <HugeiconsIcon icon={Tick02Icon} className="size-3" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm ${c.met ? "" : "font-medium"}`}>{c.label}</p>
+                <p className="text-xs text-muted-foreground">{c.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 export function AppDetailView({ id }: { id: string }) {
   const app = trpc.developerApps.get.useQuery({ id });
 
@@ -667,6 +720,7 @@ export function AppDetailView({ id }: { id: string }) {
           </div>
 
           <IdentityCard app={app.data} />
+          <VerificationCard appId={app.data.id} />
           <CredentialsCard app={app.data} />
           <KeysCard appId={app.data.id} />
           <BotCard appId={app.data.id} />
