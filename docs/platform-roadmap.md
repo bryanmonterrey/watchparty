@@ -138,15 +138,24 @@ studio.watchparty.xyz (route group in the main app, host-rewritten).
   setPermissions/uninstall (gated on app-ownership AND community owner-or-ADMIN),
   bot-facing `installs` + `listMembers` (gated on `READ_MEMBERS`), and the
   console permission toggles. Bits vendored to the console with a drift test.
-- **Hardening (re-review pass):** app-delete revokes the bot (auth-layer join +
-  user-row delete, no ghost account), `is_bot` users are refused a session at
-  `session.create.before` (not left to DNS), create() is transactional. Adversarial
-  auth review couldn't break token verify, hot-path gating, or IDOR.
-- **Deferred within the phase:** only `READ_MEMBERS` has an enforcing bot
-  endpoint so far; `SEND_MESSAGES`/`MANAGE_COIN_ALERTS`/`MODERATE` are defined
-  bits awaiting their botProcedure capabilities (each added one at a time, so a
-  bot can do nothing not explicitly opted in). A live per-bot smoke is the last
-  verification step.
+- **Hardening (two adversarial re-review passes):** pass 1 (auth) — app-delete
+  revokes the bot (auth-layer join + user-row delete, no ghost account), `is_bot`
+  users refused a session at `session.create.before` (not left to DNS), create()
+  transactional; couldn't break token verify, hot-path gating, or IDOR. Pass 2
+  (install/permissions) — install-time gates held (no cross-tenant install, IDOR,
+  permission forgery, overflow, confused-deputy); fixed the two findings: added a
+  community-owner revocation surface (`communityBots`/`communityUninstall`/
+  `communitySetPermissions`, serverId-scoped + `assertCommunityAdmin`, so the
+  server owner can evict any bot regardless of who installed it), and a
+  fail-closed `perm <= 0` guard in `requireInstallPermission`.
+- **Deferred within the phase:** (1) the community-side **Bots management UI** —
+  the revocation endpoints exist but need a section in Server Settings →
+  Integrations (alongside webhooks) to be human-usable; deferred because
+  `components/community/` is the parallel chat session's active surface. (2) only
+  `READ_MEMBERS` has an enforcing bot endpoint; `SEND_MESSAGES`/
+  `MANAGE_COIN_ALERTS`/`MODERATE` are defined bits awaiting their botProcedure
+  capabilities (each added one at a time, so a bot can do nothing not explicitly
+  opted in). (3) A live per-bot smoke is the last verification step.
 - **Risk/notes:** token auth touches the context hot path; the fail-closed guard
   is the load-bearing safety property.
 
