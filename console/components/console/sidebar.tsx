@@ -61,7 +61,7 @@ const NAV_GROUPS: {
     items: [
       { icon: Home01Icon, label: "Dashboard", href: "/" },
       { icon: Notification03Icon, label: "Notifications", href: "/notifications" },
-      { icon: SparklesIcon, label: "Agent", href: "/agent", soon: true },
+      { icon: SparklesIcon, label: "Agent", href: "/agent" },
     ],
   },
   {
