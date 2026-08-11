@@ -208,8 +208,10 @@ export function StreamManager() {
         <div className="h-40 animate-pulse rounded-2xl border border-border/60 bg-muted/30" />
       ) : (
         <>
-        <StreamPreview playbackUrl={stream?.playbackUrl ?? null} isLive={isLive} />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid items-start gap-4 lg:grid-cols-[1fr_340px]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <StreamPreview playbackUrl={stream?.playbackUrl ?? null} isLive={isLive} />
+            <div className="grid gap-4 sm:grid-cols-2">
           {/* Go-live status card */}
           <div className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
             <p className="text-sm font-medium">
@@ -242,9 +244,6 @@ export function StreamManager() {
 
           {/* Channel actions (chat modes) */}
           {userId ? <ChannelActions creatorId={userId} mode={stream?.chatMode ?? "everyone"} /> : null}
-
-          {/* Live chat */}
-          {userId ? <StreamChat hostUserId={userId} hasChatRoom={!!stream?.chatRoomArn} /> : null}
 
           {/* Ingest */}
           {provisioned ? (
@@ -310,6 +309,9 @@ export function StreamManager() {
               </div>
             </div>
           </div>
+            </div>
+          </div>
+          {userId ? <StreamChat hostUserId={userId} hasChatRoom={!!stream?.chatRoomArn} /> : null}
         </div>
         </>
       )}

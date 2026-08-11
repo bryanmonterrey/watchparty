@@ -54,7 +54,9 @@ function SectionCard({
 
 export function StudioHome() {
   const mine = trpc.stream.getMine.useQuery(undefined, { refetchInterval: 30_000 });
-  const isLive = !!mine.data?.isLive;
+  const live = trpc.stream.liveInfo.useQuery(undefined, { refetchInterval: 30_000 });
+  const isLive = !!mine.data?.isLive || !!live.data?.isLive;
+  const viewers = live.data?.viewerCount ?? mine.data?.viewerCount ?? 0;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
@@ -81,7 +83,7 @@ export function StudioHome() {
             </p>
             <p className="text-xs text-muted-foreground">
               {isLive
-                ? `${mine.data?.viewerCount ?? 0} watching${mine.data?.title ? ` · ${mine.data.title}` : ""}`
+                ? `${viewers} watching${mine.data?.title ? ` · ${mine.data.title}` : ""}`
                 : "Head to Streams to go live."}
             </p>
           </div>
