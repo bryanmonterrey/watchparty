@@ -67,6 +67,12 @@ const CHANNEL = "0936c35a-4f0f-43e1-8fc5-63b4daa15e4d";
 /**
  * `count` is SQL against the dev DB — ground truth, so truncation is visible.
  * `rows` is the array field on the procedure's output.
+ *
+ * `count` may be OMITTED where no honest ground truth exists — a ranked feed
+ * with a bounded candidate pool is not supposed to return every row, so
+ * asserting a total would be asserting the wrong thing. Those surfaces are
+ * still checked for duplicates and for termination, which is where the
+ * cursor bugs actually live.
  */
 const SURFACES = [
     {
@@ -130,6 +136,45 @@ const SURFACES = [
         input: { limit: 12 },
         rows: "videos",
         count: `select count(*)::int n from posts where "videoUrl" is not null and status = 'published' and visibility = 'public'`,
+    },
+    {
+        name: "feed.getFeed",
+        proc: "content.getFeed",
+        input: { type: "for-you", limit: 20 },
+        rows: "posts",
+        // No count on purpose: this is RANKED over a bounded candidate pool
+        // (FEED_POOL_SIZE), so "everything published" is not the right answer.
+        // Duplicates and non-termination are still bugs.
+    },
+    {
+        name: "message.list (DMs)",
+        proc: "message.list",
+        input: { conversationId: "__CONV__", limit: 50 },
+        rows: "messages",
+        count: `select count(*)::int n from messages where conversation_id = '__CONV__'`,
+        resolve: `select conversation_id id from messages group by 1 order by count(*) desc limit 1`,
+        placeholder: "__CONV__",
+    },
+    {
+        name: "getFollowing",
+        proc: "user.getFollowing",
+        input: { userId: ME, limit: 20 },
+        rows: "items",
+        count: `select count(*)::int n from follows where "followerId" = '${ME}'`,
+    },
+    {
+        name: "trending.list",
+        proc: "trending.list",
+        input: { sort: "volume", timeframe: "24h", limit: 50 },
+        rows: "items",
+        count: `select count(*)::int n from trending_coins`,
+    },
+    {
+        name: "coinFeed.list",
+        proc: "coinFeed.list",
+        input: { limit: 20 },
+        rows: "items",
+        count: `select count(*)::int n from coin_feed_events`,
     },
 ];
 
@@ -195,12 +240,16 @@ async function main() {
             const r = await db.execute(sql.raw(s.resolve));
             const id = (r.rows ?? r)[0]?.id;
             if (!id) { console.log(`  NO DATA  ${s.name} — nothing to resolve`); skipped++; continue; }
-            input = JSON.parse(JSON.stringify(s.input).replaceAll("__PARENT__", id));
-            countSql = countSql.replaceAll("__PARENT__", id);
+            const token = s.placeholder ?? "__PARENT__";
+            input = JSON.parse(JSON.stringify(s.input).replaceAll(token, id));
+            countSql = countSql?.replaceAll(token, id);
         }
 
-        const r = await db.execute(sql.raw(countSql));
-        const expected = (r.rows ?? r)[0]?.n ?? 0;
+        let expected = null;
+        if (countSql) {
+            const r = await db.execute(sql.raw(countSql));
+            expected = (r.rows ?? r)[0]?.n ?? 0;
+        }
 
         let res;
         try {
@@ -224,13 +273,16 @@ async function main() {
         const problems = [];
         if (!res.exhausted) problems.push(`cursor never terminated (${MAX_PAGES} pages)`);
         if (dupes) problems.push(`${dupes} duplicate rows`);
-        if (unique !== expected) problems.push(`reached ${unique} of ${expected} — ${expected - unique} unreachable`);
+        if (expected !== null && unique !== expected) {
+            problems.push(`reached ${unique} of ${expected} — ${expected - unique} unreachable`);
+        }
 
         if (problems.length) {
             console.log(`  FAIL     ${s.name} — ${problems.join("; ")}`);
             failed++;
         } else {
-            console.log(`  ok       ${s.name} — ${unique}/${expected} in ${res.pages} pages`);
+            const total = expected === null ? `${unique} rows (no ground truth)` : `${unique}/${expected}`;
+            console.log(`  ok       ${s.name} — ${total} in ${res.pages} pages`);
         }
     }
 
