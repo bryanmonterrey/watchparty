@@ -5,6 +5,8 @@ import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
 import { and, eq, desc, inArray, ne, sql } from "drizzle-orm";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
+import { openStreamSession, closeStreamSession } from "@/lib/stream/sessions";
+import { streamSessions } from "@/db/schema/content/stream-session";
 import { follows } from "@/db/schema/content/follow";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { TRPCError } from "@trpc/server";
@@ -453,8 +455,10 @@ export const streamRouter = router({
             const rows = await db.update(streams)
                 .set({ isLive: input.isLive, updatedAt: new Date() })
                 .where(and(eq(streams.userId, ctx.user.id), ne(streams.isLive, input.isLive)))
-                .returning({ id: streams.id });
+                .returning({ id: streams.id, title: streams.title, category: streams.category });
             for (const row of rows) {
+                if (input.isLive) await openStreamSession(ctx.user.id, row.title, row.category);
+                else await closeStreamSession(ctx.user.id);
                 await dispatchDeveloperEvent(ctx.user.id, input.isLive ? "stream.online" : "stream.offline", {
                     streamId: row.id,
                     sessionId: null,
@@ -462,6 +466,27 @@ export const streamRouter = router({
             }
             return { success: true };
         }),
+
+    /** The studio Producer/Broadcasts list — this creator's past + live sessions. */
+    broadcasts: protectedProcedure.query(async ({ ctx }) => {
+        const rows = await db
+            .select({
+                id: streamSessions.id,
+                title: streamSessions.title,
+                category: streamSessions.category,
+                startedAt: streamSessions.startedAt,
+                endedAt: streamSessions.endedAt,
+            })
+            .from(streamSessions)
+            .where(eq(streamSessions.userId, ctx.user.id))
+            .orderBy(desc(streamSessions.startedAt))
+            .limit(50);
+        return rows.map((r) => ({
+            ...r,
+            live: r.endedAt === null,
+            durationSec: r.endedAt ? Math.max(0, Math.round((r.endedAt.getTime() - r.startedAt.getTime()) / 1000)) : null,
+        }));
+    }),
 
     /**
      * Standing of each given user in a channel, for the chat member list.

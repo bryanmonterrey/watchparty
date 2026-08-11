@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { eq } from "drizzle-orm";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
+import { openStreamSession, closeStreamSession } from "@/lib/stream/sessions";
 import { timingSafeEqual } from "crypto";
 
 // IVS → EventBridge rule → API destination posts here; this is what flips
@@ -55,8 +56,9 @@ export async function POST(req: NextRequest) {
         const rows = await db.update(streams)
             .set({ isLive: true, viewerCount: 0, updatedAt: new Date() })
             .where(eq(streams.channelArn, channelArn))
-            .returning({ id: streams.id, userId: streams.userId });
+            .returning({ id: streams.id, userId: streams.userId, title: streams.title, category: streams.category });
         for (const row of rows) {
+            await openStreamSession(row.userId, row.title, row.category);
             await dispatchDeveloperEvent(row.userId, "stream.online", { streamId: row.id, sessionId });
         }
     } else if (eventName === "Stream End" || eventName === "Stream Failure") {
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
             .where(eq(streams.channelArn, channelArn))
             .returning({ id: streams.id, userId: streams.userId });
         for (const row of rows) {
+            await closeStreamSession(row.userId);
             await dispatchDeveloperEvent(row.userId, "stream.offline", { streamId: row.id, sessionId });
         }
     }

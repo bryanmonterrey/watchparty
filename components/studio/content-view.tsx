@@ -145,6 +145,129 @@ function ScheduledTab() {
   );
 }
 
+function fmtCount(n: number): string {
+  return new Intl.NumberFormat(undefined, { notation: n >= 10_000 ? "compact" : "standard" }).format(n);
+}
+
+function fmtDuration(sec: number | null): string | null {
+  if (!sec || sec <= 0) return null;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// The Media-Studio Library (studio.x.com): a grid of the creator's videos.
+function LibraryTab() {
+  const { data: session } = useAuthSession();
+  const userId = session?.user?.id;
+  const videos = trpc.content.getVideosByUser.useQuery({ userId: userId ?? "" }, { enabled: !!userId });
+
+  if (videos.isPending) {
+    return (
+      <div className="grid grid-cols-2 gap-3 py-3 sm:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="aspect-video animate-pulse rounded-xl bg-muted/40" />
+        ))}
+      </div>
+    );
+  }
+  if (videos.error) return <p className="py-6 text-center text-xs text-destructive">{videos.error.message}</p>;
+  if (!videos.data.videos.length)
+    return (
+      <p className="py-10 text-center text-xs text-muted-foreground">
+        No videos yet. Uploads and clips show up here.
+      </p>
+    );
+
+  return (
+    <div className="grid grid-cols-2 gap-3 py-3 sm:grid-cols-3">
+      {videos.data.videos.map((v) => {
+        const dur = fmtDuration(v.duration);
+        return (
+          <a
+            key={v.id}
+            href={`https://watchparty.xyz/video/${v.id}`}
+            className="group flex flex-col gap-1.5"
+          >
+            <div className="relative aspect-video overflow-hidden rounded-xl border border-border/60 bg-muted/40">
+              {v.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={v.thumbnailUrl} alt="" className="size-full object-cover" />
+              ) : (
+                <div className="flex size-full items-center justify-center">
+                  <HugeiconsIcon icon={Video01Icon} className="size-5 text-muted-foreground" />
+                </div>
+              )}
+              {dur ? (
+                <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
+                  {dur}
+                </span>
+              ) : null}
+            </div>
+            <p className="truncate text-xs font-medium">{v.title?.trim() || "Untitled"}</p>
+            <p className="text-xs text-muted-foreground">
+              {fmtCount(v.views)} views · {fmtDate(v.createdAt)}
+            </p>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+function fmtBroadcastDuration(sec: number | null): string {
+  if (!sec) return "";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// The Producer/Broadcasts list (studio.x.com Producer): this creator's past
+// and live broadcasts, from stream.broadcasts (recorded on go-live/offline).
+function BroadcastsTab() {
+  const broadcasts = trpc.stream.broadcasts.useQuery(undefined, { refetchInterval: 30_000 });
+
+  if (broadcasts.isPending) return <div className="h-20 animate-pulse rounded-xl bg-muted/30" />;
+  if (broadcasts.error) return <p className="py-6 text-center text-xs text-destructive">{broadcasts.error.message}</p>;
+  if (!broadcasts.data.length)
+    return (
+      <p className="py-10 text-center text-xs text-muted-foreground">
+        No broadcasts yet. Your past streams show up here with their duration.
+      </p>
+    );
+
+  return (
+    <div className="flex flex-col divide-y">
+      {broadcasts.data.map((b) => (
+        <div key={b.id} className="flex items-center gap-3 py-3">
+          {b.live ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">
+              <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
+              Live
+            </span>
+          ) : (
+            <span className="rounded-full border border-border/60 px-2 py-0.5 text-xs text-muted-foreground">
+              Ended
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm">{b.title?.trim() || "Untitled broadcast"}</p>
+            <p className="text-xs text-muted-foreground">
+              {fmtDate(b.startedAt)}
+              {b.category ? ` · ${b.category}` : ""}
+            </p>
+          </div>
+          {b.durationSec ? (
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              {fmtBroadcastDuration(b.durationSec)}
+            </span>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PublishedTab() {
   const { data: session } = useAuthSession();
   const userId = session?.user?.id;
@@ -176,20 +299,23 @@ function PublishedTab() {
 }
 
 const TABS = [
+  { key: "library", label: "Library" },
+  { key: "broadcasts", label: "Broadcasts" },
   { key: "drafts", label: "Drafts" },
   { key: "scheduled", label: "Scheduled" },
   { key: "published", label: "Published" },
 ] as const;
 
 export function ContentView() {
-  const [tab, setTab] = React.useState<(typeof TABS)[number]["key"]>("drafts");
+  const [tab, setTab] = React.useState<(typeof TABS)[number]["key"]>("library");
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
       <div>
         <h1 className="text-xl font-semibold">Content</h1>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Your drafts, scheduled posts, and everything you&apos;ve published.
+          Your video library, drafts, scheduled posts, and everything
+          you&apos;ve published.
         </p>
       </div>
 
@@ -209,7 +335,17 @@ export function ContentView() {
       </div>
 
       <div className="rounded-2xl border border-border/60 bg-card px-4 sm:px-5">
-        {tab === "drafts" ? <DraftsTab /> : tab === "scheduled" ? <ScheduledTab /> : <PublishedTab />}
+        {tab === "library" ? (
+          <LibraryTab />
+        ) : tab === "broadcasts" ? (
+          <BroadcastsTab />
+        ) : tab === "drafts" ? (
+          <DraftsTab />
+        ) : tab === "scheduled" ? (
+          <ScheduledTab />
+        ) : (
+          <PublishedTab />
+        )}
       </div>
     </div>
   );
