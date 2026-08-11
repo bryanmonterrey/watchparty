@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ZapIcon, Tick02Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ZapIcon, Tick02Icon, ArrowRight01Icon, FilterIcon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Chip } from "@/components/console/chip";
 import { WEBHOOK_EVENTS } from "@/lib/webhook-events";
+import { formatDate } from "@/lib/format";
 
 // X's Event subscriptions (docs/console-x-reference.md §8): which platform
 // events you receive. On watchparty these ARE the webhook subscriptions —
@@ -89,6 +90,54 @@ export function EventSubscriptionsView() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      <StreamMatches />
+    </div>
+  );
+}
+
+// The filtered-stream tail: what your Streaming rules actually matched, most
+// recent first. Distinct from webhook subscriptions above — webhooks push
+// subscribed event TYPES; the stream delivers rule matches, pulled from
+// GET /api/stream/events (see the Connections page). Makes a rule's effect
+// visible instead of leaving it blind config.
+function StreamMatches() {
+  const recent = trpc.developerStreamRules.recentDeliveries.useQuery({ limit: 15 });
+
+  return (
+    <div className="rounded-xl border bg-card">
+      <div className="flex items-center justify-between border-b px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <HugeiconsIcon icon={FilterIcon} className="size-3.5 text-muted-foreground" />
+          <p className="text-sm font-medium">Recent stream matches</p>
+        </div>
+        <Button size="sm" variant="outline" className="gap-1.5" render={<Link href="/streaming-rules" />}>
+          Streaming rules
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+        </Button>
+      </div>
+      {recent.isPending ? (
+        <div className="p-4">
+          <Skeleton className="h-24 rounded-lg" />
+        </div>
+      ) : !recent.data || recent.data.length === 0 ? (
+        <p className="px-4 py-8 text-center text-xs text-muted-foreground">
+          No matches yet. Add a rule under Streaming rules — matching events queue
+          here and at the stream endpoint.
+        </p>
+      ) : (
+        <div className="flex flex-col divide-y">
+          {recent.data.map((d) => (
+            <div key={d.seq} className="flex items-center gap-3 px-4 py-2.5">
+              <span className="font-mono text-xs">{d.type}</span>
+              {d.tag ? <Chip>{d.tag}</Chip> : null}
+              <span className="flex-1 text-right text-xs text-muted-foreground">
+                {formatDate(d.createdAt)}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

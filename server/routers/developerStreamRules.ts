@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray } from "drizzle-orm";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { developerStreamRules } from "@/db/schema/content/developer-stream-rule";
+import { developerStreamDeliveries } from "@/db/schema/content/developer-stream-delivery";
 import { developerApps } from "@/db/schema/content/developer-app";
 import { randHex } from "@/lib/api-gate";
 import { validateRule } from "@/lib/developer/stream-rules";
@@ -108,5 +109,54 @@ export const developerStreamRulesRouter = router({
                 inArray(developerStreamRules.id, input.ids),
             ));
             return { success: true };
+        }),
+
+    // ─── Delivery stream (what the rules actually matched) ───────────────────
+    // The rule engine enqueues matched events into developer_stream_deliveries;
+    // developers consume them at GET /api/stream/events. These read-only queries
+    // back the console's Connections (throughput) and Event-subscriptions (live
+    // tail) pages, so a rule stops being blind config and shows its effect.
+
+    /** Throughput: matches in the last 24h + last match time. Account-wide, or
+     *  scoped to one app when appId is given. */
+    deliveryStats: protectedProcedure
+        .input(z.object({ appId: z.string().optional() }).optional())
+        .query(async ({ ctx, input }) => {
+            const scope = input?.appId
+                ? (await assertOwnsApp(ctx.user.id, input.appId), eq(developerStreamDeliveries.appId, input.appId))
+                : eq(developerStreamDeliveries.userId, ctx.user.id);
+            const [{ n }] = await db
+                .select({ n: count() })
+                .from(developerStreamDeliveries)
+                .where(and(scope, gte(developerStreamDeliveries.createdAt, new Date(Date.now() - 86_400_000))));
+            const [latest] = await db
+                .select({ at: developerStreamDeliveries.createdAt })
+                .from(developerStreamDeliveries)
+                .where(scope)
+                .orderBy(desc(developerStreamDeliveries.seq))
+                .limit(1);
+            return { last24h: n, lastAt: latest?.at ?? null };
+        }),
+
+    /** The most recent matched events (the live stream tail). Account-wide, or
+     *  scoped to one app when appId is given. */
+    recentDeliveries: protectedProcedure
+        .input(z.object({ appId: z.string().optional(), limit: z.number().int().min(1).max(50).default(20) }))
+        .query(async ({ ctx, input }) => {
+            const scope = input.appId
+                ? (await assertOwnsApp(ctx.user.id, input.appId), eq(developerStreamDeliveries.appId, input.appId))
+                : eq(developerStreamDeliveries.userId, ctx.user.id);
+            return db
+                .select({
+                    seq: developerStreamDeliveries.seq,
+                    appId: developerStreamDeliveries.appId,
+                    type: developerStreamDeliveries.eventType,
+                    tag: developerStreamDeliveries.tag,
+                    createdAt: developerStreamDeliveries.createdAt,
+                })
+                .from(developerStreamDeliveries)
+                .where(scope)
+                .orderBy(desc(developerStreamDeliveries.seq))
+                .limit(input.limit);
         }),
 });
