@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { user } from "@/db/schema/auth";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { heliusApiKey } from "@/lib/wallet/assets-webhook";
+import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
 
 const MAX_ADDRESSES = 90_000;
 
@@ -43,6 +44,12 @@ export async function syncUserTradesWebhook(): Promise<{ webhookID: string; watc
     const existing = Array.isArray(list)
         ? list.find((w: { webhookURL?: string }) => w.webhookURL === webhookURL)
         : null;
+
+    // 100 credits per edit, 0 to read — so compare before writing. See
+    // lib/helius/webhook-edit.ts for what unconditional PUTs were costing.
+    if (existing && await webhookIsCurrent(apiKey, existing.webhookID, accountAddresses, payload.transactionTypes as string[])) {
+        return { webhookID: existing.webhookID, watching: accountAddresses.length, created: false };
+    }
 
     const res = existing
         ? await fetch(`https://api.helius.xyz/v0/webhooks/${existing.webhookID}?api-key=${apiKey}`, {

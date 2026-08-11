@@ -14,6 +14,9 @@ import { coinFeedEvents } from "@/db/schema/content/coin-feed";
 import { and, asc, desc, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
+/** A board row older than this is stale data, not data. See the note in `list`. */
+const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+
 /** Which window the % / volume columns describe. */
 export const TIMEFRAMES = ["5m", "1h", "6h", "24h"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
@@ -81,6 +84,22 @@ export const trendingRouter = router({
     list: publicProcedure.input(listInput).query(async ({ input }) => {
         const offset = input.cursor ?? 0;
         const where: SQL[] = [];
+        // Never serve a row the sync has stopped refreshing.
+        //
+        // `trending_coins` is upserted per pass and NOTHING deletes from it —
+        // `pruneCandles()` prunes candles, not this table. So a coin that falls
+        // off the board keeps its last-known price, volume and change forever,
+        // and the board renders those as if they were current. Found a `blast`
+        // row 22,021 minutes (15 days) old still being served.
+        //
+        // Filtering at READ rather than deleting: the row is still useful
+        // history, and a network whose fetch is failing should vanish from the
+        // board rather than lie — silence is the honest failure here.
+        //
+        // Six hours is deliberately generous. A full rotation covers every
+        // network in minutes, so healthy rows are always far inside it; this
+        // only has to survive a run of failed passes without emptying the board.
+        where.push(gte(trendingCoins.fetchedAt, new Date(Date.now() - STALE_AFTER_MS)));
         if (input.chains?.length) where.push(inArray(trendingCoins.network, input.chains));
         if (input.minLiquidityUsd) where.push(gte(trendingCoins.liquidityUsd, input.minLiquidityUsd));
         if (input.q?.trim()) {

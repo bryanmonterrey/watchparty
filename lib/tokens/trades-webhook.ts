@@ -14,6 +14,7 @@ import { trendingCoins } from "@/db/schema/content/trending";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { heliusApiKey } from "@/lib/wallet/assets-webhook";
 import { selectPoolsWithinBudget } from "./pool-budget";
+import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
 
 const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before sharding
 
@@ -220,6 +221,21 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
         webhookType: "enhanced",
         ...(process.env.HELIUS_WEBHOOK_SECRET ? { authHeader: process.env.HELIUS_WEBHOOK_SECRET } : {}),
     };
+
+    // SKIP THE WRITE WHEN NOTHING CHANGED.
+    //
+    // Helius charges **100 credits per webhook edit** (helius.dev/docs/webhooks)
+    // against 1 credit per delivery. This sync runs hourly across three
+    // webhooks, so unconditional PUTs cost 25 x 3 x 100 = 7,500 credits/day —
+    // 232,500 a month, or 23% of the free plan, to re-send a payload byte-for-
+    // byte identical to the one already registered.
+    //
+    // The address set only moves when the trending board does, which is a few
+    // times a day at most. Reads are not billed, so comparing first is free.
+    if (existing && await webhookIsCurrent(apiKey, existing.webhookID, accountAddresses, [mode])) {
+        console.log(`[trades-webhook] ${accountAddresses.length} address(es) unchanged — no edit, no 100-credit charge`);
+        return { webhookID: existing.webhookID, watching: accountAddresses.length, created: false };
+    }
 
     const res = existing
         ? await fetch(`https://api.helius.xyz/v0/webhooks/${existing.webhookID}?api-key=${apiKey}`, {
