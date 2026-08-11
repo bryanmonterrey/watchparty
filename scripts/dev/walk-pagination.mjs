@@ -83,6 +83,12 @@ const CHANNEL = "0936c35a-4f0f-43e1-8fc5-63b4daa15e4d";
  * `count` is SQL against the dev DB — ground truth, so truncation is visible.
  * `rows` is the array field on the procedure's output.
  *
+ * `identity` names the field that makes a ROW unique, defaulting to `id`. The
+ * feed needs `feedKey`: one post legitimately appears as itself plus a repost
+ * by each of several people, so `id` repeats by design and only `feedKey` is
+ * per-row. Using the wrong identity reports a real feature as duplicate rows —
+ * it did, on the first production run.
+ *
  * `count` may be OMITTED where no honest ground truth exists — a ranked feed
  * with a bounded candidate pool is not supposed to return every row, so
  * asserting a total would be asserting the wrong thing. Those surfaces are
@@ -160,6 +166,9 @@ const SURFACES = [
         proc: "content.getFeed",
         input: { type: "for-you", limit: 20 },
         rows: "posts",
+        // A repost renders as its ORIGINAL post, so `id` repeats within a page
+        // by design; `feedKey` is what identifies a row.
+        identity: (r) => r.feedKey ?? r.id,
         // No count on purpose: this is RANKED over a bounded candidate pool
         // (FEED_POOL_SIZE), so "everything published" is not the right answer.
         // Duplicates and non-termination are still bugs.
@@ -238,7 +247,8 @@ async function walk(surface, jar) {
         const input = cursor === undefined ? surface.input : { ...surface.input, cursor };
         const data = await call(surface.proc, input, jar);
         const rows = data[surface.rows] ?? [];
-        ids.push(...rows.map((r) => r.id));
+        const identity = surface.identity ?? ((r) => r.id);
+        ids.push(...rows.map(identity));
         cursor = data.nextCursor ?? undefined;
         if (!cursor) return { ids, pages: pages + 1, exhausted: true };
     }
@@ -310,8 +320,17 @@ async function main() {
         }
 
         const problems = [];
-        if (!res.exhausted) problems.push(`cursor never terminated (${MAX_PAGES} pages)`);
         if (dupes) problems.push(`${dupes} duplicate rows`);
+
+        // Running out of pages is only a BUG if rows were repeating; otherwise
+        // it is a table bigger than the guard, which is a limit of this script
+        // and must not be reported as a defect. coinFeed.list has 10k+ rows.
+        if (!res.exhausted && !dupes) {
+            console.log(`  partial  ${s.name} — ${unique} rows in ${MAX_PAGES} pages, still going (raise MAX_PAGES to finish)`);
+            skipped++;
+            continue;
+        }
+        if (!res.exhausted) problems.push(`cursor never terminated (${MAX_PAGES} pages)`);
         if (expected !== null && unique !== expected) {
             problems.push(`reached ${unique} of ${expected} — ${expected - unique} unreachable`);
         }
