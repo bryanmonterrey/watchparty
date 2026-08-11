@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import { formatDate, money } from "@/lib/format";
 import { CopyButton } from "@/components/console/copy-button";
 import { Chip } from "@/components/console/chip";
+import { BOT_PERMISSIONS, BOT_PERMISSION_META, hasPermission } from "@/lib/bot-permissions";
 
 // The Discord General Information page (docs/console-discord-reference.md §1):
 // identity (icon/name/description/tags), read-only IDs with copy buttons
@@ -343,6 +344,150 @@ function BotTokenPanel({ token, onDone }: { token: string; onDone: () => void })
   );
 }
 
+function PermissionToggles({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {BOT_PERMISSION_META.map((p) => {
+        const bit = BOT_PERMISSIONS[p.name];
+        const on = hasPermission(value, bit);
+        return (
+          <button
+            key={p.name}
+            type="button"
+            disabled={disabled}
+            title={p.desc}
+            onClick={() => onChange(on ? value & ~bit : value | bit)}
+            className={
+              "rounded-full border px-2.5 py-1 text-xs transition-colors disabled:opacity-50 " +
+              (on
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground")
+            }
+          >
+            {p.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Where the bot is installed + its per-community permissions. A bot can be added
+// only to communities the caller owns or admins (server-enforced); the toggles
+// write the same bitfield the bot-facing endpoints check, so what you grant here
+// is exactly what the bot can do there.
+function BotInstalls({ appId }: { appId: string }) {
+  const utils = trpc.useUtils();
+  const installs = trpc.developerBots.listInstalls.useQuery({ appId });
+  const installable = trpc.developerBots.installableCommunities.useQuery();
+
+  const invalidate = () => void utils.developerBots.listInstalls.invalidate({ appId });
+  const setPerms = trpc.developerBots.setPermissions.useMutation({ onSuccess: invalidate });
+  const uninstall = trpc.developerBots.uninstall.useMutation({ onSuccess: invalidate });
+
+  const [draftServer, setDraftServer] = React.useState("");
+  const [draftPerms, setDraftPerms] = React.useState<number>(BOT_PERMISSIONS.READ_MEMBERS);
+  const install = trpc.developerBots.install.useMutation({
+    onSuccess: () => {
+      invalidate();
+      setDraftServer("");
+      setDraftPerms(BOT_PERMISSIONS.READ_MEMBERS);
+    },
+  });
+
+  const installedIds = new Set((installs.data ?? []).map((i) => i.serverId));
+  const available = (installable.data ?? []).filter((c) => !installedIds.has(c.id));
+
+  return (
+    <div className="mt-2 border-t pt-3">
+      <p className="text-xs font-medium">Communities</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Where this bot is installed and what it may do. It can act only in
+        communities you own or admin.
+      </p>
+
+      {installs.isPending ? (
+        <div className="mt-2 h-9 animate-pulse rounded-lg bg-muted/40" />
+      ) : installs.data && installs.data.length > 0 ? (
+        <ul className="mt-2 flex flex-col gap-2">
+          {installs.data.map((i) => (
+            <li key={i.serverId} className="rounded-lg border bg-muted/20 p-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium">{i.name}</span>
+                <span className="font-mono text-xs text-muted-foreground">{i.permissions}</span>
+                <div className="flex-1" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={uninstall.isPending}
+                  onClick={() => uninstall.mutate({ appId, serverId: i.serverId })}
+                >
+                  Remove
+                </Button>
+              </div>
+              <div className="mt-2">
+                <PermissionToggles
+                  value={i.permissions}
+                  disabled={setPerms.isPending}
+                  onChange={(v) => setPerms.mutate({ appId, serverId: i.serverId, permissions: v })}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-xs text-muted-foreground">Not installed anywhere yet.</p>
+      )}
+
+      {available.length > 0 ? (
+        <div className="mt-3 rounded-lg border border-dashed p-2.5">
+          <p className="text-xs font-medium">Add to a community</p>
+          <select
+            value={draftServer}
+            onChange={(e) => setDraftServer(e.target.value)}
+            className="mt-2 w-full rounded-lg border bg-background px-2.5 py-1.5 text-xs"
+          >
+            <option value="">Select a community…</option>
+            {available.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <div className="mt-2">
+            <PermissionToggles value={draftPerms} onChange={setDraftPerms} disabled={install.isPending} />
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Button
+              size="sm"
+              disabled={!draftServer || install.isPending}
+              onClick={() => install.mutate({ appId, serverId: draftServer, permissions: draftPerms })}
+            >
+              {install.isPending ? "Installing…" : "Install"}
+            </Button>
+            {install.error ? (
+              <span className="text-xs text-destructive">{install.error.message}</span>
+            ) : null}
+          </div>
+        </div>
+      ) : installable.data && installable.data.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          You don&apos;t own or admin any communities yet — create one to install
+          this bot.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function BotCard({ appId }: { appId: string }) {
   const utils = trpc.useUtils();
   const bot = trpc.developerBots.get.useQuery({ appId });
@@ -418,6 +563,7 @@ function BotCard({ appId }: { appId: string }) {
             )}
           </div>
           {reset.error ? <p className="text-xs text-destructive">{reset.error.message}</p> : null}
+          <BotInstalls appId={appId} />
         </div>
       ) : (
         <div className="mt-3">

@@ -6,8 +6,11 @@ import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { developerApps } from "@/db/schema/content/developer-app";
 import { developerBots } from "@/db/schema/content/developer-bot";
+import { developerBotInstalls } from "@/db/schema/content/developer-bot-install";
+import { communityServers, communityMembers } from "@/db/schema/community";
 import { randHex } from "@/lib/api-gate";
 import { mintBotToken } from "@/lib/developer/bot-auth";
+import { sanitizePermissions, permissionNames } from "@/lib/developer/bot-permissions";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
 
 // Owner-facing bot management (console app-detail Bot tab). One bot per app.
@@ -32,6 +35,41 @@ async function ownedApp(userId: string, appId: string) {
 async function throttle(userId: string) {
     if (!(await limitOrPass(webhookMutationLimiter, userId))) {
         throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Wait a minute and try again" });
+    }
+}
+
+// The bot userId for an app the caller owns, or throw. Composes the app-ownership
+// check with "this app actually has a bot" so install endpoints get both gates.
+async function ownedBotUserId(userId: string, appId: string): Promise<string> {
+    await ownedApp(userId, appId);
+    const [bot] = await db
+        .select({ botUserId: developerBots.botUserId })
+        .from(developerBots)
+        .where(eq(developerBots.appId, appId))
+        .limit(1);
+    if (!bot) throw new TRPCError({ code: "NOT_FOUND", message: "This app has no bot yet" });
+    return bot.botUserId;
+}
+
+// A bot may only be installed into / managed within a community the caller
+// controls — its owner, or an ADMIN member. Installing a bot grants it standing
+// scoped abilities in that community, so this is the consent gate: you can add a
+// bot to a community you run, never to someone else's.
+async function assertCommunityAdmin(userId: string, serverId: string) {
+    const [srv] = await db
+        .select({ ownerId: communityServers.ownerId })
+        .from(communityServers)
+        .where(eq(communityServers.id, serverId))
+        .limit(1);
+    if (!srv) throw new TRPCError({ code: "NOT_FOUND", message: "Community not found" });
+    if (srv.ownerId === userId) return;
+    const [mem] = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(and(eq(communityMembers.serverId, serverId), eq(communityMembers.userId, userId)))
+        .limit(1);
+    if (mem?.role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You must own or admin this community to manage its bots" });
     }
 }
 
@@ -133,6 +171,100 @@ export const developerBotsRouter = router({
             // Deleting the user row cascades to developer_bots (and anything the
             // bot authored), leaving no orphan identity behind.
             await db.delete(user).where(eq(user.id, bot.botUserId));
+            return { success: true };
+        }),
+
+    // ─── Community installs (where the bot lives + what it may do) ───────────
+
+    /** Communities the caller can install a bot into (owns, or is an ADMIN of). */
+    installableCommunities: protectedProcedure.query(async ({ ctx }) => {
+        const owned = await db
+            .select({ id: communityServers.id, name: communityServers.name, imageUrl: communityServers.imageUrl })
+            .from(communityServers)
+            .where(eq(communityServers.ownerId, ctx.user.id));
+        const adminOf = await db
+            .select({ id: communityServers.id, name: communityServers.name, imageUrl: communityServers.imageUrl })
+            .from(communityServers)
+            .innerJoin(communityMembers, eq(communityMembers.serverId, communityServers.id))
+            .where(and(eq(communityMembers.userId, ctx.user.id), eq(communityMembers.role, "ADMIN")));
+        // Owner ∪ admin, deduped (an owner is often also a member row).
+        const byId = new Map<string, { id: string; name: string; imageUrl: string | null }>();
+        for (const c of [...owned, ...adminOf]) byId.set(c.id, c);
+        return [...byId.values()];
+    }),
+
+    /** Where this app's bot is installed, with its permissions per community. */
+    listInstalls: protectedProcedure
+        .input(z.object({ appId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const botUserId = await ownedBotUserId(ctx.user.id, input.appId);
+            const rows = await db
+                .select({
+                    serverId: developerBotInstalls.serverId,
+                    permissions: developerBotInstalls.permissions,
+                    createdAt: developerBotInstalls.createdAt,
+                    name: communityServers.name,
+                    imageUrl: communityServers.imageUrl,
+                })
+                .from(developerBotInstalls)
+                .innerJoin(communityServers, eq(communityServers.id, developerBotInstalls.serverId))
+                .where(eq(developerBotInstalls.botUserId, botUserId));
+            return rows.map((r) => ({ ...r, permissionNames: permissionNames(r.permissions) }));
+        }),
+
+    /** Install the bot into a community (or update its permissions if present). */
+    install: protectedProcedure
+        .input(z.object({ appId: z.string(), serverId: z.string().uuid(), permissions: z.number().int().nonnegative() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const botUserId = await ownedBotUserId(ctx.user.id, input.appId);
+            await assertCommunityAdmin(ctx.user.id, input.serverId);
+            const permissions = sanitizePermissions(input.permissions);
+            // Upsert on (bot, community): re-installing just resets permissions.
+            await db
+                .insert(developerBotInstalls)
+                .values({ botUserId, serverId: input.serverId, permissions, installedBy: ctx.user.id })
+                .onConflictDoUpdate({
+                    target: [developerBotInstalls.botUserId, developerBotInstalls.serverId],
+                    set: { permissions, updatedAt: new Date() },
+                });
+            return { permissions, permissionNames: permissionNames(permissions) };
+        }),
+
+    /** Change the bot's permissions in a community it's already in. */
+    setPermissions: protectedProcedure
+        .input(z.object({ appId: z.string(), serverId: z.string().uuid(), permissions: z.number().int().nonnegative() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const botUserId = await ownedBotUserId(ctx.user.id, input.appId);
+            await assertCommunityAdmin(ctx.user.id, input.serverId);
+            const permissions = sanitizePermissions(input.permissions);
+            const updated = await db
+                .update(developerBotInstalls)
+                .set({ permissions, updatedAt: new Date() })
+                .where(and(
+                    eq(developerBotInstalls.botUserId, botUserId),
+                    eq(developerBotInstalls.serverId, input.serverId),
+                ))
+                .returning({ id: developerBotInstalls.id });
+            if (!updated.length) throw new TRPCError({ code: "NOT_FOUND", message: "The bot is not installed in this community" });
+            return { permissions, permissionNames: permissionNames(permissions) };
+        }),
+
+    /** Remove the bot from a community — it can do nothing there afterward. */
+    uninstall: protectedProcedure
+        .input(z.object({ appId: z.string(), serverId: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const botUserId = await ownedBotUserId(ctx.user.id, input.appId);
+            // No community-admin gate here on purpose: the app owner may always
+            // pull their own bot out, even from a community they no longer admin.
+            await db
+                .delete(developerBotInstalls)
+                .where(and(
+                    eq(developerBotInstalls.botUserId, botUserId),
+                    eq(developerBotInstalls.serverId, input.serverId),
+                ));
             return { success: true };
         }),
 });
