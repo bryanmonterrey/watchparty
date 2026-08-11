@@ -22,6 +22,22 @@ export function BookmarksFeed() {
             { limit: 20 },
             {
                 getNextPageParam: (last) => last.nextCursor,
+                // Gated on the session, and that is what makes the snapshot
+                // work rather than merely being tidy.
+                //
+                // `placeholderData` is only consulted while the query is
+                // PENDING (query-core: `data === undefined && status ===
+                // "pending"`). `useAuthSession` is itself a network call, so
+                // without this gate render one evaluates the placeholder with
+                // an empty key — privateViewerKey has no viewer yet — and if
+                // the data lands before the session does, the query settles to
+                // "success" and the snapshot is never consulted again. A race,
+                // usually lost on a fast connection.
+                //
+                // A disabled query is still "pending", so waiting costs nothing
+                // and is correct on its own terms: this is a protected
+                // procedure that would 401 without a session anyway.
+                enabled: !!session?.user?.id,
                 placeholderData: () => bookmarksSnapshotStore.read(snapshotKey),
             }
         );

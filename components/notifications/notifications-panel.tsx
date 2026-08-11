@@ -33,7 +33,12 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
             { limit: 30 },
             {
                 getNextPageParam: (last) => last.nextCursor,
-                enabled: open,
+                // `open` AND a resolved viewer: placeholderData is only read
+                // while the query is pending, and privateViewerKey has no key
+                // until the session lands — see bookmarks-feed for the full
+                // reasoning. Without the viewer gate the snapshot loses a race
+                // with its own fetch and the bell shows a spinner anyway.
+                enabled: open && !!notifSession?.user?.id,
                 // Placeholder data paints even while the query is disabled, so
                 // the list is on screen the instant the bell opens instead of
                 // after a round trip. The unread BADGE is not painted from here
