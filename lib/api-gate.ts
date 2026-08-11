@@ -134,6 +134,22 @@ export async function verifyApiKeySig(key: string): Promise<string | null> {
     return timingSafeEq(m[2], expect) ? m[1] : null;
 }
 
+// Same shape as lib/developer/bot-auth.ts — signed over the NAMESPACED input
+// `bot:<keyId>`, so a bot signature can never validate as an API key or vice
+// versa even though both use API_GATE_SECRET.
+const BOT_TOKEN_RE = /^wpb_([0-9a-f]{16})\.([0-9a-f]{32})$/;
+
+/** Stateless bot-token signature check (no DB — the tRPC layer does the row
+ *  lookup + soft-delete check; this only proves the token was OURS). */
+async function verifyBotTokenSig(token: string): Promise<boolean> {
+    const secret = process.env.API_GATE_SECRET;
+    if (!secret) return false;
+    const m = BOT_TOKEN_RE.exec(token);
+    if (!m) return false;
+    const expect = (await hmacHex(secret, `bot:${m[1]}`)).slice(0, 32);
+    return timingSafeEq(m[2], expect);
+}
+
 // ── x402 ─────────────────────────────────────────────────────────────────────
 
 // The facilitator's fee payer, from its /supported listing, cached per
@@ -301,6 +317,17 @@ export async function apiGate(
     if (bypass && request.headers.get("x-gate-bypass") === bypass) return null;
 
     if (hasSessionCookie) return null;
+
+    // Bot traffic (Authorization: Bot wpb_…) is first-party platform traffic:
+    // it carries no cookie and no x-api-key, so without this it would 402 at
+    // the edge under enforce — every bot broken with no obvious cause. Pass
+    // ONLY on a verified HMAC (stateless, no I/O); the prefix alone would be a
+    // trivial bypass. Capability/limits are enforced downstream (botProcedure
+    // + the install bitfield), which also handles revocation via the DB row.
+    const authz = request.headers.get("authorization");
+    if (authz?.startsWith("Bot ") && (await verifyBotTokenSig(authz.slice(4).trim()))) {
+        return null;
+    }
 
     const sfs = request.headers.get("sec-fetch-site");
     if (sfs === "same-origin" || sfs === "same-site") return null;

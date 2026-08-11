@@ -11,6 +11,7 @@
 
 import { db } from "@/db";
 import { coinFeedEvents, trackedTokens, type CoinFeedTrader, type NewCoinFeedEvent } from "@/db/schema/content/coin-feed";
+import { deliverCommunityCoinAlerts } from "@/lib/coin-feed/community-alerts";
 import { eq, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { CallBudget, fetchPoolTrades, type PoolTrade } from "./geckoterminal";
@@ -224,6 +225,8 @@ export async function scanToken(token: ScannableToken, budget: CallBudget): Prom
 
     if (rows.length > 0) {
         await db.insert(coinFeedEvents).values(rows).onConflictDoNothing({ target: coinFeedEvents.dedupeKey });
+        // Bot-managed community coin alerts (best-effort, never blocks the sweep).
+        void deliverCommunityCoinAlerts(rows);
     }
 
     // Watermark last: if the insert above threw we want the next pass to retry

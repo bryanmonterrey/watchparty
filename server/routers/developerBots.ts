@@ -7,7 +7,7 @@ import { user } from "@/db/schema/auth/user";
 import { developerApps } from "@/db/schema/content/developer-app";
 import { developerBots } from "@/db/schema/content/developer-bot";
 import { developerBotInstalls } from "@/db/schema/content/developer-bot-install";
-import { communityServers, communityMembers } from "@/db/schema/community";
+import { communityServers, communityMembers, communityCoinAlerts } from "@/db/schema/community";
 import { randHex } from "@/lib/api-gate";
 import { mintBotToken } from "@/lib/developer/bot-auth";
 import { sanitizePermissions, permissionNames } from "@/lib/developer/bot-permissions";
@@ -70,6 +70,32 @@ async function assertCommunityAdmin(userId: string, serverId: string) {
         .limit(1);
     if (mem?.role !== "ADMIN") {
         throw new TRPCError({ code: "FORBIDDEN", message: "You must own or admin this community to manage its bots" });
+    }
+}
+
+/**
+ * Drop the bot's lazily-created community_members row when it leaves a
+ * community (bot.sendMessage creates one so bot messages render through the
+ * normal member/author join). App deletion doesn't need this — dropping the
+ * bot's user row cascades member rows via the userId FK. Best-effort: a
+ * failure here leaves a harmless memberless ghost in the roster, never access
+ * (access is only ever the install row, which is already gone).
+ */
+async function removeBotMemberRow(botUserId: string, serverId: string) {
+    try {
+        await db
+            .delete(communityMembers)
+            .where(and(eq(communityMembers.userId, botUserId), eq(communityMembers.serverId, serverId)));
+        // Its standing coin alerts go too. Delivery re-checks the install grant
+        // so stale rows would be silent anyway — this just keeps the table honest.
+        await db
+            .delete(communityCoinAlerts)
+            .where(and(
+                eq(communityCoinAlerts.createdByBotUserId, botUserId),
+                eq(communityCoinAlerts.serverId, serverId),
+            ));
+    } catch {
+        /* best-effort */
     }
 }
 
@@ -265,6 +291,7 @@ export const developerBotsRouter = router({
                     eq(developerBotInstalls.botUserId, botUserId),
                     eq(developerBotInstalls.serverId, input.serverId),
                 ));
+            await removeBotMemberRow(botUserId, input.serverId);
             return { success: true };
         }),
 
@@ -309,6 +336,7 @@ export const developerBotsRouter = router({
                     eq(developerBotInstalls.serverId, input.serverId),
                     eq(developerBotInstalls.botUserId, input.botUserId),
                 ));
+            await removeBotMemberRow(input.botUserId, input.serverId);
             return { success: true };
         }),
 

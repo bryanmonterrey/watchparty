@@ -15,12 +15,16 @@ import { db } from "@/db";
 import { coinFeedEvents, type NewCoinFeedEvent } from "@/db/schema/content/coin-feed";
 import { nanoid } from "nanoid";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
+import { deliverCommunityCoinAlerts } from "@/lib/coin-feed/community-alerts";
 
 /** Insert events, ignoring any whose dedupeKey already landed. */
 export async function emitCoinFeedEvents(rows: NewCoinFeedEvent[]): Promise<number> {
     if (rows.length === 0) return 0;
     try {
         await db.insert(coinFeedEvents).values(rows).onConflictDoNothing({ target: coinFeedEvents.dedupeKey });
+        // Bot-managed community coin alerts ride the same write (best-effort;
+        // never blocks or fails the emit).
+        void deliverCommunityCoinAlerts(rows);
         return rows.length;
     } catch (err) {
         console.error("[coin-feed] emit failed:", err);

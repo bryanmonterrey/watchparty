@@ -2442,7 +2442,10 @@ export const communityRouter = router({
                     userName: sql<string>`COALESCE(${communityMembers.nickname}, ${user.name}, ${communityMessages.webhookName}, 'Webhook')`,
                     userImage: sql<string | null>`COALESCE(${user.avatar_url}, ${communityMessages.webhookAvatar})`,
                     userUsername: user.username,
-                    isWebhook: sql<boolean>`(${communityMessages.webhookName} IS NOT NULL)`,
+                    // "APP" badge: webhook-authored rows AND bot-user-authored
+                    // rows (bot.sendMessage / coin alerts) — both are automated
+                    // authors, same Discord-style marker.
+                    isWebhook: sql<boolean>`(${communityMessages.webhookName} IS NOT NULL OR COALESCE(${user.isBot}, false))`,
                     replyContent: replyMsg.content,
                     replyDeleted: replyMsg.deleted,
                     replyUserName: sql<string | null>`COALESCE(${replyMember.nickname}, ${replyUser.name}, ${replyMsg.webhookName})`,

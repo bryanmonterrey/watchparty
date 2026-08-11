@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { BOT_PERMISSIONS } from "../lib/developer/bot-permissions";
+import { BOT_PERMISSIONS, BOT_PERMISSION_META as MAIN_META } from "../lib/developer/bot-permissions";
 import {
   BOT_PERMISSIONS as CONSOLE_BOT_PERMISSIONS,
   BOT_PERMISSION_META,
@@ -20,4 +20,11 @@ test("every bot permission has console UI meta", () => {
   expect(BOT_PERMISSION_META.map((m) => m.name).sort()).toEqual(
     (Object.keys(BOT_PERMISSIONS) as (keyof typeof BOT_PERMISSIONS)[]).sort(),
   );
+});
+
+// The main app grew its own meta (community Bots panel) — it is the SOURCE;
+// the console copy must match it exactly, or the console toggle and the
+// community panel would describe the same grant differently.
+test("console's vendored permission meta matches the main app's", () => {
+  expect(BOT_PERMISSION_META).toEqual(MAIN_META);
 });

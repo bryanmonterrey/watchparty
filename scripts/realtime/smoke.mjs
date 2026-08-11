@@ -53,9 +53,9 @@ const assert = (name, cond) => {
 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function connect(label, token) {
+function connect(label, token, urlOverride) {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl(token));
+    const ws = new WebSocket(urlOverride ?? wsUrl(token));
     ws.addEventListener("open", () => resolve(ws));
     ws.addEventListener("error", () => reject(new Error(`${label} connection error`)));
     ws.addEventListener("message", (e) => {
@@ -145,7 +145,11 @@ async function main() {
   // authed server publish, and connection accounting readable with the secret.
   {
     const devRoom = `dev-stream:smoke-dev-${Math.random().toString(36).slice(2, 8)}`;
-    const devUrl = (token) => `wss://${HOST}/parties/chat/${encodeURIComponent(devRoom)}?token=${encodeURIComponent(token)}`;
+    // Room goes in the path RAW — the encoded form addresses a DIFFERENT DO
+    // (the lib/realtime/publish.ts lesson), and the owner-binding prefix check
+    // never matches a name that arrives as "dev-stream%3A…". PartySocket sends
+    // it raw too, so raw is what production clients exercise.
+    const devUrl = (token) => `wss://${HOST}/parties/chat/${devRoom}?token=${encodeURIComponent(token)}`;
 
     // Wrong owner: partyserver may open the socket before onConnect rejects
     // it (4403), so the honest assertions are (a) the server closed it, and
@@ -156,7 +160,10 @@ async function main() {
       const t = await signToken("smoke-someone-else", "Stranger");
       const ws = new WebSocket(devUrl(t));
       ws.addEventListener("message", (e) => { try { strangerEvents.push(JSON.parse(e.data)); } catch {} });
-      ws.addEventListener("close", (e) => { if (e.code === 4403) strangerClosedByServer = true; });
+      ws.addEventListener("close", (e) => {
+        if (e.code === 4403) strangerClosedByServer = true;
+        else console.log(`   (stranger closed with unexpected code ${e.code})`);
+      });
       ws.addEventListener("open", () => resolve(ws));
       ws.addEventListener("error", () => resolve(null));
       setTimeout(() => resolve(null), 4000);
@@ -165,9 +172,8 @@ async function main() {
     // The owner connects and receives the deliveries nudge published via HTTP.
     events.D = [];
     const owner = devRoom.slice("dev-stream:".length);
-    const d = await connect("D", await signToken(owner, "Daemon"));
+    const d = await connect("D", null, devUrl(await signToken(owner, "Daemon")));
     await wait(600);
-    assert("dev-stream room closes a non-owner with 4403", strangerClosedByServer);
     const pub = await fetch(`https://${HOST}/parties/chat/${devRoom}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-realtime-secret": SECRET },
@@ -180,6 +186,11 @@ async function main() {
       events.D.some((e) => e.t === "event" && e.name === "deliveries" && e.payload?.seq === 42),
     );
     assert("rejected non-owner never receives the nudge", !strangerEvents.some((e) => e.t === "event"));
+    // NOTE deliberately no assertion on the client observing a 4403 close
+    // frame: a connection evicted in onConnect on a hibernation-enabled DO
+    // may never see the frame (verified live 2026-08-11 — the eviction itself
+    // is real, proven by the missed nudge + the active-count check above).
+    if (strangerClosedByServer) console.log("   (stranger also observed the 4403 close frame)");
     if (stranger) { try { stranger.close(); } catch {} }
 
     // Connection accounting is readable with the secret.
@@ -190,6 +201,14 @@ async function main() {
     assert(
       "connection accounting lists the live connection",
       !!acctBody?.connections?.some((c) => c.active && c.disconnectedAt === null),
+    );
+    // The eviction proof: exactly ONE active connection (the owner). The
+    // stranger was refused in onConnect BEFORE recordConnection, so it holds
+    // no server-side presence at all — regardless of whether the client ever
+    // observes the 4403 close frame (hibernated sockets can eat it).
+    assert(
+      "non-owner holds no server-side connection",
+      acctBody?.connections?.filter((c) => c.active).length === 1,
     );
     // …and is refused without the secret.
     const noSecret = await fetch(`https://${HOST}/parties/chat/${devRoom}`);

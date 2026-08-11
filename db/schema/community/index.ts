@@ -478,3 +478,35 @@ export const communityInvites = pgTable('community_invites', {
 ]).enableRLS();
 
 export type CommunityInvite = typeof communityInvites.$inferSelect;
+
+// ─── Bot-managed coin alerts (MANAGE_COIN_ALERTS capability) ──
+// A standing "post into this channel when this token does X" automation,
+// created and owned by an installed bot. Delivery rides the coin-feed event
+// write path (lib/coin-feed/community-alerts.ts): each matching event becomes
+// a community message authored by the bot. Server-only rows (RLS, no policy)
+// — bots reach them through bot.* procedures, admins see the effect in chat
+// and can revoke the capability or evict the bot in Server Settings.
+export const communityCoinAlerts = pgTable('community_coin_alerts', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    serverId: uuid('server_id')
+        .references(() => communityServers.id, { onDelete: 'cascade' })
+        .notNull(),
+    channelId: uuid('channel_id')
+        .references(() => communityChannels.id, { onDelete: 'cascade' })
+        .notNull(),
+    tokenAddress: text('token_address').notNull(),
+    // Coin-feed kinds to alert on (db/schema/content/coin-feed.ts). Empty = all.
+    kinds: text('kinds').array().default(sql`'{}'::text[]`).notNull(),
+    createdByBotUserId: text('created_by_bot_user_id')
+        .references(() => user.id, { onDelete: 'cascade' })
+        .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_community_coin_alerts_token').on(table.tokenAddress),
+    index('idx_community_coin_alerts_server').on(table.serverId),
+    // One alert per (channel, token, bot) — createCoinAlert upserts kinds.
+    uniqueIndex('idx_community_coin_alerts_unique').on(table.channelId, table.tokenAddress, table.createdByBotUserId),
+]).enableRLS();
+
+export type CommunityCoinAlert = typeof communityCoinAlerts.$inferSelect;

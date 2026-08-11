@@ -13,13 +13,27 @@ export const BOT_PERMISSIONS = {
     SEND_MESSAGES: 1 << 0, // 1
     /** Create/update coin-alert automations for the community. */
     MANAGE_COIN_ALERTS: 1 << 1, // 2
-    /** Moderate: delete messages, timeout members. */
+    /** Moderate: delete messages. (Timeouts have no backing schema yet.) */
     MODERATE: 1 << 2, // 4
     /** Read the member roster. */
     READ_MEMBERS: 1 << 3, // 8
 } as const;
 
 export type BotPermissionName = keyof typeof BOT_PERMISSIONS;
+
+/**
+ * UI copy for each permission, in display order. SOURCE OF TRUTH — the console
+ * vendors a copy (console/lib/bot-permissions.ts) that
+ * tests/console-bot-permissions.test.ts deep-compares against this one, so the
+ * console toggles and the community Bots panel can never describe a grant
+ * differently.
+ */
+export const BOT_PERMISSION_META: { name: BotPermissionName; label: string; desc: string }[] = [
+    { name: "SEND_MESSAGES", label: "Send messages", desc: "Post in the community's channels" },
+    { name: "MANAGE_COIN_ALERTS", label: "Manage coin alerts", desc: "Create and update coin-alert automations" },
+    { name: "MODERATE", label: "Moderate", desc: "Delete messages" },
+    { name: "READ_MEMBERS", label: "Read members", desc: "Read the member roster" },
+];
 
 /** Every currently-defined bit OR'd together (the "grant everything" value). */
 export const ALL_BOT_PERMISSIONS = Object.values(BOT_PERMISSIONS).reduce((a, b) => a | b, 0);
