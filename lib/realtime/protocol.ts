@@ -141,6 +141,36 @@ export type RealtimeClaims = {
  */
 export const INBOX_PREFIX = "inbox:";
 
+/**
+ * Prefix of the per-developer event-stream room (`dev-stream:<ownerUserId>`).
+ * Keyed by the OWNER, not the app: every stream delivery already belongs to
+ * the developer account (the event catalog is own-account-scoped by design),
+ * account-level keys need the union anyway, and one room per owner means one
+ * publish per enqueue. Owner-bound in the DO exactly like INBOX_PREFIX.
+ */
+export const DEV_STREAM_PREFIX = "dev-stream:";
+
+/**
+ * `event` name sent on a dev-stream room when new deliveries were enqueued.
+ * A NUDGE, not a payload: the socket says "rows past your cursor exist, go
+ * pull /api/stream/events?since=<cursor>" — at-least-once, replay and
+ * retention stay entirely in the queue table.
+ */
+export const DEV_STREAM_DELIVERIES_EVENT = "deliveries";
+
+/** Payload of that event: the highest seq just enqueued (a hint, not a cursor commitment). */
+export type DevStreamDeliveriesPayload = { seq: number };
+
+/**
+ * One tracked connection on a dev-stream room, as accounted by the DO
+ * (console Connections page). Times are epoch ms.
+ */
+export type DevStreamConnection = {
+  id: string;
+  connectedAt: number;
+  disconnectedAt: number | null;
+};
+
 /** `event` name sent on an inbox room when one of the user's threads moved. */
 export const INBOX_CONVERSATION_EVENT = "conversation";
 
@@ -173,6 +203,11 @@ export const rooms = {
   inbox: (userId: string) => `${INBOX_PREFIX}${userId}`,
   /** A live stream's chat room (high fan-out). */
   streamChat: (streamId: string) => `stream-chat:${streamId}`,
+  /**
+   * A developer account's event-stream push room (owner-bound; see
+   * DEV_STREAM_PREFIX for why it's keyed by owner rather than app).
+   */
+  devStream: (ownerUserId: string) => `${DEV_STREAM_PREFIX}${ownerUserId}`,
   /** A live audio Space (stage coordination: roles, raise-hand, presence). */
   space: (spaceId: string) => `space:${spaceId}`,
 } as const;

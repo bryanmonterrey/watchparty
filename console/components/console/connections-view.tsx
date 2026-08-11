@@ -9,17 +9,79 @@ import { Chip } from "@/components/console/chip";
 import { CopyButton } from "@/components/console/copy-button";
 import { formatDate } from "@/lib/format";
 
-// X's Connections page (docs/console-x-reference.md §10) is a table of held
-// streaming connections. watchparty's filtered stream is delivered by CURSOR
-// PULL, not a long-lived socket (the production-correct transport on
-// Workers/OpenNext until the shared realtime layer lands) — so instead of
-// faking a connection table this page documents the live pull endpoint and
-// shows its real throughput. A WebSocket connection view can be added here when
-// the socket transport rides the same queue.
+// X's Connections page (docs/console-x-reference.md §10): the pull endpoint's
+// throughput + docs, and the REAL socket-connection table — the push transport
+// rides the shared realtime DO (dev-stream rooms), which accounts each
+// connection; developerStreamRules.connections reads that log. Push is a
+// NUDGE ("new deliveries past seq N") — data still flows through the pull
+// endpoint, which keeps at-least-once/replay semantics in one place.
 
 const STREAM_URL = "https://watchparty.xyz/api/stream/events";
 const CURL = `curl -s "${STREAM_URL}?since=0" \\
   -H "x-api-key: wp_live_…"`;
+const SOCKET_CURL = `curl -s "https://watchparty.xyz/api/stream/token" \\
+  -H "x-api-key: wp_live_…"
+# → { token, room, host } — then connect:
+# wss://<host>/parties/chat/<room>?token=<token>
+# each "deliveries" event = pull /api/stream/events?since=<your cursor>`;
+
+function ConnectionsTable() {
+  const conns = trpc.developerStreamRules.connections.useQuery(undefined, {
+    refetchInterval: 30_000,
+  });
+
+  return (
+    <div className="rounded-xl border bg-card">
+      <div className="flex items-center justify-between border-b px-4 py-2.5">
+        <p className="text-sm font-medium">Socket connections</p>
+        {conns.data?.some((c) => c.active) ? <Chip tone="good">Active</Chip> : null}
+      </div>
+      <div className="p-4">
+        {conns.isPending ? (
+          <Skeleton className="h-16 rounded-lg" />
+        ) : conns.data == null ? (
+          <p className="text-xs text-muted-foreground">
+            The realtime layer isn&apos;t reachable right now — the pull endpoint
+            above is unaffected.
+          </p>
+        ) : conns.data.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No socket connections yet. Mint a token via{" "}
+            <span className="font-mono">GET /api/stream/token</span> and connect —
+            recent connections appear here.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-muted-foreground">
+                  <th className="pb-2 pr-4 font-medium">Connection</th>
+                  <th className="pb-2 pr-4 font-medium">Status</th>
+                  <th className="pb-2 pr-4 font-medium">Connected</th>
+                  <th className="pb-2 font-medium">Disconnected</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {conns.data.map((c) => (
+                  <tr key={`${c.id}-${c.connectedAt}`}>
+                    <td className="max-w-32 truncate py-2 pr-4 font-mono">{c.id}</td>
+                    <td className="py-2 pr-4">
+                      {c.active ? <Chip tone="good">Active</Chip> : <Chip>Closed</Chip>}
+                    </td>
+                    <td className="py-2 pr-4 tabular-nums">{formatDate(new Date(c.connectedAt))}</td>
+                    <td className="py-2 tabular-nums">
+                      {c.disconnectedAt ? formatDate(new Date(c.disconnectedAt)) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function ConnectionsView() {
   const stats = trpc.developerStreamRules.deliveryStats.useQuery();
@@ -89,11 +151,34 @@ export function ConnectionsView() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <HugeiconsIcon icon={ConnectIcon} className="size-3.5" />
-        A live WebSocket connection view will appear here when the socket
-        transport ships on top of this same stream.
+      {/* The push socket */}
+      <div className="rounded-xl border bg-card">
+        <div className="flex items-center justify-between border-b px-4 py-2.5">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            <HugeiconsIcon icon={ConnectIcon} className="size-3.5" />
+            Push socket
+          </p>
+          <Chip tone="good">Live</Chip>
+        </div>
+        <div className="flex flex-col gap-3 p-4">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <pre className="overflow-x-auto whitespace-pre text-xs text-muted-foreground">{SOCKET_CURL}</pre>
+          </div>
+          <ul className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+            <li>
+              Tokens live 120 seconds — re-mint on every reconnect (that TTL is
+              also the revocation bound for a revoked key).
+            </li>
+            <li>
+              The socket only nudges: each <span className="font-mono">deliveries</span>{" "}
+              event means new rows exist past your cursor — pull the endpoint
+              above to fetch them. Nothing is lost if the socket drops.
+            </li>
+          </ul>
+        </div>
       </div>
+
+      <ConnectionsTable />
     </div>
   );
 }

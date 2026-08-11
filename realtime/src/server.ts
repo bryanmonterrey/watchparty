@@ -6,7 +6,7 @@ import {
   type WSMessage,
 } from "partyserver";
 import { verifyRealtimeToken } from "./auth";
-import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, INBOX_PREFIX, type ChatLine, type ChatReply, type ClientMessage, type PinnedMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
+import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, DEV_STREAM_PREFIX, INBOX_PREFIX, type ChatLine, type ChatReply, type ClientMessage, type DevStreamConnection, type PinnedMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
 
 // Per-connection chat rate limit: max N lines per window.
 const CHAT_RATE_MAX = 5;
@@ -74,19 +74,23 @@ export class Chat extends Server<Env> {
       connection.close(4401, "unauthorized");
       return;
     }
-    // An inbox room belongs to exactly one person. The token proves WHO is
-    // connecting but carries nothing about the room, so this is the join that
-    // ties the two together — without it anyone signed in could listen to
-    // anyone's inbox by guessing a user id. Comparing here (rather than at
-    // mint time) is what makes it enforcement: the room name is in the URL the
-    // client chose, and this is the only place both are known.
-    if (this.name.startsWith(INBOX_PREFIX) && claims.sub !== this.name.slice(INBOX_PREFIX.length)) {
-      connection.close(4403, "forbidden");
-      return;
+    // Owner-bound rooms belong to exactly one person (inbox, dev-stream). The
+    // token proves WHO is connecting but carries nothing about the room, so
+    // this is the join that ties the two together — without it anyone signed
+    // in could listen to anyone's inbox (or event stream) by guessing a user
+    // id. Comparing here (rather than at mint time) is what makes it
+    // enforcement: the room name is in the URL the client chose, and this is
+    // the only place both are known.
+    for (const prefix of [INBOX_PREFIX, DEV_STREAM_PREFIX]) {
+      if (this.name.startsWith(prefix) && claims.sub !== this.name.slice(prefix.length)) {
+        connection.close(4403, "forbidden");
+        return;
+      }
     }
     // `chat` is only present for gated rooms (stream chat). Absent means the
     // room has no gate, so absent is allowed — see RealtimeClaims.
     connection.setState({ userId: claims.sub, name: claims.name, canChat: claims.chat !== false });
+    if (this.isDevStream) void this.recordConnection(connection.id);
     if (this.isHighFanout) {
       const lines = await this.getHistory();
       if (lines.length) {
@@ -103,7 +107,45 @@ export class Chat extends Server<Env> {
 
   onClose(connection: Connection<ConnState>) {
     this.chatHits.delete(connection.id);
+    if (this.isDevStream) void this.recordDisconnect(connection.id);
     this.broadcastPresence();
+  }
+
+  // ── dev-stream connection accounting ──────────────────────────────────────
+  // Ring buffer of recent connections in DO storage, surfaced to the console
+  // Connections page via the authed GET below. Only dev-stream rooms pay for
+  // this — chat/DM rooms churn far too fast to log per-connection rows.
+
+  private get isDevStream(): boolean {
+    return this.name.startsWith(DEV_STREAM_PREFIX);
+  }
+
+  private connectionsCache: DevStreamConnection[] | null = null;
+  private static readonly CONNECTION_LOG_MAX = 50;
+
+  private async getConnectionLog(): Promise<DevStreamConnection[]> {
+    if (this.connectionsCache) return this.connectionsCache;
+    this.connectionsCache = (await this.ctx.storage.get<DevStreamConnection[]>("dev-connections")) ?? [];
+    return this.connectionsCache;
+  }
+
+  private async putConnectionLog(log: DevStreamConnection[]) {
+    this.connectionsCache = log.slice(-Chat.CONNECTION_LOG_MAX);
+    await this.ctx.storage.put("dev-connections", this.connectionsCache);
+  }
+
+  private async recordConnection(id: string) {
+    const log = await this.getConnectionLog();
+    await this.putConnectionLog([...log, { id, connectedAt: Date.now(), disconnectedAt: null }]);
+  }
+
+  private async recordDisconnect(id: string) {
+    const log = await this.getConnectionLog();
+    const row = log.find((c) => c.id === id && c.disconnectedAt === null);
+    if (row) {
+      row.disconnectedAt = Date.now();
+      await this.putConnectionLog(log);
+    }
   }
 
   onMessage(connection: Connection<ConnState>, message: WSMessage) {
@@ -212,12 +254,27 @@ export class Chat extends Server<Env> {
     return true;
   }
 
-  /** Authoritative server publish: POST /parties/chat/:room from tRPC. */
+  /** Authoritative server publish: POST /parties/chat/:room from tRPC.
+   *  GET (dev-stream rooms only): connection accounting for the console. */
   async onRequest(request: Request): Promise<Response> {
-    if (request.method !== "POST") return new Response("method not allowed", { status: 405 });
     if (request.headers.get("x-realtime-secret") !== this.env.REALTIME_SECRET) {
       return new Response("forbidden", { status: 403 });
     }
+    if (request.method === "GET") {
+      if (!this.isDevStream) return new Response("not found", { status: 404 });
+      const log = await this.getConnectionLog();
+      // Live socket ids, so the console can mark rows Active even if a
+      // hibernation wiped in-memory state between then and now.
+      const active = new Set<string>();
+      for (const c of this.getConnections()) active.add(c.id);
+      return Response.json({
+        connections: [...log].reverse().map((c) => ({
+          ...c,
+          active: c.disconnectedAt === null && active.has(c.id),
+        })),
+      });
+    }
+    if (request.method !== "POST") return new Response("method not allowed", { status: 405 });
     let event: ServerEvent;
     try {
       event = (await request.json()) as ServerEvent;

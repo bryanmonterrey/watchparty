@@ -3,7 +3,8 @@ import { and, asc, eq, gt, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys } from "@/db/schema/content/api-key";
 import { developerStreamDeliveries } from "@/db/schema/content/developer-stream-delivery";
-import { verifyApiKeySig } from "@/lib/api-gate";
+import { verifyApiKeySig, revokedKey } from "@/lib/api-gate";
+import { redis } from "@/lib/cache";
 
 // GET /api/stream/events?since=<seq>&limit=<n>
 //
@@ -39,12 +40,19 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
     }
     const [owner] = await db
-        .select({ userId: apiKeys.userId, appId: apiKeys.appId })
+        .select({ userId: apiKeys.userId, appId: apiKeys.appId, revokedAt: apiKeys.revokedAt })
         .from(apiKeys)
         .where(eq(apiKeys.id, keyId))
         .limit(1);
-    if (!owner) {
+    // revokedAt was previously unchecked here — a revoked key kept reading the
+    // stream for as long as its HMAC stayed valid (forever). The Redis flag is
+    // checked too so console revocation bites before the ledger cron runs.
+    if (!owner || owner.revokedAt) {
         return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+    }
+    const revoked = await redis.get(revokedKey(keyId)).catch(() => null);
+    if (revoked) {
+        return NextResponse.json({ error: "API key revoked" }, { status: 401 });
     }
 
     const since = Math.max(0, Math.floor(num(req.nextUrl.searchParams.get("since"), 0)));

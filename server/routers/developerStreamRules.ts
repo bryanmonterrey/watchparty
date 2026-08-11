@@ -9,6 +9,7 @@ import { developerApps } from "@/db/schema/content/developer-app";
 import { randHex } from "@/lib/api-gate";
 import { validateRule } from "@/lib/developer/stream-rules";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
+import { rooms } from "@/lib/realtime/protocol";
 
 // Filtered-stream rule CRUD (X's Streaming Rules — docs/console-x-reference.md
 // §11). Rules are stored + managed per app; the real-time matching/delivery
@@ -159,4 +160,27 @@ export const developerStreamRulesRouter = router({
                 .orderBy(desc(developerStreamDeliveries.seq))
                 .limit(input.limit);
         }),
+
+    /** Live + recent socket connections on the account's dev-stream push room,
+     *  as accounted by the realtime DO (Connections page table). `null` means
+     *  the realtime layer isn't configured/reachable — distinct from an empty
+     *  list, which means "configured, nobody connected". */
+    connections: protectedProcedure.query(async ({ ctx }) => {
+        const host = process.env.REALTIME_HOST ?? process.env.NEXT_PUBLIC_REALTIME_HOST;
+        const secret = process.env.REALTIME_SECRET;
+        if (!host || !secret) return null;
+        try {
+            const res = await fetch(`https://${host}/parties/chat/${rooms.devStream(ctx.user.id)}`, {
+                headers: { "x-realtime-secret": secret },
+                signal: AbortSignal.timeout(4_000),
+            });
+            if (!res.ok) return null;
+            const body = (await res.json()) as {
+                connections: { id: string; connectedAt: number; disconnectedAt: number | null; active: boolean }[];
+            };
+            return body.connections;
+        } catch {
+            return null;
+        }
+    }),
 });

@@ -141,6 +141,63 @@ async function main() {
   assert("A sees B typing", events.A.some((e) => e.t === "typing" && e.userId === "smoke-user-B"));
   assert("typing is NOT echoed to sender B", !events.B.some((e) => e.t === "typing"));
 
+  // 6. Dev-stream rooms: owner-bound (inbox pattern), nudge delivery via the
+  // authed server publish, and connection accounting readable with the secret.
+  {
+    const devRoom = `dev-stream:smoke-dev-${Math.random().toString(36).slice(2, 8)}`;
+    const devUrl = (token) => `wss://${HOST}/parties/chat/${encodeURIComponent(devRoom)}?token=${encodeURIComponent(token)}`;
+
+    // Wrong owner: partyserver may open the socket before onConnect rejects
+    // it (4403), so the honest assertions are (a) the server closed it, and
+    // (b) it never receives the nudge published below.
+    const strangerEvents = [];
+    let strangerClosedByServer = false;
+    const stranger = await new Promise(async (resolve) => {
+      const t = await signToken("smoke-someone-else", "Stranger");
+      const ws = new WebSocket(devUrl(t));
+      ws.addEventListener("message", (e) => { try { strangerEvents.push(JSON.parse(e.data)); } catch {} });
+      ws.addEventListener("close", (e) => { if (e.code === 4403) strangerClosedByServer = true; });
+      ws.addEventListener("open", () => resolve(ws));
+      ws.addEventListener("error", () => resolve(null));
+      setTimeout(() => resolve(null), 4000);
+    });
+
+    // The owner connects and receives the deliveries nudge published via HTTP.
+    events.D = [];
+    const owner = devRoom.slice("dev-stream:".length);
+    const d = await connect("D", await signToken(owner, "Daemon"));
+    await wait(600);
+    assert("dev-stream room closes a non-owner with 4403", strangerClosedByServer);
+    const pub = await fetch(`https://${HOST}/parties/chat/${devRoom}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-realtime-secret": SECRET },
+      body: JSON.stringify({ t: "event", name: "deliveries", payload: { seq: 42 } }),
+    });
+    assert("server publish to dev-stream room accepted", pub.ok);
+    await wait(800);
+    assert(
+      "owner daemon receives the deliveries nudge",
+      events.D.some((e) => e.t === "event" && e.name === "deliveries" && e.payload?.seq === 42),
+    );
+    assert("rejected non-owner never receives the nudge", !strangerEvents.some((e) => e.t === "event"));
+    if (stranger) { try { stranger.close(); } catch {} }
+
+    // Connection accounting is readable with the secret.
+    const acct = await fetch(`https://${HOST}/parties/chat/${devRoom}`, {
+      headers: { "x-realtime-secret": SECRET },
+    });
+    const acctBody = acct.ok ? await acct.json() : null;
+    assert(
+      "connection accounting lists the live connection",
+      !!acctBody?.connections?.some((c) => c.active && c.disconnectedAt === null),
+    );
+    // …and is refused without the secret.
+    const noSecret = await fetch(`https://${HOST}/parties/chat/${devRoom}`);
+    assert("connection accounting requires the secret", noSecret.status === 403);
+
+    d.close();
+  }
+
   a.close();
   b.close();
   await wait(200);
