@@ -228,7 +228,16 @@ studio.watchparty.xyz (route group in the main app, host-rewritten).
 - **Backend:** `developer_apps.flags` (reserved), verification state, a review
   queue; OAuth2 authorize/token for third-party "sign in with watchparty."
 - **Surfaces:** console app-detail Verification page; a directory.
-- **Status:** not built; `flags` column exists as the hook.
+- **Status (checklist shipped; OAuth/directory → dedicated chat):** the
+  **verification checklist is built** — `lib/developer/verification.ts`
+  (`computeVerification`, pure + unit-tested), `developerApps.verificationChecklist`
+  (per-app) + `verificationSummary` (batch), a `VerificationCard` on the app-detail
+  page and a per-app badge in the apps grid. Criteria: complete profile, ToS URL,
+  Privacy URL, verified owner email, owner 2FA. `flags` remains the hook for the
+  reviewed/listed state. **OAuth2 "sign in with watchparty" + the public app
+  directory are deferred to a dedicated chat** — a security-sensitive
+  identity-provider surface on the fragile better-auth stack; see
+  `docs/dedicated-chat-segments.md`.
 
 ## Phase 12 · Rate limits as a first-class API contract
 - **Goal:** protect infra beyond credits, X-style.

@@ -9,6 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DashboardSquare01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc";
+import { Chip } from "@/components/console/chip";
+
+type VerifySummary = { met: number; total: number; complete: boolean };
 
 // The portal-level Applications grid (docs/console-discord-reference.md §14):
 // square cards with the app icon (or its name on a tile when none is set) and
@@ -64,7 +67,13 @@ function CreatePanel({ onDone }: { onDone: () => void }) {
   );
 }
 
-function AppCard({ app }: { app: { id: string; name: string; iconUrl: string | null } }) {
+function AppCard({
+  app,
+  verify,
+}: {
+  app: { id: string; name: string; iconUrl: string | null };
+  verify?: VerifySummary;
+}) {
   return (
     <Link
       href={`/apps/${app.id}`}
@@ -81,12 +90,20 @@ function AppCard({ app }: { app: { id: string; name: string; iconUrl: string | n
         )}
       </div>
       <span className="w-full truncate text-sm font-medium">{app.name}</span>
+      {verify ? (
+        verify.complete ? (
+          <Chip tone="good">Verified</Chip>
+        ) : (
+          <Chip tone="warn">{verify.total - verify.met} to verify</Chip>
+        )
+      ) : null}
     </Link>
   );
 }
 
 export function AppsView() {
   const apps = trpc.developerApps.list.useQuery();
+  const verify = trpc.developerApps.verificationSummary.useQuery();
   const [creating, setCreating] = React.useState(false);
   const atCap = !!apps.data && apps.data.length >= APP_CAP;
 
@@ -146,7 +163,7 @@ export function AppsView() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {apps.data.map((app) => (
-            <AppCard key={app.id} app={app} />
+            <AppCard key={app.id} app={app} verify={verify.data?.[app.id]} />
           ))}
         </div>
       )}

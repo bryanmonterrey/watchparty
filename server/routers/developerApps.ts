@@ -8,6 +8,7 @@ import { developerBots } from "@/db/schema/content/developer-bot";
 import { user } from "@/db/schema/auth/user";
 import { randHex } from "@/lib/api-gate";
 import { generateAppKeypair } from "@/lib/developer/app-keys";
+import { computeVerification } from "@/lib/developer/verification";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
 
 // The developer app registry (phase 1 — docs/console-execution-plan.md).
@@ -111,17 +112,42 @@ export const developerAppsRouter = router({
                 ))
                 .limit(1);
             if (!row) throw new TRPCError({ code: "NOT_FOUND" });
-
-            const criteria = [
-                { key: "profile", label: "Complete app profile", detail: "A name, description, and icon.", met: !!(row.name && row.description?.trim() && row.iconUrl) },
-                { key: "tos", label: "Terms of Service URL", detail: "A link to your app's terms.", met: !!row.tosUrl },
-                { key: "privacy", label: "Privacy Policy URL", detail: "A link to your privacy policy.", met: !!row.privacyUrl },
-                { key: "email", label: "Verified owner email", detail: "The owner account's email is confirmed.", met: !!row.emailVerified },
-                { key: "2fa", label: "Two-factor authentication", detail: "2FA is enabled on the owner account.", met: !!row.twoFactorEnabled },
-            ];
-            const met = criteria.filter((c) => c.met).length;
-            return { criteria, met, total: criteria.length, complete: met === criteria.length };
+            return computeVerification(row);
         }),
+
+    // Batch verification state for the apps list — one row per app, counts only.
+    // Shares computeVerification with the detail query so the list badge and the
+    // card can never disagree. Owner email/2FA is the same for every app, so
+    // it's read once and folded into each.
+    verificationSummary: protectedProcedure.query(async ({ ctx }) => {
+        const [owner] = await db
+            .select({ emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled })
+            .from(user)
+            .where(eq(user.id, ctx.user.id))
+            .limit(1);
+        const apps = await db
+            .select({
+                id: developerApps.id,
+                name: developerApps.name,
+                description: developerApps.description,
+                iconUrl: developerApps.iconUrl,
+                tosUrl: developerApps.tosUrl,
+                privacyUrl: developerApps.privacyUrl,
+            })
+            .from(developerApps)
+            .where(and(eq(developerApps.ownerId, ctx.user.id), isNull(developerApps.deletedAt)));
+
+        const out: Record<string, { met: number; total: number; complete: boolean }> = {};
+        for (const a of apps) {
+            const { met, total, complete } = computeVerification({
+                ...a,
+                emailVerified: owner?.emailVerified ?? false,
+                twoFactorEnabled: owner?.twoFactorEnabled ?? false,
+            });
+            out[a.id] = { met, total, complete };
+        }
+        return out;
+    }),
 
     create: protectedProcedure
         .input(z.object(identityInput))
