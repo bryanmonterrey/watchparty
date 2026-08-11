@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { developerStreamRules } from "@/db/schema/content/developer-stream-rule";
 import { developerApps } from "@/db/schema/content/developer-app";
 import { randHex } from "@/lib/api-gate";
+import { validateRule } from "@/lib/developer/stream-rules";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
 
 // Filtered-stream rule CRUD (X's Streaming Rules — docs/console-x-reference.md
@@ -65,6 +66,18 @@ export const developerStreamRulesRouter = router({
                 throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Slow down — try again in a minute" });
             }
             await assertOwnsApp(ctx.user.id, input.appId);
+
+            // Validate each rule against the engine (lib/developer/stream-rules):
+            // rejects empties, over-length, and all-negation rules (which would
+            // match the entire event firehose — the metering footgun). A rule is
+            // durable config today, but storing an unmatchable/unbounded rule now
+            // just to fail at delivery later is worse than a clear write error.
+            for (const r of input.rules) {
+                const v = validateRule(r.value);
+                if (!v.ok) {
+                    throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid rule "${r.value}": ${v.error}` });
+                }
+            }
 
             const [{ n }] = await db
                 .select({ n: count() })
