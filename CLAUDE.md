@@ -167,6 +167,26 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
 
 - **Deploy: Cloudflare** via `@opennextjs/cloudflare` (chosen for speed/cost). Keep code Workers-compatible: HTTP-based services (Upstash Redis, Resend) are fine; the DB uses **postgres.js** which runs on Cloudflare **Hyperdrive** (front Supabase with it — edge compute + single-region Postgres is slow without it). Full CF/wrangler/Hyperdrive setup is a later milestone.
 - **Dev runs on port 3001** (`bun dev` → `next dev -p 3001`) to match the reused OAuth callback URLs and `NEXT_PUBLIC_AUTH_URL` in `.env` (copied from `../sidebar`; same Supabase DB).
+- ⚠️ **The dev DB split covers `DATABASE_URL` ONLY — supabase-js still writes to
+  PRODUCTION.** Verified 2026-08-11: `.env.local` points `DATABASE_URL` at the
+  dev project (`hghxcuro…`) while `NEXT_PUBLIC_SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` still point at prod (`ugpzuypo…`). Drizzle reads
+  one database; every `supabase.from(...)` call writes the other.
+
+  So running the app locally can mutate production. Known write paths:
+  `app/api/create-wallet` and `lib/wallet/ensure-embedded.ts` (insert
+  `encrypted_wallets`), `server/routers/wallet.ts:156` (update it),
+  `app/api/update-profile`, and all Storage uploads.
+
+  It surfaced as a foreign-key error — `encrypted_wallets_user_id_user_id_fk`
+  — when a locally-created wallet for a DEV user was written to PROD, where
+  that user does not exist. That FK is the only reason it failed loudly;
+  a path whose row does not reference `user` would have succeeded silently.
+
+  **Override `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` too**, or treat any
+  supabase-js path as production even on localhost.
+
 - **Dev DB split (2026-08-07):** local dev should point at the SEPARATE free
   Supabase dev project via `.env.local` (bootstrap a fresh one with
   `node scripts/db/setup-dev-db.mjs "<dev direct url>"` — it drizzle-pushes the
