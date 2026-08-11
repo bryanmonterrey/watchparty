@@ -85,9 +85,24 @@ export const commentRouter = router({
                     eq(posts.status, "published"),
                 ))
                 .orderBy(
-                    desc(posts.isPinned), 
+                    desc(posts.isPinned),
                     desc(sql`${posts.userId} = ${postAuthorId || ''}`),
-                    desc(ctx.user ? sql`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followerId} = ${ctx.user.id} AND ${follows.followingId} = ${posts.userId})` : sql`false`),
+                    // "People you follow first" — INCLUDED ONLY WHEN SIGNED IN.
+                    //
+                    // The signed-out branch used to be `sql`false``, which
+                    // Postgres rejects outright in an ORDER BY: "non-integer
+                    // constant in ORDER BY". So this procedure returned a 500
+                    // to every signed-out caller, and with PUBLIC_BROWSING on
+                    // that is every anonymous visitor opening a post's
+                    // comments. Dropping the term is also the correct
+                    // semantics: ordering by a constant sorts nothing.
+                    //
+                    // The two neighbouring terms are safe because they are
+                    // column EXPRESSIONS, not constants — `userId = ''`
+                    // compares a column, so Postgres accepts it.
+                    ...(ctx.user
+                        ? [desc(sql`EXISTS (SELECT 1 FROM ${follows} WHERE ${follows.followerId} = ${ctx.user.id} AND ${follows.followingId} = ${posts.userId})`)]
+                        : []),
                     desc(posts.likes),
                     desc(posts.createdAt)
                 )

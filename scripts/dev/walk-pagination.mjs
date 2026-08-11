@@ -4,9 +4,23 @@
  *
  *   bun scripts/dev/walk-pagination.mjs                 # all surfaces
  *   bun scripts/dev/walk-pagination.mjs --only search   # substring filter
+ *   bun scripts/dev/walk-pagination.mjs --prod          # PUBLIC surfaces on production
  *
- * Needs a dev server and a session:
+ * Dev needs a server and a session:
  *   bun scripts/dev/mint-test-session.mjs --raw > .walk-cookie
+ *
+ * `--prod` needs NEITHER. It walks only the surfaces that take no session, so
+ * it creates nothing in production — no fixture user, no rows, no writes. The
+ * counts are read-only SELECTs against the production database.
+ *
+ * It is also the mode that actually runs: a cold route compile in dev is ~5
+ * minutes on a laptop, where production answers in milliseconds and holds real
+ * data with the tied runs and ranked orderings these bugs need.
+ *
+ * Two production details it has to handle. Requests carry same-origin headers
+ * because /api/trpc is behind the 402 paywall for external callers — this is
+ * the app's own API answering the way it answers the app. And auth-gated
+ * surfaces are SKIPPED rather than faked; use dev mode for those.
  *
  * ## Why this exists
  *
@@ -49,8 +63,9 @@
 
 import { readFileSync, existsSync } from "node:fs";
 
-const BASE = process.env.WALK_BASE ?? "http://localhost:3001";
 const args = process.argv.slice(2);
+const PROD = args.includes("--prod");
+const BASE = process.env.WALK_BASE ?? (PROD ? "https://watchparty.xyz" : "http://localhost:3001");
 const only = args.includes("--only") ? args[args.indexOf("--only") + 1] : null;
 
 /** Below this a surface has too little data to conclude anything. */
@@ -102,6 +117,7 @@ const SURFACES = [
     },
     {
         name: "community.getMessages",
+        auth: true,
         proc: "community.getMessages",
         input: { channelId: CHANNEL, limit: 50 },
         rows: "items",
@@ -111,6 +127,7 @@ const SURFACES = [
     },
     {
         name: "getNotifications",
+        auth: true,
         proc: "notification.getNotifications",
         input: { limit: 20 },
         rows: "notifications",
@@ -118,6 +135,7 @@ const SURFACES = [
     },
     {
         name: "getBookmarks",
+        auth: true,
         proc: "content.getBookmarks",
         input: { limit: 20 },
         rows: "posts",
@@ -148,6 +166,7 @@ const SURFACES = [
     },
     {
         name: "message.list (DMs)",
+        auth: true,
         proc: "message.list",
         input: { conversationId: "__CONV__", limit: 50 },
         rows: "messages",
@@ -181,6 +200,7 @@ const SURFACES = [
 // ── plumbing ────────────────────────────────────────────────────────────────
 
 function cookie() {
+    if (PROD) return null; // public surfaces only — no session is created or needed
     if (process.env.WALK_COOKIE) return process.env.WALK_COOKIE;
     for (const p of [".walk-cookie", "/tmp/walk-cookie"]) {
         if (existsSync(p)) return readFileSync(p, "utf8").trim();
@@ -195,7 +215,11 @@ function cookie() {
 
 async function call(proc, input, jar) {
     const url = `${BASE}/api/trpc/${proc}?input=${encodeURIComponent(JSON.stringify({ json: input }))}`;
-    const res = await fetch(url, { headers: { cookie: jar } });
+    // Same-origin headers on production: /api/trpc answers 402 to external
+    // callers by design (lib/api-pricing.ts). This is the app's own API.
+    const headers = jar ? { cookie: jar } : {};
+    if (PROD) Object.assign(headers, { origin: BASE, referer: `${BASE}/home` });
+    const res = await fetch(url, { headers });
     const body = await res.json().catch(() => null);
     const data = body?.result?.data?.json ?? body?.result?.data;
     if (!data) {
@@ -224,21 +248,39 @@ async function walk(surface, jar) {
 
 async function main() {
     const jar = cookie();
-    const { db } = await import("@/db");
-    const { sql } = await import("drizzle-orm");
+
+    // Counts come from whichever database the target serves. READ-ONLY: every
+    // query in SURFACES is a `select count(*)`.
+    let runCount;
+    let closeDb = async () => {};
+    if (PROD) {
+        const postgres = (await import("postgres")).default;
+        const line = (await Bun.file(".env.production").text())
+            .split("\n").find((l) => l.startsWith("DATABASE_URL="));
+        if (!line) { console.error("no DATABASE_URL in .env.production"); process.exit(1); }
+        const client = postgres(line.slice("DATABASE_URL=".length).replace(/^["']|["']$/g, ""), { max: 1, prepare: false });
+        runCount = async (text) => (await client.unsafe(text))[0];
+        closeDb = () => client.end();
+        console.log(`target: ${BASE} (production, public surfaces only)\n`);
+    } else {
+        const { db } = await import("@/db");
+        const { sql } = await import("drizzle-orm");
+        runCount = async (text) => { const r = await db.execute(sql.raw(text)); return (r.rows ?? r)[0]; };
+        console.log(`target: ${BASE}\n`);
+    }
 
     const chosen = SURFACES.filter((s) => !only || s.name.toLowerCase().includes(only.toLowerCase()));
     let failed = 0;
     let skipped = 0;
 
     for (const s of chosen) {
+        if (PROD && s.auth) { console.log(`  skipped  ${s.name} — needs a session`); skipped++; continue; }
         let input = s.input;
         let countSql = s.count;
 
         // Some surfaces need an id that only the database knows.
         if (s.resolve) {
-            const r = await db.execute(sql.raw(s.resolve));
-            const id = (r.rows ?? r)[0]?.id;
+            const id = (await runCount(s.resolve))?.id;
             if (!id) { console.log(`  NO DATA  ${s.name} — nothing to resolve`); skipped++; continue; }
             const token = s.placeholder ?? "__PARENT__";
             input = JSON.parse(JSON.stringify(s.input).replaceAll(token, id));
@@ -246,10 +288,7 @@ async function main() {
         }
 
         let expected = null;
-        if (countSql) {
-            const r = await db.execute(sql.raw(countSql));
-            expected = (r.rows ?? r)[0]?.n ?? 0;
-        }
+        if (countSql) expected = (await runCount(countSql))?.n ?? 0;
 
         let res;
         try {
@@ -286,7 +325,8 @@ async function main() {
         }
     }
 
-    console.log(`\n${chosen.length - failed - skipped} passed, ${failed} failed, ${skipped} skipped (no data).`);
+    await closeDb();
+    console.log(`\n${chosen.length - failed - skipped} passed, ${failed} failed, ${skipped} skipped.`);
     process.exit(failed ? 1 : 0);
 }
 
