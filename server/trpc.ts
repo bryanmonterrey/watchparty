@@ -8,13 +8,21 @@ import superjson from "superjson";
  * This runs on every request and provides the session to all procedures
  */
 export async function createContext() {
-    const session = await auth.api.getSession({
-        headers: await headers(),
-    });
+    // Read once and reuse: `headers()` is per-request, and getSession needs it
+    // anyway, so putting it on the context costs nothing and saves procedures
+    // reaching for `next/headers` on their own.
+    const h = await headers();
+    const session = await auth.api.getSession({ headers: h });
 
     return {
         session,
         user: session?.user ?? null,
+        /**
+         * The request headers. Procedures that need the CALLER rather than the
+         * account use this — rate limits and per-viewer dedupe on public
+         * endpoints, where there may be no user at all.
+         */
+        headers: h,
     };
 }
 

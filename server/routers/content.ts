@@ -12,6 +12,7 @@ import { createNotification } from "@/server/lib/notify";
 import { awardXP } from "@/server/lib/xp";
 import { takePage } from "@/server/lib/paginate";
 import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from "@/server/lib/keyset";
+import { recordView, viewerHandle } from "@/server/lib/record-view";
 import { recordQuestEvent } from "@/server/lib/quests";
 import { typesenseClient } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
@@ -605,14 +606,12 @@ export const contentRouter = router({
         }),
 
 
+    /** Counting rules and the abuse they guard against: server/lib/record-view.ts */
     incrementView: publicProcedure
         .input(z.object({ postId: z.string(), contentType: z.enum(["post", "video"]).default("post") }))
-        .mutation(async ({ input }) => {
-            await db.update(posts).set({
-                views: sql`${posts.views} + 1`,
-                baseScore: sql`${posts.likes} * 3.0 + ${posts.reposts} * 2.0 + ${posts.comments} * 2.0 + (${posts.views} + 1) * 0.1`,
-            }).where(eq(posts.id, input.postId));
-            return { success: true };
+        .mutation(async ({ ctx, input }) => {
+            const counted = await recordView(input.postId, viewerHandle(ctx.user?.id, ctx.headers));
+            return { success: true, counted };
         }),
 
     getProgress: protectedProcedure
