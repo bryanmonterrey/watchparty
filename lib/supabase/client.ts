@@ -1,4 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { assertSameSupabaseProject } from './assert-same-project';
+
+// Server-side only, and a warning rather than a throw: reading production from
+// dev is a legitimate setup; not KNOWING which database you are writing is not.
+assertSameSupabaseProject();
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
