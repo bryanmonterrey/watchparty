@@ -205,8 +205,18 @@ studio.watchparty.xyz (route group in the main app, host-rewritten).
 - **Backend:** existing upload (`upload` router / TUS) + content create;
   per-broadcast metrics from `stream_sessions` + views.
 - **Surfaces:** studio Library upload button, per-item compose, an Insights tab.
-- **Status:** not built (today: upload/compose link to the main app; the studio
-  has an Analytics page but no per-item Insights).
+- **Status: shipped.** `components/studio/upload-dialog.tsx` — drop → resumable
+  TUS (6MB chunks, resume-on-reconnect, the existing `upload.createResumableUpload`
+  backend) → compose (preview + caption) → publish/draft via `content.createPost`.
+  ContentView has an "Upload video" action; an **Insights** tab ranks the owner's
+  published videos by views with engagement (backed by a NEW `studioRouter.
+  getVideoInsights` — content.ts is past the file-size guard's line, so studio
+  reads land in their own router). **"Compose from a Library item" was dropped on
+  purpose:** in watchparty a video IS a post (no unattached media library), so it
+  would just duplicate — upload+compose is one flow.
+- **Deferred:** per-**broadcast** insights (broadcasts carry duration/category but
+  no engagement counts — needs stream_sessions view metrics); an in-flow thumbnail
+  picker (uploads currently inherit the post's default thumbnail).
 
 ## Phase 11 · App verification + directory
 - **Goal:** a trust gate before an app scales or lists publicly.

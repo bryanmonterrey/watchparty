@@ -10,50 +10,47 @@ import { trpc } from "@/lib/trpc/client";
 import { appToast } from "@/components/app-ui/app-toast";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, formatFileSize } from "@/lib/upload-limits";
 
-// In-studio media upload + compose (Phase 10). The resumable-upload backend
+// In-studio video upload + compose (Phase 10). The resumable-upload backend
 // already exists (upload.createResumableUpload — TUS to Supabase with a minted
 // JWT); this brings the flow INTO the studio instead of linking out to the main
-// composer. Two entries: `existing` set → skip straight to compose for a video
-// already in the Library; unset → drop a new file, upload, then compose. Reuses
-// the exact TUS pattern from components/app-ui/create-dialog (6MB chunks,
-// resume-on-reconnect) without dragging in that 1,100-line kitchen sink.
+// composer. Reuses the exact TUS pattern from components/app-ui/create-dialog
+// (6MB chunks, resume-on-reconnect) without dragging in that 1,100-line kitchen
+// sink, and finishes on content.createVideo — the mutation that actually sets
+// posts.videoUrl (createPost only stores a media array, so a video posted that
+// way would never surface in the Library, which filters videoUrl IS NOT NULL).
 
-type Existing = { url: string; title: string | null };
+function baseName(file: string): string {
+  return file.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+}
 
 export function UploadDialog({
   open,
   onOpenChange,
-  existing,
   onDone,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  existing?: Existing | null;
   onDone?: () => void;
 }) {
   const [step, setStep] = React.useState<"drop" | "uploading" | "compose">("drop");
   const [progress, setProgress] = React.useState(0);
   const [videoUrl, setVideoUrl] = React.useState<string | null>(null);
-  const [caption, setCaption] = React.useState("");
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [duration, setDuration] = React.useState(0);
 
   const createResumableUpload = trpc.upload.createResumableUpload.useMutation();
-  const createPost = trpc.content.createPost.useMutation();
+  const createVideo = trpc.content.createVideo.useMutation();
 
-  // Opening for an existing Library item jumps straight to compose; opening
-  // fresh resets to the dropzone.
   React.useEffect(() => {
     if (!open) return;
-    if (existing) {
-      setStep("compose");
-      setVideoUrl(existing.url);
-      setCaption(existing.title ?? "");
-    } else {
-      setStep("drop");
-      setVideoUrl(null);
-      setCaption("");
-      setProgress(0);
-    }
-  }, [open, existing]);
+    setStep("drop");
+    setVideoUrl(null);
+    setTitle("");
+    setDescription("");
+    setDuration(0);
+    setProgress(0);
+  }, [open]);
 
   const upload = React.useCallback(
     async (file: File) => {
@@ -61,6 +58,7 @@ export function UploadDialog({
         appToast.error(`That video is ${formatFileSize(file.size)}. Max size is ${MAX_UPLOAD_LABEL}.`);
         return;
       }
+      setTitle(baseName(file.name));
       setStep("uploading");
       setProgress(0);
       try {
@@ -125,13 +123,19 @@ export function UploadDialog({
     disabled: step !== "drop",
   });
 
-  const submit = (status: "published" | "draft") => {
-    if (!videoUrl) return;
-    createPost.mutate(
-      { content: caption.trim() || undefined, media: [{ type: "video", url: videoUrl }], status },
+  const publish = () => {
+    if (!videoUrl || !title.trim()) return;
+    createVideo.mutate(
+      {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        videoUrl,
+        visibility: "public",
+        duration: Math.round(duration) || 0,
+      },
       {
         onSuccess: () => {
-          appToast.success(status === "draft" ? "Saved to drafts" : "Published");
+          appToast.success("Published");
           onOpenChange(false);
           onDone?.();
         },
@@ -144,7 +148,7 @@ export function UploadDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg gap-0 overflow-hidden rounded-3xl border-border/60 p-0">
         <DialogHeader className="border-b border-border/60 px-5 py-4 text-left">
-          <DialogTitle className="text-base">{existing ? "Create a post" : "Upload a video"}</DialogTitle>
+          <DialogTitle className="text-base">Upload a video</DialogTitle>
         </DialogHeader>
 
         <div className="p-5">
@@ -181,20 +185,27 @@ export function UploadDialog({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               {videoUrl ? (
                 <video
                   src={videoUrl}
                   controls
+                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
                   className="aspect-video w-full rounded-2xl border border-border/60 bg-black object-contain"
                 />
               ) : null}
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title"
+                className="w-full rounded-xl border border-border/60 bg-transparent px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-border"
+              />
               <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Add a caption…"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add a description…"
                 rows={3}
-                className="w-full resize-none rounded-2xl border border-border/60 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-border"
+                className="w-full resize-none rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-border"
               />
             </div>
           )}
@@ -202,11 +213,11 @@ export function UploadDialog({
 
         {step === "compose" ? (
           <div className="flex items-center justify-end gap-2 border-t border-border/60 px-5 py-4">
-            <Button variant="ghost" disabled={createPost.isPending} onClick={() => submit("draft")}>
-              Save draft
+            <Button variant="ghost" disabled={createVideo.isPending} onClick={() => onOpenChange(false)}>
+              Cancel
             </Button>
-            <Button disabled={createPost.isPending || !videoUrl} onClick={() => submit("published")}>
-              {createPost.isPending ? "Publishing…" : "Publish"}
+            <Button disabled={createVideo.isPending || !videoUrl || !title.trim()} onClick={publish}>
+              {createVideo.isPending ? "Publishing…" : "Publish"}
             </Button>
           </div>
         ) : null}
