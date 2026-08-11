@@ -72,20 +72,27 @@ const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before shard
  *     a daily mean, and selection walks toward pools whose recent activity most
  *     exceeds their mean.
  *
- * The second error is larger than the first, so the plan overruns despite each
- * delivery being cheaper than believed. At 6:
+ * ## This number now means what it says
  *
- *     13.5 deliveries/min → 18,819/day → ~610,000 this cycle (61%)
+ * The 2.25x/2.67x gap moved into `ESTIMATE_INFLATION` in pool-budget.ts, which
+ * divides the asked-for budget before spending it. So this is DELIVERIES PER
+ * MINUTE as they actually arrive, and the affordability arithmetic can be
+ * applied directly rather than guessed around:
  *
- * Not the ~40% this comment recommends, because 45,664 credits are already
- * spent and cutting to 4 would roughly halve the trade sample that
- * `traderConcentration` needs. 61% keeps burst room and keeps the data.
+ *     1,000,000 credits ÷ 31 days ÷ 1440 min = 22.4 deliveries/min
+ *     at 1 credit per delivery (helius.dev/docs/billing/plans)
  *
- * ⚠️ The 2.25x is a single reading at ONE budget. Because the ratio bends,
- * lowering the budget should lower the ratio too — so 6 may well land under
- * 61%. RE-MEASURE before trusting the projection above.
+ * 15 leaves a third of the plan as headroom for bursts and for the RPC/DAS
+ * share (currently 1.7%). It is also roughly what the old `6` was producing in
+ * reality — 16.0/min measured — so this is a truthful re-labelling of the
+ * status quo, not a traffic increase.
+ *
+ * ⚠️ RE-MEASURE after changing this, and fix ESTIMATE_INFLATION if the ratio
+ * has moved: `bun scripts/dev/helius-usage.mjs` for credits, and
+ * `node scripts/cf/zone-analytics.mjs --path /api/webhooks/helius-trades` for
+ * the delivery rate. Two readings a full day apart, not ten minutes.
  */
-const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 6) || 0);
+const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 15) || 0);
 
 /**
  * A pool quieter than this is watched for nothing: it never accumulates the

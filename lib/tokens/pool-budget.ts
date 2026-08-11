@@ -42,6 +42,30 @@
 /** Measured 2026-08-09: deliveries under ANY ÷ actual swap rate. */
 export const ANY_MULTIPLIER = 5.3;
 
+/**
+ * How much busier a chosen pool really is than `txns24h / 1440` predicts.
+ *
+ * Measured on production 2026-08-11: `BUDGET_PER_MIN = 6` produced **16.0
+ * deliveries/min** (Cloudflare, 6h window, after the hourly sync had applied
+ * it). 16.0 / 6 = 2.67. An earlier reading at budget 12 gave 27.0/min = 2.25.
+ *
+ * Two reasons the estimate runs low, and both push the same way:
+ *   - `txns24h` is a 24-HOUR MEAN. Selection walks cheapest-first, so it admits
+ *     precisely the pools whose recent activity most exceeds their daily mean.
+ *   - a "transaction" in GeckoTerminal's count and a webhook DELIVERY are not
+ *     the same unit.
+ *
+ * Correcting here rather than by hand-tuning the budget is the point: it makes
+ * `budgetPerMin` mean deliveries per minute, so the affordability arithmetic in
+ * CLAUDE.md — 1,000,000 credits ÷ 30 ÷ 1440 = 23 deliveries/min, at 1 credit
+ * per delivery — can be applied directly instead of guessed at.
+ *
+ * ⚠️ Two samples, at two budgets. Re-measure after any change to selection, and
+ * prefer the higher observed ratio: under-spending costs coverage, overspending
+ * costs the whole plan.
+ */
+export const ESTIMATE_INFLATION = 2.7;
+
 export interface PoolCandidate {
     poolAddress: string | null;
     /** Swaps in the last 24h — GeckoTerminal's count, the basis for the estimate. */
@@ -59,7 +83,8 @@ export interface BudgetOptions {
 
 export interface PoolSelection {
     addresses: string[];
-    /** Estimated deliveries/min for the chosen set. */
+    /** Estimated deliveries/min for the chosen set, corrected by
+     *  ESTIMATE_INFLATION — i.e. what this should actually produce. */
     estPerMin: number;
     /** Candidates skipped for being below the activity floor. */
     tooQuiet: number;
@@ -84,8 +109,16 @@ export function selectPoolsWithinBudget(
     candidates: readonly PoolCandidate[],
     opts: BudgetOptions,
 ): PoolSelection {
-    const budget = Number.isFinite(opts.budgetPerMin) ? Math.max(0, opts.budgetPerMin) : 0;
-    if (budget <= 0) return { addresses: [], estPerMin: 0, tooQuiet: 0, tooBusy: 0 };
+    const asked = Number.isFinite(opts.budgetPerMin) ? Math.max(0, opts.budgetPerMin) : 0;
+    if (asked <= 0) return { addresses: [], estPerMin: 0, tooQuiet: 0, tooBusy: 0 };
+
+    // Spend a SMALLER estimated budget so the ACTUAL rate lands on what was
+    // asked for. The correction belongs here, not in poolCostPerMin: a pool's
+    // cost is its swap rate, a fact about the pool, while the gap between
+    // estimate and reality is a fact about how this function CHOOSES — it walks
+    // cheapest-first, which is exactly the order that admits pools whose recent
+    // activity most exceeds their daily mean. See ESTIMATE_INFLATION.
+    const budget = asked / ESTIMATE_INFLATION;
 
     let tooQuiet = 0;
     const priced = candidates

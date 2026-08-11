@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
     ANY_MULTIPLIER,
+    ESTIMATE_INFLATION,
     poolCostPerMin,
     selectPoolsWithinBudget,
 } from "@/lib/tokens/pool-budget";
@@ -63,11 +64,31 @@ describe("selectPoolsWithinBudget", () => {
     });
 
     test("cheapest-first maximises how many pools fit", () => {
-        const sel = selectPoolsWithinBudget(BOARD, opts());
+        // The budget is asked-for DELIVERIES, and selection divides by
+        // ESTIMATE_INFLATION to get the estimate it may spend — so a raw "12"
+        // buys ~12/2.7 of estimated rate. Scaling by the constant keeps this
+        // test about ORDERING, which is its subject, rather than about the
+        // calibration factor, which has its own coverage below.
+        const sel = selectPoolsWithinBudget(BOARD, opts({ budgetPerMin: 12 * ESTIMATE_INFLATION }));
         // GTAVI (0.94/min) and TROLL (1.0) are the cheapest above the floor.
         expect(sel.addresses).toContain("gtavi");
         expect(sel.addresses).toContain("troll");
         expect(sel.addresses.length).toBeGreaterThanOrEqual(4);
+    });
+
+    test("the budget is what should ACTUALLY arrive, not the raw estimate", () => {
+        // The whole point of ESTIMATE_INFLATION: `budgetPerMin` is deliveries
+        // per minute as measured, so CLAUDE.md's affordability arithmetic
+        // (1,000,000 credits ÷ 30 ÷ 1440 = 23/min at 1 credit each) can be used
+        // directly. Before this, asking for 6 produced a measured 16.
+        const sel = selectPoolsWithinBudget(BOARD, opts({ budgetPerMin: 12 }));
+        const rawEstimate = sel.addresses
+            .map((a) => BOARD.find((p) => p.poolAddress === a)!)
+            .reduce((sum, p) => sum + poolCostPerMin(p.txns24h, "SWAP"), 0);
+        // Spends about a third of the asked-for rate in ESTIMATED terms…
+        expect(rawEstimate).toBeLessThanOrEqual(12 / ESTIMATE_INFLATION + 0.001);
+        // …so that reality, which runs ~2.7x hot, lands near 12.
+        expect(rawEstimate * ESTIMATE_INFLATION).toBeLessThanOrEqual(12.001);
     });
 
     test("never exceeds the budget, whatever the board looks like", () => {

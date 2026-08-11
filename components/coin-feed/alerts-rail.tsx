@@ -523,33 +523,6 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
     return (
         <div className={cn("flex min-h-0 flex-1 flex-col rounded-none", className)}>
 
-            {/* "n new" pill. h-0 wrapper so it floats over the list instead of
-                pushing it down — a pill that reflows the feed would move the row
-                under the cursor, which is the exact thing the pin prevents. */}
-            <div className="relative z-20 h-0 overflow-visible">
-                <AnimatePresence>
-                    {newCount > 0 && !atTop && (
-                        <motion.div
-                            key="new-alerts-pill"
-                            initial={{ y: -40, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: -40, opacity: 0 }}
-                            transition={{ type: "spring", stiffness: 700, damping: 40, mass: 0.4 }}
-                            className="flex justify-center pt-1.5"
-                        >
-                            <button
-                                type="button"
-                                onClick={loadNewAlerts}
-                                className="flex cursor-pointer items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-black transition-transform active:scale-95"
-                            >
-                                <HugeiconsIcon icon={ArrowUp02Icon} className="size-3.5" strokeWidth={2.5} />
-                                {newCount === 99 ? "99+" : newCount} new
-                            </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-
             {/* The list, in the shared bordered/squircled rail shell — the same
                 box home's video rail puts its list in. It wraps the ITEMS only;
                 the tabs above stay outside it.
@@ -568,6 +541,38 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                 this was bottom-rounded, which is what put a rule under the tabs
                 — see the header prop's note in rail-shell. */}
             <RailShell className="mb-7" radius={25} bordered header={railHeader}>
+                {/* "n new" pill. h-0 wrapper so it floats OVER the list rather
+                    than pushing it down — a pill that reflows the feed would move
+                    the row under the cursor, which is the exact thing the pin
+                    prevents.
+
+                    INSIDE the shell, deliberately. It used to render above it,
+                    where the same h-0 overflow landed on the TABS and covered
+                    them. Floating over rows is the point; floating over the
+                    controls is a bug. */}
+                <div className="relative z-20 h-0 overflow-visible">
+                    <AnimatePresence>
+                        {newCount > 0 && !atTop && (
+                            <motion.div
+                                key="new-alerts-pill"
+                                initial={{ y: -40, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -40, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 700, damping: 40, mass: 0.4 }}
+                                className="flex justify-center pt-1.5"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={loadNewAlerts}
+                                    className="flex cursor-pointer items-center gap-1 rounded-full bg-twitter2 px-3 py-1.5 text-[12px] font-bold text-flexwhite/95 transition-transform active:scale-95"
+                                >
+                                    <HugeiconsIcon icon={ArrowUp02Icon} className="size-3.5" strokeWidth={2.5} />
+                                    {newCount === 99 ? "99+" : newCount} new
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
                 {/* Inline bar when already parked at the top — no need to float.
                     Inside the shell, above the scroller: it belongs to the list
                     it's offering to extend, so it sits within the same bordered
