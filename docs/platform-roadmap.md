@@ -173,8 +173,28 @@ studio.watchparty.xyz (route group in the main app, host-rewritten).
   product with per-rule cost controls (X's "must include ≥1 standalone
   operator" rule).
 - **Surfaces:** already built (Phase 4) — they populate once this ships.
-- **Status:** not built; this is real new infrastructure + a product decision on
-  metering, not a UI.
+- **Status (transport decided + shipped, pull-first):** the metering decision was
+  made — **cursor-pull, not a socket firehose** — because it's the production-
+  correct transport on Workers/OpenNext and webhooks already cover server-to-
+  server push. Shipped:
+  - **Rule engine** (`lib/developer/stream-rules.ts`, 18 tests): X's grammar over
+    watchparty's structured own-account events (AND-of-terms, negation, exact
+    `field:value` operators, bare-keyword substring, OR across an account's
+    rules). The ≥1-positive-term rule is enforced at write time AND match time —
+    it's the metering safeguard (an all-negation rule = the whole firehose).
+    `developerStreamRules.add` now validates through it.
+  - **Delivery queue + pull** (`developer_stream_deliveries`, bigserial cursor):
+    the event bus (`dispatchDeveloperEvent`) feeds both channels — webhook push
+    and the rule-filtered queue — from one payload build. `GET /api/stream/events?
+    since=<seq>` is x-api-key'd (same header the 402 gate meters), at-least-once,
+    replayable 3 days. Console Connections shows the live endpoint + throughput;
+    Event subscriptions shows a live match tail.
+- **Deferred:** the **WebSocket/SSE push** transport — built once on the shared
+  chat/video realtime layer (PartyKit/Durable Objects), riding this same queue,
+  scoped deliberately per the realtime-architecture note. Worth checking whether
+  the container runtime can hold long-lived connections before reaching for a DO.
+  Per-rule cost controls beyond the account-bounded default price are a later
+  metering knob.
 
 ## Phase 10 · Studio Media upload/compose + Insights
 - **Goal:** finish the Media Studio parity items.
