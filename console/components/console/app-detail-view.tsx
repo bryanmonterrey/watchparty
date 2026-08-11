@@ -322,6 +322,115 @@ function KeysCard({ appId }: { appId: string }) {
   );
 }
 
+function BotTokenPanel({ token, onDone }: { token: string; onDone: () => void }) {
+  return (
+    <div className="rounded-lg border bg-muted/40 p-3">
+      <p className="text-xs text-muted-foreground">
+        Your bot token — shown once. Send it as{" "}
+        <span className="font-mono">Authorization: Bot &lt;token&gt;</span>. Store
+        it safely; reset is the only recovery.
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <code className="min-w-0 flex-1 select-all break-all font-mono text-xs">{token}</code>
+        <CopyButton value={token} />
+      </div>
+      <div className="mt-2 flex justify-end">
+        <Button size="sm" variant="outline" onClick={onDone}>
+          I saved it
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function BotCard({ appId }: { appId: string }) {
+  const utils = trpc.useUtils();
+  const bot = trpc.developerBots.get.useQuery({ appId });
+  const [freshToken, setFreshToken] = React.useState<string | null>(null);
+  const [confirmingReset, setConfirmingReset] = React.useState(false);
+  const [confirmingRemove, setConfirmingRemove] = React.useState(false);
+
+  const create = trpc.developerBots.create.useMutation({
+    onSuccess: (d) => {
+      setFreshToken(d.token);
+      void utils.developerBots.get.invalidate({ appId });
+    },
+  });
+  const reset = trpc.developerBots.resetToken.useMutation({
+    onSuccess: (d) => {
+      setFreshToken(d.token);
+      setConfirmingReset(false);
+    },
+  });
+  const remove = trpc.developerBots.remove.useMutation({
+    onSuccess: () => {
+      setConfirmingRemove(false);
+      void utils.developerBots.get.invalidate({ appId });
+    },
+  });
+
+  return (
+    <div className="rounded-xl border bg-card p-4 sm:p-5">
+      <p className="text-sm font-medium">Bot</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        A bot user for this app — one per app. It authenticates with a token
+        (never a login) and acts as its own identity.
+      </p>
+
+      {freshToken ? (
+        <div className="mt-3">
+          <BotTokenPanel token={freshToken} onDone={() => setFreshToken(null)} />
+        </div>
+      ) : bot.isPending ? (
+        <div className="mt-3 h-10 animate-pulse rounded-lg bg-muted/40" />
+      ) : bot.data ? (
+        <div className="mt-3 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip>{bot.data.name ?? "Bot"}</Chip>
+            {bot.data.username ? (
+              <span className="font-mono text-xs text-muted-foreground">@{bot.data.username}</span>
+            ) : null}
+            <div className="flex-1" />
+            {confirmingReset ? (
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="destructive" disabled={reset.isPending} onClick={() => reset.mutate({ appId })}>
+                  {reset.isPending ? "Resetting…" : "Confirm reset"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmingReset(false)}>Keep</Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setConfirmingReset(true)}>
+                Reset token
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>Created {formatDate(bot.data.createdAt)}</span>
+            {confirmingRemove ? (
+              <span className="flex items-center gap-2">
+                <Button size="sm" variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ appId })}>
+                  {remove.isPending ? "Removing…" : "Confirm remove"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmingRemove(false)}>Keep</Button>
+              </span>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={() => setConfirmingRemove(true)}>Remove bot</Button>
+            )}
+          </div>
+          {reset.error ? <p className="text-xs text-destructive">{reset.error.message}</p> : null}
+        </div>
+      ) : (
+        <div className="mt-3">
+          <Button size="sm" disabled={create.isPending} onClick={() => create.mutate({ appId })}>
+            {create.isPending ? "Creating…" : "Create bot"}
+          </Button>
+          {create.error ? <p className="mt-2 text-xs text-destructive">{create.error.message}</p> : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DangerZone({ app }: { app: App }) {
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -414,6 +523,7 @@ export function AppDetailView({ id }: { id: string }) {
           <IdentityCard app={app.data} />
           <CredentialsCard app={app.data} />
           <KeysCard appId={app.data.id} />
+          <BotCard appId={app.data.id} />
           <DangerZone app={app.data} />
         </>
       )}

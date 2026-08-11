@@ -41,6 +41,7 @@ export const user = pgTable("user", {
   banned: boolean("banned"),
   banReason: text("banReason"),
   banExpires: timestamp("banExpires"),
+  isBot: boolean("is_bot").default(false).notNull(),   // developer-platform bot user (APP badge); backed by developer_bots (one per app)
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()

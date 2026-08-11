@@ -45,6 +45,8 @@ import { developerWebhooksRouter } from "./developerWebhooks";
 import { developerAppsRouter } from "./developerApps";
 import { developerStreamRulesRouter } from "./developerStreamRules";
 import { developerAnnouncementsRouter } from "./developerAnnouncements";
+import { developerBotsRouter } from "./developerBots";
+import { botRouter } from "./bot";
 
 /**
  * Root application router
@@ -95,6 +97,8 @@ export const appRouter = router({
     developerApps: developerAppsRouter,
     developerStreamRules: developerStreamRulesRouter,
     developerAnnouncements: developerAnnouncementsRouter,
+    developerBots: developerBotsRouter,
+    bot: botRouter,
 });
 
 /**

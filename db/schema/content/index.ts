@@ -42,3 +42,4 @@ export * from "./developer-app";
 export * from "./developer-stream-rule";
 export * from "./developer-announcement";
 export * from "./stream-session";
+export * from "./developer-bot";
