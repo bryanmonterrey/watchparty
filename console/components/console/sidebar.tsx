@@ -67,7 +67,7 @@ const NAV_GROUPS: {
   {
     label: "Access",
     items: [
-      { icon: Folder01Icon, label: "Projects", href: "/projects", soon: true },
+      { icon: Folder01Icon, label: "Projects", href: "/projects" },
       { icon: DashboardSquare01Icon, label: "Apps", href: "/apps" },
       { icon: Key01Icon, label: "Keys", href: "/keys" },
       { icon: Analytics01Icon, label: "Usage", href: "/usage" },
@@ -76,10 +76,10 @@ const NAV_GROUPS: {
   {
     label: "Toolbox",
     items: [
-      { icon: ZapIcon, label: "Event subscriptions", href: "/event-subscriptions", soon: true },
+      { icon: ZapIcon, label: "Event subscriptions", href: "/event-subscriptions" },
       { icon: WebhookIcon, label: "Webhooks", href: "/webhooks" },
-      { icon: ConnectIcon, label: "Connections", href: "/connections", soon: true },
-      { icon: FilterIcon, label: "Streaming rules", href: "/streaming-rules", soon: true },
+      { icon: ConnectIcon, label: "Connections", href: "/connections" },
+      { icon: FilterIcon, label: "Streaming rules", href: "/streaming-rules" },
     ],
   },
   {

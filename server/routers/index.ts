@@ -43,6 +43,8 @@ import { trendingRouter } from "./trending";
 import { apiKeysRouter } from "./apiKeys";
 import { developerWebhooksRouter } from "./developerWebhooks";
 import { developerAppsRouter } from "./developerApps";
+import { developerStreamRulesRouter } from "./developerStreamRules";
+import { developerAnnouncementsRouter } from "./developerAnnouncements";
 
 /**
  * Root application router
@@ -91,6 +93,8 @@ export const appRouter = router({
     apiKeys: apiKeysRouter,
     developerWebhooks: developerWebhooksRouter,
     developerApps: developerAppsRouter,
+    developerStreamRules: developerStreamRulesRouter,
+    developerAnnouncements: developerAnnouncementsRouter,
 });
 
 /**

@@ -1,13 +1,8 @@
-import { EmptyView } from "@/components/console/empty-view";
-import { Folder01Icon } from "@hugeicons/core-free-icons";
+import { redirect } from "next/navigation";
 
+// No Projects layer (docs/console-execution-plan.md decision — X deleted
+// theirs; credentials attach to Apps). The nav item stays for muscle memory
+// but sends you to Apps.
 export default function ProjectsPage() {
-  return (
-    <EmptyView
-      title="Projects"
-      tagline="A project decides which parts of the watchparty API your apps can call."
-      icon={Folder01Icon}
-      emptyLine="No projects found for this account."
-    />
-  );
+  redirect("/apps");
 }
