@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 /**
- * Call every PUBLIC tRPC query on a deployment, signed out, and report 5xx.
+ * Call every tRPC QUERY on a deployment, signed out, and report 5xx.
  *
  *   bun scripts/dev/probe-public-api.ts                     # production
  *   bun scripts/dev/probe-public-api.ts --base http://localhost:3001
+ *   bun scripts/dev/probe-public-api.ts --gated             # protected too
  *
  * ## What it is looking for
  *
@@ -25,6 +26,14 @@
  * safely. Signed-out is also the state most likely to be under-tested — the
  * comments 500 existed precisely because nobody exercised the anonymous path.
  *
+ * ## --gated
+ *
+ * Also probes protected/admin/premium QUERIES. Those must answer UNAUTHORIZED
+ * (401) to an anonymous caller; a 5xx means the handler ran before the auth
+ * middleware could stop it, which is both an error-noise problem and a hint
+ * that something reads `ctx.user` without it being guaranteed. Still queries
+ * only — a mutation is never called, signed in or out.
+ *
  * Requests carry same-origin headers because /api/trpc answers 402 to external
  * callers by design (lib/api-pricing.ts). This is the app's own API.
  */
@@ -33,6 +42,7 @@ import { readdirSync, readFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
 const BASE = args.includes("--base") ? args[args.indexOf("--base") + 1] : "https://watchparty.xyz";
+const GATED = args.includes("--gated");
 
 /** Router file → mounted key in server/routers/index.ts. Several merge into `content`. */
 const MOUNT: Record<string, string> = Object.fromEntries(
@@ -49,20 +59,22 @@ const MOUNT: Record<string, string> = Object.fromEntries(
         }),
 );
 
-const procs: { file: string; name: string; needsInput: boolean }[] = [];
+const procs: { file: string; name: string; needsInput: boolean; kind: string }[] = [];
 for (const f of readdirSync("server/routers").filter((f) => f.endsWith(".ts") && f !== "index.ts")) {
     const src = readFileSync(`server/routers/${f}`, "utf8");
     const parts = src.split(/\n {4}(\w+):\s*(public|protected|admin|premium)\w*Procedure/);
     for (let i = 1; i < parts.length; i += 3) {
         const [name, kind, body] = [parts[i], parts[i + 1], (parts[i + 2] || "").slice(0, 2500)];
-        if (kind !== "public" || !/\.query\(/.test(body)) continue;   // queries only, never mutations
-        procs.push({ file: f.replace(".ts", ""), name, needsInput: /\.input\(/.test(body) });
+        if (!/\.query\(/.test(body)) continue;                       // queries only, never mutations
+        if (kind !== "public" && !GATED) continue;
+        procs.push({ file: f.replace(".ts", ""), name, needsInput: /\.input\(/.test(body), kind });
     }
 }
 
 const headers = { origin: BASE, referer: `${BASE}/home` };
 const failures: string[] = [];
 let ok = 0, rejected = 0, unmapped = 0;
+const gatedCount = procs.filter((p) => p.kind !== "public").length;
 
 for (const p of procs) {
     const mount = MOUNT[p.file];
@@ -83,7 +95,8 @@ for (const p of procs) {
 }
 
 console.log(`${BASE}`);
-console.log(`probed ${procs.length - unmapped} public queries — ${ok} answered 200, ${rejected} rejected the probe input (expected), ${failures.length} returned 5xx`);
+const label = GATED ? `${procs.length - unmapped} queries (${gatedCount} auth-gated)` : `${procs.length - unmapped} public queries`;
+console.log(`probed ${label} — ${ok} answered 200, ${rejected} rejected (4xx: bad input or unauthorized, both expected), ${failures.length} returned 5xx`);
 if (unmapped) console.log(`(${unmapped} skipped: router file not mounted in index.ts)`);
 for (const f of failures) console.log(`  FAIL ${f}`);
 process.exit(failures.length ? 1 : 0);
