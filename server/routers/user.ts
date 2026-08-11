@@ -15,6 +15,7 @@ import { effectiveVerifiedTier } from '@/lib/verified-tier';
 import { claimQueuedGiftForNewFollower } from '@/server/lib/gift-credits';
 import { dispatchDeveloperEvent } from '@/lib/developer/webhooks';
 import { socialLinksSchema } from '@/lib/profile/socials';
+import { TRPCError } from "@trpc/server";
 
 export const userRouter = router({
     // Live availability check for onboarding — same uniqueness source of
@@ -474,7 +475,15 @@ export const userRouter = router({
         }))
         .query(async ({ input, ctx }) => {
             const { userId, username } = input;
-            if (!userId && !username) throw new Error("userId or username is required");
+            // BAD_REQUEST, not a bare Error. A plain throw becomes
+            // INTERNAL_SERVER_ERROR, so a caller that simply omitted both
+            // fields got a 500 — indistinguishable in logs and dashboards from
+            // the database being down. The zod schema can't express "at least
+            // one of these" without a refine, so the check lives here and must
+            // carry the right code itself.
+            if (!userId && !username) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "userId or username is required" });
+            }
 
             const targetUser = await db.query.user.findFirst({
                 where: userId ? eq(user.id, userId) : eq(user.username, username!),
