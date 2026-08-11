@@ -149,8 +149,27 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
 
-    // Check if user already has a wallet
-    if (session.user.wallet_address) {
+    // Already has a wallet? Ask the DATABASE, not the session.
+    //
+    // `session.user.wallet_address` comes from the customSession callback in
+    // lib/auth/server.ts, which serves it out of `withCache("user:profile:…")`.
+    // A cached value that disagrees with the row DEADLOCKS the user: this
+    // endpoint refuses because the cache says a wallet exists, while
+    // `wallet.frostSetup` refuses with "Wallet not found" because the row says
+    // it does not. Neither path is recoverable from the UI, and the user is
+    // locked out of messages permanently — the encryption gate needs a share
+    // that can now never be created.
+    //
+    // Observed on a dev fixture whose cache held a wallet address while
+    // `user.wallet_address` was null. One row of ground truth costs a query
+    // and removes the whole class.
+    const [current] = await db
+      .select({ wallet_address: user.wallet_address })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (current?.wallet_address) {
       return NextResponse.json(
         { error: "User already has a wallet" },
         { status: 400 }
