@@ -1,4 +1,10 @@
-# Next phases
+# Verification & follow-ups
+
+**Not the product roadmap.** That is `docs/platform-roadmap.md` — console,
+webhooks, app registry, studio, streaming, phases 0-12. This is the engineering
+queue left behind by the defect work of 2026-08-11: what shipped unverified,
+what is blocked on what, and the two decisions that are the owner's. The two
+documents are orthogonal; neither reorders the other.
 
 Written 2026-08-11, after a session that fixed fourteen defects found by
 measurement rather than by reading code. Ordered so each phase unblocks the
