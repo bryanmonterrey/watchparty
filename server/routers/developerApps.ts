@@ -4,6 +4,8 @@ import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { developerApps } from "@/db/schema/content/developer-app";
+import { developerBots } from "@/db/schema/content/developer-bot";
+import { user } from "@/db/schema/auth/user";
 import { randHex } from "@/lib/api-gate";
 import { generateAppKeypair } from "@/lib/developer/app-keys";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
@@ -182,6 +184,17 @@ export const developerAppsRouter = router({
                 ))
                 .returning({ id: developerApps.id });
             if (!updated.length) throw new TRPCError({ code: "NOT_FOUND" });
+            // Deleting the app revokes its bot: drop the bot's user row (cascades
+            // to developer_bots), so the token stops resolving and no is_bot ghost
+            // account is left squatting a username. The app soft-deletes for audit;
+            // the bot hard-deletes because a credential the owner can no longer see
+            // or rotate (get/reset filter on the live app) must not keep working.
+            const [bot] = await db
+                .select({ botUserId: developerBots.botUserId })
+                .from(developerBots)
+                .where(eq(developerBots.appId, input.id))
+                .limit(1);
+            if (bot) await db.delete(user).where(eq(user.id, bot.botUserId));
             return { success: true };
         }),
 });

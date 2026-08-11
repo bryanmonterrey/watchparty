@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { developerBots } from "@/db/schema/content/developer-bot";
+import { developerApps } from "@/db/schema/content/developer-app";
 import { hmacHex, randHex } from "@/lib/api-gate";
 
 // Bot token: `wpb_<keyId>.<sig>` on the SAME proven scheme as the app's API
@@ -46,10 +47,17 @@ export async function resolveBotToken(token: string): Promise<{ userId: string; 
     if (!m) return null;
     const expect = (await hmacHex(secret, `bot:${m[1]}`)).slice(0, 32);
     if (!timingSafeEqHex(m[2], expect)) return null;
+    // Join developer_apps and require the app be live: a soft-deleted app's bot
+    // must stop authenticating the instant the app is removed, even if the row
+    // still exists (the owner can no longer see or rotate that token — get/reset
+    // filter on isNull(deletedAt) — so leaving it valid would strand a live
+    // credential the owner can't revoke). remove() also deletes the bot row, so
+    // this is defense-in-depth against a bot outliving its app by any path.
     const [row] = await db
         .select({ botUserId: developerBots.botUserId, appId: developerBots.appId })
         .from(developerBots)
-        .where(eq(developerBots.keyId, m[1]))
+        .innerJoin(developerApps, eq(developerApps.id, developerBots.appId))
+        .where(and(eq(developerBots.keyId, m[1]), isNull(developerApps.deletedAt)))
         .limit(1);
     return row ? { userId: row.botUserId, appId: row.appId } : null;
 }

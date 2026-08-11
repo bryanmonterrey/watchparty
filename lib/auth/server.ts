@@ -457,10 +457,23 @@ export const auth = betterAuth({
       create: {
         before: async (sessionData: any, ctx: any) => {
           if (sessionData.userId) {
-            await db
+            const [updated] = await db
               .update(user)
               .set({ last_signed_in: new Date(), updatedAt: new Date() })
-              .where(eq(user.id, sessionData.userId));
+              .where(eq(user.id, sessionData.userId))
+              .returning({ isBot: user.isBot });
+
+            // Bot accounts authenticate ONLY via their `Bot <token>` on the API
+            // (server/trpc.ts) and must never hold a browser session. The bot's
+            // user row carries emailVerified:true and a deterministic address, and
+            // emailOTP here is passwordless — so without this refusal, guessing the
+            // synthetic bot email could mint an OTP session AS the bot. Throwing in
+            // the session-create hook closes EVERY login path (OTP/OAuth/wallet) at
+            // once, instead of relying on the bots-subdomain mailbox never
+            // delivering. Reuses the update above, so it costs no extra query.
+            if (updated?.isBot) {
+              throw new APIError("UNAUTHORIZED", { message: "Invalid user" });
+            }
 
             // `ctx?.` for the same reason as the user-create hook above: a
             // session made outside an HTTP request (scripts, seeds) gets no

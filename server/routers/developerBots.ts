@@ -75,21 +75,27 @@ export const developerBotsRouter = router({
             const botUserId = `bot_${randHex(12)}`;
             const { keyId, token } = await mintBotToken();
 
-            // A real user row so the bot composes with chat/communities. Email is
-            // synthetic + unique; is_bot marks it (APP badge, and never a login).
-            await db.insert(user).values({
-                id: botUserId,
-                name: `${app.name} bot`,
-                email: `bot-${botUserId}@bots.watchparty.xyz`,
-                emailVerified: true,
-                gender: false,
-                isBot: true,
-            });
-            await db.insert(developerBots).values({
-                botUserId,
-                appId: input.appId,
-                ownerId: ctx.user.id,
-                keyId,
+            // One transaction: the bot user row and its developer_bots link land
+            // together or not at all. Without this, a failure on the second insert
+            // (or a race losing the unique app_id) would strand an is_bot user row
+            // with no link — a ghost account squatting a username, invisible to the
+            // owner. A real user row so the bot composes with chat/communities;
+            // email is synthetic + unique; is_bot marks it (APP badge, never a login).
+            await db.transaction(async (tx) => {
+                await tx.insert(user).values({
+                    id: botUserId,
+                    name: `${app.name} bot`,
+                    email: `bot-${botUserId}@bots.watchparty.xyz`,
+                    emailVerified: true,
+                    gender: false,
+                    isBot: true,
+                });
+                await tx.insert(developerBots).values({
+                    botUserId,
+                    appId: input.appId,
+                    ownerId: ctx.user.id,
+                    keyId,
+                });
             });
             return { botUserId, token };
         }),
@@ -98,6 +104,9 @@ export const developerBotsRouter = router({
     resetToken: protectedProcedure
         .input(z.object({ appId: z.string() }))
         .mutation(async ({ ctx, input }) => {
+            if (!process.env.API_GATE_SECRET) {
+                throw new TRPCError({ code: "PRECONDITION_FAILED", message: "The developer platform is not enabled" });
+            }
             await throttle(ctx.user.id);
             await ownedApp(ctx.user.id, input.appId);
             const { keyId, token } = await mintBotToken();
