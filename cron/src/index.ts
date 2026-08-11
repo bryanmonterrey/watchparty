@@ -98,6 +98,14 @@ export default {
             // Weekly finish snapshots — route no-ops outside Monday 00:00–01:00
             // UTC, then writes the just-ended ISO week's board finishes once.
             ctx.waitUntil(call(env, "/api/cron/weekly-finishes"));
+            // Close polls whose endsAt has passed, and drop expired stories.
+            // Both were also never dispatched (see publish-scheduled above).
+            // Ten-minute granularity is fine for both: a poll closing a few
+            // minutes late changes nothing, and story expiry is a privacy
+            // EXPECTATION rather than a guarantee to the minute — but "never"
+            // is not late, it is broken.
+            ctx.waitUntil(call(env, "/api/cron/end-polls"));
+            ctx.waitUntil(call(env, "/api/cron/expire-stories"));
         } else if (event.cron === "* * * * *") {
             // Every minute — the CF cron floor. All three are cheap bounded
             // API-call passes; in-app swaps additionally trigger instant
@@ -112,11 +120,25 @@ export default {
             // Its budget and coin-alerts' deliberately sum under GeckoTerminal's
             // shared ~30 calls/min ceiling — see lib/coin-feed/geckoterminal.ts.
             ctx.waitUntil(call(env, "/api/cron/trending-sync"));
+            // Scheduled posts. Every minute, not */10, because a post set for
+            // 15:00 should appear at 15:00 — a ten-minute window is a visible
+            // broken promise. One indexed UPDATE, so it is as cheap as the rest.
+            //
+            // This route EXISTED and was never dispatched: 18 routes under
+            // app/api/cron, 14 called here. Cloudflare analytics showed zero
+            // requests to it in 24h. Nothing failed loudly; scheduled posts
+            // simply would have sat in `scheduled` forever.
+            ctx.waitUntil(call(env, "/api/cron/publish-scheduled"));
             // Uptime monitor — probes the live site (incl. a DB-touching tRPC
             // query) and emails on down/recovered transitions. See monitor.ts.
             ctx.waitUntil(runMonitor(env));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
+            // NOT scheduled here yet: /api/cron/send-fee-sweep, whose own header
+            // says "schedule alongside premium-collect". It SIGNS TRANSACTIONS
+            // from user wallets to collect accrued EVM send fees, and turning an
+            // unattended money-mover on is the owner's call, not a cleanup. It
+            // is a no-op today (no users), so nothing is being lost by waiting.
         }
     },
 } satisfies ExportedHandler<Env>;
