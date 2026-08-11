@@ -129,11 +129,26 @@ studio.watchparty.xyz (route group in the main app, host-rewritten).
   header — no cost to app traffic); a permissions model.
 - **Surfaces:** console app-detail **Bot** tab (token view-once, install toggle,
   permission checkboxes with a live integer).
-- **Status:** **designed** (captured in `developer-platform` memory), not built —
-  set aside when the studio work took priority. The one page-shaped piece is
-  the console's Agent-adjacent "bots" surface.
+- **Status:** **shipped.** Identity + `wpb_` HMAC-keyed token (same proven
+  scheme as the API keys, `lib/developer/bot-auth.ts`), fail-closed context
+  resolution (`server/trpc.ts` — bots never get a session; `botProcedure` is the
+  only door), and the console Bot tab (view-once token, reset, remove). Second
+  half shipped too: `developer_bot_installs` + a per-community permissions
+  bitfield (`lib/developer/bot-permissions.ts`), owner-facing install/
+  setPermissions/uninstall (gated on app-ownership AND community owner-or-ADMIN),
+  bot-facing `installs` + `listMembers` (gated on `READ_MEMBERS`), and the
+  console permission toggles. Bits vendored to the console with a drift test.
+- **Hardening (re-review pass):** app-delete revokes the bot (auth-layer join +
+  user-row delete, no ghost account), `is_bot` users are refused a session at
+  `session.create.before` (not left to DNS), create() is transactional. Adversarial
+  auth review couldn't break token verify, hot-path gating, or IDOR.
+- **Deferred within the phase:** only `READ_MEMBERS` has an enforcing bot
+  endpoint so far; `SEND_MESSAGES`/`MANAGE_COIN_ALERTS`/`MODERATE` are defined
+  bits awaiting their botProcedure capabilities (each added one at a time, so a
+  bot can do nothing not explicitly opted in). A live per-bot smoke is the last
+  verification step.
 - **Risk/notes:** token auth touches the context hot path; the fail-closed guard
-  is the load-bearing safety property. Needs live verification per bot.
+  is the load-bearing safety property.
 
 ## Phase 9 · Real-time streaming engine
 - **Goal:** make Streaming rules, Connections, and Event subscriptions *live*.
