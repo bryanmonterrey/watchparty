@@ -267,4 +267,68 @@ export const developerBotsRouter = router({
                 ));
             return { success: true };
         }),
+
+    // ─── Community-owner view (evict any bot from a community you control) ────
+    // The endpoints above are keyed on appId — the BOT owner's view. These are
+    // keyed on serverId and gated by assertCommunityAdmin — the COMMUNITY owner's
+    // view. Without them a community owner could neither see nor remove a bot that
+    // another admin installed (and can't reach the appId-scoped uninstall, since
+    // they don't own the app): a demoted/removed admin's bot would keep its
+    // granted access with the resource owner powerless to revoke it. This is the
+    // Discord-shaped fix — the server owner always holds the eviction button.
+
+    /** Bots installed in a community the caller owns or admins, with their perms. */
+    communityBots: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await assertCommunityAdmin(ctx.user.id, input.serverId);
+            const rows = await db
+                .select({
+                    botUserId: developerBotInstalls.botUserId,
+                    permissions: developerBotInstalls.permissions,
+                    createdAt: developerBotInstalls.createdAt,
+                    name: user.name,
+                    username: user.username,
+                })
+                .from(developerBotInstalls)
+                .innerJoin(user, eq(user.id, developerBotInstalls.botUserId))
+                .where(eq(developerBotInstalls.serverId, input.serverId));
+            return rows.map((r) => ({ ...r, permissionNames: permissionNames(r.permissions) }));
+        }),
+
+    /** Evict a bot from a community you own or admin — regardless of who installed
+     *  it or who owns the bot's app. */
+    communityUninstall: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), botUserId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            await assertCommunityAdmin(ctx.user.id, input.serverId);
+            await db
+                .delete(developerBotInstalls)
+                .where(and(
+                    eq(developerBotInstalls.serverId, input.serverId),
+                    eq(developerBotInstalls.botUserId, input.botUserId),
+                ));
+            return { success: true };
+        }),
+
+    /** Change a bot's permissions in a community you own or admin (resource-owner
+     *  view — the community owner can tighten what a bot may do, not only evict). */
+    communitySetPermissions: protectedProcedure
+        .input(z.object({ serverId: z.string().uuid(), botUserId: z.string(), permissions: z.number().int().nonnegative() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            await assertCommunityAdmin(ctx.user.id, input.serverId);
+            const permissions = sanitizePermissions(input.permissions);
+            const updated = await db
+                .update(developerBotInstalls)
+                .set({ permissions, updatedAt: new Date() })
+                .where(and(
+                    eq(developerBotInstalls.serverId, input.serverId),
+                    eq(developerBotInstalls.botUserId, input.botUserId),
+                ))
+                .returning({ id: developerBotInstalls.id });
+            if (!updated.length) throw new TRPCError({ code: "NOT_FOUND", message: "That bot is not installed in this community" });
+            return { permissions, permissionNames: permissionNames(permissions) };
+        }),
 });

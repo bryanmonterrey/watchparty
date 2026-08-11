@@ -20,6 +20,13 @@ import { BOT_PERMISSIONS, hasPermission, permissionNames } from "@/lib/developer
 // cascade removes installs when a community is deleted, so a stale serverId
 // simply has no row).
 async function requireInstallPermission(botUserId: string, serverId: string, perm: number) {
+    // perm must be a real, single-or-combined capability bit. Guard perm === 0
+    // explicitly: hasPermission(bits, 0) is vacuously true (bits & 0 === 0), so a
+    // future capability that passed 0 here would be satisfied by ANY install row
+    // — fail-closed on that programming error rather than silently granting.
+    if (perm <= 0) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Unknown capability" });
+    }
     const [row] = await db
         .select({ permissions: developerBotInstalls.permissions })
         .from(developerBotInstalls)
