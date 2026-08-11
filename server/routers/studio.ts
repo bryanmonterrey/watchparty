@@ -8,6 +8,30 @@ import { posts } from "@/db/schema";
 // router is already past the file-size guard's line and grandfathered at its
 // current size, so new studio surfaces land here instead of growing it.
 export const studioRouter = router({
+    // The owner's full video library for the studio Library tab. Unlike content.
+    // getVideosByUser (public, capped at 20, published+public only), this is the
+    // creator's own management view: every video they own regardless of
+    // visibility or status, newest first.
+    getMyVideos: protectedProcedure
+        .input(z.object({ limit: z.number().min(1).max(100).default(60) }).optional())
+        .query(async ({ ctx, input }) => {
+            return db
+                .select({
+                    id: posts.id,
+                    title: posts.title,
+                    thumbnailUrl: posts.thumbnailUrl,
+                    duration: posts.duration,
+                    views: posts.views,
+                    visibility: posts.visibility,
+                    status: posts.status,
+                    createdAt: posts.createdAt,
+                })
+                .from(posts)
+                .where(and(eq(posts.userId, ctx.user.id), isNotNull(posts.videoUrl)))
+                .orderBy(desc(posts.createdAt))
+                .limit(input?.limit ?? 60);
+        }),
+
     // Per-video performance for the studio Insights tab: the owner's published
     // videos ranked by views, with engagement. Distinct from content.
     // getVideosByUser (public, profile rail, capped at 20) — this is the owner's

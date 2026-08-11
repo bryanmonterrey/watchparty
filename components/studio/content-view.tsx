@@ -157,11 +157,10 @@ function fmtDuration(sec: number | null): string | null {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// The Media-Studio Library (studio.x.com): a grid of the creator's videos.
+// The Media-Studio Library (studio.x.com): the creator's own videos — every
+// one they own, any visibility (studio.getMyVideos), not the public rail.
 function LibraryTab() {
-  const { data: session } = useAuthSession();
-  const userId = session?.user?.id;
-  const videos = trpc.content.getVideosByUser.useQuery({ userId: userId ?? "" }, { enabled: !!userId });
+  const videos = trpc.studio.getMyVideos.useQuery();
 
   if (videos.isPending) {
     return (
@@ -173,7 +172,7 @@ function LibraryTab() {
     );
   }
   if (videos.error) return <p className="py-6 text-center text-xs text-destructive">{videos.error.message}</p>;
-  if (!videos.data.videos.length)
+  if (!videos.data.length)
     return (
       <p className="py-10 text-center text-xs text-muted-foreground">
         No videos yet. Use <span className="font-medium text-foreground">Upload video</span> to add one.
@@ -182,7 +181,7 @@ function LibraryTab() {
 
   return (
     <div className="grid grid-cols-2 gap-3 py-3 sm:grid-cols-3">
-      {videos.data.videos.map((v) => {
+      {videos.data.map((v) => {
         const dur = fmtDuration(v.duration);
         return (
           <a
@@ -199,6 +198,11 @@ function LibraryTab() {
                   <HugeiconsIcon icon={Video01Icon} className="size-5 text-muted-foreground" />
                 </div>
               )}
+              {v.visibility !== "public" ? (
+                <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium capitalize text-white">
+                  {v.visibility}
+                </span>
+              ) : null}
               {dur ? (
                 <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
                   {dur}
@@ -383,8 +387,8 @@ export function ContentView() {
   const utils = trpc.useUtils();
 
   const onUploaded = () => {
-    void utils.content.getVideosByUser.invalidate();
-    void utils.content.getDrafts.invalidate();
+    void utils.studio.getMyVideos.invalidate();
+    void utils.studio.getVideoInsights.invalidate();
   };
 
   return (
