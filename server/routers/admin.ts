@@ -5,8 +5,10 @@ import { TRPCError } from "@trpc/server";
 import { reports, verificationRequests } from "@/db/schema/content/moderation";
 import { user } from "@/db/schema/auth";
 import { posts } from "@/db/schema/content";
-import { eq, desc, count, and, inArray } from "drizzle-orm";
+import { trackedTokens } from "@/db/schema/content/coin-feed";
+import { eq, desc, count, and, inArray, gte, sql as dsql } from "drizzle-orm";
 import { deletePost } from "@/lib/typesense/sync";
+import { reviewCoinSpam } from "@/lib/coin-feed/spam-review";
 
 // Admin-only middleware
 const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
@@ -17,6 +19,47 @@ const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 });
 
 export const adminRouter = router({
+    /**
+     * What the deterministic spam rules missed, over coins first seen recently.
+     *
+     * A MUTATION despite reading nothing, on purpose: it costs a Workers AI
+     * call and tens of seconds, so it must fire on a click rather than on every
+     * render, refetch, focus regain or retry that a query would bring.
+     *
+     * Proposals only — see lib/coin-feed/spam-review.ts for why the model is
+     * kept out of the gate itself. Promoting a term is a code change to
+     * `quality.ts`, reviewed like any other.
+     */
+    reviewCoinSpam: adminProcedure
+        .input(z.object({ hours: z.number().min(1).max(168).default(24), limit: z.number().min(1).max(200).default(80) }))
+        .mutation(async ({ input }) => {
+            const rows = await db
+                .select({
+                    network: trackedTokens.network,
+                    tokenAddress: trackedTokens.tokenAddress,
+                    symbol: trackedTokens.symbol,
+                    name: trackedTokens.name,
+                    liquidityUsd: trackedTokens.liquidityUsd,
+                    volume24hUsd: trackedTokens.volume24hUsd,
+                    imageUrl: trackedTokens.imageUrl,
+                })
+                .from(trackedTokens)
+                .where(gte(trackedTokens.firstSeenAt, dsql`now() - (${input.hours} || ' hours')::interval`))
+                .orderBy(desc(trackedTokens.firstSeenAt))
+                .limit(input.limit);
+
+            const review = await reviewCoinSpam(rows);
+            if (!review) {
+                // Never fall back to an empty result — "couldn't review" and
+                // "found nothing" must not look the same on a safety surface.
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Spam review unavailable (Workers AI unreachable or returned no usable JSON).",
+                });
+            }
+            return review;
+        }),
+
     // ─── Stats ───────────────────────────────────────────────────────────────
 
     getStats: adminProcedure.query(async () => {

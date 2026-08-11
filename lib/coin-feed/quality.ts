@@ -34,6 +34,14 @@ const BRAND_TERMS = [
     "coinbase",
     "binance",
     "blackrock",
+    // Found 2026-08-11 by `bun scripts/coin-feed/audit-spam.ts`, which reviews
+    // the coins this gate ACCEPTED and reports what it could not see. Both were
+    // live on the watch list below the brand bar, i.e. recognising them rejects
+    // them outright rather than merely raising the bar:
+    //   SanDisk  $154,494 liquidity
+    //   Unitree  $68,969  (also squatted under its Chinese name, 宇树科技)
+    "sandisk",
+    "unitree",
 ];
 
 /**
@@ -80,6 +88,12 @@ const BRAND_WORDS = [
     "tsla",
     "msft",
     "mstr",
+    // Found 2026-08-11 by scripts/coin-feed/audit-spam.ts (see BRAND_TERMS).
+    // Both are pure tickers that are not also words, which is the bar this list
+    // sets — SNDK was on the watch list at $154k and AMD at $68k, both under
+    // the brand bar.
+    "sndk",
+    "amd",
 ];
 const BRAND_WORD_RE = new RegExp(`\\b(${BRAND_WORDS.join("|")})\\b`, "i");
 

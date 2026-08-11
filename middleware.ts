@@ -15,7 +15,7 @@ const RESERVED_SLUGS = new Set([
   "login", "signup", "home", "feed", "search", "settings", "messages",
   "premium", "quests", "trade", "shorts", "video", "communities", "coin",
   "category", "status", "notifications", "wallet", "explore", "about",
-  "developer", "studio", "apps", "oauth",
+  "developer", "studio", "apps", "oauth", "admin",
 ]);
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
@@ -118,6 +118,18 @@ export async function middleware(request: NextRequest) {
   if (host === "studio.watchparty.xyz" && !pathname.startsWith("/api")) {
     return withCleanup(
       NextResponse.rewrite(new URL(`/studio${pathname === "/" ? "" : pathname}`, request.url)),
+    );
+  }
+  // admin.watchparty.xyz is the internal admin panel — same host-rewrite shape
+  // as studio, and /api passes through so its tRPC calls reach this app.
+  //
+  // The (admin) layout re-reads `role` from the DATABASE (the session payload
+  // caches it, so a revoked role would linger), and every mutation behind it
+  // goes through `adminProcedure`, which checks again server-side. This rewrite
+  // is routing, never a security boundary.
+  if (host === "admin.watchparty.xyz" && !pathname.startsWith("/api")) {
+    return withCleanup(
+      NextResponse.rewrite(new URL(`/admin${pathname === "/" ? "" : pathname}`, request.url)),
     );
   }
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the

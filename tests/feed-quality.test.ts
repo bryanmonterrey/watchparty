@@ -24,6 +24,16 @@ describe("brand-squat gate", () => {
         expect(isBrandSquat("APPLE", "Apple Coin")).toBe(true);
         expect(isBrandSquat("AAPL", "Apple PreStocks")).toBe(true);
         expect(isBrandSquat("NVIDIA", null)).toBe(true);
+        // Found 2026-08-11 by scripts/coin-feed/audit-spam.ts on coins this
+        // gate had ACCEPTED, all of them under the $250k brand bar — i.e.
+        // recognising the name rejects them outright.
+        expect(isBrandSquat("SNDK", "SanDisk")).toBe(true);
+        expect(isBrandSquat("AMD", null)).toBe(true);
+        expect(isBrandSquat("UNITREE", "Unitree Robotics")).toBe(true);
+        // Word boundaries stay load-bearing: the new tickers must not eat
+        // ordinary words the way a substring match would.
+        expect(isBrandSquat("PYRAMD", "pyramd finance")).toBe(false);
+        expect(isBrandSquat("SNDKR", "sneaker dao")).toBe(false);
     });
 
     test("ordinary memecoins pass untouched", () => {

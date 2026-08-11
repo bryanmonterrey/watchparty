@@ -107,6 +107,20 @@ async function screenSecurity(pools: DiscoveredPool[]): Promise<DiscoveredPool[]
             );
             screened++;
             if (!passesSecurityBar(sec)) rejected.add(id);
+
+            // BACKFILL THE IMAGE GeckoTerminal doesn't have.
+            //
+            // `imageUrl` comes from GT, which returns nothing for some coins —
+            // 2.9% of tracked_tokens and 9.3% of trending_coins on 2026-08-11.
+            // That is GT coverage, not a property of the coin: 11 of the 20
+            // imageless trending coins hold over $250k liquidity, so those were
+            // rendering blank for no reason.
+            //
+            // Mobula has them, and `sec` is the response we JUST made the call
+            // for — same request, same cache entry, no extra credit. Only fills
+            // a hole; a GT image always wins, since it is what the rest of the
+            // feed has been keyed to.
+            if (sec?.logo && !p.imageUrl) p.imageUrl = sec.logo;
         } catch {
             // 429/timeout — fail-open, retried on a later pass via cache miss.
         }

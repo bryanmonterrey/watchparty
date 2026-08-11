@@ -347,6 +347,21 @@ export interface MobulaTokenSecurity {
      * that would be a second request per coin.
      */
     socials: { twitter: string | null; website: string | null; telegram: string | null } | null;
+    /**
+     * Token logo — the same free-data case as `socials` above, and the fix for
+     * a visible gap rather than a nice-to-have.
+     *
+     * `image_url` on `tracked_tokens` / `trending_coins` comes from
+     * GeckoTerminal, which returns nothing for some coins (measured 2026-08-11:
+     * 2.9% of tracked, 9.3% of trending). That is a hole in GT's COVERAGE, not
+     * a property of the coin — 11 of the 20 imageless trending coins hold over
+     * $250k liquidity — so those coins render blank for no good reason.
+     *
+     * Mobula has logos for them (spot-checked against KITTENS/solana and
+     * SAMI/base, both null in GT), and it arrives in THIS response, on a call
+     * the security screen already makes. Free.
+     */
+    logo: string | null;
 }
 
 /** Holder-quality + contract-safety stats for one token — the MTT-style
@@ -407,6 +422,15 @@ export async function fetchMobulaTokenSecurity(
             const website = url(raw.website);
             const telegram = url(raw.telegram);
             return twitter || website || telegram ? { twitter, website, telegram } : null;
+        })(),
+        // http(s) only, for the same reason as socials: this payload also
+        // carries IPFS URIs and file blobs, and an <img src> is no safer a
+        // destination for one than an href. `originLogoUrl` is deliberately
+        // ignored — it points at the issuer's own host, which for a spam token
+        // is an arbitrary attacker-controlled URL; Mobula's own CDN copy is not.
+        logo: (() => {
+            const v = d.logo;
+            return typeof v === "string" && /^https?:\/\//i.test(v.trim()) ? v.trim() : null;
         })(),
     };
 }
