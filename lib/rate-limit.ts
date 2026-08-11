@@ -67,6 +67,26 @@ export const webhookTestLimiter = new Ratelimit({
     prefix: 'ratelimit:webhook:test',
 });
 
+// OAuth2 IdP endpoints (edge middleware is the PRIMARY gate — better-auth's
+// own rateLimit block is production-only and /api/auth is 402-exempt).
+// Keyed by client IP in middleware.ts; client_id keying was considered and
+// skipped: the token body is form-encoded and reading it at the edge would
+// consume the request stream before better-auth sees it.
+export const oauthTokenLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(20, '1 m'),
+    analytics: true,
+    prefix: 'ratelimit:oauth:token',
+});
+
+// authorize + consent (interactive, browser-driven — slightly looser)
+export const oauthInteractiveLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(30, '1 m'),
+    analytics: true,
+    prefix: 'ratelimit:oauth:interactive',
+});
+
 /**
  * Fail-open limit check: only a genuine "limited" verdict returns false.
  * Redis being down or unconfigured must never take the feature down with it.

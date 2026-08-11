@@ -137,3 +137,72 @@ describe("selectPoolsWithinBudget", () => {
         expect(sel.tooBusy).toBeGreaterThan(0);
     });
 });
+
+/**
+ * `watch: "token"` registers the MINT instead of the pool. Measured 2026-08-11:
+ * a mint delivers the same SWAP count as its pool while covering every venue the
+ * token trades on, and survives the pool address changing at graduation.
+ */
+describe("selectPoolsWithinBudget — watch: token", () => {
+    // Two pools, one mint: the shape the pool unit gets wrong.
+    const SPLIT = [
+        { poolAddress: "pumpamm", tokenAddress: "mintA", txns24h: 2_000 },
+        { poolAddress: "raydium", tokenAddress: "mintA", txns24h: 3_000 },
+        { poolAddress: "solo", tokenAddress: "mintB", txns24h: 1_000 },
+    ];
+
+    test("registers mints, not pools", () => {
+        const sel = selectPoolsWithinBudget(SPLIT, opts({ watch: "token" }));
+        expect(sel.addresses.sort()).toEqual(["mintA", "mintB"]);
+    });
+
+    test("the two pools of one mint are ONE watch", () => {
+        const byPool = selectPoolsWithinBudget(SPLIT, opts());
+        const byToken = selectPoolsWithinBudget(SPLIT, opts({ watch: "token" }));
+        expect(byPool.addresses).toHaveLength(3);
+        expect(byToken.addresses).toHaveLength(2);
+    });
+
+    test("costed as the SUM of its pools — watching the mint catches both", () => {
+        // mintA = 2,000 + 3,000 = 5,000/day; mintB = 1,000. Under-counting this
+        // is how a budget silently overspends.
+        const sel = selectPoolsWithinBudget(SPLIT, opts({ watch: "token" }));
+        expect(sel.estPerMin).toBeCloseTo(6_000 / 1440, 5);
+    });
+
+    test("the activity floor applies to the mint's TOTAL, not each pool", () => {
+        // Neither pool clears 500 alone; together they are 600 and the token is
+        // worth watching. Pool-keyed selection drops both.
+        const dusty = [
+            { poolAddress: "p1", tokenAddress: "mintC", txns24h: 300 },
+            { poolAddress: "p2", tokenAddress: "mintC", txns24h: 300 },
+        ];
+        expect(selectPoolsWithinBudget(dusty, opts()).addresses).toEqual([]);
+        expect(selectPoolsWithinBudget(dusty, opts({ watch: "token" })).addresses).toEqual(["mintC"]);
+    });
+
+    test("a repeated pool row is still ONE pool — deduped before it is summed", () => {
+        // The dedupe has to happen first: summing a duplicated row would price
+        // this token at twice its real traffic.
+        const dupe = [
+            { poolAddress: "p1", tokenAddress: "mintD", txns24h: 1_440 },
+            { poolAddress: "p1", tokenAddress: "mintD", txns24h: 1_440 },
+        ];
+        const sel = selectPoolsWithinBudget(dupe, opts({ watch: "token" }));
+        expect(sel.addresses).toEqual(["mintD"]);
+        expect(sel.estPerMin).toBeCloseTo(1, 5);
+    });
+
+    test("a candidate with no mint is skipped, not registered as undefined", () => {
+        const partial = [
+            { poolAddress: "p1", tokenAddress: null, txns24h: 5_000 },
+            { poolAddress: "p2", tokenAddress: "mintE", txns24h: 1_000 },
+        ];
+        const sel = selectPoolsWithinBudget(partial, opts({ watch: "token" }));
+        expect(sel.addresses).toEqual(["mintE"]);
+    });
+
+    test("defaults to pools when watch is unset — the ANY path is unchanged", () => {
+        expect(selectPoolsWithinBudget(SPLIT, opts()).addresses).toContain("pumpamm");
+    });
+});

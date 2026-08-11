@@ -169,7 +169,21 @@ async function processDelivery(events: HeliusEvent[]) {
     );
     // A missing trending list only costs display-pool tape, so this one degrades
     // rather than skipping: tokens we own the pricing model for still sync.
-    const displayHits = (displayPools ?? []).filter((p) => p.poolAddress && touched.has(p.poolAddress));
+    // MATCH EITHER ADDRESS, and that is not belt-and-braces — it is what makes
+    // the pool→mint switch in `trades-webhook.ts` safe to deploy.
+    //
+    // Registration now watches the MINT under SWAP mode, but the webhook is only
+    // re-registered when the hourly cron runs. Between this code going live and
+    // that run, Helius is still delivering on POOL addresses. A receiver that
+    // matched only the new unit would drop every delivery in that window while
+    // still returning 200 — paid for, acknowledged, discarded.
+    //
+    // It also keeps working under ANY, where `watch` stays "pool".
+    const displayHits = (displayPools ?? []).filter(
+        (p) =>
+            (p.poolAddress && touched.has(p.poolAddress)) ||
+            (p.tokenAddress && touched.has(p.tokenAddress)),
+    );
 
     if (rows.length === 0 && displayHits.length === 0) {
         return;

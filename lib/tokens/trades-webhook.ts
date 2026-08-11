@@ -128,18 +128,47 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
     // by rank is what broke this: rank is activity, so it selected the single
     // most expensive pools on the chain and nothing else fit.
     const candidates = await db
-        .select({ poolAddress: trendingCoins.poolAddress, txns24h: trendingCoins.txns24h })
+        .select({
+            poolAddress: trendingCoins.poolAddress,
+            tokenAddress: trendingCoins.tokenAddress,
+            txns24h: trendingCoins.txns24h,
+        })
         .from(trendingCoins)
         .where(eq(trendingCoins.network, "solana"));
+
+    // WATCH THE COIN, NOT THE POOL.
+    //
+    // A pool is one venue; a token trades on many. Measured 2026-08-11 against
+    // the two pools this webhook actually had registered, mint-side vs
+    // pool-side over 100 transactions each:
+    //
+    //     C3Rfug…pump   100 SWAP both ways   pool saw 1 venue, mint saw 6
+    //     DdSPvf…pump    62 SWAP both ways   pool saw 2 venues, mint saw 5
+    //
+    // Identical SWAP counts, so identical cost — the extra venues route through
+    // the same pool. What the mint buys is everything that DOESN'T: a second
+    // real pool, and the pool address CHANGING when a token graduates off its
+    // bonding curve, which silently zeroes a pool-keyed tape until the next
+    // hourly sync notices.
+    //
+    // The old objection ("watching the mint would also fire on plain
+    // transfers") holds only under ANY. Under SWAP, Helius filters by parsed
+    // type regardless of which address matched, so transfers never arrive —
+    // measured at 6 TRANSFERs per 100 mint transactions, all of them filtered.
+    //
+    // Under ANY — i.e. once we have live tokens of our own — that filter is
+    // gone and transfers would be billed, so the pool stays the unit there.
+    const watch = mode === "SWAP" ? "token" : "pool";
 
     const selection = selectPoolsWithinBudget(candidates, {
         budgetPerMin: BUDGET_PER_MIN,
         mode,
         minTxns24h: MIN_POOL_TXNS_24H,
+        watch,
     });
     const trending = selection.addresses.map((poolAddress) => ({ poolAddress }));
     console.log(
-        `[trades-webhook] ${mode}: ${selection.addresses.length} display pool(s), ` +
+        `[trades-webhook] ${mode}: ${selection.addresses.length} display ${watch}(s), ` +
         `~${selection.estPerMin.toFixed(1)}/min of ${BUDGET_PER_MIN} budget ` +
         `(${selection.tooQuiet} too quiet, ${selection.tooBusy} didn't fit)`,
     );

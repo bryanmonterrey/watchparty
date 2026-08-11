@@ -221,6 +221,188 @@ function CredentialsCard({ app }: { app: App }) {
   );
 }
 
+// "Sign in with watchparty" — the app's OAuth2 client. One per app; the
+// secret is shown exactly once (view-once panel, same contract as bot
+// tokens). Redirect URIs are exact-match, https-only (localhost tolerated
+// until the app lists publicly). Managed only here — the protocol-level
+// /oauth2/register endpoint is disabled at the edge.
+function OAuth2Card({ appId }: { appId: string }) {
+  const utils = trpc.useUtils();
+  const client = trpc.developerApps.getOAuthClient.useQuery({ id: appId });
+  const [freshSecret, setFreshSecret] = React.useState<{ clientId: string; clientSecret: string } | null>(null);
+  const [redirects, setRedirects] = React.useState("");
+  const [draftRedirect, setDraftRedirect] = React.useState("");
+  const [confirmingRotate, setConfirmingRotate] = React.useState(false);
+
+  React.useEffect(() => {
+    if (client.data) setRedirects(client.data.redirectUris.join("\n"));
+  }, [client.data]);
+
+  const invalidate = () => void utils.developerApps.getOAuthClient.invalidate({ id: appId });
+  const create = trpc.developerApps.createOAuthClient.useMutation({
+    onSuccess: (d) => {
+      setFreshSecret(d);
+      invalidate();
+    },
+  });
+  const rotate = trpc.developerApps.rotateOAuthSecret.useMutation({
+    onSuccess: (d) => {
+      setFreshSecret(d);
+      setConfirmingRotate(false);
+    },
+  });
+  const saveRedirects = trpc.developerApps.updateOAuthRedirects.useMutation({ onSuccess: invalidate });
+  const setDisabled = trpc.developerApps.setOAuthClientDisabled.useMutation({ onSuccess: invalidate });
+  const setListed = trpc.developerApps.setListed.useMutation({ onSuccess: invalidate });
+
+  const parsedRedirects = redirects
+    .split("\n")
+    .map((r) => r.trim())
+    .filter(Boolean);
+  const redirectsDirty =
+    client.data != null && parsedRedirects.join("\n") !== client.data.redirectUris.join("\n");
+
+  const err =
+    create.error ?? rotate.error ?? saveRedirects.error ?? setDisabled.error ?? setListed.error;
+
+  return (
+    <div className="rounded-xl border bg-card p-4 sm:p-5">
+      <p className="text-sm font-medium">Sign in with watchparty</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Let people sign in to your app with their watchparty account (OAuth2 +
+        PKCE). Users see a consent screen listing exactly what you can read.
+      </p>
+
+      {freshSecret ? (
+        <div className="mt-3 rounded-lg border bg-muted/40 p-3">
+          <p className="text-xs text-muted-foreground">
+            Your client secret — shown once. It authenticates your server at the
+            token endpoint; store it safely, rotate is the only recovery.
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="min-w-0 flex-1 select-all break-all font-mono text-xs">
+              {freshSecret.clientSecret}
+            </code>
+            <CopyButton value={freshSecret.clientSecret} />
+          </div>
+          <div className="mt-2 flex justify-end">
+            <Button size="sm" variant="outline" onClick={() => setFreshSecret(null)}>
+              I saved it
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {client.isPending ? (
+        <div className="mt-3 h-10 animate-pulse rounded-lg bg-muted/40" />
+      ) : client.data ? (
+        <div className="mt-4 flex flex-col gap-4">
+          <ReadonlyId label="Client ID" value={client.data.clientId} mono />
+          <Field
+            label="Redirect URIs"
+            hint="One per line. Exact match, https only (http://localhost is fine while developing)."
+          >
+            <textarea
+              rows={3}
+              value={redirects}
+              onChange={(e) => setRedirects(e.target.value)}
+              placeholder={"https://yourapp.com/callback"}
+              className="w-full resize-none rounded-lg border bg-transparent p-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </Field>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              disabled={!redirectsDirty || parsedRedirects.length === 0 || saveRedirects.isPending}
+              onClick={() => saveRedirects.mutate({ id: appId, redirectUris: parsedRedirects })}
+            >
+              {saveRedirects.isPending ? "Saving…" : "Save redirect URIs"}
+            </Button>
+            {confirmingRotate ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={rotate.isPending}
+                  onClick={() => rotate.mutate({ id: appId })}
+                >
+                  {rotate.isPending ? "Rotating…" : "Confirm rotate"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmingRotate(false)}>
+                  Keep
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setConfirmingRotate(true)}>
+                Rotate secret
+              </Button>
+            )}
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant={client.data.disabled ? "outline" : "ghost"}
+              disabled={setDisabled.isPending}
+              onClick={() => setDisabled.mutate({ id: appId, disabled: !client.data!.disabled })}
+            >
+              {client.data.disabled ? "Enable client" : "Disable client"}
+            </Button>
+          </div>
+          {client.data.disabled ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Disabled — issued tokens were revoked; sign-in is off until re-enabled.
+            </p>
+          ) : null}
+
+          <div className="border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium">Public directory</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  List this app on the &ldquo;Connect with watchparty&rdquo; directory.
+                  Needs the full verification checklist and no localhost redirects.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={client.data.listed ? "ghost" : "outline"}
+                disabled={setListed.isPending}
+                onClick={() => setListed.mutate({ id: appId, listed: !client.data!.listed })}
+              >
+                {setListed.isPending ? "…" : client.data.listed ? "Unlist" : "List publicly"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3">
+          <Field
+            label="Redirect URI"
+            hint="Where we send users back after they approve. Exact match; add more later."
+          >
+            <Input
+              value={draftRedirect}
+              onChange={(e) => setDraftRedirect(e.target.value)}
+              placeholder="https://yourapp.com/callback"
+              className="font-mono"
+            />
+          </Field>
+          <div className="mt-3">
+            <Button
+              size="sm"
+              disabled={!draftRedirect.trim() || create.isPending}
+              onClick={() => create.mutate({ id: appId, redirectUris: [draftRedirect.trim()] })}
+            >
+              {create.isPending ? "Setting up…" : "Enable Sign in with watchparty"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {err ? <p className="mt-3 text-xs text-destructive">{err.message}</p> : null}
+    </div>
+  );
+}
+
 function KeysCard({ appId }: { appId: string }) {
   const utils = trpc.useUtils();
   const keys = trpc.apiKeys.list.useQuery();
@@ -722,6 +904,7 @@ export function AppDetailView({ id }: { id: string }) {
           <IdentityCard app={app.data} />
           <VerificationCard appId={app.data.id} />
           <CredentialsCard app={app.data} />
+          <OAuth2Card appId={app.data.id} />
           <KeysCard appId={app.data.id} />
           <BotCard appId={app.data.id} />
           <DangerZone app={app.data} />

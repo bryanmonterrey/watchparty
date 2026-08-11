@@ -21,6 +21,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
 import { allowsAnonymous } from "./lib/auth/public-browsing";
 import { apiGate } from "./lib/api-gate";
+import { limitOrPass, oauthTokenLimiter, oauthInteractiveLimiter } from "./lib/rate-limit";
 
 // Edge middleware. Next 16 deprecated `middleware` in favor of `proxy`, BUT
 // `proxy` is locked to the Node.js runtime, which OpenNext/Cloudflare Workers
@@ -125,6 +126,38 @@ export async function middleware(request: NextRequest) {
   // default off, so this is inert until deliberately flipped; see
   // docs/api-monetization.md before enforcing.
   if (pathname.startsWith(apiAuthPrefix) || pathname.startsWith("/api/")) {
+    // OAuth2 IdP surface (better-auth oidc-provider). Two edge rules that the
+    // plugin cannot express itself:
+    if (pathname.startsWith("/api/auth/oauth2/")) {
+      // 1. Dynamic client registration is off in the plugin options, but the
+      //    /register endpoint STILL accepts any session holder (verified
+      //    1.6.26 dist) — bypassing the developerApps router's ownership
+      //    model, cap and redirect-URI policy. No plugin option disables the
+      //    endpoint, so it is 404'd here outright.
+      if (pathname === "/api/auth/oauth2/register") return withCleanup(notFound());
+      // 2. Rate-limit token/authorize/consent by IP. better-auth's own
+      //    rateLimit block only runs in production; this is the primary gate.
+      if (
+        pathname === "/api/auth/oauth2/token" ||
+        pathname === "/api/auth/oauth2/authorize" ||
+        pathname === "/api/auth/oauth2/consent"
+      ) {
+        const ip =
+          request.headers.get("cf-connecting-ip") ??
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          "unknown";
+        const limiter =
+          pathname === "/api/auth/oauth2/token" ? oauthTokenLimiter : oauthInteractiveLimiter;
+        if (!(await limitOrPass(limiter, `${pathname}:${ip}`))) {
+          return withCleanup(
+            new NextResponse("Too Many Requests", {
+              status: 429,
+              headers: { "retry-after": "60", "content-type": "text/plain; charset=utf-8" },
+            }),
+          );
+        }
+      }
+    }
     const gate = await apiGate(request, !!session);
     if (gate?.block) return withCleanup(gate.block);
     const res = NextResponse.next();

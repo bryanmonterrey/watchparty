@@ -68,6 +68,8 @@ export const ESTIMATE_INFLATION = 2.7;
 
 export interface PoolCandidate {
     poolAddress: string | null;
+    /** The MINT. Watched instead of the pool when `watch: "token"` — see below. */
+    tokenAddress?: string | null;
     /** Swaps in the last 24h — GeckoTerminal's count, the basis for the estimate. */
     txns24h: number | null;
 }
@@ -79,6 +81,30 @@ export interface BudgetOptions {
     mode: "ANY" | "SWAP";
     /** Ignore pools too quiet to ever produce a scoreable sample. */
     minTxns24h: number;
+    /**
+     * Register the pool address, or the token's MINT? Default `"pool"`.
+     *
+     * ## Why "token" is the better unit under SWAP
+     *
+     * A pool is ONE venue. A token trades on several — measured on the live
+     * board 2026-08-11, mint `C3Rfug…pump` traded across PUMP_AMM, Jupiter,
+     * OKX, DFLOW and Titan, while the registered pool saw two of those. Watching
+     * the pool therefore buys a partial tape, and it silently goes to zero when
+     * a token graduates to a new pool, because the pool address changes and the
+     * registration doesn't until the next hourly sync.
+     *
+     * The objection in the old comment — "watching the mint would also fire on
+     * plain transfers" — is true only under ANY. `transactionTypes: ["SWAP"]`
+     * filters by PARSED TYPE regardless of which address matched, so transfers
+     * never arrive. Measured on two watched pools: identical SWAP counts
+     * (62 vs 62, 100 vs 100) mint-side and pool-side, with the mint additionally
+     * covering three more venues. Same cost, strictly more coverage.
+     *
+     * So the estimate carries over unchanged, and `txns24h` for the pools of one
+     * mint is SUMMED — watching the mint catches all of them, and pricing it as
+     * a single pool would under-count a token that trades in several places.
+     */
+    watch?: "pool" | "token";
 }
 
 export interface PoolSelection {
@@ -120,10 +146,27 @@ export function selectPoolsWithinBudget(
     // activity most exceeds their daily mean. See ESTIMATE_INFLATION.
     const budget = asked / ESTIMATE_INFLATION;
 
+    // A repeated pool row is the SAME pool, so it is deduped before anything is
+    // summed. Only then are the distinct pools of one mint collapsed into a
+    // single watch whose cost is their sum — watching the mint catches all of
+    // them, and pricing that as one pool is how a budget silently overspends.
+    // Getting the order wrong the other way double-counts a duplicated row.
+    const distinctPools = new Map<string, PoolCandidate>();
+    for (const c of candidates) {
+        if (c.poolAddress && !distinctPools.has(c.poolAddress)) distinctPools.set(c.poolAddress, c);
+    }
+
+    const byAddress = new Map<string, number>();
+    for (const c of distinctPools.values()) {
+        const address = opts.watch === "token" ? c.tokenAddress : c.poolAddress;
+        if (!address) continue;
+        const txns = Number.isFinite(c.txns24h ?? NaN) ? Math.max(0, c.txns24h as number) : 0;
+        byAddress.set(address, (byAddress.get(address) ?? 0) + txns);
+    }
+
     let tooQuiet = 0;
-    const priced = candidates
-        .filter((c): c is PoolCandidate & { poolAddress: string } => !!c.poolAddress)
-        .map((c) => ({ address: c.poolAddress, cost: poolCostPerMin(c.txns24h, opts.mode), txns: c.txns24h ?? 0 }))
+    const priced = [...byAddress.entries()]
+        .map(([address, txns]) => ({ address, cost: poolCostPerMin(txns, opts.mode), txns }))
         .filter((p) => {
             if (p.txns < opts.minTxns24h) {
                 tooQuiet++;
@@ -136,12 +179,12 @@ export function selectPoolsWithinBudget(
         .sort((a, b) => a.cost - b.cost);
 
     const addresses: string[] = [];
-    const seen = new Set<string>();
     let spent = 0;
     let tooBusy = 0;
 
+    // No dedupe needed here — `byAddress` is keyed by the address being
+    // registered, so `priced` is already unique.
     for (const p of priced) {
-        if (seen.has(p.address)) continue;
         if (spent + p.cost > budget) {
             // Sorted ascending, so everything after this is at least as
             // expensive — but keep counting for the log rather than breaking,
@@ -150,7 +193,6 @@ export function selectPoolsWithinBudget(
             tooBusy++;
             continue;
         }
-        seen.add(p.address);
         addresses.push(p.address);
         spent += p.cost;
     }

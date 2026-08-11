@@ -21,6 +21,11 @@
 export interface HeliusWebhookState {
     accountAddresses?: unknown;
     transactionTypes?: unknown;
+    /**
+     * Helius auto-disables a webhook whose endpoint fails too often (≥95% over
+     * 24h on the free plan). Confirmed present on the live GET response.
+     */
+    active?: unknown;
 }
 
 /**
@@ -50,6 +55,15 @@ export function sameAddressSet(current: unknown, next: readonly string[]): boole
  * Returns `false` on any error: failing to compare must mean "write it", never
  * "skip it". A missed edit leaves a stale registration live, which is the
  * expensive direction.
+ *
+ * ⚠️ A DISABLED webhook is never "current", however well its address list
+ * matches. Helius auto-disables an endpoint that fails too often (≥95% over 24h
+ * on the free plan), and a disabled webhook delivers nothing while still
+ * reporting the addresses and types it was configured with. Comparing only
+ * those two fields would therefore see "no change", skip the write, and leave
+ * the webhook dead — permanently, because every subsequent hourly run reaches
+ * the same conclusion. The unconditional PUT this guard replaced happened to
+ * revive it; the guard has to do that deliberately.
  */
 export async function webhookIsCurrent(
     apiKey: string,
@@ -61,6 +75,9 @@ export async function webhookIsCurrent(
         const res = await fetch(`https://api.helius.xyz/v0/webhooks/${webhookID}?api-key=${apiKey}`);
         if (!res.ok) return false;
         const current = (await res.json()) as HeliusWebhookState;
+        // Explicitly false only — the field is absent on some responses, and
+        // "absent" must not read as "disabled" or the guard never skips.
+        if (current.active === false) return false;
         const types = Array.isArray(current.transactionTypes) ? (current.transactionTypes as string[]) : [];
         return (
             sameAddressSet(current.accountAddresses, nextAddresses) &&

@@ -273,6 +273,49 @@ So `HELIUS_TRADES_DISPLAY_POOLS` stays **0** on a free plan — not as caution b
 as arithmetic, because ordering by rank always picks the busiest pools on the
 chain. Our own launched pools are a trickle and are unaffected.
 
+### Deliveries cost 1 credit. **Edits cost 100.**
+
+The three syncs (`trades`, `assets`, `user-trades`) run hourly and used to `PUT`
+unconditionally: 25 runs × 3 webhooks × 100 = **7,500 credits/day = 23% of the
+free plan**, spent re-sending byte-identical payloads on an app with no users.
+Reads are free, so `lib/helius/webhook-edit.ts` compares first. Two things it
+encodes that are easy to get wrong:
+
+- the address compare is **order-insensitive** — selection sorts cheapest-first,
+  so a pool whose `txns24h` ticked up reorders the list without changing what is
+  watched, and a positional compare bills 100 credits for that;
+- **`active: false` is never "current"**. Helius auto-disables an endpoint that
+  fails ≥95% over 24h, and a disabled webhook still reports the addresses it was
+  configured with. Skipping the write there leaves it dead *permanently*, since
+  every later run reaches the same verdict. The unconditional PUT used to revive
+  it by accident; the guard has to do it on purpose.
+
+### Watch the MINT, not the pool (SWAP mode only)
+
+`trendingCoins.tokenAddress`, not `poolAddress`. Measured 2026-08-11 over 100
+transactions per address on the two pools then registered:
+
+```
+C3Rfug…pump   100 SWAP mint-side, 100 pool-side   1 venue → 6
+DdSPvf…pump    62 SWAP mint-side,  62 pool-side   2 venues → 5
+```
+
+Identical SWAP counts, so **identical cost** — the extra venues route through
+the same pool. What the mint buys is what doesn't: a second real pool, and the
+pool address *changing at graduation*, which silently zeroes a pool-keyed tape
+until the next hourly sync.
+
+The old objection — "watching the mint also fires on plain transfers" — is true
+only under **ANY**. Under SWAP, Helius filters by parsed type regardless of which
+address matched (measured: 6 TRANSFERs per 100 mint txs, all filtered). So
+`watch` is `"token"` under SWAP and stays `"pool"` under ANY. The receiver
+matches **either** address, which is what makes the switch deployable — the
+webhook isn't re-registered until the cron runs.
+
+Two things measured and deliberately NOT done: `txnStatus: "success"` (0 failed
+transactions in 200 sampled — three 100-credit edits for no saving), and raw
+webhooks (no type filter at all, so strictly more deliveries).
+
 ## Query gotcha: never interpolate a JS `Date` into a `sql` template
 
 ```ts

@@ -15,11 +15,27 @@ import { withCache, TTL, redis } from "@/lib/cache";
 import { verifyEvmMessage } from "@/lib/chains/evm/verify";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { customSession, multiSession, emailOTP, admin, twoFactor } from "better-auth/plugins";
+import { customSession, multiSession, emailOTP, admin, twoFactor, jwt, oidcProvider } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
 import { expo } from "@better-auth/expo";
 import { db } from "@/db";
-import { user, session, account, verification, passkey as passkeyTable, walletAddress, linkedWallets } from "@/db/schema/auth";
+import {
+  user,
+  session,
+  account,
+  verification,
+  passkey as passkeyTable,
+  walletAddress,
+  linkedWallets,
+  twoFactor as twoFactorTable,
+  oauthApplication,
+  oauthAccessToken,
+  oauthConsent,
+  jwks,
+} from "@/db/schema/auth";
+import { sealSecret, openSecret } from "@/lib/developer/secret-box";
+import { OAUTH_SCOPE_IDS } from "@/lib/developer/oauth-scopes";
+import { oauthTokenRotation } from "./oauth-token-rotation";
 import { eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 import { Resend } from "resend";
@@ -107,6 +123,14 @@ const config = {
     window: 60,
     max: 100,
     storage: "secondary-storage" as const,
+    // Defense-in-depth for the OAuth2 IdP endpoints (production only, like
+    // the rest of this block). The PRIMARY gate is edge middleware — see
+    // middleware.ts, which also 404s /oauth2/register outright.
+    customRules: {
+      "/oauth2/token": { window: 60, max: 20 },
+      "/oauth2/authorize": { window: 60, max: 30 },
+      "/oauth2/consent": { window: 60, max: 20 },
+    },
   },
   user: {
     additionalFields: {
@@ -174,7 +198,23 @@ export const auth = betterAuth({
 
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema: { user, session, account, verification, passkey: passkeyTable, walletAddress },
+    // Every model a registered plugin touches MUST be in this map — the
+    // adapter resolves config.schema[model] and THROWS on a missing key.
+    // (twoFactor was missing here while the plugin was registered; any 2FA
+    // row operation would have thrown until it was added.)
+    schema: {
+      user,
+      session,
+      account,
+      verification,
+      passkey: passkeyTable,
+      walletAddress,
+      twoFactor: twoFactorTable,
+      oauthApplication,
+      oauthAccessToken,
+      oauthConsent,
+      jwks,
+    },
   }),
 
   advanced: {
@@ -344,6 +384,51 @@ export const auth = betterAuth({
     }),
 
     admin(),
+
+    // Signs OIDC id_tokens (EdDSA, served at /api/auth/jwks). REQUIRED by the
+    // oidc-provider config below: with sealed client secrets, the HS256
+    // fallback would sign id_tokens with the AES-GCM ciphertext — unverifiable
+    // by every RP. Side effect: adds /api/auth/token (session-JWT mint for the
+    // current session holder); benign, documented in docs/oauth-provider.md.
+    jwt(),
+
+    // OAuth2/OIDC identity provider — "Sign in with watchparty".
+    // Deliberately the DEPRECATED in-tree plugin at better-auth 1.6.26: the
+    // replacement @better-auth/oauth-provider requires better-call 1.4.0,
+    // which collides with @better-auth/infra's hard 1.3.7 pin (dash() below)
+    // — the exact two-better-call geometry of the documented 31-type-error
+    // incident. Endpoint surface is identical; migrate when the coordinated
+    // 1.6.27+ bump ships as its own change. See docs/oauth-provider.md.
+    oidcProvider({
+      __skipDeprecationWarning: true,
+      loginPage: "/login",
+      consentPage: "/oauth/consent",
+      // The JSDoc claims @default true, but the dist code reads
+      // options.requirePKCE RAW — omitting this ships PKCE-unenforced.
+      // Verified 1.6.26 (authorize.mjs:95, index.mjs:493). Do not remove.
+      requirePKCE: true,
+      allowPlainCodeChallengeMethod: false,
+      useJWTPlugin: true,
+      allowDynamicClientRegistration: false,
+      scopes: OAUTH_SCOPE_IDS,
+      accessTokenExpiresIn: 3600,
+      // Never the default "plain" — secrets seal via AES-GCM (secret-box).
+      storeClientSecret: { encrypt: sealSecret, decrypt: openSecret },
+      // Merged into BOTH id_token and userinfo unconditionally by the
+      // plugin, so scope filtering must happen here.
+      getAdditionalUserInfoClaim: (claimUser, scopes) => {
+        if (!scopes.includes("profile")) return {};
+        return {
+          username: claimUser.username ?? null,
+          picture: claimUser.avatar_url ?? claimUser.image ?? null,
+          verified: Boolean(claimUser.verifiedTier) && !claimUser.hideVerifiedBadge,
+        };
+      },
+    }),
+
+    // Covers the upstream gap where a refresh grant never invalidates the
+    // presented refresh token — see lib/auth/oauth-token-rotation.ts.
+    oauthTokenRotation(),
 
     dash(),
 

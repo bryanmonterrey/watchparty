@@ -1,14 +1,17 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, isNull } from "drizzle-orm";
-import { router, protectedProcedure } from "@/server/trpc";
+import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { router, protectedProcedure, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { developerApps } from "@/db/schema/content/developer-app";
 import { developerBots } from "@/db/schema/content/developer-bot";
 import { user } from "@/db/schema/auth/user";
+import { oauthApplication, oauthAccessToken, oauthConsent } from "@/db/schema/auth";
 import { randHex } from "@/lib/api-gate";
 import { generateAppKeypair } from "@/lib/developer/app-keys";
 import { computeVerification } from "@/lib/developer/verification";
+import { sealSecret } from "@/lib/developer/secret-box";
+import { APP_FLAGS, hasFlag } from "@/lib/developer/app-flags";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
 
 // The developer app registry (phase 1 — docs/console-execution-plan.md).
@@ -35,7 +38,8 @@ const identityInput = {
     privacyUrl: httpsUrl.optional(),
 };
 
-// Public shape — deliberately omits privateKeyEnc.
+// Public shape — deliberately omits privateKeyEnc. oauthClientId and flags are
+// safe: a client_id is public by protocol, flags carry no secrets.
 const publicCols = {
     id: developerApps.id,
     name: developerApps.name,
@@ -45,9 +49,57 @@ const publicCols = {
     publicKey: developerApps.publicKey,
     tosUrl: developerApps.tosUrl,
     privacyUrl: developerApps.privacyUrl,
+    flags: developerApps.flags,
+    oauthClientId: developerApps.oauthClientId,
     createdAt: developerApps.createdAt,
     updatedAt: developerApps.updatedAt,
 };
+
+// Exact-match redirect URIs for the app's OAuth client. https only; http is
+// tolerated ONLY for localhost during development and blocks public listing
+// (setListed re-checks). Commas are hard-rejected because the oidc-provider
+// plugin stores the list comma-joined — one comma inside a URI would corrupt
+// every entry on split. Fragments are illegal per RFC 6749 §3.1.2.
+const redirectUri = z
+    .string()
+    .trim()
+    .min(1)
+    .max(2048)
+    .superRefine((u, refCtx) => {
+        if (u.includes(",")) {
+            refCtx.addIssue({ code: "custom", message: "Commas are not allowed in redirect URIs" });
+            return;
+        }
+        let parsed: URL;
+        try {
+            parsed = new URL(u);
+        } catch {
+            refCtx.addIssue({ code: "custom", message: "Not a valid absolute URL" });
+            return;
+        }
+        if (parsed.hash) {
+            refCtx.addIssue({ code: "custom", message: "Redirect URIs must not contain a fragment" });
+            return;
+        }
+        const isLocal = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+        if (parsed.protocol === "https:") return;
+        if (parsed.protocol === "http:" && isLocal) return;
+        refCtx.addIssue({
+            code: "custom",
+            message: "Redirect URIs must be https (http is allowed only for localhost)",
+        });
+    });
+
+const redirectUriList = z.array(redirectUri).min(1).max(10);
+
+function isLocalhostUri(u: string): boolean {
+    try {
+        const parsed = new URL(u);
+        return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+    } catch {
+        return true; // unparseable never counts as prod-ready
+    }
+}
 
 async function throttle(userId: string): Promise<void> {
     if (!(await limitOrPass(webhookMutationLimiter, userId))) {
@@ -246,7 +298,7 @@ export const developerAppsRouter = router({
                     eq(developerApps.ownerId, ctx.user.id),
                     isNull(developerApps.deletedAt),
                 ))
-                .returning({ id: developerApps.id });
+                .returning({ id: developerApps.id, oauthClientId: developerApps.oauthClientId });
             if (!updated.length) throw new TRPCError({ code: "NOT_FOUND" });
             // Deleting the app revokes its bot: drop the bot's user row (cascades
             // to developer_bots), so the token stops resolving and no is_bot ghost
@@ -259,6 +311,256 @@ export const developerAppsRouter = router({
                 .where(eq(developerBots.appId, input.id))
                 .limit(1);
             if (bot) await db.delete(user).where(eq(user.id, bot.botUserId));
+            // Same rule for the OAuth client: disable it AND delete its issued
+            // tokens + consents. Deleting tokens is the actual revocation —
+            // /oauth2/userinfo never checks client.disabled (verified 1.6.26),
+            // so a merely-disabled client's live tokens would keep working.
+            // The client row itself stays for audit (client_id is public).
+            if (updated[0].oauthClientId) {
+                await revokeOAuthClient(updated[0].oauthClientId);
+            }
             return { success: true };
         }),
+
+    // ── OAuth2 client ("Sign in with watchparty") ─────────────────────────
+    // One client per app, managed only through here — the plugin's own
+    // /oauth2/register endpoint is 404'd at the edge (middleware.ts) because
+    // it would let any session holder bypass this ownership model.
+
+    getOAuthClient: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const app = await ownedApp(ctx.user.id, input.id);
+            if (!app.oauthClientId) return null;
+            const [client] = await db
+                .select({
+                    clientId: oauthApplication.clientId,
+                    redirectUrls: oauthApplication.redirectUrls,
+                    type: oauthApplication.type,
+                    disabled: oauthApplication.disabled,
+                    createdAt: oauthApplication.createdAt,
+                })
+                .from(oauthApplication)
+                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .limit(1);
+            if (!client) return null;
+            return {
+                clientId: client.clientId,
+                redirectUris: client.redirectUrls.split(",").filter(Boolean),
+                type: client.type,
+                disabled: client.disabled,
+                createdAt: client.createdAt,
+                listed: hasFlag(app.flags, APP_FLAGS.LISTED),
+            };
+        }),
+
+    createOAuthClient: protectedProcedure
+        .input(z.object({ id: z.string(), redirectUris: redirectUriList }))
+        .mutation(async ({ ctx, input }) => {
+            if (!process.env.API_GATE_SECRET) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "The developer platform is not enabled on this deployment",
+                });
+            }
+            await throttle(ctx.user.id);
+            const app = await ownedApp(ctx.user.id, input.id);
+            if (app.oauthClientId) {
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "This app already has an OAuth client — rotate its secret instead",
+                });
+            }
+
+            const clientId = `wpcl_${randHex(12)}`;
+            // 64 hex chars (256 bits) — shown to the owner exactly once below,
+            // stored only sealed (AES-GCM via secret-box).
+            const clientSecret = randHex(32);
+            const now = new Date();
+            await db.insert(oauthApplication).values({
+                id: crypto.randomUUID(),
+                name: app.name,
+                icon: app.iconUrl,
+                // Joined back to the app world; the plugin JSON.parses this
+                // unguarded, so it must stay valid JSON (or null).
+                metadata: JSON.stringify({ appId: app.id }),
+                clientId,
+                clientSecret: await sealSecret(clientSecret),
+                redirectUrls: input.redirectUris.join(","),
+                // v1 is confidential web clients only. Native/public (PKCE,
+                // no secret) arrives with the mobile OAuth-client work.
+                type: "web",
+                disabled: false,
+                userId: ctx.user.id,
+                createdAt: now,
+                updatedAt: now,
+            });
+            await db
+                .update(developerApps)
+                .set({ oauthClientId: clientId, updatedAt: now })
+                .where(eq(developerApps.id, app.id));
+            // The secret is returned ONCE — the view-once panel is the only UI
+            // that ever sees it.
+            return { clientId, clientSecret };
+        }),
+
+    updateOAuthRedirects: protectedProcedure
+        .input(z.object({ id: z.string(), redirectUris: redirectUriList }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const app = await ownedApp(ctx.user.id, input.id);
+            if (!app.oauthClientId) throw new TRPCError({ code: "NOT_FOUND" });
+            // A listed app must never point at localhost — delist first.
+            if (
+                hasFlag(app.flags, APP_FLAGS.LISTED) &&
+                input.redirectUris.some(isLocalhostUri)
+            ) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Listed apps can't use localhost redirect URIs — unlist first",
+                });
+            }
+            await db
+                .update(oauthApplication)
+                .set({ redirectUrls: input.redirectUris.join(","), updatedAt: new Date() })
+                .where(eq(oauthApplication.clientId, app.oauthClientId));
+            return { redirectUris: input.redirectUris };
+        }),
+
+    rotateOAuthSecret: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const app = await ownedApp(ctx.user.id, input.id);
+            if (!app.oauthClientId) throw new TRPCError({ code: "NOT_FOUND" });
+            const clientSecret = randHex(32);
+            await db
+                .update(oauthApplication)
+                .set({ clientSecret: await sealSecret(clientSecret), updatedAt: new Date() })
+                .where(eq(oauthApplication.clientId, app.oauthClientId));
+            return { clientId: app.oauthClientId, clientSecret };
+        }),
+
+    setOAuthClientDisabled: protectedProcedure
+        .input(z.object({ id: z.string(), disabled: z.boolean() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const app = await ownedApp(ctx.user.id, input.id);
+            if (!app.oauthClientId) throw new TRPCError({ code: "NOT_FOUND" });
+            if (input.disabled) {
+                await revokeOAuthClient(app.oauthClientId);
+            } else {
+                await db
+                    .update(oauthApplication)
+                    .set({ disabled: false, updatedAt: new Date() })
+                    .where(eq(oauthApplication.clientId, app.oauthClientId));
+            }
+            return { disabled: input.disabled };
+        }),
+
+    // ── Public directory ──────────────────────────────────────────────────
+
+    /** Owner opts the app in/out of the public directory. Listing re-checks
+     *  the verification checklist server-side — the badge gate is here, not
+     *  in the UI. */
+    setListed: protectedProcedure
+        .input(z.object({ id: z.string(), listed: z.boolean() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const app = await ownedApp(ctx.user.id, input.id);
+
+            if (!input.listed) {
+                await db
+                    .update(developerApps)
+                    .set({ flags: sql`${developerApps.flags} & ~${APP_FLAGS.LISTED}`, updatedAt: new Date() })
+                    .where(eq(developerApps.id, app.id));
+                return { listed: false };
+            }
+
+            // Listing requirements, all server-enforced:
+            // 1. verification checklist complete (profile/tos/privacy/email/2fa)
+            const [owner] = await db
+                .select({ emailVerified: user.emailVerified, twoFactorEnabled: user.twoFactorEnabled })
+                .from(user)
+                .where(eq(user.id, ctx.user.id))
+                .limit(1);
+            const verification = computeVerification({
+                name: app.name,
+                description: app.description,
+                iconUrl: app.iconUrl,
+                tosUrl: app.tosUrl,
+                privacyUrl: app.privacyUrl,
+                emailVerified: owner?.emailVerified ?? false,
+                twoFactorEnabled: owner?.twoFactorEnabled ?? false,
+            });
+            if (!verification.complete) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "Complete the verification checklist before listing",
+                });
+            }
+            // 2. a configured, enabled OAuth client with no localhost redirects
+            if (!app.oauthClientId) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "Set up the app's OAuth client before listing",
+                });
+            }
+            const [client] = await db
+                .select({ redirectUrls: oauthApplication.redirectUrls, disabled: oauthApplication.disabled })
+                .from(oauthApplication)
+                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .limit(1);
+            if (!client || client.disabled) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "The app's OAuth client is disabled",
+                });
+            }
+            if (client.redirectUrls.split(",").filter(Boolean).some(isLocalhostUri)) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "Remove localhost redirect URIs before listing",
+                });
+            }
+
+            await db
+                .update(developerApps)
+                .set({ flags: sql`${developerApps.flags} | ${APP_FLAGS.LISTED}`, updatedAt: new Date() })
+                .where(eq(developerApps.id, app.id));
+            return { listed: true };
+        }),
+
+    /** The public "Connect with watchparty" directory. Anonymous-readable;
+     *  only listed, live, OAuth-enabled apps; only public columns. */
+    directory: publicProcedure.query(async () => {
+        return db
+            .select({
+                id: developerApps.id,
+                name: developerApps.name,
+                description: developerApps.description,
+                iconUrl: developerApps.iconUrl,
+                tags: developerApps.tags,
+                oauthClientId: developerApps.oauthClientId,
+            })
+            .from(developerApps)
+            .where(and(
+                isNull(developerApps.deletedAt),
+                isNotNull(developerApps.oauthClientId),
+                sql`(${developerApps.flags} & ${APP_FLAGS.LISTED}) = ${APP_FLAGS.LISTED}`,
+            ))
+            .orderBy(desc(developerApps.createdAt))
+            .limit(100);
+    }),
 });
+
+/** Disable a client AND delete its issued tokens + consents — deletion is the
+ *  real revocation (userinfo ignores `disabled`). Client row kept for audit. */
+async function revokeOAuthClient(clientId: string): Promise<void> {
+    await db
+        .update(oauthApplication)
+        .set({ disabled: true, updatedAt: new Date() })
+        .where(eq(oauthApplication.clientId, clientId));
+    await db.delete(oauthAccessToken).where(eq(oauthAccessToken.clientId, clientId));
+    await db.delete(oauthConsent).where(eq(oauthConsent.clientId, clientId));
+}

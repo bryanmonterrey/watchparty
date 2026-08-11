@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { isNotNull } from "drizzle-orm";
 import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
+import { isAddressFormat } from "@/lib/chains/address";
 
 /**
  * Helius address webhook for wallet assets ("rung 2" of the indexer ladder):
@@ -39,8 +40,19 @@ export async function syncAssetsWebhook(): Promise<{ webhookID: string; watching
         .from(user)
         .where(isNotNull(user.wallet_address));
 
-    const accountAddresses = [...new Set(rows.map((r) => r.address).filter(Boolean) as string[])].slice(0, MAX_ADDRESSES);
-    if (!accountAddresses.length) throw new Error("No linked wallet addresses to watch.");
+    // SOLANA ADDRESSES ONLY. `user.wallet_address` is chain-agnostic since
+    // multichain accounts landed, so EVM addresses end up in this list — 2 of
+    // the 21 registered on 2026-08-11 were `0x…`. Helius indexes Solana, so an
+    // EVM address is a slot that can never match: no deliveries, no error, and
+    // nothing to indicate it isn't working. Harmless for cost today, but it
+    // consumes the 100k cap and makes "watching 21 wallets" untrue.
+    const linked = [...new Set(rows.map((r) => r.address).filter(Boolean) as string[])];
+    const accountAddresses = linked.filter((a) => isAddressFormat("solana", a)).slice(0, MAX_ADDRESSES);
+    const skipped = linked.length - accountAddresses.length;
+    if (skipped > 0) {
+        console.log(`[assets-webhook] ${accountAddresses.length} Solana wallet(s); skipped ${skipped} non-Solana`);
+    }
+    if (!accountAddresses.length) throw new Error("No linked Solana wallet addresses to watch.");
 
     const payload = {
         webhookURL,

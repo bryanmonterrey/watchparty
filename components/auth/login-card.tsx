@@ -53,6 +53,15 @@ export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
   // dashboard delegating login here — use a hard navigation to cross origins).
   const redirectTo = resolvePostLoginRedirect(callbackUrl);
   const goAfterLogin = () => {
+    // OIDC resume: /api/auth/oauth2/authorize bounces anonymous users HERE
+    // carrying the original authorize query (response_type + client_id) and a
+    // signed oidc_login_prompt cookie. When the session lands, better-auth's
+    // after-hook re-runs authorize and the auth client auto-navigates to the
+    // consent screen / the client's redirect URI. Navigating ourselves would
+    // race that redirect and strand the sign-in-with-watchparty flow — stand
+    // down and let the plugin drive.
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("response_type") && params.has("client_id")) return;
     if (redirectTo.startsWith("/")) {
       router.push(redirectTo);
       router.refresh();

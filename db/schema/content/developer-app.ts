@@ -20,8 +20,10 @@ export const developerApps = pgTable("developer_apps", {
     privateKeyEnc: text("private_key_enc").notNull(),
     tosUrl: text("tos_url"),
     privacyUrl: text("privacy_url"),
-    /** app flags bitfield (verification state, etc.) — reserved for phase 5. */
+    /** app flags bitfield (lib/developer/app-flags.ts — LISTED etc.). */
     flags: bigint("flags", { mode: "number" }).default(0).notNull(),
+    /** OAuth2 client for "Sign in with watchparty" — FK-less join to oauthApplication.clientId. */
+    oauthClientId: text("oauth_client_id").unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     /** soft delete — an app id must never be reused (it may be public). */
