@@ -13,6 +13,8 @@ export const publicRoutes: string[] = [
   "/safety",
   "/about",
   "/developer",
+  // Public "Connect with watchparty" app directory (app/(directory)/apps).
+  "/apps",
 ];
 
 // Public PREFIXES (dynamic public pages, e.g. the embeddable server widget

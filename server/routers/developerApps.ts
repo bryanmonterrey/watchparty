@@ -36,6 +36,7 @@ const identityInput = {
     tags: z.array(z.string().trim().min(1).max(24)).max(5).optional(),
     tosUrl: httpsUrl.optional(),
     privacyUrl: httpsUrl.optional(),
+    websiteUrl: httpsUrl.optional(),
 };
 
 // Public shape — deliberately omits privateKeyEnc. oauthClientId and flags are
@@ -49,6 +50,7 @@ const publicCols = {
     publicKey: developerApps.publicKey,
     tosUrl: developerApps.tosUrl,
     privacyUrl: developerApps.privacyUrl,
+    websiteUrl: developerApps.websiteUrl,
     flags: developerApps.flags,
     oauthClientId: developerApps.oauthClientId,
     createdAt: developerApps.createdAt,
@@ -236,6 +238,7 @@ export const developerAppsRouter = router({
                 privateKeyEnc,
                 tosUrl: input.tosUrl ?? null,
                 privacyUrl: input.privacyUrl ?? null,
+                websiteUrl: input.websiteUrl ?? null,
             });
             return { id };
         }),
@@ -254,6 +257,7 @@ export const developerAppsRouter = router({
                     ...(fields.tags !== undefined ? { tags: fields.tags } : {}),
                     ...(fields.tosUrl !== undefined ? { tosUrl: fields.tosUrl || null } : {}),
                     ...(fields.privacyUrl !== undefined ? { privacyUrl: fields.privacyUrl || null } : {}),
+                    ...(fields.websiteUrl !== undefined ? { websiteUrl: fields.websiteUrl || null } : {}),
                     updatedAt: new Date(),
                 })
                 .where(and(
@@ -541,6 +545,7 @@ export const developerAppsRouter = router({
                 description: developerApps.description,
                 iconUrl: developerApps.iconUrl,
                 tags: developerApps.tags,
+                websiteUrl: developerApps.websiteUrl,
                 oauthClientId: developerApps.oauthClientId,
             })
             .from(developerApps)

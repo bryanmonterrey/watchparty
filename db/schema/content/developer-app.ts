@@ -20,6 +20,8 @@ export const developerApps = pgTable("developer_apps", {
     privateKeyEnc: text("private_key_enc").notNull(),
     tosUrl: text("tos_url"),
     privacyUrl: text("privacy_url"),
+    /** Public homepage, shown on the app directory card. */
+    websiteUrl: text("website_url"),
     /** app flags bitfield (lib/developer/app-flags.ts — LISTED etc.). */
     flags: bigint("flags", { mode: "number" }).default(0).notNull(),
     /** OAuth2 client for "Sign in with watchparty" — FK-less join to oauthApplication.clientId. */

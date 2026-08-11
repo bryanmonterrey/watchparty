@@ -60,6 +60,7 @@ type App = {
   publicKey: string;
   tosUrl: string | null;
   privacyUrl: string | null;
+  websiteUrl: string | null;
   createdAt: Date;
 };
 
@@ -71,6 +72,7 @@ function IdentityCard({ app }: { app: App }) {
   const [tags, setTags] = React.useState(app.tags.join(", "));
   const [tosUrl, setTosUrl] = React.useState(app.tosUrl ?? "");
   const [privacyUrl, setPrivacyUrl] = React.useState(app.privacyUrl ?? "");
+  const [websiteUrl, setWebsiteUrl] = React.useState(app.websiteUrl ?? "");
 
   const update = trpc.developerApps.update.useMutation({
     onSuccess: () => {
@@ -91,6 +93,7 @@ function IdentityCard({ app }: { app: App }) {
     iconUrl !== (app.iconUrl ?? "") ||
     tosUrl !== (app.tosUrl ?? "") ||
     privacyUrl !== (app.privacyUrl ?? "") ||
+    websiteUrl !== (app.websiteUrl ?? "") ||
     parsedTags.join(",") !== app.tags.join(",");
 
   return (
@@ -125,6 +128,14 @@ function IdentityCard({ app }: { app: App }) {
         <Field label="Tags" hint="Up to 5, comma-separated.">
           <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="trading, bot" />
         </Field>
+        <Field label="Website" hint="Shown on your public directory card.">
+          <Input
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="https://yourapp.com"
+            className="font-mono"
+          />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Terms of Service URL">
             <Input
@@ -157,6 +168,7 @@ function IdentityCard({ app }: { app: App }) {
               tags: parsedTags,
               tosUrl: tosUrl || undefined,
               privacyUrl: privacyUrl || undefined,
+              websiteUrl: websiteUrl || undefined,
             })
           }
         >

@@ -86,3 +86,6 @@ create policy jwks_deny_direct_access on jwks
 
 -- One OAuth client per developer app (nullable until the owner enables OAuth).
 alter table developer_apps add column if not exists oauth_client_id text unique;
+
+-- Public homepage for the directory card.
+alter table developer_apps add column if not exists website_url text;

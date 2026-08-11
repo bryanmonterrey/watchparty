@@ -113,8 +113,8 @@ export function ConsentCard({
           </div>
         </div>
 
-        <Squircle radius={20} className="mt-6 block w-full">
-          <ul className="flex flex-col divide-y divide-white/10 border border-white/10 bg-white/[0.04] p-1">
+        <Squircle asChild radius={20}>
+          <ul className="mt-6 flex w-full flex-col divide-y divide-white/10 border border-white/10 bg-white/[0.04] p-1">
             {scopes.map((s) => (
               <li key={s.scope} className="flex items-start gap-3 px-4 py-3.5">
                 <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
