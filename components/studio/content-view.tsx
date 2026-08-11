@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Album02Icon, LinkSquare02Icon, Image01Icon, Video01Icon } from "@hugeicons/core-free-icons";
+import { Album02Icon, LinkSquare02Icon, Image01Icon, Video01Icon, CloudUploadIcon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
+import { UploadDialog } from "@/components/studio/upload-dialog";
 
 // Content management (studio S3): the creator's own pipeline. Drafts and
 // Scheduled are the real management surfaces — backed by content.getDrafts /
@@ -175,7 +176,7 @@ function LibraryTab() {
   if (!videos.data.videos.length)
     return (
       <p className="py-10 text-center text-xs text-muted-foreground">
-        No videos yet. Uploads and clips show up here.
+        No videos yet. Use <span className="font-medium text-foreground">Upload video</span> to add one.
       </p>
     );
 
@@ -298,8 +299,78 @@ function PublishedTab() {
   );
 }
 
+// Per-video performance (studio.x.com Insights): the owner's published videos
+// ranked by views, with engagement. Distinct from the account-level Analytics
+// page — this is per-item, so a creator sees which videos actually landed.
+function InsightsTab() {
+  const insights = trpc.studio.getVideoInsights.useQuery();
+
+  if (insights.isPending) return <div className="h-20 animate-pulse rounded-xl bg-muted/30" />;
+  if (insights.error) return <p className="py-6 text-center text-xs text-destructive">{insights.error.message}</p>;
+  if (!insights.data.length)
+    return (
+      <p className="py-10 text-center text-xs text-muted-foreground">
+        No published videos yet. Performance shows up here once you publish one.
+      </p>
+    );
+
+  const totalViews = insights.data.reduce((s, v) => s + v.views, 0);
+  const totalLikes = insights.data.reduce((s, v) => s + v.likes, 0);
+
+  return (
+    <div className="flex flex-col gap-3 py-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+          <p className="text-xs text-muted-foreground">Total views</p>
+          <p className="mt-0.5 text-lg font-semibold tabular-nums">{fmtCount(totalViews)}</p>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+          <p className="text-xs text-muted-foreground">Total likes</p>
+          <p className="mt-0.5 text-lg font-semibold tabular-nums">{fmtCount(totalLikes)}</p>
+        </div>
+      </div>
+      <div className="flex flex-col divide-y">
+        {insights.data.map((v) => (
+          <a
+            key={v.id}
+            href={`https://watchparty.xyz/video/${v.id}`}
+            className="flex items-center gap-3 py-3"
+          >
+            <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/40">
+              {v.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={v.thumbnailUrl} alt="" className="size-full object-cover" />
+              ) : (
+                <div className="flex size-full items-center justify-center">
+                  <HugeiconsIcon icon={Video01Icon} className="size-4 text-muted-foreground" />
+                </div>
+              )}
+              {(() => {
+                const dur = fmtDuration(v.duration);
+                return dur ? (
+                  <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-0.5 text-xs font-medium text-white">
+                    {dur}
+                  </span>
+                ) : null;
+              })()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{v.title?.trim() || "Untitled"}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {fmtCount(v.views)} views · {fmtCount(v.likes)} likes · {fmtCount(v.comments)} comments · {fmtCount(v.reposts)} reposts
+              </p>
+              <p className="text-xs text-muted-foreground/70">{fmtDate(v.createdAt)}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { key: "library", label: "Library" },
+  { key: "insights", label: "Insights" },
   { key: "broadcasts", label: "Broadcasts" },
   { key: "drafts", label: "Drafts" },
   { key: "scheduled", label: "Scheduled" },
@@ -308,16 +379,31 @@ const TABS = [
 
 export function ContentView() {
   const [tab, setTab] = React.useState<(typeof TABS)[number]["key"]>("library");
+  const [uploadOpen, setUploadOpen] = React.useState(false);
+  const utils = trpc.useUtils();
+
+  const onUploaded = () => {
+    void utils.content.getVideosByUser.invalidate();
+    void utils.content.getDrafts.invalidate();
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
-      <div>
-        <h1 className="text-xl font-semibold">Content</h1>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Your video library, drafts, scheduled posts, and everything
-          you&apos;ve published.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Content</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Your video library, drafts, scheduled posts, and everything
+            you&apos;ve published.
+          </p>
+        </div>
+        <Button size="sm" className="gap-1.5" onClick={() => setUploadOpen(true)}>
+          <HugeiconsIcon icon={CloudUploadIcon} className="size-4" />
+          Upload video
+        </Button>
       </div>
+
+      <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onDone={onUploaded} />
 
       <div className="flex gap-1 rounded-xl border border-border/60 bg-card p-1">
         {TABS.map((t) => (
@@ -337,6 +423,8 @@ export function ContentView() {
       <div className="rounded-2xl border border-border/60 bg-card px-4 sm:px-5">
         {tab === "library" ? (
           <LibraryTab />
+        ) : tab === "insights" ? (
+          <InsightsTab />
         ) : tab === "broadcasts" ? (
           <BroadcastsTab />
         ) : tab === "drafts" ? (

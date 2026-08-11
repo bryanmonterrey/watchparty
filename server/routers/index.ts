@@ -47,6 +47,7 @@ import { developerStreamRulesRouter } from "./developerStreamRules";
 import { developerAnnouncementsRouter } from "./developerAnnouncements";
 import { developerBotsRouter } from "./developerBots";
 import { botRouter } from "./bot";
+import { studioRouter } from "./studio";
 
 /**
  * Root application router
@@ -99,6 +100,7 @@ export const appRouter = router({
     developerAnnouncements: developerAnnouncementsRouter,
     developerBots: developerBotsRouter,
     bot: botRouter,
+    studio: studioRouter,
 });
 
 /**
