@@ -240,6 +240,33 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+  # OG share-image worker (og-worker/). Standalone on purpose: it carries
+  # next/og's ~1 MiB of resvg/yoga wasm + font so the main `watchparty` worker
+  # doesn't have to (that weight had pushed it over the 10 MiB upload cap). Its
+  # wrangler.jsonc declares the zone route watchparty.xyz/api/og/*, so the SAME
+  # share URLs the app builds resolve here with no client change. No .env — it
+  # bakes no secrets and reads no DB. Bundles src/index.ts directly (no OpenNext
+  # build); workers-og resolves from og-worker's own lockfile.
+  deploy-og:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install og-worker dependencies
+        run: bun install --frozen-lockfile
+        working-directory: og-worker
+
+      - name: Deploy og worker
+        run: bunx wrangler deploy
+        working-directory: og-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   # THE ONE THAT SERVES THE SITE.
   #
   # watchparty.xyz is attached to `watchparty-app`, the Worker that fronts the
