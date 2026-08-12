@@ -145,13 +145,38 @@ export type ScanResult = { events: number; tradesSeen: number; skipped?: boolean
  */
 export async function scanToken(token: ScannableToken, budget: CallBudget): Promise<ScanResult> {
     const useGt = process.env.COIN_ALERTS_SOURCE === "gt";
+    // ## Read the whole WINDOW, not "everything since the last scan"
+    //
+    // This passed the watermark, so a pass only ever saw trades newer than the
+    // previous pass — and the cron runs every minute. A cluster needs
+    // MIN_TRADERS (6) wallets and MIN_CLUSTER_USD ($7,500) inside
+    // CLUSTER_WINDOW_MS (15 minutes), but the trades it could see spanned ONE.
+    // The effective threshold was therefore "6 wallets and $7,500 in a single
+    // minute", roughly fifteen times what the constants say, and it only ever
+    // fired on a violent burst.
+    //
+    // Measured on production 2026-08-12: the rail emitted nothing for 6h45m
+    // while the tape kept filling — 414 qualifying trades across 4 pools in six
+    // hours, and exactly ONE 15-minute bucket that met the documented bar (10
+    // traders, $71,707). A pass restricted to one minute of that never sees it.
+    //
+    // Re-reading an overlapping window is what the schema was built for:
+    // `coin_feed_events.dedupeKey` says "a re-scan of an overlapping trade
+    // window recomputes the same cluster; the unique index turns the second
+    // write into a no-op". The watermark below still governs whether there is
+    // anything NEW worth scoring, so a quiet coin is still cheap.
+    //
+    // Only the local reader gets the wider window. The GT path is billed per
+    // call and its `sinceMs` is a server-side filter, not a page size, so
+    // widening it there would change cost rather than coverage.
+    const windowStart = Date.now() - CLUSTER_WINDOW_MS;
     const trades = useGt
         ? await fetchPoolTrades(token.network, token.poolAddress, budget, MIN_TRADE_USD)
         : await readPoolTrades(
               token.network,
               token.poolAddress,
               MIN_TRADE_USD,
-              token.lastTradeAt?.getTime(),
+              Math.min(token.lastTradeAt?.getTime() ?? windowStart, windowStart),
           );
 
     // null = the request failed (429/timeout), NOT "no trades". Leave both
@@ -182,10 +207,16 @@ export async function scanToken(token: ScannableToken, budget: CallBudget): Prom
         return { events: 0, tradesSeen: 0 };
     }
 
-    const whales = fresh.filter((t) => t.usd >= WHALE_USD);
+    // Score the WHOLE window, not just what arrived since the last pass. `fresh`
+    // above is only the "is there anything new here" test — using it as the
+    // scoring input is what shrank a 15-minute window to one minute (see the
+    // note at the read). Re-scoring an overlap is free and safe: every row
+    // carries a `dedupeKey`, so a cluster already emitted becomes a no-op insert
+    // rather than a duplicate in the rail.
+    const whales = trades.filter((t) => t.usd >= WHALE_USD);
     // A whale fill is its own event; leaving it in the pool would also let one
     // wallet carry a cluster's USD threshold on its own.
-    const clusterable = fresh.filter((t) => t.usd < WHALE_USD);
+    const clusterable = trades.filter((t) => t.usd < WHALE_USD);
     const windows = [...findWindows(clusterable, "buy"), ...findWindows(clusterable, "sell")];
 
     // One identity lookup for the whole coin, not one per window.
@@ -221,9 +252,21 @@ export async function scanToken(token: ScannableToken, budget: CallBudget): Prom
             usdValue: w.usd,
             marketCapUsd: marketCapAt(token, last.priceUsd),
             traders: ranked.map((r) => identities.get(r.addr) ?? { address: r.addr }),
-            // Keyed on the window's closing tx: deterministic, so a retried pass
-            // that recomputes the same window collides instead of duplicating.
-            dedupeKey: `cluster:${token.id}:${w.side}:${last.txHash}`,
+            // Keyed on the window's OPENING tx, not its closing one.
+            //
+            // The closing tx was deterministic for a fixed input and unstable
+            // across the overlapping re-scans this now does: `findWindows`
+            // anchors on the earliest trade and consumes forward, so one more
+            // trade arriving extends the same window and moves its LAST tx —
+            // producing a fresh key, and a near-duplicate row in the rail, on
+            // every pass a burst is still running. Up to fifteen of them, at a
+            // one-minute cron and a fifteen-minute window.
+            //
+            // The opening tx does not move while the burst's first trade is
+            // still inside the lookback, so a growing cluster collides with
+            // itself exactly as intended. Once that trade ages out the window
+            // genuinely is a different one.
+            dedupeKey: `cluster:${token.id}:${w.side}:${w.trades[0].txHash}`,
             occurredAt: w.endAt,
         });
     }
