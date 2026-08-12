@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { projectRef } from "./project-ref";
 
 /**
  * The service-role client — and the one chokepoint that refuses to write to
@@ -35,20 +36,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * one-off — a backfill against prod from a laptop, say. It has to be typed on
  * purpose, which is the entire point.
  */
-
-/** The project ref out of either URL shape Supabase hands out. */
-function projectRef(value: string | undefined): string | null {
-    if (!value) return null;
-    const pooled = value.match(/postgres\.([a-z0-9]{16,}):/)?.[1];
-    if (pooled) return pooled;
-    try {
-        const host = new URL(value).host;
-        const first = host.split(".")[0];
-        return first === "db" ? (host.split(".")[1] ?? null) : first;
-    } catch {
-        return null;
-    }
-}
 
 /**
  * @throws when drizzle and supabase-js target different projects outside

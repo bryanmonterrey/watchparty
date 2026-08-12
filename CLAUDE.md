@@ -197,7 +197,7 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
   Compare the resolved project refs instead:
 
   ```bash
-  node scripts/db/check-env-target.mjs   # exits 1 on a mismatch
+  bun scripts/db/check-env-target.ts   # exits 1 on a mismatch
   ```
 
   `lib/supabase/assert-same-project.ts` warns about this at startup and is

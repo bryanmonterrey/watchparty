@@ -1,7 +1,7 @@
 /**
  * Which database does this checkout actually write to?
  *
- *   node scripts/db/check-env-target.mjs        # exits 1 on a mismatch
+ *   bun scripts/db/check-env-target.ts        # exits 1 on a mismatch
  *
  * ## Why the obvious check is not enough
  *
@@ -17,26 +17,19 @@
  * it. That is the whole point of this script: a var can be overridden and still
  * be wrong, and that failure looks exactly like a fix.
  *
+ * Runs under bun so it can import the SAME `projectRef` the app uses. It kept
+ * a private copy until 2026-08-12, and that copy is exactly how the custom
+ * domain bug survived in one place while being fixed in another.
+ *
  * Prints masked refs only, never credentials.
  */
 import { readFileSync } from "node:fs";
+import { projectRef } from "../../lib/supabase/project-ref";
 
-function projectRef(value) {
-    if (!value) return null;
-    // Pooler connection strings carry it in the user: postgres.<ref>:pw@host
-    const pooled = value.match(/postgres\.([a-z0-9]{16,}):/)?.[1];
-    if (pooled) return pooled;
-    try {
-        const host = new URL(value).host;
-        const first = host.split(".")[0];
-        return first === "db" ? (host.split(".")[1] ?? null) : first;
-    } catch {
-        return null;
-    }
-}
+type Env = Record<string, string>;
 
-function readEnv(file) {
-    const out = {};
+function readEnv(file: string): Env {
+    const out: Env = {};
     try {
         for (const line of readFileSync(file, "utf8").split("\n")) {
             const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
@@ -54,9 +47,9 @@ function readEnv(file) {
 // Same precedence the app uses: .env.local wins.
 const base = readEnv(".env");
 const local = readEnv(".env.local");
-const get = (k) => local[k] ?? base[k];
-const mask = (r) => (r ? `${r.slice(0, 8)}…` : "(none)");
-const from = (k) => (k in local ? ".env.local" : k in base ? ".env" : "unset");
+const get = (k: string): string | undefined => local[k] ?? base[k];
+const mask = (r: string | null): string => (r ? `${r.slice(0, 8)}…` : "(none)");
+const from = (k: string): string => (k in local ? ".env.local" : k in base ? ".env" : "unset");
 
 const dbRef = projectRef(get("DATABASE_URL"));
 const apiRef = projectRef(get("NEXT_PUBLIC_SUPABASE_URL"));

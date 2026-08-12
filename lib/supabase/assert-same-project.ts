@@ -27,22 +27,7 @@
  * nothing to compare there and the check quietly does nothing.
  */
 
-/** The project ref out of either URL shape Supabase hands out. */
-function projectRef(value: string | undefined): string | null {
-    if (!value) return null;
-    // Pooler connection strings carry it in the user: postgres.<ref>:pw@host
-    const pooled = value.match(/postgres\.([a-z0-9]{16,}):/)?.[1];
-    if (pooled) return pooled;
-    // Everything else has it as the first host label: <ref>.supabase.co,
-    // db.<ref>.supabase.co
-    try {
-        const host = new URL(value).host;
-        const first = host.split(".")[0];
-        return first === "db" ? host.split(".")[1] ?? null : first;
-    } catch {
-        return null;
-    }
-}
+import { projectRef } from "./project-ref";
 
 let warned = false;
 
