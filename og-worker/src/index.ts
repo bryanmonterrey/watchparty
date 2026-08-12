@@ -28,23 +28,26 @@ function card({ text, name, username, avatar }: {
 }): string {
     const handle = username.startsWith("@") ? username : `@${username}`;
     const avatarEl = avatar
-        ? `<img src="${esc(avatar)}" style="width:80px;height:80px;border-radius:40px;object-fit:cover;margin-right:24px" />`
-        : `<div style="width:80px;height:80px;border-radius:40px;background-color:#e5e7eb;margin-right:24px"></div>`;
-    // No whitespace BETWEEN tags: workers-og's HTML parser turns inter-tag
-    // newlines/indentation into text nodes, which count as extra children —
-    // and satori then throws "Expected <div> to have explicit display:flex if
-    // it has more than one child node". Keep this one tight line.
+        ? `<img src="${esc(avatar)}" style="width: 80px; height: 80px; border-radius: 40px; object-fit: cover; margin-right: 24px" />`
+        : `<div style="width: 80px; height: 80px; border-radius: 40px; background-color: #e5e7eb; margin-right: 24px"></div>`;
+    // Styles MUST be written `property: value` WITH the space — workers-og's
+    // CSS parser only recognises the spaced form, and a dropped `display: flex`
+    // makes satori see a block div and throw "Expected <div> to have explicit
+    // display: flex if it has more than one child node". (The unspaced
+    // `display:flex` form silently parsed to nothing — the real cause of the
+    // 500s, not the inter-tag whitespace.) Keep the markup on one line too, so
+    // no text nodes sneak in as extra children.
     return (
-        `<div style="height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background-color:#000000;color:white">` +
-            `<div style="display:flex;flex-direction:column;background-color:#ffffff;color:#000000;width:800px;min-height:400px;border-radius:24px;padding:48px;box-shadow:0 20px 40px rgba(0,0,0,0.5)">` +
-                `<div style="display:flex;align-items:center;margin-bottom:32px">` +
+        `<div style="height: 100%; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #000000; color: white">` +
+            `<div style="display: flex; flex-direction: column; background-color: #ffffff; color: #000000; width: 800px; min-height: 400px; border-radius: 24px; padding: 48px; box-shadow: 0 20px 40px rgba(0,0,0,0.5)">` +
+                `<div style="display: flex; align-items: center; margin-bottom: 32px">` +
                     avatarEl +
-                    `<div style="display:flex;flex-direction:column">` +
-                        `<span style="font-size:32px;font-weight:bold;color:#09090b;margin-bottom:4px">${esc(name)}</span>` +
-                        `<span style="font-size:24px;color:#71717a">${esc(handle)}</span>` +
+                    `<div style="display: flex; flex-direction: column">` +
+                        `<span style="font-size: 32px; font-weight: bold; color: #09090b; margin-bottom: 4px">${esc(name)}</span>` +
+                        `<span style="font-size: 24px; color: #71717a">${esc(handle)}</span>` +
                     `</div>` +
                 `</div>` +
-                `<div style="display:flex;font-size:36px;line-height:1.4;color:#09090b">${esc(text)}</div>` +
+                `<div style="display: flex; font-size: 36px; line-height: 1.4; color: #09090b">${esc(text)}</div>` +
             `</div>` +
         `</div>`
     );
