@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "public", "mobile", "console", "realtime", "cron", "tests", "services/rpc-proxy", "scripts/_stub-server-only.ts", "cloudflare-env.d.ts", "container"]
+  "exclude": ["node_modules", "public", "mobile", "console", "realtime", "og-worker", "cron", "tests", "services/rpc-proxy", "scripts/_stub-server-only.ts", "cloudflare-env.d.ts", "container"]
 }
