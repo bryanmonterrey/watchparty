@@ -15,6 +15,7 @@ import { deliverCommunityCoinAlerts } from "@/lib/coin-feed/community-alerts";
 import { eq, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { CallBudget, fetchPoolTrades, type PoolTrade } from "./geckoterminal";
+import { readPoolTrades } from "./local-trades";
 // Shared with the coin page's trades table — see lib/coins/resolve-traders.
 import { resolveTraders } from "@/lib/coins/resolve-traders";
 
@@ -122,12 +123,36 @@ function findWindows(trades: PoolTrade[], side: "buy" | "sell"): Window[] {
 export type ScanResult = { events: number; tradesSeen: number; skipped?: boolean };
 
 /**
- * Scan one coin and write any events it produced. Costs exactly one
- * GeckoTerminal call. Advances the coin's watermark + scan cursor when the call
- * SUCCEEDED — even if it found nothing — so the queue keeps moving.
+ * Scan one coin and write any events it produced. Advances the coin's watermark
+ * + scan cursor when the read SUCCEEDED — even if it found nothing — so the
+ * queue keeps moving.
+ *
+ * ## Reads OUR OWN tape unless COIN_ALERTS_SOURCE=gt
+ *
+ * The GeckoTerminal path is one call PER COIN per pass, which is why clusters
+ * could not follow the rest of the app onto a metered provider: 20 calls/min is
+ * 864,000 credits a month, and no cadence fixes it because the cost scales with
+ * the number of coins watched, not the polling rate.
+ *
+ * `coin_trades` already holds these swaps — pushed in by the Helius webhook
+ * today, by the Mobula socket once the Tape DO runs. Re-fetching them costs
+ * money to learn what is already in our own table.
+ *
+ * Coverage becomes the TAPE's coverage, and that is the real trade: alerts fire
+ * only for coins something is actually streaming. Narrower, and honest — the
+ * same call the board made when it dropped the provider that could not supply
+ * holder data.
  */
 export async function scanToken(token: ScannableToken, budget: CallBudget): Promise<ScanResult> {
-    const trades = await fetchPoolTrades(token.network, token.poolAddress, budget, MIN_TRADE_USD);
+    const useGt = process.env.COIN_ALERTS_SOURCE === "gt";
+    const trades = useGt
+        ? await fetchPoolTrades(token.network, token.poolAddress, budget, MIN_TRADE_USD)
+        : await readPoolTrades(
+              token.network,
+              token.poolAddress,
+              MIN_TRADE_USD,
+              token.lastTradeAt?.getTime(),
+          );
 
     // null = the request failed (429/timeout), NOT "no trades". Leave both
     // cursors untouched so this coin is retried next pass instead of being

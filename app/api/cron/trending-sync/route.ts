@@ -105,14 +105,27 @@ export async function GET(req: NextRequest) {
     try {
         const result = await runTrendingSync(budget, gtNetworks, source);
 
-        // Candles take what the board's own sweep left. The board has first
-        // claim: it's the front page, and a stale trending list is more visible
-        // than a chart that advances a minute late. With a CoinGecko key the
-        // ceiling is per-key rather than per-IP, so there's real headroom here;
-        // without one this usually gets very little, which is exactly why the
-        // chart READ path doesn't depend on it (see docs/live-charts-plan).
-        const candleBudget = new CallBudget(gtKeyed() ? 40 : 4);
-        const candles = await runCandleSync(candleBudget);
+        // ── Candle PREFETCH is off once Mobula is on ─────────────────────
+        //
+        // This was the last GeckoTerminal caller in the write path, and it is
+        // the one that could simply STOP rather than be ported.
+        //
+        // The chart read path (lib/tokens/udf-datafeed) already goes: our own
+        // coin_candles -> Mobula -> GT, and it PERSISTS what Mobula returns. So
+        // a coin someone opens populates itself, for free, on first view.
+        //
+        // Porting the prefetch instead would be the expensive option: Mobula's
+        // OHLCV endpoint costs 5 CREDITS a call, not 1, so prefetching a
+        // few-hundred-coin board is thousands of credits an hour to fill a
+        // cache for coins nobody opened. docs/market-data-options.md already
+        // reached this conclusion — "you do not need candles for every coin,
+        // you need them for every coin someone opens" — and then kept the
+        // prefetch anyway because GT calls were free.
+        //
+        // They are not free any more; they are just failing somewhere else.
+        const candles = mobulaChains.length > 0
+            ? { synced: 0, written: 0, skipped: "mobula: candles are fetch-on-open" as const }
+            : await runCandleSync(new CallBudget(gtKeyed() ? 40 : 4));
 
         // Retention runs on the pass that turns the chain list over, so it's
         // once every five minutes rather than every minute.
