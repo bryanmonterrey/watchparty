@@ -178,7 +178,12 @@ export function AppSidebar() {
         }
     }
     const { data: unreadNotifs } = trpc.notification.getUnreadCount.useQuery(undefined, { enabled: !!session?.user })
-    const { data: unreadMessages } = trpc.conversation.getUnreadCount.useQuery(undefined, { enabled: !!session?.user, refetchInterval: 30_000 })
+    // Unread updates arrive by PUSH: useInboxRealtime (mounted app-wide in
+    // AppProviders) invalidates this query on every inbox event, so the badge
+    // is realtime already. The interval is only the safety net for a dropped
+    // socket — 30s here was the widest poll in the app (every page, every
+    // user) and pure container load. docs/realtime-video-architecture.md.
+    const { data: unreadMessages } = trpc.conversation.getUnreadCount.useQuery(undefined, { enabled: !!session?.user, refetchInterval: 300_000 })
     // Cmd/Ctrl+K jumps to the dedicated /search page (the old command-palette
     // dialog was removed in favor of the full search page).
     React.useEffect(() => {
