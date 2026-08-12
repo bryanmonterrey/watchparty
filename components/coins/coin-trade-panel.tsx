@@ -288,7 +288,7 @@ export function CoinTradePanel({
                 swapToast.dismiss();
                 setWalletDialogOpen(true);
             } else {
-                swapToast.error((error as Error)?.message || "swap failed");
+                swapToast.error((error as Error)?.message || "Swap failed");
             }
         } finally {
             setSubmitting(false);
@@ -299,13 +299,13 @@ export function CoinTradePanel({
     if (!chainId || (!isSolana && !isEvm) || (isEvm && !getChain(chainId))) {
         return (
             <div className={cn(cardClassName, "p-5")}>
-                <h3 className="text-lg font-bold text-white">trade {coinSymbol}</h3>
+                <h3 className="text-lg font-bold text-white">Trade {coinSymbol}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-                    in-app swaps aren&apos;t available on {chainLabel(coin.network)} yet.
+                    In-app swaps aren&apos;t available on {chainLabel(coin.network)} yet.
                 </p>
                 {marketUrl && (
                     <Button asChild className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85">
-                        <a href={marketUrl} target="_blank" rel="noopener noreferrer">open market</a>
+                        <a href={marketUrl} target="_blank" rel="noopener noreferrer">Open market</a>
                     </Button>
                 )}
             </div>
@@ -370,13 +370,13 @@ export function CoinTradePanel({
 
             {/* size */}
             <div className="mt-4 flex items-center justify-between text-[13px] font-medium text-zinc-500">
-                <span>amount</span>
+                <span>Amount</span>
                 <button
                     type="button"
                     onClick={() => setAmount(toInputAmount(balance))}
                     className="cursor-pointer tabular-nums transition-colors hover:text-white"
                 >
-                    balance {formatAmount(balance)} {balanceSymbol}
+                    Balance {formatAmount(balance)} {balanceSymbol}
                 </button>
             </div>
             <div className="mt-1.5 flex h-12 items-center gap-2 rounded-2xl bg-white/5 px-4">
@@ -411,21 +411,21 @@ export function CoinTradePanel({
 
             {/* estimate */}
             <div className="mt-4 flex items-center justify-between text-[13px] font-medium">
-                <span className="text-zinc-500">you receive</span>
+                <span className="text-zinc-500">You receive</span>
                 <span className="tabular-nums text-zinc-200">
                     {estimate != null && amountNum > 0 ? `≈ ${formatAmount(estimate)} ${receiveSymbol}` : "—"}
                 </span>
             </div>
             {isEvm && evmQuote.data?.tool && amountNum > 0 && (
                 <div className="mt-1 flex items-center justify-between text-[12px] font-medium text-zinc-600">
-                    <span>route</span>
+                    <span>Route</span>
                     <span>{evmQuote.data.tool}</span>
                 </div>
             )}
 
             {/* slippage */}
             <div className="mt-3 flex items-center justify-between">
-                <span className="text-[13px] font-medium text-zinc-500">slippage</span>
+                <span className="text-[13px] font-medium text-zinc-500">Slippage</span>
                 <div className="flex items-center gap-1">
                     {SLIPPAGE_PRESETS.map((s) => (
                         <button
@@ -457,7 +457,7 @@ export function CoinTradePanel({
                     side === "buy" ? "bg-lantern hover:bg-lantern/85" : "bg-pastelred hover:bg-pastelred/85",
                 )}
             >
-                {submitting ? "swapping…" : `${side} ${coinSymbol}`}
+                {submitting ? "Swapping…" : `${side === "buy" ? "Buy" : "Sell"} ${coinSymbol}`}
             </Button>
 
             {/* Bottom "open market ↗" link removed (2026-08-12) — the in-app swap

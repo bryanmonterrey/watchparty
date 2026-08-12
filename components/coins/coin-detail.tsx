@@ -58,7 +58,7 @@ function CopyTokenAddress({ address }: { address: string }) {
             )}
         >
             <span className="hidden @xl/coin:inline">
-                {copied ? "copied" : `${address.slice(0, 5)}…${address.slice(-5)}`}
+                {copied ? "Copied" : `${address.slice(0, 5)}…${address.slice(-5)}`}
             </span>
             {/* Stacked icons cross-fade + scale on copy so the swap reads as a
                 confirmation rather than a hard cut. */}
@@ -609,7 +609,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                         <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
                                         <span className="text-[11px] font-medium tabular-nums">—</span>
                                     </span>
-                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">no $tags yet</span>
+                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">No $tags yet</span>
                                 </span>
                             </div>
                         );
@@ -625,7 +625,8 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     );
 }
 
-/** The reference's square filter toggles — a checkbox, not a switch. */
+/** Filter toggle — a checkbox (not a switch). Round, per the house rule that
+ *  every checkbox is rounded-full. */
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
     return (
         <button
@@ -635,7 +636,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
         >
             <span
                 className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+                    "flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
                     checked ? "border-lantern bg-lantern" : "border-flexwhite/20",
                 )}
             >
