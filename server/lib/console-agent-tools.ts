@@ -93,6 +93,42 @@ export function consoleAgentToolsFor(ctx: Context) {
             },
         }),
 
+        getMyApiKeys: tool({
+            description:
+                "The caller's API keys with their FUNDING status — per-key USDC balance, total spent, and when each was last used. Use it for 'how much credit do I have', 'is my key funded', 'which key is running low', or before telling someone why a call 402'd. Balances are live (reflect spend the flush cron hasn't written back yet).",
+            inputSchema: z.object({}),
+            execute: () =>
+                caught(async () => {
+                    const keys = await caller.apiKeys.list();
+                    return keys.map((k) => ({
+                        name: k.name,
+                        prefix: k.prefix,
+                        balanceUsd: k.balanceUsd,
+                        spentUsd: k.spentUsd,
+                        revoked: k.revoked,
+                        lastUsedAt: k.lastUsedAt,
+                        scopes: k.scopes ?? "all",
+                    }));
+                }),
+        }),
+
+        getRecentWebhookDeliveries: tool({
+            description:
+                "The last ~20 webhook delivery attempts for the caller's endpoint — event type, whether it succeeded (ok), HTTP status, and how long it took. Use it to debug 'my webhook isn't firing', 'are deliveries failing', or to confirm an endpoint is healthy. Returns nothing if no endpoint is configured.",
+            inputSchema: z.object({}),
+            execute: () =>
+                caught(async () => {
+                    const rows = await caller.developerWebhooks.deliveries();
+                    return rows.map((d) => ({
+                        event: d.event,
+                        ok: d.ok,
+                        status: d.status,
+                        durationMs: d.durationMs,
+                        at: d.createdAt,
+                    }));
+                }),
+        }),
+
         createApp: tool({
             description:
                 "Create a developer app (a home for keys/webhooks with an Ed25519 signing identity). Returns the new app id. 25-app cap is enforced.",

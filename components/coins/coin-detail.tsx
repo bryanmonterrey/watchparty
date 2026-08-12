@@ -12,7 +12,7 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpRight01Icon, Clock01Icon, Copy01Icon, FavouriteIcon } from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon, Clock01Icon, Copy01Icon, Tick02Icon, FavouriteIcon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import { ChainBadge } from "@/components/trending/chain-badge";
 import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons";
@@ -31,6 +31,52 @@ import { HomeActionDock } from "@/components/home/home-action-dock";
 import { coinTag, logClient } from "@/lib/client-log";
 import { Squircle } from "@/components/ui/squircle";
 import { retryTransient } from "@/lib/query-retry";
+
+/** Token-address copy affordance beside the coin name. Manages its own copied
+ *  state so the icon cross-fades to a check (and the truncated address swaps to
+ *  "copied") — silent copy gave no confirmation before. */
+function CopyTokenAddress({ address }: { address: string }) {
+    const [copied, setCopied] = React.useState(false);
+    return (
+        <button
+            type="button"
+            onClick={() => {
+                void navigator.clipboard.writeText(address);
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1500);
+            }}
+            aria-label={copied ? "token address copied" : "copy token address"}
+            className={cn(
+                "flex shrink-0 cursor-pointer items-center gap-1 text-[13px] font-medium transition-colors",
+                copied ? "text-emerald-400" : "text-zinc-600 hover:text-white",
+            )}
+        >
+            <span className="hidden @xl/coin:inline">
+                {copied ? "copied" : `${address.slice(0, 5)}…${address.slice(-5)}`}
+            </span>
+            {/* Stacked icons cross-fade + scale on copy so the swap reads as a
+                confirmation rather than a hard cut. */}
+            <span className="relative inline-flex size-3.5 items-center justify-center">
+                <HugeiconsIcon
+                    icon={Copy01Icon}
+                    strokeWidth={2}
+                    className={cn(
+                        "absolute size-3.5 transition-all duration-200 ease-out",
+                        copied ? "scale-50 opacity-0" : "scale-100 opacity-100",
+                    )}
+                />
+                <HugeiconsIcon
+                    icon={Tick02Icon}
+                    strokeWidth={2.5}
+                    className={cn(
+                        "absolute size-3.5 transition-all duration-200 ease-out",
+                        copied ? "scale-100 opacity-100" : "scale-50 opacity-0",
+                    )}
+                />
+            </span>
+        </button>
+    );
+}
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
  *  ResolvedCoin — declared here because that module is server-only and this
@@ -140,17 +186,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                             affordance — it was a full-width button at the bottom
                             of the old sidebar, which is a lot of room for a
                             string nobody reads in full. */}
-                        <button
-                            type="button"
-                            onClick={() => void navigator.clipboard.writeText(coin.tokenAddress)}
-                            aria-label="copy token address"
-                            className="flex shrink-0 cursor-pointer items-center gap-1 text-[13px] font-medium text-zinc-600 transition-colors hover:text-white"
-                        >
-                            <span className="hidden @xl/coin:inline">
-                                {coin.tokenAddress.slice(0, 5)}…{coin.tokenAddress.slice(-5)}
-                            </span>
-                            <HugeiconsIcon icon={Copy01Icon} className="size-3.5" strokeWidth={2} />
-                        </button>
+                        <CopyTokenAddress address={coin.tokenAddress} />
                         {explorer && (
                             <a
                                 href={explorer}
@@ -401,7 +437,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     const TABS: { id: TableTab; label: string }[] = [
         { id: "holders", label: "Holders" },
         { id: "swaps", label: "Swaps" },
-        { id: "mentions", label: `$mentions (${rows.length})` },
+        { id: "mentions", label: `$tags (${rows.length})` },
     ];
 
     return (
@@ -444,7 +480,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-4">
-                    <Toggle checked={mentionsOnly} onChange={setMentionsOnly} label="$mentions only" />
+                    <Toggle checked={mentionsOnly} onChange={setMentionsOnly} label="$tags only" />
                     <Toggle checked={friendsOnly} onChange={setFriendsOnly} label="Friends only" />
                 </div>
             </div>
@@ -454,7 +490,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 <span className="px-5 py-3">Position</span>
                 <span className="px-5 py-3">PnL</span>
                 <span className="px-5 py-3">Avg. entry</span>
-                <span className="px-5 py-3">$mentions</span>
+                <span className="px-5 py-3">$tags</span>
             </div>
 
             {isLoading ? (
@@ -567,7 +603,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                         <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
                                         <span className="text-[11px] font-medium tabular-nums">—</span>
                                     </span>
-                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">no $mentions yet</span>
+                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">no $tags yet</span>
                                 </span>
                             </div>
                         );

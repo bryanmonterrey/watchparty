@@ -30,15 +30,19 @@ function PlatformGlyph({ platform, className }: { platform: SocialPlatform; clas
     }
 }
 
-export function SocialLinksRow({ socials, className }: {
+export function SocialLinksRow({ socials, className, compact = false }: {
     socials: SocialLinks | null | undefined;
     className?: string;
+    /** Inline size for sitting next to the name on the profile top line —
+     *  smaller circles, no background until hover, so a row of them reads as
+     *  quiet metadata beside the display name rather than a button cluster. */
+    compact?: boolean;
 }) {
     const entries = socialEntries(socials);
     if (!entries.length) return null;
 
     return (
-        <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+        <div className={cn("flex flex-wrap items-center", compact ? "gap-0.5" : "gap-1.5", className)}>
             {entries.map(([platform, value]) => (
                 <a
                     key={platform}
@@ -46,9 +50,14 @@ export function SocialLinksRow({ socials, className }: {
                     target={platform === "email" ? undefined : "_blank"}
                     rel="noopener noreferrer"
                     title={SOCIAL_META[platform].label}
-                    className="flex size-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                    className={cn(
+                        "flex items-center justify-center rounded-full text-zinc-400 transition-colors hover:text-white",
+                        compact
+                            ? "size-7 hover:bg-white/10"
+                            : "size-9 bg-white/5 hover:bg-white/10",
+                    )}
                 >
-                    <PlatformGlyph platform={platform} className="size-[18px]" />
+                    <PlatformGlyph platform={platform} className={compact ? "size-[15px]" : "size-[18px]"} />
                 </a>
             ))}
         </div>

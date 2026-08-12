@@ -468,16 +468,9 @@ export function CoinTradePanel({
                 {submitting ? "swapping…" : `${side} ${coinSymbol}`}
             </Button>
 
-            {marketUrl && (
-                <a
-                    href={marketUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 block text-center text-[13px] font-medium text-zinc-500 transition-colors hover:text-white"
-                >
-                    open market ↗
-                </a>
-            )}
+            {/* Bottom "open market ↗" link removed (2026-08-12) — the in-app swap
+                is the intended action here; the market link stays only in the
+                no-in-app-swap gate above, where it's the sole fallback. */}
 
             {/* Radix closes this on outside click / escape — exactly the asked-for
                 behaviour. Lives in a portal, so its place in this card is moot. */}

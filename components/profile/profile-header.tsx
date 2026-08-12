@@ -9,6 +9,7 @@ import { BadgeStrip } from "./badge-strip";
 import { FollowersFollowingDialog } from "./followers-following-dialog";
 import { ProfileHeaderActions } from "./profile-header-actions";
 import { CreatorCoinAction } from "./creator-coin-action";
+import { SocialLinksRow } from "./social-links";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
@@ -75,7 +76,7 @@ export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameCl
                 column (sibling below) so their h-11 height no longer inflates
                 this stack's first row and skews the gaps. */}
             <div className="flex flex-col gap-0.5 min-w-0">
-                <div className={cn("flex items-center justify-start min-w-0", isMinimized ? "flex-row gap-1" : "flex-row gap-1")}>
+                <div className={cn("flex items-center justify-start min-w-0 flex-row flex-wrap gap-x-1 gap-y-1")}>
                     {onNameClick ? (
                         <button
                             type="button"
@@ -108,6 +109,9 @@ export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameCl
                     <span className="text-zinc-400 tracking-wide font-semibold text-lg">
                         @{user.username}
                     </span>
+                    {/* Socials sit inline with the name (compact, quiet) — moved
+                        here from the About card so they're visible on every tab. */}
+                    {!isMinimized && <SocialLinksRow socials={user.socials} compact className="ml-1" />}
                 </div>
 
                 {!isMinimized && SHOW_LEVEL_AND_BADGES && (

@@ -13,6 +13,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/console/copy-button";
+import { AgentMarkdown } from "@/components/console/agent-markdown";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
@@ -299,11 +300,17 @@ export function AgentView() {
                     {m.content || (!m.tools?.length && busy && i === messages.length - 1) ? (
                       <div
                         className={cn(
-                          "rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap",
-                          m.role === "user" ? "bg-foreground text-background" : "bg-muted/50",
+                          "rounded-2xl px-3.5 py-2 text-sm",
+                          m.role === "user"
+                            ? "bg-foreground text-background whitespace-pre-wrap"
+                            : "bg-muted/50",
                         )}
                       >
-                        {m.content || "…"}
+                        {m.role === "assistant" && m.content ? (
+                          <AgentMarkdown>{m.content}</AgentMarkdown>
+                        ) : (
+                          m.content || "…"
+                        )}
                       </div>
                     ) : null}
                   </div>

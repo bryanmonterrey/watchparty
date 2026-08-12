@@ -2,12 +2,12 @@
 
 import { UserType } from "@/db/schema/auth/user";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon, PinpointIcon, CalendarIcon, Link2Icon } from "@/components/icons";
-import { SocialLinksRow } from "./social-links";
 
 // The structured "About {name}" card at the top of the About tab. Holds the
-// bio + details (location / joined / website) — moved here from the profile
-// header (2026-07-24) — plus the socials row. No wallet address — addresses are
-// never displayed in the UI (owner rule, 2026-07-21).
+// bio + details (location / joined / website). Socials moved to the profile
+// header's top line (next to the name, 2026-08-12) so they show on every tab.
+// No wallet address — addresses are never displayed in the UI (owner rule,
+// 2026-07-21).
 
 const formatJoinedDate = (date: Date | null) => {
     if (!date) return "Recently";
@@ -59,8 +59,6 @@ export function AboutCard({ user }: { user: UserType }) {
                     </a>
                 )}
             </div>
-
-            <SocialLinksRow socials={user.socials} />
         </div>
     );
 }
