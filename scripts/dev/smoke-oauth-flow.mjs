@@ -34,7 +34,12 @@ function readEnv(file) {
     return out;
 }
 const env = PROD ? readEnv(".env") : { ...readEnv(".env"), ...readEnv(".env.local") };
-for (const [k, v] of Object.entries(env)) if (v && !process.env[k]) process.env[k] = v;
+// UNCONDITIONAL assignment (mint-test-session does the same): bun auto-loads
+// .env.local into process.env before this script runs, so a "don't override"
+// guard would silently keep the DEV DATABASE_URL in --production mode — the
+// seeded client lands in dev while the prod app looks in prod, and every
+// check fails with invalid_client. Found the hard way 2026-08-11.
+for (const [k, v] of Object.entries(env)) if (v) process.env[k] = v;
 
 // ── seed: throwaway client + session cookie ─────────────────────────────────
 const { db } = await import("../../db/index.ts");
@@ -114,9 +119,12 @@ async function tokenPost(params) {
 async function runConsent(consentUrl) {
     const u = new URL(consentUrl, BASE);
     const consentCode = u.searchParams.get("consent_code");
+    // `origin` is REQUIRED: better-auth's CSRF check 403s an origin-less POST
+    // (MISSING_OR_NULL_ORIGIN). Browsers always send it from the consent page;
+    // a bare server-side fetch must add it explicitly.
     const res = await fetch(`${BASE}/api/auth/oauth2/consent`, {
         method: "POST",
-        headers: { "content-type": "application/json", cookie },
+        headers: { "content-type": "application/json", cookie, origin: BASE },
         body: JSON.stringify({ accept: true, ...(consentCode ? { consent_code: consentCode } : {}) }),
     });
     const body = await res.json().catch(() => null);
@@ -297,7 +305,7 @@ try {
             const u = new URL(loc, BASE);
             const res = await fetch(`${BASE}/api/auth/oauth2/consent`, {
                 method: "POST",
-                headers: { "content-type": "application/json", cookie },
+                headers: { "content-type": "application/json", cookie, origin: BASE },
                 body: JSON.stringify({ accept: false, consent_code: u.searchParams.get("consent_code") }),
             });
             const body = await res.json().catch(() => null);

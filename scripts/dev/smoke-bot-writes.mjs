@@ -30,7 +30,10 @@ function readEnv(file) {
     return out;
 }
 const env = PROD ? readEnv(".env") : { ...readEnv(".env"), ...readEnv(".env.local") };
-for (const [k, v] of Object.entries(env)) if (v && !process.env[k]) process.env[k] = v;
+// UNCONDITIONAL assignment — bun auto-loads .env.local first, so a "don't
+// override" guard keeps the DEV DB in --production mode (see the identical
+// note in smoke-oauth-flow.mjs).
+for (const [k, v] of Object.entries(env)) if (v) process.env[k] = v;
 
 const { db } = await import("../../db/index.ts");
 const { user } = await import("../../db/schema/auth/user.ts");
