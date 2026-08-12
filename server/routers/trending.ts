@@ -196,7 +196,14 @@ export const trendingRouter = router({
                 select 1 from ${trendingCoins} dup
                 where lower(dup.symbol) = lower(${trendingCoins.symbol})
                   and lower(coalesce(dup.name, '')) = lower(coalesce(${trendingCoins.name}, ''))
-                  and dup.fetched_at >= ${new Date(Date.now() - STALE_AFTER_MS)}
+                  -- .toISOString() + an explicit cast, NEVER a JS Date. A value
+                  -- interpolated into `sql` carries no column, so drizzle has no
+                  -- encoder for it and hands the Date to postgres.js, where
+                  -- workerd's Buffer polyfill throws ERR_INVALID_ARG_TYPE. Node
+                  -- accepts it, so this passes locally and 500s in production —
+                  -- exactly the trap CLAUDE.md documents, and it took the whole
+                  -- board down until the next deploy.
+                  and dup.fetched_at >= ${new Date(Date.now() - STALE_AFTER_MS).toISOString()}::timestamptz
                   and (
                     coalesce(dup.volume_24h_usd, 0) > coalesce(${trendingCoins.volume24hUsd}, 0)
                     or (coalesce(dup.volume_24h_usd, 0) = coalesce(${trendingCoins.volume24hUsd}, 0)
