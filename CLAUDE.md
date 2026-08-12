@@ -187,6 +187,24 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` too**, or treat any
   supabase-js path as production even on localhost.
 
+  ⚠️ **Overriding the var is not the same as fixing it.** Checked again
+  2026-08-12: all four keys were PRESENT in `.env.local` and
+  `NEXT_PUBLIC_SUPABASE_URL` still held the **production** value
+  (`ugpzuypo…`) while `DATABASE_URL` pointed at dev (`hghxcuro…`). A var
+  can be overridden and still be wrong, and that failure looks exactly
+  like a fix — grepping for the key name reports success.
+
+  Compare the resolved project refs instead:
+
+  ```bash
+  node scripts/db/check-env-target.mjs   # exits 1 on a mismatch
+  ```
+
+  `lib/supabase/assert-same-project.ts` warns about this at startup and is
+  wired into `lib/supabase/client.ts`, but it only fires when the app
+  actually runs — which is never, locally (see the dev-server note). The
+  script is the check that works without a dev server.
+
 - **Dev DB split (2026-08-07):** local dev should point at the SEPARATE free
   Supabase dev project via `.env.local` (bootstrap a fresh one with
   `node scripts/db/setup-dev-db.mjs "<dev direct url>"` — it drizzle-pushes the
