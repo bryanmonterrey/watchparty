@@ -14,8 +14,15 @@ Treat `../sidebar` as the reference implementation when porting a feature — bu
 
 Both the site's **platform premium** tiers and **creator subscriptions** run on the
 Solana **Subscriptions & Allowances** program (`De1eg…`), billed in **USDC**, with a
-scheduled collector that auto-pulls each period. Built, tsc/build-clean, and
-**devnet-validated**. Not yet live on mainnet.
+scheduled collector that auto-pulls each period. **LIVE ON MAINNET** (verified
+2026-08-12): the 8 platform plans are provisioned on-chain with the real USDC
+mint (since 2026-06-21), collector = `C9kxy…`, cold = `TREASURY_COLD_PUBKEY`,
+and both crons run from the `watchparty-cron` worker —
+`/api/cron/premium-collect` and `/api/cron/treasury-sweep` both answer clean on
+prod. No real subscriber yet (the one "active" row is the `dev-grant-narc`
+fixture). Still open from `docs/cloudflare-launch.md`: step 7 outflow alerts
+(needs a Discord/Slack `ALERT_WEBHOOK_URL` from the user) and a first real
+subscribe test.
 
 - **Code map:** `lib/premium/tiers.ts` (platform pricing), `lib/chains/solana/subscriptions/`
   (kit client, `compat` wallet-adapter bridge, `checkout`, `collector` = server signer +

@@ -6,7 +6,10 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { SquareLock02Icon } from '@hugeicons/core-free-icons';
 import { useEncryptionContext } from './encryption-provider';
 import { useAuthSession } from '@/hooks/use-auth-session';
-import { WalletSetupCta } from '@/components/wallet/wallet-drawer/views/setup/wallet-setup-cta';
+// drawer2's CTA, not the old drawer's: the old one POSTs /api/create-wallet
+// with no turnstile token, which 403s wherever TURNSTILE_SECRET_KEY is set —
+// i.e. the gate's primary button was dead in prod.
+import { WalletSetupCta } from '@/components/wallet/wallet-drawer2/views/setup/wallet-setup-cta';
 
 // Same lazy-mount pattern as WalletButton: the connect modal is heavy and only
 // needed on click, so it stays out of the messages bundle until then.

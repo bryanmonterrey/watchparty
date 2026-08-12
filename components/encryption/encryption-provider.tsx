@@ -16,6 +16,7 @@ import { trpc } from '@/lib/trpc/client';
 import { TRPCClientError } from '@trpc/client';
 import { logger } from '@/lib/logger';
 import { storeFrostClientShare } from '@/lib/frost/frost-storage';
+import type { FrostShare, FrostPublicInfo } from '@/lib/frost/types';
 
 const cryptoManager = new CryptoManager();
 const keyStorage = new KeyStorage();
@@ -70,6 +71,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
     // rehydrate the on-device share when an existing wallet isn't materialized on
     // this device yet, so messaging doesn't wrongly prompt to generate a wallet.
     const frostSetup = trpc.wallet.frostSetup.useMutation();
+    const ensureEmbedded = trpc.wallet.ensureEmbedded.useMutation();
     const utils = trpc.useUtils();
 
     const initKeys = useCallback(async () => {
@@ -138,6 +140,39 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
                     initGuard.current = false;
                     return;
                 } else {
+                    // No wallet anywhere — this used to be the hard wall that
+                    // ~1/3 of accounts (email/OAuth signups) hit. The embedded
+                    // wallet is fully server-provisionable and idempotent
+                    // (wallet.ensureEmbedded), so self-heal instead: create or
+                    // fetch it, land the FROST client share on this device,
+                    // and carry on. The seed phrase stays recoverable from
+                    // wallet settings (revealPhrase) — backup is a nudge, not
+                    // a wall. Only a genuine provisioning failure still gates.
+                    try {
+                        const created = await ensureEmbedded.mutateAsync();
+                        if (created?.clientShare && created?.publicInfo) {
+                            // The wire type collapses to {} (the router passes
+                            // ensureEmbeddedWallet's share through untyped);
+                            // the values are our own server's FrostShare.
+                            await storeFrostClientShare(
+                                userId,
+                                created.clientShare as FrostShare,
+                                created.publicInfo as FrostPublicInfo,
+                            );
+                        } else {
+                            // Wallet pre-existed (created:false) — the share
+                            // comes from the server backup instead.
+                            const setup = await frostSetup.mutateAsync();
+                            if (setup?.clientShare) {
+                                await storeFrostClientShare(userId, setup.clientShare, setup.publicInfo);
+                            }
+                        }
+                        wrapKey = await deriveMessagingWrapKey(userId);
+                    } catch (provisionErr) {
+                        logger.error('Silent wallet provisioning for messaging failed', provisionErr as Error, { userId });
+                    }
+                }
+                if (!wrapKey) {
                     setNeedsWallet(true);
                     setIsInitialized(false);
                     // Allow a later wallet connect (dep change) or retry() to proceed.
