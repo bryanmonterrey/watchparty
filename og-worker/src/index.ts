@@ -106,8 +106,8 @@ export default {
                     "cache-control": "public, max-age=86400, s-maxage=604800, immutable",
                 },
             });
-        } catch (err) {
-            return new Response(`OG render error: ${(err as Error)?.message}`, { status: 500 });
+        } catch {
+            return new Response("Failed to generate image", { status: 500 });
         }
     },
 };
