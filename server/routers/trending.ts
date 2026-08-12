@@ -11,7 +11,8 @@ import { router, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { coinFeedEvents } from "@/db/schema/content/coin-feed";
-import { and, asc, desc, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { coinCandles } from "@/db/schema/content/coin-candles";
+import { and, asc, desc, eq, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { clearsBrandBar, isRiskyHoldings } from "@/lib/coin-feed/quality";
 import { isVerifiedMint, verifiedSolanaMints } from "@/lib/coins/verified-tokens";
@@ -291,8 +292,48 @@ export const trendingRouter = router({
             clean.map((i) => ({ ...i, volume: i.volume24hUsd ?? 0, marketCap: i.marketCapUsd ?? 0 })),
         );
 
+        // ── 24h sparkline, one query for the whole page ──────────────────
+        //
+        // Per row would be 50-100 queries a page. The bars are already in
+        // `coin_candles`, projected from the trade tape by record-swaps, so
+        // this costs nothing beyond the read.
+        //
+        // Hourly bars ("60"), which is 24 points across a day — enough shape
+        // for a 28px chart and small enough to ship inline rather than as a
+        // second round trip.
+        //
+        // Coins with no bars simply get an empty array and CoinSparkline draws
+        // an em-dash. That is the honest state while the tape covers only the
+        // watched mints, and it is why the component distinguishes "no series"
+        // from "no movement" rather than drawing a flat line for both.
+        const pools = deduped.map((i) => i.poolAddress).filter(Boolean) as string[];
+        const spark = new Map<string, { t: number; c: number }[]>();
+        if (pools.length > 0) {
+            const since = Math.floor(Date.now() / 1000) - 24 * 60 * 60;
+            const bars = await db
+                .select({ poolAddress: coinCandles.poolAddress, ts: coinCandles.ts, c: coinCandles.c })
+                .from(coinCandles)
+                .where(
+                    and(
+                        eq(coinCandles.resolution, "60"),
+                        gte(coinCandles.ts, since),
+                        inArray(coinCandles.poolAddress, pools),
+                    ),
+                )
+                .orderBy(asc(coinCandles.ts));
+            for (const b of bars) {
+                const arr = spark.get(b.poolAddress) ?? [];
+                arr.push({ t: b.ts, c: b.c });
+                spark.set(b.poolAddress, arr);
+            }
+        }
+
         return {
-            items: deduped.map((i) => ({ ...i, activity: activity.get(i.id) ?? null })),
+            items: deduped.map((i) => ({
+                ...i,
+                activity: activity.get(i.id) ?? null,
+                spark: spark.get(i.poolAddress) ?? [],
+            })),
             nextCursor: hasMore ? offset + input.limit : null,
         };
     }),

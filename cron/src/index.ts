@@ -91,15 +91,6 @@ export default {
         } else if (event.cron === "*/10 * * * *") {
             // Callout leaderboard: advance peak gains + pay multiplier XP bonuses.
             ctx.waitUntil(call(env, "/api/cron/callout-performance"));
-            // Re-point the Mobula trade socket at the coins that currently
-            // matter. The right 50 change through the day, and re-subscribing
-            // is FREE — the DO sends a new payload on the existing connection,
-            // and Mobula bills per minute OPEN, not per subscription. So the
-            // watch list can be chosen by RELEVANCE, which is the inversion
-            // this whole move was for: the Helius budget had to pick the
-            // cheapest pools and evicted a coin the moment it took off.
-            // No-ops when REALTIME_HOST/SECRET are unset, i.e. until the DO runs.
-            ctx.waitUntil(call(env, "/api/cron/tape-watch"));
             // Settle pending server-witnessed trades on-chain (Phase 4a).
             ctx.waitUntil(call(env, "/api/cron/trade-verify"));
             // Rebuild realized-PnL snapshots from confirmed trades (Phase 4b).
@@ -125,6 +116,24 @@ export default {
             // Coin alert feed (/home left rail): discovers tracked coins across
             // chains and clusters their swaps into "N traders bought" events.
             ctx.waitUntil(call(env, "/api/cron/coin-alerts"));
+            // Re-point the Mobula trade socket at the coins that currently
+            // matter — EVERY MINUTE, because it is free to do so.
+            //
+            // Mobula bills a socket per MINUTE OPEN, not per subscription or
+            // message, and Tape.reconcile() sends the new payload on the
+            // EXISTING connection rather than reconnecting. So swapping all 50
+            // coins costs zero credits, and the only cost of doing it per
+            // minute is one indexed query plus one call to the realtime worker.
+            //
+            // That is the inversion this whole move was for. `Helius` billed
+            // per DELIVERY, so the watch list had to be picked cheapest-first
+            // and a coin was EVICTED the moment it took off — the exact opposite
+            // of what a live tape should follow. Here relevance is free, so the
+            // list tracks 24h volume and re-picks on the same cadence as the
+            // rest of the feed.
+            //
+            // No-ops when REALTIME_HOST/SECRET are unset, i.e. until the DO runs.
+            ctx.waitUntil(call(env, "/api/cron/tape-watch"));
             // Trending board (/trending): refreshes a rotating slice of chains.
             // Its budget and coin-alerts' deliberately sum under GeckoTerminal's
             // shared ~30 calls/min ceiling — see lib/coin-feed/geckoterminal.ts.

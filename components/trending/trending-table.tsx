@@ -21,6 +21,7 @@ import { Squircle } from "@/components/ui/squircle";
 import { ChainBadge } from "./chain-badge";
 import { useStar } from "./use-starred";
 import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
+import { CoinSparkline } from "@/components/coins/coin-sparkline";
 
 // The trending board — every-chain coin table behind /trending.
 //
@@ -57,6 +58,29 @@ const SORT = "volume" as const;
 
 const PAGE = 50;
 
+/**
+ * The 24h sparkline column — OFF until the tape covers the board.
+ *
+ * The chart data is real and wired end to end: bars are projected from
+ * `coin_trades` on ingest, batched into `trending.list`, and rendered by
+ * CoinSparkline. What is missing is OVERLAP.
+ *
+ * Measured 2026-08-12 after backfilling every trade on the tape: 3 of 199 board
+ * rows have 24h bars. The tape holds the pools Helius watches; the board shows
+ * Mobula's top coins by volume, and those are almost disjoint sets. A column
+ * that draws an em-dash on 98% of rows reads as broken, not as honest — the
+ * em-dash is there for the occasional gap, not for the whole column.
+ *
+ * `/api/cron/tape-watch` is what closes this: it points the Mobula socket at
+ * the top 50 BOARD coins and re-picks every minute, so overlap goes from 3 to
+ * 50 the moment the Tape DO runs. Flip this on then.
+ *
+ * A build-time constant rather than a runtime check so the grid track count is
+ * decided once — the header and every cell must agree on it, and a value that
+ * could change between renders is a board whose columns shift under you.
+ */
+const SPARKLINE = process.env.NEXT_PUBLIC_TRENDING_SPARKLINE === "1";
+
 // One grid definition shared by the header and every row, so columns can never
 // drift apart. Progressive disclosure by width rather than a horizontal
 // scrollbar: the board should stay readable in a centre column, not demand the
@@ -87,7 +111,10 @@ const GRID =
     // + volume
     "@xl:grid-cols-[minmax(0,1fr)_104px_100px_104px_60px_28px] " +
     // + market cap
-    "@3xl:grid-cols-[minmax(0,1fr)_112px_112px_112px_116px_72px_32px]";
+    // + market cap (+ the 24h sparkline when SPARKLINE is on)
+    (SPARKLINE
+        ? "@3xl:grid-cols-[minmax(0,1fr)_112px_112px_112px_88px_116px_72px_32px]"
+        : "@3xl:grid-cols-[minmax(0,1fr)_112px_112px_112px_116px_72px_32px]");
 
 // ONE size and ONE weight for every string in the table, per the author: the
 // hierarchy is carried entirely by colour, so nothing here may set its own
@@ -285,6 +312,21 @@ function TrendingRowView({ row, timeframe, quickBuy, buying }: {
                 {compactUsd(row.marketCapUsd)}
             </span>
 
+            {/* 24h shape. Bars are projected from the trade tape, so a coin
+                nothing is streaming has none — CoinSparkline draws an em-dash
+                rather than a flat line, because "no series" and "no movement"
+                are different facts. */}
+            {SPARKLINE && (
+            <span className="hidden @3xl:block">
+                <CoinSparkline
+                    points={row.spark ?? []}
+                    width={80}
+                    height={26}
+                    label={`${row.symbol} 24h trend`}
+                />
+            </span>
+            )}
+
             <ChangeCell pct={pctFor(row, timeframe)} />
 
             <BuyCell row={row} quickBuy={quickBuy} buying={buying} />
@@ -388,6 +430,11 @@ export function TrendingTable({ className }: { className?: string }) {
                 <span className="cursor-pointer transition-colors hover:text-twitter2">Market price</span>
                 <span className="hidden cursor-pointer transition-colors hover:text-twitter2 @xl:block">Volume</span>
                 <span className="hidden cursor-pointer transition-colors hover:text-twitter2 @3xl:block">Market cap</span>
+                {/* Matches the sparkline cell's @3xl visibility. A header that
+                    appears at a different breakpoint than its column shifts
+                    every heading one track right — silent, and only at one
+                    width. */}
+                {SPARKLINE && <span className="hidden @3xl:block">Last 24h</span>}
                 <span className="cursor-pointer transition-colors hover:text-twitter2">Change</span>
                 {/* The action columns are self-evident from the rows; a header
                     over them would just be noise. They still need their tracks. */}
