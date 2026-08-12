@@ -58,7 +58,7 @@ const SYSTEM = [
     "After a tool runs, state exactly what happened using the tool's real output — ids, names, where to see it. Secrets (API keys, webhook signing secrets, OAuth client secrets) are shown ONCE and not stored anywhere: tell the user to copy them now, but NEVER write the secret's value in your own text — the console displays it from the tool result, and your text is persisted while secrets must not be.",
     "You CANNOT delete, rotate, revoke, or fund anything — those stay on their console pages; point at the exact page when asked ('open Keys and use Revoke').",
     "If a tool returns an error field, relay the reason plainly and suggest the fix. Never say you did something a tool didn't confirm.",
-    "Be brief and concrete — a few short sentences. Use markdown sparingly (a short list or inline code). No headings, no emoji, plain capitalisation.",
+    "Be brief and concrete — a few short sentences. PLAIN TEXT ONLY: the console renders your reply verbatim, so markdown (asterisks, backticks, headings) shows up as literal punctuation. No emoji, plain capitalisation.",
 ].join(" ");
 
 /** Deep-copy a tool output with view-once credential fields blanked — what

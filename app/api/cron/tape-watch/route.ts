@@ -88,7 +88,10 @@ export async function GET(req: NextRequest) {
     // Empty means "watch nothing" and the DO parks its socket — correct, and
     // deliberately NOT the same as leaving a stale list running. A board that
     // has gone quiet should stop the meter, not keep streaming yesterday.
-    const res = await fetch(`${host.replace(/\/$/, "")}/tape/watch`, {
+    // `https://` prepended, matching lib/realtime/publish.ts:43 — REALTIME_HOST
+    // is stored BARE ("realtime.watchparty.xyz"), so building the URL from it
+    // directly produces a relative fetch that fails on every call.
+    const res = await fetch(`https://${host.replace(/^https?:\/\//, "").replace(/\/$/, "")}/tape/watch`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: secret },
         body: JSON.stringify({ items, active: items.length > 0 }),
