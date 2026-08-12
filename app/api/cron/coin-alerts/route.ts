@@ -23,7 +23,15 @@ export const maxDuration = 120;
 
 /** Discovery cadence in minutes. Trending pools don't turn over fast enough to
  *  justify paying 2 calls/network every single minute. */
+// 5 while discovery runs on GeckoTerminal, which is free and rate-limited.
+// Mobula is METERED, so the interval becomes the bill: 2 chains x 1 call
+// ("new" only — the trending half is read from trending_coins) is
+//     every 30 min -> 2,880/month + the board's 4,320 = 7,200  (free tier)
+//     every  5 min -> 17,280/month + 4,320 = 21,600            (over)
+// DISCOVERY_MOBULA_EVERY_MIN overrides only when the Mobula path is on, so the
+// GT cadence is untouched by the switch.
 const DISCOVERY_EVERY_MIN = 5;
+const DISCOVERY_MOBULA_EVERY_MIN = Math.max(1, Number(process.env.DISCOVERY_MOBULA_EVERY_MIN ?? 30) || 30);
 
 export async function GET(req: NextRequest) {
     const authz = req.headers.get("authorization");
@@ -35,7 +43,9 @@ export async function GET(req: NextRequest) {
     const minute = new Date().getUTCMinutes();
     // ?discover=1 forces a discovery pass — used when validating by hand.
     const forceDiscovery = req.nextUrl.searchParams.get("discover") === "1";
-    const shouldDiscover = forceDiscovery || minute % DISCOVERY_EVERY_MIN === 0;
+    const onMobula = !!process.env.DISCOVERY_MOBULA_CHAINS?.trim();
+    const everyMin = onMobula ? DISCOVERY_MOBULA_EVERY_MIN : DISCOVERY_EVERY_MIN;
+    const shouldDiscover = forceDiscovery || minute % everyMin === 0;
 
     let discovery = null;
     if (shouldDiscover) {

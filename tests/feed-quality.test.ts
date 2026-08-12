@@ -168,9 +168,30 @@ describe("brand tickers", () => {
         expect(isBrandSquat("CB", "Coinbase Token")).toBe(true);
     });
 
-    test("a ticker squat still passes with enough liquidity — high bar, not a ban", () => {
+    test("a TICKER gets no liquidity escape — changed 2026-08-12", () => {
+        // This test used to assert the opposite: HOOD at $400k passed, because
+        // the bar was "high, not a ban" for every brand match alike.
+        //
+        // Measured on the live board, SNDK was clearing it at $298,149 and
+        // sitting there as an impersonator with money behind it. Liquidity says
+        // a coin is well funded; it has never said the coin is who it claims to
+        // be, and for a stock ticker that is the only question. A $CLAUDE meme
+        // with real depth is plausibly a genuine community coin — SanDisk's
+        // NASDAQ ticker has no such reading.
         expect(clearsBrandBar("HOOD", null, 136_439)).toBe(false);
-        expect(clearsBrandBar("HOOD", null, 400_000)).toBe(true);
+        expect(clearsBrandBar("HOOD", null, 400_000)).toBe(false);
+        expect(clearsBrandBar("SNDK", "Sandisk Corporation", 298_149)).toBe(false);
+        // Verification remains the ONE escape, because it answers the actual
+        // question a tokenised equity poses.
+        expect(clearsBrandBar("HOOD", null, 0, true)).toBe(true);
+    });
+
+    test("a brand NAME keeps the liquidity bar — the rule is unchanged there", () => {
+        // The high-bar behaviour still exists; it just applies to names rather
+        // than tickers now. Losing this distinction is how the change would
+        // silently become a blanket ban.
+        expect(clearsBrandBar("CLAUDE", null, 3_000)).toBe(false);
+        expect(clearsBrandBar("CLAUDE", null, 400_000)).toBe(true);
     });
 });
 
@@ -277,9 +298,12 @@ describe("clearsBrandBar — verified exemption", () => {
         expect(clearsBrandBar("NVDA", "Nvidia", 0, true)).toBe(true);
     });
 
-    test("the bar still works when nothing is verified — old behaviour intact", () => {
-        expect(clearsBrandBar("NVDA", "Nvidia", 500_000)).toBe(true);
-        expect(clearsBrandBar("NVDA", "Nvidia", 1_000)).toBe(false);
+    test("unverified, the liquidity bar applies to NAMES and never to tickers", () => {
+        expect(clearsBrandBar("CLAUDE", "Claude Coin", 500_000)).toBe(true);
+        expect(clearsBrandBar("CLAUDE", "Claude Coin", 1_000)).toBe(false);
+        // NVDA is a ticker: no amount of liquidity buys it through.
+        expect(clearsBrandBar("NVDA", "Nvidia", 500_000)).toBe(false);
+        expect(clearsBrandBar("NVDA", "Nvidia", 50_000_000)).toBe(false);
     });
 
     test("a non-brand coin is unaffected either way", () => {

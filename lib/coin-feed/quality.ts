@@ -295,5 +295,20 @@ export function clearsBrandBar(
 ): boolean {
     if (!isBrandSquat(symbol, name)) return true;
     if (verified) return true;
+
+    // A STOCK TICKER gets no liquidity escape.
+    //
+    // The bar exists so a well-funded brand-riding MEME isn't banned outright —
+    // a $CLAUDE with real depth is plausibly a genuine community coin. A stock
+    // ticker is not that. `SNDK` is SanDisk's NASDAQ ticker; there is no
+    // community reading of it, and at $298,149 it was clearing the bar and
+    // sitting on the board as an impersonator with money behind it.
+    //
+    // Liquidity says a coin is well funded. It has never said the coin is who
+    // it claims to be — and for a ticker, that is the only question. The
+    // `verified` short-circuit above is the correct escape for a genuinely
+    // tokenised equity, and it is the ONLY one that answers it.
+    if (isStockTicker(symbol, name)) return false;
+
     return (liquidityUsd ?? 0) >= BRAND_SQUAT_MIN_LIQUIDITY_USD;
 }

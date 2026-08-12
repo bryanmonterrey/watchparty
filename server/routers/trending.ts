@@ -20,6 +20,23 @@ import { collapseCopycats } from "@/lib/coins/collapse-copycats";
 /** A board row older than this is stale data, not data. See the note in `list`. */
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Below this a coin is not tradeable, so it is not a listing.
+ *
+ * Measured 2026-08-12: 109 of 311 board rows — 35% — sat under $1,000 of
+ * liquidity. Not a rounding artefact of a few dust pairs; a third of what the
+ * board was showing could not absorb a $100 order without moving double digits.
+ *
+ * $1,000 is deliberately low. It is not a quality judgement — quality is what
+ * the brand, ticker and holder gates are for — it only asserts that a row on a
+ * TRADING surface should be something you can actually trade. Anything with
+ * real interest clears it within minutes of launch.
+ *
+ * Env-tunable because the right floor depends on what the board is for, and
+ * that is worth changing without a deploy.
+ */
+const MIN_BOARD_LIQUIDITY_USD = Number(process.env.TRENDING_MIN_LIQUIDITY_USD ?? 1_000) || 0;
+
 /** Which window the % / volume columns describe. */
 export const TIMEFRAMES = ["5m", "1h", "6h", "24h"] as const;
 export type Timeframe = (typeof TIMEFRAMES)[number];
@@ -124,6 +141,12 @@ export const trendingRouter = router({
             .filter(Boolean);
         if (allowedSources.length && !allowedSources.includes("*")) {
             where.push(inArray(trendingCoins.source, allowedSources));
+        }
+        // Untradeable rows are not listings — see MIN_BOARD_LIQUIDITY_USD.
+        // In SQL rather than after the page, so it does not eat the page size
+        // the way the JS gates below necessarily do.
+        if (MIN_BOARD_LIQUIDITY_USD > 0) {
+            where.push(gte(trendingCoins.liquidityUsd, MIN_BOARD_LIQUIDITY_USD));
         }
         if (input.chains?.length) where.push(inArray(trendingCoins.network, input.chains));
         if (input.minLiquidityUsd) where.push(gte(trendingCoins.liquidityUsd, input.minLiquidityUsd));
