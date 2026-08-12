@@ -1976,7 +1976,7 @@ function TagSection({ server }: { server: CommunityServer }) {
                         className={!color ? "bg-white/10 text-zinc-200" : undefined}
                     />
                 ) : (
-                    <span className="shrink-0 text-[13px] font-medium text-zinc-600">no tag</span>
+                    <span className="shrink-0 text-[13px] font-medium text-zinc-600">No tag</span>
                 )}
             </div>
 
@@ -2001,7 +2001,7 @@ function TagSection({ server }: { server: CommunityServer }) {
                         badge === "" ? "bg-white/15 text-white" : "bg-white/[0.04] hover:bg-white/10",
                     )}
                 >
-                    none
+                    None
                 </button>
                 {TAG_BADGES.map((b) => (
                     <button

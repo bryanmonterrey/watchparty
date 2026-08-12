@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Plus, Pencil, Video, ListVideo, Bell, User, Link } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   EndScreenElement,
   EndScreenElementType,
@@ -211,12 +212,10 @@ function SubscribeElementForm({
         onBlur={onCommit}
       />
       <label className="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          className="rounded accent-red-500"
+        <Checkbox
           checked={el.showHovercardOutline ?? false}
-          onChange={(e) => {
-            onPatch(el.id, { showHovercardOutline: e.target.checked })
+          onCheckedChange={(v) => {
+            onPatch(el.id, { showHovercardOutline: v === true })
             onCommit()
           }}
         />

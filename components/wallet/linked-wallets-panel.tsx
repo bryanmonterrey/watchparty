@@ -36,7 +36,7 @@ export function LinkedWalletsPanel() {
                 // make the user look at it before it's gone.
                 setNewMnemonic(res.mnemonic);
             } else {
-                appToast.success("wallet already set up");
+                appToast.success("Wallet already set up");
             }
         },
         onError: (e) => appToast.error(e.message),
@@ -45,7 +45,7 @@ export function LinkedWalletsPanel() {
     const setPrimary = trpc.wallet.setPrimaryWallet.useMutation({
         onSuccess: () => {
             utils.wallet.listLinkedWallets.invalidate();
-            appToast.success("main wallet updated");
+            appToast.success("Main wallet updated");
         },
         onError: (e) => appToast.error(e.message),
     });
@@ -70,7 +70,7 @@ export function LinkedWalletsPanel() {
     const linkWallet = trpc.wallet.linkWallet.useMutation({
         onSuccess: () => {
             utils.wallet.listLinkedWallets.invalidate();
-            appToast.success("wallet linked");
+            appToast.success("Wallet linked");
         },
         onError: (e) => appToast.error(e.message),
     });
@@ -98,7 +98,7 @@ export function LinkedWalletsPanel() {
     const unlink = trpc.wallet.unlinkWallet.useMutation({
         onSuccess: () => {
             utils.wallet.listLinkedWallets.invalidate();
-            appToast.success("wallet unlinked");
+            appToast.success("Wallet unlinked");
         },
         onError: (e) => appToast.error(e.message),
     });
@@ -112,10 +112,10 @@ export function LinkedWalletsPanel() {
             <div className="space-y-4">
                 <div>
                     <h2 className="text-[16px] font-bold tracking-tight text-white">
-                        save your recovery phrase
+                        Save your recovery phrase
                     </h2>
                     <p className="mt-1 text-[12px] font-medium text-zinc-500">
-                        these 12 words are the only way to restore this wallet. we can&apos;t
+                        These 12 words are the only way to restore this wallet. We can&apos;t
                         recover them for you.
                     </p>
                 </div>
@@ -131,7 +131,7 @@ export function LinkedWalletsPanel() {
         <div className="space-y-4">
             <div className="flex items-end justify-between gap-3">
                 <div>
-                    <h2 className="text-[16px] font-bold tracking-tight text-white">wallets</h2>
+                    <h2 className="text-[16px] font-bold tracking-tight text-white">Wallets</h2>
                     {/* "the primary one is what the app uses" was wrong AND
                         dangerous-by-omission: the app spends from whichever
                         wallet is connected, while this setting decides where
@@ -175,7 +175,7 @@ export function LinkedWalletsPanel() {
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2">
                                             <h3 className="truncate text-[14px] font-semibold text-white">
-                                                {w.label || (isEmbedded ? "watchparty wallet" : "connected wallet")}
+                                                {w.label || (isEmbedded ? "Watchparty wallet" : "Connected wallet")}
                                             </h3>
                                             {w.isPrimary && (
                                                 <span className="flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -184,12 +184,12 @@ export function LinkedWalletsPanel() {
                                                         className="size-3"
                                                         strokeWidth={2.5}
                                                     />
-                                                    main
+                                                    Main
                                                 </span>
                                             )}
                                         </div>
                                         <p className="mt-0.5 text-[12px] font-medium text-zinc-500">
-                                            {isEmbedded ? "created by watchparty" : "connected by you"}
+                                            {isEmbedded ? "Created by watchparty" : "Connected by you"}
                                         </p>
                                     </div>
                                 </div>
@@ -203,7 +203,7 @@ export function LinkedWalletsPanel() {
                                             disabled={setPrimary.isPending}
                                             onClick={() => setPrimary.mutate({ address: w.address })}
                                         >
-                                            make main
+                                            Make main
                                         </Button>
                                     )}
                                     {/* The embedded wallet can't be unlinked — we hold its key
@@ -237,10 +237,10 @@ export function LinkedWalletsPanel() {
                                 </div>
                                 <div>
                                     <h3 className="text-[14px] font-semibold text-white">
-                                        link your connected wallet
+                                        Link your connected wallet
                                     </h3>
                                     <p className="text-[12px] font-medium text-zinc-500">
-                                        sign once to prove it&apos;s yours, then you can make it your main
+                                        Sign once to prove it&apos;s yours, then you can make it your main
                                     </p>
                                 </div>
                             </div>
@@ -250,7 +250,7 @@ export function LinkedWalletsPanel() {
                                 disabled={linking || !signMessage}
                                 onClick={handleLinkConnected}
                             >
-                                {linking ? "linking…" : "link"}
+                                {linking ? "Linking…" : "Link"}
                             </Button>
                         </Panel>
                     )}
@@ -263,10 +263,10 @@ export function LinkedWalletsPanel() {
                                 </div>
                                 <div>
                                     <h3 className="text-[14px] font-semibold text-white">
-                                        set up your watchparty wallet
+                                        Set up your watchparty wallet
                                     </h3>
                                     <p className="text-[12px] font-medium text-zinc-500">
-                                        one phrase covering every network, and it becomes your main wallet
+                                        One phrase covering every network, and it becomes your main wallet
                                     </p>
                                 </div>
                             </div>
@@ -276,7 +276,7 @@ export function LinkedWalletsPanel() {
                                 disabled={ensureEmbedded.isPending}
                                 onClick={() => ensureEmbedded.mutate()}
                             >
-                                {ensureEmbedded.isPending ? "setting up…" : "set up"}
+                                {ensureEmbedded.isPending ? "Setting up…" : "Set up"}
                             </Button>
                         </Panel>
                     )}

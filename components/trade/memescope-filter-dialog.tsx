@@ -240,26 +240,26 @@ export function MemescopeFilterDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-sm">
-                <DialogTitle>filter coins</DialogTitle>
+                <DialogTitle>Filter coins</DialogTitle>
                 <div className="mt-1 flex flex-col gap-3">
-                    <Field label="min market cap ($)" value={marketCap} onChange={setMarketCap} placeholder="10000" />
-                    <Field label="min 24h volume ($)" value={volume} onChange={setVolume} placeholder="5000" />
-                    <Field label="min holders" value={holders} onChange={setHolders} placeholder="50" />
-                    <Field label="max age (hours)" value={age} onChange={setAge} placeholder="24" />
+                    <Field label="Min market cap ($)" value={marketCap} onChange={setMarketCap} placeholder="10000" />
+                    <Field label="Min 24h volume ($)" value={volume} onChange={setVolume} placeholder="5000" />
+                    <Field label="Min holders" value={holders} onChange={setHolders} placeholder="50" />
+                    <Field label="Max age (hours)" value={age} onChange={setAge} placeholder="24" />
                     <Field
-                        label={`min buy pressure (%) — needs ${MIN_TXNS_FOR_RATIO}+ trades`}
+                        label={`Min buy pressure (%) — needs ${MIN_TXNS_FOR_RATIO}+ trades`}
                         value={buyPercent}
                         onChange={setBuyPercent}
                         placeholder="60"
                     />
                     <Field
-                        label="min volume acceleration (5m vs 1h pace)"
+                        label="Min volume acceleration (5m vs 1h pace)"
                         value={accel}
                         onChange={setAccel}
                         placeholder="2"
                     />
                     <Field
-                        label="min turnover (24h volume ÷ market cap)"
+                        label="Min turnover (24h volume ÷ market cap)"
                         value={turnoverMin}
                         onChange={setTurnoverMin}
                         placeholder="10"
@@ -270,9 +270,9 @@ export function MemescopeFilterDialog({
                         className="flex cursor-pointer items-center justify-between py-1 text-left"
                     >
                         <span className="flex flex-col">
-                            <span className="text-[13px] font-medium text-zinc-300">hide risky coins</span>
+                            <span className="text-[13px] font-medium text-zinc-300">Hide risky coins</span>
                             <span className="text-[12px] text-zinc-600">
-                                high sniper / insider / top-10 holder concentration
+                                High sniper / insider / top-10 holder concentration
                             </span>
                         </span>
                         <span
@@ -293,7 +293,7 @@ export function MemescopeFilterDialog({
                         }}
                         className="h-11 flex-1 rounded-full bg-white/10 font-bold text-white hover:bg-white/20"
                     >
-                        reset
+                        Reset
                     </Button>
                     <Button
                         onClick={() => {
@@ -311,7 +311,7 @@ export function MemescopeFilterDialog({
                         }}
                         className="h-11 flex-1 rounded-full bg-white font-bold text-black hover:bg-white/85"
                     >
-                        apply
+                        Apply
                     </Button>
                 </div>
             </DialogContent>

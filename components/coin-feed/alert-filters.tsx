@@ -63,7 +63,7 @@ export function AlertFiltersButton({
         on ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} /> : undefined;
 
     const items = [
-        { type: "label" as const, label: "show" },
+        { type: "label" as const, label: "Show" },
         ...KIND_GROUPS.map((g) =>
             gooMenuItem({
                 key: g.key,
@@ -75,7 +75,7 @@ export function AlertFiltersButton({
         ),
 
         { type: "separator" as const },
-        { type: "label" as const, label: "chains" },
+        { type: "label" as const, label: "Chains" },
         ...COIN_NETWORKS.filter((n) => n.enabled).map((n) => {
             const tracked = coverage?.find((c) => c.network === n.id)?.tracked;
             return gooMenuItem({
@@ -95,7 +95,7 @@ export function AlertFiltersButton({
         }),
 
         { type: "separator" as const },
-        { type: "label" as const, label: "min size" },
+        { type: "label" as const, label: "Min size" },
         ...USD_STEPS.map((v) =>
             gooMenuItem({
                 key: `usd-${v}`,
@@ -107,7 +107,7 @@ export function AlertFiltersButton({
         ),
 
         { type: "separator" as const },
-        { type: "label" as const, label: "min traders" },
+        { type: "label" as const, label: "Min traders" },
         ...TRADER_STEPS.map((v) =>
             gooMenuItem({
                 key: `traders-${v}`,
@@ -121,7 +121,7 @@ export function AlertFiltersButton({
         { type: "separator" as const },
         gooMenuItem({
             key: "wp-only",
-            label: "watchparty coins only",
+            label: "Watchparty coins only",
             closeOnSelect: false,
             onClick: () => onChange({ ...filters, watchpartyOnly: !filters.watchpartyOnly }),
             right: check(filters.watchpartyOnly),
@@ -131,7 +131,7 @@ export function AlertFiltersButton({
                   { type: "separator" as const },
                   gooMenuItem({
                       key: "reset",
-                      label: "reset filters",
+                      label: "Reset filters",
                       onClick: () => onChange(DEFAULT_FILTERS),
                   }),
               ]
@@ -182,6 +182,6 @@ export function activeFilterSummary(filters: AlertFilters): string | null {
     if (filters.networks?.length) parts.push(filters.networks.map(networkLabel).join(", "));
     if (filters.minUsd > 0) parts.push(`${filters.minUsd / 1000}k+`);
     if (filters.minTraders > 0) parts.push(`${filters.minTraders}+ traders`);
-    if (filters.watchpartyOnly) parts.push("watchparty only");
+    if (filters.watchpartyOnly) parts.push("Watchparty only");
     return parts.join(" · ");
 }

@@ -49,7 +49,7 @@ export function NetworkView({ onSelect, onClose, availableKinds }: NetworkViewPr
           <HugeiconsIcon icon={Cancel01Icon} className="size-[18px]" strokeWidth={2} />
         </button>
         <span className="pointer-events-none absolute left-0 right-0 text-center text-[18px] font-semibold text-white">
-          receive on
+          Receive on
         </span>
       </div>
 

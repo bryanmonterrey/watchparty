@@ -44,7 +44,7 @@ export function ReceiveActions({ walletAddress, missingAddress }: ReceiveActions
                         {walletAddress}
                     </p>
                 ) : missingAddress ? (
-                    <p className="text-[14px] font-medium text-zinc-500">not available yet</p>
+                    <p className="text-[14px] font-medium text-zinc-500">Not available yet</p>
                 ) : (
                     <span className="my-[3px] h-4 w-[85%] rounded-full shimmer-skeleton" />
                 )}

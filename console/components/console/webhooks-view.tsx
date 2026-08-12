@@ -80,7 +80,7 @@ function Checkbox({
       aria-label={label}
       disabled={disabled}
       onClick={() => onToggle(!checked)}
-      className={`flex size-4 shrink-0 items-center justify-center rounded border transition-colors disabled:opacity-50 ${
+      className={`flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors disabled:opacity-50 ${
         checked ? "border-emerald-500 bg-emerald-500 text-white" : "bg-transparent"
       }`}
     >

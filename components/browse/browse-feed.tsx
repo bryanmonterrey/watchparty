@@ -739,7 +739,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
             >
             {isError ? (
                 <div className="flex flex-col items-center gap-3 py-20 text-center">
-                    <p className="text-sm text-zinc-500">couldn&apos;t load the feed</p>
+                    <p className="text-sm text-zinc-500">Couldn&apos;t load the feed</p>
                     {/* Retrying happens on its own every 20s; this is for
                         anyone who doesn't want to wait for the next tick. */}
                     <button
@@ -747,7 +747,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
                         onClick={() => void refetchPosts()}
                         className="cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold text-zinc-400 transition-colors hover:text-white"
                     >
-                        retry
+                        Retry
                     </button>
                 </div>
             ) : isLoading && !populatedTabs.current.has(activeTab) ? (

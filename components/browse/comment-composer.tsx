@@ -405,7 +405,7 @@ export function CommentComposer({
                     <input
                         value={contentWarningText}
                         onChange={(e) => setContentWarningText(e.target.value)}
-                        placeholder="describe the sensitive content"
+                        placeholder="Describe the sensitive content"
                         className="w-full rounded-full border border-white/10 bg-transparent px-4 py-2 text-[13px] text-zinc-200 outline-none placeholder:text-zinc-500"
                     />
                 )}

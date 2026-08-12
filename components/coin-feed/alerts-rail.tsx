@@ -614,13 +614,13 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                     happened while just sitting there. */}
                 {isError && windowItems.length === 0 ? (
                     <div className="px-3 py-10 text-center">
-                        <p className="text-[13px] font-bold text-zinc-400">couldn&apos;t load alerts</p>
+                        <p className="text-[13px] font-bold text-zinc-400">Couldn&apos;t load alerts</p>
                         <button
                             type="button"
                             onClick={() => void refetch()}
                             className="mt-2 cursor-pointer rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] font-bold text-zinc-300 transition-colors hover:text-white"
                         >
-                            try again
+                            Try again
                         </button>
                     </div>
                 ) : isLoading && !populated.current ? (
@@ -706,7 +706,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                         onClick={() => void refetch()}
                         className="mx-1 mb-1 shrink-0 cursor-pointer rounded-full py-1.5 text-[11px] font-semibold text-zinc-600 transition-colors hover:text-zinc-300"
                     >
-                        couldn&apos;t refresh · retry
+                        Couldn&apos;t refresh · retry
                     </button>
                 )}
             </RailShell>

@@ -248,7 +248,7 @@ function DiscoverRow({
             {/* Price */}
             <div className="min-w-0 max-lg:hidden">
                 <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{formatPrice(token.priceUsd)}</p>
-                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">price</p>
+                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Price</p>
             </div>
 
             {/* TX + holders */}
@@ -509,7 +509,7 @@ export function TradeDiscover() {
                             hideRisky ? "bg-lantern text-black" : "bg-white/5 text-zinc-400 hover:text-white",
                         )}
                     >
-                        hide risky
+                        Hide risky
                     </button>
 
                     {/* Quick-buy amount — Solana only; the amount is SOL and

@@ -166,14 +166,14 @@ export function TradeFeed() {
                                 ) : (
                                     <HugeiconsIcon icon={Globe02Icon} className="size-4" strokeWidth={2} />
                                 )}
-                                {activeChain?.label ?? "all chains"}
+                                {activeChain?.label ?? "All chains"}
                                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
                             </>
                         }
                         items={[
                             gooMenuItem({
                                 key: "all",
-                                label: "all chains",
+                                label: "All chains",
                                 icon: <HugeiconsIcon icon={Globe02Icon} className="size-4" strokeWidth={2} />,
                                 onClick: () => setChain("all"),
                                 right: chain === "all"

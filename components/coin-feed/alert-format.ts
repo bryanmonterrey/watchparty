@@ -53,11 +53,11 @@ export const KIND_META: Record<CoinFeedKind, KindMeta> = {
 /** Groups shown in the filter panel — kinds are toggled a group at a time,
  *  because "clusters" vs "whales" is the distinction anyone actually wants. */
 export const KIND_GROUPS: { key: string; label: string; kinds: CoinFeedKind[] }[] = [
-    { key: "clusters", label: "trader clusters", kinds: ["cluster_buy", "cluster_sell"] },
-    { key: "whales", label: "whale trades", kinds: ["whale_buy", "whale_sell"] },
-    { key: "lifecycle", label: "launches + migrations", kinds: ["launch", "migration"] },
-    { key: "callouts", label: "callouts", kinds: ["callout"] },
-    { key: "predictions", label: "predictions", kinds: ["prediction"] },
+    { key: "clusters", label: "Trader clusters", kinds: ["cluster_buy", "cluster_sell"] },
+    { key: "whales", label: "Whale trades", kinds: ["whale_buy", "whale_sell"] },
+    { key: "lifecycle", label: "Launches + migrations", kinds: ["launch", "migration"] },
+    { key: "callouts", label: "Callouts", kinds: ["callout"] },
+    { key: "predictions", label: "Predictions", kinds: ["prediction"] },
 ];
 
 export type AlertLinkTarget = { href: string; external: boolean };

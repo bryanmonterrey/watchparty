@@ -81,7 +81,7 @@ function Headline({ event }: { event: AlertEvent }) {
         case "whale_sell":
             return (
                 <>
-                    <span className="shrink-0 font-medium text-white">whale</span>
+                    <span className="shrink-0 font-medium text-white">Whale</span>
                     {badge}
                     <span className="truncate font-medium text-white tabular-nums">{formatUsd(event.usdValue)}</span>
                 </>
@@ -89,28 +89,28 @@ function Headline({ event }: { event: AlertEvent }) {
         case "launch":
             return (
                 <>
-                    <span className="shrink-0 font-medium text-white">launched</span>
+                    <span className="shrink-0 font-medium text-white">Launched</span>
                     {badge}
                 </>
             );
         case "migration":
             return (
                 <>
-                    <span className="shrink-0 font-medium text-white">bonded</span>
+                    <span className="shrink-0 font-medium text-white">Bonded</span>
                     {badge}
                 </>
             );
         case "callout":
             return (
                 <>
-                    <span className="shrink-0 font-medium text-white">called out</span>
+                    <span className="shrink-0 font-medium text-white">Called out</span>
                     {badge}
                 </>
             );
         case "prediction":
             return (
                 <>
-                    <span className="shrink-0 font-medium text-white">new market</span>
+                    <span className="shrink-0 font-medium text-white">New market</span>
                     {badge}
                 </>
             );

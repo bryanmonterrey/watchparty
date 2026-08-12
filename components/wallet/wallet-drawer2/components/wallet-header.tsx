@@ -180,7 +180,7 @@ export function WalletHeader({
                             connected", so switching to it is a disconnect.
                             Nothing here changes the main wallet. */}
                         <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
-                            wallet in use
+                            Wallet in use
                         </p>
                         <ul>
                             <li
@@ -189,7 +189,7 @@ export function WalletHeader({
                                 <button
                                     onClick={() => {
                                         if (usingEmbedded) { setAccountOpen(false); return; }
-                                        disconnect().catch(() => appToast.error("couldn't switch wallet"));
+                                        disconnect().catch(() => appToast.error("Couldn't switch wallet"));
                                         setAccountOpen(false);
                                     }}
                                     disabled={connecting}
@@ -200,9 +200,9 @@ export function WalletHeader({
                                     </span>
                                     <span className="min-w-0 flex-1">
                                         <span className="block truncate text-sm font-semibold text-white">
-                                            watchparty wallet
+                                            Watchparty wallet
                                         </span>
-                                        <span className="block text-xs font-medium text-zinc-500">built in</span>
+                                        <span className="block text-xs font-medium text-zinc-500">Built in</span>
                                     </span>
                                     {usingEmbedded && <Check className="size-4 shrink-0 text-white" />}
                                 </button>
@@ -236,7 +236,7 @@ export function WalletHeader({
                                                 <span className="block truncate text-sm font-semibold text-white">
                                                     {w.adapter.name}
                                                 </span>
-                                                <span className="block text-xs font-medium text-zinc-500">extension</span>
+                                                <span className="block text-xs font-medium text-zinc-500">Extension</span>
                                             </span>
                                             {isActive && <Check className="size-4 shrink-0 text-white" />}
                                         </button>
@@ -250,7 +250,7 @@ export function WalletHeader({
                         <div className="mx-3 my-1.5 h-px bg-white/10" />
 
                         <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
-                            accounts
+                            Accounts
                         </p>
                         <ul>
                             {accounts.map((a) => {
@@ -340,7 +340,7 @@ export function WalletHeader({
                             <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.06] text-lg font-medium text-zinc-400">
                                 +
                             </span>
-                            <span className="text-sm font-semibold text-white">add an existing account</span>
+                            <span className="text-sm font-semibold text-white">Add an existing account</span>
                         </a>
 
                     </MorphPopoverContent>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Download01Icon, Tick02Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { Squircle } from "@/components/ui/squircle";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface SeedPhraseDisplayProps {
@@ -126,12 +127,11 @@ export default function SeedPhraseDisplay({
                 <div className="space-y-3">
                     <Squircle asChild radius={16} autoEffects={false}>
                         <label htmlFor="confirm-saved" className="flex cursor-pointer items-start gap-3 bg-white/[0.04] p-4">
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 id="confirm-saved"
                                 checked={confirmed}
-                                onChange={(e) => setConfirmed(e.target.checked)}
-                                className="mt-0.5 size-4 shrink-0 cursor-pointer accent-white"
+                                onCheckedChange={(v) => setConfirmed(v === true)}
+                                className="mt-0.5 cursor-pointer"
                             />
                             <span className="text-[13px] font-medium leading-relaxed text-zinc-300">
                                 I wrote down my recovery phrase and stored it somewhere safe. If I lose it, I lose the wallet — forever.

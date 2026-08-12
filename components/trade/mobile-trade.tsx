@@ -62,7 +62,7 @@ function TokenRow({ token }: { token: TradeToken }) {
 
             {/* Chart button + market cap */}
             <span className="rounded-lg border border-lantern/60 bg-lantern/15 px-3.5 py-2 text-sm font-semibold">
-                chart
+                Chart
             </span>
             <div className="w-[72px] text-right">
                 <p className="text-base font-extrabold">{fmtCap(token.marketCap)}</p>

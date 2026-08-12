@@ -216,7 +216,7 @@ export function CommunitiesLanding() {
                                 <input
                                     value={code}
                                     onChange={(e) => setCode(e.target.value)}
-                                    placeholder="invite code"
+                                    placeholder="Invite code"
                                     className="flex-1 min-w-0 bg-transparent text-sm text-flexwhite outline-none placeholder:text-flexwhite/35 py-1.5"
                                 />
                                 <button
