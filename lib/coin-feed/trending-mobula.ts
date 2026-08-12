@@ -34,9 +34,10 @@
 
 import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { fetchMobulaChainPairs, mobulaEnabled } from "@/lib/coins/mobula";
 import { isBoardExcluded, trackedTokenId } from "./networks";
+import type { DiscoveredPool } from "./geckoterminal";
 
 /**
  * The chains Mobula's pairs endpoint serves, and the ones the board is scoped
@@ -51,6 +52,109 @@ export const MOBULA_TRENDING_CHAINS = [
     "bnb",
     "hyperevm",
 ] as const;
+
+/**
+ * Discovery candidates for the ALERT feed, from Mobula.
+ *
+ * Two halves, and only one of them costs anything.
+ *
+ * The "trending" half is READ FROM `trending_coins`, which the board sync
+ * already populated this hour — the same coins, already paid for. Calling the
+ * API again for rows sitting in our own table is how a metered provider turns
+ * into a $400 plan; GeckoTerminal's shape encouraged exactly that, because its
+ * calls were free and rate-limited rather than billed.
+ *
+ * The "new" half genuinely has to be fetched: newly-created pairs are the whole
+ * point of discovery and by definition are not on a volume-ranked board yet.
+ * One call per chain.
+ *
+ * ## Cost
+ *
+ *     2 chains x 1 call ("new" only)
+ *     every 30 min -> 2,880/month   + the board's 4,320 = 7,200  (free tier)
+ *     every  5 min -> 17,280/month  + 4,320 = 21,600             (over)
+ *
+ * The old GeckoTerminal cadence was every 5 minutes at 2 calls per network,
+ * which is 34,560/month metered. Porting that cadence onto a billed API without
+ * checking is the mistake this comment exists to prevent.
+ */
+export async function discoverFromMobula(
+    chains: readonly string[],
+    perChainLimit = 100,
+): Promise<DiscoveredPool[]> {
+    if (!mobulaEnabled()) return [];
+
+    const out: DiscoveredPool[] = [];
+    for (const chain of chains) {
+        // Paid-for rows first — no call.
+        const cached = await db
+            .select()
+            .from(trendingCoins)
+            .where(and(eq(trendingCoins.network, chain), eq(trendingCoins.source, "mobula")))
+            .limit(perChainLimit);
+        for (const r of cached) {
+            if (!r.tokenAddress || !r.symbol) continue;
+            out.push({
+                network: chain,
+                poolAddress: r.poolAddress,
+                tokenAddress: r.tokenAddress,
+                dexId: r.dexId,
+                symbol: r.symbol,
+                name: r.name,
+                imageUrl: r.imageUrl,
+                priceUsd: r.priceUsd,
+                marketCapUsd: r.marketCapUsd,
+                fdvUsd: r.fdvUsd,
+                liquidityUsd: r.liquidityUsd,
+                volume5mUsd: r.volume5mUsd,
+                volume1hUsd: r.volume1hUsd,
+                volume6hUsd: r.volume6hUsd,
+                volume24hUsd: r.volume24hUsd,
+                priceChange5m: r.priceChange5m,
+                priceChange1h: r.priceChange1h,
+                priceChange6h: r.priceChange6h,
+                priceChange24h: r.priceChange24h,
+                buys24h: r.buys24h,
+                sells24h: r.sells24h,
+                poolCreatedAt: r.poolCreatedAt,
+            });
+        }
+
+        // The one call that is actually needed.
+        const fresh = await fetchMobulaChainPairs(chain, "new", perChainLimit);
+        for (const p of fresh ?? []) {
+            if (!p.tokenAddress || !p.symbol) continue;
+            out.push({
+                network: chain,
+                poolAddress: p.pairAddress ?? p.tokenAddress,
+                tokenAddress: p.tokenAddress,
+                dexId: p.source ?? null,
+                symbol: p.symbol,
+                name: p.name,
+                imageUrl: p.logo,
+                priceUsd: p.priceUsd,
+                marketCapUsd: p.marketCap,
+                fdvUsd: null,
+                liquidityUsd: p.liquidity,
+                volume5mUsd: p.volume5m,
+                volume1hUsd: p.volume1h,
+                volume6hUsd: null,
+                volume24hUsd: p.volume24h,
+                priceChange5m: p.change5m,
+                priceChange1h: p.change1h,
+                priceChange6h: p.change6h,
+                priceChange24h: p.change24h,
+                // Mobula reports a trade COUNT, not a buy/sell split — see the
+                // note in the board sync. A fabricated 50/50 would be
+                // indistinguishable from a real buy-pressure signal.
+                buys24h: null,
+                sells24h: null,
+                poolCreatedAt: p.createdAtMs ? new Date(p.createdAtMs) : null,
+            });
+        }
+    }
+    return out;
+}
 
 export interface MobulaTrendingResult {
     chain: string;

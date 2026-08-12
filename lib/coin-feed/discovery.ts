@@ -18,6 +18,7 @@ import { withCache } from "@/lib/cache";
 import { tokens } from "@/db/schema/content/token";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { CallBudget, fetchNewPools, fetchTrendingPools, type DiscoveredPool } from "./geckoterminal";
+import { discoverFromMobula } from "./trending-mobula";
 import {
     enabledNetworks,
     EXCLUDED_SYMBOLS,
@@ -532,13 +533,36 @@ export type DiscoveryResult = {
 export async function runDiscovery(budget: CallBudget): Promise<DiscoveryResult> {
     const found: DiscoveredPool[] = [];
 
-    for (const net of enabledNetworks()) {
-        if (budget.remaining < 2) break;
-        const [trending, fresh] = await Promise.all([
-            fetchTrendingPools(net.id, budget),
-            fetchNewPools(net.id, budget),
-        ]);
-        found.push(...trending.filter(qualifies), ...fresh.filter(qualifies));
+    // ── Mobula, when configured — and then GeckoTerminal is OFF ──────────────
+    //
+    // Not a fallback pair: GT ran a 23.5% HTTP 500 rate over a 6h window and
+    // fails outright from Cloudflare's shared egress IP
+    // (docs/market-data-options.md). Running both would keep the failure mode
+    // and add a bill.
+    //
+    // `discoverFromMobula` reads the "trending" half out of `trending_coins`,
+    // which the board sync already paid for this hour, and fetches only the
+    // "new" half — 1 call per chain instead of 2. The old GT cadence (every 5
+    // min, 2 calls per network) is 34,560 credits/month metered; porting a
+    // cadence designed around a FREE rate-limited API onto a billed one is the
+    // expensive mistake here, so DISCOVERY_MOBULA_CHAINS is opt-in and the
+    // caller owns the interval.
+    const mobulaEnv = process.env.DISCOVERY_MOBULA_CHAINS?.trim();
+    if (mobulaEnv) {
+        const chains = mobulaEnv === "*"
+            ? enabledNetworks().map((n) => n.id)
+            : mobulaEnv.split(",").map((c) => c.trim()).filter(Boolean);
+        const pools = await discoverFromMobula(chains);
+        found.push(...pools.filter(qualifies));
+    } else {
+        for (const net of enabledNetworks()) {
+            if (budget.remaining < 2) break;
+            const [trending, fresh] = await Promise.all([
+                fetchTrendingPools(net.id, budget),
+                fetchNewPools(net.id, budget),
+            ]);
+            found.push(...trending.filter(qualifies), ...fresh.filter(qualifies));
+        }
     }
 
     const discovered = await upsertPools(await screenSecurity(found));
