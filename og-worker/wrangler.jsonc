@@ -10,17 +10,21 @@
   // cap. This worker carries that weight instead; the main worker gets its
   // headroom back. See the memory `worker-bundle-size-ceiling`.
   //
-  // The zone route claims watchparty.xyz/api/og/* so the SAME share URLs the
-  // app already builds (window.location.origin + /api/og/post?...) resolve
-  // here, with no client change. Zone routes take precedence over the origin
-  // worker's own route, so this overrides the (still-present, until the app
-  // route is removed) Next handler with zero flip-over gap.
+  // ZONE ROUTE — set OUT OF BAND in the Cloudflare dashboard, NOT here.
+  // Verified 2026-08-12: the CI deploy token lacks Workers Routes edit
+  // permission (route creation via wrangler returns Authentication error
+  // 10000), same reason console.watchparty.xyz/api/* was wired by hand. If
+  // `routes` lived in this config, every `wrangler deploy` would try to
+  // recreate the route and fail the whole job even though the worker uploaded
+  // fine — so the route stays a one-time dashboard step:
   //
-  // If the CI token lacks Workers Routes edit permission this deploy fails at
-  // route creation (loud, harmless — the main app keeps serving OG); add the
-  // route by hand in the Cloudflare dashboard with the same pattern.
-  "routes": [
-    { "pattern": "watchparty.xyz/api/og/*", "zone_name": "watchparty.xyz" }
-  ],
+  //   Workers & Pages → watchparty-og → Settings → Domains & Routes → Add route
+  //     Route:  watchparty.xyz/api/og/*
+  //     Zone:   watchparty.xyz
+  //
+  // A route pattern outranks the origin worker's catch-all, so once it's added
+  // the SAME share URLs the app builds (origin + /api/og/post?...) resolve
+  // here with no client change. Only AFTER the route is live should the app's
+  // own /api/og route be removed (that's what reclaims the bundle headroom).
   "observability": { "enabled": true }
 }
