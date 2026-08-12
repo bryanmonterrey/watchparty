@@ -102,9 +102,67 @@ const BRAND_WORDS = [
 ];
 const BRAND_WORD_RE = new RegExp(`\\b(${BRAND_WORDS.join("|")})\\b`, "i");
 
+/**
+ * Stock and ETF tickers — the impersonation this board actually gets.
+ *
+ * Measured 2026-08-12 by running the reviewer over every visible coin: 146 of
+ * 434 were flagged, and the flags are dominated by TOKENISED EQUITY names —
+ * NVDA, MU, SNDK, NBIS, SPYB, QQQB, MGUSD. Not memecoins riding a brand; stock
+ * tickers.
+ *
+ * That reframes the problem in a way that makes it finite. "Brands" is an
+ * unbounded set somebody maintains forever; TICKERS are a closed, public,
+ * enumerable list. This is the S&P-100-and-major-ETF core of it, which covers
+ * the observed cases, and it grows from `scripts/coin-feed/audit-feeds.ts`
+ * rather than from taste.
+ *
+ * ⚠️ This list is only safe BECAUSE of the verified-mint exemption in
+ * `clearsBrandBar`. Several of these are legitimately tokenised — Ondo, Backed
+ * and others issue real equity tokens — so matching a ticker cannot mean
+ * "hide". It means "hide unless a canonical registry vouches for it". Without
+ * that exemption this list would hide real assets, which is precisely the
+ * mistake the $250k liquidity proxy was making in the other direction.
+ *
+ * Word-boundary matched, like BRAND_WORDS: `MU` as a substring would eat MUSK,
+ * MUMU and MUTANT.
+ *
+ * ⚠️ DELIBERATELY ABSENT, and a test enforces the first two: COIN (Coinbase),
+ * META, SPY, RIOT, DIA, KO, MA, GS, HD, PG, SQ, MS. Each is either ordinary
+ * English, ordinary crypto vocabulary, or two letters that collide with
+ * everything — and the rule this file already sets is that a ticker earns a
+ * place here only when it is NOT also a word. DIA is itself a real crypto
+ * oracle token, which is the failure mode in miniature.
+ */
+const STOCK_TICKERS = [
+    // Observed impersonating on the live board.
+    "nvda", "sndk", "mu", "nbis", "spyb", "qqqb", "mgusd", "spcxb",
+    // Mega-caps and the tickers most often tokenised.
+    "aapl", "msft", "goog", "googl", "amzn", "tsla", "nflx", "amd",
+    "intc", "orcl", "crm", "adbe", "csco", "qcom", "txn", "avgo", "smci",
+    "jpm", "bac", "wfc", "brk", "visa", "pypl",
+    "wmt", "cost", "nke", "sbux", "mcd", "pep", "dis",
+    "xom", "cvx", "unh", "jnj", "pfe", "mrna", "lly", "abbv",
+    "baba", "nio", "pltr", "rblx", "abnb", "uber", "lyft", "snap", "pins",
+    "mstr", "mara", "hood",
+    // Index and commodity ETFs.
+    "qqq", "iwm", "vti", "voo", "arkk", "gld", "slv", "tlt",
+] as const;
+const STOCK_TICKER_RE = new RegExp(`\\b(${STOCK_TICKERS.join("|")})\\b`, "i");
+
+/** True when the symbol or name reads as a stock/ETF ticker. Separate from
+ *  `isBrandSquat` so callers can weigh them differently — a ticker match is
+ *  strong evidence of tokenised-equity impersonation specifically. */
+export function isStockTicker(symbol: string, name: string | null | undefined): boolean {
+    return STOCK_TICKER_RE.test(`${symbol} ${name ?? ""}`);
+}
+
 export function isBrandSquat(symbol: string, name: string | null | undefined): boolean {
     const hay = `${symbol} ${name ?? ""}`.toLowerCase();
-    return BRAND_TERMS.some((t) => hay.includes(t)) || BRAND_WORD_RE.test(hay);
+    return (
+        BRAND_TERMS.some((t) => hay.includes(t)) ||
+        BRAND_WORD_RE.test(hay) ||
+        STOCK_TICKER_RE.test(hay)
+    );
 }
 
 // ── Holder-quality risk (Mobula security stats) ─────────────────────────────
@@ -220,7 +278,22 @@ export function clearsBrandBar(
     symbol: string,
     name: string | null | undefined,
     liquidityUsd: number | null | undefined,
+    /**
+     * Vouched for by a canonical registry (Jupiter's verified list). When true
+     * this SHORT-CIRCUITS the liquidity bar.
+     *
+     * The bar was always a proxy for "this brand-matching coin might be the
+     * real one", and it is a bad one in both directions: it let `preOPENAI`
+     * through at $5.4M while it would reject a small legitimate project. A
+     * registry answers the question the proxy was approximating — measured
+     * 2026-08-12, 0 of 18 board impersonators are verified, and CBBTC is.
+     *
+     * Optional so existing callers keep their old behaviour; pass it wherever
+     * the list is available.
+     */
+    verified = false,
 ): boolean {
     if (!isBrandSquat(symbol, name)) return true;
+    if (verified) return true;
     return (liquidityUsd ?? 0) >= BRAND_SQUAT_MIN_LIQUIDITY_USD;
 }

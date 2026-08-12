@@ -85,9 +85,22 @@ export async function GET(req: NextRequest) {
             console.error(`[trending-sync] mobula ${chain} failed:`, err instanceof Error ? err.message : err);
         }
     }
-    // Chains Mobula just refreshed don't need GT this pass.
-    const done = new Set(mobulaResults.map((r) => r.chain));
-    const gtNetworks = networks.filter((n) => !done.has(n.id));
+    // ── GeckoTerminal is OFF once Mobula is configured ───────────────────────
+    //
+    // Not "GT fills the chains Mobula doesn't serve". The owner's call, and the
+    // measurements back it: GT ran a 23.5% HTTP 500 rate over a 6h window, it
+    // fails outright from Cloudflare's shared egress IP
+    // (docs/market-data-options.md), and it carries no holder data — so every
+    // GT-sourced row is one the spam gate cannot judge. 217 of 503 rows were in
+    // exactly that state: visible, unjudgeable, and indistinguishable from
+    // "clean" to `isRiskyHoldings`, which fails open on nulls.
+    //
+    // A narrower board that can be filtered beats a wider one that cannot.
+    //
+    // Setting TRENDING_MOBULA_CHAINS is therefore the whole switch: GT keeps
+    // running only while it is unset, which is what makes this reversible
+    // without a deploy.
+    const gtNetworks = mobulaChains.length > 0 ? [] : networks;
 
     try {
         const result = await runTrendingSync(budget, gtNetworks, source);

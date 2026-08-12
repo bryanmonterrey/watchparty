@@ -5,6 +5,7 @@ import {
     isRiskyHoldings,
     passesSecurityBar,
     BRAND_SQUAT_MIN_LIQUIDITY_USD,
+    isStockTicker,
 } from "@/lib/coin-feed/quality";
 import { applyMemescopeFilters, filtersActive, NO_FILTERS } from "@/components/trade/memescope-filter-dialog";
 import { collapseCopycats } from "@/components/trade/collapse-copycats";
@@ -225,5 +226,63 @@ describe("hide risky filter", () => {
         expect(out.map((t) => t.id)).toEqual(["s"]);
         expect(filtersActive({ ...NO_FILTERS, hideRisky: true })).toBe(true);
         expect(filtersActive(NO_FILTERS)).toBe(false);
+    });
+});
+
+/**
+ * Stock-ticker impersonation, and the verification exemption that makes an
+ * aggressive ticker list safe.
+ *
+ * Measured 2026-08-12 across every visible coin: 146 of 434 flagged, dominated
+ * by tokenised-equity names (NVDA, MU, SNDK, NBIS, SPYB, QQQB). Structural
+ * signals did NOT separate them — median top-10 concentration was 19.6% for
+ * flagged vs 19.8% for clean. Impersonation and rug-risk are orthogonal, and
+ * only the name identifies the first.
+ */
+describe("stock-ticker impersonation", () => {
+    test("catches the tickers actually seen impersonating", () => {
+        expect(isStockTicker("NVDA", null)).toBe(true);
+        expect(isStockTicker("MU", "Micron")).toBe(true);
+        expect(isStockTicker("SPYB", null)).toBe(true);
+        expect(isStockTicker("QQQB", null)).toBe(true);
+    });
+
+    test("word boundaries hold — a ticker inside a word is not a ticker", () => {
+        // \bmu\b must not eat MUSK/MUMU/MUTANT, the exact hazard the
+        // BRAND_WORDS comment already warned about.
+        expect(isStockTicker("MUSK", "elon musk coin")).toBe(false);
+        expect(isStockTicker("MUMU", "mumu the bull")).toBe(false);
+        expect(isStockTicker("AMDAHL", null)).toBe(false);
+    });
+
+    test("ordinary words are NOT tickers, however real the ticker is", () => {
+        // COIN/META are enforced by the older test above; these are the ones I
+        // added and had to take back out. DIA is itself a real crypto oracle.
+        for (const s of ["COIN", "META", "SPY", "RIOT", "DIA", "KO", "MA"]) {
+            expect(isStockTicker(s, null)).toBe(false);
+        }
+    });
+});
+
+describe("clearsBrandBar — verified exemption", () => {
+    test("an unverified brand match below the bar is hidden", () => {
+        expect(clearsBrandBar("NVDA", "Nvidia", 10_000, false)).toBe(false);
+    });
+
+    test("VERIFIED short-circuits the liquidity proxy entirely", () => {
+        // The bar was always a stand-in for "this might be the real one". A
+        // registry answers it: 0 of 18 board impersonators were verified,
+        // and CBBTC was.
+        expect(clearsBrandBar("CBBTC", "Coinbase Wrapped BTC", 0, true)).toBe(true);
+        expect(clearsBrandBar("NVDA", "Nvidia", 0, true)).toBe(true);
+    });
+
+    test("the bar still works when nothing is verified — old behaviour intact", () => {
+        expect(clearsBrandBar("NVDA", "Nvidia", 500_000)).toBe(true);
+        expect(clearsBrandBar("NVDA", "Nvidia", 1_000)).toBe(false);
+    });
+
+    test("a non-brand coin is unaffected either way", () => {
+        expect(clearsBrandBar("PEPE", "pepe", 0, false)).toBe(true);
     });
 });

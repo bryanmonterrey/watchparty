@@ -14,6 +14,8 @@ import { coinFeedEvents } from "@/db/schema/content/coin-feed";
 import { and, asc, desc, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { clearsBrandBar, isRiskyHoldings } from "@/lib/coin-feed/quality";
+import { isVerifiedMint, verifiedSolanaMints } from "@/lib/coins/verified-tokens";
+import { collapseCopycats } from "@/lib/coins/collapse-copycats";
 
 /** A board row older than this is stale data, not data. See the note in `list`. */
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
@@ -101,6 +103,28 @@ export const trendingRouter = router({
         // network in minutes, so healthy rows are always far inside it; this
         // only has to survive a run of failed passes without emptying the board.
         where.push(gte(trendingCoins.fetchedAt, new Date(Date.now() - STALE_AFTER_MS)));
+
+        // ── Only rows the spam gate can actually judge ───────────────────────
+        //
+        // A GeckoTerminal-sourced row carries no holder data, and
+        // `isRiskyHoldings` fails OPEN on nulls — deliberately, since treating
+        // unknown as risky would empty every chain that lacks the numbers. The
+        // consequence is that a GT row is unfilterable by definition: it renders
+        // whatever it is. 217 of 503 rows were in that state.
+        //
+        // So the board serves only rows from a provider that supplies the
+        // signals. That is a NARROWER board, on purpose — a coin nobody can
+        // vet is worse than a coin nobody sees, on a surface people trade from.
+        //
+        // Env-overridable rather than hardcoded so this is reversible without a
+        // deploy, and so a future provider can be added by name.
+        const allowedSources = (process.env.TRENDING_SOURCES ?? "mobula")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+        if (allowedSources.length && !allowedSources.includes("*")) {
+            where.push(inArray(trendingCoins.source, allowedSources));
+        }
         if (input.chains?.length) where.push(inArray(trendingCoins.network, input.chains));
         if (input.minLiquidityUsd) where.push(gte(trendingCoins.liquidityUsd, input.minLiquidityUsd));
         if (input.q?.trim()) {
@@ -222,12 +246,30 @@ export const trendingRouter = router({
         // FAILS OPEN on nulls, deliberately: every GeckoTerminal-sourced row
         // has no holder data at all, and treating "unknown" as "risky" would
         // empty the board for every chain Mobula does not serve.
+        // Canonical registry first — it is what makes the brand/ticker rules
+        // safe to apply aggressively. Cached 6h, so this is not a per-request
+        // fetch; empty on failure, which reads as "nothing is exempt" rather
+        // than disabling the gate.
+        const verified = await verifiedSolanaMints();
+
         const clean = items
-            .filter((i) => clearsBrandBar(i.symbol, i.name, i.liquidityUsd))
+            .filter((i) => clearsBrandBar(i.symbol, i.name, i.liquidityUsd, isVerifiedMint(verified, i.network, i.tokenAddress)))
             .filter((i) => !isRiskyHoldings(i));
 
+        // ONE ROW PER COIN. Copycats relaunch the same symbol+name every few
+        // minutes, and this board never collapsed them — the filter existed but
+        // lived in components/trade/, so only /trade got it. Measured on the
+        // live solana board: 36 rows for 6 actual coins, with XST alone taking
+        // 10% of a 131-row board.
+        //
+        // AFTER the gates, not before: collapsing first could keep a spam copy
+        // as the survivor and then hide it, losing the legitimate one behind it.
+        const deduped = collapseCopycats(
+            clean.map((i) => ({ ...i, volume: i.volume24hUsd ?? 0, marketCap: i.marketCapUsd ?? 0 })),
+        );
+
         return {
-            items: clean.map((i) => ({ ...i, activity: activity.get(i.id) ?? null })),
+            items: deduped.map((i) => ({ ...i, activity: activity.get(i.id) ?? null })),
             nextCursor: hasMore ? offset + input.limit : null,
         };
     }),
