@@ -2,12 +2,12 @@ import { boolean, index, pgPolicy, pgTable, text, timestamp } from "drizzle-orm/
 import { sql } from "drizzle-orm";
 import { user } from "./user";
 
-// OAuth2/OIDC client registry for "Sign in with watchparty" (better-auth
-// oidc-provider plugin). One row per third-party client; joined to
-// developer_apps via developer_apps.oauth_client_id. Table/column names are
-// camelCase because better-auth's drizzle adapter resolves fields by the TS
-// property key and this repo mirrors its models verbatim (see passkey.ts,
-// twoFactor.ts).
+// LEGACY (since the @better-auth/oauth-provider migration): the deprecated
+// oidc-provider plugin's client registry, superseded by oauth-client.ts
+// (`oauthClient`). The table is kept for audit and rollback; live rows were
+// copied across (secrets unsealed → rehashed) by
+// scripts/db/migrate-oauth-clients.mjs. Nothing at runtime should read this —
+// it exists so the migration script and a rollback can.
 export const oauthApplication = pgTable("oauthApplication", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),

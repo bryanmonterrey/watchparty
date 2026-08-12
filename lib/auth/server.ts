@@ -15,7 +15,8 @@ import { withCache, TTL, redis } from "@/lib/cache";
 import { verifyEvmMessage } from "@/lib/chains/evm/verify";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { customSession, multiSession, emailOTP, admin, twoFactor, jwt, oidcProvider } from "better-auth/plugins";
+import { customSession, multiSession, emailOTP, admin, twoFactor, jwt } from "better-auth/plugins";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { expo } from "@better-auth/expo";
 import { db } from "@/db";
@@ -28,14 +29,14 @@ import {
   walletAddress,
   linkedWallets,
   twoFactor as twoFactorTable,
-  oauthApplication,
+  oauthClient,
   oauthAccessToken,
+  oauthRefreshToken,
   oauthConsent,
   jwks,
 } from "@/db/schema/auth";
-import { sealSecret, openSecret } from "@/lib/developer/secret-box";
 import { OAUTH_SCOPE_IDS } from "@/lib/developer/oauth-scopes";
-import { oauthTokenRotation } from "./oauth-token-rotation";
+import { randHex } from "@/lib/api-gate";
 import { eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 import { Resend } from "resend";
@@ -130,6 +131,8 @@ const config = {
       "/oauth2/token": { window: 60, max: 20 },
       "/oauth2/authorize": { window: 60, max: 30 },
       "/oauth2/consent": { window: 60, max: 20 },
+      "/oauth2/continue": { window: 60, max: 20 },
+      "/oauth2/end-session": { window: 60, max: 30 },
     },
   },
   user: {
@@ -210,8 +213,9 @@ export const auth = betterAuth({
       passkey: passkeyTable,
       walletAddress,
       twoFactor: twoFactorTable,
-      oauthApplication,
+      oauthClient,
       oauthAccessToken,
+      oauthRefreshToken,
       oauthConsent,
       jwks,
     },
@@ -386,49 +390,73 @@ export const auth = betterAuth({
     admin(),
 
     // Signs OIDC id_tokens (EdDSA, served at /api/auth/jwks). REQUIRED by the
-    // oidc-provider config below: with sealed client secrets, the HS256
-    // fallback would sign id_tokens with the AES-GCM ciphertext — unverifiable
-    // by every RP. Side effect: adds /api/auth/token (session-JWT mint for the
+    // oauth-provider config below (disableJwtPlugin defaults false and stays
+    // that way — the HS256 fallback would sign id_tokens with the client
+    // secret). Side effect: adds /api/auth/token (session-JWT mint for the
     // current session holder); benign, documented in docs/oauth-provider.md.
     jwt(),
 
     // OAuth2/OIDC identity provider — "Sign in with watchparty".
-    // Deliberately the DEPRECATED in-tree plugin at better-auth 1.6.26: the
-    // replacement @better-auth/oauth-provider requires better-call 1.4.0,
-    // which collides with @better-auth/infra's hard 1.3.7 pin (dash() below)
-    // — the exact two-better-call geometry of the documented 31-type-error
-    // incident. Endpoint surface is identical; migrate when the coordinated
-    // 1.6.27+ bump ships as its own change. See docs/oauth-provider.md.
-    oidcProvider({
-      __skipDeprecationWarning: true,
+    // @better-auth/oauth-provider (migrated 2026-08-12 from the deprecated
+    // in-tree oidcProvider — the better-call geometry blocker dissolved once
+    // overrides forced a single 1.4.0 tree-wide). What the new plugin fixed
+    // upstream, source-verified: PKCE is structural (S256-only, required
+    // unless a client row explicitly opts out — the lying `requirePKCE`
+    // option is gone), refresh rotation is atomic with family invalidation
+    // on replay (lib/auth/oauth-token-rotation.ts deleted), `disabled` is
+    // real revocation, and tokens/secrets are stored hashed. See
+    // docs/oauth-provider.md.
+    oauthProvider({
       loginPage: "/login",
       consentPage: "/oauth/consent",
-      // The JSDoc claims @default true, but the dist code reads
-      // options.requirePKCE RAW — omitting this ships PKCE-unenforced.
-      // Verified 1.6.26 (authorize.mjs:95, index.mjs:493). Do not remove.
-      requirePKCE: true,
-      allowPlainCodeChallengeMethod: false,
-      useJWTPlugin: true,
       allowDynamicClientRegistration: false,
       scopes: OAUTH_SCOPE_IDS,
       accessTokenExpiresIn: 3600,
-      // Never the default "plain" — secrets seal via AES-GCM (secret-box).
-      storeClientSecret: { encrypt: sealSecret, decrypt: openSecret },
-      // Merged into BOTH id_token and userinfo unconditionally by the
-      // plugin, so scope filtering must happen here.
-      getAdditionalUserInfoClaim: (claimUser, scopes) => {
+      // Keep the old 7d refresh window (plugin default is 30d).
+      refreshTokenExpiresIn: 60 * 60 * 24 * 7,
+      // base64url(sha256) at rest — replaces the sealed AES-GCM storage.
+      // NOT the encrypt/decrypt form: that THROWS at construction while the
+      // jwt plugin is registered (verified 1.6.27 dist).
+      storeClientSecret: "hashed",
+      // Client rows are created by developerApps.createOAuthClient (direct
+      // insert — that's how wpcl_ ids, the 25-app cap and redirect policy
+      // survive), but set the generator anyway so any plugin-side creation
+      // path mints the same shape.
+      generateClientId: () => `wpcl_${randHex(12)}`,
+      // Secret-scanner-identifiable token prefixes. Safe to set at cutover
+      // because every pre-migration token dies with the plaintext→hashed
+      // storage switch. prefix.clientSecret is deliberately ABSENT: existing
+      // client secrets were issued bare and survive via rehash — a prefix
+      // would fail-closed every one of them at the token endpoint.
+      prefix: { opaqueAccessToken: "wpat_", refreshToken: "wprt_" },
+      // The warnings ask for root-level /.well-known mirrors; RPs are
+      // documented against /api/auth/.well-known/* (docs/oauth-provider.md).
+      silenceWarnings: { oauthAuthServerConfig: true, openidConfig: true },
+      // The plugin's own client CRUD (/oauth2/create-client|update-client|
+      // delete-client|client/rotate-secret) is only session-gated — it would
+      // bypass developerApps' ownership/cap/redirect policy. Middleware 404s
+      // those paths at the edge; this is the belt-and-braces layer.
+      clientPrivileges: ({ action }) => action === "read" || action === "list",
+      // userinfo extras. The callback's output is merged unconditionally
+      // (only the BASE claims are scope-filtered upstream), so the profile
+      // guard here is still load-bearing.
+      customUserInfoClaims: ({ user: claimUser, scopes }) => {
         if (!scopes.includes("profile")) return {};
         return {
-          username: claimUser.username ?? null,
-          picture: claimUser.avatar_url ?? claimUser.image ?? null,
+          username: (claimUser.username as string | null) ?? null,
+          picture: (claimUser.avatar_url as string | null) ?? claimUser.image ?? null,
+          verified: Boolean(claimUser.verifiedTier) && !claimUser.hideVerifiedBadge,
+        };
+      },
+      customIdTokenClaims: ({ user: claimUser, scopes }) => {
+        if (!scopes.includes("profile")) return {};
+        return {
+          username: (claimUser.username as string | null) ?? null,
+          picture: (claimUser.avatar_url as string | null) ?? claimUser.image ?? null,
           verified: Boolean(claimUser.verifiedTier) && !claimUser.hideVerifiedBadge,
         };
       },
     }),
-
-    // Covers the upstream gap where a refresh grant never invalidates the
-    // presented refresh token — see lib/auth/oauth-token-rotation.ts.
-    oauthTokenRotation(),
 
     dash(),
 

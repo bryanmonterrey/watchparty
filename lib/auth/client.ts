@@ -8,6 +8,7 @@ import {
   emailOTPClient,
 } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { sentinelClient } from "@better-auth/infra/client";
 import { siwsClientPlugin } from "better-auth-siws/client";
 import { clearAllSnapshots } from "@/lib/snapshot/store";
@@ -23,6 +24,12 @@ export const authClient = createAuthClient({
   plugins: [
     siwsClientPlugin(),
     passkeyClient(),
+    // OAuth2 IdP login-resume: when the login page URL carries a signed
+    // authorize query (`sig` param), this fetch plugin attaches it as
+    // `oauth_query` to every sign-in POST so the server's after-hook can
+    // resume /oauth2/authorize once the session lands. Without it, third-
+    // party sign-in silently dead-ends at the app after login.
+    oauthProviderClient(),
     customSessionClient<typeof auth>(),
     multiSessionClient(),
     emailOTPClient(),

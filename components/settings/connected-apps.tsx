@@ -57,8 +57,7 @@ export function ConnectedApps() {
                             {app.scopes.length
                                 ? app.scopes.map((s) => s.label).join(" · ")
                                 : "Sign-in only"}
-                            {" — since "}
-                            {new Date(app.grantedAt).toLocaleDateString()}
+                            {app.grantedAt ? ` — since ${new Date(app.grantedAt).toLocaleDateString()}` : null}
                         </p>
                     </div>
                     <PillButton
