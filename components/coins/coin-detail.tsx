@@ -21,6 +21,7 @@ import {
     type OverlayState,
 } from "@/components/tokens/chart-overlay-controls";
 import { ChainBadge } from "@/components/trending/chain-badge";
+import { StatCarousel } from "./stat-carousel";
 import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
@@ -183,7 +184,15 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                     <ChainBadge network={coin.network} className="absolute -bottom-1 -right-1 rounded-full bg-black p-1 ring-1 ring-black" />
                 </div>
                 <div className="min-w-0">
-                    <h1 className="truncate text-xl font-bold tracking-tight text-white">{coin.symbol}</h1>
+                    {/* Socials sit beside the TICKER, not beside the name a line
+                        below — that is where the reference puts them and where
+                        the eye goes first. They still render nothing when a coin
+                        genuinely has no links; drawing dead icons to fill the row
+                        would be worse than the gap. */}
+                    <div className="flex min-w-0 items-center gap-2">
+                        <h1 className="truncate text-xl font-bold tracking-tight text-white">{coin.symbol}</h1>
+                        <CoinSocials coin={coin} />
+                    </div>
                     <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[13px] font-medium text-zinc-500">
                             {coin.name ?? chainLabel(coin.network)}
@@ -204,12 +213,11 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                                 <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" strokeWidth={2} />
                             </a>
                         )}
-                        <CoinSocials coin={coin} />
                     </div>
                 </div>
             </div>
 
-            <div className="hidden-scrollbar -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 py-0.5">
+            <StatCarousel>
                 {/* Market cap leads, untiled and larger — the headline number. */}
                 <div className="flex shrink-0 flex-col justify-center pr-2">
                     <span className="whitespace-nowrap text-[11px] font-medium text-zinc-500">Market cap</span>
@@ -231,7 +239,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                     label="Buys / sells"
                     value={`${coin.buys24h?.toLocaleString() ?? "—"} / ${coin.sells24h?.toLocaleString() ?? "—"}`}
                 />
-            </div>
+            </StatCarousel>
         </header>
     );
 }
@@ -466,7 +474,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 reads as one control, not three separate links. */}
             {/* No fill — an internal row of the box above, divided from the
                 table by an ordinary border-b. */}
-            <div className="flex min-w-0 items-center justify-between gap-4 px-5 py-4">
+            <div className="flex min-w-0 items-center justify-between gap-4 py-4">
                 <div className="flex min-w-0 items-center">
                     {TABS.map((t, i) => (
                         <React.Fragment key={t.id}>
@@ -492,11 +500,11 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
             </div>
 
             <div className={cn(GRID, "text-[15px] font-normal text-zinc-500")}>
-                <span className="px-5 py-3">Trader</span>
-                <span className="px-5 py-3">Position</span>
-                <span className="px-5 py-3">PnL</span>
-                <span className="px-5 py-3">Avg. entry</span>
-                <span className="px-5 py-3">$tags</span>
+                <span className="px-3.5 py-3">Trader</span>
+                <span className="px-3.5 py-3">Position</span>
+                <span className="px-3.5 py-3">PnL</span>
+                <span className="px-3.5 py-3">Avg. entry</span>
+                <span className="px-3.5 py-3">$tags</span>
             </div>
 
             {isLoading ? (
@@ -533,7 +541,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     seeded circle with the brand star, never a
                                     letter — and addresses are never rendered in
                                     full. */}
-                                <span className="flex min-w-0 items-center gap-3 self-stretch px-5 py-3.5">
+                                <span className="flex min-w-0 items-center gap-3 self-stretch px-3.5 py-3.5">
                                     <span
                                         className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full"
                                         style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
@@ -558,7 +566,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     </span>
                                 </span>
 
-                                <span className="flex min-w-0 flex-col px-5 py-3.5">
+                                <span className="flex min-w-0 flex-col px-3.5 py-3.5">
                                     <span className="truncate font-bold tabular-nums text-white">
                                         {row.positionUsd == null ? "—" : compactUsd(row.positionUsd)}
                                     </span>
@@ -567,7 +575,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     </span>
                                 </span>
 
-                                <span className="flex min-w-0 flex-col px-5 py-3.5">
+                                <span className="flex min-w-0 flex-col px-3.5 py-3.5">
                                     <span className={cn("truncate font-bold tabular-nums", row.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred")}>
                                         {row.pnlUsd == null ? "—" : `${up ? "+" : "−"}${compactUsd(Math.abs(row.pnlUsd))}`}
                                     </span>
@@ -581,7 +589,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                 {/* Entry as MARKET CAP over price: on a memecoin
                                     "$10.2M MC" is the comparison people actually
                                     make, and $0.0102 alone says nothing. */}
-                                <span className="flex min-w-0 flex-col px-5 py-3.5">
+                                <span className="flex min-w-0 flex-col px-3.5 py-3.5">
                                     <span className="truncate font-bold tabular-nums text-white">
                                         {entryMc == null ? (
                                             row.avgEntry == null ? "—" : compactUsd(row.avgEntry)
@@ -604,7 +612,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     differentiates this board, and the empty
                                     state should read as an absent post rather
                                     than a broken cell. */}
-                                <span className="flex min-w-0 items-center gap-3 px-5 py-3.5">
+                                <span className="flex min-w-0 items-center gap-3 px-3.5 py-3.5">
                                     <span className="flex shrink-0 flex-col items-center text-zinc-700">
                                         <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
                                         <span className="text-[11px] font-medium tabular-nums">—</span>

@@ -213,6 +213,12 @@ export function TokenTradingViewChart({
                 library_path: "/charting_library/",
                 locale: "en",
                 theme: "dark",
+                // The pane is canvas via `paneProperties`, but the top strip is
+                // its own thing: `toolbar_bg` is the only knob for it, and
+                // without it the chart wears a lighter band along the top edge.
+                // Everything else around the canvas is themed in watchparty.css
+                // through the documented --tv-color-* properties (see below).
+                toolbar_bg: CANVAS,
                 autosize: true,
                 timezone: "Etc/UTC",
                 disabled_features: ["header_symbol_search", "symbol_search_hot_key", "header_compare"],

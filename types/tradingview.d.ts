@@ -26,6 +26,11 @@ interface TradingViewWidgetOptions {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     loading_screen?: Record<string, any>;
     custom_css_url?: string;
+    /** Background for the top toolbar strip. The pane is themed through
+     *  `overrides["paneProperties.background"]` and the rest of the chrome
+     *  through custom_css_url's --tv-color-* properties; this strip is neither,
+     *  and without it the chart wears a lighter band along its top edge. */
+    toolbar_bg?: string;
 }
 
 interface TradingViewWidgetInstance {
