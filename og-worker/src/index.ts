@@ -76,8 +76,10 @@ export default {
                     "cache-control": "public, max-age=86400, s-maxage=604800, immutable",
                 },
             });
-        } catch {
-            return new Response("Failed to generate image", { status: 500 });
+        } catch (err) {
+            // TEMP: surface the real render error to diagnose in prod, then
+            // lock back down to a generic 500.
+            return new Response(`OG render error: ${(err as Error)?.message}\n${(err as Error)?.stack}`, { status: 500 });
         }
     },
 };

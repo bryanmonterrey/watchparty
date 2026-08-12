@@ -17,7 +17,6 @@ import {
     fetchMobulaChainPairs,
     fetchMobulaTokenHolders,
     fetchMobulaTokenTrades,
-    fetchMobulaTokenSecurity,
     mobulaCadence,
     mobulaEnabled,
     type MobulaPair,
@@ -26,6 +25,7 @@ import {
 import { resolveTraders } from "@/lib/coins/resolve-traders";
 import { recordMobulaTrades } from "@/lib/coins/record-mobula-trades";
 import { upstreamEmpty } from "@/server/lib/upstream-empty";
+import { securityWithLiquidityBackfill } from "@/server/lib/backfill-liquidity";
 import { isRiskyHoldings } from "@/lib/coin-feed/quality";
 import {
     traderConcentration,
@@ -293,11 +293,10 @@ export const tradeRouter = router({
             // matters for a COLD key, where there is no last-good to serve.
             upstreamEmpty("coinTrades", [], () =>
             withSwrCache(`coin:trades:v2:${input.network}:${input.address}`, mobulaCadence().tradesTtl, TRADES_STALE_SECONDS, async () => {
-                // 300 requested, not the default 100: the swap filter drops
-                // liquidity operations, and on EVM chains those are ~90% of the
-                // page — BRETT/base returns 18 real swaps for a 100-row request.
-                // The table renders 25 folded rows, so a 100-row request left it
-                // visibly short on every EVM coin. Same one call either way.
+                // 300, not the default 100: the swap filter drops liquidity
+                // operations, ~90% of an EVM page (BRETT/base yields 18 real
+                // swaps per 100 rows), and the table renders 25 folded rows —
+                // so 100 left it visibly short on EVM. Same one call either way.
                 //
                 // null (provider off, or a chain it doesn't cover) IS a real
                 // answer and stays cacheable; only a thrown request escapes.
@@ -363,7 +362,8 @@ export const tradeRouter = router({
                     securityCacheKey(input.network, input.address),
                     mobulaCadence().securityTtl,
                     SLOW_STALE_SECONDS,
-                    () => fetchMobulaTokenSecurity(input.network, input.address),
+                    // Also fills the board's liquidity — see backfill-liquidity.
+                    () => securityWithLiquidityBackfill(input.network, input.address),
                 ),
             ),
         ),

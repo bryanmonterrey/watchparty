@@ -226,6 +226,17 @@ async function rescreenTracked(): Promise<number> {
             );
             screened++;
             if (!passesSecurityBar(sec)) doomed.push(r.id);
+
+            // Same free liquidity backfill as `screenSecurity` — this is the
+            // path that reaches coins already on the watch list, which is where
+            // a stale or absent figure actually costs something: `clearsBrandBar`
+            // and `evictBrandSquats` both read it.
+            if (sec?.liquidityUsd != null) {
+                await db
+                    .update(trackedTokens)
+                    .set({ liquidityUsd: sec.liquidityUsd })
+                    .where(eq(trackedTokens.id, r.id));
+            }
         } catch {
             // Fail-open, same as discovery: a 429 is not evidence of anything.
         }
