@@ -79,5 +79,9 @@ skills-lock.json
 # Wallet ciphertext backups from master-key rotation — never commit
 .wallet-backups/
 
+# deepsec AI vulnerability scanner workspace (large + contains findings)
+.deepsec/
+
 .smoke/
 .walk-cookie
+.deepsec-run.log
