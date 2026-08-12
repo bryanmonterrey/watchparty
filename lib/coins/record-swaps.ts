@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { coinTrades } from "@/db/schema/content/coin-trades";
 import { getMintPriceMap, WSOL_MINT } from "@/server/lib/mint-prices";
+import { tradePriceUsd, updateCandlesFromTrades } from "@/lib/coins/candles-from-trades";
 
 /**
  * Turn Helius enhanced-webhook SWAP events into rows on the public tape.
@@ -157,6 +158,37 @@ export async function recordSwaps(
     // a re-write would fire a second Realtime event, double-printing the row in
     // every open table.
     await db.insert(coinTrades).values(rows).onConflictDoNothing();
+
+    // Advance the CHART from the same trades.
+    //
+    // `subscribeCandles` drives live bars off postgres_changes on
+    // `coin_candles`, so an open chart moves when a candle row is written —
+    // liveness costs a database write, never an API call. Until 0c1d2b29 the
+    // only writer was a GeckoTerminal poll; with that gone, a chart would load
+    // its history and then sit still.
+    //
+    // Deriving the bar here is both free and faster than what it replaces: a
+    // synced candle appeared on the next cron pass, this one lands 1-2 seconds
+    // behind the swap.
+    //
+    // Best-effort. The tape is the source of truth and a candle is a
+    // projection of it — failing to project must never lose the trade.
+    try {
+        await updateCandlesFromTrades(
+            rows
+                .map((r) => ({
+                    network: r.network,
+                    poolAddress: r.poolAddress,
+                    ts: r.ts,
+                    priceUsd: tradePriceUsd(r.amountUsd ?? null, r.amountToken ?? null) ?? 0,
+                    amountToken: r.amountToken ?? null,
+                }))
+                .filter((t) => t.priceUsd > 0),
+        );
+    } catch (err) {
+        console.error("[record-swaps] candle projection failed:", err instanceof Error ? err.message : err);
+    }
+
     return rows.length;
 }
 

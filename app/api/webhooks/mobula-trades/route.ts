@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import { db } from "@/db";
 import { coinTrades } from "@/db/schema/content/coin-trades";
+import { tradePriceUsd, updateCandlesFromTrades } from "@/lib/coins/candles-from-trades";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -96,5 +97,25 @@ async function persist(trades: MobulaTrade[]): Promise<void> {
         await db.insert(coinTrades).values(rows).onConflictDoNothing();
     } catch (err) {
         console.error("[mobula-trades] insert failed:", err instanceof Error ? err.message : err);
+        return;
+    }
+
+    // Same candle projection the Helius path does — an open chart advances off
+    // postgres_changes on `coin_candles`, so the bar has to be written for the
+    // chart to move. Best-effort: the tape is the source of truth.
+    try {
+        await updateCandlesFromTrades(
+            rows
+                .map((r) => ({
+                    network: r.network,
+                    poolAddress: r.poolAddress,
+                    ts: r.ts,
+                    priceUsd: tradePriceUsd(r.amountUsd, r.amountToken) ?? 0,
+                    amountToken: r.amountToken,
+                }))
+                .filter((t) => t.priceUsd > 0),
+        );
+    } catch (err) {
+        console.error("[mobula-trades] candle projection failed:", err instanceof Error ? err.message : err);
     }
 }
