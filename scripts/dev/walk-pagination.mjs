@@ -195,7 +195,20 @@ const SURFACES = [
         proc: "trending.list",
         input: { sort: "volume", timeframe: "24h", limit: 50 },
         rows: "items",
-        count: `select count(*)::int n from trending_coins`,
+        // MUST mirror trending.list's freshness filter (STALE_AFTER_MS = 6h).
+        //
+        // Without it this reported "reached 249 of 250 — 1 unreachable" on three
+        // consecutive runs: a deficit that stayed at exactly 1 while the total
+        // moved, which is the signature of a deterministic skip rather than a
+        // race with the sync. It was neither. `trending_coins` held 251 rows,
+        // 250 fresh and ONE stale — `USDB` on blast, last fetched 15 days
+        // earlier — and `list` was correctly refusing to serve it.
+        //
+        // So the ground truth was wrong, not the pagination, and the "failure"
+        // was the filter doing its job on the exact row it was written for. An
+        // assertion that does not encode the procedure's actual contract
+        // measures the assertion.
+        count: `select count(*)::int n from trending_coins where fetched_at >= now() - interval '6 hours'`,
     },
     {
         name: "coinFeed.list",
