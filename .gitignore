@@ -85,3 +85,6 @@ skills-lock.json
 .smoke/
 .walk-cookie
 .deepsec-run.log
+
+# Nested worker deps (installed in CI, like realtime)
+og-worker/node_modules
