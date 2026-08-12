@@ -194,7 +194,10 @@ export interface MobulaPair {
     logo: string | null;
     priceUsd: number;
     marketCap: number;
-    liquidity: number;
+    /** Dollars, or null when unknown — see the note at the mapping site. The
+     *  pairs endpoint does NOT supply this; it arrives from the security
+     *  screen (`MobulaTokenSecurity.liquidityUsd`). */
+    liquidity: number | null;
     volume24h: number;
     volume1h: number;
     volume5m: number;
@@ -444,6 +447,21 @@ export interface MobulaTokenSecurity {
     bundlersPct: number | null;
     bundlersCount: number | null;
     liquidityBurnPct: number | null;
+    /**
+     * REAL liquidity in dollars — the only place in this API that gives one.
+     *
+     * The pairs endpoint's `liquidity` field is NOT dollars. Measured
+     * 2026-08-12 on `/1/market/blockchain/pairs`, one row carried
+     * `liquidity: 0.00000038` beside `volume_24h: 80,068,102` for the same
+     * pair. `/2/token/details` reports `liquidityUSD` for the same tokens and
+     * it is sane: BONK $57.7k, USDC $15.7M.
+     *
+     * That mattered more than a wrong number on screen. `clearsBrandBar` lets a
+     * brand-squatting coin through once it holds BRAND_SQUAT_MIN_LIQUIDITY_USD,
+     * so the escape hatch was being granted (and denied) on noise — CLAUDE and
+     * OPENAI were firing alerts with "liquidity" that meant nothing.
+     */
+    liquidityUsd: number | null;
     noMintAuthority: boolean | null;
     isFreezable: boolean | null;
     buyTaxPct: number | null;
@@ -518,6 +536,11 @@ export async function fetchMobulaTokenSecurity(
         bundlersPct: num(d.bundlersHoldingsPercentage),
         bundlersCount: num(d.bundlersCount),
         liquidityBurnPct: num(d.liquidityBurnPercentage),
+        // `liquidityUSD` first, `approximateReserveUSD` as the fallback — both
+        // appear on this response and both are real dollars (measured on BONK:
+        // 57,721 and 109,159 respectively; the reserve is the pool's total,
+        // the liquidity figure is the tradeable side).
+        liquidityUsd: num(d.liquidityUSD) ?? num(d.approximateReserveUSD),
         noMintAuthority: typeof sec.noMintAuthority === "boolean" ? sec.noMintAuthority : null,
         isFreezable: typeof sec.isFreezable === "boolean" ? sec.isFreezable : null,
         buyTaxPct: tax(sec.buyTax),
@@ -598,7 +621,21 @@ export async function fetchMobulaChainPairs(
             logo: token.logo ?? null,
             priceUsd: token.price ?? row.price ?? 0,
             marketCap: token.marketCap ?? 0,
-            liquidity: row.liquidity ?? 0,
+            // ⚠️ NOT `row.liquidity`. That field is not dollars — see
+            // MobulaTokenSecurity.liquidityUsd for the measurement (0.00000038
+            // beside $80M of 24h volume, same row). Writing it into a column
+            // named `liquidity_usd` produced a board that filtered on a unit
+            // nobody could name.
+            //
+            // `null` rather than 0, and the distinction is the whole point:
+            // "we do not know this coin's liquidity" and "this coin has no
+            // liquidity" lead to opposite decisions, and this codebase has
+            // already been bitten by conflating them once (securityScore read 0
+            // for healthy coins and rejected 20 of 20 audited tokens).
+            //
+            // The real figure arrives per-coin from the security screen, which
+            // is one call we already make.
+            liquidity: null,
             volume24h: row.volume_24h ?? 0,
             volume1h: row.volume_1h ?? 0,
             volume5m: row.volume_5min ?? 0,

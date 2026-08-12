@@ -14,6 +14,7 @@ import { follows } from "@/db/schema/content/follow";
 import { tokens } from "@/db/schema/content/token";
 import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
+import { brandSymbolPattern } from "@/lib/coin-feed/quality";
 
 /** Cursor is `${iso}|${id}` — both halves of the ORDER BY, so it's total. */
 const encodeCursor = (occurredAt: Date, id: string) => `${occurredAt.toISOString()}|${id}`;
@@ -47,6 +48,28 @@ type FilterInput = z.infer<typeof filterInput>;
  *  `following` filter. */
 function buildFilters(input: FilterInput, viewerId: string | null): SQL[] {
     const where: SQL[] = [];
+
+    // ── The spam gate the rail never had ────────────────────────────────────
+    //
+    // The board has applied `clearsBrandBar` for months; this surface applied
+    // NOTHING. Measured 2026-08-12 over 24h — 2,001 events across 64 coins —
+    // 7 of the 60 coins reviewed would have been rejected by the board's own
+    // filter, among them OPENAI (80 events) and CLAUDE (160). The rail is the
+    // surface that PUSHES coins at people, so it was the wrong one to leave
+    // ungated.
+    //
+    // Applied at READ time, not only at write: `coin_feed_events` is an append
+    // log with a retention window, so every event emitted before a term was
+    // added keeps rendering forever. A read-time filter fixes the backlog and
+    // the future in one place — the same reasoning as the staleness filter on
+    // the board.
+    //
+    // Symbol only, because this table has no `name` (it is denormalised for
+    // render speed) — see `brandSymbolPattern`. `!~*` is Postgres's
+    // case-insensitive regex negation.
+    if (process.env.COIN_FEED_BRAND_GATE !== "off") {
+        where.push(sql`${coinFeedEvents.symbol} !~* ${brandSymbolPattern()}`);
+    }
 
     if (input.scope && input.scope !== "all") {
         // Both viewer-relative scopes are empty when logged out, rather than an

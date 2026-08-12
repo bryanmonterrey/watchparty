@@ -12,7 +12,7 @@ import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { coinFeedEvents } from "@/db/schema/content/coin-feed";
 import { coinCandles } from "@/db/schema/content/coin-candles";
-import { and, asc, desc, eq, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { clearsBrandBar, isRiskyHoldings } from "@/lib/coin-feed/quality";
 import { isVerifiedMint, verifiedSolanaMints } from "@/lib/coins/verified-tokens";
@@ -146,8 +146,28 @@ export const trendingRouter = router({
         // Untradeable rows are not listings — see MIN_BOARD_LIQUIDITY_USD.
         // In SQL rather than after the page, so it does not eat the page size
         // the way the JS gates below necessarily do.
+        //
+        // ## `IS NULL` passes, and that is not a loophole
+        //
+        // `liquidity_usd` is NULL for every row the pairs sync writes, because
+        // that endpoint does not report dollars (see lib/coins/mobula.ts —
+        // 0.00000038 next to $80M of 24h volume). A real figure only arrives
+        // once the per-coin security screen has run.
+        //
+        // So NULL means "not yet measured", and `gte` alone would empty the
+        // entire board — every row fails a comparison against NULL. Excluding
+        // unmeasured coins is also the wrong call on the merits: the previous
+        // behaviour filtered on that garbage unit, which is what dropped
+        // high-volume real coins (TOAD at $27.9M/day) while keeping arbitrary
+        // ones. Volume is the tradeability signal we can actually trust here;
+        // liquidity gates the coin the moment we know it.
         if (MIN_BOARD_LIQUIDITY_USD > 0) {
-            where.push(gte(trendingCoins.liquidityUsd, MIN_BOARD_LIQUIDITY_USD));
+            where.push(
+                or(
+                    isNull(trendingCoins.liquidityUsd),
+                    gte(trendingCoins.liquidityUsd, MIN_BOARD_LIQUIDITY_USD),
+                )!,
+            );
         }
         if (input.chains?.length) where.push(inArray(trendingCoins.network, input.chains));
         if (input.minLiquidityUsd) where.push(gte(trendingCoins.liquidityUsd, input.minLiquidityUsd));

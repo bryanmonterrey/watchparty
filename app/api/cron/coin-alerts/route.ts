@@ -17,6 +17,7 @@ import { CallBudget, GT_CALL_BUDGET } from "@/lib/coin-feed/geckoterminal";
 import { runDiscovery } from "@/lib/coin-feed/discovery";
 import { runClusterScan } from "@/lib/coin-feed/clusters";
 import { enabledNetworks } from "@/lib/coin-feed/networks";
+import { pullMobulaTape } from "@/lib/coin-feed/mobula-tape-pull";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -62,6 +63,27 @@ export async function GET(req: NextRequest) {
         for (let i = 0; i < discoveryBudget.spent; i++) budget.take();
     }
 
+    // Fill the tape from MOBULA before scanning it.
+    //
+    // The scanner reads `coin_trades` and does not care who wrote it. Until now
+    // the only writer for a coin nobody has open was the Helius trades webhook,
+    // which is the last place Helius touched this app's market data. This pulls
+    // the same trades from Mobula for the coin the scan is about to reach.
+    //
+    // Runs BEFORE the scan on purpose — the ordering in `pullMobulaTape` is the
+    // scan's own priority, so the rows land in time to be read this pass rather
+    // than next one.
+    //
+    // Credit-bounded and off by default on anything but the 5-minute stride;
+    // see the arithmetic in that module. A failure here must not stop the scan,
+    // which still has the webhook's rows to work with.
+    let tape = null;
+    try {
+        tape = await pullMobulaTape(minute);
+    } catch (err) {
+        console.error("[coin-alerts] mobula tape pull failed:", err);
+    }
+
     let scan = { scanned: 0, events: 0, skipped: 0, rateLimited: false };
     try {
         scan = await runClusterScan(budget);
@@ -71,6 +93,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
         discovery,
+        tape,
         scanned: scan.scanned,
         events: scan.events,
         // Coins the provider refused on; they keep their place in the queue.

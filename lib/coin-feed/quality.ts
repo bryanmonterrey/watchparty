@@ -47,6 +47,24 @@ const BRAND_TERMS = [
     // volume. `alphabet` is deliberately absent: it is an ordinary English
     // word and would fail real coins, the same reason `coin` and `meta` are.
     "google",
+    // Found 2026-08-12 by `bun scripts/coin-feed/audit-live-feeds.ts`, which
+    // reviews what the BOARD and the ALERT RAIL are showing right now rather
+    // than the adoption queue. Entertainment brands, which no previous pass
+    // looked for — every earlier list was tech companies and AI labs:
+    //   Mario64        75 alert events, $69k liquidity   (Nintendo)
+    //   Tiktok Coin    on the board                      (ByteDance)
+    //   Memeflix       on the rail                       (Netflix)
+    //   BNBSHIB CHAIN  on the board, welds two brands together
+    // `mario` is a substring term on purpose: "Mario64", "Super Mario",
+    // "MarioCoin" are all the same squat. It is a given name, but not one that
+    // appears in real ticker names often enough to cost us anything.
+    "mario",
+    "tiktok",
+    "netflix",
+    "bnbshib",
+    // "Official <brand>" is its own tell — the model flagged "Official SUN"
+    // for the claim, not the name. Handled as a WORD below, since "official"
+    // alone is far too common to substring-match.
 ];
 
 /**
@@ -99,6 +117,10 @@ const BRAND_WORDS = [
     // the brand bar.
     "sndk",
     "amd",
+    // Found 2026-08-12 by scripts/coin-feed/audit-live-feeds.ts on the live
+    // board. A WORD and not a term: "gta" inside another word is meaningless,
+    // and the board carried FOUR separate GTA rows at once.
+    "gta",
 ];
 const BRAND_WORD_RE = new RegExp(`\\b(${BRAND_WORDS.join("|")})\\b`, "i");
 
@@ -311,4 +333,42 @@ export function clearsBrandBar(
     if (isStockTicker(symbol, name)) return false;
 
     return (liquidityUsd ?? 0) >= BRAND_SQUAT_MIN_LIQUIDITY_USD;
+}
+
+/**
+ * The same brand/ticker judgement as `isBrandSquat`, expressed as a POSIX
+ * regex Postgres can apply in a WHERE clause.
+ *
+ * ## Why a second expression of one rule, which is normally a smell
+ *
+ * The alert rail (`server/routers/coinFeed.ts`) applied NO quality gate at all
+ * — measured 2026-08-12, 7 of the 60 coins firing alerts would have been
+ * rejected by the board's own filter, including OPENAI and CLAUDE. Two things
+ * make the JS predicate unusable there:
+ *
+ *  - `list` and `newCount` must agree, and the file's own comment names the
+ *    classic bug: a count that includes rows the list filters out. A JS filter
+ *    after the query would also eat the page size and break the cursor.
+ *  - `coin_feed_events` is denormalised for render speed and carries `symbol`
+ *    but no `name`, so there is nothing for the full predicate to read anyway.
+ *
+ * So this is deliberately the WEAKER half — symbol only. A coin whose symbol is
+ * innocent and whose name squats ("Official SUN", "Tiktok Coin") is caught at
+ * WRITE time by the emit path, which does have the name. Both halves are built
+ * from the same three lists, so extending a list still fixes both surfaces.
+ *
+ * Substring terms and word-boundary words keep their distinct meanings: `\y` is
+ * Postgres's word boundary, so `gta` will not match inside another word while
+ * `claude` still matches "MyClaudeCoin".
+ */
+export function brandSymbolPattern(): string {
+    const terms = BRAND_TERMS.map(escapeRe).join("|");
+    const words = [...BRAND_WORDS, ...STOCK_TICKERS].map(escapeRe).join("|");
+    return `(${terms})|\\y(${words})\\y`;
+}
+
+/** Regex-escape a literal. The lists are hand-written and currently contain no
+ *  metacharacters, but "gpt-5" is one edit away from mattering. */
+function escapeRe(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
