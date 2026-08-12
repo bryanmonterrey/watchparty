@@ -191,18 +191,24 @@ export const trendingRouter = router({
         // `collapseCopycats` stays. It still earns its place on the /trade board
         // and as a second line here, and identity is defined in one module
         // rather than two.
+        //
+        // ⚠️ The timestamp goes in as .toISOString() with an explicit
+        // ::timestamptz cast, NEVER as a JS Date. A value interpolated into a
+        // sql template carries no column, so drizzle has no encoder for it and
+        // hands the Date to postgres.js, where workerd's Buffer polyfill throws
+        // ERR_INVALID_ARG_TYPE. Node accepts it, so the Date form passes locally
+        // and 500s only on the deployed worker — it took the whole board down
+        // between 03b5bfd0 and ec428c4d. See the note in CLAUDE.md.
+        //
+        // ⚠️ And no backticks inside this template. A backtick in a SQL comment
+        // terminates the template literal; that shipped too, as a syntax error
+        // that tests and the LSP both missed because nothing imports this file
+        // in the test path.
         if (process.env.TRENDING_DEDUPE !== "off") {
             where.push(sql`not exists (
                 select 1 from ${trendingCoins} dup
                 where lower(dup.symbol) = lower(${trendingCoins.symbol})
                   and lower(coalesce(dup.name, '')) = lower(coalesce(${trendingCoins.name}, ''))
-                  -- .toISOString() + an explicit cast, NEVER a JS Date. A value
-                  -- interpolated into `sql` carries no column, so drizzle has no
-                  -- encoder for it and hands the Date to postgres.js, where
-                  -- workerd's Buffer polyfill throws ERR_INVALID_ARG_TYPE. Node
-                  -- accepts it, so this passes locally and 500s in production —
-                  -- exactly the trap CLAUDE.md documents, and it took the whole
-                  -- board down until the next deploy.
                   and dup.fetched_at >= ${new Date(Date.now() - STALE_AFTER_MS).toISOString()}::timestamptz
                   and (
                     coalesce(dup.volume_24h_usd, 0) > coalesce(${trendingCoins.volume24hUsd}, 0)
