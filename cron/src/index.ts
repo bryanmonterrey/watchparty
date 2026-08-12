@@ -91,6 +91,15 @@ export default {
         } else if (event.cron === "*/10 * * * *") {
             // Callout leaderboard: advance peak gains + pay multiplier XP bonuses.
             ctx.waitUntil(call(env, "/api/cron/callout-performance"));
+            // Re-point the Mobula trade socket at the coins that currently
+            // matter. The right 50 change through the day, and re-subscribing
+            // is FREE — the DO sends a new payload on the existing connection,
+            // and Mobula bills per minute OPEN, not per subscription. So the
+            // watch list can be chosen by RELEVANCE, which is the inversion
+            // this whole move was for: the Helius budget had to pick the
+            // cheapest pools and evicted a coin the moment it took off.
+            // No-ops when REALTIME_HOST/SECRET are unset, i.e. until the DO runs.
+            ctx.waitUntil(call(env, "/api/cron/tape-watch"));
             // Settle pending server-witnessed trades on-chain (Phase 4a).
             ctx.waitUntil(call(env, "/api/cron/trade-verify"));
             // Rebuild realized-PnL snapshots from confirmed trades (Phase 4b).
