@@ -87,7 +87,14 @@ export function StatCarousel({
                     drag.current = null;
                 }}
                 className={cn(
-                    "hidden-scrollbar -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 py-0.5",
+                    // NO negative margin. `-mx-1 px-1` made the scroller 8px
+                    // WIDER than the wrapper the fades are positioned against,
+                    // so a tile's edge sat 4px outside the gradient on each side
+                    // and showed through as a hard sliver — the fade looked
+                    // px-1-ish because that was the only part of the tile it was
+                    // actually covering. The scroller has to share its edges with
+                    // the element the fades are pinned to.
+                    "hidden-scrollbar flex min-w-0 items-center gap-2 overflow-x-auto py-0.5",
                     "cursor-grab select-none active:cursor-grabbing",
                     // The strip owns horizontal panning; the page keeps vertical.
                     "touch-pan-x",
@@ -102,14 +109,14 @@ export function StatCarousel({
             <div
                 aria-hidden
                 className={cn(
-                    "pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-canvas to-transparent transition-opacity duration-200",
+                    "pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-canvas to-transparent transition-opacity duration-200",
                     edges.left ? "opacity-100" : "opacity-0",
                 )}
             />
             <div
                 aria-hidden
                 className={cn(
-                    "pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-canvas to-transparent transition-opacity duration-200",
+                    "pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-canvas to-transparent transition-opacity duration-200",
                     edges.right ? "opacity-100" : "opacity-0",
                 )}
             />
