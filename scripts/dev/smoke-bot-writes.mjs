@@ -44,7 +44,6 @@ const {
 const { developerApps } = await import("../../db/schema/content/developer-app.ts");
 const { developerBots } = await import("../../db/schema/content/developer-bot.ts");
 const { developerBotInstalls } = await import("../../db/schema/content/developer-bot-install.ts");
-const { mintBotToken } = await import("../../lib/developer/bot-auth.ts");
 const { BOT_PERMISSIONS } = await import("../../lib/developer/bot-permissions.ts");
 const { eq, and } = await import("drizzle-orm");
 
@@ -84,24 +83,29 @@ async function trpc(path, input, { method } = { method: "POST" }) {
 const suffix = randHex(4);
 const appId = `wpapp_smokebot${suffix}`;
 const botUserId = webcrypto.randomUUID();
-const keyId = randHex(8);
+// mintBotToken GENERATES the keyId — the developer_bots row must store the
+// one it returns (and TOKEN is the .token field, not the object).
+const minted = await (await import("../../lib/developer/bot-auth.ts")).mintBotToken();
+const keyId = minted.keyId;
 
 // Fixture ownership is self-contained: the bot's own user row owns the app
 // AND the community, so cleanup is exactly three deletes and cascades.
 await db.insert(user).values({
     id: botUserId, name: `Smoke Bot ${suffix}`, email: `smoke-bot-${suffix}@bots.watchparty.local`,
-    emailVerified: true, isBot: true, createdAt: new Date(), updatedAt: new Date(),
+    emailVerified: true, isBot: true, gender: false, createdAt: new Date(), updatedAt: new Date(),
 });
 await db.insert(developerApps).values({
     id: appId, ownerId: botUserId, name: `bot-smoke ${suffix}`, publicKey: "00", privateKeyEnc: "00",
 });
 await db.insert(developerBots).values({ botUserId, appId, ownerId: botUserId, keyId });
-TOKEN = await mintBotToken(keyId);
+TOKEN = minted.token;
 
 const serverId = webcrypto.randomUUID();
 const channelId = webcrypto.randomUUID();
-await db.insert(communityServers).values({ id: serverId, name: `bot-smoke ${suffix}`, ownerId: botUserId });
-await db.insert(communityChannels).values({ id: channelId, name: "general", type: "TEXT", serverId });
+await db.insert(communityServers).values({
+    id: serverId, name: `bot-smoke ${suffix}`, ownerId: botUserId, inviteCode: `smoke-${suffix}-${randHex(4)}`,
+});
+await db.insert(communityChannels).values({ id: channelId, name: "general", type: "TEXT", serverId, createdById: botUserId });
 
 const ALL = BOT_PERMISSIONS.SEND_MESSAGES | BOT_PERMISSIONS.MODERATE | BOT_PERMISSIONS.MANAGE_COIN_ALERTS;
 const setPerms = (bits) =>
