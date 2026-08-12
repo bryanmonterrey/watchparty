@@ -42,6 +42,11 @@ const BRAND_TERMS = [
     //   Unitree  $68,969  (also squatted under its Chinese name, 宇树科技)
     "sandisk",
     "unitree",
+    // Found 2026-08-12 by running the reviewer over the TRENDING BOARD rather
+    // than over adoption candidates — GOOGLE was sitting in the top 60 by 24h
+    // volume. `alphabet` is deliberately absent: it is an ordinary English
+    // word and would fail real coins, the same reason `coin` and `meta` are.
+    "google",
 ];
 
 /**

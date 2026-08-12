@@ -13,6 +13,7 @@ import { trendingCoins } from "@/db/schema/content/trending";
 import { coinFeedEvents } from "@/db/schema/content/coin-feed";
 import { and, asc, desc, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { clearsBrandBar } from "@/lib/coin-feed/quality";
 
 /** A board row older than this is stale data, not data. See the note in `list`. */
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
@@ -176,8 +177,33 @@ export const trendingRouter = router({
             );
         }
 
+        // HIDE BRAND SQUATS. The board had NO quality gate of any kind.
+        //
+        // `clearsBrandBar` ran only in discovery's `qualifies()`, which decides
+        // adoption into `tracked_tokens` — the alert rail. This table is fed
+        // straight from GeckoTerminal by `trending-sync`, which filters
+        // nothing, so every impersonator on the chain rendered here.
+        //
+        // Measured 2026-08-12 on the top 60 by 24h volume: TEN were
+        // impersonators — GOOGLE, SNDK, NVDA, OPENAI, SPACEX, SPCXB, Grok BOT,
+        // MARIO64, ELONCOIN, BNBSHIB — and SIX of those were already known to
+        // `isBrandSquat`. They were visible not because the rules missed them
+        // but because nothing ever asked.
+        //
+        // Filtered here rather than in `trending-sync` so a rule change takes
+        // effect immediately instead of on the next sync, and so the row
+        // survives for a future "show everything" toggle — the same reasoning
+        // as the freshness filter above.
+        //
+        // In JS, not SQL: `clearsBrandBar` is the ONE definition of this, and
+        // restating its two lists as a Postgres regex is precisely how the two
+        // copies drift apart. Filtering after the page means a page can return
+        // slightly fewer than `limit` rows; it never SKIPS one, because the
+        // cursor still advances by `limit`. Same trade `screenSecurity` makes.
+        const clean = items.filter((i) => clearsBrandBar(i.symbol, i.name, i.liquidityUsd));
+
         return {
-            items: items.map((i) => ({ ...i, activity: activity.get(i.id) ?? null })),
+            items: clean.map((i) => ({ ...i, activity: activity.get(i.id) ?? null })),
             nextCursor: hasMore ? offset + input.limit : null,
         };
     }),

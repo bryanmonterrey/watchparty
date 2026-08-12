@@ -216,6 +216,21 @@ const SURFACES = [
         proc: "trending.list",
         input: { sort: "volume", timeframe: "24h", limit: 50 },
         rows: "items",
+        // ⚠️ NO GROUND TRUTH as of 2026-08-12 — see below. The count is kept
+        // (and still mirrors the freshness filter) only as documentation of
+        // what it USED to assert; the walker treats this surface as
+        // count-less, like feed.getFeed.
+        //
+        // `trending.list` now also hides brand squats via `clearsBrandBar`,
+        // which is a JS predicate over two regex lists. Restating those lists
+        // as a Postgres regex here would put a SECOND definition of "is this
+        // spam" in the tree — and a count that drifts from its procedure is
+        // exactly what produced the "1 unreachable" false failure this comment
+        // block was written for. A wrong assertion is worse than none.
+        //
+        // The walk still checks what matters most: that paging terminates and
+        // never repeats a row.
+        //
         // MUST mirror trending.list's freshness filter (STALE_AFTER_MS = 6h).
         //
         // Without it this reported "reached 249 of 250 — 1 unreachable" on three
@@ -229,7 +244,7 @@ const SURFACES = [
         // was the filter doing its job on the exact row it was written for. An
         // assertion that does not encode the procedure's actual contract
         // measures the assertion.
-        count: `select count(*)::int n from trending_coins where fetched_at >= now() - interval '6 hours'`,
+        // count: intentionally absent — see the note above.
     },
     {
         name: "coinFeed.list",
