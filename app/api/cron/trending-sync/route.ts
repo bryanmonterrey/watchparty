@@ -57,8 +57,25 @@ export async function GET(req: NextRequest) {
           ? [...MOBULA_TRENDING_CHAINS]
           : mobulaEnv.split(",").map((c) => c.trim()).filter((c) => (MOBULA_TRENDING_CHAINS as readonly string[]).includes(c));
 
+    // ── The cost dial ────────────────────────────────────────────────────────
+    //
+    // This route fires EVERY MINUTE. Running six chains on every pass is
+    // 259,200 credits/month, which fits neither the free tier (10k) nor the $50
+    // one (125k) — so the cadence is not a preference, it is what decides
+    // whether the bill is payable:
+    //
+    //     every 60 min   6 x 24   =  4,320/month  -> free tier
+    //     every  5 min   6 x 288  = 51,840/month  -> $50 tier
+    //     every  1 min   6 x 1440 = 259,200/month -> neither
+    //
+    // Expressed as an interval rather than a boolean precisely so moving up a
+    // tier is one number, and so the arithmetic above sits next to the knob it
+    // describes. `?all=1` bypasses it for a manual seed.
+    const everyMin = Math.max(1, Number(process.env.TRENDING_MOBULA_EVERY_MIN ?? 60) || 60);
+    const dueThisPass = sweepAll || new Date().getUTCMinutes() % everyMin === 0;
+
     const mobulaResults: { chain: string; written: number }[] = [];
-    for (const chain of mobulaChains) {
+    for (const chain of dueThisPass ? mobulaChains : []) {
         try {
             const r = await syncTrendingChainFromMobula(chain);
             // null = provider off or chain unsupported. Falling through to GT

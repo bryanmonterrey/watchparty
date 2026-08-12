@@ -6,11 +6,21 @@
   "compatibility_flags": ["nodejs_compat"],
   // The single Chat room class. Binding name MUST equal the class name so
   // partyserver routes /parties/chat/:room → this DO.
+  // `Tape` holds the outbound Mobula trade socket. Unlike Chat it must NOT
+  // hibernate — an outbound socket does not survive it, and because Mobula
+  // bills per minute OPEN rather than per event, a hibernated Tape goes silent
+  // while still costing money. See realtime/src/tape.ts.
   "durable_objects": {
-    "bindings": [{ "name": "Chat", "class_name": "Chat" }]
+    "bindings": [
+      { "name": "Chat", "class_name": "Chat" },
+      { "name": "Tape", "class_name": "Tape" }
+    ]
   },
   // SQLite-backed DOs (required for partyserver hibernation + storage).
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Chat"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Chat"] },
+    { "tag": "v2", "new_sqlite_classes": ["Tape"] }
+  ],
   "observability": { "enabled": true }
   // REALTIME_SECRET is a secret, set out-of-band (not committed):
   //   wrangler secret put REALTIME_SECRET   (run inside realtime/)

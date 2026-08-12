@@ -6,6 +6,8 @@ import {
   type WSMessage,
 } from "partyserver";
 import { verifyRealtimeToken } from "./auth";
+// Re-exported so wrangler can bind the class declared in tape.ts.
+export { Tape } from "./tape";
 import { CHAT_MAX_LEN, CHAT_HISTORY_MAX, CHAT_REPLY_EXCERPT, DEV_STREAM_PREFIX, INBOX_PREFIX, type ChatLine, type ChatReply, type ClientMessage, type DevStreamConnection, type PinnedMessage, type PresenceUser, type ServerEvent } from "../../lib/realtime/protocol";
 
 // Per-connection chat rate limit: max N lines per window.
@@ -14,8 +16,14 @@ const CHAT_RATE_WINDOW_MS = 5000;
 
 export type Env = {
   Chat: DurableObjectNamespace<Chat>;
+  /** The Mobula trade socket — see src/tape.ts. */
+  Tape: DurableObjectNamespace<import("./tape").Tape>;
   /** Shared HMAC secret — must match the Next app's REALTIME_SECRET. */
   REALTIME_SECRET: string;
+  /** Mobula API key. Absent ⇒ Tape stays dormant and costs nothing. */
+  MOBULA_API_KEY?: string;
+  /** Origin Tape POSTs batched trades back to. */
+  APP_ORIGIN?: string;
 };
 
 /** Per-connection state, persisted in the WS attachment (survives hibernation). */
@@ -313,6 +321,22 @@ export class Chat extends Server<Env> {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    // ── /tape/* → the single Tape DO ─────────────────────────────────────────
+    //
+    // ONE instance, by fixed name: Mobula caps an ORGANISATION at 50 watched
+    // tokens, so a second socket would not double coverage, it would compete
+    // for the same cap while doubling the per-minute bill.
+    //
+    // Guarded by REALTIME_SECRET — this endpoint changes what is watched and
+    // therefore what is spent, so it must never be reachable from a browser.
+    const tapeUrl = new URL(request.url);
+    if (tapeUrl.pathname.startsWith("/tape/")) {
+      if (request.headers.get("authorization") !== env.REALTIME_SECRET) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      return env.Tape.get(env.Tape.idFromName("mobula")).fetch(request);
+    }
+
     return (
       (await routePartykitRequest(request, env as never, {
         // Authenticate at the HTTP/upgrade layer so invalid tokens are rejected
