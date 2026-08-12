@@ -19,6 +19,7 @@ import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
 import { CoinSecurityCard } from "./coin-security-card";
+import { CoinActivityCard } from "./coin-activity-card";
 import { TokenBondingCurve } from "@/components/tokens/token-bonding-curve";
 import { TokenDescription } from "@/components/tokens/token-description";
 import { TokenChatCard } from "@/components/tokens/token-chat-card";
@@ -646,6 +647,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 <CoinTradePanel key={coin.id} coin={coin} marketUrl={marketUrl} cardClassName={SWAP_CARD} />
                 <CoinSecurityCard coin={coin} cardClassName={SWAP_CARD} />
+                <CoinActivityCard coin={coin} cardClassName={SWAP_CARD} />
             </div>
         </aside>
     );

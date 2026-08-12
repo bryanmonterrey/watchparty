@@ -134,11 +134,24 @@ export default {
             ctx.waitUntil(runMonitor(env));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
-            // NOT scheduled here yet: /api/cron/send-fee-sweep, whose own header
-            // says "schedule alongside premium-collect". It SIGNS TRANSACTIONS
-            // from user wallets to collect accrued EVM send fees, and turning an
-            // unattended money-mover on is the owner's call, not a cleanup. It
-            // is a no-op today (no users), so nothing is being lost by waiting.
+            // NOT scheduled here, and the reason is stronger than caution.
+            //
+            // /api/cron/send-fee-sweep SIGNS TRANSACTIONS from each user's
+            // seed-derived key to collect accrued 0.5% EVM send fees, with the
+            // gas coming out of that user's wallet. Its own header says
+            // "schedule alongside premium-collect".
+            //
+            // Verified 2026-08-11, and both halves matter:
+            //   TREASURY_EVM_ADDRESS   NOT SET  -> the route returns
+            //                                     {skipped} before doing anything
+            //   send_fee_accruals      0 rows   -> nothing to sweep regardless
+            //
+            // So scheduling it today would be inert — which is exactly the
+            // problem. An inert schedule means the sweep starts moving real
+            // money on the day somebody sets TREASURY_EVM_ADDRESS for an
+            // unrelated reason, with nobody having decided to turn it on.
+            // Wiring it here turns a deliberate future choice into a side
+            // effect of an env var. Schedule it WITH that decision, not before.
         }
     },
 } satisfies ExportedHandler<Env>;

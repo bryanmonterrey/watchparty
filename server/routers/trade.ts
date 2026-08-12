@@ -23,6 +23,7 @@ import {
 } from "@/lib/coins/mobula";
 import { resolveTraders } from "@/lib/coins/resolve-traders";
 import { isRiskyHoldings } from "@/lib/coin-feed/quality";
+import { traderConcentration, MIN_TRADES_FOR_VERDICT } from "@/lib/coin-feed/trader-concentration";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -296,6 +297,74 @@ export const tradeRouter = router({
             withCache(securityCacheKey(input.network, input.address), mobulaCadence().securityTtl, () =>
                 fetchMobulaTokenSecurity(input.network, input.address).catch(() => null)
             )
+        ),
+
+    /**
+     * Is this coin's activity many people, or a few wallets passing tokens
+     * around? Computed from OUR tape (`coin_trades`), not from a provider.
+     *
+     * Complements `coinSecurity`, which answers a different question. Mobula
+     * reports who HOLDS the supply; this reports who is TRADING it, and the two
+     * come apart exactly where it matters — a coin can have healthy holder
+     * distribution while five wallets manufacture all of its volume.
+     *
+     * ## Returns `hasVerdict: false` far more often than it returns a verdict
+     *
+     * `traderConcentration` needs 40+ recorded trades before it will say
+     * anything, and our tape only covers the coins the Helius budget can afford
+     * to watch. Measured 2026-08-11: 18 tokens clear the floor over 24h and 52
+     * over 7 days. So the card must render NOTHING rather than a reassuring
+     * blank — "we have not seen enough trades" and "this coin is fine" are
+     * different answers, and this is a money surface.
+     *
+     * Window is 7 days: it is where the sample sizes are (52 tokens vs 18), and
+     * wash trading is a pattern over days rather than an hour.
+     */
+    coinTraderConcentration: publicProcedure
+        .input(z.object({ address: z.string(), days: z.number().min(1).max(30).default(7) }))
+        .query(({ input }) =>
+            withCache(`trade:concentration:v1:${input.address}:${input.days}`, 300, async () => {
+                const sinceTs = Math.floor(Date.now() / 1000) - input.days * 86_400;
+
+                // One pass over the token's trades. `trader` is the wallet that
+                // paid for the swap, so "top 5" is by trade COUNT — see
+                // trader-concentration.ts for why counts and not dollars.
+                const rows = await db.execute<{
+                    trades: number;
+                    traders: number;
+                    top5_trades: number;
+                    round_trip_traders: number;
+                }>(sql`
+                    WITH t AS (
+                        SELECT trader, side FROM coin_trades
+                        WHERE token_address = ${input.address} AND ts >= ${sinceTs}
+                    )
+                    SELECT
+                      (SELECT count(*) FROM t)::int                       AS trades,
+                      (SELECT count(DISTINCT trader) FROM t)::int         AS traders,
+                      (SELECT coalesce(sum(n), 0) FROM (
+                          SELECT count(*) AS n FROM t GROUP BY trader ORDER BY count(*) DESC LIMIT 5
+                       ) top5)::int                                       AS top5_trades,
+                      (SELECT count(*) FROM (
+                          SELECT trader FROM t GROUP BY trader
+                          HAVING bool_or(side = 'buy') AND bool_or(side = 'sell')
+                       ) rt)::int                                         AS round_trip_traders
+                `);
+
+                const r = (rows as unknown as { trades: number; traders: number; top5_trades: number; round_trip_traders: number }[])[0];
+                if (!r) return null;
+
+                const c = traderConcentration({
+                    trades: Number(r.trades),
+                    traders: Number(r.traders),
+                    top5Trades: Number(r.top5_trades),
+                    roundTripTraders: Number(r.round_trip_traders),
+                });
+                // No verdict → null, so the client has nothing to render rather
+                // than a row of zeroes that reads as "clean".
+                if (!c.hasVerdict) return null;
+                return { ...c, trades: Number(r.trades), traders: Number(r.traders), days: input.days, minTrades: MIN_TRADES_FOR_VERDICT };
+            })
         ),
 
     /**
