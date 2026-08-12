@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { BOT_PERMISSIONS, BOT_PERMISSION_META, hasPermission } from "@/lib/developer/bot-permissions";
 
