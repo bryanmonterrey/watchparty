@@ -4,52 +4,74 @@ import { ImageResponse } from "workers-og";
 // app used to render at /api/og/post via `next/og` — moved here to keep
 // next/og's ~1 MiB of wasm out of the main worker bundle (see wrangler.jsonc).
 //
-// workers-og is the Workers-native Satori+resvg renderer; unlike next/og it
-// takes an HTML STRING (no React), which keeps this worker tiny. The card
-// markup below mirrors the original JSX 1:1 (1200×630, white card on black,
-// avatar + name + handle header, post text body).
+// Element tree, NOT an HTML string: workers-og also accepts an HTML string,
+// but its HTML/CSS string parser mishandles multi-child flex containers (it
+// dropped `display: flex` and satori then threw "Expected <div> to have
+// explicit display: flex if it has more than one child node" — regardless of
+// whitespace or `property: value` spacing). satori's real input is a
+// React-element shape: `{ type, props: { style, children } }`. We build that
+// as plain objects (no React dependency) with camelCase style keys — the exact
+// tree the original next/og JSX compiled to, so rendering is unambiguous.
 
-/** Escape user-supplied text for safe interpolation into the HTML template —
- *  an unescaped `<` or `"` in a post would otherwise break the parse. */
-function esc(s: string): string {
-    return s
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-}
+type Node = {
+    type: string;
+    props: { style: Record<string, unknown>; children?: unknown };
+};
+
+const el = (type: string, style: Record<string, unknown>, children?: unknown): Node => ({
+    type,
+    props: { style, ...(children !== undefined ? { children } : {}) },
+});
 
 function card({ text, name, username, avatar }: {
     text: string;
     name: string;
     username: string;
     avatar: string;
-}): string {
+}): Node {
     const handle = username.startsWith("@") ? username : `@${username}`;
-    const avatarEl = avatar
-        ? `<img src="${esc(avatar)}" style="width: 80px; height: 80px; border-radius: 40px; object-fit: cover; margin-right: 24px" />`
-        : `<div style="width: 80px; height: 80px; border-radius: 40px; background-color: #e5e7eb; margin-right: 24px"></div>`;
-    // Styles MUST be written `property: value` WITH the space — workers-og's
-    // CSS parser only recognises the spaced form, and a dropped `display: flex`
-    // makes satori see a block div and throw "Expected <div> to have explicit
-    // display: flex if it has more than one child node". (The unspaced
-    // `display:flex` form silently parsed to nothing — the real cause of the
-    // 500s, not the inter-tag whitespace.) Keep the markup on one line too, so
-    // no text nodes sneak in as extra children.
-    return (
-        `<div style="height: 100%; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #000000; color: white">` +
-            `<div style="display: flex; flex-direction: column; background-color: #ffffff; color: #000000; width: 800px; min-height: 400px; border-radius: 24px; padding: 48px; box-shadow: 0 20px 40px rgba(0,0,0,0.5)">` +
-                `<div style="display: flex; align-items: center; margin-bottom: 32px">` +
-                    avatarEl +
-                    `<div style="display: flex; flex-direction: column">` +
-                        `<span style="font-size: 32px; font-weight: bold; color: #09090b; margin-bottom: 4px">${esc(name)}</span>` +
-                        `<span style="font-size: 24px; color: #71717a">${esc(handle)}</span>` +
-                    `</div>` +
-                `</div>` +
-                `<div style="display: flex; font-size: 36px; line-height: 1.4; color: #09090b">${esc(text)}</div>` +
-            `</div>` +
-        `</div>`
+    const avatarNode = avatar
+        ? el("img", { width: 80, height: 80, borderRadius: 40, objectFit: "cover", marginRight: 24 } as Record<string, unknown> & { src?: string })
+        : el("div", { width: 80, height: 80, borderRadius: 40, backgroundColor: "#e5e7eb", marginRight: 24 });
+    // `src` lives on props, not style, for the <img>.
+    if (avatar) (avatarNode.props as Record<string, unknown>).src = avatar;
+
+    return el(
+        "div",
+        {
+            height: "100%",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#000000",
+            color: "white",
+        },
+        el(
+            "div",
+            {
+                display: "flex",
+                flexDirection: "column",
+                backgroundColor: "#ffffff",
+                color: "#000000",
+                width: 800,
+                minHeight: 400,
+                borderRadius: 24,
+                padding: 48,
+                boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+            },
+            [
+                el("div", { display: "flex", alignItems: "center", marginBottom: 32 }, [
+                    avatarNode,
+                    el("div", { display: "flex", flexDirection: "column" }, [
+                        el("span", { fontSize: 32, fontWeight: 700, color: "#09090b", marginBottom: 4 }, name),
+                        el("span", { fontSize: 24, color: "#71717a" }, handle),
+                    ]),
+                ]),
+                el("div", { display: "flex", fontSize: 36, lineHeight: 1.4, color: "#09090b" }, text),
+            ],
+        ),
     );
 }
 
@@ -63,13 +85,13 @@ export default {
         }
         try {
             const p = url.searchParams;
-            const html = card({
+            const element = card({
                 text: (p.get("text") || "Just another amazing post on Watchparty!").slice(0, 280),
                 name: (p.get("name") || "Creator").slice(0, 80),
                 username: (p.get("username") || "@creator").slice(0, 80),
                 avatar: p.get("avatar") || "",
             });
-            const res = new ImageResponse(html, { width: 1200, height: 630 });
+            const res = new ImageResponse(element as unknown as string, { width: 1200, height: 630 });
             // Materialize the PNG fully before responding. Rewrapping
             // `res.body` (a ReadableStream) into a new Response streamed EMPTY
             // (0-byte 200s, verified in prod) — the satori/resvg render must be
