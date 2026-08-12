@@ -42,6 +42,7 @@ const AdminDashboard = dynamic(() => import("@/components/admin/admin-dashboard"
 const ProfileSettings = dynamic(() => import("@/components/auth/profile-settings"), { loading: PanelLoading, ssr: false });
 const AccountLinking = dynamic(() => import("@/components/auth/account-linking"), { loading: PanelLoading, ssr: false });
 const WalletManagement = dynamic(() => import("@/components/auth/wallet-management"), { loading: PanelLoading, ssr: false });
+const ConnectedApps = dynamic(() => import("@/components/settings/connected-apps").then(m => m.ConnectedApps), { loading: PanelLoading, ssr: false });
 const PasskeyManager = dynamic(() => import("@/components/auth/passkey-manager"), { loading: PanelLoading, ssr: false });
 const SecurityAuditLog = dynamic(() => import("@/components/auth/security-audit-log"), { loading: PanelLoading, ssr: false });
 
@@ -123,6 +124,7 @@ export default function SettingsPage() {
                 {tab === "audit" && <SecurityAuditLog />}
                 {tab === "linked" && <AccountLinking />}
                 {tab === "wallets" && <WalletManagement />}
+                {tab === "connectedApps" && <ConnectedApps />}
                 {tab === "admin" && isAdmin && <AdminDashboard />}
             </div>
         </div>

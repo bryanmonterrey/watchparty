@@ -36,6 +36,9 @@ const TOC = [
     ["pricing", "Pricing"],
     ["x402", "Paying per request (x402)"],
     ["webhooks", "Webhooks"],
+    ["stream", "Event stream"],
+    ["oauth", "Sign in with watchparty"],
+    ["bots", "Bots"],
     ["errors", "Errors"],
 ] as const;
 
@@ -202,6 +205,92 @@ export default function DocsPage() {
                             anything older than a few minutes of clock skew via <Mono>t</Mono>.
                             The console&apos;s webhooks page previews every payload shape and
                             sends signed <Mono>webhook.test</Mono> deliveries on demand.
+                        </p>
+                    </Section>
+
+                    <Section id="stream" title="Event stream">
+                        <p>
+                            Events matching your{" "}
+                            <a href="https://console.watchparty.xyz/streaming-rules" className="font-bold text-white underline underline-offset-4">streaming rules</a>{" "}
+                            queue durably and are consumed by <Mono>cursor pull</Mono> — at-least-once,
+                            replayable for 3 days, dedupe on <Mono>seq</Mono>. An app-scoped key streams
+                            that app; an account key streams all your apps.
+                        </p>
+                        <CodeCard label="curl · pull">
+                            <P># resume from your last cursor; the response returns the next one</P>{"\n"}
+                            curl -s <S>&quot;https://watchparty.xyz/api/stream/events?since=0&quot;</S> \{"\n"}
+                            {"  "}-H <S>&quot;x-api-key: wp_live_…&quot;</S>
+                        </CodeCard>
+                        <p>
+                            For instant delivery, add the <Mono>push socket</Mono>: mint a 120-second
+                            token with your API key, connect, and treat each{" "}
+                            <Mono>deliveries</Mono> event as &quot;new rows past your cursor exist — pull
+                            now.&quot; The socket only ever nudges; data, ordering and replay stay on
+                            the pull endpoint, so a dropped socket never loses an event.
+                        </p>
+                        <CodeCard label="node · push socket">
+                            <K>const</K> {"{ token, room, host }"} = <K>await</K> (<K>await</K> <P>fetch</P>(<S>&quot;https://watchparty.xyz/api/stream/token&quot;</S>,{"\n"}
+                            {"  "}{"{ headers: { "}<S>&quot;x-api-key&quot;</S>: key{" } }"})).<P>json</P>()<P>;</P>{"\n"}
+                            <K>const</K> ws = <K>new</K> <P>WebSocket</P>(<S>{"`wss://${host}/parties/chat/${room}?token=${token}`"}</S>)<P>;</P>{"\n"}
+                            ws.<P>onmessage</P> = () <P>=&gt;</P> <P>pullEvents</P>()<P>;</P> <P>// re-mint on every reconnect</P>
+                        </CodeCard>
+                    </Section>
+
+                    <Section id="oauth" title="Sign in with watchparty">
+                        <p>
+                            Let people sign in to your app with their watchparty account —
+                            standard OAuth2 + OIDC with <Mono>PKCE required (S256 only)</Mono>.
+                            Create a client on your app&apos;s page in the{" "}
+                            <a href="https://console.watchparty.xyz/apps" className="font-bold text-white underline underline-offset-4">console</a>:
+                            web clients hold a secret server-side; public (native) clients are
+                            PKCE-only with custom-scheme redirects. Redirect URIs are exact-match.
+                        </p>
+                        <CodeCard label="flow">
+                            <P># 1. send the user to</P>{"\n"}
+                            GET https://watchparty.xyz/api/auth/oauth2/authorize{"\n"}
+                            {"  "}?response_type=code&amp;client_id=wpcl_…&amp;redirect_uri=…{"\n"}
+                            {"  "}&amp;scope=openid+profile+email&amp;state=…&amp;code_challenge=…&amp;code_challenge_method=S256{"\n\n"}
+                            <P># 2. they approve on the consent screen; you get ?code= back</P>{"\n"}
+                            POST https://watchparty.xyz/api/auth/oauth2/token{"\n"}
+                            {"  "}grant_type=authorization_code&amp;code=…&amp;code_verifier=…&amp;client_id=…&amp;client_secret=…{"\n\n"}
+                            <P># 3. read the profile (claims follow the granted scopes)</P>{"\n"}
+                            GET https://watchparty.xyz/api/auth/oauth2/userinfo{"\n"}
+                            {"  "}Authorization: Bearer &lt;access_token&gt;
+                        </CodeCard>
+                        <p>
+                            Scopes: <Mono>openid</Mono>, <Mono>profile</Mono>, <Mono>email</Mono>,{" "}
+                            <Mono>offline_access</Mono> (refresh tokens rotate — the old one dies on
+                            each refresh). Discovery lives at{" "}
+                            <Mono>/api/auth/.well-known/openid-configuration</Mono>; id_tokens are
+                            EdDSA-signed against <Mono>/api/auth/jwks</Mono>. Always send{" "}
+                            <Mono>state</Mono>. Users can revoke your app any time from their
+                            settings; revocation kills issued tokens immediately.
+                        </p>
+                    </Section>
+
+                    <Section id="bots" title="Bots">
+                        <p>
+                            A bot is a real account your app drives with a token — created on your
+                            app&apos;s page in the console, installed per community by its admins, and
+                            allowed to do exactly what the install&apos;s permission bits grant:
+                            read members, send messages, moderate, manage coin alerts.
+                        </p>
+                        <CodeCard label="curl · act as the bot">
+                            <P># identity</P>{"\n"}
+                            curl -s <S>&quot;https://watchparty.xyz/api/trpc/bot.whoami&quot;</S> \{"\n"}
+                            {"  "}-H <S>&quot;Authorization: Bot wpb_…&quot;</S>{"\n\n"}
+                            <P># post into an installed community&apos;s channel (SEND_MESSAGES)</P>{"\n"}
+                            curl -s -X POST <S>&quot;https://watchparty.xyz/api/trpc/bot.sendMessage&quot;</S> \{"\n"}
+                            {"  "}-H <S>&quot;Authorization: Bot wpb_…&quot;</S> -H <S>&quot;content-type: application/json&quot;</S> \{"\n"}
+                            {"  "}-d <S>{"'{\"json\":{\"channelId\":\"…\",\"content\":\"gm\"}}'"}</S>
+                        </CodeCard>
+                        <p>
+                            Also available: <Mono>bot.installs</Mono>, <Mono>bot.listMembers</Mono>,{" "}
+                            <Mono>bot.deleteMessage</Mono>, <Mono>bot.timeoutMember</Mono>, and coin-alert
+                            CRUD (<Mono>bot.createCoinAlert</Mono> — posts into a channel when a tracked
+                            token moves). Sends are limited to 10 per 10s per channel under a
+                            100/min ceiling; admins can retune or evict your bot at any time, and
+                            its access dies with the install.
                         </p>
                     </Section>
 

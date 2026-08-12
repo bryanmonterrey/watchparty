@@ -341,6 +341,37 @@ try {
         ok(refreshDead.status >= 400, "refresh is dead after client disable");
     }
 
+    // 10.4 Connected-apps surface (oauthGrants): the user can see and revoke
+    // the grant the flow above created. Revoke = tokens dead + consent gone.
+    {
+        const grantsReq = (path, body) =>
+            fetch(`${BASE}/api/trpc/${path}`, {
+                method: body ? "POST" : "GET",
+                headers: { cookie, origin: BASE, "content-type": "application/json" },
+                ...(body ? { body: JSON.stringify({ json: body }) } : {}),
+            }).then(async (r) => ({ status: r.status, data: (await r.json().catch(() => null))?.result?.data?.json ?? null }));
+        // The disable test above turned the client off and wiped its grants —
+        // re-enable first, then run a fresh consent+exchange to have a grant.
+        await db.update(oauthApplication).set({ disabled: false }).where(eq(oauthApplication.clientId, CLIENT_ID));
+        const code2 = await obtainCode();
+        if (code2) {
+            await tokenPost({
+                grant_type: "authorization_code", code: code2, redirect_uri: REDIRECT,
+                client_id: CLIENT_ID, client_secret: CLIENT_SECRET, code_verifier: verifier,
+            });
+        }
+        const list = await grantsReq("oauthGrants.list");
+        ok(
+            list.status === 200 && Array.isArray(list.data) && list.data.some((g) => g.clientId === CLIENT_ID),
+            "oauthGrants.list shows the connected app",
+            JSON.stringify(list).slice(0, 140),
+        );
+        const revoke = await grantsReq("oauthGrants.revoke", { clientId: CLIENT_ID });
+        ok(revoke.status === 200, "oauthGrants.revoke succeeds");
+        const after = await grantsReq("oauthGrants.list");
+        ok(!after.data?.some((g) => g.clientId === CLIENT_ID), "grant gone after revoke");
+    }
+
     // 10.5 Public client (PKCE-only): token exchange succeeds WITHOUT a
     // client_secret; a wrong verifier still fails (PKCE is the whole proof).
     {

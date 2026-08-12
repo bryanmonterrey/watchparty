@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 // parse, then the page redirects them to /premium.
 export const SETTINGS_TABS = [
     "profile", "notifications", "privacy", "blocked", "muted", "hidden",
-    "sessions", "2fa", "passkeys", "audit", "linked", "wallets", "admin",
+    "sessions", "2fa", "passkeys", "audit", "linked", "wallets", "connectedApps", "admin",
     // moved → /premium (kept for deep-link redirects)
     "premium", "subscriptions", "gifts", "payouts", "referrals",
     "analytics", "stream", "vips", "moderators", "bans", "welcome", "mass",
@@ -125,6 +125,7 @@ export const SETTINGS_NAV_GROUPS: { label: string; items: SettingsNavItem[] }[] 
                 subs: [
                     { id: "linked", label: "Linked accounts" },
                     { id: "wallets", label: "Wallets" },
+                    { id: "connectedApps", label: "Connected apps" },
                 ],
             },
         ],

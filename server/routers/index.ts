@@ -46,6 +46,8 @@ import { developerAppsRouter } from "./developerApps";
 import { developerStreamRulesRouter } from "./developerStreamRules";
 import { developerAnnouncementsRouter } from "./developerAnnouncements";
 import { developerBotsRouter } from "./developerBots";
+import { oauthGrantsRouter } from "./oauthGrants";
+import { communityModerationRouter } from "./communityModeration";
 import { botRouter } from "./bot";
 import { studioRouter } from "./studio";
 
@@ -100,6 +102,8 @@ export const appRouter = router({
     developerAnnouncements: developerAnnouncementsRouter,
     developerBots: developerBotsRouter,
     bot: botRouter,
+    oauthGrants: oauthGrantsRouter,
+    communityModeration: communityModerationRouter,
     studio: studioRouter,
 });
 
