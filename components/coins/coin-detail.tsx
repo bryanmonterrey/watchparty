@@ -14,6 +14,12 @@ import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon, Clock01Icon, Copy01Icon, Tick02Icon, FavouriteIcon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
+import type { ChartMarker } from "@/components/tokens/chart-trade-markers";
+import {
+    ChartOverlayControls,
+    DEFAULT_OVERLAYS,
+    type OverlayState,
+} from "@/components/tokens/chart-overlay-controls";
 import { ChainBadge } from "@/components/trending/chain-badge";
 import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
@@ -645,6 +651,41 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 }
 
 function CoinChart({ coin }: { coin: CoinViewData }) {
+    const [overlays, setOverlays] = React.useState<OverlayState>(DEFAULT_OVERLAYS);
+
+    // The SAME query the trades table runs, so this costs no extra request —
+    // react-query dedupes on the key and both components read one cache entry.
+    // It already resolves each wallet to a site identity (`resolveTraders`),
+    // which is exactly what the bubbles need: a face, or nothing.
+    const { data: trades = [] } = trpc.trade.coinTrades.useQuery(
+        { network: coin.network, address: coin.tokenAddress },
+        { staleTime: 10_000, refetchInterval: 15_000, retry: retryTransient(1) },
+    );
+
+    const markers = React.useMemo<ChartMarker[]>(() => {
+        if (!overlays.mySwaps && !overlays.tags) return [];
+        return trades
+            // A marker is a PERSON. A wallet with no site identity has no
+            // avatar to draw and no Tag to carry, so it would render as a wall
+            // of identical placeholder circles — which is what the reference
+            // avoids by only marking its own users.
+            .filter((t) => !!t.username)
+            .map((t) => ({
+                key: t.txHash || `${t.account}-${t.ts}`,
+                ts: t.ts,
+                // Execution price. `usdValue / tokenAmount` rather than the
+                // coin's current price, or every bubble would sit on today's
+                // line instead of where the trade actually happened.
+                priceUsd:
+                    t.tokenAmount > 0 && t.usdValue > 0 ? t.usdValue / t.tokenAmount : (coin.priceUsd ?? 0),
+                isBuy: t.isBuy,
+                username: t.username,
+                avatarUrl: t.avatarUrl,
+                usdValue: t.usdValue,
+            }))
+            .filter((m) => m.priceUsd > 0 && m.ts > 0);
+    }, [trades, overlays.mySwaps, overlays.tags, coin.priceUsd]);
+
     return (
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* EVERY chain, not just Solana. GeckoTerminal indexes them all —
@@ -660,9 +701,12 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
                     // Turns on live bars — the chart subscribes to this pool's
                     // candles instead of polling. See lib/coins/candle-stream.
                     poolAddress={coin.poolAddress}
+                    markers={markers}
+                    markerMinUsd={overlays.minUsd}
                     className="h-full w-full"
                 />
             </div>
+            <ChartOverlayControls value={overlays} onChange={setOverlays} />
             <CoinTable coin={coin} />
         </main>
     );

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { subscribeCandles, type LiveBar } from "@/lib/coins/candle-stream";
+import { ChartTradeMarkers, type ChartMarker, type TvWidgetLike } from "./chart-trade-markers";
 import { TokenCandlestickChart } from "./token-candlestick-chart";
 import { logClient } from "@/lib/client-log";
 
@@ -114,10 +115,25 @@ interface TokenTradingViewChartProps {
      *  subscribes to coin_candles over Realtime instead of polling. Without it
      *  the widget falls back to its own 30s refresh. */
     poolAddress?: string | null;
+    /** Avatar bubbles pinned to the candles where those trades happened.
+     *  Omit for a plain chart — the layer costs nothing when absent. */
+    markers?: readonly ChartMarker[];
+    /** Hide markers under this notional; 0 shows everything. */
+    markerMinUsd?: number;
+    onMarkerSelect?: (m: ChartMarker) => void;
     className?: string;
 }
 
-export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAddress, className }: TokenTradingViewChartProps) {
+export function TokenTradingViewChart({
+    mint,
+    ticker,
+    network = "solana",
+    poolAddress,
+    markers,
+    markerMinUsd = 0,
+    onMarkerSelect,
+    className,
+}: TokenTradingViewChartProps) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const widgetRef = React.useRef<TradingViewWidgetInstance | null>(null);
     const [state, setState] = React.useState<LoadState>("loading");
@@ -296,6 +312,21 @@ export function TokenTradingViewChart({ mint, ticker, network = "solana", poolAd
     return (
         <div className={`relative ${className ?? ""}`}>
             <div ref={containerRef} className="absolute inset-0" />
+            {/* Trade markers ride ON TOP of the widget's own canvas rather than
+                inside it: the Charting Library has no image marker (`createShape`
+                and `createExecutionShape` draw text and arrows only), so the
+                avatars are DOM positioned from the chart's visible ranges. Only
+                mounted once `ready`, because the ranges read as null before the
+                first paint and the layer would spend its first frames hidden. */}
+            {state === "ready" && markers && markers.length > 0 && (
+                <ChartTradeMarkers
+                    widget={widgetRef.current as unknown as TvWidgetLike | null}
+                    markers={markers}
+                    containerRef={containerRef}
+                    minUsd={markerMinUsd}
+                    onSelect={onMarkerSelect}
+                />
+            )}
             {state !== "ready" && (
                 <div className="absolute inset-0 flex items-center justify-center">
                     <div className="h-full w-full rounded-2xl shimmer-skeleton" />
