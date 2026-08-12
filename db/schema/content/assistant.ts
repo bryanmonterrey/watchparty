@@ -22,6 +22,11 @@ export const assistantThreads = pgTable('assistant_threads', {
     // an extra inference round trip and this is shown in a list where the
     // opening question is a better label than a summary anyway.
     title: text('title').notNull(),
+    // Which chat product owns the thread: 'ask' (the app's assistant panel) or
+    // 'console' (the developer-console Agent). One persistence stack, two
+    // surfaces — the column is what keeps console setups out of the app's ask
+    // history dialog and vice versa.
+    surface: text('surface').default('ask').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     // Ordering key for the history list — bumped on every append, so a thread
     // returned to yesterday sorts above one abandoned this morning.

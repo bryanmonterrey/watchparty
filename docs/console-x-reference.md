@@ -69,9 +69,13 @@ watchparty identity, HugeIcons).
   + send arrow.
 - Right rail: **+ New conversation** (conversation history lives here).
 
-→ `/agent` — the assistant infra exists (`assistant` router:
-quota/threads/thread/deleteThread + streaming `/api/assistant`);
-console-scoped tools (create key, fund, read usage) come later.
+→ `/agent` — SHIPPED with writes (2026-08-12): NDJSON streaming from
+`/api/console-agent` (GLM on Workers AI), conversation rail persisted in
+`assistant_threads` with `surface='console'`, and tools that ACT — create
+app/key, webhook setup + events, streaming rules, enable OAuth sign-in —
+each through a server-side tRPC caller so the UI's guards apply
+identically. No delete/rotate/fund tools; secrets stream once and are
+redacted before persistence.
 
 ## 4. Projects
 

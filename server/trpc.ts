@@ -64,6 +64,14 @@ export const mergeRouters = t.mergeRouters;
 export const publicProcedure = t.procedure;
 
 /**
+ * Server-side caller — lets non-tRPC server code (the console-agent route's
+ * write tools) invoke procedures WITH every guard they carry (auth, ownership,
+ * caps, throttles). The caller is built per request from a real Context, so
+ * nothing is expressible through it that the HTTP surface wouldn't allow.
+ */
+export const createCallerFactory = t.createCallerFactory;
+
+/**
  * Protected procedure - requires authentication
  * Use this for any endpoint that needs a logged-in user
  */

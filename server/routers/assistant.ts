@@ -41,9 +41,14 @@ export const assistantRouter = router({
     // The history dialog's list. Titles and timestamps only — replaying the
     // messages is a second call, because the dialog shows ~50 threads and
     // shipping every message body for all of them would be most of a session's
-    // transcript to render one line each.
+    // transcript to render one line each. `surface` splits the two chat
+    // products sharing these tables: 'ask' (the app panel, the default so
+    // existing callers are unchanged) and 'console' (the console Agent rail).
     threads: protectedProcedure
-        .input(z.object({ limit: z.number().min(1).max(100).default(50) }).optional())
+        .input(z.object({
+            limit: z.number().min(1).max(100).default(50),
+            surface: z.enum(["ask", "console"]).default("ask"),
+        }).optional())
         .query(async ({ ctx, input }) => {
             return db
                 .select({
@@ -52,12 +57,17 @@ export const assistantRouter = router({
                     updatedAt: assistantThreads.updatedAt,
                 })
                 .from(assistantThreads)
-                .where(eq(assistantThreads.userId, ctx.user.id))
+                .where(and(
+                    eq(assistantThreads.userId, ctx.user.id),
+                    eq(assistantThreads.surface, input?.surface ?? "ask"),
+                ))
                 .orderBy(desc(assistantThreads.updatedAt))
                 .limit(input?.limit ?? 50);
         }),
 
-    // One thread, replayed in order.
+    // One thread, replayed in order. Surface-agnostic on purpose: the id is
+    // unguessable and ownership is the gate; a surface mismatch would only
+    // matter if the same user pasted a console thread id into the ask dialog.
     thread: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .query(async ({ ctx, input }) => {

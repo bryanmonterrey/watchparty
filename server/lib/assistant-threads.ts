@@ -44,6 +44,7 @@ export async function persistAssistantTurn({
     threadId,
     incoming,
     responseMessage,
+    surface = "ask",
 }: {
     userId: string;
     threadId: string;
@@ -51,6 +52,8 @@ export async function persistAssistantTurn({
     incoming: UIMessage[];
     /** The assistant message produced this turn. */
     responseMessage: UIMessage;
+    /** Which chat product owns the thread — 'ask' (app panel) or 'console'. */
+    surface?: "ask" | "console";
 }): Promise<void> {
     const lastUser = [...incoming].reverse().find((m) => m.role === "user");
     if (!lastUser) return;
@@ -61,7 +64,7 @@ export async function persistAssistantTurn({
     // upsert would be the one place a client-generated id could do damage.
     await db
         .insert(assistantThreads)
-        .values({ id: threadId, userId, title: titleFrom(incoming) })
+        .values({ id: threadId, userId, title: titleFrom(incoming), surface })
         .onConflictDoUpdate({
             target: assistantThreads.id,
             set: { updatedAt: new Date() },

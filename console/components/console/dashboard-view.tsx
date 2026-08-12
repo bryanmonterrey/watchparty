@@ -149,9 +149,8 @@ const CROSS_SELL: {
     icon: SparklesIcon,
     title: "Console agent",
     desc: "Describe what you want to build — the agent sets up keys, webhooks, and subscriptions for you.",
-    cta: "Preview",
+    cta: "Open",
     href: "/agent",
-    soon: true,
   },
 ];
 
