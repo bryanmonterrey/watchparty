@@ -8,7 +8,7 @@ import { BookmarkIcon } from "@/components/icons";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { bookmarksSnapshotStore } from "@/lib/snapshot/surfaces";
 import { privateViewerKey } from "@/lib/snapshot/keys";
-import { useSnapshot } from "@/hooks/use-snapshot";
+import { useSnapshot, useSnapshotPlaceholder } from "@/hooks/use-snapshot";
 
 export function BookmarksFeed() {
     // The safest surface in the app to paint from a snapshot: the list is yours,
@@ -16,6 +16,7 @@ export function BookmarksFeed() {
     // week-old page is almost always still exactly right.
     const { data: session } = useAuthSession();
     const snapshotKey = privateViewerKey(session?.user?.id, "bookmarks");
+    const snapshotPlaceholder = useSnapshotPlaceholder(bookmarksSnapshotStore.read, snapshotKey);
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isPlaceholderData } =
         trpc.content.getBookmarks.useInfiniteQuery(
@@ -38,7 +39,7 @@ export function BookmarksFeed() {
                 // and is correct on its own terms: this is a protected
                 // procedure that would 401 without a session anyway.
                 enabled: !!session?.user?.id,
-                placeholderData: () => bookmarksSnapshotStore.read(snapshotKey),
+                placeholderData: snapshotPlaceholder,
             }
         );
 

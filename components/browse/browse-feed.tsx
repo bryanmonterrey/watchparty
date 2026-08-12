@@ -20,7 +20,7 @@ import { useFeedDwell } from "@/hooks/use-feed-dwell";
 import { retryTransient } from "@/lib/query-retry";
 import { feedSnapshotStore, readFeedSnapshot } from "@/lib/feed/feed-snapshot";
 import { viewerKey } from "@/lib/snapshot/keys";
-import { useSnapshot } from "@/hooks/use-snapshot";
+import { useSnapshot, useSnapshotPlaceholder } from "@/hooks/use-snapshot";
 
 type FeedType = "for-you" | "following" | "news";
 type FeedItem = { type: "post"; createdAt: Date; data: any };
@@ -186,6 +186,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
     // EXISTS subqueries against the viewer, so one account's page is wrong for
     // the next — and multi-session switches accounts with no sign-out between.
     const feedSnapshotKey = viewerKey(session?.user?.id, "feed", activeTab);
+    const snapshotPlaceholder = useSnapshotPlaceholder(readFeedSnapshot, feedSnapshotKey);
 
     const {
         data: postData,
@@ -203,7 +204,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
             // let the real fetch replace it. `placeholderData`, never
             // `initialData`: the latter is cached as though the server sent it,
             // so it inherits staleTime and can suppress the fetch entirely.
-            placeholderData: () => readFeedSnapshot(feedSnapshotKey),
+            placeholderData: snapshotPlaceholder,
             // "Failed to load feed" used to be TERMINAL. There was no retry and
             // no recovery, so a single dropped request — which production does
             // produce, on worker memory — replaced the whole feed with that

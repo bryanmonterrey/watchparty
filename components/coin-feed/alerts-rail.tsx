@@ -10,7 +10,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { alertsSnapshotStore } from "@/lib/snapshot/surfaces";
 import { viewerKey, queryInputKey } from "@/lib/snapshot/keys";
-import { useSnapshot } from "@/hooks/use-snapshot";
+import { useSnapshot, useSnapshotPlaceholder } from "@/hooks/use-snapshot";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { RailShell } from "@/components/rails/rail-shell";
 import { RailScrollbar } from "@/components/rails/rail-scrollbar";
@@ -102,6 +102,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
         () => viewerKey(railSession?.user?.id, "alerts", queryInputKey(filterInput)),
         [railSession?.user?.id, filterInput],
     );
+    const snapshotPlaceholder = useSnapshotPlaceholder(alertsSnapshotStore.read, alertsSnapshotKey);
 
     const {
         data,
@@ -128,7 +129,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
             // skeletons. The store's max age is 30 minutes, deliberately short:
             // these are market events, and one old enough to mislead is never
             // painted at all. See lib/snapshot/surfaces.ts.
-            placeholderData: () => alertsSnapshotStore.read(alertsSnapshotKey),
+            placeholderData: snapshotPlaceholder,
             // A rail that sits open for hours will hit the occasional dropped
             // request; back off and recover rather than surfacing the first
             // blip. Errors no longer blank the feed either — see the render.

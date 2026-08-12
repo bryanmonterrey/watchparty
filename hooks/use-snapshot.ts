@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 /**
  * Mirror a query's data into a snapshot store so the next visit paints
@@ -19,6 +19,39 @@ const WRITE_DEBOUNCE_MS = 1_000;
 
 export interface SnapshotWriter<T> {
     write(key: string, value: T): void;
+}
+
+/**
+ * A STABLE `placeholderData` reader — pass this, never an inline arrow.
+ *
+ * query-core reuses the previous placeholder instead of recomputing it only
+ * when the function is referentially identical between renders:
+ *
+ *   queryObserver.js:267
+ *     if (prevResult?.isPlaceholderData &&
+ *         options.placeholderData === prevResultOptions?.placeholderData)
+ *
+ * An inline `() => store.read(key)` fails that identity check every render, so
+ * the branch above is never taken and the store is re-read and re-parsed with
+ * superjson each time. That is not a brief cost on these surfaces: the private
+ * ones gate `enabled` on the session, and a disabled query stays `pending`
+ * (`query.js:446` — status tracks data, never `enabled`), so the placeholder
+ * path runs for the whole wait rather than for one render.
+ *
+ * Keyed on `key` so a viewer or channel change still re-reads exactly once.
+ *
+ * Takes the read FUNCTION rather than the store, which makes one signature
+ * cover both shapes in use: `someStore.read` (a plain closure in the object
+ * `createSnapshotStore` returns — no `this`, so passing it bare is safe) and
+ * the standalone `readFeedSnapshot` / `readChatSnapshot`. Both are
+ * module-level, so both are referentially stable; an inline wrapper object
+ * would not be, and would quietly reintroduce exactly the miss this fixes.
+ */
+export function useSnapshotPlaceholder<T>(
+    read: (key: string) => T | undefined,
+    key: string,
+): () => T | undefined {
+    return useCallback(() => read(key), [read, key]);
 }
 
 /**

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { trendingSnapshotStore } from "@/lib/snapshot/surfaces";
 import { viewerKey, queryInputKey } from "@/lib/snapshot/keys";
-import { useSnapshot } from "@/hooks/use-snapshot";
+import { useSnapshot, useSnapshotPlaceholder } from "@/hooks/use-snapshot";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
@@ -328,6 +328,7 @@ export function TrendingTable({ className }: { className?: string }) {
     const { quickBuy, buyingId } = useQuickBuy();
 
     const snapshotKey = useMemo(() => viewerKey(null, "trending", queryInputKey(input)), [input]);
+    const snapshotPlaceholder = useSnapshotPlaceholder(trendingSnapshotStore.read, snapshotKey);
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, isPlaceholderData } =
         trpc.trending.list.useInfiniteQuery(input, {
@@ -340,7 +341,7 @@ export function TrendingTable({ className }: { className?: string }) {
             // hand back once it is 15 minutes old — the shortest max age of any
             // surface, because both the prices AND the ordering go stale, and a
             // row in the wrong position still looks authoritative.
-            placeholderData: () => trendingSnapshotStore.read(snapshotKey),
+            placeholderData: snapshotPlaceholder,
         });
 
     useSnapshot(trendingSnapshotStore, snapshotKey, data, isPlaceholderData);

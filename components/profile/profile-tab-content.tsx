@@ -19,7 +19,7 @@ import { ProfilePnlCard } from "./profile-pnl-card";
 import { ProfileMediaGrid } from "./profile-media-grid";
 import { profilePostsSnapshotStore } from "@/lib/snapshot/surfaces";
 import { viewerKey } from "@/lib/snapshot/keys";
-import { useSnapshot } from "@/hooks/use-snapshot";
+import { useSnapshot, useSnapshotPlaceholder } from "@/hooks/use-snapshot";
 // Lazy: the predictions tab is rarely the landing tab, and this pulls in
 // market cards + charts the rest of the profile never needs.
 const PredictionsView = dynamic(
@@ -102,13 +102,14 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
     const snapshotKey = search
         ? ""
         : viewerKey(viewerSession?.user?.id, "profile-posts", userId, type, show, sort);
+    const snapshotPlaceholder = useSnapshotPlaceholder(profilePostsSnapshotStore.read, snapshotKey);
 
     const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isPlaceholderData } =
         trpc.content.getPostsByUser.useInfiniteQuery(
             { userId, limit: 20, type, show, sort, search: search || undefined },
             {
                 getNextPageParam: (last) => last.nextCursor,
-                placeholderData: () => profilePostsSnapshotStore.read(snapshotKey),
+                placeholderData: snapshotPlaceholder,
             }
         );
 

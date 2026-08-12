@@ -11,6 +11,7 @@ import { CommunityChatItem } from "./community-chat-item";
 import { COMMUNITY_PAGE_LIMIT } from "@/hooks/use-community-reaction";
 import { renderKeyFor } from "@/lib/community/local-keys";
 import { readChatSnapshot } from "@/lib/community/chat-snapshot";
+import { useSnapshotPlaceholder } from "@/hooks/use-snapshot";
 import { withGroupFlags } from "@/lib/community/message-grouping";
 import { useChatSnapshot } from "@/hooks/use-chat-snapshot";
 import { CommunityChatWelcome } from "./community-chat-welcome";
@@ -58,6 +59,7 @@ export function CommunityChatMessages({
     const currentUsername = session?.user?.username ?? null;
     const chatRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
+    const snapshotPlaceholder = useSnapshotPlaceholder(readChatSnapshot, channelId);
 
     const {
         data,
@@ -77,7 +79,7 @@ export function CommunityChatMessages({
             // rather than `initialData` on purpose: placeholder data is never
             // written to the cache, so it can't inherit `staleTime` and suppress
             // the request. See `lib/community/chat-snapshot.ts`.
-            placeholderData: () => readChatSnapshot(channelId),
+            placeholderData: snapshotPlaceholder,
         }
     );
 
