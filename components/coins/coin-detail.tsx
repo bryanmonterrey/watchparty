@@ -181,7 +181,16 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                     ) : (
                         <div className="size-full rounded-full bg-soft-gray-10" />
                     )}
-                    <ChainBadge network={coin.network} className="absolute -bottom-1 -right-1 rounded-full bg-black p-1 ring-1 ring-black" />
+                    {/* NO `p-1` here. Tailwind is border-box, so padding comes
+                        OUT of the declared size: `size-5 p-1` rendered the chain
+                        logo at 20 - 8 = 12px inside a black disc, which is why
+                        it read as a speck. The disc and the separation from the
+                        avatar behind it come from the ring instead, which draws
+                        outside the box and costs the image nothing. */}
+                    <ChainBadge
+                        network={coin.network}
+                        className="absolute -bottom-0.5 -right-0.5 size-[22px] rounded-full bg-canvas ring-2 ring-canvas"
+                    />
                 </div>
                 <div className="min-w-0">
                     {/* Socials sit beside the TICKER, not beside the name a line
