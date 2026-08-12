@@ -40,6 +40,7 @@ import { panelsRouter } from "./panels";
 import { discoverRouter } from "./discover";
 import { coinFeedRouter } from "./coinFeed";
 import { trendingRouter } from "./trending";
+import { tagsRouter } from "./tags";
 import { apiKeysRouter } from "./apiKeys";
 import { developerWebhooksRouter } from "./developerWebhooks";
 import { developerAppsRouter } from "./developerApps";
@@ -95,6 +96,7 @@ export const appRouter = router({
     discover: discoverRouter,
     coinFeed: coinFeedRouter,
     trending: trendingRouter,
+    tags: tagsRouter,
     apiKeys: apiKeysRouter,
     developerWebhooks: developerWebhooksRouter,
     developerApps: developerAppsRouter,

@@ -424,6 +424,15 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     // call per 5s window, and this refetch rides that cache — so the board
     // ticks like a stream without per-client upstream cost. (The old reader
     // was Solana-only and a minute behind.)
+    // Each trader's most recent post carrying this coin's ticker — the last
+    // column. Separate from the trades query on purpose: it changes on a post,
+    // not on a swap, so it gets its own (slower) cadence instead of refetching
+    // with the tape every 15s.
+    const { data: tagByUser = {} } = trpc.tags.latestByAuthor.useQuery(
+        { symbol: coin.symbol },
+        { staleTime: 60_000, retry: retryTransient(1) },
+    );
+
     const { data: trades = [], isLoading } = trpc.trade.coinTrades.useQuery(
         { network: coin.network, address: coin.tokenAddress },
         // The server cache (mobulaCadence) governs actual freshness per plan;
@@ -615,18 +624,26 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     )}
                                 </span>
 
-                                {/* $mentions — posts carrying this coin's
-                                    cashtag. Not wired to a query yet; the shape
-                                    is here because it's the column that
-                                    differentiates this board, and the empty
-                                    state should read as an absent post rather
-                                    than a broken cell. */}
+                                {/* Tags — this trader's MOST RECENT post
+                                    carrying the coin's ticker. One line per
+                                    trader, not a feed: the table answers "what
+                                    does this person say about the coin", and
+                                    their latest take is that answer.
+                                    Keyed by USERNAME, which is what
+                                    `resolveTraders` gives the row — an anonymous
+                                    wallet has nothing to say here by definition. */}
                                 <span className="flex min-w-0 items-center gap-3 px-3.5 py-3.5">
                                     <span className="flex shrink-0 flex-col items-center text-zinc-700">
                                         <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
                                         <span className="text-[11px] font-medium tabular-nums">—</span>
                                     </span>
-                                    <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">No $tags yet</span>
+                                    {row.username && tagByUser[row.username] ? (
+                                        <span className="min-w-0 truncate text-[13px] font-medium text-zinc-300">
+                                            {tagByUser[row.username].text}
+                                        </span>
+                                    ) : (
+                                        <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">No tags yet</span>
+                                    )}
                                 </span>
                             </div>
                         );
@@ -680,8 +697,34 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
         { staleTime: 10_000, refetchInterval: 15_000, retry: retryTransient(1) },
     );
 
-    const markers = React.useMemo<ChartMarker[]>(() => {
-        if (!overlays.mySwaps && !overlays.tags) return [];
+    // Tags: posts that wrote this coin's ticker. Anchored at the post's time
+    // and the price of the candle covering that minute — the author need never
+    // have traded, which is exactly what separates a Tag from a swap marker.
+    const { data: tags = [] } = trpc.tags.forCoin.useQuery(
+        { network: coin.network, poolAddress: coin.poolAddress, symbol: coin.symbol },
+        { staleTime: 60_000, enabled: overlays.tags, retry: retryTransient(1) },
+    );
+
+    const tagMarkers = React.useMemo<ChartMarker[]>(() => {
+        if (!overlays.tags) return [];
+        return tags
+            // No candle for that minute -> no honest height for the bubble.
+            .filter((t) => t.priceUsd != null && t.ts > 0)
+            .map((t) => ({
+                key: `tag-${t.id}`,
+                ts: t.ts,
+                priceUsd: t.priceUsd as number,
+                // A Tag is a statement, not a side. Neutral ring: colouring it
+                // green or red would assert a direction the post never made.
+                isBuy: true,
+                username: t.username,
+                avatarUrl: t.avatarUrl,
+                tag: t.text,
+            }));
+    }, [tags, overlays.tags]);
+
+    const swapMarkers = React.useMemo<ChartMarker[]>(() => {
+        if (!overlays.mySwaps) return [];
         return trades
             // A marker is a PERSON. A wallet with no site identity has no
             // avatar to draw and no Tag to carry, so it would render as a wall
@@ -702,7 +745,9 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
                 usdValue: t.usdValue,
             }))
             .filter((m) => m.priceUsd > 0 && m.ts > 0);
-    }, [trades, overlays.mySwaps, overlays.tags, coin.priceUsd]);
+    }, [trades, overlays.mySwaps, coin.priceUsd]);
+
+    const markers = React.useMemo(() => [...swapMarkers, ...tagMarkers], [swapMarkers, tagMarkers]);
 
     return (
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
