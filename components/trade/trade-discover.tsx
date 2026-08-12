@@ -303,7 +303,17 @@ export function TradeDiscover() {
     const [sort, setSort] = useState<SortKey>("volume");
     const [timeframe, setTimeframe] = useState<Timeframe>("24h");
     const [chain, setChain] = useState<TradeChain>("solana");
-    const [hideRisky, setHideRisky] = useState(false);
+    // ON by default. Measured 2026-08-12 against the live solana board: 22 of
+    // 97 coins (23%) carry `risky` — top-10 ≥80%, snipers/insiders/bundlers
+    // ≥40%, or dev ≥30% — and every one was being shown, because this filter
+    // existed and defaulted OFF. That is the "spam in all feeds" complaint.
+    //
+    // Photon and Axiom both ship their holder-concentration and dev/sniper
+    // filters as active defaults rather than opt-in; a discovery surface whose
+    // safety net is off until you find the toggle is not protecting anyone.
+    // The button beside the tabs still turns it off, and carries aria-pressed,
+    // so the state stays visible and reversible.
+    const [hideRisky, setHideRisky] = useState(true);
     const { quickBuy, buyingId, amountSol, setAmountSol } = useQuickBuy();
     const utils = trpc.useUtils();
 

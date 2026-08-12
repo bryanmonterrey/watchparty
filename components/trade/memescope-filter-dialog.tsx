@@ -85,6 +85,23 @@ export const NO_FILTERS: MemescopeFilters = {
     minTurnover: null,
 };
 
+/**
+ * What the board STARTS with — not the same thing as `NO_FILTERS`.
+ *
+ * `NO_FILTERS` means literally none, and is what the dialog's clear button
+ * applies; `filtersActive(NO_FILTERS)` must stay false and
+ * `applyMemescopeFilters(list, NO_FILTERS)` must return the same array. Two
+ * tests assert exactly that, and they caught this being conflated.
+ *
+ * The initial state is a different question, and the answer is measured: on
+ * 2026-08-12 the live solana board carried `risky` on 22 of 97 coins (23%) and
+ * showed every one, because the filter existed and started off. Photon and
+ * Axiom both ship holder-concentration and dev/sniper filters active rather
+ * than opt-in — a safety net that is off until you find the toggle protects
+ * nobody.
+ */
+export const DEFAULT_FILTERS: MemescopeFilters = { ...NO_FILTERS, hideRisky: true };
+
 export function filtersActive(f: MemescopeFilters): boolean {
     return (
         f.minMarketCap != null ||
@@ -198,7 +215,11 @@ export function MemescopeFilterDialog({
     const [buyPercent, setBuyPercent] = React.useState("");
     const [accel, setAccel] = React.useState("");
     const [turnoverMin, setTurnoverMin] = React.useState("");
-    const [hideRisky, setHideRisky] = React.useState(false);
+    // Seeded from the applied filters, not hardcoded: the effect below re-seeds
+    // on open so a literal was harmless today, but a literal `false` beside a
+    // default of `true` is a contradiction waiting for someone to remove the
+    // effect.
+    const [hideRisky, setHideRisky] = React.useState(filters.hideRisky);
     React.useEffect(() => {
         if (!open) return;
         setMarketCap(filters.minMarketCap?.toString() ?? "");

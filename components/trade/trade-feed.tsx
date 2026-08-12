@@ -16,6 +16,7 @@ import {
     applyMemescopeFilters,
     filtersActive,
     NO_FILTERS,
+    DEFAULT_FILTERS,
     type MemescopeFilters,
 } from "./memescope-filter-dialog";
 import type { TokenStatus, TradeToken } from "./types";
@@ -38,7 +39,7 @@ export function TradeFeed() {
     // "all" is the default — memescope is one board over every chain we route,
     // and the picker narrows it when you care about a single ecosystem.
     const [chain, setChain] = useState<"all" | TradeChain>("all");
-    const [filters, setFilters] = useState<MemescopeFilters>(NO_FILTERS);
+    const [filters, setFilters] = useState<MemescopeFilters>(DEFAULT_FILTERS);
     const [filterOpen, setFilterOpen] = useState(false);
 
     const wantsInHouse = chain === "all" || chain === "solana";
