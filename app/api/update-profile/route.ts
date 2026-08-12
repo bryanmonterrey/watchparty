@@ -7,6 +7,7 @@ import { user } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
 import { invalidateCache } from "@/lib/cache";
+import { serviceClient } from "@/lib/supabase/service-client";
 
 export async function POST(req: NextRequest) {
     try {
@@ -81,10 +82,10 @@ export async function POST(req: NextRequest) {
         // Handle avatar upload
         if (avatarFile) {
             try {
-                const supabase = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-                );
+                // A Storage upload references no `user` row, so a
+                // cross-project write here would have succeeded SILENTLY
+                // against production. serviceClient() refuses instead.
+                const supabase = serviceClient();
 
                 const fileExt = avatarFile.name.split(".").pop();
                 const fileName = `${userId}-${Date.now()}.${fileExt}`;

@@ -8,8 +8,8 @@
 // Idempotent — if an encrypted_wallets row already exists this returns the
 // existing Swig address and touches nothing.
 
-import { createClient } from "@supabase/supabase-js";
 import { nanoid } from "nanoid";
+import { serviceClient } from "@/lib/supabase/service-client";
 import { and, eq } from "drizzle-orm";
 import * as bip39 from "bip39";
 import { Keypair } from "@solana/web3.js";
@@ -22,11 +22,12 @@ import { redis } from "@/lib/cache";
 
 const subtle = globalThis.crypto?.subtle;
 
+// serviceClient(), not createClient(): this inserts `encrypted_wallets` — the
+// exact path that once wrote a DEV user's wallet into PRODUCTION, where that
+// user does not exist. It now refuses when drizzle and supabase-js target
+// different projects outside production. See lib/supabase/service-client.ts.
 function supabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  return serviceClient();
 }
 
 export interface EnsureEmbeddedResult {

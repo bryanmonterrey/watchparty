@@ -17,6 +17,7 @@ import { persistDerivedAddresses } from "@/lib/wallet/multichain";
 import { registerWebhookAddresses } from "@/lib/helius/webhook";
 import { registerAlchemyAddresses } from "@/lib/alchemy/webhook";
 import { redis } from "@/lib/cache";
+import { serviceClient } from "@/lib/supabase/service-client";
 
 // Use browser's Web Crypto API (works in Node.js 16+)
 const subtle = globalThis.crypto?.subtle;
@@ -255,10 +256,10 @@ export async function POST(req: NextRequest) {
     );
 
     // Store in Supabase using service role key (bypasses RLS)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    // serviceClient() refuses to write when drizzle reads one project and
+    // supabase-js targets another. This insert is the one that surfaced as
+    // encrypted_wallets_user_id_user_id_fk against production.
+    const supabase = serviceClient();
 
     const { error: dbError } = await supabase.from('encrypted_wallets').insert({
       id: nanoid(),
