@@ -10,6 +10,30 @@ function notFound() {
   }) as NextResponse;
 }
 
+/**
+ * Prefix a host-rewritten path, but only ONCE.
+ *
+ * `studio.watchparty.xyz/*` rewrites under `/studio` and
+ * `admin.watchparty.xyz/*` under `/admin`, so the shells' nav links have two
+ * bad options and no good one — until this. A link to `/studio/streams` got
+ * prefixed again into `/studio/studio/streams` and 404'd; a link to `/streams`
+ * would work on the subdomain and 404 on watchparty.xyz.
+ *
+ * Both were live: `studio.watchparty.xyz/studio/streams` and
+ * `admin.watchparty.xyz/admin/coin-spam` each returned 404 on 2026-08-12, which
+ * is EVERY nav click in both shells. The studio one had been shipped for a
+ * while and never reported — the subdomain's landing page works, so it only
+ * breaks once you click something.
+ *
+ * Making the rewrite idempotent means one absolute href works from either host,
+ * which is what a shared shell component actually needs.
+ */
+function prefixOnce(prefix: string, pathname: string): string {
+  if (pathname === "/") return prefix;
+  if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return pathname;
+  return `${prefix}${pathname}`;
+}
+
 /** Top-level paths that are real routes, never usernames. */
 const RESERVED_SLUGS = new Set([
   "login", "signup", "home", "feed", "search", "settings", "messages",
@@ -116,9 +140,7 @@ export async function middleware(request: NextRequest) {
   // under /studio (the (studio) route group self-gates on the session cookie).
   // /api passes through so the studio's tRPC calls reach the app's own handler.
   if (host === "studio.watchparty.xyz" && !pathname.startsWith("/api")) {
-    return withCleanup(
-      NextResponse.rewrite(new URL(`/studio${pathname === "/" ? "" : pathname}`, request.url)),
-    );
+    return withCleanup(NextResponse.rewrite(new URL(prefixOnce("/studio", pathname), request.url)));
   }
   // admin.watchparty.xyz is the internal admin panel — same host-rewrite shape
   // as studio, and /api passes through so its tRPC calls reach this app.
@@ -128,9 +150,7 @@ export async function middleware(request: NextRequest) {
   // goes through `adminProcedure`, which checks again server-side. This rewrite
   // is routing, never a security boundary.
   if (host === "admin.watchparty.xyz" && !pathname.startsWith("/api")) {
-    return withCleanup(
-      NextResponse.rewrite(new URL(`/admin${pathname === "/" ? "" : pathname}`, request.url)),
-    );
+    return withCleanup(NextResponse.rewrite(new URL(prefixOnce("/admin", pathname), request.url)));
   }
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the
   // app's own traffic — external (session-less, off-site) callers go through
