@@ -2,7 +2,7 @@ import { z } from "zod";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
-import { oauthApplication, oauthAccessToken, oauthConsent } from "@/db/schema/auth";
+import { oauthClient, oauthAccessToken, oauthRefreshToken, oauthConsent } from "@/db/schema/auth";
 import { developerApps } from "@/db/schema/content/developer-app";
 import { describeScopes } from "@/lib/developer/oauth-scopes";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
@@ -13,9 +13,10 @@ import { TRPCError } from "@trpc/server";
 // (The developer side — disable/rotate/delete the client — lives in
 // developerApps; this is per-user, per-client.)
 //
-// Revocation = deleting the user's oauthConsent rows AND their token rows for
-// that client. Deleting tokens is the real revocation (userinfo never checks
-// consent after issuance); deleting consent makes the next authorize show the
+// Since the oauth-provider migration, consent rows are UPSERTED (one row per
+// client/user — existence IS the consent) and token storage is hashed.
+// Revocation = deleting the user's consent row AND their access/refresh token
+// rows for that client; deleting consent makes the next authorize show the
 // consent screen again instead of silently re-issuing.
 
 export const oauthGrantsRouter = router({
@@ -28,14 +29,13 @@ export const oauthGrantsRouter = router({
                 createdAt: oauthConsent.createdAt,
             })
             .from(oauthConsent)
-            .where(and(eq(oauthConsent.userId, ctx.user.id), eq(oauthConsent.consentGiven, true)))
+            .where(eq(oauthConsent.userId, ctx.user.id))
             .orderBy(desc(oauthConsent.createdAt));
         if (consents.length === 0) return [];
 
-        // Consent rows accumulate by design (the endpoint inserts
-        // unconditionally) — collapse to one entry per client, keeping the
-        // newest row's scopes (the last thing the user actually approved).
-        const byClient = new Map<string, { scopes: string; grantedAt: Date }>();
+        // One row per (client, user) since the upsert change; the Map is
+        // insurance against pre-migration duplicates, keeping the newest.
+        const byClient = new Map<string, { scopes: string[]; grantedAt: Date | null }>();
         for (const c of consents) {
             if (!byClient.has(c.clientId)) byClient.set(c.clientId, { scopes: c.scopes, grantedAt: c.createdAt });
         }
@@ -43,13 +43,13 @@ export const oauthGrantsRouter = router({
         const clientIds = [...byClient.keys()];
         const clients = await db
             .select({
-                clientId: oauthApplication.clientId,
-                name: oauthApplication.name,
-                icon: oauthApplication.icon,
-                disabled: oauthApplication.disabled,
+                clientId: oauthClient.clientId,
+                name: oauthClient.name,
+                icon: oauthClient.icon,
+                disabled: oauthClient.disabled,
             })
-            .from(oauthApplication)
-            .where(inArray(oauthApplication.clientId, clientIds));
+            .from(oauthClient)
+            .where(inArray(oauthClient.clientId, clientIds));
         const apps = await db
             .select({ oauthClientId: developerApps.oauthClientId, websiteUrl: developerApps.websiteUrl })
             .from(developerApps)
@@ -60,9 +60,11 @@ export const oauthGrantsRouter = router({
             const grant = byClient.get(c.clientId)!;
             return {
                 clientId: c.clientId,
-                name: c.name,
+                // Blank over a placeholder for a missing name (house rule) —
+                // in practice every row carries the app's name at creation.
+                name: c.name ?? "",
                 icon: c.icon,
-                disabled: c.disabled,
+                disabled: c.disabled ?? false,
                 websiteUrl: websiteByClient.get(c.clientId) ?? null,
                 grantedAt: grant.grantedAt,
                 scopes: describeScopes(grant.scopes).map(({ scope, label, desc }) => ({ scope, label, desc })),
@@ -82,6 +84,9 @@ export const oauthGrantsRouter = router({
             await db
                 .delete(oauthAccessToken)
                 .where(and(eq(oauthAccessToken.clientId, input.clientId), eq(oauthAccessToken.userId, ctx.user.id)));
+            await db
+                .delete(oauthRefreshToken)
+                .where(and(eq(oauthRefreshToken.clientId, input.clientId), eq(oauthRefreshToken.userId, ctx.user.id)));
             await db
                 .delete(oauthConsent)
                 .where(and(eq(oauthConsent.clientId, input.clientId), eq(oauthConsent.userId, ctx.user.id)));

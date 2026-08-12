@@ -6,11 +6,11 @@ import { db } from "@/db";
 import { developerApps } from "@/db/schema/content/developer-app";
 import { developerBots } from "@/db/schema/content/developer-bot";
 import { user } from "@/db/schema/auth/user";
-import { oauthApplication, oauthAccessToken, oauthConsent } from "@/db/schema/auth";
+import { oauthClient, oauthAccessToken, oauthRefreshToken, oauthConsent } from "@/db/schema/auth";
 import { randHex } from "@/lib/api-gate";
 import { generateAppKeypair } from "@/lib/developer/app-keys";
 import { computeVerification } from "@/lib/developer/verification";
-import { sealSecret } from "@/lib/developer/secret-box";
+import { hashOAuthClientSecret } from "@/lib/developer/oauth-client-secret";
 import { APP_FLAGS, hasFlag } from "@/lib/developer/app-flags";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
 
@@ -58,10 +58,11 @@ const publicCols = {
 };
 
 // Exact-match redirect URIs for the app's OAuth client. Zod checks STRUCTURE
-// (absolute URL, no fragment per RFC 6749 §3.1.2, and no commas — the
-// oidc-provider plugin stores the list comma-joined, so one comma would
-// corrupt every entry on split). The SCHEME policy depends on the client's
-// type, so it's enforced in-handler by assertRedirectPolicy below.
+// (absolute URL, no fragment per RFC 6749 §3.1.2; the comma rejection is now
+// just hygiene — storage moved from the old comma-joined text column to a
+// real text[], so a comma no longer corrupts anything). The SCHEME policy
+// depends on the client's type, so it's enforced in-handler by
+// assertRedirectPolicy below.
 const redirectUri = z
     .string()
     .trim()
@@ -340,8 +341,10 @@ export const developerAppsRouter = router({
 
     // ── OAuth2 client ("Sign in with watchparty") ─────────────────────────
     // One client per app, managed only through here — the plugin's own
-    // /oauth2/register endpoint is 404'd at the edge (middleware.ts) because
-    // it would let any session holder bypass this ownership model.
+    // client CRUD (/oauth2/register|create-client|update-client|
+    // delete-client|client/rotate-secret) is 404'd at the edge
+    // (middleware.ts) and blocked by clientPrivileges in lib/auth/server.ts,
+    // because it would let any session holder bypass this ownership model.
 
     getOAuthClient: protectedProcedure
         .input(z.object({ id: z.string() }))
@@ -350,21 +353,23 @@ export const developerAppsRouter = router({
             if (!app.oauthClientId) return null;
             const [client] = await db
                 .select({
-                    clientId: oauthApplication.clientId,
-                    redirectUrls: oauthApplication.redirectUrls,
-                    type: oauthApplication.type,
-                    disabled: oauthApplication.disabled,
-                    createdAt: oauthApplication.createdAt,
+                    clientId: oauthClient.clientId,
+                    redirectUris: oauthClient.redirectUris,
+                    public: oauthClient.public,
+                    disabled: oauthClient.disabled,
+                    createdAt: oauthClient.createdAt,
                 })
-                .from(oauthApplication)
-                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .from(oauthClient)
+                .where(eq(oauthClient.clientId, app.oauthClientId))
                 .limit(1);
             if (!client) return null;
             return {
                 clientId: client.clientId,
-                redirectUris: client.redirectUrls.split(",").filter(Boolean),
-                type: client.type,
-                disabled: client.disabled,
+                redirectUris: client.redirectUris,
+                // The console's contract is "web" | "public"; the row stores
+                // the protocol-level type ("web" | "native") + public flag.
+                type: client.public ? "public" : "web",
+                disabled: client.disabled ?? false,
                 createdAt: client.createdAt,
                 listed: hasFlag(app.flags, APP_FLAGS.LISTED),
             };
@@ -397,22 +402,34 @@ export const developerAppsRouter = router({
             assertRedirectPolicy(input.redirectUris, input.type);
 
             const clientId = `wpcl_${randHex(12)}`;
-            // 64 hex chars (256 bits) — shown to the owner exactly once below,
-            // stored only sealed (AES-GCM via secret-box). Public clients get
-            // NO secret: PKCE is their whole proof.
-            const clientSecret = input.type === "web" ? randHex(32) : null;
+            // wpsk_ + 64 hex chars (256 bits) — shown to the owner exactly
+            // once below, stored only as base64url(sha256) (the plugin's
+            // defaultHasher; it recomputes the hash of the presented string
+            // at the token endpoint). Public clients get NO secret: PKCE is
+            // their whole proof, and `public: true` is what tells the token
+            // endpoint not to demand one.
+            const clientSecret = input.type === "web" ? `wpsk_${randHex(32)}` : null;
             const now = new Date();
-            await db.insert(oauthApplication).values({
+            await db.insert(oauthClient).values({
                 id: crypto.randomUUID(),
                 name: app.name,
                 icon: app.iconUrl,
-                // Joined back to the app world; the plugin JSON.parses this
-                // unguarded, so it must stay valid JSON (or null).
-                metadata: JSON.stringify({ appId: app.id }),
+                uri: app.websiteUrl,
+                tos: app.tosUrl,
+                policy: app.privacyUrl,
+                metadata: { appId: app.id },
                 clientId,
-                clientSecret: clientSecret ? await sealSecret(clientSecret) : null,
-                redirectUrls: input.redirectUris.join(","),
-                type: input.type,
+                clientSecret: clientSecret ? await hashOAuthClientSecret(clientSecret) : null,
+                redirectUris: input.redirectUris,
+                // Protocol-level type: confidential server-side clients are
+                // "web"; our "public" maps to "native" (mobile/desktop PKCE
+                // clients — the plugin requires native|user-agent-based when
+                // token_endpoint_auth_method is "none").
+                type: input.type === "web" ? "web" : "native",
+                public: input.type !== "web",
+                tokenEndpointAuthMethod: input.type === "web" ? "client_secret_post" : "none",
+                grantTypes: ["authorization_code", "refresh_token"],
+                responseTypes: ["code"],
                 disabled: false,
                 userId: ctx.user.id,
                 createdAt: now,
@@ -434,12 +451,12 @@ export const developerAppsRouter = router({
             const app = await ownedApp(ctx.user.id, input.id);
             if (!app.oauthClientId) throw new TRPCError({ code: "NOT_FOUND" });
             const [existing] = await db
-                .select({ type: oauthApplication.type })
-                .from(oauthApplication)
-                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .select({ public: oauthClient.public })
+                .from(oauthClient)
+                .where(eq(oauthClient.clientId, app.oauthClientId))
                 .limit(1);
             if (!existing) throw new TRPCError({ code: "NOT_FOUND" });
-            assertRedirectPolicy(input.redirectUris, existing.type === "public" ? "public" : "web");
+            assertRedirectPolicy(input.redirectUris, existing.public ? "public" : "web");
             // A listed app must never point at localhost — delist first.
             if (
                 hasFlag(app.flags, APP_FLAGS.LISTED) &&
@@ -451,9 +468,9 @@ export const developerAppsRouter = router({
                 });
             }
             await db
-                .update(oauthApplication)
-                .set({ redirectUrls: input.redirectUris.join(","), updatedAt: new Date() })
-                .where(eq(oauthApplication.clientId, app.oauthClientId));
+                .update(oauthClient)
+                .set({ redirectUris: input.redirectUris, updatedAt: new Date() })
+                .where(eq(oauthClient.clientId, app.oauthClientId));
             return { redirectUris: input.redirectUris };
         }),
 
@@ -464,18 +481,18 @@ export const developerAppsRouter = router({
             const app = await ownedApp(ctx.user.id, input.id);
             if (!app.oauthClientId) throw new TRPCError({ code: "NOT_FOUND" });
             const [existing] = await db
-                .select({ type: oauthApplication.type })
-                .from(oauthApplication)
-                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .select({ public: oauthClient.public })
+                .from(oauthClient)
+                .where(eq(oauthClient.clientId, app.oauthClientId))
                 .limit(1);
-            if (existing?.type === "public") {
+            if (existing?.public) {
                 throw new TRPCError({ code: "BAD_REQUEST", message: "Public clients have no secret — PKCE is their proof" });
             }
-            const clientSecret = randHex(32);
+            const clientSecret = `wpsk_${randHex(32)}`;
             await db
-                .update(oauthApplication)
-                .set({ clientSecret: await sealSecret(clientSecret), updatedAt: new Date() })
-                .where(eq(oauthApplication.clientId, app.oauthClientId));
+                .update(oauthClient)
+                .set({ clientSecret: await hashOAuthClientSecret(clientSecret), updatedAt: new Date() })
+                .where(eq(oauthClient.clientId, app.oauthClientId));
             return { clientId: app.oauthClientId, clientSecret };
         }),
 
@@ -489,9 +506,9 @@ export const developerAppsRouter = router({
                 await revokeOAuthClient(app.oauthClientId);
             } else {
                 await db
-                    .update(oauthApplication)
+                    .update(oauthClient)
                     .set({ disabled: false, updatedAt: new Date() })
-                    .where(eq(oauthApplication.clientId, app.oauthClientId));
+                    .where(eq(oauthClient.clientId, app.oauthClientId));
             }
             return { disabled: input.disabled };
         }),
@@ -545,9 +562,9 @@ export const developerAppsRouter = router({
                 });
             }
             const [client] = await db
-                .select({ redirectUrls: oauthApplication.redirectUrls, disabled: oauthApplication.disabled })
-                .from(oauthApplication)
-                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .select({ redirectUris: oauthClient.redirectUris, disabled: oauthClient.disabled })
+                .from(oauthClient)
+                .where(eq(oauthClient.clientId, app.oauthClientId))
                 .limit(1);
             if (!client || client.disabled) {
                 throw new TRPCError({
@@ -555,7 +572,7 @@ export const developerAppsRouter = router({
                     message: "The app's OAuth client is disabled",
                 });
             }
-            if (client.redirectUrls.split(",").filter(Boolean).some(isLocalhostUri)) {
+            if (client.redirectUris.some(isLocalhostUri)) {
                 throw new TRPCError({
                     code: "PRECONDITION_FAILED",
                     message: "Remove localhost redirect URIs before listing",
@@ -593,13 +610,17 @@ export const developerAppsRouter = router({
     }),
 });
 
-/** Disable a client AND delete its issued tokens + consents — deletion is the
- *  real revocation (userinfo ignores `disabled`). Client row kept for audit. */
+/** Disable a client AND delete its issued tokens + consents. Since the
+ *  oauth-provider migration, `disabled` is checked at authorize/token/
+ *  introspect/userinfo — so the flag alone already revokes; the deletions are
+ *  belt-and-braces (and mean re-enabling requires fresh consent). Client row
+ *  kept for audit. */
 async function revokeOAuthClient(clientId: string): Promise<void> {
     await db
-        .update(oauthApplication)
+        .update(oauthClient)
         .set({ disabled: true, updatedAt: new Date() })
-        .where(eq(oauthApplication.clientId, clientId));
+        .where(eq(oauthClient.clientId, clientId));
     await db.delete(oauthAccessToken).where(eq(oauthAccessToken.clientId, clientId));
+    await db.delete(oauthRefreshToken).where(eq(oauthRefreshToken.clientId, clientId));
     await db.delete(oauthConsent).where(eq(oauthConsent.clientId, clientId));
 }

@@ -5,9 +5,9 @@ import Image from "next/image";
 import { PinkStarLogo } from "@/components/icons";
 import { Squircle } from "@/components/ui/squircle";
 
-// Approve/Deny for the OAuth consent screen. POSTs {accept, consent_code} to
-// the plugin's consent endpoint and follows the returned redirectURI — both
-// verdicts redirect (deny returns the client's redirect_uri carrying
+// Approve/Deny for the OAuth consent screen. POSTs {accept, oauth_query} to
+// the plugin's consent endpoint and follows the returned {redirect, url} —
+// both verdicts redirect (deny returns the client's redirect_uri carrying
 // error=access_denied), so the button handler is the same shape either way.
 //
 // This surface paints its own background (the (auth) shell is hardcoded
@@ -16,12 +16,34 @@ import { Squircle } from "@/components/ui/squircle";
 
 type ScopeRow = { scope: string; label: string; desc: string };
 
-async function submitConsent(accept: boolean, consentCode: string | null): Promise<string> {
+// Vendored from @better-auth/oauth-provider's buildSignedOAuthQuery (not a
+// public export of the /client entry). The server signs a canonicalized,
+// EXACT param set — `sig`, the `ba_param` name list, and every param those
+// names cover — so the POST body must carry precisely that subset of
+// location.search: one stray appended param (analytics, etc.) and the
+// signature check fails.
+function buildSignedOAuthQuery(search: string): string | null {
+  const params = new URLSearchParams(search);
+  if (!params.has("sig")) return null;
+  const signedNames = new Set(params.getAll("ba_param"));
+  if (signedNames.size === 0) return null;
+  const signed = new URLSearchParams();
+  for (const [key, value] of params.entries()) {
+    if (key === "sig" || key === "ba_param" || signedNames.has(key)) signed.append(key, value);
+  }
+  return signed.toString();
+}
+
+async function submitConsent(accept: boolean): Promise<string> {
+  const oauthQuery = buildSignedOAuthQuery(window.location.search);
+  if (!oauthQuery) {
+    throw new Error("This authorization request expired. Close this page and try again from the app.");
+  }
   const res = await fetch("/api/auth/oauth2/consent", {
     method: "POST",
     headers: { "content-type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ accept, ...(consentCode ? { consent_code: consentCode } : {}) }),
+    body: JSON.stringify({ accept, oauth_query: oauthQuery }),
   });
   if (!res.ok) {
     let detail = "";
@@ -33,9 +55,9 @@ async function submitConsent(accept: boolean, consentCode: string | null): Promi
     }
     throw new Error(detail || "This authorization request expired. Close this page and try again from the app.");
   }
-  const body = (await res.json()) as { redirectURI?: string };
-  if (!body.redirectURI) throw new Error("Malformed response from the authorization server");
-  return body.redirectURI;
+  const body = (await res.json()) as { redirect?: boolean; url?: string };
+  if (!body.url) throw new Error("Malformed response from the authorization server");
+  return body.url;
 }
 
 export function ConsentError({ message }: { message: string }) {
@@ -56,7 +78,6 @@ export function ConsentCard({
   tosUrl,
   privacyUrl,
   scopes,
-  consentCode,
   accountName,
   accountAvatar,
 }: {
@@ -65,7 +86,6 @@ export function ConsentCard({
   tosUrl: string | null;
   privacyUrl: string | null;
   scopes: ScopeRow[];
-  consentCode: string | null;
   accountName: string;
   accountAvatar: string | null;
 }) {
@@ -77,7 +97,7 @@ export function ConsentCard({
     setError(null);
     setBusy(accept ? "approve" : "deny");
     try {
-      window.location.href = await submitConsent(accept, consentCode);
+      window.location.href = await submitConsent(accept);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong — try again.");
       setBusy(null);

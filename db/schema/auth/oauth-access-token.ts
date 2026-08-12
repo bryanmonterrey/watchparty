@@ -1,27 +1,32 @@
 import { index, pgPolicy, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./user";
-import { oauthApplication } from "./oauth-application";
+import { session } from "./session";
+import { oauthClient } from "./oauth-client";
+import { oauthRefreshToken } from "./oauth-refresh-token";
 
-// Issued OAuth2 tokens (opaque 32-char strings, looked up by equality).
-// Access 1h / refresh 7d; refresh rotation cleanup lives in
-// lib/auth/oauth-token-rotation.ts. Disabling a client DELETES its rows here
-// (userinfo never checks client.disabled — deletion is the revocation).
+// Opaque OAuth2 access tokens (@better-auth/oauth-provider shape — the old
+// oidc-provider table of the same name was renamed *_legacy at cutover).
+// `token` stores base64url(sha256(<raw>)); refresh fields moved to their own
+// oauthRefreshToken table, linked via refreshId. Rows are created at
+// issue/refresh, deleted at revoke, read at introspection — never updated.
 export const oauthAccessToken = pgTable("oauthAccessToken", {
     id: text("id").primaryKey(),
-    accessToken: text("accessToken").notNull().unique(),
-    refreshToken: text("refreshToken").notNull().unique(),
-    accessTokenExpiresAt: timestamp("accessTokenExpiresAt").notNull(),
-    refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt").notNull(),
+    token: text("token").unique(),
     clientId: text("clientId")
         .notNull()
-        .references(() => oauthApplication.clientId, { onDelete: "cascade" }),
+        .references(() => oauthClient.clientId, { onDelete: "cascade" }),
+    sessionId: text("sessionId").references(() => session.id, { onDelete: "set null" }),
     userId: text("userId").references(() => user.id, { onDelete: "cascade" }),
-    scopes: text("scopes").notNull(),
-    createdAt: timestamp("createdAt").notNull(),
-    updatedAt: timestamp("updatedAt").notNull(),
+    referenceId: text("referenceId"),
+    refreshId: text("refreshId").references(() => oauthRefreshToken.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expiresAt"),
+    createdAt: timestamp("createdAt"),
+    scopes: text("scopes").array().notNull(),
 }, (table) => [
     index("idx_oauth_access_token_client").on(table.clientId),
+    index("idx_oauth_access_token_session").on(table.sessionId),
     index("idx_oauth_access_token_user").on(table.userId),
+    index("idx_oauth_access_token_refresh").on(table.refreshId),
     pgPolicy("oauth_access_token_deny_direct_access", { for: "all", to: ["authenticated", "anon"], using: sql`false` }),
 ]).enableRLS();

@@ -1,5 +1,13 @@
 # @better-auth/oauth-provider migration — the standing plan
 
+> **EXECUTED 2026-08-12** in its dedicated session. One planning assumption
+> dissolved on contact: BOTH databases held zero client/consent/token rows
+> (every prod row was smoke-created and smoke-cleaned), so the secret-rehash
+> migration and token truncation were structural no-ops —
+> `scripts/db/migrate-oauth-clients.mjs` exists, ran, and moved nothing.
+> Current-state reference: `docs/oauth-provider.md`. This file stays as the
+> delta map that drove the work.
+
 Source-verified delta map (2026-08-12, against the published 1.6.27 tarball).
 **This is a re-architecture, not a rename — execute in a dedicated session**,
 with `scripts/dev/smoke-oauth-flow.mjs --production` as the exit gate. The

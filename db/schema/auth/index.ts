@@ -12,7 +12,9 @@ export * from "./wallet-addresses";
 export * from "./send-fee-accruals";
 export * from "./linked-wallets";
 export * from "./oauth-application";
+export * from "./oauth-client";
 export * from "./oauth-access-token";
+export * from "./oauth-refresh-token";
 export * from "./oauth-consent";
 export * from "./jwks";
 

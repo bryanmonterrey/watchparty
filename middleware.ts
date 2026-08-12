@@ -161,25 +161,43 @@ export async function middleware(request: NextRequest) {
     // OAuth2 IdP surface (better-auth oidc-provider). Two edge rules that the
     // plugin cannot express itself:
     if (pathname.startsWith("/api/auth/oauth2/")) {
-      // 1. Dynamic client registration is off in the plugin options, but the
-      //    /register endpoint STILL accepts any session holder (verified
-      //    1.6.26 dist) — bypassing the developerApps router's ownership
-      //    model, cap and redirect-URI policy. No plugin option disables the
-      //    endpoint, so it is 404'd here outright.
-      if (pathname === "/api/auth/oauth2/register") return withCleanup(notFound());
-      // 2. Rate-limit token/authorize/consent by IP. better-auth's own
-      //    rateLimit block only runs in production; this is the primary gate.
+      // 1. The oauth-provider plugin's client CRUD endpoints are plain
+      //    session-gated — any signed-in user could mint/mutate clients,
+      //    bypassing the developerApps router's ownership model, 25-app cap
+      //    and redirect-URI policy. clientPrivileges in lib/auth/server.ts
+      //    blocks them in-plugin; this 404 is the edge layer of the same
+      //    rule (the old register-404, retargeted — /register itself now
+      //    403s properly with registration off, but 404 keeps the surface
+      //    dark).
       if (
+        pathname === "/api/auth/oauth2/register" ||
+        pathname === "/api/auth/oauth2/create-client" ||
+        pathname === "/api/auth/oauth2/update-client" ||
+        pathname === "/api/auth/oauth2/delete-client" ||
+        pathname === "/api/auth/oauth2/client/rotate-secret"
+      ) {
+        return withCleanup(notFound());
+      }
+      // 2. Rate-limit the protocol endpoints by IP. better-auth's own
+      //    rateLimit block only runs in production; this is the primary gate.
+      //    token/introspect/revoke share the stricter server-to-server
+      //    limiter; the human-paced surfaces share the interactive one.
+      const strictLimited =
         pathname === "/api/auth/oauth2/token" ||
+        pathname === "/api/auth/oauth2/introspect" ||
+        pathname === "/api/auth/oauth2/revoke";
+      if (
+        strictLimited ||
         pathname === "/api/auth/oauth2/authorize" ||
-        pathname === "/api/auth/oauth2/consent"
+        pathname === "/api/auth/oauth2/consent" ||
+        pathname === "/api/auth/oauth2/continue" ||
+        pathname === "/api/auth/oauth2/end-session"
       ) {
         const ip =
           request.headers.get("cf-connecting-ip") ??
           request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
           "unknown";
-        const limiter =
-          pathname === "/api/auth/oauth2/token" ? oauthTokenLimiter : oauthInteractiveLimiter;
+        const limiter = strictLimited ? oauthTokenLimiter : oauthInteractiveLimiter;
         if (!(await limitOrPass(limiter, `${pathname}:${ip}`))) {
           return withCleanup(
             new NextResponse("Too Many Requests", {

@@ -24,6 +24,7 @@
     "@base-ui/react": "^1.7.0",
     "@better-auth/expo": "1.6.27",
     "@better-auth/infra": "^0.3.7",
+    "@better-auth/oauth-provider": "1.6.27",
     "@better-auth/passkey": "1.6.27",
     "@block65/webcrypto-web-push": "^1.0.2",
     "@cloudflare/containers": "^0.3.7",
