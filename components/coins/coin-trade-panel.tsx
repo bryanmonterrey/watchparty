@@ -18,7 +18,6 @@
 // card instead of a button that fails.
 
 import * as React from "react";
-import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
@@ -345,8 +344,10 @@ export function CoinTradePanel({
 
     return (
         <div className={cn(cardClassName, "p-4")}>
-            {/* buy / sell toggle — the active pill slides on the shared spring */}
-            <div className="relative flex items-center rounded-full bg-white/5 p-1">
+            {/* buy / sell — matches the perps order-panel direction tabs: a
+                segmented pill with a subtle white wash on the active side +
+                its accent color (green buy / red sell), no solid fill. */}
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
                 {(["buy", "sell"] as const).map((s) => (
                     <button
                         key={s}
@@ -356,21 +357,12 @@ export function CoinTradePanel({
                             setAmount("");
                         }}
                         className={cn(
-                            "relative z-10 h-11 flex-1 cursor-pointer rounded-full text-base font-bold transition-colors",
-                            side === s ? "text-black" : "text-zinc-400 hover:text-white",
+                            "flex h-11 cursor-pointer items-center justify-center rounded-full text-base font-extrabold capitalize transition-colors",
+                            side === s
+                                ? cn("bg-white/[0.08]", s === "buy" ? "text-long" : "text-short")
+                                : "text-zinc-500 hover:text-white",
                         )}
                     >
-                        {side === s && (
-                            <motion.div
-                                layoutId="coinTradeSide"
-                                className={cn(
-                                    "absolute inset-0 -z-10 rounded-full",
-                                    s === "buy" ? "bg-lantern" : "bg-pastelred",
-                                )}
-                                initial={false}
-                                transition={{ type: "spring", stiffness: 250, damping: 30 }}
-                            />
-                        )}
                         {s}
                     </button>
                 ))}
