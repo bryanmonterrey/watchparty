@@ -122,6 +122,26 @@ async function screenSecurity(pools: DiscoveredPool[]): Promise<DiscoveredPool[]
             // a hole; a GT image always wins, since it is what the rest of the
             // feed has been keyed to.
             if (sec?.logo && !p.imageUrl) p.imageUrl = sec.logo;
+
+            // BACKFILL THE LIQUIDITY, for the same reason and at the same price.
+            //
+            // The pairs feed does not report dollars — measured 2026-08-12, its
+            // `liquidity` field read 0.00000038 beside $80M of 24h volume on the
+            // same row — so `lib/coins/mobula.ts` now stores NULL there rather
+            // than a fabricated zero. THIS response carries the real figure
+            // (`liquidityUSD`, sane on every coin checked), and it is the call
+            // we already made.
+            //
+            // It matters beyond display: `clearsBrandBar` lets a brand-squatting
+            // coin through only once it holds BRAND_SQUAT_MIN_LIQUIDITY_USD, so
+            // without a real number that escape hatch can never open — and with
+            // the old junk number it was opening on noise (CLAUDE and OPENAI
+            // were on the alert rail).
+            //
+            // Overwrites unconditionally, unlike the image: a measured figure is
+            // strictly better than whatever a pairs row claimed, and liquidity
+            // is the kind of number that must not go stale silently.
+            if (sec?.liquidityUsd != null) p.liquidityUsd = sec.liquidityUsd;
         } catch {
             // 429/timeout — fail-open, retried on a later pass via cache miss.
         }

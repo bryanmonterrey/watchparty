@@ -62,11 +62,20 @@ export default {
                 avatar: p.get("avatar") || "",
             });
             const res = new ImageResponse(html, { width: 1200, height: 630 });
+            // Materialize the PNG fully before responding. Rewrapping
+            // `res.body` (a ReadableStream) into a new Response streamed EMPTY
+            // (0-byte 200s, verified in prod) — the satori/resvg render must be
+            // drained here, not piped through a reconstructed Response.
+            const png = await res.arrayBuffer();
             // Share previews are re-fetched by every platform's crawler and are
             // effectively immutable per URL — cache hard at the edge.
-            const headers = new Headers(res.headers);
-            headers.set("cache-control", "public, max-age=86400, s-maxage=604800, immutable");
-            return new Response(res.body, { status: res.status, headers });
+            return new Response(png, {
+                status: 200,
+                headers: {
+                    "content-type": "image/png",
+                    "cache-control": "public, max-age=86400, s-maxage=604800, immutable",
+                },
+            });
         } catch {
             return new Response("Failed to generate image", { status: 500 });
         }
