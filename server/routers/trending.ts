@@ -13,7 +13,7 @@ import { trendingCoins } from "@/db/schema/content/trending";
 import { coinFeedEvents } from "@/db/schema/content/coin-feed";
 import { and, asc, desc, gte, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { clearsBrandBar } from "@/lib/coin-feed/quality";
+import { clearsBrandBar, isRiskyHoldings } from "@/lib/coin-feed/quality";
 
 /** A board row older than this is stale data, not data. See the note in `list`. */
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
@@ -136,6 +136,14 @@ export const trendingRouter = router({
                 poolCreatedAt: trendingCoins.poolCreatedAt,
                 rank: trendingCoins.rank,
                 fetchedAt: trendingCoins.fetchedAt,
+                // Holder quality — null on GeckoTerminal-sourced rows, which
+                // never carried it. `isRiskyHoldings` reads null as no-data.
+                top10Pct: trendingCoins.top10Pct,
+                devPct: trendingCoins.devPct,
+                snipersPct: trendingCoins.snipersPct,
+                insidersPct: trendingCoins.insidersPct,
+                bundlersPct: trendingCoins.bundlersPct,
+                holdersCount: trendingCoins.holdersCount,
             })
             .from(trendingCoins)
             .where(where.length ? and(...where) : undefined)
@@ -200,7 +208,23 @@ export const trendingRouter = router({
         // copies drift apart. Filtering after the page means a page can return
         // slightly fewer than `limit` rows; it never SKIPS one, because the
         // cursor still advances by `limit`. Same trade `screenSecurity` makes.
-        const clean = items.filter((i) => clearsBrandBar(i.symbol, i.name, i.liquidityUsd));
+        // ...and hide the structurally risky, which is the filter that actually
+        // works. `clearsBrandBar` above is name matching, and name matching
+        // cannot tell `preOPENAI` from `CBETH` ("Coinbase Wrapped Staked ETH")
+        // — both hit the same brand term. Concentration can: a coin whose top
+        // ten wallets hold 90% is a rug whatever it calls itself, and a real
+        // wrapped asset never looks like that.
+        //
+        // This is what Photon's Memescope and Axiom's Pulse filter on, and both
+        // ship it ACTIVE. `/trade` already did (as of b1a3c6a1); the board
+        // could not, because GeckoTerminal never gave it the numbers.
+        //
+        // FAILS OPEN on nulls, deliberately: every GeckoTerminal-sourced row
+        // has no holder data at all, and treating "unknown" as "risky" would
+        // empty the board for every chain Mobula does not serve.
+        const clean = items
+            .filter((i) => clearsBrandBar(i.symbol, i.name, i.liquidityUsd))
+            .filter((i) => !isRiskyHoldings(i));
 
         return {
             items: clean.map((i) => ({ ...i, activity: activity.get(i.id) ?? null })),

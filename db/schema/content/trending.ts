@@ -54,6 +54,24 @@ export const trendingCoins = pgTable("trending_coins", {
      *  ranking, which blends signals we can't recompute from these columns. */
     rank: integer("rank"),
 
+    // ── Holder quality (db/trending-holder-stats.sql) ────────────────────────
+    // Structural spam signals — what Photon and Axiom actually filter on, and
+    // the only thing that can tell an impersonator from a real brand product.
+    // Name matching cannot: `preOPENAI` and `CBETH` match the same term.
+    //
+    // NULL means NO DATA, never "clean" — `isRiskyHoldings` fails open on null
+    // by design, so a GeckoTerminal-sourced row is never called risky for
+    // lacking numbers it was never given. `source` is what distinguishes the
+    // two cases while both providers run.
+    top10Pct: doublePrecision("top10_pct"),
+    devPct: doublePrecision("dev_pct"),
+    snipersPct: doublePrecision("snipers_pct"),
+    insidersPct: doublePrecision("insiders_pct"),
+    bundlersPct: doublePrecision("bundlers_pct"),
+    holdersCount: integer("holders_count"),
+    /** "mobula" | "geckoterminal" — which provider wrote this row. */
+    source: text("source"),
+
     fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
     index("idx_trending_network").on(table.network),

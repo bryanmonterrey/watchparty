@@ -12,6 +12,7 @@ import { networksForPass, runTrendingSync, sourceForPass } from "@/lib/coin-feed
 import { TRENDING_NETWORKS } from "@/lib/coin-feed/networks";
 import { runCandleSync, pruneCandles } from "@/lib/coins/candle-sync";
 import { gtKeyed } from "@/lib/coins/gecko-endpoint";
+import { MOBULA_TRENDING_CHAINS, syncTrendingChainFromMobula } from "@/lib/coin-feed/trending-mobula";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -33,8 +34,46 @@ export async function GET(req: NextRequest) {
     const requested = req.nextUrl.searchParams.get("source");
     const source = requested === "top" || requested === "trending" ? requested : sourceForPass();
 
+    // ── Mobula first, for the chains it serves ───────────────────────────────
+    //
+    // OFF unless TRENDING_MOBULA_CHAINS is set, so this deploys inert and the
+    // GeckoTerminal path below is untouched until the switch is thrown
+    // deliberately. Set it to a comma-separated list, or `*` for all six.
+    //
+    // Why move at all: GT rate-limits per IP and Cloudflare's egress IP is
+    // shared, so it fails outright from the Worker (docs/market-data-options.md).
+    // And it carries NO holder data, which is the only thing that can separate
+    // an impersonator from a real brand product — `preOPENAI` and `CBETH` match
+    // the same name rule. Mobula returns both, one call per chain.
+    //
+    // COST: 6 chains x 1 call. Hourly = 4,320/month (fits the 10k free tier);
+    // every 5 min = 51,840 (fits the $50 tier). This route runs per MINUTE, so
+    // a chain is refreshed only when its slice comes round — see the modulo in
+    // `networksForPass`. Widen deliberately, and re-check the arithmetic first.
+    const mobulaEnv = process.env.TRENDING_MOBULA_CHAINS?.trim();
+    const mobulaChains = !mobulaEnv
+        ? []
+        : mobulaEnv === "*"
+          ? [...MOBULA_TRENDING_CHAINS]
+          : mobulaEnv.split(",").map((c) => c.trim()).filter((c) => (MOBULA_TRENDING_CHAINS as readonly string[]).includes(c));
+
+    const mobulaResults: { chain: string; written: number }[] = [];
+    for (const chain of mobulaChains) {
+        try {
+            const r = await syncTrendingChainFromMobula(chain);
+            // null = provider off or chain unsupported. Falling through to GT
+            // rather than blanking the chain is the point of returning null.
+            if (r) mobulaResults.push({ chain: r.chain, written: r.written });
+        } catch (err) {
+            console.error(`[trending-sync] mobula ${chain} failed:`, err instanceof Error ? err.message : err);
+        }
+    }
+    // Chains Mobula just refreshed don't need GT this pass.
+    const done = new Set(mobulaResults.map((r) => r.chain));
+    const gtNetworks = networks.filter((n) => !done.has(n.id));
+
     try {
-        const result = await runTrendingSync(budget, networks, source);
+        const result = await runTrendingSync(budget, gtNetworks, source);
 
         // Candles take what the board's own sweep left. The board has first
         // claim: it's the front page, and a stale trending list is more visible
@@ -51,7 +90,7 @@ export async function GET(req: NextRequest) {
             ? await pruneCandles()
             : 0;
 
-        return NextResponse.json({ ...result, callsSpent: budget.spent, candles, pruned });
+        return NextResponse.json({ ...result, mobula: mobulaResults, callsSpent: budget.spent, candles, pruned });
     } catch (err) {
         console.error("[trending-sync] pass failed:", err);
         return NextResponse.json({ error: "sync failed" }, { status: 500 });
