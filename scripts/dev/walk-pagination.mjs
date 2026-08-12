@@ -97,6 +97,27 @@ const CHANNEL = "0936c35a-4f0f-43e1-8fc5-63b4daa15e4d";
  */
 const SURFACES = [
     {
+        // ⚠️ AUDIT NOTE 2026-08-12 — the post-backed counts below are one
+        // condition short, and it is latent rather than live.
+        //
+        // `getComments`, `getPostsByUser` and `searchPosts` all
+        // `innerJoin(user, eq(posts.userId, user.id))` (comment.ts:82,150 and
+        // content.ts:1255,1378,1424). An inner join silently DROPS any post
+        // whose author row is gone, and none of these counts model that — so a
+        // hard-deleted user would make the harness report "N unreachable" on
+        // pagination that is working perfectly. Exactly the trending false
+        // failure, one table over.
+        //
+        // Left as-is deliberately: admin only ever SUSPENDS users
+        // (`adminRouter.suspendUser`), never hard-deletes, so no orphan can
+        // exist today, and `... and exists (select 1 from "user" ...)` on every
+        // count would be ceremony against a case the schema does not produce.
+        // Add it the day a real delete path lands.
+        //
+        // Audited clean, mirroring their procedures exactly: coinFeed.list
+        // (buildFilters adds nothing at default scope), community.getMessages
+        // (`deleted` is selected, never filtered — deleted rows are returned
+        // with a flag), getNotifications (userId + keyset cursor only).
         name: "searchPosts (top)",
         proc: "content.searchPosts",
         input: { query: "haystack", limit: 20, sort: "top" },
