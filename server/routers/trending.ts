@@ -169,55 +169,31 @@ export const trendingRouter = router({
                 )!,
             );
         }
-        // ── One row per identity, BEFORE paging ─────────────────────────────
+        // ── One row per identity ────────────────────────────────────────────
         //
-        // `collapseCopycats` already does this, but it runs on the page the SQL
-        // returned, so it only ever sees 50 rows and copies split across pages
-        // survive. Measured 2026-08-12 on the live board: 87 of 241 fresh rows
-        // (36%) were duplicate tickers, and 82 of those were byte-identical
-        // symbol AND name — eleven rows of `BOT` / "Grok Bot" on one chain, with
-        // eleven different mints. That is pump.fun copycat minting, and the JS
-        // pass was structurally unable to see it.
+        // ⚠️ REVERTED 2026-08-12, twice broken. The SQL dedupe that belongs here
+        // (a correlated NOT EXISTS keeping the highest-volume row per
+        // symbol+name) took the entire board to 500 in production and stayed
+        // broken through one attempted fix. It is worth doing — 87 of 241 rows
+        // were duplicate tickers, 82 of them byte-identical symbol AND name,
+        // eleven rows of `BOT` / "Grok Bot" — but not worth a third guess
+        // against a live surface.
         //
-        // Keeps the highest 24h volume per identity, ties broken on address so
-        // the choice is deterministic across requests (an unstable survivor
-        // makes rows appear to jump between pages while scrolling).
+        // What is known: the JS-Date-in-a-sql-template trap was REAL and is
+        // fixed in the reverted code, but it was not the whole cause, since the
+        // query still failed with `.toISOString()::timestamptz`. The remaining
+        // suspect is the correlated reference itself: drizzle renders
+        // `${trendingCoins}` and `${trendingCoins.symbol}` as the same bare
+        // table name, so the outer reference inside a subquery that also selects
+        // FROM trending_coins may not resolve to the outer row.
         //
-        // A correlated NOT EXISTS rather than DISTINCT ON: it composes with the
-        // existing WHERE and ORDER BY instead of dictating them, and this table
-        // is a few hundred rows — the subquery is indexed on the same
-        // (network, symbol) access the board already uses.
+        // Next attempt should build the statement with drizzle's query builder
+        // and an explicit `alias()` for the inner table, and be proven by
+        // logging `err.cause` off the worker rather than by running the SQL
+        // under Node — postgres.js accepts things workerd rejects, which is how
+        // this shipped after a "verified against production" check.
         //
-        // `collapseCopycats` stays. It still earns its place on the /trade board
-        // and as a second line here, and identity is defined in one module
-        // rather than two.
-        //
-        // ⚠️ The timestamp goes in as .toISOString() with an explicit
-        // ::timestamptz cast, NEVER as a JS Date. A value interpolated into a
-        // sql template carries no column, so drizzle has no encoder for it and
-        // hands the Date to postgres.js, where workerd's Buffer polyfill throws
-        // ERR_INVALID_ARG_TYPE. Node accepts it, so the Date form passes locally
-        // and 500s only on the deployed worker — it took the whole board down
-        // between 03b5bfd0 and ec428c4d. See the note in CLAUDE.md.
-        //
-        // ⚠️ And no backticks inside this template. A backtick in a SQL comment
-        // terminates the template literal; that shipped too, as a syntax error
-        // that tests and the LSP both missed because nothing imports this file
-        // in the test path.
-        if (process.env.TRENDING_DEDUPE !== "off") {
-            where.push(sql`not exists (
-                select 1 from ${trendingCoins} dup
-                where lower(dup.symbol) = lower(${trendingCoins.symbol})
-                  and lower(coalesce(dup.name, '')) = lower(coalesce(${trendingCoins.name}, ''))
-                  and dup.fetched_at >= ${new Date(Date.now() - STALE_AFTER_MS).toISOString()}::timestamptz
-                  and (
-                    coalesce(dup.volume_24h_usd, 0) > coalesce(${trendingCoins.volume24hUsd}, 0)
-                    or (coalesce(dup.volume_24h_usd, 0) = coalesce(${trendingCoins.volume24hUsd}, 0)
-                        and dup.token_address < ${trendingCoins.tokenAddress})
-                  )
-            )`);
-        }
-
+        // `collapseCopycats` below still collapses duplicates within a page.
         if (input.chains?.length) where.push(inArray(trendingCoins.network, input.chains));
         if (input.minLiquidityUsd) where.push(gte(trendingCoins.liquidityUsd, input.minLiquidityUsd));
         if (input.q?.trim()) {
