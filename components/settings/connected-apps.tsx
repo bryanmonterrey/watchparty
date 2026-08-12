@@ -46,14 +46,14 @@ export function ConnectedApps() {
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                            <p className="truncate text-[15px] font-bold">{app.name}</p>
+                            <p className="truncate text-base font-bold">{app.name}</p>
                             {app.disabled ? (
-                                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-semibold text-white/40">
+                                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs font-semibold text-white/40">
                                     Disabled by developer
                                 </span>
                             ) : null}
                         </div>
-                        <p className="truncate text-[13px] font-medium text-white/40">
+                        <p className="truncate text-sm font-medium text-white/40">
                             {app.scopes.length
                                 ? app.scopes.map((s) => s.label).join(" · ")
                                 : "Sign-in only"}

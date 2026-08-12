@@ -72,15 +72,15 @@ export function MemberRow({
         <div className="flex items-center gap-3 rounded-[18px] px-2.5 py-2 transition-colors hover:bg-white/[0.04]">
             <Avatar className="size-11 shrink-0">
                 <AvatarImage src={m.userImage || undefined} alt={m.userName || ""} />
-                <AvatarFallback className="bg-white/10 text-[13px] font-bold text-zinc-300">
+                <AvatarFallback className="bg-white/10 text-sm font-bold text-zinc-300">
                     {(m.userName || "?")[0]?.toUpperCase()}
                 </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-bold text-white" style={m.roleColor ? { color: m.roleColor } : undefined}>
-                    {m.userName}{isSelf && <span className="ml-1.5 text-[12px] font-semibold text-zinc-500">you</span>}
+                <p className="truncate text-base font-bold text-white" style={m.roleColor ? { color: m.roleColor } : undefined}>
+                    {m.userName}{isSelf && <span className="ml-1.5 text-xs font-semibold text-zinc-500">you</span>}
                 </p>
-                <p className="truncate text-[13px] font-medium text-zinc-500">
+                <p className="truncate text-sm font-medium text-zinc-500">
                     @{m.userUsername || "user"} · joined {formatDistanceToNow(new Date(m.createdAt), { addSuffix: true })}
                     {m.joinMethod ? ` · via ${m.joinMethod === "discovery" ? "discovery" : "invite"}` : ""}
                 </p>
@@ -95,7 +95,7 @@ export function MemberRow({
                     buttonRadius={16}
                     triggerAriaLabel={`Manage ${m.userName}`}
                     triggerClassName={cn(
-                        "flex h-9 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3.5 text-[13px] font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
+                        "flex h-9 cursor-pointer items-center gap-1 rounded-full bg-white/5 px-3.5 text-sm font-bold text-zinc-300 transition-colors hover:bg-white/10 hover:text-white",
                         busy && "opacity-50 pointer-events-none",
                     )}
                     trigger={
@@ -108,7 +108,7 @@ export function MemberRow({
                         ...ROLES.filter((r) => r !== m.role).map((r) => ({
                             key: r,
                             onClick: () => updateRole.mutate({ serverId, memberId: m.id, role: r }),
-                            className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                            className: "text-sm font-medium text-zinc-100 hover:bg-white/10",
                             label: <>Make {ROLE_LABEL[r]}</>,
                         })),
                         ...customRoles.map((r) => {
@@ -116,7 +116,7 @@ export function MemberRow({
                             return {
                                 key: `custom-${r.id}`,
                                 onClick: () => toggleCustomRole.mutate({ serverId, memberId: m.id, roleId: r.id }),
-                                className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                                className: "text-sm font-medium text-zinc-100 hover:bg-white/10",
                                 label: (
                                     <span className="flex w-full items-center gap-2">
                                         <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: r.color }} />
@@ -133,13 +133,13 @@ export function MemberRow({
                                 {
                                     key: "timeout",
                                     onClick: () => timeoutMember.mutate({ serverId, userId: m.userId, durationSeconds: 3600 }),
-                                    className: "text-[13px] font-semibold text-pastelred hover:bg-pastelred/10",
+                                    className: "text-sm font-semibold text-pastelred hover:bg-pastelred/10",
                                     label: <>Timeout · 1 hour</>,
                                 },
                                 {
                                     key: "timeout-clear",
                                     onClick: () => timeoutMember.mutate({ serverId, userId: m.userId, durationSeconds: 0 }),
-                                    className: "text-[13px] font-medium text-zinc-100 hover:bg-white/10",
+                                    className: "text-sm font-medium text-zinc-100 hover:bg-white/10",
                                     label: <>Clear timeout</>,
                                 },
                             ]
@@ -147,20 +147,20 @@ export function MemberRow({
                         {
                             key: "kick",
                             onClick: () => kickMember.mutate({ serverId, memberId: m.id }),
-                            className: "text-[13px] font-semibold text-pastelred hover:bg-pastelred/10",
+                            className: "text-sm font-semibold text-pastelred hover:bg-pastelred/10",
                             label: <>Kick from server</>,
                         },
                         {
                             key: "ban",
                             onClick: () => banMember.mutate({ serverId, memberId: m.id }),
-                            className: "text-[13px] font-semibold text-pastelred hover:bg-pastelred/10",
+                            className: "text-sm font-semibold text-pastelred hover:bg-pastelred/10",
                             label: <>Ban from server</>,
                         },
                     ]}
                 />
             ) : (
                 <span className={cn(
-                    "shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold",
+                    "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold",
                     m.role === "ADMIN" ? "bg-white/15 text-white" : m.role === "MODERATOR" ? "bg-white/10 text-zinc-200" : "bg-white/5 text-zinc-500",
                 )}>
                     {ROLE_LABEL[m.role] ?? m.role}
