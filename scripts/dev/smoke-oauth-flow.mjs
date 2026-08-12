@@ -341,6 +341,46 @@ try {
         ok(refreshDead.status >= 400, "refresh is dead after client disable");
     }
 
+    // 10.5 Public client (PKCE-only): token exchange succeeds WITHOUT a
+    // client_secret; a wrong verifier still fails (PKCE is the whole proof).
+    {
+        const PUB_ID = `wpcl_smokepub_${Date.now().toString(36)}`;
+        await db.insert(oauthApplication).values({
+            id: webcrypto.randomUUID(), name: "OAuth smoke public client", clientId: PUB_ID,
+            clientSecret: null, redirectUrls: REDIRECT, type: "public", disabled: false,
+            metadata: null, createdAt: new Date(), updatedAt: new Date(),
+        });
+        try {
+            const authRes = await get(authorizeUrl({ client_id: PUB_ID, state: "smoke-pub" }));
+            const loc = authRes.headers.get("location") ?? "";
+            const consent = loc.includes("/oauth/consent") ? await runConsent(loc) : null;
+            const cbUrl = consent?.redirectURI ? new URL(consent.redirectURI) : (loc.startsWith("http") ? new URL(loc) : null);
+            const code = cbUrl?.searchParams.get("code");
+            ok(!!code, "public client obtains a code", loc.slice(0, 100));
+            const noSecret = await tokenPost({
+                grant_type: "authorization_code", code, redirect_uri: REDIRECT,
+                client_id: PUB_ID, code_verifier: verifier,
+            });
+            ok(noSecret.status === 200 && !!noSecret.body?.access_token, "public client exchanges WITHOUT a secret", JSON.stringify(noSecret.body).slice(0, 100));
+
+            const authRes2 = await get(authorizeUrl({ client_id: PUB_ID, state: "smoke-pub-2" }));
+            const loc2 = authRes2.headers.get("location") ?? "";
+            const consent2 = loc2.includes("/oauth/consent") ? await runConsent(loc2) : null;
+            const code2 = consent2?.redirectURI
+                ? new URL(consent2.redirectURI).searchParams.get("code")
+                : (loc2.startsWith("http") ? new URL(loc2).searchParams.get("code") : null);
+            const badVerifier = await tokenPost({
+                grant_type: "authorization_code", code: code2, redirect_uri: REDIRECT,
+                client_id: PUB_ID, code_verifier: `${verifier}x`,
+            });
+            ok(badVerifier.status >= 400, "public client with a wrong verifier refused");
+        } finally {
+            await db.delete(oauthAccessToken).where(eq(oauthAccessToken.clientId, PUB_ID)).catch(() => {});
+            await db.delete(oauthConsent).where(eq(oauthConsent.clientId, PUB_ID)).catch(() => {});
+            await db.delete(oauthApplication).where(eq(oauthApplication.clientId, PUB_ID)).catch(() => {});
+        }
+    }
+
     // 11. Rate limit — burst the token endpoint; expect a 429 somewhere.
     //     Fail-open by design (Upstash down ⇒ no 429), so this only warns.
     {

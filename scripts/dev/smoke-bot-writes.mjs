@@ -14,6 +14,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { webcrypto } from "node:crypto";
 
 const PROD = process.argv.includes("--production");
@@ -196,6 +197,37 @@ try {
     ok(deleted.status === 200, "deleteCoinAlert succeeds");
     const remaining = await db.select({ id: communityCoinAlerts.id }).from(communityCoinAlerts).where(eq(communityCoinAlerts.serverId, serverId));
     ok(remaining.length === 0, "alert row removed");
+
+    // 7.5 Member timeouts (MODERATE): bot times out a real member → their
+    // send is refused; duration 0 clears it; the owner can never be timed out.
+    {
+        const mintArgs = ["scripts/dev/mint-test-session.mjs", "--json", ...(PROD ? ["--yes-production"] : [])];
+        const session = JSON.parse(execFileSync("bun", mintArgs, { encoding: "utf8" }).trim().split("\n").pop());
+        await db.insert(communityMembers)
+            .values({ userId: session.userId, serverId, role: "GUEST", joinMethod: "smoke" })
+            .onConflictDoNothing();
+
+        const humanSend = (text) =>
+            fetch(`${BASE}/api/trpc/community.sendMessage`, {
+                method: "POST", redirect: "manual",
+                headers: { cookie: session.cookie, origin: BASE, "content-type": "application/json" },
+                body: JSON.stringify({ json: { channelId, content: text } }),
+            }).then(async (r) => ({ status: r.status, code: (await r.json().catch(() => null))?.error?.json?.data?.code ?? null }));
+
+        const t1 = await trpc("bot.timeoutMember", { serverId, userId: session.userId, durationSeconds: 300, reason: "smoke" });
+        ok(t1.status === 200 && !!t1.data?.timeoutUntil, "bot.timeoutMember sets a timeout", JSON.stringify(t1).slice(0, 120));
+        const blocked = await humanSend("should be blocked");
+        ok(blocked.code === "FORBIDDEN", "timed-out member's send is FORBIDDEN", JSON.stringify(blocked));
+        const t0 = await trpc("bot.timeoutMember", { serverId, userId: session.userId, durationSeconds: 0 });
+        ok(t0.status === 200 && t0.data?.timeoutUntil === null, "duration 0 clears the timeout");
+        const allowed = await humanSend("should send now");
+        ok(allowed.status === 200, "cleared member can post again", JSON.stringify(allowed));
+        const owner = await trpc("bot.timeoutMember", { serverId, userId: botUserId, durationSeconds: 60 });
+        ok(owner.errCode === "FORBIDDEN", "owner/mods can never be timed out");
+        await db.delete(communityMembers)
+            .where(and(eq(communityMembers.userId, session.userId), eq(communityMembers.serverId, serverId)))
+            .catch(() => {});
+    }
 
     // 8. Rate limit: burst 12 sends; expect at least one TOO_MANY_REQUESTS.
     //    Fail-open when Upstash is unreachable — warn-only, like the OAuth smoke.

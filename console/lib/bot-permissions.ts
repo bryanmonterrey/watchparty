@@ -17,7 +17,7 @@ export type BotPermissionName = keyof typeof BOT_PERMISSIONS;
 export const BOT_PERMISSION_META: { name: BotPermissionName; label: string; desc: string }[] = [
   { name: "SEND_MESSAGES", label: "Send messages", desc: "Post in the community's channels" },
   { name: "MANAGE_COIN_ALERTS", label: "Manage coin alerts", desc: "Create and update coin-alert automations" },
-  { name: "MODERATE", label: "Moderate", desc: "Delete messages" },
+  { name: "MODERATE", label: "Moderate", desc: "Delete messages and time out members" },
   { name: "READ_MEMBERS", label: "Read members", desc: "Read the member roster" },
 ];
 

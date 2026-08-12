@@ -28,6 +28,7 @@ import { boostLevelFor } from "@/lib/premium/boost-levels";
 import { isEntitled } from "@/server/lib/premium-entitlement";
 import { takePage } from "@/server/lib/paginate";
 import { DELETED_MESSAGE_TEXT } from "@/lib/community/constants";
+import { enforceAutomod, isTimedOut } from "@/lib/community/automod";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { eq, and, or, desc, asc, sql, lt, ne, count, inArray, gt, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -130,13 +131,6 @@ async function resolveInviteCode(code: string): Promise<{
     return { server, invite: inviteRow, expired };
 }
 
-/** Comma-separated automod keywords → normalized list. */
-function parseKeywords(raw: string | null | undefined): string[] {
-    return (raw ?? "")
-        .split(",")
-        .map((w) => w.trim().toLowerCase())
-        .filter(Boolean);
-}
 
 /**
  * Boost allowance for a user: slots from their active premium tier (computed
@@ -207,13 +201,6 @@ const WELCOME_TEMPLATES = [
     "Say hi to {name}",
     "{name} is here",
     "{name} joined the server",
-];
-
-// AutoMod "commonly flagged words" — a small built-in list; the custom
-// keywords field covers anything server-specific.
-const FLAGGED_WORDS = [
-    "nigger", "faggot", "retard", "kike", "spic", "chink", "tranny",
-    "rape", "kys", "kill yourself",
 ];
 
 // Activity alerts: joins in the last 10 min above this → one system notice
@@ -2554,61 +2541,21 @@ export const communityRouter = router({
                 throw new TRPCError({ code: "FORBIDDEN", message: "This channel is read-only" });
             }
 
-            // AutoMod: rules apply to members (mods/admins exempt).
+            // Timed out (bot.timeoutMember / MODERATE)? Nobody is exempt by
+            // role — a mod who got timed out before promotion stays muted.
+            if (isTimedOut(member[0])) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "You're timed out in this community" });
+            }
+
+            // AutoMod: rules apply to members (mods/admins exempt). Extracted
+            // to lib/community/automod.ts (file-size guard).
             if (member[0].role === "GUEST") {
-                const [srv] = await db
-                    .select({
-                        automodKeywords: communityServers.automodKeywords,
-                        automodBlockLinks: communityServers.automodBlockLinks,
-                        automodBlockMentions: communityServers.automodBlockMentions,
-                        automodFlaggedWords: communityServers.automodFlaggedWords,
-                        verificationLevel: communityServers.verificationLevel,
-                        rulesRequired: communityServers.rulesRequired,
-                        rules: communityServers.rules,
-                    })
-                    .from(communityServers)
-                    .where(eq(communityServers.id, channel[0].serverId))
-                    .limit(1);
-
-                // Server rules gate: members must agree before chatting.
-                if (srv?.rulesRequired && srv.rules && !member[0].rulesAgreedAt) {
-                    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Agree to the server rules before chatting" });
-                }
-
-                // Verification level: posting requirements for regular members.
-                // low = account 10+ min old · medium = account 1+ day old ·
-                // high = medium AND a server member for 10+ minutes.
-                if (srv?.verificationLevel && srv.verificationLevel !== "none") {
-                    const TEN_MIN = 10 * 60 * 1000;
-                    const ONE_DAY = 24 * 60 * 60 * 1000;
-                    const [me] = await db.select({ createdAt: user.createdAt }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
-                    const accountAge = Date.now() - (me?.createdAt?.getTime() ?? Date.now());
-                    const memberAge = Date.now() - member[0].createdAt.getTime();
-                    if (srv.verificationLevel === "low" && accountAge < TEN_MIN) {
-                        throw new TRPCError({ code: "FORBIDDEN", message: "Your account is too new to post here yet — try again in a few minutes" });
-                    }
-                    if (srv.verificationLevel === "medium" && accountAge < ONE_DAY) {
-                        throw new TRPCError({ code: "FORBIDDEN", message: "This server requires accounts to be at least a day old to post" });
-                    }
-                    if (srv.verificationLevel === "high" && (accountAge < ONE_DAY || memberAge < TEN_MIN)) {
-                        throw new TRPCError({ code: "FORBIDDEN", message: "This server requires a day-old account and 10 minutes of membership to post" });
-                    }
-                }
-
-                const blocked = parseKeywords(srv?.automodKeywords);
-                const lower = input.content.toLowerCase();
-                if (blocked.some((w) => lower.includes(w))) {
-                    throw new TRPCError({ code: "BAD_REQUEST", message: "Message blocked by this server's AutoMod" });
-                }
-                if (srv?.automodFlaggedWords && FLAGGED_WORDS.some((w) => lower.includes(w))) {
-                    throw new TRPCError({ code: "BAD_REQUEST", message: "Message blocked by this server's AutoMod" });
-                }
-                if (srv?.automodBlockLinks && /https?:\/\//i.test(input.content)) {
-                    throw new TRPCError({ code: "BAD_REQUEST", message: "Links are blocked by this server's AutoMod" });
-                }
-                if (srv?.automodBlockMentions && (input.content.match(/@[a-zA-Z0-9_-]+/g)?.length ?? 0) > 5) {
-                    throw new TRPCError({ code: "BAD_REQUEST", message: "Too many mentions — blocked by this server's AutoMod" });
-                }
+                await enforceAutomod({
+                    serverId: channel[0].serverId,
+                    userId: ctx.user.id,
+                    content: input.content,
+                    member: member[0],
+                });
             }
 
             const [message] = await db

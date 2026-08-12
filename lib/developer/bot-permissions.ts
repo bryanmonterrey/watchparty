@@ -13,7 +13,7 @@ export const BOT_PERMISSIONS = {
     SEND_MESSAGES: 1 << 0, // 1
     /** Create/update coin-alert automations for the community. */
     MANAGE_COIN_ALERTS: 1 << 1, // 2
-    /** Moderate: delete messages. (Timeouts have no backing schema yet.) */
+    /** Moderate: delete messages, time out members. */
     MODERATE: 1 << 2, // 4
     /** Read the member roster. */
     READ_MEMBERS: 1 << 3, // 8
@@ -31,7 +31,7 @@ export type BotPermissionName = keyof typeof BOT_PERMISSIONS;
 export const BOT_PERMISSION_META: { name: BotPermissionName; label: string; desc: string }[] = [
     { name: "SEND_MESSAGES", label: "Send messages", desc: "Post in the community's channels" },
     { name: "MANAGE_COIN_ALERTS", label: "Manage coin alerts", desc: "Create and update coin-alert automations" },
-    { name: "MODERATE", label: "Moderate", desc: "Delete messages" },
+    { name: "MODERATE", label: "Moderate", desc: "Delete messages and time out members" },
     { name: "READ_MEMBERS", label: "Read members", desc: "Read the member roster" },
 ];
 

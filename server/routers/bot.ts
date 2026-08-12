@@ -211,6 +211,61 @@ export const botRouter = router({
             return { success: true };
         }),
 
+    /** Time out a member (mute-from-posting), or clear with duration 0.
+     *  MODERATE. Only GUESTs can be timed out — never the owner or mods —
+     *  and the permission check runs against the SAME serverId as the write,
+     *  so a grant can't be borrowed across communities. */
+    timeoutMember: botProcedure
+        .input(z.object({
+            serverId: z.string().uuid(),
+            userId: z.string(),
+            /** Seconds from now; 0 clears. Capped at 28 days (Discord's cap). */
+            durationSeconds: z.number().int().min(0).max(28 * 86_400),
+            reason: z.string().trim().max(200).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            await requireInstallPermission(ctx.bot.userId, input.serverId, BOT_PERMISSIONS.MODERATE);
+            const [target] = await db
+                .select({ id: communityMembers.id, role: communityMembers.role, isBot: user.isBot })
+                .from(communityMembers)
+                .innerJoin(user, eq(user.id, communityMembers.userId))
+                .where(and(
+                    eq(communityMembers.serverId, input.serverId),
+                    eq(communityMembers.userId, input.userId),
+                ))
+                .limit(1);
+            if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Not a member of that community" });
+            // Bots aren't timeout targets — their member rows are GUEST, but
+            // the send path doesn't read timeoutUntil for bots; the real
+            // levers are the permission bits and eviction (Bots panel).
+            if (target.isBot) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Bots can't be timed out — remove their permissions or uninstall them instead" });
+            }
+            const [srv] = await db
+                .select({ ownerId: communityServers.ownerId })
+                .from(communityServers)
+                .where(eq(communityServers.id, input.serverId))
+                .limit(1);
+            if (srv?.ownerId === input.userId || target.role !== "GUEST") {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Only regular members can be timed out" });
+            }
+            const timeoutUntil =
+                input.durationSeconds > 0 ? new Date(Date.now() + input.durationSeconds * 1000) : null;
+            await db
+                .update(communityMembers)
+                .set({ timeoutUntil, updatedAt: new Date() })
+                .where(eq(communityMembers.id, target.id));
+            await logBotAudit(
+                input.serverId,
+                ctx.bot.userId,
+                "bot.member.timeout",
+                timeoutUntil
+                    ? `timed a member out until ${timeoutUntil.toISOString()}${input.reason ? ` — ${input.reason}` : ""}`
+                    : "cleared a member's timeout",
+            );
+            return { userId: input.userId, timeoutUntil };
+        }),
+
     // ── Coin alerts (MANAGE_COIN_ALERTS) ─────────────────────────────────
     // Standing "post here when this token does X" automations. Delivery rides
     // the coin-feed event write path (lib/coin-feed/community-alerts.ts) and

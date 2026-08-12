@@ -244,6 +244,7 @@ function OAuth2Card({ appId }: { appId: string }) {
   const [freshSecret, setFreshSecret] = React.useState<{ clientId: string; clientSecret: string } | null>(null);
   const [redirects, setRedirects] = React.useState("");
   const [draftRedirect, setDraftRedirect] = React.useState("");
+  const [draftType, setDraftType] = React.useState<"web" | "public">("web");
   const [confirmingRotate, setConfirmingRotate] = React.useState(false);
 
   React.useEffect(() => {
@@ -253,7 +254,8 @@ function OAuth2Card({ appId }: { appId: string }) {
   const invalidate = () => void utils.developerApps.getOAuthClient.invalidate({ id: appId });
   const create = trpc.developerApps.createOAuthClient.useMutation({
     onSuccess: (d) => {
-      setFreshSecret(d);
+      // Public clients get no secret — nothing to show once.
+      if (d.clientSecret) setFreshSecret({ clientId: d.clientId, clientSecret: d.clientSecret });
       invalidate();
     },
   });
@@ -330,7 +332,9 @@ function OAuth2Card({ appId }: { appId: string }) {
             >
               {saveRedirects.isPending ? "Saving…" : "Save redirect URIs"}
             </Button>
-            {confirmingRotate ? (
+            {client.data.type === "public" ? (
+              <Chip>Public client — PKCE, no secret</Chip>
+            ) : confirmingRotate ? (
               <>
                 <Button
                   size="sm"
@@ -387,22 +391,43 @@ function OAuth2Card({ appId }: { appId: string }) {
         </div>
       ) : (
         <div className="mt-3">
-          <Field
-            label="Redirect URI"
-            hint="Where we send users back after they approve. Exact match; add more later."
-          >
-            <Input
-              value={draftRedirect}
-              onChange={(e) => setDraftRedirect(e.target.value)}
-              placeholder="https://yourapp.com/callback"
-              className="font-mono"
-            />
+          <Field label="Client type" hint="Web keeps a secret server-side; Public is for native/mobile apps (PKCE only, custom URL schemes allowed).">
+            <div className="flex gap-1.5">
+              {(["web", "public"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setDraftType(t)}
+                  className={
+                    "rounded-full border px-3 py-1 text-xs transition-colors " +
+                    (draftType === t
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  {t === "web" ? "Web (confidential)" : "Public (native)"}
+                </button>
+              ))}
+            </div>
           </Field>
+          <div className="mt-3">
+            <Field
+              label="Redirect URI"
+              hint="Where we send users back after they approve. Exact match; add more later."
+            >
+              <Input
+                value={draftRedirect}
+                onChange={(e) => setDraftRedirect(e.target.value)}
+                placeholder={draftType === "web" ? "https://yourapp.com/callback" : "yourapp://callback"}
+                className="font-mono"
+              />
+            </Field>
+          </div>
           <div className="mt-3">
             <Button
               size="sm"
               disabled={!draftRedirect.trim() || create.isPending}
-              onClick={() => create.mutate({ id: appId, redirectUris: [draftRedirect.trim()] })}
+              onClick={() => create.mutate({ id: appId, redirectUris: [draftRedirect.trim()], type: draftType })}
             >
               {create.isPending ? "Setting up…" : "Enable Sign in with watchparty"}
             </Button>

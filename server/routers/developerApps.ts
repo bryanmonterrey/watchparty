@@ -57,11 +57,11 @@ const publicCols = {
     updatedAt: developerApps.updatedAt,
 };
 
-// Exact-match redirect URIs for the app's OAuth client. https only; http is
-// tolerated ONLY for localhost during development and blocks public listing
-// (setListed re-checks). Commas are hard-rejected because the oidc-provider
-// plugin stores the list comma-joined — one comma inside a URI would corrupt
-// every entry on split. Fragments are illegal per RFC 6749 §3.1.2.
+// Exact-match redirect URIs for the app's OAuth client. Zod checks STRUCTURE
+// (absolute URL, no fragment per RFC 6749 §3.1.2, and no commas — the
+// oidc-provider plugin stores the list comma-joined, so one comma would
+// corrupt every entry on split). The SCHEME policy depends on the client's
+// type, so it's enforced in-handler by assertRedirectPolicy below.
 const redirectUri = z
     .string()
     .trim()
@@ -81,18 +81,30 @@ const redirectUri = z
         }
         if (parsed.hash) {
             refCtx.addIssue({ code: "custom", message: "Redirect URIs must not contain a fragment" });
-            return;
         }
-        const isLocal = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-        if (parsed.protocol === "https:") return;
-        if (parsed.protocol === "http:" && isLocal) return;
-        refCtx.addIssue({
-            code: "custom",
-            message: "Redirect URIs must be https (http is allowed only for localhost)",
-        });
     });
 
 const redirectUriList = z.array(redirectUri).min(1).max(10);
+
+/** Scheme policy by client type: web (confidential) = https, http only for
+ *  localhost dev. public (native, PKCE-only) = additionally custom app
+ *  schemes (`myapp://cb`) — but NEVER plain http off localhost. */
+function assertRedirectPolicy(uris: string[], type: "web" | "public"): void {
+    for (const u of uris) {
+        const parsed = new URL(u);
+        const isLocal = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+        if (parsed.protocol === "https:") continue;
+        if (parsed.protocol === "http:" && isLocal) continue;
+        if (type === "public" && parsed.protocol !== "http:") continue;
+        throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+                type === "public"
+                    ? "Public clients may use https, localhost http, or a custom app scheme"
+                    : "Redirect URIs must be https (http is allowed only for localhost)",
+        });
+    }
+}
 
 function isLocalhostUri(u: string): boolean {
     try {
@@ -359,7 +371,14 @@ export const developerAppsRouter = router({
         }),
 
     createOAuthClient: protectedProcedure
-        .input(z.object({ id: z.string(), redirectUris: redirectUriList }))
+        .input(z.object({
+            id: z.string(),
+            redirectUris: redirectUriList,
+            // web = confidential (server-side, gets a secret). public =
+            // native/SPA, PKCE-only — the token endpoint skips the secret
+            // check for type "public" (verified in plugin source).
+            type: z.enum(["web", "public"]).default("web"),
+        }))
         .mutation(async ({ ctx, input }) => {
             if (!process.env.API_GATE_SECRET) {
                 throw new TRPCError({
@@ -375,11 +394,13 @@ export const developerAppsRouter = router({
                     message: "This app already has an OAuth client — rotate its secret instead",
                 });
             }
+            assertRedirectPolicy(input.redirectUris, input.type);
 
             const clientId = `wpcl_${randHex(12)}`;
             // 64 hex chars (256 bits) — shown to the owner exactly once below,
-            // stored only sealed (AES-GCM via secret-box).
-            const clientSecret = randHex(32);
+            // stored only sealed (AES-GCM via secret-box). Public clients get
+            // NO secret: PKCE is their whole proof.
+            const clientSecret = input.type === "web" ? randHex(32) : null;
             const now = new Date();
             await db.insert(oauthApplication).values({
                 id: crypto.randomUUID(),
@@ -389,11 +410,9 @@ export const developerAppsRouter = router({
                 // unguarded, so it must stay valid JSON (or null).
                 metadata: JSON.stringify({ appId: app.id }),
                 clientId,
-                clientSecret: await sealSecret(clientSecret),
+                clientSecret: clientSecret ? await sealSecret(clientSecret) : null,
                 redirectUrls: input.redirectUris.join(","),
-                // v1 is confidential web clients only. Native/public (PKCE,
-                // no secret) arrives with the mobile OAuth-client work.
-                type: "web",
+                type: input.type,
                 disabled: false,
                 userId: ctx.user.id,
                 createdAt: now,
@@ -405,7 +424,7 @@ export const developerAppsRouter = router({
                 .where(eq(developerApps.id, app.id));
             // The secret is returned ONCE — the view-once panel is the only UI
             // that ever sees it.
-            return { clientId, clientSecret };
+            return { clientId, clientSecret, type: input.type };
         }),
 
     updateOAuthRedirects: protectedProcedure
@@ -414,6 +433,13 @@ export const developerAppsRouter = router({
             await throttle(ctx.user.id);
             const app = await ownedApp(ctx.user.id, input.id);
             if (!app.oauthClientId) throw new TRPCError({ code: "NOT_FOUND" });
+            const [existing] = await db
+                .select({ type: oauthApplication.type })
+                .from(oauthApplication)
+                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .limit(1);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND" });
+            assertRedirectPolicy(input.redirectUris, existing.type === "public" ? "public" : "web");
             // A listed app must never point at localhost — delist first.
             if (
                 hasFlag(app.flags, APP_FLAGS.LISTED) &&
@@ -437,6 +463,14 @@ export const developerAppsRouter = router({
             await throttle(ctx.user.id);
             const app = await ownedApp(ctx.user.id, input.id);
             if (!app.oauthClientId) throw new TRPCError({ code: "NOT_FOUND" });
+            const [existing] = await db
+                .select({ type: oauthApplication.type })
+                .from(oauthApplication)
+                .where(eq(oauthApplication.clientId, app.oauthClientId))
+                .limit(1);
+            if (existing?.type === "public") {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Public clients have no secret — PKCE is their proof" });
+            }
             const clientSecret = randHex(32);
             await db
                 .update(oauthApplication)

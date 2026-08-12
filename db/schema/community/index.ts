@@ -102,6 +102,9 @@ export const communityMembers = pgTable('community_members', {
     muted: boolean('muted'),
     // When they agreed to the server rules (null = not yet)
     rulesAgreedAt: timestamp('rules_agreed_at', { withTimezone: true }),
+    // Muted-from-posting until this instant (bot.timeoutMember / MODERATE);
+    // null or past = not timed out. Enforced in the message send paths.
+    timeoutUntil: timestamp('timeout_until', { withTimezone: true }),
     // How they joined: 'invite' | 'discovery'
     joinMethod: text('join_method'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
