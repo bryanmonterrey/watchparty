@@ -169,6 +169,42 @@ export const trendingRouter = router({
                 )!,
             );
         }
+        // ── One row per identity, BEFORE paging ─────────────────────────────
+        //
+        // `collapseCopycats` already does this, but it runs on the page the SQL
+        // returned, so it only ever sees 50 rows and copies split across pages
+        // survive. Measured 2026-08-12 on the live board: 87 of 241 fresh rows
+        // (36%) were duplicate tickers, and 82 of those were byte-identical
+        // symbol AND name — eleven rows of `BOT` / "Grok Bot" on one chain, with
+        // eleven different mints. That is pump.fun copycat minting, and the JS
+        // pass was structurally unable to see it.
+        //
+        // Keeps the highest 24h volume per identity, ties broken on address so
+        // the choice is deterministic across requests (an unstable survivor
+        // makes rows appear to jump between pages while scrolling).
+        //
+        // A correlated NOT EXISTS rather than DISTINCT ON: it composes with the
+        // existing WHERE and ORDER BY instead of dictating them, and this table
+        // is a few hundred rows — the subquery is indexed on the same
+        // (network, symbol) access the board already uses.
+        //
+        // `collapseCopycats` stays. It still earns its place on the /trade board
+        // and as a second line here, and identity is defined in one module
+        // rather than two.
+        if (process.env.TRENDING_DEDUPE !== "off") {
+            where.push(sql`not exists (
+                select 1 from ${trendingCoins} dup
+                where lower(dup.symbol) = lower(${trendingCoins.symbol})
+                  and lower(coalesce(dup.name, '')) = lower(coalesce(${trendingCoins.name}, ''))
+                  and dup.fetched_at >= ${new Date(Date.now() - STALE_AFTER_MS)}
+                  and (
+                    coalesce(dup.volume_24h_usd, 0) > coalesce(${trendingCoins.volume24hUsd}, 0)
+                    or (coalesce(dup.volume_24h_usd, 0) = coalesce(${trendingCoins.volume24hUsd}, 0)
+                        and dup.token_address < ${trendingCoins.tokenAddress})
+                  )
+            )`);
+        }
+
         if (input.chains?.length) where.push(inArray(trendingCoins.network, input.chains));
         if (input.minLiquidityUsd) where.push(gte(trendingCoins.liquidityUsd, input.minLiquidityUsd));
         if (input.q?.trim()) {
