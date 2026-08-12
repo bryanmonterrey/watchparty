@@ -25,6 +25,7 @@ import {
 } from "@/lib/coins/mobula";
 import { resolveTraders } from "@/lib/coins/resolve-traders";
 import { recordMobulaTrades } from "@/lib/coins/record-mobula-trades";
+import { upstreamEmpty } from "@/server/lib/upstream-empty";
 import { isRiskyHoldings } from "@/lib/coin-feed/quality";
 import {
     traderConcentration,
@@ -282,13 +283,28 @@ export const tradeRouter = router({
     coinTrades: publicProcedure
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
+            // NOT `.catch(() => null)` around the fetch. `withCache` stores
+            // whatever the callback RETURNS, so swallowing a 429 into `[]` cached
+            // the emptiness — one refused request blanked the table for the whole
+            // window, silently, and the next window refused again just as often.
+            // Observed on production 2026-08-12: alternating 0 / 235 rows for the
+            // same mint on 35s spacing.
+            //
+            // Letting it throw is what makes the failure temporary: nothing is
+            // written to Redis, so the very next request retries. `upstreamEmpty`
+            // converts it to an empty table for THIS caller only, and logs the
+            // reason, which the swallow never did.
+            upstreamEmpty("coinTrades", [], () =>
             withCache(`coin:trades:v1:${input.network}:${input.address}`, mobulaCadence().tradesTtl, async () => {
                 // 300 requested, not the default 100: the swap filter drops
                 // liquidity operations, and on EVM chains those are ~90% of the
                 // page — BRETT/base returns 18 real swaps for a 100-row request.
                 // The table renders 25 folded rows, so a 100-row request left it
                 // visibly short on every EVM coin. Same one call either way.
-                const rows = await fetchMobulaTokenTrades(input.network, input.address, 300).catch(() => null);
+                //
+                // null (provider off, or a chain it doesn't cover) IS a real
+                // answer and stays cacheable; only a thrown request escapes.
+                const rows = await fetchMobulaTokenTrades(input.network, input.address, 300);
                 if (!rows?.length) return [];
 
                 // Inside the cache callback ON PURPOSE: this runs once per TTL
@@ -332,16 +348,24 @@ export const tradeRouter = router({
                         txHash: r.txHash,
                     };
                 });
-            })
+            })),
         ),
 
-    /** Holder-quality + contract-safety block for one coin. Cached 120s. */
+    /**
+     * Holder-quality + contract-safety block for one coin.
+     *
+     * Cached on the security cadence — 15 MINUTES on the free plan, which is why
+     * the failure must not be cached: swallowing a refused request into `null`
+     * hid the card for a quarter of an hour over one 429. See `coinTrades`.
+     */
     coinSecurity: publicProcedure
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
-            withCache(securityCacheKey(input.network, input.address), mobulaCadence().securityTtl, () =>
-                fetchMobulaTokenSecurity(input.network, input.address).catch(() => null)
-            )
+            upstreamEmpty("coinSecurity", null, () =>
+                withCache(securityCacheKey(input.network, input.address), mobulaCadence().securityTtl, () =>
+                    fetchMobulaTokenSecurity(input.network, input.address),
+                ),
+            ),
         ),
 
     /**
@@ -380,6 +404,7 @@ export const tradeRouter = router({
     coinTraderConcentration: publicProcedure
         .input(z.object({ address: z.string(), network: z.string().default("solana") }))
         .query(({ input }) =>
+            upstreamEmpty("coinTraderConcentration", null, () =>
             // Cached on the SECURITY cadence, not the trades one. The trades
             // table on the same page wants a fast window; this is a verdict
             // about a pattern over hours, and re-deriving it every 30s would
@@ -393,7 +418,7 @@ export const tradeRouter = router({
                         input.network,
                         input.address,
                         CONCENTRATION_SAMPLE,
-                    ).catch(() => null);
+                    );
                     if (!trades || trades.length === 0) return null;
 
                     const stats = statsFromTrades(trades);
@@ -416,7 +441,7 @@ export const tradeRouter = router({
                         minTrades: MIN_TRADES_FOR_VERDICT,
                     };
                 },
-            ),
+            )),
         ),
 
     /**
