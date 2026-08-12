@@ -97,6 +97,26 @@ export const TOP5_SHARE_WASHY_PCT = 60;
  * both together.
  */
 export const CONCENTRATION_SAMPLE = 1000;
+
+/**
+ * How long a coin-page read stays SERVEABLE past its fresh window.
+ *
+ * Long, on purpose, and the reason is measured rather than assumed: Mobula's
+ * free plan refuses about half of all `/2/token/trades` requests with a 429,
+ * even at 10-second spacing and with the monthly quota untouched (verified
+ * 2026-08-12). Under a plain cache each refusal is an empty table; under SWR it
+ * is a table a few minutes old, because the background refresh only overwrites
+ * on success.
+ *
+ * The judgement in both numbers is the same one the chart already makes: a
+ * slightly old answer beats a blank one on a page about money. `TRADES` is
+ * shorter because a stale trade list reads as "nothing is happening", which is
+ * itself information and shouldn't be wrong for long.
+ */
+export const TRADES_STALE_SECONDS = 10 * 60;
+
+/** Holder stats and wash-trading verdicts move over hours, not minutes. */
+export const SLOW_STALE_SECONDS = 6 * 60 * 60;
 /** Traders who both bought AND sold. High means round-tripping, not adoption. */
 export const ROUND_TRIP_WASHY_PCT = 40;
 

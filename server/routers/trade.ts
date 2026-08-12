@@ -9,7 +9,7 @@ import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
 import { eq, and, desc, sql, isNotNull, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { withCache } from "@/lib/cache";
+import { withCache, withSwrCache } from "@/lib/cache";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { emitLaunchEvent } from "@/lib/coin-feed/emit";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
@@ -32,6 +32,8 @@ import {
     statsFromTrades,
     CONCENTRATION_SAMPLE,
     MIN_TRADES_FOR_VERDICT,
+    TRADES_STALE_SECONDS,
+    SLOW_STALE_SECONDS,
 } from "@/lib/coin-feed/trader-concentration";
 
 /**
@@ -283,19 +285,14 @@ export const tradeRouter = router({
     coinTrades: publicProcedure
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
-            // NOT `.catch(() => null)` around the fetch. `withCache` stores
-            // whatever the callback RETURNS, so swallowing a 429 into `[]` cached
-            // the emptiness — one refused request blanked the table for the whole
-            // window, silently, and the next window refused again just as often.
-            // Observed on production 2026-08-12: alternating 0 / 235 rows for the
-            // same mint on 35s spacing.
-            //
-            // Letting it throw is what makes the failure temporary: nothing is
-            // written to Redis, so the very next request retries. `upstreamEmpty`
-            // converts it to an empty table for THIS caller only, and logs the
-            // reason, which the swallow never did.
+            // SWR, not a plain cache: the free plan 429s about half of these
+            // (see TRADES_STALE_SECONDS for the measurement), and a plain cache
+            // turns every refusal into an empty table because it has nothing to
+            // fall back on. `withSwrCache` only writes on success, so a refused
+            // refresh leaves the last good rows in place. `upstreamEmpty` still
+            // matters for a COLD key, where there is no last-good to serve.
             upstreamEmpty("coinTrades", [], () =>
-            withCache(`coin:trades:v1:${input.network}:${input.address}`, mobulaCadence().tradesTtl, async () => {
+            withSwrCache(`coin:trades:v2:${input.network}:${input.address}`, mobulaCadence().tradesTtl, TRADES_STALE_SECONDS, async () => {
                 // 300 requested, not the default 100: the swap filter drops
                 // liquidity operations, and on EVM chains those are ~90% of the
                 // page — BRETT/base returns 18 real swaps for a 100-row request.
@@ -362,8 +359,11 @@ export const tradeRouter = router({
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
             upstreamEmpty("coinSecurity", null, () =>
-                withCache(securityCacheKey(input.network, input.address), mobulaCadence().securityTtl, () =>
-                    fetchMobulaTokenSecurity(input.network, input.address),
+                withSwrCache(
+                    securityCacheKey(input.network, input.address),
+                    mobulaCadence().securityTtl,
+                    SLOW_STALE_SECONDS,
+                    () => fetchMobulaTokenSecurity(input.network, input.address),
                 ),
             ),
         ),
@@ -410,9 +410,10 @@ export const tradeRouter = router({
             // about a pattern over hours, and re-deriving it every 30s would
             // multiply the free plan's 1-request-per-second ceiling by every
             // open coin page for no change in the answer.
-            withCache(
-                `trade:concentration:v2:${input.network}:${input.address}`,
+            withSwrCache(
+                `trade:concentration:v3:${input.network}:${input.address}`,
                 mobulaCadence().securityTtl,
+                SLOW_STALE_SECONDS,
                 async () => {
                     const trades = await fetchMobulaTokenTrades(
                         input.network,
