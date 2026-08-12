@@ -60,11 +60,25 @@ export const ANY_MULTIPLIER = 5.3;
  * CLAUDE.md — 1,000,000 credits ÷ 30 ÷ 1440 = 23 deliveries/min, at 1 credit
  * per delivery — can be applied directly instead of guessed at.
  *
- * ⚠️ Two samples, at two budgets. Re-measure after any change to selection, and
- * prefer the higher observed ratio: under-spending costs coverage, overspending
- * costs the whole plan.
+ * ## RE-DERIVED 2026-08-12, and it moved by 4x
+ *
+ * Both readings above were taken while the webhook watched POOLS under ANY.
+ * Two things changed since: the watch unit became the MINT under SWAP
+ * (a8a40272), and selection now SUMS a mint's pools rather than pricing one.
+ * Measured on the live webhook over a 6h window:
+ *
+ *     BUDGET_PER_MIN = 15  ->  3.5 deliveries/min actual   (ratio 0.23)
+ *
+ * So the estimate now OVER-predicts by about 1.6x where it used to under-
+ * predict by 2.7x — 0.23 x 2.7 = 0.63. Left at 2.7 it starved the tape: three
+ * coins watched against a free plan that sustains 23 deliveries/min
+ * (1,000,000 / 30 / 1440), i.e. six times the headroom sitting unused.
+ *
+ * ⚠️ RE-MEASURE after any change to selection or watch unit. This constant has
+ * been wrong in BOTH directions now, and each time it was wrong it looked
+ * exactly like the budget working.
  */
-export const ESTIMATE_INFLATION = 2.7;
+export const ESTIMATE_INFLATION = 0.63;
 
 export interface PoolCandidate {
     poolAddress: string | null;
@@ -109,8 +123,17 @@ export interface BudgetOptions {
 
 export interface PoolSelection {
     addresses: string[];
-    /** Estimated deliveries/min for the chosen set, corrected by
-     *  ESTIMATE_INFLATION — i.e. what this should actually produce. */
+    /**
+     * RAW estimated deliveries/min for the chosen set — the sum of
+     * `poolCostPerMin`, NOT corrected.
+     *
+     * Expected actual = `estPerMin * ESTIMATE_INFLATION`. The doc here used to
+     * claim this was already corrected, which was harmless while the factor was
+     * 2.7 (the number simply read low) and actively misleading now that it is
+     * 0.63: selection spends `asked / 0.63`, so `estPerMin` legitimately
+     * EXCEEDS `budgetPerMin` and a reader comparing the two sees a budget
+     * apparently being overrun.
+     */
     estPerMin: number;
     /** Candidates skipped for being below the activity floor. */
     tooQuiet: number;

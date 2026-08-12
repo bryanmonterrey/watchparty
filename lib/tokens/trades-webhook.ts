@@ -93,7 +93,13 @@ const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before shard
  * `node scripts/cf/zone-analytics.mjs --path /api/webhooks/helius-trades` for
  * the delivery rate. Two readings a full day apart, not ten minutes.
  */
-const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 15) || 0);
+// 16, against a free plan that sustains 23/min (1,000,000 / 30 / 1440).
+//
+// Was 15 and producing 3.5/min actual, because ESTIMATE_INFLATION was still
+// calibrated for pool-watching under ANY — see the note there. With the factor
+// corrected this number finally means what it says, and 16 leaves ~30% headroom
+// for a burst, which is the entire reason a budget exists.
+const BUDGET_PER_MIN = Math.max(0, Number(process.env.HELIUS_TRADES_BUDGET_PER_MIN ?? 16) || 0);
 
 /**
  * A pool quieter than this is watched for nothing: it never accumulates the

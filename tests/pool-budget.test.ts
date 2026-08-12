@@ -94,7 +94,12 @@ describe("selectPoolsWithinBudget", () => {
     test("never exceeds the budget, whatever the board looks like", () => {
         for (const budget of [0.5, 1, 5, 12, 50]) {
             const sel = selectPoolsWithinBudget(BOARD, opts({ budgetPerMin: budget }));
-            expect(sel.estPerMin).toBeLessThanOrEqual(budget);
+            // The real invariant: the RAW estimate stays inside the
+            // inflation-adjusted budget. `estPerMin` is uncorrected, so with
+            // ESTIMATE_INFLATION below 1 it legitimately exceeds `budget` —
+            // expected ACTUAL is estPerMin * ESTIMATE_INFLATION.
+            expect(sel.estPerMin).toBeLessThanOrEqual(budget / ESTIMATE_INFLATION + 1e-9);
+            expect(sel.estPerMin * ESTIMATE_INFLATION).toBeLessThanOrEqual(budget + 1e-9);
         }
     });
 
@@ -103,7 +108,7 @@ describe("selectPoolsWithinBudget", () => {
         const swap = selectPoolsWithinBudget(BOARD, opts({ mode: "SWAP" }));
         const any = selectPoolsWithinBudget(BOARD, opts({ mode: "ANY" }));
         expect(any.addresses.length).toBeLessThan(swap.addresses.length);
-        expect(any.estPerMin).toBeLessThanOrEqual(12);
+        expect(any.estPerMin * ESTIMATE_INFLATION).toBeLessThanOrEqual(12 + 1e-9);
     });
 
     test("drops pools too quiet to ever produce a verdict", () => {

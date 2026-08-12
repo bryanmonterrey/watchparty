@@ -44,6 +44,25 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ skipped: "realtime not configured" });
     }
 
+    // ⚠️ OFF unless TAPE_WATCH_ENABLED=1, because Mobula's socket is gated by
+    // PLAN, not by credits. Verified against the live endpoint 2026-08-12:
+    //
+    //   {"event":"error","message":"WebSocket usage is allowed only on Growth
+    //    and Enterprise plans. Your current plan is 'free'. Please upgrade."}
+    //
+    // Growth is $400/month. Every earlier note in this codebase saying the Tape
+    // DO needs the $50 Start-up tier was wrong — that reasoning came from credit
+    // arithmetic (43,200/month fits inside 125,000) and never checked the plan
+    // gate.
+    //
+    // Left running, this cron would set `active: true` every minute, the DO
+    // would retry the rejected connection on its 20s alarm, and the failure
+    // would be invisible from outside. Enable it the day the plan allows a
+    // socket, not before.
+    if (process.env.TAPE_WATCH_ENABLED !== "1") {
+        return NextResponse.json({ skipped: "TAPE_WATCH_ENABLED not set (Mobula WS needs the Growth plan)" });
+    }
+
     // Candidates: fresh board rows with a mint, busiest first.
     //
     // Ordered by 24h VOLUME rather than by cost, which is the inversion this

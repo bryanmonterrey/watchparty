@@ -234,6 +234,23 @@ export class Tape extends DurableObject<TapeEnv> {
         try {
             const data = typeof ev.data === "string" ? JSON.parse(ev.data) : null;
             if (!data) return;
+
+            // SURFACE PROVIDER ERRORS. Without this the DO reports
+            // `connected: true, failures: 0, lastError: null` while Mobula
+            // rejects every subscription — which is exactly what happened on
+            // 2026-08-12: the socket opened, Mobula replied
+            //   {"event":"error","message":"WebSocket usage is allowed only on
+            //    Growth and Enterprise plans..."}
+            // and closed, and /tape/state showed a perfectly healthy tape
+            // receiving nothing. An error frame is not a trade frame, and
+            // silently dropping it makes a plan problem look like a quiet
+            // market.
+            if (data.event === "error" || typeof data.error === "string") {
+                this.lastError = String(data.message ?? data.error).slice(0, 200);
+                this.failures++;
+                return;
+            }
+
             const trades = Array.isArray(data) ? data : (data.data ?? data.trades ?? null);
             if (!Array.isArray(trades) || trades.length === 0) return;
             this.received += trades.length;
