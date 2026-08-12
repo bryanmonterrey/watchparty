@@ -131,6 +131,58 @@ memo comparators from Phase 6 step 1 already took the cheaper half, and it
 would replace scroll machinery fixed on 2026-08-11 in a file where a broken
 scroll trigger went unnoticed for months.
 
+### DECIDED 2026-08-11: do not build it. The measurement cannot be taken.
+
+`community_messages` holds **12 rows in production** — every channel, every
+server, combined. The criteria above call for a reading at ~800 messages, which
+is roughly seventy times more chat than the app has ever had.
+
+So this is not "measured and fine", and not "deferred pending data". The
+condition windowing addresses **does not exist yet** and cannot be provoked
+without inventing traffic. Building against a synthetic 800-message fixture
+would be optimising a DOM that no user has, in the exact file where a broken
+scroll trigger hid for months — spending real regression risk on a hypothetical.
+
+Re-open this only when a real channel passes a few hundred messages. The
+criteria above stand as written; nothing about them needs revisiting, only the
+data. `select count(*) from community_messages` is the cheap trigger to watch.
+
+---
+
+## Private-snapshot paint (task #3) — VERIFIED 2026-08-11, against the source
+
+The fix gates `enabled` on the resolved viewer so the snapshot does not lose a
+race with its own fetch. Both halves of its premise were checked in the
+installed `@tanstack/query-core`, not assumed:
+
+```
+queryObserver.js:265   placeholderData applies only while
+                       `data === undefined && status === "pending"`
+query.js:446           status: hasData ? "success" : "pending"
+query.js:99            `enabled` is read ONLY for isActive() — it never
+                       touches status
+```
+
+So a disabled query is genuinely still `pending`, the placeholder is consulted
+for the whole wait, and gating on the session costs nothing. The fix is sound.
+
+**Why this did not need the browser**, given `browser-smoke-chat` went green
+four times on a panel that was blank: that failure was a self-coloured surface
+using theme-flipping tokens (`--flexwhite` inverts), rendering black on black.
+These surfaces reuse the SAME components as their live data — a snapshot post
+renders through `PostCard` exactly as a fetched one does — so there is no
+separate styling path to diverge. The visual risk that bug represented is
+absent here.
+
+⚠️ **One real cost found while reading.** `placeholderData: () => store.read(k)`
+is an inline arrow, so the memo at `queryObserver.js:267`
+(`options.placeholderData === prevResultOptions?.placeholderData`) never
+matches, and the store is re-read and re-parsed with superjson on EVERY render
+while the query is pending — which, for a session-gated query, is the whole
+wait. Not fixed: the render count is small and unmeasured, and inventing a
+`useCallback` on that basis is the sort of unmeasured change this document
+exists to discourage. Fix it if a snapshot surface ever shows up in a profile.
+
 ---
 
 ## Phase 4 — Finish traderConcentration (task #1 step 3)
