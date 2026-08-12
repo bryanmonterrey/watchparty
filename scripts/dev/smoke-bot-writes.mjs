@@ -222,8 +222,11 @@ try {
         ok(t0.status === 200 && t0.data?.timeoutUntil === null, "duration 0 clears the timeout");
         const allowed = await humanSend("should send now");
         ok(allowed.status === 200, "cleared member can post again", JSON.stringify(allowed));
+        // The fixture's owner IS the bot, so the isBot refusal (BAD_REQUEST)
+        // fires before the owner/role refusal (FORBIDDEN) — either code
+        // proves the target was protected.
         const owner = await trpc("bot.timeoutMember", { serverId, userId: botUserId, durationSeconds: 60 });
-        ok(owner.errCode === "FORBIDDEN", "owner/mods can never be timed out");
+        ok(owner.errCode === "FORBIDDEN" || owner.errCode === "BAD_REQUEST", "owner/mods/bots can never be timed out", JSON.stringify(owner).slice(0, 100));
         await db.delete(communityMembers)
             .where(and(eq(communityMembers.userId, session.userId), eq(communityMembers.serverId, serverId)))
             .catch(() => {});
