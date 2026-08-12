@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "@/server/trpc";
@@ -14,6 +15,7 @@ import { emitLaunchEvent } from "@/lib/coin-feed/emit";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import {
     fetchMobulaChainPairs,
+    fetchMobulaTokenHolders,
     fetchMobulaTokenTrades,
     fetchMobulaTokenSecurity,
     mobulaCadence,
@@ -22,8 +24,14 @@ import {
     securityCacheKey,
 } from "@/lib/coins/mobula";
 import { resolveTraders } from "@/lib/coins/resolve-traders";
+import { recordMobulaTrades } from "@/lib/coins/record-mobula-trades";
 import { isRiskyHoldings } from "@/lib/coin-feed/quality";
-import { traderConcentration, MIN_TRADES_FOR_VERDICT } from "@/lib/coin-feed/trader-concentration";
+import {
+    traderConcentration,
+    statsFromTrades,
+    CONCENTRATION_SAMPLE,
+    MIN_TRADES_FOR_VERDICT,
+} from "@/lib/coin-feed/trader-concentration";
 
 /**
  * Trade discovery feed. Reads ONLY the cached market columns on `tokens`
@@ -258,18 +266,55 @@ export const tradeRouter = router({
 
     /**
      * Recent trades for any coin on any covered chain — the coin page's
-     * trades/holders board. Near-live by shared cache: 5s TTL means every
-     * viewer of a coin costs ONE upstream call per window, and the client's 5s
-     * refetch rides it. (True push needs Mobula's Growth-plan websockets or
-     * the Helius indexer — docs/market-data-options.md; the transport can swap
-     * under this same procedure when either lands.)
+     * trades/holders board. Near-live by shared cache: the TTL means every
+     * viewer of a coin costs ONE upstream call per window, and the client's
+     * refetch rides it. (True push needs Mobula's Growth-plan websockets —
+     * docs/market-data-options.md; the transport can swap under this same
+     * procedure when it lands.)
+     *
+     * It also ADVANCES THE CHART, as a side effect of a fetch already paid for.
+     * See lib/coins/record-mobula-trades: the response carries the pool and the
+     * execution price, so the trades that were new get written to our tape and
+     * projected into `coin_candles`, which is what the chart's Realtime
+     * subscription watches. Before this, the only writer of live bars was the
+     * Helius trades webhook.
      */
     coinTrades: publicProcedure
         .input(z.object({ network: z.string(), address: z.string() }))
         .query(({ input }) =>
             withCache(`coin:trades:v1:${input.network}:${input.address}`, mobulaCadence().tradesTtl, async () => {
-                const rows = await fetchMobulaTokenTrades(input.network, input.address).catch(() => null);
+                // 300 requested, not the default 100: the swap filter drops
+                // liquidity operations, and on EVM chains those are ~90% of the
+                // page — BRETT/base returns 18 real swaps for a 100-row request.
+                // The table renders 25 folded rows, so a 100-row request left it
+                // visibly short on every EVM coin. Same one call either way.
+                const rows = await fetchMobulaTokenTrades(input.network, input.address, 300).catch(() => null);
                 if (!rows?.length) return [];
+
+                // Inside the cache callback ON PURPOSE: this runs once per TTL
+                // window per coin, not once per viewer. Outside it, ten open
+                // tabs would each replay the same batch against the database.
+                //
+                // Deferred rather than awaited — a chart bar must never delay
+                // the table it was derived from — but deferred with `after()`,
+                // NOT a floating promise. On Workers the isolate can be torn
+                // down once the response is sent, so a bare `void promise` is
+                // work that may simply never happen, intermittently, with no
+                // error anywhere. `after` is valid here because a tRPC
+                // procedure runs inside the /api/trpc Route Handler's request
+                // scope; when there is no such scope (a `createCallerFactory`
+                // caller from a cron or the console agent) it throws, and then
+                // running inline is correct because nothing is racing a
+                // response.
+                const write = () =>
+                    recordMobulaTrades(input.network, input.address, rows).catch((err) =>
+                        console.error("[coinTrades] tape write failed:", err instanceof Error ? err.message : err),
+                    );
+                try {
+                    after(write);
+                } catch {
+                    void write();
+                }
                 // Same enrichment the old Solana-only reader did: wallets that
                 // belong to someone here render as the person, on every chain —
                 // resolveTraders checks the derived per-chain addresses too.
@@ -301,70 +346,77 @@ export const tradeRouter = router({
 
     /**
      * Is this coin's activity many people, or a few wallets passing tokens
-     * around? Computed from OUR tape (`coin_trades`), not from a provider.
+     * around?
      *
-     * Complements `coinSecurity`, which answers a different question. Mobula
-     * reports who HOLDS the supply; this reports who is TRADING it, and the two
-     * come apart exactly where it matters — a coin can have healthy holder
-     * distribution while five wallets manufacture all of its volume.
+     * Complements `coinSecurity`, which answers a different question. Mobula's
+     * security block reports who HOLDS the supply; this reports who is TRADING
+     * it, and the two come apart exactly where it matters — a coin can have
+     * healthy holder distribution while five wallets manufacture all of its
+     * volume.
      *
-     * ## Returns `hasVerdict: false` far more often than it returns a verdict
+     * ## Reads Mobula's trades, NOT our own tape
      *
-     * `traderConcentration` needs 40+ recorded trades before it will say
-     * anything, and our tape only covers the coins the Helius budget can afford
-     * to watch. Measured 2026-08-11: 18 tokens clear the floor over 24h and 52
-     * over 7 days. So the card must render NOTHING rather than a reassuring
-     * blank — "we have not seen enough trades" and "this coin is fine" are
-     * different answers, and this is a money surface.
+     * This was computed from `coin_trades`, which is filled by the Helius trades
+     * webhook — so the card was Helius powering a coin page, and it inherited
+     * that tape's coverage: measured 2026-08-11, 18 tokens cleared the 40-trade
+     * floor over 24h and 52 over 7 days, out of a board of ~200. Every other
+     * coin rendered nothing, correctly but uselessly.
      *
-     * Window is 7 days: it is where the sample sizes are (52 tokens vs 18), and
-     * wash trading is a pattern over days rather than an hour.
+     * The same endpoint `coinTrades` already calls answers this for ANY coin on
+     * any chain we list. Measured 2026-08-12 on BONK: 100 trades spanning 10
+     * minutes with 38 distinct traders; 1,000 spanning 109 minutes with 266.
+     * So the sample is deep enough to clear the floor on a coin anyone is
+     * actually looking at, which is the only coin this card renders on.
+     *
+     * ## The window is a TRADE COUNT, not a number of days
+     *
+     * Mobula returns the most recent N trades, so "last 7 days" was never a
+     * thing this could honestly say once the source changed. It reports the
+     * span it actually measured (`windowMinutes`) and the card prints that.
+     * Fewer than `MIN_TRADES_FOR_VERDICT` trades still returns null: "we have
+     * not seen enough trades" and "this coin is fine" are different answers,
+     * and this is a money surface.
      */
     coinTraderConcentration: publicProcedure
-        .input(z.object({ address: z.string(), days: z.number().min(1).max(30).default(7) }))
+        .input(z.object({ address: z.string(), network: z.string().default("solana") }))
         .query(({ input }) =>
-            withCache(`trade:concentration:v1:${input.address}:${input.days}`, 300, async () => {
-                const sinceTs = Math.floor(Date.now() / 1000) - input.days * 86_400;
+            // Cached on the SECURITY cadence, not the trades one. The trades
+            // table on the same page wants a fast window; this is a verdict
+            // about a pattern over hours, and re-deriving it every 30s would
+            // multiply the free plan's 1-request-per-second ceiling by every
+            // open coin page for no change in the answer.
+            withCache(
+                `trade:concentration:v2:${input.network}:${input.address}`,
+                mobulaCadence().securityTtl,
+                async () => {
+                    const trades = await fetchMobulaTokenTrades(
+                        input.network,
+                        input.address,
+                        CONCENTRATION_SAMPLE,
+                    ).catch(() => null);
+                    if (!trades || trades.length === 0) return null;
 
-                // One pass over the token's trades. `trader` is the wallet that
-                // paid for the swap, so "top 5" is by trade COUNT — see
-                // trader-concentration.ts for why counts and not dollars.
-                const rows = await db.execute<{
-                    trades: number;
-                    traders: number;
-                    top5_trades: number;
-                    round_trip_traders: number;
-                }>(sql`
-                    WITH t AS (
-                        SELECT trader, side FROM coin_trades
-                        WHERE token_address = ${input.address} AND ts >= ${sinceTs}
-                    )
-                    SELECT
-                      (SELECT count(*) FROM t)::int                       AS trades,
-                      (SELECT count(DISTINCT trader) FROM t)::int         AS traders,
-                      (SELECT coalesce(sum(n), 0) FROM (
-                          SELECT count(*) AS n FROM t GROUP BY trader ORDER BY count(*) DESC LIMIT 5
-                       ) top5)::int                                       AS top5_trades,
-                      (SELECT count(*) FROM (
-                          SELECT trader FROM t GROUP BY trader
-                          HAVING bool_or(side = 'buy') AND bool_or(side = 'sell')
-                       ) rt)::int                                         AS round_trip_traders
-                `);
+                    const stats = statsFromTrades(trades);
+                    const c = traderConcentration(stats);
+                    // No verdict → null, so the client has nothing to render
+                    // rather than a row of zeroes that reads as "clean".
+                    if (!c.hasVerdict) return null;
 
-                const r = (rows as unknown as { trades: number; traders: number; top5_trades: number; round_trip_traders: number }[])[0];
-                if (!r) return null;
+                    const stamps = trades.map((t) => t.ts).filter((ts) => ts > 0);
+                    const windowMinutes =
+                        stamps.length > 1
+                            ? Math.max(1, Math.round((Math.max(...stamps) - Math.min(...stamps)) / 60))
+                            : null;
 
-                const c = traderConcentration({
-                    trades: Number(r.trades),
-                    traders: Number(r.traders),
-                    top5Trades: Number(r.top5_trades),
-                    roundTripTraders: Number(r.round_trip_traders),
-                });
-                // No verdict → null, so the client has nothing to render rather
-                // than a row of zeroes that reads as "clean".
-                if (!c.hasVerdict) return null;
-                return { ...c, trades: Number(r.trades), traders: Number(r.traders), days: input.days, minTrades: MIN_TRADES_FOR_VERDICT };
-            })
+                    return {
+                        ...c,
+                        trades: stats.trades,
+                        traders: stats.traders,
+                        windowMinutes,
+                        minTrades: MIN_TRADES_FOR_VERDICT,
+                    };
+                },
+            ),
         ),
 
     /**
@@ -868,51 +920,54 @@ export const tradeRouter = router({
         }),
 
     /**
-     * Top holders for a token page. Helius DAS getTokenAccounts returns
-     * owner+amount per token account; we aggregate per owner and express
-     * shares against on-chain supply. Cached 60s — holder churn is slow.
+     * Top holders for a token page.
+     *
+     * ## Mobula, not Helius DAS
+     *
+     * This used to fire two Helius RPC calls — `getTokenAccounts` for every
+     * token ACCOUNT of the mint plus `getTokenSupply` — and aggregate accounts
+     * into owners here. Two things were wrong with it, beyond the provider
+     * split (holder distribution is market data; Helius is this app's
+     * operations provider, and every credit spent here is one not available for
+     * signing and reading wallets):
+     *
+     *  - **It was Solana-only by construction.** DAS has no notion of an ERC-20,
+     *    so the holders table had nothing to show on the five EVM chains the
+     *    board now covers — it just rendered empty.
+     *  - **`limit: 1000` was a silent truncation.** Any mint with more than
+     *    1,000 token accounts — which is most of them — had its top-20 computed
+     *    from an arbitrary page, and `sharePercent` was the only thing that
+     *    looked wrong, subtly.
+     *
+     * Mobula returns owner, balance and supply share already sorted, in one
+     * call, on every chain we list. Cached 60s — holder churn is slow, and the
+     * free plan allows one request per second across the whole app.
+     *
+     * `supply` is no longer returned: nothing read it (the component labels its
+     * count from `token.holderCount`), and reconstructing it from a share
+     * percentage would be inventing a number.
      */
     getHolders: publicProcedure
-        .input(z.object({ mint: z.string().min(32).max(44) }))
-        .query(async ({ input }) => {
-            const heliusKey = process.env.HELIUS_API_KEY;
-            if (!heliusKey) return { holders: [], supply: 0 };
-            const url = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
-            const post = (id: string, body: object) =>
-                fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    signal: AbortSignal.timeout(10000),
-                    body: JSON.stringify({ jsonrpc: "2.0", id, ...body }),
-                }).then((r) => r.json()).catch(() => ({ result: null }));
-
-            return withCache(`token:holders:${input.mint}`, 60, async () => {
-                const [accountsRes, supplyRes] = await Promise.all([
-                    post("holders", { method: "getTokenAccounts", params: { mint: input.mint, limit: 1000 } }),
-                    post("supply", { method: "getTokenSupply", params: [input.mint] }),
-                ]);
-
-                const accounts: { owner?: string; amount?: number }[] =
-                    accountsRes?.result?.token_accounts ?? [];
-                const supplyRaw = Number(supplyRes?.result?.value?.amount ?? 0);
-                const decimals = Number(supplyRes?.result?.value?.decimals ?? 0);
-
-                const byOwner = new Map<string, number>();
-                for (const a of accounts) {
-                    if (!a.owner) continue;
-                    byOwner.set(a.owner, (byOwner.get(a.owner) ?? 0) + Number(a.amount ?? 0));
-                }
-
-                const holders = [...byOwner.entries()]
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 20)
-                    .map(([owner, raw]) => ({
-                        owner,
-                        amount: decimals ? raw / 10 ** decimals : raw,
-                        sharePercent: supplyRaw > 0 ? (raw / supplyRaw) * 100 : 0,
-                    }));
-
-                return { holders, supply: decimals ? supplyRaw / 10 ** decimals : supplyRaw };
-            });
-        }),
+        .input(
+            z.object({
+                mint: z.string().min(32).max(64),
+                network: z.string().default("solana"),
+            }),
+        )
+        .query(({ input }) =>
+            withCache(`token:holders:v2:${input.network}:${input.mint}`, 60, async () => {
+                const holders = await fetchMobulaTokenHolders(input.network, input.mint, 20).catch(
+                    () => null,
+                );
+                // An upstream failure is an empty table, never a thrown query —
+                // this sits on a page whose other cards are fine.
+                return {
+                    holders: (holders ?? []).map((h) => ({
+                        owner: h.address,
+                        amount: h.amount,
+                        sharePercent: h.sharePercent,
+                    })),
+                };
+            }),
+        ),
 });

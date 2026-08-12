@@ -127,6 +127,20 @@ export interface UdfBars {
     errmsg?: string;
 }
 
+/** Bars -> the UDF column-per-field response. Used by both the stored and the
+ *  provider branches, which previously spelled this out twice. */
+function udfOk(bars: readonly { ts: number; o: number; h: number; l: number; c: number; v?: number | null }[]): UdfBars {
+    return {
+        s: "ok",
+        t: bars.map((b) => b.ts),
+        o: bars.map((b) => b.o),
+        h: bars.map((b) => b.h),
+        l: bars.map((b) => b.l),
+        c: bars.map((b) => b.c),
+        v: bars.map((b) => b.v ?? 0),
+    };
+}
+
 /**
  * Fetch OHLCV bars for a mint within [from, to] (unix seconds) at a TradingView
  * resolution, returning the UDF /history response shape.
@@ -161,32 +175,46 @@ export async function getUdfBars(
             `[udf] ${network}:${mint.slice(0, 8)} res=${resolution} src=${source} bars=${bars} pool=${pool ? "y" : "n"} mobula=${mobulaEnabled() ? "on" : "off"} ms=${Date.now() - t0}${extra ? ` ${extra}` : ""}`,
         );
 
-    // OUR DATABASE FIRST. This is the whole point of coin_candles: a chart read
-    // must not depend on an upstream that rate-limits our egress. Anything the
-    // sync has already stored is served from Postgres and never touches GT.
+    // OUR DATABASE FIRST — but only while the stored series still reaches the
+    // present. This is the whole point of coin_candles: a chart read must not
+    // depend on an upstream that rate-limits our egress.
     //
-    // Falls through to the live fetch below only when the series isn't stored
-    // yet — a coin nobody has charted before. Once the sync has seen it, this
-    // is the only branch that runs.
+    // ## The freshness gate is what makes the chart LIVE
+    //
+    // This branch used to return on `stored.length > 0`, with the comment
+    // "once the sync has seen it, this is the only branch that runs" — which
+    // was exactly the bug. The provider path PERSISTS what it fetches (below),
+    // so the first person to open a coin filled the table, and every later
+    // request was served those same bars forever. The chart froze at whatever
+    // minute it was first opened, and looked like a working chart the whole
+    // time.
+    //
+    // It was survivable only because the Helius trades webhook was appending
+    // live bars — for the two or three coins its budget could afford to watch.
+    // Every other coin was already frozen, and taking Helius off the coin page
+    // would have frozen those last few too.
+    //
+    // So: serve from Postgres when the newest stored bar covers the last CLOSED
+    // bar before `to`, and otherwise fall through to the provider, which
+    // refreshes the table on its way past. Panning into history still hits the
+    // DB (its `to` is old, so the bar it demands is old too); asking for "now"
+    // demands a bar from now.
+    let stored: Awaited<ReturnType<typeof readCandles>> = [];
     if (pool) {
         try {
-            const stored = await readCandles(network, pool.address, resolution, from, to);
-            if (stored.length > 0) {
-                trace("db", stored.length);
-                return {
-                    s: "ok",
-                    t: stored.map((b) => b.ts),
-                    o: stored.map((b) => b.o),
-                    h: stored.map((b) => b.h),
-                    l: stored.map((b) => b.l),
-                    c: stored.map((b) => b.c),
-                    v: stored.map((b) => b.v ?? 0),
-                };
-            }
+            stored = await readCandles(network, pool.address, resolution, from, to);
         } catch (err) {
             // A database problem must not take the chart down when the upstream
             // path still works — fall through rather than fail.
             console.error("[udf] candle read failed:", err instanceof Error ? err.message : err);
+        }
+        // One bar of slack: the bar containing `to` is still OPEN, so nobody
+        // can have a closed bar for it, and demanding one would fall through
+        // on every single request and never serve the DB at all.
+        const lastClosed = Math.floor(to / barSeconds) * barSeconds - barSeconds;
+        if (stored.length > 0 && stored[stored.length - 1].ts >= lastClosed) {
+            trace("db", stored.length);
+            return udfOk(stored);
         }
     }
 
@@ -224,23 +252,28 @@ export async function getUdfBars(
                     }
                 }
 
-                return {
-                    s: "ok",
-                    t: bars.map((b) => b.ts),
-                    o: bars.map((b) => b.o),
-                    h: bars.map((b) => b.h),
-                    l: bars.map((b) => b.l),
-                    c: bars.map((b) => b.c),
-                    v: bars.map((b) => b.v ?? 0),
-                } as UdfBars;
+                return udfOk(bars);
             });
         } catch (err) {
             if (err instanceof EmptyWindow) {
+                // Upstream answered and the window is bare. Our own table is
+                // still the better answer if it holds anything for this range —
+                // those are trades we actually recorded.
+                if (stored.length > 0) {
+                    trace("db-stale", stored.length, "mobula-empty");
+                    return udfOk(stored);
+                }
                 trace("mobula", 0, "empty");
                 return { s: "no_data" };
             }
-            // Anything else: fall through to GT rather than fail the chart.
+            // Anything else: serve what we already had rather than fail the
+            // chart. The freshness gate above sent us here precisely because
+            // these bars were behind — behind beats blank.
             trace("mobula", 0, `ERR=${err instanceof Error ? err.message : String(err)}`);
+            if (stored.length > 0) {
+                trace("db-stale", stored.length, "mobula-error");
+                return udfOk(stored);
+            }
         }
     }
 

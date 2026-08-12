@@ -4,7 +4,6 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { coinTrades } from "@/db/schema/content/coin-trades";
 import { getMintPriceMap, WSOL_MINT } from "@/server/lib/mint-prices";
-import { tradePriceUsd, updateCandlesFromTrades } from "@/lib/coins/candles-from-trades";
 
 /**
  * Turn Helius enhanced-webhook SWAP events into rows on the public tape.
@@ -159,35 +158,29 @@ export async function recordSwaps(
     // every open table.
     await db.insert(coinTrades).values(rows).onConflictDoNothing();
 
-    // Advance the CHART from the same trades.
+    // ## This deliberately does NOT advance the chart
     //
-    // `subscribeCandles` drives live bars off postgres_changes on
-    // `coin_candles`, so an open chart moves when a candle row is written —
-    // liveness costs a database write, never an API call. Until 0c1d2b29 the
-    // only writer was a GeckoTerminal poll; with that gone, a chart would load
-    // its history and then sit still.
+    // It used to: the same trades were projected into `coin_candles`, which is
+    // what `subscribeCandles` watches, so an open chart moved 1-2 seconds behind
+    // a swap. It was removed because the only thing feeding this function is the
+    // HELIUS trades webhook, and Helius does not power the coin page — market
+    // data is Mobula's job here, Helius is operations (RPC, wallets, the user's
+    // own trade history).
     //
-    // Deriving the bar here is both free and faster than what it replaces: a
-    // synced candle appeared on the next cron pass, this one lands 1-2 seconds
-    // behind the swap.
+    // It was never as good as it looked, either. Measured on production
+    // 2026-08-12, the projection kept 33 pools' bars fresh over 24h out of ~300
+    // tracked tokens — and it MASKED a real bug in the chart's read path, where
+    // stored bars were served forever without a freshness check
+    // (lib/tokens/udf-datafeed). Those 33 coins looked live; every other chart
+    // had been frozen at the minute it was first opened. Fixing the read path
+    // is what makes charts live off Mobula for all of them.
     //
-    // Best-effort. The tape is the source of truth and a candle is a
-    // projection of it — failing to project must never lose the trade.
-    try {
-        await updateCandlesFromTrades(
-            rows
-                .map((r) => ({
-                    network: r.network,
-                    poolAddress: r.poolAddress,
-                    ts: r.ts,
-                    priceUsd: tradePriceUsd(r.amountUsd ?? null, r.amountToken ?? null) ?? 0,
-                    amountToken: r.amountToken ?? null,
-                }))
-                .filter((t) => t.priceUsd > 0),
-        );
-    } catch (err) {
-        console.error("[record-swaps] candle projection failed:", err instanceof Error ? err.message : err);
-    }
+    // The tape itself stays. It feeds the cluster/whale alert scanner
+    // (lib/coin-feed/clusters), which is a different surface from the coin page
+    // and is producing ~2,500 events a day off these rows. When the Mobula
+    // socket runs, `app/api/webhooks/mobula-trades` fills the same table AND
+    // projects candles from it — that route keeps its projection, because those
+    // trades come from the provider the coin page is allowed to read.
 
     return rows.length;
 }

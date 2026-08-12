@@ -3,22 +3,34 @@
 // Is this coin's activity many people, or a few wallets passing tokens around?
 //
 // Sits beside CoinSecurityCard and deliberately does NOT live inside it: they
-// answer different questions from different sources, and either can be present
-// without the other. Mobula reports who HOLDS the supply; this reports who is
-// TRADING it, from our own tape. They come apart exactly where it matters — a
-// coin can show healthy holder distribution while five wallets manufacture all
-// of its volume.
+// answer different questions, and either can be present without the other.
+// Security reports who HOLDS the supply; this reports who is TRADING it. They
+// come apart exactly where it matters — a coin can show healthy holder
+// distribution while five wallets manufacture all of its volume.
 //
-// Renders nothing without a verdict. `traderConcentration` needs 40+ recorded
-// trades, and our tape only covers the coins the Helius budget can afford to
-// watch (measured 2026-08-11: 18 tokens clear the floor over 24h, 52 over 7
-// days). "We haven't seen enough trades" must never render as a reassuring row
-// of zeroes — this is a money surface, and silence is the honest answer.
+// Scored over up to the last 1,000 SWAPS from Mobula (fewer on EVM chains,
+// where most of a page is liquidity operations), not over our own tape. The
+// tape is filled by the Helius trades webhook, whose budget could afford two or
+// three coins, so this card used to render on almost nothing (measured
+// 2026-08-11: 18 tokens cleared the 40-trade floor over 24h, out of a board of
+// ~200). It now renders on any coin anyone opens.
+//
+// Still renders nothing without a verdict: "we haven't seen enough trades" must
+// never appear as a reassuring row of zeroes — this is a money surface, and
+// silence is the honest answer.
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import type { CoinViewData } from "./coin-detail";
 import { retryTransient } from "@/lib/query-retry";
+
+/** Minutes → the coarsest unit that stays truthful. */
+function formatSpan(minutes: number): string {
+    if (minutes < 60) return `${minutes} min`;
+    const hours = minutes / 60;
+    if (hours < 48) return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} hours`;
+    return `${Math.round(hours / 24)} days`;
+}
 
 function Row({ label, value, tone }: { label: string; value: string; tone?: "good" | "bad" }) {
     return (
@@ -38,7 +50,7 @@ function Row({ label, value, tone }: { label: string; value: string; tone?: "goo
 
 export function CoinActivityCard({ coin, cardClassName }: { coin: CoinViewData; cardClassName: string }) {
     const { data } = trpc.trade.coinTraderConcentration.useQuery(
-        { address: coin.tokenAddress, days: 7 },
+        { address: coin.tokenAddress, network: coin.network },
         { staleTime: 300_000, retry: retryTransient(1) },
     );
     if (!data) return null;
@@ -77,7 +89,15 @@ export function CoinActivityCard({ coin, cardClassName }: { coin: CoinViewData; 
                 )}
                 <Row label="traders" value={`${data.traders} / ${data.trades} trades`} />
             </div>
-            <p className="mt-2 text-xs text-zinc-600">last {data.days} days, from trades we recorded</p>
+            {/* Says the span it MEASURED, not a window it was configured with.
+                The source returns the last N trades, so the period varies by how
+                busy the coin is — 18 minutes on BONK, 138 on BRETT. Printing a
+                fixed "last 7 days" here would have been a straight lie about a
+                number sitting next to a wash-trading verdict. */}
+            <p className="mt-2 text-xs text-zinc-600">
+                last {data.trades.toLocaleString()} trades
+                {data.windowMinutes != null && `, about ${formatSpan(data.windowMinutes)}`}
+            </p>
         </div>
     );
 }

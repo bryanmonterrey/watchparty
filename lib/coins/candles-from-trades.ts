@@ -15,22 +15,27 @@
  *
  * ## Deriving them instead of fetching them
  *
- * The tape is already arriving: `coin_trades` is written by the Helius webhook
- * today and by the Mobula socket once the Tape DO runs, both PUSH. A candle is
- * just those trades bucketed by time, so the bar can be computed from data we
- * already hold rather than bought back from a provider at 5 credits a call.
+ * A candle is just trades bucketed by time, so the bar can be computed from
+ * data we already hold rather than bought back from a provider at 5 credits a
+ * call. It is also FASTER than what it replaces: a synced candle appeared
+ * whenever the next cron pass ran, this one lands on the tape's cadence.
  *
- * It is also FASTER than what it replaces. A synced candle appeared whenever
- * the next cron pass ran; this one lands 1-2 seconds behind the swap, which is
- * what a live chart is supposed to look like.
+ * ## Who calls this, and what changed
  *
- * ## Coverage is the tape's coverage, and that is the honest limit
+ * `lib/coins/record-mobula-trades` — the trades the COIN PAGE already fetches
+ * every 30s, so any coin someone is looking at ticks. This is the path that
+ * matters day to day, and it is free: the request was already made for the
+ * table under the chart.
  *
- * Only coins something is actively streaming get live bars — 3 mints under the
- * current Helius budget, up to 50 once the Tape DO runs. Everything else still
- * loads full history on open (coin_candles -> Mobula -> persisted) and simply
- * does not tick. That is the same trade the board and the alert feed already
- * made, and it fails visibly rather than by quietly showing stale numbers.
+ * `app/api/webhooks/mobula-trades` — the Tape DO's push, once Mobula's socket
+ * is on a plan that allows it. Sub-second, and it does not need anyone watching.
+ *
+ * NOT `lib/coins/record-swaps` any more. That is the Helius webhook's path, and
+ * Helius does not power the coin page — it is this app's operations provider.
+ * It kept 33 pools' bars fresh (measured 2026-08-12) and, worse, its freshness
+ * masked a bug in the READ path, where stored bars were served without any
+ * staleness check: those 33 charts looked live and every other chart in the app
+ * had been frozen since the minute it was first opened.
  */
 
 import { db } from "@/db";

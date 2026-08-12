@@ -133,12 +133,19 @@ Phases 0–2 give minute granularity, bounded by how often the cron writes. True
 tick-level means consuming swaps as they happen, which needs a **persistent
 connection** — and that is the one thing Workers genuinely cannot do.
 
-*This* is where a Durable Object earns its place: one DO per pool holding a
-Helius subscription (already integrated — `lib/helius/webhook.ts`), folding
-swaps into the in-flight candle and fanning out to connected clients.
+*This* is where a Durable Object earns its place: one DO holding a market-data
+socket, folding swaps into the in-flight candle and fanning out to connected
+clients. Built — `realtime/src/tape.ts` — and dormant, because Mobula gates
+WebSockets on the Growth plan.
 
-Do not build this until Phase 2 is live and minute granularity is demonstrably
-the complaint. It is the most expensive phase and the least certain to matter.
+⚠️ **Not a Helius subscription, as this said.** Helius is operations here; the
+coin page reads Mobula. Since 2026-08-12 the in-flight candle is projected from
+the trades the coin page already fetches (`lib/coins/record-mobula-trades`), so
+Phase 3's remaining value is push for coins **nobody has open** — which is what
+the alert scanner needs, not the chart.
+
+Do not build further on this until minute granularity is demonstrably the
+complaint. It is the most expensive phase and the least certain to matter.
 
 ---
 
@@ -153,8 +160,10 @@ widget. It was renting data on the read path.
 
 ## Out of scope, deliberately
 
-- **Non-Solana tick data.** Phase 3's Helius path is Solana-only. Other chains
-  stay on Phase 1 cron granularity; GT covers them for backfill.
+- ~~**Non-Solana tick data.**~~ No longer out of scope, and no longer a
+  Solana-only path: live bars come from Mobula's per-token trades, which covers
+  every chain the board lists. This exclusion existed because the plan assumed
+  Helius, whose swap ingest is Solana by construction.
 - **The holders table.** Position/PnL/avg-entry needs per-wallet cost basis —
   every transfer of the mint indexed. Different project, same "own your data"
   lesson.

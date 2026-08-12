@@ -159,34 +159,45 @@ fetched twice. This is what fixes "charts never load," on every chain. Cheapest
 entry that isn't crippled: Codex is $350, CoinGecko's free tier can't do
 on-chain at all.
 
-**Liveness → Helius, not a metered provider.**
-Solana is the bulk of the volume, the webhook infrastructure is already wired
-(`lib/helius/webhook.ts`) and already paid for, and it is **push-based, so it
-costs nothing per update**. Swap events land, we build bars, Supabase Realtime
-fans them out. That is genuinely live, and it never touches the credit budget.
+**~~Liveness → Helius~~. SUPERSEDED 2026-08-12 — liveness comes from the trades
+the coin page already fetches.**
 
-The result is dexscreener-feel on Solana, fast-loading charts everywhere else,
-for $50/mo. EVM liveness stays polled-and-slow until it's worth either Mobula
-Growth ($400, WSS) or an EVM log indexer.
+The plan below was to build bars from Helius swap events. It was implemented,
+and then removed, because **Helius does not power the coin page** — that is the
+provider split ([[mobula-vs-helius-billing]]): Helius is operations (RPC,
+wallets, the user's own trade history), Mobula is market data.
+
+Removing it cost nothing, because the replacement is free in the same way the
+Helius one was:
+
+- the coin page fetches Mobula trades every 30s for the table under the chart;
+- those rows carry `marketAddress` and `baseTokenPriceUSD`;
+- so `lib/coins/record-mobula-trades` writes them to `coin_trades` and projects
+  `coin_candles`, which Supabase Realtime fans out to the open chart.
+
+No extra request, every chain rather than Solana only, and it covers whatever
+someone is looking at instead of the two or three coins a per-delivery budget
+could afford. Solana AND EVM are live on this path; Mobula Growth ($400, WSS)
+buys push for coins nobody currently has open — which is what alerts need, not
+what the chart needs.
+
+⚠️ It only worked once the READ path was fixed. `getUdfBars` served stored
+candles whenever any existed, with no freshness check, so every chart in the app
+was frozen at the minute it was first opened — invisible because the Helius tape
+kept 33 pools genuinely fresh and those were the ones anyone looked at.
 
 ### Sequencing
 
-1. Mobula Start-up key → adapter behind the existing `gtBase()`/`gtHeaders()`
-   seam, so callers don't change.
-2. On-demand backfill on chart open, stored to `coin_candles`.
-3. Helius swap ingest → candles → Supabase Realtime. This is what makes it feel
-   live, and it's the step that does NOT scale with spend.
-4. EVM: reassess. Growth's WSS vs. our own log indexer, decided by how much EVM
-   traffic actually shows up.
-
-### Sequencing
-
-1. Mobula Start-up key → adapter behind the existing `gtBase()`/`gtHeaders()`
-   seam, so callers don't change.
-2. On-demand backfill on chart open, stored to `coin_candles`.
-3. Poll-the-visible-coin → Supabase Realtime for live bars.
-4. Helius swap ingest for Solana, dropping it off the metered path.
-5. EVM log indexer only if provider credits become the binding constraint.
+1. ✅ Mobula key → adapter behind the existing `gtBase()`/`gtHeaders()` seam, so
+   callers don't change.
+2. ✅ On-demand backfill on chart open, stored to `coin_candles`.
+3. ✅ Live bars projected from the coin page's own trades fetch
+   (`lib/coins/record-mobula-trades`) → Supabase Realtime. Every chain, no
+   extra request, and NOT Helius.
+4. Alerts are the thing still waiting on push: the cluster/whale scanner reads
+   `coin_trades`, which today only fills for coins someone has open plus the
+   Helius tape. Mobula Growth's WSS (the `Tape` DO, built and dormant) is what
+   closes that, not the chart.
 
 ## Not the answer
 

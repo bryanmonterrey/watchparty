@@ -57,6 +57,46 @@
 export const MIN_TRADES_FOR_VERDICT = 40;
 /** Top-5 wallets doing this share of the trades is a cluster, not a market. */
 export const TOP5_SHARE_WASHY_PCT = 60;
+
+/**
+ * How many rows `trade.coinTraderConcentration` asks Mobula for. NOT how many
+ * get scored — `fetchMobulaTokenTrades` filters to real swaps first, and on EVM
+ * chains that removes most of the page.
+ *
+ * It lives HERE, beside the threshold, because the two are one calibration:
+ * the sample size changes the score, so moving either alone silently re-labels
+ * coins.
+ *
+ * ## 1,000, because a smaller page has no SWAPS in it
+ *
+ * Measured 2026-08-12 through `fetchMobulaTokenTrades` (i.e. post-filter):
+ *
+ *            requested 200            requested 1000
+ *   BONK    200 swaps, top5 27.5%    1000 swaps, top5 33.0%   (103 -> 277 traders)
+ *   USDC    197 swaps, top5 50.8%     988 swaps, top5 51.2%   (57 -> 189)
+ *   BRETT     7 swaps, top5 85.7%      96 swaps, top5 34.4%   (6 -> 50)
+ *
+ * BRETT is the case that decides it. Liquidity operations are ~90% of its rows,
+ * so a 200-row request yields SEVEN real swaps — under MIN_TRADES_FOR_VERDICT,
+ * meaning the card renders nothing at all on a coin with plenty of trading to
+ * describe. At 1,000 it clears the floor and scores 34.4%, which is the truth
+ * about it.
+ *
+ * ## And the direction is not predictable
+ *
+ * The three coins move three ways between the two sample sizes — BONK up 5.5
+ * points, USDC flat, BRETT down 51. "More samples dilute the top five" is wrong:
+ * a wider window can just as easily be one a few bots dominate. So this is
+ * measured, not reasoned about — `scripts/coins/calibrate-concentration.ts`.
+ *
+ * 1,000 is Mobula's page maximum and it is ONE request either way; the cost is
+ * a larger response, not a second call. The limit that bites is 1 REQUEST PER
+ * SECOND on the free plan, which is why the caller is cached for 15 minutes.
+ *
+ * ⚠️ Changing this invalidates TOP5_SHARE_WASHY_PCT. Re-run the script and move
+ * both together.
+ */
+export const CONCENTRATION_SAMPLE = 1000;
 /** Traders who both bought AND sold. High means round-tripping, not adoption. */
 export const ROUND_TRIP_WASHY_PCT = 40;
 
@@ -94,6 +134,58 @@ export interface Concentration {
     hasVerdict: boolean;
     /** Concentrated enough to distrust the volume. Always false without a verdict. */
     washy: boolean;
+}
+
+/** One swap, in the only shape this module needs. */
+export interface ScorableTrade {
+    /** The wallet that received the swap. */
+    account: string;
+    isBuy: boolean;
+    /** USD notional. Sign is ignored; 0 or NaN contributes nothing. */
+    usdValue?: number;
+}
+
+/**
+ * Roll a list of swaps into the aggregate the scorer takes.
+ *
+ * Lives here rather than in the tRPC procedure that calls it because it is the
+ * other half of `traderConcentration` — the two must agree on what "top 5"
+ * counts (trades, not dollars) and on which wallet a swap belongs to, and they
+ * drifted apart the moment one lived in SQL and the other in TypeScript. Being
+ * a pure function it is also directly testable, which the SQL never was.
+ *
+ * Note the two different top-5 sets: `top5Trades` is the five BUSIEST wallets
+ * and `top5VolumeUsd` the five LARGEST. They are usually different wallets, and
+ * conflating them is what makes a market maker look like a cluster.
+ */
+export function statsFromTrades(trades: readonly ScorableTrade[]): TraderStats {
+    const byTrader = new Map<string, { n: number; usd: number; buys: number; sells: number }>();
+    let volumeUsd = 0;
+
+    for (const t of trades) {
+        if (!t.account) continue;
+        const usd = Number.isFinite(t.usdValue ?? NaN) ? Math.abs(t.usdValue as number) : 0;
+        volumeUsd += usd;
+        const cur = byTrader.get(t.account) ?? { n: 0, usd: 0, buys: 0, sells: 0 };
+        cur.n += 1;
+        cur.usd += usd;
+        if (t.isBuy) cur.buys += 1;
+        else cur.sells += 1;
+        byTrader.set(t.account, cur);
+    }
+
+    const perTrader = [...byTrader.values()];
+    const busiest = [...perTrader].sort((a, b) => b.n - a.n).slice(0, 5);
+    const largest = [...perTrader].sort((a, b) => b.usd - a.usd).slice(0, 5);
+
+    return {
+        trades: perTrader.reduce((s, t) => s + t.n, 0),
+        traders: perTrader.length,
+        top5Trades: busiest.reduce((s, t) => s + t.n, 0),
+        roundTripTraders: perTrader.filter((t) => t.buys > 0 && t.sells > 0).length,
+        volumeUsd,
+        top5VolumeUsd: largest.reduce((s, t) => s + t.usd, 0),
+    };
 }
 
 /**

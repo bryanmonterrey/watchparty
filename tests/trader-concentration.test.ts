@@ -4,6 +4,7 @@ import {
     MIN_TRADES_FOR_VERDICT,
     ROUND_TRIP_WASHY_PCT,
     TOP5_SHARE_WASHY_PCT,
+    statsFromTrades,
     traderConcentration,
 } from "@/lib/coin-feed/trader-concentration";
 
@@ -118,5 +119,63 @@ describe("volume share", () => {
     test("cannot exceed 100 even if the caller's top5 overshoots the total", () => {
         const c = traderConcentration({ ...base, volumeUsd: 500, top5VolumeUsd: 900 });
         expect(c.top5VolumeSharePct).toBe(100);
+    });
+});
+
+/**
+ * `statsFromTrades` is the half that used to be SQL against `coin_trades`.
+ *
+ * It moved into TypeScript when the card came off our Helius-fed tape and onto
+ * Mobula's trades endpoint, and these cases are the ones the SQL could never be
+ * tested for: which wallet a swap belongs to, and the two DIFFERENT top-5 sets.
+ */
+describe("statsFromTrades", () => {
+    const buy = (account: string, usdValue = 0) => ({ account, isBuy: true, usdValue });
+    const sell = (account: string, usdValue = 0) => ({ account, isBuy: false, usdValue });
+
+    test("counts trades per wallet, not rows per address string", () => {
+        const s = statsFromTrades([buy("a"), buy("a"), sell("a"), buy("b")]);
+        expect(s.trades).toBe(4);
+        expect(s.traders).toBe(2);
+    });
+
+    test("round-trip means BOTH sides — buying twice is not one", () => {
+        const s = statsFromTrades([buy("a"), buy("a"), buy("b"), sell("b")]);
+        expect(s.roundTripTraders).toBe(1);
+    });
+
+    test("top-5 by COUNT is a different set from top-5 by VOLUME", () => {
+        // One whale with a single huge trade, five bots with many small ones.
+        // Scoring the whale as a cluster is exactly the false positive the
+        // count-based verdict exists to avoid.
+        const bots = ["b1", "b2", "b3", "b4", "b5"].flatMap((b) =>
+            Array.from({ length: 10 }, () => buy(b, 10)),
+        );
+        const s = statsFromTrades([...bots, buy("whale", 1_000_000)]);
+        expect(s.trades).toBe(51);
+        // The busiest five are the bots: 50 of the 51 trades.
+        expect(s.top5Trades).toBe(50);
+        // The largest five by dollars include the whale, who is 99.5% of volume.
+        expect(s.top5VolumeUsd).toBeGreaterThan(1_000_000);
+        expect(traderConcentration(s).top5VolumeSharePct).toBeGreaterThan(99);
+    });
+
+    test("an empty list is no verdict, never a clean one", () => {
+        const c = traderConcentration(statsFromTrades([]));
+        expect(c.hasVerdict).toBe(false);
+        expect(c.washy).toBe(false);
+    });
+
+    test("survives missing accounts and unpriced trades", () => {
+        const s = statsFromTrades([
+            { account: "", isBuy: true },
+            { account: "a", isBuy: true },
+            { account: "a", isBuy: false, usdValue: NaN },
+        ]);
+        expect(s.trades).toBe(2);
+        expect(s.traders).toBe(1);
+        // No priced trade anywhere → volume share is unknown, not zero.
+        expect(s.volumeUsd).toBe(0);
+        expect(traderConcentration(s).top5VolumeSharePct).toBeNull();
     });
 });

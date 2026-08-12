@@ -31,8 +31,13 @@
  * ── COST ─────────────────────────────────────────────────────────────────────
  * A GET to ohlcv-history costs 5 CREDITS, not 1 (their docs, under Rate Limit).
  * On the $50/mo Start-up plan's 125k credits that is 25,000 chart fetches a
- * month, ~830/day. Fine for fetch-on-open, nowhere near enough to poll. Which
- * is why liveness belongs on Helius push, not here.
+ * month, ~830/day. Fine for fetch-on-open, nowhere near enough to poll.
+ *
+ * So liveness does NOT come from re-fetching this endpoint. It comes from the
+ * trades feed the coin page is already paying for: those rows carry a pool and
+ * an execution price, and `lib/coins/record-mobula-trades` projects them into
+ * `coin_candles`, which the chart subscribes to over Realtime. History is a
+ * fetch; the moving bar is a database write.
  */
 
 import type { Candle } from "@/lib/coins/candle-resolution";
@@ -254,6 +259,19 @@ export interface MobulaTrade {
     /** Unix seconds. */
     ts: number;
     txHash: string;
+    /**
+     * Execution price in USD (`baseTokenPriceUSD`) — already in the response,
+     * previously dropped on the floor.
+     *
+     * It is what lets the same fetch that fills the trades table also advance
+     * the chart (lib/coins/record-mobula-trades): a candle needs a price, and
+     * deriving one from usd/amount loses precision on dust trades when the
+     * upstream already computed it exactly.
+     *
+     * Nullable because it is a provider's field, not ours — a row without one
+     * is skipped by the persister rather than written with a guess.
+     */
+    priceUsd: number | null;
 }
 
 /**
@@ -291,6 +309,7 @@ export async function fetchMobulaTokenTrades(
             type?: string;
             baseTokenAmount?: number;
             baseTokenAmountUSD?: number;
+            baseTokenPriceUSD?: number;
             date?: number;
             swapRecipient?: string;
             transactionSenderAddress?: string;
@@ -298,15 +317,109 @@ export async function fetchMobulaTokenTrades(
         }[];
     };
     return (json.data ?? [])
+        // SWAPS ONLY. This endpoint returns liquidity operations alongside
+        // trades, and on EVM chains they are the MAJORITY — measured 2026-08-12,
+        // BRETT/base returned 625 `withdrawal` + 278 `deposit` against 68 buys
+        // and 29 sells in one 1,000-row page.
+        //
+        // Everything downstream was consuming them as trades, because the map
+        // below reads `type === "buy"` and anything else became a sell:
+        //
+        //   - the coin page's table showed 90% phantom $0 sells;
+        //   - `coinTraderConcentration` scored them, which put BRETT's top-5
+        //     share at 89.6% (flagged "concentrated") against 34.0% on its real
+        //     swaps — the card was calling a healthy coin wash-traded;
+        //   - the candle projection skipped them only by accident, because a
+        //     liquidity row carries no price.
+        //
+        // Solana rows are typed too (`buy`/`sell`), so this is not an EVM
+        // special case — it is the filter that endpoint always needed.
+        .filter((t) => t.type === "buy" || t.type === "sell")
         .map((t) => ({
             account: t.swapRecipient || t.transactionSenderAddress || "",
             isBuy: t.type === "buy",
             usdValue: t.baseTokenAmountUSD ?? 0,
             tokenAmount: t.baseTokenAmount ?? 0,
+            // `date` is MILLISECONDS here and unix SECONDS everywhere in our
+            // tape — coin_trades.ts, candle buckets, the UDF window.
             ts: t.date ? Math.floor(t.date / 1000) : 0,
             txHash: t.transactionHash ?? "",
+            priceUsd:
+                typeof t.baseTokenPriceUSD === "number" && t.baseTokenPriceUSD > 0
+                    ? t.baseTokenPriceUSD
+                    : null,
         }))
         .filter((t) => t.account && t.ts > 0);
+}
+
+export interface MobulaHolder {
+    /** Owner address. */
+    address: string;
+    /** Balance in whole tokens. */
+    amount: number;
+    /** Percent of total supply, 0–100. */
+    sharePercent: number;
+    /** USD value of the position, when Mobula prices the token. */
+    usdValue: number | null;
+}
+
+/**
+ * Top holders for a token.
+ *
+ * ## Why this is not Helius
+ *
+ * `trade.getHolders` used to call Helius DAS `getTokenAccounts` + `getTokenSupply`
+ * and aggregate token ACCOUNTS into owners by hand. That worked, and it was the
+ * wrong provider: holder distribution is market data, and Helius is the app's
+ * operations provider (RPC, wallets, the user's own trade history). Every credit
+ * spent answering "who holds this coin" is a credit not available for signing
+ * and reading wallets.
+ *
+ * It was also Solana-only by construction — DAS has no notion of an ERC-20 —
+ * so the holders table simply had nothing to show on the five EVM chains the
+ * board now covers.
+ *
+ * Mobula returns owner, balance and supply share in ONE call, on every chain we
+ * list. `totalSupplyShare` is computed upstream, which removes the second
+ * (supply) request and the division that went with it.
+ *
+ * Verified against the live endpoint 2026-08-12: BONK/solana top holder 7.68%,
+ * BRETT/base 11.47%. Note the free plan is 1 REQUEST PER SECOND — three calls
+ * fired back to back returned 429 — so callers must be cached, never a loop.
+ */
+export async function fetchMobulaTokenHolders(
+    network: string,
+    address: string,
+    limit = 20,
+): Promise<MobulaHolder[] | null> {
+    if (!mobulaEnabled()) return null;
+    const blockchain = mobulaCoinBlockchain(network);
+    if (!blockchain) return null;
+
+    const url = new URL(`${isDemo() ? DEMO_BASE : LIVE_BASE}/1/market/token/holders`);
+    // `asset`, NOT `address` — this endpoint 400s with "Asset is required" on
+    // the parameter name every other endpoint in this file uses.
+    url.searchParams.set("asset", address);
+    url.searchParams.set("blockchain", blockchain);
+    url.searchParams.set("limit", String(Math.min(100, Math.max(1, limit))));
+
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (!isDemo()) headers.Authorization = rawKey();
+
+    const res = await fetch(url.toString(), { headers, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`mobula holders ${res.status}`);
+
+    const json = (await res.json()) as {
+        data?: { address?: string; amount?: number; totalSupplyShare?: number; amountUSD?: number }[];
+    };
+    return (json.data ?? [])
+        .filter((h) => !!h.address)
+        .map((h) => ({
+            address: h.address!,
+            amount: typeof h.amount === "number" ? h.amount : 0,
+            sharePercent: typeof h.totalSupplyShare === "number" ? h.totalSupplyShare : 0,
+            usdValue: typeof h.amountUSD === "number" ? h.amountUSD : null,
+        }));
 }
 
 /**
