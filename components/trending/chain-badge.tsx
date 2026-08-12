@@ -69,7 +69,7 @@ export function ChainBadge({ network, className }: { network: string; className?
             alt={label}
             title={label}
             loading="lazy"
-            className={cn("size-3.5 shrink-0 rounded-sm object-cover", className)}
+            className={cn("size-5 shrink-0 rounded-sm object-cover", className)}
         />
     );
 }

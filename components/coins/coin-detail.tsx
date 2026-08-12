@@ -144,7 +144,7 @@ function compactUsd(value: number | null) {
  */
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
     return (
-        <div className="flex min-w-0 shrink-0 flex-col justify-center rounded-xl border border-flexwhite/10 bg-soft-gray-5 px-3.5 py-2">
+        <div className="flex min-w-0 shrink-0 flex-col justify-center rounded-xl bg-soft-gray-5 px-3.5 py-2">
             <span className="whitespace-nowrap text-[11px] font-medium text-zinc-500">{label}</span>
             <span className={cn("truncate text-[15px] font-bold tabular-nums", tone ?? "text-white")}>{value}</span>
         </div>
@@ -190,7 +190,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                         genuinely has no links; drawing dead icons to fill the row
                         would be worse than the gap. */}
                     <div className="flex min-w-0 items-center gap-2">
-                        <h1 className="truncate text-xl font-bold tracking-tight text-white">{coin.symbol}</h1>
+                        <h1 className="truncate text-xl font-medium tracking-tight text-flexwhite">{coin.symbol}</h1>
                         <CoinSocials coin={coin} />
                     </div>
                     <div className="flex min-w-0 items-center gap-2">
