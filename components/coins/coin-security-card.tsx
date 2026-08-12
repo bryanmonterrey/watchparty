@@ -32,7 +32,7 @@ function Row({
             <span className="text-[13px] font-medium text-zinc-500">{label}</span>
             <span
                 className={cn(
-                    "text-[13px] font-bold tabular-nums",
+                    "text-[13px] font-semibold tabular-nums",
                     tone === "good" ? "text-lantern" : tone === "bad" ? "text-pastelred" : "text-zinc-200",
                 )}
             >
@@ -51,23 +51,23 @@ export function CoinSecurityCard({ coin, cardClassName }: { coin: CoinViewData; 
 
     // Percent rows: only the ones with an answer. Counts ride in the label.
     const holdings: { label: string; value: number | null; warnAt: number }[] = [
-        { label: "top 10 holders", value: data.top10Pct, warnAt: 30 },
+        { label: "Top 10 holders", value: data.top10Pct, warnAt: 30 },
         {
-            label: data.snipersCount ? `snipers (${data.snipersCount})` : "snipers",
+            label: data.snipersCount ? `Snipers (${data.snipersCount})` : "Snipers",
             value: data.snipersPct,
             warnAt: 10,
         },
         {
-            label: data.insidersCount ? `insiders (${data.insidersCount})` : "insiders",
+            label: data.insidersCount ? `Insiders (${data.insidersCount})` : "Insiders",
             value: data.insidersPct,
             warnAt: 10,
         },
         {
-            label: data.bundlersCount ? `bundlers (${data.bundlersCount})` : "bundlers",
+            label: data.bundlersCount ? `Bundlers (${data.bundlersCount})` : "Bundlers",
             value: data.bundlersPct,
             warnAt: 10,
         },
-        { label: "dev holdings", value: data.devPct, warnAt: 5 },
+        { label: "Dev holdings", value: data.devPct, warnAt: 5 },
     ];
     const shown = holdings.filter((h) => h.value != null);
 
@@ -75,31 +75,31 @@ export function CoinSecurityCard({ coin, cardClassName }: { coin: CoinViewData; 
     if (data.noMintAuthority != null) {
         flags.push(
             data.noMintAuthority
-                ? { label: "mint authority", value: "revoked", tone: "good" }
-                : { label: "mint authority", value: "active", tone: "bad" },
+                ? { label: "Mint authority", value: "Revoked", tone: "good" }
+                : { label: "Mint authority", value: "Active", tone: "bad" },
         );
     }
     if (data.isFreezable != null) {
         flags.push(
             data.isFreezable
-                ? { label: "freezable", value: "yes", tone: "bad" }
-                : { label: "freezable", value: "no", tone: "good" },
+                ? { label: "Freezable", value: "Yes", tone: "bad" }
+                : { label: "Freezable", value: "No", tone: "good" },
         );
     }
-    if (data.buyTaxPct != null) flags.push({ label: "buy tax", value: `${data.buyTaxPct}%`, tone: "bad" });
-    if (data.sellTaxPct != null) flags.push({ label: "sell tax", value: `${data.sellTaxPct}%`, tone: "bad" });
-    if (data.honeypotFlag) flags.push({ label: "blacklist", value: "flagged", tone: "bad" });
+    if (data.buyTaxPct != null) flags.push({ label: "Buy tax", value: `${data.buyTaxPct}%`, tone: "bad" });
+    if (data.sellTaxPct != null) flags.push({ label: "Sell tax", value: `${data.sellTaxPct}%`, tone: "bad" });
+    if (data.honeypotFlag) flags.push({ label: "Blacklist", value: "Flagged", tone: "bad" });
 
     if (shown.length === 0 && flags.length === 0) return null;
 
     return (
         <div className={cn(cardClassName, "mt-2 p-4")}>
             <div className="flex items-center justify-between">
-                <h3 className="text-[15px] font-bold text-white">security</h3>
+                <h3 className="text-[15px] font-semibold text-flexwhite">Security</h3>
                 {data.securityScore != null && (
                     <span
                         className={cn(
-                            "text-[13px] font-bold tabular-nums",
+                            "text-[13px] font-semibold tabular-nums",
                             data.securityScore >= 70
                                 ? "text-lantern"
                                 : data.securityScore >= 40

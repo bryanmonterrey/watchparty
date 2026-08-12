@@ -35,10 +35,10 @@ function formatSpan(minutes: number): string {
 function Row({ label, value, tone }: { label: string; value: string; tone?: "good" | "bad" }) {
     return (
         <div className="flex items-center justify-between py-1.5">
-            <span className="text-sm font-medium text-zinc-500">{label}</span>
+            <span className="text-[13px] font-medium text-zinc-500">{label}</span>
             <span
                 className={cn(
-                    "text-sm font-bold tabular-nums",
+                    "text-[13px] font-semibold tabular-nums",
                     tone === "good" ? "text-lantern" : tone === "bad" ? "text-pastelred" : "text-zinc-200",
                 )}
             >
@@ -58,10 +58,10 @@ export function CoinActivityCard({ coin, cardClassName }: { coin: CoinViewData; 
     return (
         <div className={cn(cardClassName, "mt-2 p-4")}>
             <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-white">trader activity</h3>
+                <h3 className="text-[15px] font-semibold text-flexwhite">Trader activity</h3>
                 {data.washy && (
-                    <span className="rounded-full bg-pastelred/15 px-2 py-0.5 text-xs font-bold text-pastelred">
-                        concentrated
+                    <span className="rounded-full bg-pastelred/15 px-2 py-0.5 text-xs font-semibold text-pastelred">
+                        Concentrated
                     </span>
                 )}
             </div>
@@ -70,12 +70,12 @@ export function CoinActivityCard({ coin, cardClassName }: { coin: CoinViewData; 
                     one token was flagged only by top-5 share and another only by
                     round-trips, which is why the verdict is an OR. */}
                 <Row
-                    label="top 5 wallets"
+                    label="Top 5 wallets"
                     value={`${data.top5SharePct.toFixed(1)}%`}
                     tone={data.top5SharePct >= 60 ? "bad" : undefined}
                 />
                 <Row
-                    label="round-trip traders"
+                    label="Round-trip traders"
                     value={`${data.roundTripPct.toFixed(1)}%`}
                     tone={data.roundTripPct >= 40 ? "bad" : undefined}
                 />
@@ -85,9 +85,9 @@ export function CoinActivityCard({ coin, cardClassName }: { coin: CoinViewData; 
                     most of the dollars in ANY market. Colouring it would mark
                     almost every coin washy. */}
                 {data.top5VolumeSharePct != null && (
-                    <Row label="top 5 by volume" value={`${data.top5VolumeSharePct.toFixed(1)}%`} />
+                    <Row label="Top 5 by volume" value={`${data.top5VolumeSharePct.toFixed(1)}%`} />
                 )}
-                <Row label="traders" value={`${data.traders} / ${data.trades} trades`} />
+                <Row label="Traders" value={`${data.traders} / ${data.trades} trades`} />
             </div>
             {/* Says the span it MEASURED, not a window it was configured with.
                 The source returns the last N trades, so the period varies by how
@@ -95,7 +95,7 @@ export function CoinActivityCard({ coin, cardClassName }: { coin: CoinViewData; 
                 fixed "last 7 days" here would have been a straight lie about a
                 number sitting next to a wash-trading verdict. */}
             <p className="mt-2 text-xs text-zinc-600">
-                last {data.trades.toLocaleString()} trades
+                Last {data.trades.toLocaleString()} trades
                 {data.windowMinutes != null && `, about ${formatSpan(data.windowMinutes)}`}
             </p>
         </div>
