@@ -5,11 +5,16 @@ land as an incremental slice inside a general build session.** Attempting them
 mid-stream — between UI passes and small features — is how an auth surface ships
 with a subtle hole or an infra decision gets made by accident.
 
-Each segment below is **deferred to its own dedicated chat/session**: one focused
-scope, its own design pass, its own threat model, its own verification. This file
-is the standing list so the decision isn't re-litigated every session. When one
-of these comes up, open a fresh chat for it rather than folding it into whatever
-else is in flight.
+Each segment below was **deferred to its own dedicated chat/session**: one focused
+scope, its own design pass, its own threat model, its own verification.
+
+**STATUS 2026-08-12: all three SHIPPED and prod-verified in the dedicated
+session.** §1 → `docs/oauth-provider.md` + `scripts/dev/smoke-oauth-flow.mjs`
+(prod smoke all green). §2 → dev-stream push on the existing realtime DO +
+console Connections table (`scripts/realtime/smoke.mjs` 16/16 live). §3 →
+bot.sendMessage/deleteMessage/coin-alerts + Server Settings Bots panel
+(`scripts/dev/smoke-bot-writes.mjs` prod all green). The sections below are
+kept as the design rationale of record.
 
 See `docs/platform-roadmap.md` for where each sits in the overall arc.
 
