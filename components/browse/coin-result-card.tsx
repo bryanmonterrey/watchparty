@@ -58,7 +58,7 @@ export function CoinResultCard({ coin, className }: CoinResultCardProps) {
             )}
 
             <div className="flex-1 min-w-0">
-                <p className="font-bold text-[15px] text-zinc-100 truncate">{coin.ticker}</p>
+                <p className="font-bold text-base text-zinc-100 truncate">{coin.ticker}</p>
                 <p className="text-sm text-zinc-500 truncate">
                     {coin.name}
                     {coin.tokenAddress && (
