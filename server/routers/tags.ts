@@ -17,9 +17,8 @@ import { withCache } from "@/lib/cache";
  *
  * ## Matched in SQL, with the same rule as lib/tags/extract
  *
- * `\y\$SYMBOL\y` — Postgres word boundaries, case-insensitive. The TypeScript
- * extractor is the definition; this has to agree with it or the chart and the
- * table disagree about what counts. Two rules both encode:
+ * The TypeScript extractor is the definition; this has to agree with it or the
+ * chart and the table disagree about what counts. Two rules both encode:
  *
  *   - the `$` is REQUIRED. "bonk is up" is not a tag; "$BONK" is. The plain word
  *     appears constantly in ordinary text.
@@ -41,8 +40,27 @@ import { withCache } from "@/lib/cache";
 
 const SYMBOL = z.string().min(1).max(24);
 
-/** `$SYMBOL` on word boundaries — the SQL twin of lib/tags/extract's regex. */
-const tagPattern = (symbol: string) => `\\y\\$${symbol.replace(/^\$/, "").replace(/[^A-Za-z0-9]/g, "")}\\y`;
+/**
+ * `$SYMBOL` delimited, as the SQL twin of lib/tags/extract's regex.
+ *
+ * ⚠️ NOT `\y\$SYMBOL\y`, which is what this was and which never matched a
+ * single row. Postgres's `\y` asserts a WORD boundary, and `$` is not a word
+ * character — between the space and the `$` in "gm $BONK" both sides are
+ * non-word, so there is no boundary there and the pattern fails. Verified
+ * against production: `'gm $BONK looking good' ~* '\y\$BONK\y'` is FALSE.
+ *
+ * The whole Tags feature would have shipped returning nothing, on every coin,
+ * with no error anywhere — the exact shape of failure this codebase keeps
+ * getting bitten by: absence that looks like "no data yet".
+ *
+ * Explicit delimiters instead: start-of-string or a non-word char before the
+ * `$`, and end-of-string or a non-word char after the symbol. Verified to match
+ * "gm $BONK looking good" and to REJECT "gm $BONKINU".
+ */
+const tagPattern = (symbol: string) => {
+    const t = symbol.replace(/^\$/, "").replace(/[^A-Za-z0-9]/g, "");
+    return `(^|[^A-Za-z0-9_$])\\$${t}($|[^A-Za-z0-9_])`;
+};
 
 export const tagsRouter = router({
     /**

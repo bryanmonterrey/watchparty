@@ -20,9 +20,20 @@ describe("extractTags", () => {
         }
     });
 
-    test("a ticker must start with a letter", () => {
-        expect(extractTags("$4CHAN")).toEqual([]);
+    test("digit-leading tickers are real tickers", () => {
+        // $4CHAN is a coin. Requiring a leading letter threw these away.
+        expect(extractTags("$4CHAN")).toEqual([{ raw: "4CHAN", key: "4chan" }]);
         expect(extractTags("$C4")).toEqual([{ raw: "C4", key: "c4" }]);
+        expect(extractTags("$0x")).toEqual([{ raw: "0x", key: "0x" }]);
+    });
+
+    test("money SHORTHAND is still money, even with a letter in it", () => {
+        for (const s of ["$5m", "$10k", "$1.5b", "$2T"]) expect(extractTags(s)).toEqual([]);
+    });
+
+    test("a ticker needs at least one letter", () => {
+        expect(extractTags("$100")).toEqual([]);
+        expect(extractTags("$4444")).toEqual([]);
     });
 
     test("mid-word dollars are not tags", () => {
