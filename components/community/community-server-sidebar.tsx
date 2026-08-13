@@ -53,7 +53,7 @@ export function CommunityServerSidebar({ serverId }: Props) {
     ];
 
     return (
-        <div className="flex flex-col h-full w-76 shrink-0 bg-zinc-900/60 overflow-hidden max-md:w-full">
+        <div className="flex flex-col h-full w-76 shrink-0 bg-background border-xborder-soft-gray/12 overflow-hidden max-md:w-full">
             <CommunityServerHeader
                 server={server}
                 role={role}

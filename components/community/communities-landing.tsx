@@ -161,7 +161,7 @@ export function CommunitiesLanding() {
     };
 
     return (
-        <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 bg-sidebar-hover/25">
+        <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 bg-background">
             <div className="flex flex-col max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>

@@ -477,7 +477,7 @@ export function TrendingTable({ className }: { className?: string }) {
                         disabled={isFetchingNextPage}
                         className={cn(CELL_TEXT, "h-11 cursor-pointer rounded-full bg-white/5 px-5 text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white disabled:opacity-50")}
                     >
-                        {isFetchingNextPage ? "loading…" : "load more"}
+                        {isFetchingNextPage ? "Loading…" : "Load more"}
                     </button>
                 </div>
             )}
