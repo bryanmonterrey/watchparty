@@ -83,6 +83,30 @@ export function normalizeAddress(address: string): string {
     return /^0x[0-9a-fA-F]{40}$/.test(address) ? address.toLowerCase() : address;
 }
 
+/** One DsPair → DexPair, or null when the pair is missing identity fields. */
+function mapPair(p: DsPair): DexPair | null {
+    const tokenAddress = p.baseToken?.address;
+    const poolAddress = p.pairAddress;
+    const symbol = p.baseToken?.symbol;
+    if (!tokenAddress || !poolAddress || !symbol || !p.chainId) return null;
+    return {
+        network: CHAIN_TO_NETWORK[p.chainId] ?? p.chainId,
+        poolAddress,
+        tokenAddress: normalizeAddress(tokenAddress),
+        dexId: p.dexId ?? null,
+        symbol: symbol.toUpperCase(),
+        name: p.baseToken?.name ?? null,
+        imageUrl: p.info?.imageUrl ?? null,
+        priceUsd: num(p.priceUsd),
+        marketCapUsd: num(p.marketCap) ?? num(p.fdv),
+        liquidityUsd: num(p.liquidity?.usd),
+        volume24hUsd: num(p.volume?.h24),
+        priceChange24h: num(p.priceChange?.h24),
+        buys24h: p.txns?.h24?.buys ?? null,
+        sells24h: p.txns?.h24?.sells ?? null,
+    };
+}
+
 /**
  * Every pair Dexscreener knows for a token address, across every chain,
  * DEEPEST LIQUIDITY FIRST.
@@ -109,10 +133,8 @@ export async function fetchTokenPairs(address: string): Promise<DexPair[]> {
 
     const out: DexPair[] = [];
     for (const p of json?.pairs ?? []) {
-        const tokenAddress = p.baseToken?.address;
-        const poolAddress = p.pairAddress;
-        const symbol = p.baseToken?.symbol;
-        if (!tokenAddress || !poolAddress || !symbol || !p.chainId) continue;
+        const mapped = mapPair(p);
+        if (!mapped) continue;
 
         // The queried address must be the pair's BASE token. Dexscreener returns
         // pairs where it's the quote side too (every SOL pair, say), and those
@@ -121,24 +143,9 @@ export async function fetchTokenPairs(address: string): Promise<DexPair[]> {
         // Compared case-insensitively because the response is checksummed and
         // the query usually isn't; STORED via normalizeAddress so what we write
         // matches what the rest of our tables hold.
-        if (tokenAddress.toLowerCase() !== wanted) continue;
+        if (mapped.tokenAddress.toLowerCase() !== wanted) continue;
 
-        out.push({
-            network: CHAIN_TO_NETWORK[p.chainId] ?? p.chainId,
-            poolAddress,
-            tokenAddress: normalizeAddress(tokenAddress),
-            dexId: p.dexId ?? null,
-            symbol: symbol.toUpperCase(),
-            name: p.baseToken?.name ?? null,
-            imageUrl: p.info?.imageUrl ?? null,
-            priceUsd: num(p.priceUsd),
-            marketCapUsd: num(p.marketCap) ?? num(p.fdv),
-            liquidityUsd: num(p.liquidity?.usd),
-            volume24hUsd: num(p.volume?.h24),
-            priceChange24h: num(p.priceChange?.h24),
-            buys24h: p.txns?.h24?.buys ?? null,
-            sells24h: p.txns?.h24?.sells ?? null,
-        });
+        out.push(mapped);
     }
 
     // `info` (and so the logo) is present on only a minority of pairs — 8 of 30
@@ -149,4 +156,47 @@ export async function fetchTokenPairs(address: string): Promise<DexPair[]> {
     if (image) for (const p of out) p.imageUrl ??= image;
 
     return out.sort((a, b) => (b.liquidityUsd ?? 0) - (a.liquidityUsd ?? 0));
+}
+
+/**
+ * Free-text token search — the GLOBAL half of the app's coin search: name or
+ * ticker matches against every token Dexscreener indexes, not just coins we
+ * launched or track.
+ *
+ * ONE ROW PER TOKEN, not per pair: /search answers with every matching venue,
+ * so a popular coin arrives a dozen times. Vendor ranking (first appearance)
+ * decides the order; within a token the deepest-liquidity pair supplies the
+ * numbers, and any sibling pair's logo fills a missing one, same as
+ * fetchTokenPairs. Returns [] on any failure — search degrades, it never
+ * throws.
+ */
+export async function searchPairs(query: string, limit = 10): Promise<DexPair[]> {
+    let json: { pairs?: DsPair[] | null } | null = null;
+    try {
+        const res = await fetch(`${BASE}/search?q=${encodeURIComponent(query)}`, {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
+        if (!res.ok) return [];
+        json = await res.json();
+    } catch {
+        return [];
+    }
+
+    const byToken = new Map<string, DexPair>();
+    for (const p of json?.pairs ?? []) {
+        const mapped = mapPair(p);
+        if (!mapped) continue;
+        const id = `${mapped.network}:${mapped.tokenAddress.toLowerCase()}`;
+        const prev = byToken.get(id);
+        if (!prev) {
+            byToken.set(id, mapped);
+        } else if ((mapped.liquidityUsd ?? 0) > (prev.liquidityUsd ?? 0)) {
+            mapped.imageUrl ??= prev.imageUrl;
+            byToken.set(id, mapped);
+        } else {
+            prev.imageUrl ??= mapped.imageUrl;
+        }
+    }
+    return [...byToken.values()].slice(0, limit);
 }

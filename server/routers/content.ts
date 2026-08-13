@@ -4,6 +4,7 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { posts, tokens, trendingCoins, likes, bookmarks, polls, postUnlocks, seenPosts, videoProgress, videoHeatmap } from "@/db/schema/content";
 import { resolveCoin } from "@/lib/coins/resolve";
+import { searchPairs } from "@/lib/coins/dexscreener";
 import { user } from "@/db/schema/auth";
 import { eq, desc, and, count, like, or, ilike, sql, gt, inArray, asc, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -259,7 +260,7 @@ export const contentRouter = router({
             // sync already keeps fresh.
             const esc = query.replace(/[%_\\]/g, (c) => `\\${c}`);
             const anywhere = `%${esc}%`;
-            const [userRows, postRows, ownRows, boardRows] = await Promise.all([
+            const [userRows, postRows, ownRows, boardRows, globalRows] = await Promise.all([
                 db
                     .select({ id: user.id, name: user.name, username: user.username, avatar_url: user.avatar_url })
                     .from(user)
@@ -310,6 +311,11 @@ export const contentRouter = router({
                     .where(or(ilike(trendingCoins.symbol, anywhere), ilike(trendingCoins.name, anywhere)))
                     .orderBy(sql`${trendingCoins.volume24hUsd} desc nulls last`)
                     .limit(input.limit),
+                // The GLOBAL half: any coin Dexscreener indexes, by name or
+                // ticker — this is what makes typing "cashcat" work without the
+                // coin ever having touched our tables. Skipped for one-char
+                // queries (pure noise) and returns [] on any upstream failure.
+                query.length >= 2 ? searchPairs(query, input.limit) : Promise.resolve([]),
             ]);
 
             // Our launches first, then board coins — deduped by address, since
@@ -334,6 +340,7 @@ export const contentRouter = router({
             for (const c of boardRows) {
                 if (tokenResults.length >= input.limit) break;
                 if (seenAddresses.has(c.tokenAddress.toLowerCase())) continue;
+                seenAddresses.add(c.tokenAddress.toLowerCase());
                 tokenResults.push({
                     id: c.id,
                     name: c.name ?? c.symbol,
@@ -345,6 +352,23 @@ export const contentRouter = router({
                     marketCap: c.marketCapUsd,
                     volume24h: c.volume24hUsd,
                     href: `/coin/${c.network}/${c.tokenAddress}`,
+                });
+            }
+            for (const p of globalRows) {
+                if (tokenResults.length >= input.limit) break;
+                if (seenAddresses.has(p.tokenAddress.toLowerCase())) continue;
+                seenAddresses.add(p.tokenAddress.toLowerCase());
+                tokenResults.push({
+                    id: `${p.network}:${p.tokenAddress}`,
+                    name: p.name ?? p.symbol,
+                    ticker: p.symbol,
+                    imageUrl: p.imageUrl,
+                    tokenAddress: p.tokenAddress,
+                    price: p.priceUsd,
+                    change24h: p.priceChange24h,
+                    marketCap: p.marketCapUsd,
+                    volume24h: p.volume24hUsd,
+                    href: `/coin/${p.network}/${p.tokenAddress}`,
                 });
             }
 

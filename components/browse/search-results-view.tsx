@@ -7,9 +7,10 @@ import { PostCard } from "./post-card";
 import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { UserResultCard } from "./user-result-card";
+import { CoinResultCard } from "./coin-result-card";
 import { Loader2 } from "lucide-react";
 
-type SearchTab = "top" | "latest" | "people" | "media" | "lists";
+type SearchTab = "top" | "latest" | "coins" | "people" | "media" | "lists";
 
 interface SearchResultsViewProps {
     query: string;
@@ -21,6 +22,7 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
     const tabs: { id: SearchTab; label: string }[] = [
         { id: "top", label: "Top" },
         { id: "latest", label: "Latest" },
+        { id: "coins", label: "Coins" },
         { id: "people", label: "People" },
         { id: "media", label: "Media" },
         { id: "lists", label: "Lists" },
@@ -28,14 +30,14 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
 
     // Queries
     const postsQuery = trpc.content.searchPosts.useInfiniteQuery(
-        { 
-            query, 
+        {
+            query,
             sort: activeTab === "top" ? "top" : "latest",
             onlyMedia: activeTab === "media"
         },
-        { 
-            enabled: activeTab !== "people" && activeTab !== "lists" && query.length > 0,
-            getNextPageParam: (lastPage) => lastPage.nextCursor 
+        {
+            enabled: activeTab !== "people" && activeTab !== "lists" && activeTab !== "coins" && query.length > 0,
+            getNextPageParam: (lastPage) => lastPage.nextCursor
         }
     );
 
@@ -44,8 +46,22 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
         { enabled: activeTab === "people" && query.length > 0 }
     );
 
-    const isLoading = activeTab === "people" ? usersQuery.isLoading : postsQuery.isLoading;
-    const isError = activeTab === "people" ? usersQuery.isError : postsQuery.isError;
+    // Same procedure the header dropdown uses: a pasted address resolves any
+    // coin on any chain, a text query matches our launches + the trending
+    // board. Only the tokens slice is read here.
+    const coinsQuery = trpc.content.search.useQuery(
+        { query, limit: 30 },
+        { enabled: activeTab === "coins" && query.length > 0 }
+    );
+
+    const isLoading =
+        activeTab === "people" ? usersQuery.isLoading
+        : activeTab === "coins" ? coinsQuery.isLoading
+        : postsQuery.isLoading;
+    const isError =
+        activeTab === "people" ? usersQuery.isError
+        : activeTab === "coins" ? coinsQuery.isError
+        : postsQuery.isError;
 
     const renderContent = () => {
         if (!query) {
@@ -57,10 +73,38 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
         }
 
         if (isLoading) {
+            if (activeTab === "coins") {
+                return (
+                    <div className="divide-y divide-border/40">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-3 px-4 py-3">
+                                <div className="w-10 h-10 rounded-full shimmer-skeleton shrink-0" />
+                                <div className="flex-1 space-y-1.5">
+                                    <div className="h-3.5 w-24 rounded-full shimmer-skeleton" />
+                                    <div className="h-3 w-40 rounded-full shimmer-skeleton" />
+                                </div>
+                                <div className="h-3.5 w-16 rounded-full shimmer-skeleton" />
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
             return (
                 <div className="divide-y divide-border/40">
                     {[...Array(8)].map((_, i) => (
                         <PostCardSkeleton key={i} />
+                    ))}
+                </div>
+            );
+        }
+
+        if (activeTab === "coins") {
+            const coins = coinsQuery.data?.tokens ?? [];
+            if (coins.length === 0) return <EmptyState />;
+            return (
+                <div className="divide-y divide-border/40">
+                    {coins.map((coin) => (
+                        <CoinResultCard key={coin.id} coin={coin} />
                     ))}
                 </div>
             );
