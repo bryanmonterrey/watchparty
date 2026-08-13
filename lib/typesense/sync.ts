@@ -1,4 +1,27 @@
-import { typesenseClient } from "./client";
+import { typesenseClient, typesenseReady, noteTypesenseOk, noteTypesenseFailure } from "./client";
+
+/**
+ * Every index write goes through here.
+ *
+ * These calls were already individually try/caught as "non-critical", and that
+ * was right — index drift must never cost someone the post they just wrote. But
+ * swallowing the error also hid that the cluster was GONE (NXDOMAIN, found
+ * 2026-08-13), so each of these kept paying a failed DNS lookup on a write path
+ * forever, silently.
+ *
+ * The swallow stays; the outcome is now reported to the breaker in ./client, so
+ * after a few consecutive failures these short-circuit entirely until the mute
+ * expires.
+ */
+async function indexWrite(op: () => Promise<unknown>): Promise<void> {
+    if (!typesenseReady()) return;
+    try {
+        await op();
+        noteTypesenseOk();
+    } catch (err) {
+        noteTypesenseFailure(err);
+    }
+}
 
 export const userSchema = {
     name: "users",
@@ -41,26 +64,18 @@ export async function upsertUser(u: {
     avatar_url?: string | null;
     createdAt: Date;
 }) {
-    try {
-        const doc: Record<string, unknown> = {
-            id: u.id,
-            name: u.name,
-            username: u.username,
-            createdAt: Math.floor(u.createdAt.getTime() / 1000),
-        };
-        if (u.avatar_url) doc.avatar_url = u.avatar_url;
-        await typesenseClient.collections("users").documents().upsert(doc);
-    } catch {
-        // non-critical
-    }
+    const doc: Record<string, unknown> = {
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        createdAt: Math.floor(u.createdAt.getTime() / 1000),
+    };
+    if (u.avatar_url) doc.avatar_url = u.avatar_url;
+    await indexWrite(() => typesenseClient.collections("users").documents().upsert(doc));
 }
 
 export async function deleteUser(userId: string) {
-    try {
-        await typesenseClient.collections("users").documents(userId).delete();
-    } catch {
-        // non-critical
-    }
+    await indexWrite(() => typesenseClient.collections("users").documents(userId).delete());
 }
 
 export async function upsertPost(post: {
@@ -70,26 +85,20 @@ export async function upsertPost(post: {
     imageUrl?: string | null;
     createdAt: Date;
 }) {
-    try {
-        const doc: Record<string, unknown> = {
-            id: post.id,
-            content: post.content,
-            userId: post.userId,
-            createdAt: Math.floor(post.createdAt.getTime() / 1000),
-        };
-        if (post.imageUrl) doc.imageUrl = post.imageUrl;
-        await typesenseClient.collections("posts").documents().upsert(doc);
-    } catch {
-        // non-critical — index drift is acceptable
-    }
+    const doc: Record<string, unknown> = {
+        id: post.id,
+        content: post.content,
+        userId: post.userId,
+        createdAt: Math.floor(post.createdAt.getTime() / 1000),
+    };
+    if (post.imageUrl) doc.imageUrl = post.imageUrl;
+    // Index drift is acceptable; losing the post is not.
+    await indexWrite(() => typesenseClient.collections("posts").documents().upsert(doc));
 }
 
 export async function deletePost(postId: string) {
-    try {
-        await typesenseClient.collections("posts").documents(postId).delete();
-    } catch {
-        // document may not exist in index
-    }
+    // The document may simply not be in the index — same swallow as before.
+    await indexWrite(() => typesenseClient.collections("posts").documents(postId).delete());
 }
 
 export async function upsertToken(token: {
@@ -100,17 +109,13 @@ export async function upsertToken(token: {
     imageUrl?: string | null;
     createdAt: Date;
 }) {
-    try {
-        const doc: Record<string, unknown> = {
-            id: token.id,
-            name: token.name,
-            ticker: token.ticker,
-            createdAt: Math.floor(token.createdAt.getTime() / 1000),
-        };
-        if (token.tokenAddress) doc.tokenAddress = token.tokenAddress;
-        if (token.imageUrl)     doc.imageUrl     = token.imageUrl;
-        await typesenseClient.collections("tokens").documents().upsert(doc);
-    } catch {
-        // non-critical
-    }
+    const doc: Record<string, unknown> = {
+        id: token.id,
+        name: token.name,
+        ticker: token.ticker,
+        createdAt: Math.floor(token.createdAt.getTime() / 1000),
+    };
+    if (token.tokenAddress) doc.tokenAddress = token.tokenAddress;
+    if (token.imageUrl)     doc.imageUrl     = token.imageUrl;
+    await indexWrite(() => typesenseClient.collections("tokens").documents().upsert(doc));
 }

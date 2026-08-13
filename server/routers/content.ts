@@ -14,7 +14,7 @@ import { takePage } from "@/server/lib/paginate";
 import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from "@/server/lib/keyset";
 import { recordView, viewerHandle } from "@/server/lib/record-view";
 import { recordQuestEvent } from "@/server/lib/quests";
-import { typesenseClient } from "@/lib/typesense/client";
+import { typesenseClient, typesenseReady, noteTypesenseOk, noteTypesenseFailure } from "@/lib/typesense/client";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, deletePost } from "@/lib/typesense/sync";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
@@ -49,11 +49,26 @@ export const contentRouter = router({
             })
         )
         .query(async ({ input }) => {
-            if (!input.query) {
-                return { videos: [], posts: [], tokens: [], streams: [] };
-            }
+            // ⚠️ `users` is in this shape deliberately. The success path returns
+            // it and the old empty-query return did not, so a caller reading
+            // `.users` got undefined on an empty query — harmless until search
+            // started failing and every response looked like that one.
+            const empty = { videos: [], users: [], posts: [], tokens: [], streams: [] };
+            if (!input.query) return empty;
 
-            const { results } = await typesenseClient.multiSearch.perform(
+            // Search DEGRADES, it does not 500.
+            //
+            // Found live on 2026-08-13: TYPESENSE_HOST pointed at a cluster that
+            // had been deleted, so this threw ENOTFOUND and the procedure
+            // returned a 500 to every searcher. An unreachable index is a
+            // missing feature, not a broken request — the honest answer is "no
+            // results", and the breaker in lib/typesense/client stops us
+            // re-dialling a dead host on every keystroke.
+            if (!typesenseReady()) return empty;
+
+            let results: Array<{ hits?: Array<{ document: Record<string, unknown> }> }>;
+            try {
+                ({ results } = await typesenseClient.multiSearch.perform(
                 {
                     searches: [
                         {
@@ -77,7 +92,12 @@ export const contentRouter = router({
                     ],
                 },
                 {}
-            ) as { results: Array<{ hits?: Array<{ document: Record<string, unknown> }> }> };
+                ) as { results: Array<{ hits?: Array<{ document: Record<string, unknown> }> }> });
+                noteTypesenseOk();
+            } catch (err) {
+                noteTypesenseFailure(err);
+                return empty;
+            }
 
             const userHits  = results[0]?.hits ?? [];
             const postHits  = results[1]?.hits ?? [];
