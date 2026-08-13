@@ -6,6 +6,7 @@ import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { after } from "next/server";
 import { fetchMobulaTokenSecurity } from "@/lib/coins/mobula";
+import { fetchTokenPairs } from "@/lib/coins/dexscreener";
 
 /**
  * Write a MEASURED liquidity figure onto the board and the watch list.
@@ -127,28 +128,43 @@ export interface LiquidityScreenResult {
  * happened to look, and (until the coalesce in `trending-mobula.ts`) the next
  * hourly pass wiped it again. Net effect: 0 of 308 fresh rows carried a figure.
  *
- * ## Cost, which is why it's bounded and not a sweep
+ * ## The source is DEXSCREENER, not Mobula, and that is the whole design
  *
- * 1 credit per coin. The caller runs this on the SAME hourly gate as the board
- * sync, which is what makes it affordable next to the board's own 4,320/month:
+ * This originally called Mobula's `/2/token/details` at 1 credit each. Measured
+ * against production on 2026-08-13, that was the wrong choice twice over:
  *
- *     20/pass, hourly   =    480/month   -> fits the 10k free tier
- *     20/pass, 5-min    =  5,760/month   -> $50 tier
- *     the whole board   = ~308 credits per full sweep, every pass -> neither
+ *   - the free key answered **429 "Max usage reached" to ~75%** of calls at any
+ *     spacing, so a 20-coin pass measured about 1 coin;
+ *   - and being metered, it had to stay bounded to ~480 credits/month, which
+ *     put a full sweep of a ~300-row board weeks away.
  *
- * At 20/hour a ~300-row board measures itself in about 15 hours, then only has
- * to keep pace with churn.
+ * Dexscreener reports the same figure — real dollars, `liquidity.usd` — for
+ * free, at per-IP limits in the HUNDREDS per minute (see lib/coins/dexscreener,
+ * which already fronts every coin page for untracked coins). The two coins
+ * Mobula refused hardest answered instantly:
  *
- * ## Highest volume first, and the stall it can cause
+ *     SNDK     $80,068,102 of 24h volume   ->  $27.69 liquidity
+ *     UNITREE  $60,386,088                 ->   $3.67
  *
- * Ordering by 24h volume spends the budget where the board is most read, and on
- * the coins most likely to HAVE a figure. The failure mode to watch: a coin with
- * large volume that the provider never returns liquidity for stays NULL, stays
- * at the head of this ordering, and gets re-paid for every pass. That is why the
- * result separates `measured` from `unmeasured` and the cron reports both — a
- * pass that keeps coming back all-unmeasured is the signal to key retries off a
- * screened-at timestamp instead. It is not worth a schema column before that
- * shows up in the numbers.
+ * Which is the point of measuring at all: both were sitting at the TOP of the
+ * board, and both are wash trade. `MIN_BOARD_LIQUIDITY_USD` cannot exclude a
+ * coin whose liquidity is unknown — NULL means "not yet measured", never "none"
+ * — so every unmeasured row is a row the spam floor is blind to.
+ *
+ * Still bounded per pass, but now by wall-clock rather than money: each coin is
+ * one HTTP round trip, and this runs inside a cron with a 120s ceiling.
+ *
+ * ## Highest volume first
+ *
+ * Spends the pass where the board is most read, and on the coins whose being
+ * wrong matters most. `measured` / `unmeasured` stay separate in the result so a
+ * provider that starts returning nothing is visible in the cron's response
+ * rather than looking like a quiet success.
+ *
+ * NOTE: batching (`/tokens/a,b,c`) is deliberately NOT used. That endpoint caps
+ * at 30 PAIRS, not 30 tokens, so one deep coin's pools consume the whole
+ * response — measured: a 4-address request came back with 30 pairs covering
+ * only SOL and WETH, silently dropping the other two.
  *
  * Never throws: a failed screen leaves the status quo (an unmeasured row), which
  * the board already renders correctly.
@@ -199,9 +215,32 @@ export async function screenBoardLiquidity(limit: number): Promise<LiquidityScre
             break;
         }
         try {
-            const sec = await securityWithLiquidityBackfill(row.network, row.tokenAddress);
-            if (sec?.liquidityUsd != null) out.measured++;
-            else out.unmeasured++;
+            const pairs = await fetchTokenPairs(row.tokenAddress);
+            if (!pairs.length) {
+                out.unmeasured++;
+                continue;
+            }
+
+            // Prefer a pair on the row's OWN chain. An EVM address is not
+            // chain-unique — the same bytes can exist on several chains — so the
+            // globally deepest pair can describe a different coin entirely.
+            // Solana addresses are unambiguous and fall through to the same
+            // answer either way.
+            //
+            // Falls back to the deepest overall when the slugs don't line up:
+            // ours came from GeckoTerminal and dexscreener's differ ("eth" vs
+            // "ethereum"), and CHAIN_TO_NETWORK only covers the pairs we knew to
+            // map. A real figure from the wrong slug beats no figure.
+            const onChain = pairs.filter((p) => p.network === row.network);
+            const best = (onChain.length ? onChain : pairs)[0];
+            const liq = best?.liquidityUsd;
+
+            if (liq == null) {
+                out.unmeasured++;
+                continue;
+            }
+            await backfillTrendingLiquidity(row.network, row.tokenAddress, liq);
+            out.measured++;
         } catch (err) {
             out.failed++;
             console.warn(

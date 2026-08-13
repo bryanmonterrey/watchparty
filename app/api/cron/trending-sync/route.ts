@@ -95,11 +95,11 @@ export async function GET(req: NextRequest) {
     // (2026-08-13) — which matters beyond a blank column: `clearsBrandBar` reads
     // it to decide whether a brand-squatting ticker has earned the alert rail.
     //
-    // Rides the SAME `dueThisPass` gate as the board sync, which is what keeps
-    // the arithmetic payable — see the cost note in `screenBoardLiquidity`:
-    //
-    //     20/pass, hourly  =   480/month  -> free tier, next to the board's 4,320
-    //     20/pass, 5-min   = 5,760/month  -> $50 tier
+    // Rides the SAME `dueThisPass` gate as the board sync. The source is
+    // DEXSCREENER (free, hundreds/min per IP) rather than Mobula's metered
+    // per-coin endpoint, which refused ~75% of calls on the free key — so the
+    // bound here is wall-clock inside this route's 120s ceiling, not money.
+    // See the note on `screenBoardLiquidity`.
     //
     // `?screen=N` overrides it for a manual seed (bounded at 200), the same way
     // `?all=1` overrides the chain slice. 0 turns it off without a deploy.
