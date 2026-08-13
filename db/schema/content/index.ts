@@ -41,6 +41,7 @@ export * from "./api-key";
 export * from "./developer-webhook";
 export * from "./developer-app";
 export * from "./developer-project";
+export * from "./oauth-scope-request";
 export * from "./developer-stream-rule";
 export * from "./developer-announcement";
 export * from "./stream-session";

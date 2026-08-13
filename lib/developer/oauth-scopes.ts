@@ -37,11 +37,43 @@ export const OAUTH_SCOPES = [
 
 export type OAuthScope = (typeof OAUTH_SCOPES)[number]["scope"];
 
-/** The plain scope ids, in catalog order — what the provider config accepts. */
-export const OAUTH_SCOPE_IDS: string[] = OAUTH_SCOPES.map((s) => s.scope);
+// ── Privileged scopes ───────────────────────────────────────────────────────
+// Scopes that require ADMIN REVIEW before an app may be granted them (Phase 11
+// "human review for privileged scopes"). The review queue, the fail-closed gate
+// (an app only gets a privileged scope after approval, added to its oauthClient
+// allow-list) and the admin surface are all live — but this set is INTENTIONALLY
+// EMPTY today, so nothing is gated yet.
+//
+// To add one, and ONLY together with a real endpoint that ENFORCES it (the house
+// rule — never a scope the consent screen shows but nothing honors):
+//   1. add the { scope, label, desc } entry to OAUTH_SCOPES above,
+//   2. add its id to PRIVILEGED_SCOPE_IDS here,
+//   3. ship the endpoint that checks it.
+// The console will then offer it as a "request access" scope, gated by review.
+export const PRIVILEGED_SCOPE_IDS: string[] = [];
+
+/** Does this scope require admin review before an app may use it? */
+export function isPrivilegedScope(scope: string): boolean {
+    return PRIVILEGED_SCOPE_IDS.includes(scope);
+}
+
+// The provider's GLOBAL scope list (opts.scopes in lib/auth/server.ts) — the
+// scopes a default client (client.scopes = null) may request self-serve.
+// PRIVILEGED scopes are EXCLUDED here on purpose: that's the gate. A privileged
+// scope is only reachable by a client whose explicit `scopes` allow-list
+// includes it, which admin approval writes (server/routers/admin.ts). Empty
+// PRIVILEGED_SCOPE_IDS today ⇒ this is every scope, unchanged.
+export const OAUTH_SCOPE_IDS: string[] = OAUTH_SCOPES
+    .map((s) => s.scope)
+    .filter((s) => !isPrivilegedScope(s));
+
+/** Every scope id in the catalog, privileged included — used to build a
+ *  client's allow-list when a privileged scope is granted (standard scopes +
+ *  the approved privileged ones). */
+export const ALL_OAUTH_SCOPE_IDS: string[] = OAUTH_SCOPES.map((s) => s.scope);
 
 export function isKnownScope(scope: string): scope is OAuthScope {
-    return OAUTH_SCOPE_IDS.includes(scope);
+    return ALL_OAUTH_SCOPE_IDS.includes(scope);
 }
 
 /** Resolve a space- or array-form scope request to catalog entries, unknown scopes dropped. */

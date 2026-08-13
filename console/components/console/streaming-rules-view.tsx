@@ -27,6 +27,12 @@ import { Chip } from "@/components/console/chip";
 // real-time matching engine is a later phase, so the header says so honestly
 // (same empty-then-populated shape X shows).
 
+/** Micro-units → $ display. Local copy of lib/developer/stream-pricing's helper
+ *  (the console can't import main-app runtime code — type-only boundary). */
+function microToUsd(micro: number): string {
+  return `$${(micro / 1_000_000).toFixed(micro % 1_000_000 === 0 ? 2 : 4)}`;
+}
+
 function AddRulesModal({
   appId,
   appName,
@@ -148,6 +154,10 @@ export function StreamingRulesView() {
   const remove = trpc.developerStreamRules.remove.useMutation({
     onSuccess: () => void utils.developerStreamRules.list.invalidate(),
   });
+  const stats = trpc.developerStreamRules.deliveryStats.useQuery(
+    { appId: appId ?? "" },
+    { enabled: !!appId },
+  );
   const [adding, setAdding] = React.useState(false);
 
   return (
@@ -156,9 +166,19 @@ export function StreamingRulesView() {
         <div>
           <h2 className="text-xl font-semibold">Streaming rules</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Manage filtered stream rules for your apps. Rules are stored now;
-            real-time matching is coming.
+            Manage filtered stream rules for your apps. Matches deliver on
+            <code className="mx-1 rounded bg-muted px-1 py-0.5 font-mono">GET /api/stream/events</code>.
+            Delivery is <span className="font-medium text-foreground">free</span> —
+            the stream is account-bounded (your own events only). Every rule
+            needs at least one positive term.
           </p>
+          {selectedApp && stats.data ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Last 24h: <span className="font-medium text-foreground">{stats.data.last24h}</span>{" "}
+              {stats.data.last24h === 1 ? "delivery" : "deliveries"} ·{" "}
+              <span className="font-medium text-foreground">{microToUsd(stats.data.last24hCostMicro)}</span>
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           {selectedApp ? (

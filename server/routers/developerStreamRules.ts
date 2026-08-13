@@ -8,6 +8,7 @@ import { developerStreamDeliveries } from "@/db/schema/content/developer-stream-
 import { developerApps } from "@/db/schema/content/developer-app";
 import { randHex } from "@/lib/api-gate";
 import { validateRule } from "@/lib/developer/stream-rules";
+import { STREAM_DELIVERY_PRICE_MICRO, streamDeliveryCostMicro } from "@/lib/developer/stream-pricing";
 import { limitOrPass, webhookMutationLimiter } from "@/lib/rate-limit";
 import { rooms } from "@/lib/realtime/protocol";
 
@@ -136,7 +137,13 @@ export const developerStreamRulesRouter = router({
                 .where(scope)
                 .orderBy(desc(developerStreamDeliveries.seq))
                 .limit(1);
-            return { last24h: n, lastAt: latest?.at ?? null };
+            return {
+                last24h: n,
+                lastAt: latest?.at ?? null,
+                // Firehose cost controls — free while the stream is account-bounded.
+                priceMicro: STREAM_DELIVERY_PRICE_MICRO,
+                last24hCostMicro: streamDeliveryCostMicro(n),
+            };
         }),
 
     /** The most recent matched events (the live stream tail). Account-wide, or

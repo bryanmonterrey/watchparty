@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "reports" | "verification" | "users";
+type Tab = "overview" | "reports" | "verification" | "scopes" | "users";
 
 function StatCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
     return (
@@ -160,6 +160,72 @@ function VerificationTab() {
     );
 }
 
+// Privileged OAuth scope requests (Phase 11). Approving writes the scope onto
+// the app's oauthClient allow-list. Inert until PRIVILEGED_SCOPE_IDS is set, so
+// this normally shows an empty queue.
+function ScopeRequestsTab() {
+    const utils = trpc.useUtils();
+    const [filter, setFilter] = useState<"pending" | "approved" | "rejected">("pending");
+    const { data, isLoading } = trpc.admin.getScopeRequests.useQuery({ status: filter });
+    const review = trpc.admin.reviewScopeRequest.useMutation({
+        onSuccess: () => { utils.admin.getScopeRequests.invalidate(); toast.success("Decision saved"); },
+    });
+    const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
+
+    return (
+        <div className="space-y-4">
+            <div className="flex gap-1">
+                {(["pending", "approved", "rejected"] as const).map(s => (
+                    <button key={s} onClick={() => setFilter(s)}
+                        className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors", filter === s ? "bg-white/10 text-zinc-100" : "text-zinc-500 hover:text-zinc-300")}>
+                        {s}
+                    </button>
+                ))}
+            </div>
+
+            {isLoading ? <div className="space-y-2">{[1,2].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+            : !data?.length ? (
+                <div className="text-center py-12 text-zinc-600">
+                    <Shield className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm">No {filter} scope requests</p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {data.map(r => (
+                        <div key={r.id} className="rounded-xl bg-zinc-900/60 border border-white/10 p-4 space-y-3">
+                            <div>
+                                <p className="text-sm font-semibold text-zinc-200">{r.appName}</p>
+                                <p className="text-xs text-zinc-500">@{r.ownerUsername} · requesting <span className="font-mono text-white">{r.scope}</span></p>
+                                {r.reason && <p className="text-zinc-300 mt-1 text-xs">{r.reason}</p>}
+                            </div>
+                            {filter === "pending" && (
+                                <div className="space-y-2">
+                                    <input
+                                        placeholder="Rejection reason (optional)"
+                                        value={rejectReason[r.id] ?? ""}
+                                        onChange={e => setRejectReason(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                        className="w-full px-3 py-1.5 bg-zinc-800 rounded-lg text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/30"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => review.mutate({ requestId: r.id, action: "approve" })}
+                                            className="flex-1 py-1.5 rounded-lg bg-white text-zinc-950 text-xs font-bold hover:bg-white/90 transition-colors">
+                                            Approve
+                                        </button>
+                                        <button onClick={() => review.mutate({ requestId: r.id, action: "reject", rejectionReason: rejectReason[r.id] })}
+                                            className="flex-1 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors">
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function UsersTab() {
     const [query, setQuery] = useState("");
     const [debouncedQ, setDebouncedQ] = useState("");
@@ -247,6 +313,7 @@ export function AdminDashboard() {
         { id: "overview", label: "Overview", icon: <FileText className="w-4 h-4" /> },
         { id: "reports", label: "Reports", icon: <Flag className="w-4 h-4" />, badge: stats?.pendingReports },
         { id: "verification", label: "Verification", icon: <ShieldCheck className="w-4 h-4" />, badge: stats?.pendingVerifications },
+        { id: "scopes", label: "Scopes", icon: <Shield className="w-4 h-4" /> },
         { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
     ];
 
@@ -301,6 +368,7 @@ export function AdminDashboard() {
 
             {tab === "reports" && <ReportsTab />}
             {tab === "verification" && <VerificationTab />}
+            {tab === "scopes" && <ScopeRequestsTab />}
             {tab === "users" && <UsersTab />}
         </div>
     );

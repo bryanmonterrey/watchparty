@@ -4,8 +4,12 @@ import { db } from "@/db";
 import { TRPCError } from "@trpc/server";
 import { reports, verificationRequests } from "@/db/schema/content/moderation";
 import { user } from "@/db/schema/auth";
+import { oauthClient } from "@/db/schema/auth";
 import { posts } from "@/db/schema/content";
+import { developerApps } from "@/db/schema/content/developer-app";
+import { oauthScopeRequests } from "@/db/schema/content/oauth-scope-request";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
+import { OAUTH_SCOPE_IDS } from "@/lib/developer/oauth-scopes";
 import { eq, desc, count, and, inArray, gte, sql as dsql } from "drizzle-orm";
 import { deletePost } from "@/lib/typesense/sync";
 import { reviewCoinSpam } from "@/lib/coin-feed/spam-review";
@@ -180,6 +184,84 @@ export const adminRouter = router({
 
             if (input.action === "approve") {
                 await db.update(user).set({ verifiedTier: req[0].requestedTier }).where(eq(user.id, req[0].userId));
+            }
+
+            return { success: true };
+        }),
+
+    // ─── Privileged OAuth scope requests ─────────────────────────────────────
+    // The Phase 11 "human review for privileged scopes" queue. Approval writes
+    // the scope onto the app's oauthClient allow-list (standard scopes + every
+    // granted privileged scope), which is the gate the OAuth provider enforces
+    // at authorize. Inert until PRIVILEGED_SCOPE_IDS is non-empty.
+
+    getScopeRequests: adminProcedure
+        .input(z.object({
+            status: z.enum(["pending", "approved", "rejected"]).optional().default("pending"),
+        }))
+        .query(async ({ input }) => {
+            return db
+                .select({
+                    id: oauthScopeRequests.id,
+                    appId: oauthScopeRequests.appId,
+                    scope: oauthScopeRequests.scope,
+                    reason: oauthScopeRequests.reason,
+                    status: oauthScopeRequests.status,
+                    createdAt: oauthScopeRequests.createdAt,
+                    appName: developerApps.name,
+                    ownerName: user.name,
+                    ownerUsername: user.username,
+                })
+                .from(oauthScopeRequests)
+                .innerJoin(developerApps, eq(oauthScopeRequests.appId, developerApps.id))
+                .innerJoin(user, eq(oauthScopeRequests.userId, user.id))
+                .where(eq(oauthScopeRequests.status, input.status))
+                .orderBy(desc(oauthScopeRequests.createdAt));
+        }),
+
+    reviewScopeRequest: adminProcedure
+        .input(z.object({
+            requestId: z.string(),
+            action: z.enum(["approve", "reject"]),
+            rejectionReason: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const [req] = await db
+                .select({ appId: oauthScopeRequests.appId, scope: oauthScopeRequests.scope, status: oauthScopeRequests.status })
+                .from(oauthScopeRequests)
+                .where(eq(oauthScopeRequests.id, input.requestId))
+                .limit(1);
+            if (!req) throw new TRPCError({ code: "NOT_FOUND" });
+            if (req.status !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Already reviewed" });
+
+            await db.update(oauthScopeRequests).set({
+                status: input.action === "approve" ? "approved" : "rejected",
+                reviewedBy: ctx.user.id,
+                reviewedAt: new Date(),
+                rejectionReason: input.action === "reject" ? input.rejectionReason : null,
+                updatedAt: new Date(),
+            }).where(eq(oauthScopeRequests.id, input.requestId));
+
+            if (input.action === "approve") {
+                const [app] = await db
+                    .select({ oauthClientId: developerApps.oauthClientId })
+                    .from(developerApps)
+                    .where(eq(developerApps.id, req.appId))
+                    .limit(1);
+                if (app?.oauthClientId) {
+                    // The client's allow-list = the standard scopes every client
+                    // gets + every APPROVED privileged scope for this app. Rebuilt
+                    // from the source of truth so it's idempotent and self-heals.
+                    const granted = await db
+                        .select({ scope: oauthScopeRequests.scope })
+                        .from(oauthScopeRequests)
+                        .where(and(eq(oauthScopeRequests.appId, req.appId), eq(oauthScopeRequests.status, "approved")));
+                    const scopes = [...new Set([...OAUTH_SCOPE_IDS, ...granted.map((g) => g.scope)])];
+                    await db
+                        .update(oauthClient)
+                        .set({ scopes, updatedAt: new Date() })
+                        .where(eq(oauthClient.clientId, app.oauthClientId));
+                }
             }
 
             return { success: true };

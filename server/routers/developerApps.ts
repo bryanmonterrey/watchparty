@@ -7,6 +7,8 @@ import { developerApps } from "@/db/schema/content/developer-app";
 import { developerBots } from "@/db/schema/content/developer-bot";
 import { user } from "@/db/schema/auth/user";
 import { oauthClient, oauthAccessToken, oauthRefreshToken, oauthConsent } from "@/db/schema/auth";
+import { oauthScopeRequests } from "@/db/schema/content/oauth-scope-request";
+import { isPrivilegedScope } from "@/lib/developer/oauth-scopes";
 import { randHex } from "@/lib/api-gate";
 import { generateAppKeypair } from "@/lib/developer/app-keys";
 import { computeVerification } from "@/lib/developer/verification";
@@ -512,6 +514,60 @@ export const developerAppsRouter = router({
                     .where(eq(oauthClient.clientId, app.oauthClientId));
             }
             return { disabled: input.disabled };
+        }),
+
+    // ── Privileged-scope requests ─────────────────────────────────────────
+    // A privileged OAuth scope requires ADMIN REVIEW before an app may use it.
+    // Requesting one files a pending row; approval adds the scope to the app's
+    // oauthClient allow-list (server/routers/admin.ts). PRIVILEGED_SCOPE_IDS is
+    // empty today, so requestScope has nothing to accept until a scope ships.
+
+    /** The caller's scope requests for one app (status per scope). */
+    listScopeRequests: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .query(async ({ ctx, input }) => {
+            await ownedApp(ctx.user.id, input.id);
+            return db
+                .select({
+                    scope: oauthScopeRequests.scope,
+                    status: oauthScopeRequests.status,
+                    rejectionReason: oauthScopeRequests.rejectionReason,
+                    createdAt: oauthScopeRequests.createdAt,
+                    reviewedAt: oauthScopeRequests.reviewedAt,
+                })
+                .from(oauthScopeRequests)
+                .where(and(eq(oauthScopeRequests.appId, input.id), eq(oauthScopeRequests.userId, ctx.user.id)))
+                .orderBy(desc(oauthScopeRequests.createdAt));
+        }),
+
+    /** Request a privileged scope for an app — files a pending review row. */
+    requestScope: protectedProcedure
+        .input(z.object({ id: z.string(), scope: z.string().min(1).max(64), reason: z.string().trim().max(500).optional() }))
+        .mutation(async ({ ctx, input }) => {
+            await throttle(ctx.user.id);
+            const app = await ownedApp(ctx.user.id, input.id);
+            if (!app.oauthClientId) {
+                throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Enable Sign in with watchparty first" });
+            }
+            // Only PRIVILEGED scopes go through review — standard scopes are
+            // self-serve. An unknown/standard scope here is a client bug.
+            if (!isPrivilegedScope(input.scope)) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "That scope doesn't require review" });
+            }
+            // The partial unique index refuses a second live (pending/approved)
+            // request for the same (app, scope); surface that as a clean 409.
+            try {
+                await db.insert(oauthScopeRequests).values({
+                    id: `wposr_${randHex(8)}`,
+                    appId: app.id,
+                    userId: ctx.user.id,
+                    scope: input.scope,
+                    reason: input.reason ?? null,
+                });
+            } catch {
+                throw new TRPCError({ code: "CONFLICT", message: "You already have a pending or approved request for this scope" });
+            }
+            return { status: "pending" as const };
         }),
 
     // ── Public directory ──────────────────────────────────────────────────
