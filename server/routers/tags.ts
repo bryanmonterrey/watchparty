@@ -2,183 +2,266 @@ import { z } from "zod";
 import { router, publicProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { posts } from "@/db/schema/content/post";
+import { postTags } from "@/db/schema/content/post-tag";
 import { user } from "@/db/schema/auth/user";
+import { tokens } from "@/db/schema/content/token";
+import { trendingCoins } from "@/db/schema/content/trending";
 import { coinCandles } from "@/db/schema/content/coin-candles";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
 
 /**
- * Tags — posts that mention a coin's ticker.
+ * Tags — the coins a post references.
  *
- * Every piece of content in this app is a post, so a Tag is not a new kind of
- * object: it is a post that wrote `$TICKER`. That is what puts an avatar on the
- * chart at a price and a moment, and what fills the coin table's last column
- * with each trader's most recent take.
+ * A Tag is PICKED in the composer: typing `$` then a character opens a ticker
+ * dropdown, and choosing one stores a reference. It is not parsed out of the
+ * text afterwards.
  *
- * ## Matched in SQL, with the same rule as lib/tags/extract
+ * ## That design is what makes this correct, not just convenient
  *
- * The TypeScript extractor is the definition; this has to agree with it or the
- * chart and the table disagree about what counts. Two rules both encode:
+ * The first implementation matched `$TICKER` against post text at query time,
+ * and shipped a pattern that matched NOTHING — `\y\$BONK\y`, where `\y`
+ * asserts a word boundary and `$` is not a word character. Nothing failed. A
+ * broken matcher and a coin nobody tagged return the same empty list, so the
+ * feature would have read as "no tags yet" on every coin indefinitely.
  *
- *   - the `$` is REQUIRED. "bonk is up" is not a tag; "$BONK" is. The plain word
- *     appears constantly in ordinary text.
- *   - the boundary matters. Without `\y` a search for $BONK matches $BONKINU.
- *
- * ⚠️ No index backs this. `posts` is small today (tens of rows) so a scan is
- * nothing; at real volume the answer is a `post_tags` join table written on
- * publish, and this query becomes its backfill. Doing that now would be a
- * migration ahead of any data to put in it.
- *
- * ## Anchoring a Tag on the chart
- *
- * A post has a time but no price — the author need never have traded, which is
- * the whole point of a Tag versus a trade marker. The vertical position comes
- * from the candle covering that minute, and when there is no candle the Tag is
- * returned with `priceUsd: null` and simply is not plotted. Inventing a price
- * would put somebody's words at a level that never traded.
+ * A stored reference removes the failure mode rather than fixing an instance of
+ * it: the row is there or it is not, and there is no pattern left to be subtly
+ * wrong. It also settles WHICH coin, which text cannot — the same ticker is
+ * minted on every chain repeatedly (eleven distinct mints called `BOT` on the
+ * live board). "$BOT" is ambiguous; a picked reference is not.
  */
 
 const SYMBOL = z.string().min(1).max(24);
-
-/**
- * `$SYMBOL` delimited, as the SQL twin of lib/tags/extract's regex.
- *
- * ⚠️ NOT `\y\$SYMBOL\y`, which is what this was and which never matched a
- * single row. Postgres's `\y` asserts a WORD boundary, and `$` is not a word
- * character — between the space and the `$` in "gm $BONK" both sides are
- * non-word, so there is no boundary there and the pattern fails. Verified
- * against production: `'gm $BONK looking good' ~* '\y\$BONK\y'` is FALSE.
- *
- * The whole Tags feature would have shipped returning nothing, on every coin,
- * with no error anywhere — the exact shape of failure this codebase keeps
- * getting bitten by: absence that looks like "no data yet".
- *
- * Explicit delimiters instead: start-of-string or a non-word char before the
- * `$`, and end-of-string or a non-word char after the symbol. Verified to match
- * "gm $BONK looking good" and to REJECT "gm $BONKINU".
- */
-const tagPattern = (symbol: string) => {
-    const t = symbol.replace(/^\$/, "").replace(/[^A-Za-z0-9]/g, "");
-    return `(^|[^A-Za-z0-9_$])\\$${t}($|[^A-Za-z0-9_])`;
-};
 
 export const tagsRouter = router({
     /**
      * Recent Tags for one coin, newest first — the chart's markers and the
      * "Tags" tab under it.
      */
+    /**
+     * Recent Tags for one coin, newest first — the chart's markers.
+     *
+     * Anchored at the post's time and the price of the 1m candle covering that
+     * minute. A post has a time but no price: the author need never have traded,
+     * which is the whole difference between a Tag and a swap marker. With no
+     * candle for that minute the Tag comes back `priceUsd: null` and is not
+     * plotted — inventing a price would put somebody's words at a level that
+     * never traded.
+     */
     forCoin: publicProcedure
         .input(
             z.object({
                 network: z.string(),
+                tokenAddress: z.string(),
                 poolAddress: z.string().nullish(),
-                symbol: SYMBOL,
                 limit: z.number().min(1).max(100).default(50),
             }),
         )
         .query(({ input }) =>
-            withCache(`tags:coin:v1:${input.symbol.toLowerCase()}:${input.limit}`, 30, async () => {
-                const rows = await db
-                    .select({
-                        id: posts.id,
-                        content: posts.content,
-                        createdAt: posts.createdAt,
-                        userId: posts.userId,
-                        username: user.username,
-                        name: user.name,
-                        avatarUrl: user.image,
-                    })
-                    .from(posts)
-                    .innerJoin(user, eq(user.id, posts.userId))
-                    .where(sql`${posts.content} ~* ${tagPattern(input.symbol)}`)
-                    .orderBy(desc(posts.createdAt))
-                    .limit(input.limit);
-                if (!rows.length) return [];
-
-                // Price at each post's minute, from the candle that covers it.
-                // One query for the whole page rather than one per Tag: the
-                // per-Tag shape is what made the old sparkline column expensive.
-                const stamps = rows.map((r) => Math.floor(r.createdAt.getTime() / 1000));
-                const priceByBucket = new Map<number, number>();
-                if (input.poolAddress && stamps.length) {
-                    const from = Math.min(...stamps) - 60;
-                    const to = Math.max(...stamps) + 60;
-                    const candles = await db
-                        .select({ ts: coinCandles.ts, c: coinCandles.c })
-                        .from(coinCandles)
+            withCache(
+                `tags:coin:v2:${input.network}:${input.tokenAddress}:${input.limit}`,
+                30,
+                async () => {
+                    const rows = await db
+                        .select({
+                            id: posts.id,
+                            content: posts.content,
+                            createdAt: postTags.createdAt,
+                            username: user.username,
+                            avatarUrl: user.image,
+                        })
+                        .from(postTags)
+                        .innerJoin(posts, eq(posts.id, postTags.postId))
+                        .innerJoin(user, eq(user.id, posts.userId))
                         .where(
                             and(
-                                eq(coinCandles.network, input.network),
-                                eq(coinCandles.poolAddress, input.poolAddress),
-                                eq(coinCandles.resolution, "1"),
-                                gte(coinCandles.ts, from),
-                                lte(coinCandles.ts, to),
+                                eq(postTags.network, input.network),
+                                eq(postTags.tokenAddress, input.tokenAddress),
                             ),
-                        );
-                    for (const c of candles) priceByBucket.set(c.ts, c.c);
-                }
+                        )
+                        .orderBy(desc(postTags.createdAt))
+                        .limit(input.limit);
+                    if (!rows.length) return [];
 
-                return rows.map((r) => {
-                    const ts = Math.floor(r.createdAt.getTime() / 1000);
-                    const bucket = Math.floor(ts / 60) * 60;
-                    return {
-                        id: r.id,
-                        userId: r.userId,
-                        username: r.username,
-                        name: r.name,
-                        avatarUrl: r.avatarUrl,
-                        // Trimmed for the column; the post itself is one click away.
-                        text: (r.content ?? "").trim().slice(0, 280),
-                        ts,
-                        // null when no candle covers that minute — not plotted,
-                        // rather than plotted at a made-up level.
-                        priceUsd: priceByBucket.get(bucket) ?? null,
-                    };
-                });
-            }),
+                    const stamps = rows.map((r) => Math.floor(r.createdAt.getTime() / 1000));
+                    const priceByBucket = new Map<number, number>();
+                    if (input.poolAddress) {
+                        // One query for the page, not one per Tag.
+                        const candles = await db
+                            .select({ ts: coinCandles.ts, c: coinCandles.c })
+                            .from(coinCandles)
+                            .where(
+                                and(
+                                    eq(coinCandles.network, input.network),
+                                    eq(coinCandles.poolAddress, input.poolAddress),
+                                    eq(coinCandles.resolution, "1"),
+                                    gte(coinCandles.ts, Math.min(...stamps) - 60),
+                                    lte(coinCandles.ts, Math.max(...stamps) + 60),
+                                ),
+                            );
+                        for (const c of candles) priceByBucket.set(c.ts, c.c);
+                    }
+
+                    return rows.map((r) => {
+                        const ts = Math.floor(r.createdAt.getTime() / 1000);
+                        return {
+                            id: r.id,
+                            username: r.username,
+                            avatarUrl: r.avatarUrl,
+                            text: (r.content ?? "").trim().slice(0, 280),
+                            ts,
+                            priceUsd: priceByBucket.get(Math.floor(ts / 60) * 60) ?? null,
+                        };
+                    });
+                },
+            ),
         ),
 
     /**
      * Each author's MOST RECENT Tag for this coin — the coin table's last
-     * column, which shows one line per trader rather than a feed.
+     * column, one line per trader rather than a feed.
      *
-     * Keyed by USERNAME, not user id: the table's rows come from
-     * `resolveTraders`, which maps a wallet to a username and an avatar and
-     * never carries an id. Keying by something the caller does not have is a
-     * map that silently never hits.
-     *
-     * DISTINCT ON is exactly this question in one pass; grouping and then
-     * re-querying for each author's latest would be a query per row of the
-     * table.
+     * Keyed by USERNAME: the table's rows come from `resolveTraders`, which maps
+     * a wallet to a username and an avatar and never carries a user id, so an
+     * id-keyed map would silently never hit.
      */
     latestByAuthor: publicProcedure
-        .input(z.object({ symbol: SYMBOL, limit: z.number().min(1).max(200).default(100) }))
-        .query(({ input }) =>
-            withCache(`tags:latest:v1:${input.symbol.toLowerCase()}:${input.limit}`, 30, async () => {
-                const rows = await db.execute<{
-                    user_id: string;
-                    username: string | null;
-                    content: string | null;
-                    created_at: Date;
-                }>(sql`
-                    SELECT DISTINCT ON (p."userId")
-                           p."userId" AS user_id, u.username, p.content, p."createdAt" AS created_at
-                    FROM ${posts} p
-                    JOIN ${user} u ON u.id = p."userId"
-                    WHERE p.content ~* ${tagPattern(input.symbol)}
-                    ORDER BY p."userId", p."createdAt" DESC
-                    LIMIT ${input.limit}
-                `);
-
-                const out: Record<string, { text: string; ts: number }> = {};
-                for (const r of rows as unknown as { username: string | null; content: string | null; created_at: Date }[]) {
-                    if (!r.username) continue;
-                    out[r.username] = {
-                        text: (r.content ?? "").trim().slice(0, 280),
-                        ts: Math.floor(new Date(r.created_at).getTime() / 1000),
-                    };
-                }
-                return out;
+        .input(
+            z.object({
+                network: z.string(),
+                tokenAddress: z.string(),
+                limit: z.number().min(1).max(200).default(100),
             }),
+        )
+        .query(({ input }) =>
+            withCache(
+                `tags:latest:v2:${input.network}:${input.tokenAddress}:${input.limit}`,
+                30,
+                async () => {
+                    // DISTINCT ON answers "each author's latest" in one pass;
+                    // grouping and re-querying per author is a query per table row.
+                    const rows = await db
+                        .selectDistinctOn([posts.userId], {
+                            username: user.username,
+                            content: posts.content,
+                            createdAt: postTags.createdAt,
+                        })
+                        .from(postTags)
+                        .innerJoin(posts, eq(posts.id, postTags.postId))
+                        .innerJoin(user, eq(user.id, posts.userId))
+                        .where(
+                            and(
+                                eq(postTags.network, input.network),
+                                eq(postTags.tokenAddress, input.tokenAddress),
+                            ),
+                        )
+                        .orderBy(posts.userId, desc(postTags.createdAt))
+                        .limit(input.limit);
+
+                    const out: Record<string, { text: string; ts: number }> = {};
+                    for (const r of rows) {
+                        if (!r.username) continue;
+                        out[r.username] = {
+                            text: (r.content ?? "").trim().slice(0, 280),
+                            ts: Math.floor(r.createdAt.getTime() / 1000),
+                        };
+                    }
+                    return out;
+                },
+            ),
         ),
+
+    /**
+     * The composer's ticker dropdown: what the author is typing after `$`.
+     *
+     * Searches coins we launched AND the trending board, because the board is
+     * where almost every coin anyone talks about lives — restricting this to
+     * `tokens` would offer a handful of our own launches and nothing else, and
+     * the author would go back to typing plain text.
+     *
+     * Ours rank first: a watchparty launch is the one case where the tag can
+     * also light up a creator's own page.
+     */
+    search: publicProcedure
+        .input(z.object({ q: SYMBOL, limit: z.number().min(1).max(20).default(8) }))
+        .query(({ input }) => {
+            const term = input.q.replace(/^\$/, "").trim();
+            if (!term) return Promise.resolve([]);
+            return withCache(`tags:search:v1:${term.toLowerCase()}:${input.limit}`, 60, async () => {
+                const like = `${term}%`;
+                const [ours, external] = await Promise.all([
+                    db
+                        .select({
+                            symbol: tokens.ticker,
+                            name: tokens.name,
+                            imageUrl: tokens.imageUrl,
+                            tokenAddress: tokens.tokenAddress,
+                            tokenId: tokens.id,
+                        })
+                        .from(tokens)
+                        .where(ilike(tokens.ticker, like))
+                        .limit(input.limit),
+                    db
+                        .select({
+                            symbol: trendingCoins.symbol,
+                            name: trendingCoins.name,
+                            imageUrl: trendingCoins.imageUrl,
+                            tokenAddress: trendingCoins.tokenAddress,
+                            network: trendingCoins.network,
+                            volume: trendingCoins.volume24hUsd,
+                        })
+                        .from(trendingCoins)
+                        .where(
+                            or(
+                                ilike(trendingCoins.symbol, like),
+                                ilike(trendingCoins.name, like),
+                            ),
+                        )
+                        .orderBy(desc(trendingCoins.volume24hUsd))
+                        .limit(input.limit * 3),
+                ]);
+
+                type Hit = {
+                    symbol: string;
+                    name: string | null;
+                    imageUrl: string | null;
+                    network: string;
+                    tokenAddress: string;
+                    tokenId: string | null;
+                };
+                const seen = new Set<string>();
+                const out: Hit[] = [];
+                const push = (h: Hit) => {
+                    if (!h.tokenAddress || !h.symbol) return;
+                    const k = `${h.network}:${h.tokenAddress}`;
+                    if (seen.has(k)) return;
+                    seen.add(k);
+                    out.push(h);
+                };
+                for (const t of ours) {
+                    if (!t.tokenAddress) continue;
+                    push({
+                        symbol: t.symbol,
+                        name: t.name,
+                        imageUrl: t.imageUrl,
+                        network: "solana",
+                        tokenAddress: t.tokenAddress,
+                        tokenId: t.tokenId,
+                    });
+                }
+                for (const c of external) {
+                    if (!c.tokenAddress) continue;
+                    push({
+                        symbol: c.symbol,
+                        name: c.name,
+                        imageUrl: c.imageUrl,
+                        network: c.network,
+                        tokenAddress: c.tokenAddress,
+                        tokenId: null,
+                    });
+                }
+                return out.slice(0, input.limit);
+            });
+        }),
 });

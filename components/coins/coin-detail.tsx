@@ -189,7 +189,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                         outside the box and costs the image nothing. */}
                     <ChainBadge
                         network={coin.network}
-                        className="absolute -bottom-0.5 -right-0.5 size-[22px] rounded-full bg-canvas ring-2 ring-canvas"
+                        className="absolute -bottom-0.5 -right-0.5 size-[18px] rounded-full bg-canvas ring-2 ring-canvas"
                     />
                 </div>
                 <div className="min-w-0">
@@ -429,7 +429,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     // not on a swap, so it gets its own (slower) cadence instead of refetching
     // with the tape every 15s.
     const { data: tagByUser = {} } = trpc.tags.latestByAuthor.useQuery(
-        { symbol: coin.symbol },
+        { network: coin.network, tokenAddress: coin.tokenAddress },
         { staleTime: 60_000, retry: retryTransient(1) },
     );
 
@@ -701,7 +701,7 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
     // and the price of the candle covering that minute — the author need never
     // have traded, which is exactly what separates a Tag from a swap marker.
     const { data: tags = [] } = trpc.tags.forCoin.useQuery(
-        { network: coin.network, poolAddress: coin.poolAddress, symbol: coin.symbol },
+        { network: coin.network, tokenAddress: coin.tokenAddress, poolAddress: coin.poolAddress },
         { staleTime: 60_000, enabled: overlays.tags, retry: retryTransient(1) },
     );
 

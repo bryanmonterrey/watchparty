@@ -1,5 +1,6 @@
 export * from './assistant';
 export * from "./post"
+export * from "./post-tag";
 export * from "./playlist";
 export * from "./escrow";
 export * from "./token";
