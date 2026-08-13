@@ -72,9 +72,10 @@ throttle` memory), which was NOT known to affect this endpoint too.
 Consequences, in order of importance:
 
 1. **The fill rate is throttle-bound, not budget-bound.** ~20 picks/hour at ~25%
-   success is ~5 rows/hour, so 240 blank rows take ~2 days rather than the ~15
-   hours the arithmetic predicts. Raising `TRENDING_LIQUIDITY_SCREEN_PER_PASS`
-   does not fix this and just burns more wall-clock on 429s.
+   success predicts ~5 rows/hour. **Observed is worse:** 3 → 4 measured rows
+   over roughly an hour of live crons (243 fresh rows). At that rate the board
+   takes weeks, not days. Raising `TRENDING_LIQUIDITY_SCREEN_PER_PASS` does not
+   fix it and just burns more wall-clock on 429s.
 2. **A refused coin stays at the head of the ordering** and is re-picked next
    pass. It self-clears (the 429s are probabilistic, not per-coin — SOL answered
    fine), so this is slow rather than stuck, but it does mean the top of the
@@ -106,6 +107,33 @@ Three things call it today, and none of them run without traffic:
 **Do NOT** revert to writing the pairs `liquidity` value. It is not dollars, and
 `clearsBrandBar`'s escape hatch reads it — that is how CLAUDE and OPENAI got onto
 the alert rail.
+
+---
+
+## 1b. SEARCH IS DOWN ON PROD — Typesense cluster is gone (found 2026-08-13)
+
+Not related to anything above; found while smoke-testing the router split.
+
+```
+curl -s -G https://watchparty.xyz/api/trpc/content.search \
+  -H "Origin: https://watchparty.xyz" --data-urlencode 'input={"json":{"query":"a","limit":1}}'
+# 500  getaddrinfo ENOTFOUND pnybcdrsuh24awk7p-1.a2.typesense.net
+```
+
+`TYPESENSE_HOST` in `.env.production` is `pnybcdrsuh24awk7p-1.a2.typesense.net`,
+and that name is **NXDOMAIN** — verified independently with `nslookup` from a
+laptop, so it is not a Workers DNS quirk. The cluster was deleted or expired;
+the host is not merely unreachable, it does not exist.
+
+Blast radius is wider than the search box: `upsertPost` / `upsertToken` /
+`upsertUser` in `lib/typesense/sync` are called from the post, video and token
+write paths. They are wrapped so they don't fail those writes, but every one of
+them is currently a guaranteed failed DNS lookup on the request path — a real
+latency cost on every publish, for an index nothing can read.
+
+Decide which: stand up a new Typesense cluster and re-point + reindex, or gate
+the whole integration behind a flag so the write paths stop calling a host that
+does not resolve. Do NOT leave it as-is.
 
 ---
 
