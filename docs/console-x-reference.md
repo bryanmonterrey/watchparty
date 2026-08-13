@@ -90,8 +90,13 @@ redacted before persistence.
   sales**; Community Notes AI Note Writer API → **Request access**), each
   with a "Sales managed" chip.
 
-→ **Skipped in v1** (keys are flat); maps to the future app-registry tier
-([[developer-platform]]).
+→ **SHIPPED 2026-08-12 as an ORG layer** (not plans): projects group apps
+(and their keys) via `developer_projects` + `developer_apps.project_id`;
+console Projects page (create/rename/delete, `?project=` apps filter,
+move-to-project on app detail). The "Pay Per Use" chip is an INERT stub — a
+project grants/gates nothing; money stays at the account level. Real paid
+tiers layer on later without a schema change. See
+`docs/console-backlog-plans.md` §1.
 
 ## 5. Apps (list)
 
