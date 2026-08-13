@@ -659,7 +659,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                         )}
                                     </span>
                                     <span className="flex min-w-0 flex-col">
-                                        <span className={cn("truncate font-bold", row.username ? "text-white" : "text-zinc-400")}>
+                                        <span className={cn("truncate font-medium", row.username ? "text-white" : "text-zinc-400")}>
                                             {row.username ?? `${row.account.slice(0, 4)}…${row.account.slice(-4)}`}
                                         </span>
                                         {hold && (
@@ -672,7 +672,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                 </span>
 
                                 <span className="flex min-w-0 flex-col px-3.5 py-3.5">
-                                    <span className="truncate font-bold tabular-nums text-white">
+                                    <span className="truncate font-medium tabular-nums text-white">
                                         {row.positionUsd == null ? "—" : compactUsd(row.positionUsd)}
                                     </span>
                                     <span className="truncate text-[13px] font-medium tabular-nums text-zinc-600">
@@ -681,7 +681,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                 </span>
 
                                 <span className="flex min-w-0 flex-col px-3.5 py-3.5">
-                                    <span className={cn("truncate font-bold tabular-nums", row.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred")}>
+                                    <span className={cn("truncate font-medium tabular-nums", row.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred")}>
                                         {row.pnlUsd == null ? "—" : `${up ? "+" : "−"}${compactUsd(Math.abs(row.pnlUsd))}`}
                                     </span>
                                     {row.pnlPct != null && (
@@ -695,7 +695,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     "$10.2M MC" is the comparison people actually
                                     make, and $0.0102 alone says nothing. */}
                                 <span className="flex min-w-0 flex-col px-3.5 py-3.5">
-                                    <span className="truncate font-bold tabular-nums text-white">
+                                    <span className="truncate font-medium tabular-nums text-white">
                                         {entryMc == null ? (
                                             row.avgEntry == null ? "—" : compactUsd(row.avgEntry)
                                         ) : (
@@ -726,7 +726,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                             {tagByUser[row.username].text}
                                         </span>
                                     ) : (
-                                        <span className="min-w-0 truncate font-bold text-zinc-700">—</span>
+                                        <span className="min-w-0 truncate font-medium text-zinc-700">—</span>
                                     )}
                                 </span>
                             </div>
