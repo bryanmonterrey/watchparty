@@ -188,6 +188,13 @@ export interface MorphPopoverContentProps {
   align?: Align;
   /** Gap between trigger and panel, in px. Default 8. */
   sideOffset?: number;
+  /**
+   * Shift along the align axis, in px. For align="start" a positive value
+   * moves the panel right of the trigger's left edge (22 on a size-11 trigger
+   * puts the panel's left edge at the button's middle); for align="end" it
+   * mirrors, moving the panel's right edge left. Default 0.
+   */
+  alignOffset?: number;
   /** Panel corner radius, in px. Default 16. */
   radius?: number;
   /**
@@ -206,6 +213,7 @@ export function MorphPopoverContent({
   side = "bottom",
   align = "end",
   sideOffset = 8,
+  alignOffset = 0,
   radius = 16,
   fill,
   className,
@@ -222,8 +230,8 @@ export function MorphPopoverContent({
   useEffect(() => setPortalReady(true), []);
   const left = layout
     ? align === "end"
-      ? layout.trigger.left + layout.trigger.width - layout.content.width
-      : layout.trigger.left
+      ? layout.trigger.left + layout.trigger.width - layout.content.width - alignOffset
+      : layout.trigger.left + alignOffset
     : 0;
   const top = layout
     ? side === "bottom"

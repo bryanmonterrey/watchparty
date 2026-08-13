@@ -62,6 +62,9 @@ export function MoreMenu({ userId, username, open, onOpenChange, onClose, trigge
             open={open}
             onOpenChange={onOpenChange}
             align="start"
+            // Half the size-11 trigger: the panel's left edge starts at the
+            // button's horizontal middle instead of its left edge.
+            alignOffset={22}
             width={236}
             gap={8}
             triggerAriaLabel="More options"

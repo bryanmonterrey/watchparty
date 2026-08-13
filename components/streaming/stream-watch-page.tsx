@@ -10,6 +10,7 @@ import { useMiniPlayer } from "@/contexts/mini-player-context";
 import { StreamPlayer } from "./stream-player";
 import { StreamChat } from "./stream-chat";
 import { StreamMetadata } from "./stream-metadata";
+import { AboutCard } from "@/components/profile/about-card";
 
 interface StreamWatchPageProps {
     host: UserType;
@@ -102,6 +103,15 @@ export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
                     isLoading={isLoading}
                     onNameClick={onShowProfile}
                 />
+
+                {/* The channel's About card — the same component the profile's
+                    About tab renders, under the stream the way Twitch does it.
+                    Full column width, matching the description block above. */}
+                {!isLoading && (
+                    <div className="mt-4">
+                        <AboutCard user={host} />
+                    </div>
+                )}
             </main>
 
             {/* ── Chat sidebar ──────────────────────────────────────────────── */}

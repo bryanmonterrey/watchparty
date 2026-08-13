@@ -82,6 +82,8 @@ export type GooDropdownProps = {
   /** Panel width in px. */
   width?: number
   align?: 'start' | 'end'
+  /** Shift along the align axis, in px — see MorphPopoverContent.alignOffset. */
+  alignOffset?: number
   /** No-op since the beui popover — see the destructure. */
   shift?: number
   side?: 'top' | 'bottom'
@@ -175,6 +177,7 @@ export function GooDropdown({
   headerHeight = 48,
   width = 450,
   align = 'end',
+  alignOffset,
   side = 'bottom',
   gap = 14,
   itemHeight = 52,
@@ -237,6 +240,7 @@ export function GooDropdown({
       <MorphPopoverContent
         side={side}
         align={align}
+        alignOffset={alignOffset}
         sideOffset={gap}
         radius={panelRadius}
         fill={fill}
