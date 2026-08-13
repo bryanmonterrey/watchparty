@@ -42,6 +42,52 @@ liquidity figure for, so it stays NULL, stays at the head, and is re-paid for
 every hour. The fix if that shows up is a `liquidity_screened_at` column to key
 retries off — deliberately NOT built ahead of evidence.
 
+### VERIFIED ON PROD 2026-08-13, and the throttle is the binding constraint
+
+Deploy `1c4929b9`, three probes. The mechanism works: `liquidity_usd` went from
+**0 of 308 to 3 of 243 fresh rows**, values sane (max $13.5M), and they PERSIST
+— so the deferred `after()` write does flush on the worker.
+
+What the probes also showed, immediately, is that the budget is not what limits
+this. Two consecutive passes returned the SAME numbers:
+
+```
+{"picked":3,"measured":1,"unmeasured":0,"failed":2,"deadlineHit":false}
+```
+
+`failed`, not `unmeasured` — those are throws. Reproduced against Mobula
+directly with the prod key at 2s spacing:
+
+```
+SNDK    429  Rate limit exceeded (Max usage reached)
+SOL     200  liquidityUSD = 14,090,833
+UNITREE 429  Rate limit exceeded (Max usage reached)
+ETH     429  Rate limit exceeded (Max usage reached)
+```
+
+So ~75% of `/2/token/details` calls are refused on the free key — the same
+behaviour already measured for `/2/token/trades` (see the `mobula-free-tier-
+throttle` memory), which was NOT known to affect this endpoint too.
+
+Consequences, in order of importance:
+
+1. **The fill rate is throttle-bound, not budget-bound.** ~20 picks/hour at ~25%
+   success is ~5 rows/hour, so 240 blank rows take ~2 days rather than the ~15
+   hours the arithmetic predicts. Raising `TRENDING_LIQUIDITY_SCREEN_PER_PASS`
+   does not fix this and just burns more wall-clock on 429s.
+2. **A refused coin stays at the head of the ordering** and is re-picked next
+   pass. It self-clears (the 429s are probabilistic, not per-coin — SOL answered
+   fine), so this is slow rather than stuck, but it does mean the top of the
+   board is retried far more often than the tail.
+3. This is the strongest evidence yet for the **$50 Start-up plan**, which is
+   already an open decision below. It is the same one env var.
+
+**If staying on the free key**, the fix is the `liquidity_screened_at` column
+after all — stamp every ATTEMPT, retry no sooner than ~6h — so a 429-heavy head
+cannot monopolise the budget. Additive + nullable, so it ships as SQL under
+`db/` and applies to both projects. Not built yet: it is the wrong fix if the
+plan changes, since a paid key removes the pressure entirely.
+
 **Expect the board to SHRINK a little as this fills.** `MIN_BOARD_LIQUIDITY_USD`
 ($1,000, env-tunable) only filters rows whose liquidity is KNOWN — 35% of rows
 measured under $1k on 2026-08-12. Those become filterable for the first time.
