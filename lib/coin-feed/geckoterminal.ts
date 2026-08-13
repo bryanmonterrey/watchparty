@@ -127,6 +127,14 @@ export type DiscoveredPool = {
     buys24h: number | null;
     sells24h: number | null;
     poolCreatedAt: Date | null;
+    /** Launchpad lifecycle, populated only by the Mobula Pulse discovery path
+     *  (GT rows and cached board rows leave them undefined). `bonded: false`
+     *  with a percentage means the coin is still ON its bonding curve — no AMM
+     *  pool exists yet, which is why `qualifies()` treats these rows under
+     *  curve criteria instead of the liquidity floors. */
+    bonded?: boolean | null;
+    bondingPercentage?: number | null;
+    holdersCount?: number | null;
 };
 
 /** GT ids look like "solana_<address>"; the address is everything after the

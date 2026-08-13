@@ -43,6 +43,14 @@ const MAX_TRACKED = 300;
  *  stables / wrapped majors / mega-caps are excluded outright — they always
  *  clear a trader-count threshold, so they'd fire on every scan and bury the
  *  memecoin activity the rail is for. */
+/** On-curve adoption bar: this far up the bonding curve with this many
+ *  holders, a coin is heading for migration and worth an alert-scan slot
+ *  BEFORE it gets there. 70 matches the memescope's final-stretch split; 50
+ *  holders is what separates a crowd from a deployer's own wallets (the
+ *  mid-curve rows measured 2026-08-13 carried ~100). */
+const CURVE_ADOPT_MIN_PCT = 70;
+const CURVE_ADOPT_MIN_HOLDERS = 50;
+
 function qualifies(pool: DiscoveredPool): boolean {
     const net = networkById(pool.network);
     if (!net) return false;
@@ -51,6 +59,17 @@ function qualifies(pool: DiscoveredPool): boolean {
     // launch-day pumps; they get a much higher LIQUIDITY bar instead — see
     // lib/coin-feed/quality.ts.
     if (!clearsBrandBar(pool.symbol, pool.name, pool.liquidityUsd, false, pool.tokenAddress)) return false;
+    // A coin still ON its bonding curve has no AMM liquidity BY CONSTRUCTION,
+    // so the floors below reject every one — which is why alerts historically
+    // saw a pump.fun coin only after migration, at the moment of peak dump
+    // risk. Curve position + crowd size are the honest equivalents here. Only
+    // Pulse-sourced rows carry these fields; everything else falls through.
+    if (pool.bonded === false && pool.bondingPercentage != null && pool.bondingPercentage < 100) {
+        return (
+            pool.bondingPercentage >= CURVE_ADOPT_MIN_PCT &&
+            (pool.holdersCount ?? 0) >= CURVE_ADOPT_MIN_HOLDERS
+        );
+    }
     const liquidity = pool.liquidityUsd ?? 0;
     const volume = pool.volume24hUsd ?? 0;
     return liquidity >= net.minLiquidityUsd && volume >= net.minVolume24hUsd;

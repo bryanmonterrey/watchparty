@@ -35,14 +35,15 @@
 import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { and, eq, sql } from "drizzle-orm";
-import { fetchMobulaChainPairs, mobulaEnabled } from "@/lib/coins/mobula";
+import { fetchMobulaChainPairs, fetchMobulaPulse, mobulaEnabled } from "@/lib/coins/mobula";
 import { isBoardExcluded, trackedTokenId } from "./networks";
 import type { DiscoveredPool } from "./geckoterminal";
 
 /**
- * The chains Mobula's pairs endpoint serves, and the ones the board is scoped
- * to. Verified against the demo host; chains it 500s on (bitcoin, robinhood)
- * are absent from `PAIR_BLOCKCHAINS` and therefore from here.
+ * The chains the board is scoped to. Bitcoin is absent (no token pairs).
+ * Robinhood is served through PULSE, not the pairs endpoint — pairs 500s on
+ * evm:4663 (re-verified 2026-08-13) while Pulse covers it, launchpads
+ * included; `syncTrendingChainFromMobula` falls back per-chain.
  */
 export const MOBULA_TRENDING_CHAINS = [
     "solana",
@@ -51,6 +52,7 @@ export const MOBULA_TRENDING_CHAINS = [
     "polygon",
     "bnb",
     "hyperevm",
+    "robinhood",
 ] as const;
 
 /**
@@ -120,11 +122,28 @@ export async function discoverFromMobula(
             });
         }
 
-        // The one call that is actually needed.
-        const fresh = await fetchMobulaChainPairs(chain, "new", perChainLimit);
+        // The one call that is actually needed — Pulse, not the pairs list.
+        // Pairs are pool-shaped, so their "new" list is a MIGRATIONS echo: a
+        // pump.fun coin has no pool until it graduates, and every one of
+        // solana's 40 "newest" pairs was post-migration when measured
+        // (2026-08-13). Pulse's three lanes ride the same one call and carry
+        // the bonding phase, which is what lets `qualifies()` adopt a coin
+        // BEFORE the migration instead of discovering its exit dump. Lane
+        // order bonded → bonding → fresh so a coin caught mid-migration keeps
+        // its furthest-along state.
+        const lanes = await fetchMobulaPulse(chain, perChainLimit);
+        const fresh = lanes
+            ? [...lanes.bonded, ...lanes.bonding, ...lanes.fresh]
+            : await fetchMobulaChainPairs(chain, "new", perChainLimit);
+        const seenLaneAddr = new Set<string>();
         for (const p of fresh ?? []) {
             if (!p.tokenAddress || !p.symbol) continue;
+            if (seenLaneAddr.has(p.tokenAddress)) continue;
+            seenLaneAddr.add(p.tokenAddress);
             out.push({
+                bonded: p.bonded,
+                bondingPercentage: p.bondingPercentage,
+                holdersCount: p.holders,
                 network: chain,
                 poolAddress: p.pairAddress ?? p.tokenAddress,
                 tokenAddress: p.tokenAddress,
@@ -176,7 +195,16 @@ export async function syncTrendingChainFromMobula(
 ): Promise<MobulaTrendingResult | null> {
     if (!mobulaEnabled()) return null;
 
-    const pairs = await fetchMobulaChainPairs(chain, "trending", limit);
+    // Pairs first; on chains the pairs endpoint can't serve (robinhood 500s,
+    // mapped as absent → null) the Pulse bonded lane stands in — those ARE the
+    // chain's AMM pools, so volume-sorting them reproduces what "trending"
+    // returns everywhere else. Same provider, so `source` stays "mobula" and
+    // the board read's source gate needs no change.
+    const pairs =
+        (await fetchMobulaChainPairs(chain, "trending", limit)) ??
+        (await fetchMobulaPulse(chain, limit).then(
+            (lanes) => lanes && [...lanes.bonded].sort((a, b) => b.volume24h - a.volume24h),
+        ));
     if (!pairs) return null;
 
     // One row per TOKEN, deepest pool wins. A coin appears under several pairs
