@@ -5,9 +5,47 @@ deployed unless marked otherwise. Ordered by what to do first.
 
 ---
 
-## 1. Board liquidity is blank on every row  (task #24)
+## 1. Board liquidity is blank on every row  (task #24) — BUILT 2026-08-13
 
 **Measured:** 0 of 308 fresh `trending_coins` rows carry a `liquidity_usd`.
+
+**There were TWO causes, and the second one is why the number stayed at zero
+rather than creeping up.** The write path below was already working — a coin
+page view called `securityWithLiquidityBackfill` and wrote a real figure — but
+`trending-mobula.ts`'s upsert set `liquidityUsd: excluded.liquidity_usd` on
+conflict, and `excluded` is ALWAYS null on that path (the mapping writes null on
+purpose, because the pairs field is not dollars). So every hourly board pass
+erased every measurement taken in the previous hour. Fixed with a `coalesce`,
+the same idiom its neighbours (`image_url`, the holder stats) already use for
+the same reason.
+
+With that in place, the screening pass below can actually accumulate:
+`screenBoardLiquidity()` in `server/lib/backfill-liquidity.ts`, called from the
+trending-sync cron on the same `dueThisPass` hourly gate. 20 coins/pass, highest
+24h volume first, 1 credit each = **480/month**, taking the free tier from 7,200
+to 7,680 of 10,000. Knob: `TRENDING_LIQUIDITY_SCREEN_PER_PASS` (0 = off);
+`?screen=N` on the cron URL overrides it for a manual seed, bounded at 200, the
+same way `?all=1` overrides the chain slice.
+
+**Verify after deploy** — the cron response now carries a `liquidityScreen`
+block, and it is written to be read:
+
+```
+curl -sH "Authorization: Bearer $CRON_SECRET" \
+  "https://watchparty.xyz/api/cron/trending-sync?screen=5" | jq .liquidityScreen
+# {"picked":5,"measured":5,"unmeasured":0,"failed":0,"deadlineHit":false}
+```
+
+`measured` 0 with `unmeasured` N on repeated passes is the one failure mode to
+watch: it means the head of the volume ordering is a coin the provider has no
+liquidity figure for, so it stays NULL, stays at the head, and is re-paid for
+every hour. The fix if that shows up is a `liquidity_screened_at` column to key
+retries off — deliberately NOT built ahead of evidence.
+
+**Expect the board to SHRINK a little as this fills.** `MIN_BOARD_LIQUIDITY_USD`
+($1,000, env-tunable) only filters rows whose liquidity is KNOWN — 35% of rows
+measured under $1k on 2026-08-12. Those become filterable for the first time.
+That is the intended behaviour, not a regression.
 
 **Why.** Mobula's pairs endpoint — the one that fills the board — does not report
 dollars. Its `liquidity` field read `0.00000038` next to `volume_24h` of
@@ -18,16 +56,6 @@ and "none" lead to opposite decisions), and the real figure comes from
 Three things call it today, and none of them run without traffic:
 `trade.coinSecurity` (someone opens a coin page), and discovery's
 `screenSecurity` / `rescreenTracked`.
-
-**The fix.** Give `app/api/cron/trending-sync` a bounded screening pass: take the
-top N board coins with `liquidity_usd IS NULL`, call
-`securityWithLiquidityBackfill` for each, 1 credit apiece. N is a budget
-decision — the free plan is 10k credits/month total and the coin pages and
-alert tape already draw on it; ~20/pass on the existing cadence is a sane start.
-
-**Why it wasn't done in-session:** it edits a cron path, and the board was taken
-down twice on 2026-08-12 by changes to the trending read path. Worth doing with
-a clear head and a production verification after.
 
 **Do NOT** revert to writing the pairs `liquidity` value. It is not dollars, and
 `clearsBrandBar`'s escape hatch reads it — that is how CLAUDE and OPENAI got onto
@@ -113,6 +141,12 @@ token-launch blocks are separable.
 - **fomo's URL** — `.biz` and `.fun` both refuse connections. Wanted to inspect
   how their chart marker layer is positioned.
 - **`ALERT_WEBHOOK_URL`** — last item on `docs/cloudflare-launch.md` step 7.
+  ⚠️ Looks like this is ALREADY SET: `.env.production` carries a real Discord
+  webhook for it. What's unconfirmed is whether the deployed `DOTENV_PRODUCTION`
+  secret was re-synced since it was added — check before treating it as open.
+  Separately, `lib/alerts/discord.ts` reads a DIFFERENT variable
+  (`DISCORD_ALERT_WEBHOOK_URL`) from the one `app/api/webhooks/helius-treasury`
+  reads (`ALERT_WEBHOOK_URL`), so setting one does not light up the other.
 - **Mobula $50 Start-up plan** — one env var (`MOBULA_PLAN=startup`) tightens
   every cadence, and `MOBULA_TAPE_COINS_PER_PASS=12` gives the alert tape the
   full watch list hourly. On the free key Mobula refuses ~half of all

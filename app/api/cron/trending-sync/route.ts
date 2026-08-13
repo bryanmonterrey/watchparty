@@ -13,6 +13,7 @@ import { TRENDING_NETWORKS } from "@/lib/coin-feed/networks";
 import { runCandleSync, pruneCandles } from "@/lib/coins/candle-sync";
 import { gtKeyed } from "@/lib/coins/gecko-endpoint";
 import { MOBULA_TRENDING_CHAINS, syncTrendingChainFromMobula } from "@/lib/coin-feed/trending-mobula";
+import { screenBoardLiquidity } from "@/server/lib/backfill-liquidity";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -85,6 +86,41 @@ export async function GET(req: NextRequest) {
             console.error(`[trending-sync] mobula ${chain} failed:`, err instanceof Error ? err.message : err);
         }
     }
+    // ── Liquidity screen ─────────────────────────────────────────────────────
+    //
+    // The board cannot measure its own liquidity: the pairs endpoint's
+    // `liquidity` is not dollars, so the sync above writes NULL deliberately and
+    // the real figure only comes from the per-coin security screen. Nothing ran
+    // that on a schedule, so `liquidity_usd` was NULL on 308 of 308 fresh rows
+    // (2026-08-13) — which matters beyond a blank column: `clearsBrandBar` reads
+    // it to decide whether a brand-squatting ticker has earned the alert rail.
+    //
+    // Rides the SAME `dueThisPass` gate as the board sync, which is what keeps
+    // the arithmetic payable — see the cost note in `screenBoardLiquidity`:
+    //
+    //     20/pass, hourly  =   480/month  -> free tier, next to the board's 4,320
+    //     20/pass, 5-min   = 5,760/month  -> $50 tier
+    //
+    // `?screen=N` overrides it for a manual seed (bounded at 200), the same way
+    // `?all=1` overrides the chain slice. 0 turns it off without a deploy.
+    //
+    // ⚠️ The raw string is checked for absence BEFORE Number(): a missing param
+    // reads as null, and Number(null) is 0 — a finite, in-range number that
+    // would have pinned the screen to "off" on every scheduled pass while
+    // looking like a deliberate override.
+    const screenRaw = req.nextUrl.searchParams.get("screen");
+    const screenParam = screenRaw === null || screenRaw.trim() === "" ? NaN : Number(screenRaw);
+    const screenPinned = Number.isFinite(screenParam) && screenParam >= 0;
+    const screenPerPass = screenPinned
+        ? Math.min(200, Math.floor(screenParam))
+        : Math.max(0, Math.floor(Number(process.env.TRENDING_LIQUIDITY_SCREEN_PER_PASS ?? 20)) || 0);
+    // An explicit ?screen= also bypasses the hourly gate — otherwise a manual
+    // seed silently does nothing for 59 minutes out of every 60, which reads as
+    // a broken endpoint rather than a scheduling rule.
+    const liquidityScreen = (dueThisPass || screenPinned) && screenPerPass > 0
+        ? await screenBoardLiquidity(screenPerPass)
+        : null;
+
     // ── GeckoTerminal is OFF once Mobula is configured ───────────────────────
     //
     // Not "GT fills the chains Mobula doesn't serve". The owner's call, and the
@@ -133,7 +169,17 @@ export async function GET(req: NextRequest) {
             ? await pruneCandles()
             : 0;
 
-        return NextResponse.json({ ...result, mobula: mobulaResults, callsSpent: budget.spent, candles, pruned });
+        return NextResponse.json({
+            ...result,
+            mobula: mobulaResults,
+            // Reported so a stalled screen is visible: repeated passes with
+            // measured 0 and unmeasured N mean the head of the volume ordering
+            // is unmeasurable and is being re-paid for every hour.
+            liquidityScreen,
+            callsSpent: budget.spent,
+            candles,
+            pruned,
+        });
     } catch (err) {
         console.error("[trending-sync] pass failed:", err);
         return NextResponse.json({ error: "sync failed" }, { status: 500 });

@@ -453,8 +453,8 @@ export function CoinTradePanel({
                 onClick={submit}
                 disabled={!canSubmit}
                 className={cn(
-                    "mt-4 h-12 w-full rounded-full font-bold text-black transition-colors disabled:opacity-40",
-                    side === "buy" ? "bg-lantern hover:bg-lantern/85" : "bg-pastelred hover:bg-pastelred/85",
+                    "mt-4 h-13 w-full rounded-full font-bold text-black transition-colors disabled:opacity-40",
+                    side === "buy" ? "bg-flexwhite/85 hover:bg-flexwhite/95" : "bg-pastelred/85 hover:bg-pastelred",
                 )}
             >
                 {submitting ? "Swapping…" : `${side === "buy" ? "Buy" : "Sell"} ${coinSymbol}`}

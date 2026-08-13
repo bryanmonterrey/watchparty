@@ -263,7 +263,18 @@ export async function syncTrendingChainFromMobula(
                 imageUrl: sql`coalesce(excluded.image_url, ${trendingCoins.imageUrl})`,
                 priceUsd: sql`excluded.price_usd`,
                 marketCapUsd: sql`excluded.market_cap_usd`,
-                liquidityUsd: sql`excluded.liquidity_usd`,
+                // COALESCE, and this one is load-bearing rather than defensive.
+                // `excluded.liquidity_usd` is ALWAYS null here — the pairs
+                // endpoint doesn't report dollars, so the mapping writes null on
+                // purpose. Assigning it unconditionally meant every hourly pass
+                // erased the measured figure that a coin-page view (or the
+                // screen in the trending-sync cron) had just backfilled, so the
+                // column read NULL on 308 of 308 fresh rows on 2026-08-13 while
+                // the backfill path itself was working fine.
+                //
+                // Same reasoning as the holder stats below: a fresh null is not
+                // news, and overwriting a real measurement with one is a loss.
+                liquidityUsd: sql`coalesce(excluded.liquidity_usd, ${trendingCoins.liquidityUsd})`,
                 volume5mUsd: sql`excluded.volume_5m_usd`,
                 volume1hUsd: sql`excluded.volume_1h_usd`,
                 volume24hUsd: sql`excluded.volume_24h_usd`,

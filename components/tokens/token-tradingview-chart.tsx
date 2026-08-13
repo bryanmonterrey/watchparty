@@ -22,9 +22,9 @@ const DATAFEED_SCRIPT = "/datafeeds/udf/dist/bundle.js";
 // vars — it renders into an iframe that our stylesheet doesn't reach.
 const UP = "#00ED89";      // lantern
 const DOWN = "#FF746C";    // pastelred
-const CANVAS = "#080808";  // --color-canvas, the app background
+const CANVAS = "#050505";  // --color-canvas, the app background
 const HAIRLINE = "#18181B"; // sidebar-hover, the app's grid/divider weight
-const TEXT = "#7F878E";    // pastelgray, the app's muted label colour
+const TEXT = "#71717A";    // pastelgray, the app's muted label colour
 const MUTED = "#3F3F46";   // zinc-700 — the loading spinner, deliberately
                            // neutral. It used to run twitter2 blue, which is a
                            // royal-blue ring on an otherwise black chart and the

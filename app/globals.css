@@ -44,6 +44,34 @@
   --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
   --digit-dir-x: 0;
   --digit-dir-y: 1;
+  /* ── transitions.dev: text states swap (04-text-states-swap.md) ────────
+     Stock tuning. Drives the coin header's token-address pill (coin-detail's
+     CopyTokenAddress): address ⇄ "Copy" ⇄ "Copied" swap in place with the
+     blurred rise. */
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
+  /* ── transitions.dev: success check (10-success-check.md) ──────────────
+     Stock durations and eases, but the y-bob and blur are pulled WAY in from
+     stock (40px / 10px): the first consumer is a 14px check inside the
+     address pill, where a 40px bob flies the glyph across the whole header.
+     A larger centerpiece check should re-widen both on itself — they're
+     custom props, override at the call site. */
+  --check-opacity-dur: 500ms;
+  --check-rotate-dur: 500ms;
+  --check-rotate-from: 80deg;
+  --check-bob-dur: 500ms;
+  --check-y-amount: 6px;
+  --check-blur-dur: 500ms;
+  --check-blur-from: 3px;
+  --check-path-dur: 500ms;
+  --check-path-delay: 80ms;
+  --check-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease-opacity: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease-rotate: cubic-bezier(0.22, 1, 0.36, 1);
+  --check-ease-bob: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --check-ease-path: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* ── Motion tokens ──────────────────────────────────────────────────────
      The CSS mirror of `lib/ease.ts`. Same four durations and two easings, in
@@ -216,6 +244,7 @@
   --color-postgray: var(--postgray);
   --color-lantern2: #35FFAA;
   --color-lantern: #00ED89;
+  --color-cyberpurp: #4A4A5E;
   --color-gray1: #17171B;
   /* The app canvas — bg-panel's white 3% over the black shell, flattened, and
      the exact value the sidebar paints. Every full-bleed app surface that must
@@ -1080,6 +1109,104 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 
   @media (prefers-reduced-motion: reduce) {
     .t-digit-group .t-digit { animation: none !important; }
+  }
+}
+
+/* ── transitions.dev: text states swap (04-text-states-swap.md) ───────────
+   Pasted verbatim from the skill. Three-phase, JS-driven (coin-detail's
+   CopyTokenAddress): add .is-exit → old text rises + blurs out; after
+   --text-swap-dur swap textContent and add .is-enter-start (jump below,
+   no transition); force a reflow, remove it → new text rises to rest.
+   The reflow between the last two steps is what makes the enter play —
+   don't "simplify" it away. Variables live in :root at the top. */
+@layer utilities {
+  .t-text-swap {
+    display: inline-block;
+    transform: translateY(0);
+    filter: blur(0);
+    opacity: 1;
+    transition:
+      transform var(--text-swap-dur) var(--text-swap-ease),
+      filter    var(--text-swap-dur) var(--text-swap-ease),
+      opacity   var(--text-swap-dur) var(--text-swap-ease);
+    will-change: transform, filter, opacity;
+  }
+  .t-text-swap.is-exit {
+    transform: translateY(calc(var(--text-swap-translate-y) * -1));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+  }
+  .t-text-swap.is-enter-start {
+    transform: translateY(var(--text-swap-translate-y));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-text-swap { transition: none !important; }
+  }
+}
+
+/* ── transitions.dev: success check (10-success-check.md) ─────────────────
+   Pasted verbatim from the skill. The wrapper drives fade + rotate + blur +
+   Y-bob; the SVG path stroke-draws. Cold load is data-state="out" (opacity
+   0, no animation); flipping to "in" plays the appear. Hide is the caller's
+   problem (flipping back to "out" snaps invisible), which suits the address
+   pill — the label swap covers the exit. Variables live in :root.
+
+   The dasharray is NOT the snippet's placeholder 20: it's getTotalLength()
+   of the pill's check path (M5 12.5 L10 17.5 L19 7 ≈ 20.9), rounded up. A
+   different path needs its own length set inline or it pre-reveals /
+   over-draws. */
+@layer utilities {
+  .t-success-check {
+    display: inline-block;
+    transform-origin: center;
+    opacity: 0;
+    will-change: transform, opacity, filter;
+  }
+  .t-success-check svg { display: block; overflow: visible; }
+  .t-success-check svg path {
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+  }
+
+  .t-success-check[data-state="in"] {
+    animation:
+      t-check-fade   var(--check-opacity-dur) var(--check-ease-opacity) forwards,
+      t-check-rotate var(--check-rotate-dur)  var(--check-ease-rotate)  forwards,
+      t-check-blur   var(--check-blur-dur)    var(--check-ease-out)     forwards,
+      t-check-bob    var(--check-bob-dur)     var(--check-ease-bob)     forwards;
+  }
+  .t-success-check[data-state="in"] svg path {
+    animation: t-check-draw var(--check-path-dur) var(--check-ease-path) var(--check-path-delay, 0ms) forwards;
+  }
+
+  @keyframes t-check-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes t-check-rotate {
+    from { transform: rotate(var(--check-rotate-from)); }
+    to   { transform: rotate(0deg); }
+  }
+  @keyframes t-check-blur {
+    from { filter: blur(var(--check-blur-from)); }
+    to   { filter: blur(0); }
+  }
+  @keyframes t-check-bob {
+    from { translate: 0 var(--check-y-amount); }
+    to   { translate: 0 0; }
+  }
+  @keyframes t-check-draw { to { stroke-dashoffset: 0; } }
+
+  /* One edit vs the snippet: visibility is scoped to [data-state="in"]. The
+     stock guard shows the check unconditionally, which is fine when it only
+     mounts on success — this one is always mounted and toggles state, so the
+     stock rule would pin it visible for reduced-motion users. */
+  @media (prefers-reduced-motion: reduce) {
+    .t-success-check { animation: none !important; }
+    .t-success-check svg path { animation: none !important; }
+    .t-success-check[data-state="in"] { opacity: 1; }
+    .t-success-check[data-state="in"] svg path { stroke-dashoffset: 0 !important; }
   }
 }
 
