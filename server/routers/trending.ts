@@ -14,29 +14,25 @@ import { coinFeedEvents } from "@/db/schema/content/coin-feed";
 import { coinCandles } from "@/db/schema/content/coin-candles";
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { clearsBrandBar, isRiskyHoldings } from "@/lib/coin-feed/quality";
+import { clearsBrandBar, isRiskyHoldings, MIN_BOARD_LIQUIDITY_USD } from "@/lib/coin-feed/quality";
 import { isVerifiedMint, verifiedSolanaMints } from "@/lib/coins/verified-tokens";
 import { collapseCopycats } from "@/lib/coins/collapse-copycats";
 
 /** A board row older than this is stale data, not data. See the note in `list`. */
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
 
-/**
- * Below this a coin is not tradeable, so it is not a listing.
- *
- * Measured 2026-08-12: 109 of 311 board rows — 35% — sat under $1,000 of
- * liquidity. Not a rounding artefact of a few dust pairs; a third of what the
- * board was showing could not absorb a $100 order without moving double digits.
- *
- * $1,000 is deliberately low. It is not a quality judgement — quality is what
- * the brand, ticker and holder gates are for — it only asserts that a row on a
- * TRADING surface should be something you can actually trade. Anything with
- * real interest clears it within minutes of launch.
- *
- * Env-tunable because the right floor depends on what the board is for, and
- * that is worth changing without a deploy.
- */
-const MIN_BOARD_LIQUIDITY_USD = Number(process.env.TRENDING_MIN_LIQUIDITY_USD ?? 1_000) || 0;
+// The floor moved to lib/coin-feed/quality (imported below) so it is ONE rule
+// rather than this router's rule. It living here is precisely why /trade's
+// chain board never applied it: that surface reads Mobula live and never
+// passes through this file.
+//
+// Measured 2026-08-12: 109 of 311 board rows — 35% — sat under $1,000 of
+// liquidity. Not a rounding artefact of a few dust pairs; a third of what the
+// board was showing could not absorb a $100 order without moving double digits.
+//
+// $1,000 is deliberately low. It is not a quality judgement — quality is what
+// the brand, ticker and holder gates are for — it only asserts that a row on a
+// TRADING surface should be something you can actually trade.
 
 /** Which window the % / volume columns describe. */
 export const TIMEFRAMES = ["5m", "1h", "6h", "24h"] as const;

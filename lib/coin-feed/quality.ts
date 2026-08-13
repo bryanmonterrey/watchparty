@@ -203,6 +203,39 @@ export interface HoldingsRisk {
 }
 
 /** Concentration levels at which a coin is one wallet-cluster's exit event. */
+/**
+ * Below this a coin is not tradeable, so it is not a listing.
+ *
+ * Lives HERE rather than in the trending router because it is not the trending
+ * board's rule — it is the app's. It was a module-local const in
+ * server/routers/trending.ts, which is exactly why `/trade`'s chain board never
+ * applied it: that surface reads Mobula live and never passes through the
+ * router that owned the number.
+ *
+ * Env-tunable because the right floor depends on what the board is for, and
+ * that is worth changing without a deploy.
+ */
+export const MIN_BOARD_LIQUIDITY_USD = Number(process.env.TRENDING_MIN_LIQUIDITY_USD ?? 1_000) || 0;
+
+/**
+ * Is this coin tradeable enough to list, given what we know about it?
+ *
+ * ⚠️ `null` PASSES, and that is not a loophole. NULL means "not yet measured",
+ * never "none" — the chain-wide pairs endpoint that fills these surfaces does
+ * not report dollars (0.00000038 beside $80M of 24h volume), so a coin is
+ * unmeasured until a per-coin screen has run. Rejecting unknowns would empty
+ * the board, SOL and ETH included.
+ *
+ * Measured 2026-08-13, once the screen had run: 105 of 243 rows — 43% — were
+ * under this floor, among them a coin showing $168,842,702 of 24h volume
+ * against $0.02 of liquidity.
+ */
+export function clearsLiquidityFloor(liquidityUsd: number | null | undefined): boolean {
+    if (MIN_BOARD_LIQUIDITY_USD <= 0) return true;
+    if (liquidityUsd == null) return true;
+    return liquidityUsd >= MIN_BOARD_LIQUIDITY_USD;
+}
+
 export function isRiskyHoldings(h: HoldingsRisk): boolean {
     return (
         (h.top10Pct ?? 0) >= 80 ||
