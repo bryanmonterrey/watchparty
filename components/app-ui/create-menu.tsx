@@ -23,17 +23,22 @@ import { WithAuth } from "@/components/auth/with-auth";
 // of thing you can make here was one tab-click deeper and invisible until you
 // were already in the dialog.
 //
-// The four dialog tabs open the dialog ON that tab (CreateDialog takes
-// initialTab + controlled open for exactly this). Space, Callout and Prediction
-// are NAVIGATIONS, not dialogs — each is made against something specific (a
-// community, a coin, a market), so there's nothing to fill in from the header;
-// the menu takes you where the thing gets made.
+// The five dialog tabs open the dialog ON that tab (CreateDialog takes
+// initialTab + controlled open for exactly this). Callout and Prediction are
+// NAVIGATIONS, not dialogs — each is made against something specific (a coin, a
+// market), so there's nothing to fill in from the header; the menu takes you
+// where the thing gets made.
+//
+// Space USED to be a navigation, on the grounds that its create workflow didn't
+// exist. It does now (create-dialog/space-setup) — a space is made against
+// nothing but its own title, so there was never anything to navigate to; the
+// community page's inline form was simply the only place it lived. Both work:
+// that form is still there for people already inside a community.
 //
 // Deliberately NOT here: Story and Shorts (author's call), Community and
-// Playlist (same). Space is in, but its create workflow doesn't exist yet —
-// spaces-view has no create form, so the item lands on the page.
+// Playlist (same).
 
-type DialogTab = "video" | "post" | "coin" | "stream";
+type DialogTab = "video" | "post" | "coin" | "stream" | "space";
 
 export function CreateMenu({ triggerClassName }: { triggerClassName?: string }) {
     const router = useRouter();
@@ -105,8 +110,8 @@ export function CreateMenu({ triggerClassName }: { triggerClassName?: string }) 
                     { key: "sep", type: "separator" },
                     gooMenuItem({
                         key: "space",
-                        onClick: () => go("/communities/spaces"),
-                        
+                        onClick: () => openDialog("space"),
+
                         label: "Space",
                     }),
                     gooMenuItem({

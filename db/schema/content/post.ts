@@ -27,6 +27,9 @@ export const posts = pgTable("posts", {
     // broadcast already created instead of landing as a second feed entry.
     // See db/stream-post-columns.sql.
     streamId: text("streamId"),
+    // Which space this post IS, when it is one — the audio-room parallel of
+    // streamId. See db/space-post-columns.sql.
+    spaceId: text("spaceId"),
     isShort: boolean("isShort").default(false).notNull(),
     category: text("category"),
     language: jsonb("language").$type<string[]>().default([]),

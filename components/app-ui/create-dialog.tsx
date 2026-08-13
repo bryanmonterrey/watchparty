@@ -45,12 +45,25 @@ interface CreateDialogProps extends React.HTMLAttributes<HTMLElement> {
     initialTab?: Tab
 }
 
-type Tab = "video" | "post" | "coin" | "stream"
+type Tab = "video" | "post" | "coin" | "stream" | "space"
 
 // Full stream setup (generate connection, keys, info, OBS steps), designed for
 // this dialog — paid for only when the tab opens.
 const LazyStreamSetup = dynamic(
     () => import("./create-dialog/stream-setup").then((m) => m.StreamSetup),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex h-[350px] items-center justify-center">
+                <div className="h-3.5 w-40 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
+            </div>
+        ),
+    },
+)
+// Same treatment as the stream tab: the picker and its autocomplete are only
+// paid for when someone opens Space.
+const LazySpaceSetup = dynamic(
+    () => import("./create-dialog/space-setup").then((m) => m.SpaceSetup),
     {
         ssr: false,
         loading: () => (
@@ -594,7 +607,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                     {step === "upload" && (
                         <div className="flex items-center justify-between px-6 pt-6 pb-2">
                             <div className="flex items-center gap-6 relative">
-                                {(["video", "post", "stream", "coin"] as Tab[]).map((tab) => (
+                                {(["video", "post", "stream", "space", "coin"] as Tab[]).map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
@@ -1068,6 +1081,16 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                     className="max-h-[70vh] min-h-[350px] overflow-y-auto"
                                 >
                                     <LazyStreamSetup />
+                                </motion.div>
+                            ) : activeTab === "space" && step === "upload" ? (
+                                <motion.div
+                                    key="space"
+                                    initial={{ opacity: 1, y: 0 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.125 }}
+                                    className="max-h-[70vh] min-h-[350px] overflow-y-auto"
+                                >
+                                    <LazySpaceSetup onDone={() => setOpen(false)} />
                                 </motion.div>
                             ) : null}
                         </AnimatePresence>

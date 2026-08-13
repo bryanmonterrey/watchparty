@@ -6,6 +6,9 @@ import {
     communitySpaceParticipants,
 } from "@/db/schema/community/spaces";
 import { user } from "@/db/schema";
+import { posts } from "@/db/schema/content/post";
+import { postTagsInput, writePostTags } from "@/server/lib/write-post-tags";
+import { nanoid } from "nanoid";
 import { eq, and, desc, count, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { publishToRoom } from "@/lib/realtime/publish";
@@ -38,13 +41,21 @@ export const spacesRouter = router({
             z.object({
                 title: z.string().min(1).max(120),
                 serverId: z.string().uuid().optional(),
+                // Coins the title tags, same validator and same meaning as a
+                // post's or a stream's.
+                tags: postTagsInput,
+                // Whether the space's post reaches the feed. This is the post's
+                // own column — the "visible or not" option is not a new concept
+                // and must not become a second one.
+                visibility: z.enum(["public", "private", "unlisted"]).default("public"),
             })
         )
         .mutation(async ({ ctx, input }) => {
+            const title = input.title.trim();
             const [space] = await db
                 .insert(communitySpaces)
                 .values({
-                    title: input.title.trim(),
+                    title,
                     hostId: ctx.user.id,
                     serverId: input.serverId ?? null,
                 })
@@ -55,7 +66,43 @@ export const spacesRouter = router({
                 .values({ spaceId: space.id, userId: ctx.user.id, role: "HOST" })
                 .onConflictDoNothing();
 
-            return space;
+            // ── The post ────────────────────────────────────────────────────
+            //
+            // A space is a post, exactly as a stream is (stream.startBroadcast).
+            //
+            // NO videoUrl, and that is the difference from a stream rather than
+            // an omission: a space is audio, and `getVideoFeed` gates on
+            // isNotNull(videoUrl), so this belongs in the main feed and not on
+            // a surface built for video.
+            //
+            // Best-effort: the space is the thing with value and the caller is
+            // already joining the room. A post that fails to write must not
+            // fail the space that is now live.
+            let postId: string | null = null;
+            try {
+                postId = nanoid();
+                await db.insert(posts).values({
+                    id: postId,
+                    userId: ctx.user.id,
+                    spaceId: space.id,
+                    title,
+                    isLive: true,
+                    status: "published",
+                    visibility: input.visibility,
+                });
+                // Filtered against the title as saved, the same rule the
+                // composer applies: a coin picked and then deleted from the
+                // text must not tag the post.
+                const picked = (input.tags ?? []).filter((t) =>
+                    title.toLowerCase().includes(`$${t.symbol.toLowerCase()}`),
+                );
+                if (picked.length) await writePostTags(postId, picked);
+            } catch (err) {
+                postId = null;
+                console.error("[spaces.create] post failed:", err instanceof Error ? err.message : err);
+            }
+
+            return { ...space, postId };
         }),
 
     /** All currently-live spaces with host + participant count. */
@@ -190,6 +237,20 @@ export const spacesRouter = router({
                 .update(communitySpaces)
                 .set({ status: "ENDED", endedAt: new Date() })
                 .where(eq(communitySpaces.id, input.spaceId));
+
+            // Retire the post this space created. Without it an ended space
+            // keeps a LIVE badge in the feed forever — the same trap the stream
+            // path hit (app/api/webhooks/ivs). Best-effort: ending the space is
+            // what the host asked for and must not fail on the annotation.
+            try {
+                await db
+                    .update(posts)
+                    .set({ isLive: false })
+                    .where(and(eq(posts.spaceId, input.spaceId), eq(posts.isLive, true)));
+            } catch (err) {
+                console.error("[spaces.end] retiring post failed:", err instanceof Error ? err.message : err);
+            }
+
             await notifySpaceChange(input.spaceId);
             return { success: true };
         }),
