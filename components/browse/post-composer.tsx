@@ -198,6 +198,9 @@ export function PostComposer() {
             audience,
             replyPrivacy,
             status: "draft",
+            // A draft keeps its tags, or picking a coin and saving loses the
+            // reference and the author has to pick it again on publish.
+            tags: pickedTags.filter((t) => content.toLowerCase().includes(`$${t.symbol.toLowerCase()}`)),
         });
     };
 

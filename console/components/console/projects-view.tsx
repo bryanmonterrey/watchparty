@@ -131,15 +131,17 @@ function ProjectCard({ project }: { project: ProjectRow }) {
 
       {!renaming ? (
         <>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/apps?project=${project.id}`}>View apps</Link>
+          <Button variant="outline" size="sm" render={<Link href={`/apps?project=${project.id}`} />}>
+            View apps
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Project actions">
-                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="icon-sm" aria-label="Project actions">
+                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setRenaming(true)}>
                 <HugeiconsIcon icon={PencilEdit02Icon} className="size-4" />

@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Tick02Icon, Folder01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc";
 import { formatDate, money } from "@/lib/format";
 import { CopyButton } from "@/components/console/copy-button";
@@ -894,6 +900,61 @@ function VerificationCard({ appId }: { appId: string }) {
   );
 }
 
+// Which Project this app is filed under, with a dropdown to move it (or unfile
+// it). A project is an organizational bucket only — moving an app changes
+// nothing it can do; keys/webhooks ride along with the app.
+function ProjectCard({ app }: { app: { id: string; projectId: string | null } }) {
+  const utils = trpc.useUtils();
+  const projects = trpc.developerProjects.list.useQuery();
+  const assign = trpc.developerProjects.assignApp.useMutation({
+    onSuccess: () => {
+      void utils.developerApps.get.invalidate({ id: app.id });
+      void utils.developerApps.list.invalidate();
+      void utils.developerProjects.list.invalidate();
+    },
+  });
+  const current = projects.data?.find((p) => p.id === app.projectId) ?? null;
+
+  return (
+    <div className="rounded-xl border bg-card p-4 sm:p-5">
+      <p className="text-sm font-medium">Project</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Group this app under a project. Organization only — it doesn&apos;t
+        change what the app can do.
+      </p>
+      <div className="mt-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={assign.isPending}>
+                <HugeiconsIcon icon={Folder01Icon} className="size-4" />
+                {current ? current.name : "Unfiled"}
+                <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 text-muted-foreground" />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => assign.mutate({ appId: app.id, projectId: null })}>
+              Unfiled
+              {app.projectId === null ? <HugeiconsIcon icon={Tick02Icon} className="ml-auto size-4" /> : null}
+            </DropdownMenuItem>
+            {(projects.data ?? []).map((p) => (
+              <DropdownMenuItem key={p.id} onClick={() => assign.mutate({ appId: app.id, projectId: p.id })}>
+                {p.name}
+                {app.projectId === p.id ? <HugeiconsIcon icon={Tick02Icon} className="ml-auto size-4" /> : null}
+              </DropdownMenuItem>
+            ))}
+            {projects.data && projects.data.length === 0 ? (
+              <DropdownMenuItem disabled>No projects yet — create one on Projects</DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {assign.error ? <p className="mt-2 text-xs text-destructive">{assign.error.message}</p> : null}
+    </div>
+  );
+}
+
 export function AppDetailView({ id }: { id: string }) {
   const app = trpc.developerApps.get.useQuery({ id });
 
@@ -939,6 +1000,7 @@ export function AppDetailView({ id }: { id: string }) {
           </div>
 
           <IdentityCard app={app.data} />
+          <ProjectCard app={app.data} />
           <VerificationCard appId={app.data.id} />
           <CredentialsCard app={app.data} />
           <OAuth2Card appId={app.data.id} />

@@ -50,7 +50,7 @@ function Check({
         >
             <span
                 className={cn(
-                    "grid size-[18px] place-items-center rounded-[5px] border transition-colors",
+                    "grid size-[18px] place-items-center rounded-full border transition-colors",
                     checked ? "border-bleu bg-bleu" : "border-[rgba(138,145,158,0.4)] bg-transparent",
                 )}
             >

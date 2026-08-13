@@ -104,8 +104,18 @@ function AppCard({
 export function AppsView() {
   const apps = trpc.developerApps.list.useQuery();
   const verify = trpc.developerApps.verificationSummary.useQuery();
+  const projects = trpc.developerProjects.list.useQuery();
+  const router = useRouter();
   const [creating, setCreating] = React.useState(false);
   const atCap = !!apps.data && apps.data.length >= APP_CAP;
+
+  // Optional ?project=<id> filter — the "View apps" affordance on a project row.
+  const projectFilter = useSearchParams().get("project");
+  const filterName = projects.data?.find((p) => p.id === projectFilter)?.name ?? null;
+  const shown = React.useMemo(
+    () => (projectFilter ? (apps.data ?? []).filter((a) => a.projectId === projectFilter) : apps.data),
+    [apps.data, projectFilter],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 sm:p-6">
@@ -132,6 +142,16 @@ export function AppsView() {
         ) : null}
       </div>
 
+      {projectFilter ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Filtered by project{filterName ? `: ${filterName}` : ""}</span>
+          <Button variant="ghost" size="xs" className="gap-1" onClick={() => router.push("/apps")}>
+            <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+            Clear
+          </Button>
+        </div>
+      ) : null}
+
       {creating ? <CreatePanel onDone={() => setCreating(false)} /> : null}
 
       {apps.isPending ? (
@@ -144,25 +164,28 @@ export function AppsView() {
         <div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
           {apps.error.message}
         </div>
-      ) : apps.data.length === 0 && !creating ? (
+      ) : (shown ?? []).length === 0 && !creating ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border bg-card p-10 text-center">
           <div className="flex size-10 items-center justify-center rounded-lg border">
             <HugeiconsIcon icon={DashboardSquare01Icon} className="size-4 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium">No apps yet</p>
+            <p className="text-sm font-medium">{projectFilter ? "No apps in this project" : "No apps yet"}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Create one to get a signing identity and a home for your keys and
-              webhooks.
+              {projectFilter
+                ? "Open an app and pick this project to file it here."
+                : "Create one to get a signing identity and a home for your keys and webhooks."}
             </p>
           </div>
-          <Button size="sm" onClick={() => setCreating(true)}>
-            Create your first app
-          </Button>
+          {!projectFilter ? (
+            <Button size="sm" onClick={() => setCreating(true)}>
+              Create your first app
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {apps.data.map((app) => (
+          {(shown ?? []).map((app) => (
             <AppCard key={app.id} app={app} verify={verify.data?.[app.id]} />
           ))}
         </div>
