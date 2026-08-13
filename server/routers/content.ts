@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { writePostTags, postTagsInput } from "@/server/lib/write-post-tags";
 import { posts, playlists, playlistVideos, escrows, tokens, likes, bookmarks, polls, pollVotes, postUnlocks, reports, seenPosts, videoProgress, videoHeatmap, videoCaptions } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq, desc, and, count, like, or, ilike, sql, gt, lt, inArray, asc, isNotNull } from "drizzle-orm";
+import { eq, desc, and, count, like, or, ilike, sql, gt, inArray, asc, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 import { withCache, invalidateCache, TTL } from "@/lib/cache";
@@ -43,6 +43,7 @@ export const contentRouter = router({
                 scheduledFor: z.date().optional(),
                 playlistIds: z.array(z.string()).optional(),
                 id: z.string().optional(),
+                tags: postTagsInput,
                 // Token Launch
                 tokenAddress: z.string().optional(),
                 poolAddress: z.string().optional(),
@@ -142,6 +143,7 @@ export const contentRouter = router({
                 collaborators: input.collaborators,
                 isShort: false,
             });
+            if (input.tags?.length) await writePostTags(videoId, input.tags); // a video IS a post
             if (input.description) upsertPost({ id: videoId, content: input.description, userId: ctx.session.user.id, imageUrl: input.thumbnailUrl, createdAt: new Date() });
             await awardXP(ctx.session.user.id, "post_created", videoId);
             await recordQuestEvent(ctx.session.user.id, "post_created");
