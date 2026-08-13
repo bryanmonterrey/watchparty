@@ -1,4 +1,4 @@
-import { pgTable, pgPolicy, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, pgPolicy, text, boolean, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "../auth/user";
 
@@ -23,6 +23,11 @@ export const streams = pgTable("streams", {
     // behind. See db/stream-coin-columns.sql.
     ticker: text("ticker"),
     tokenId: text("token_id"),
+    // Coins the title tags, saved WITH the title as intent — the picker's own
+    // state never rehydrates from existing text, so anything not persisted is
+    // lost across the reload that routinely separates setup from going live.
+    // Re-filtered against the title at go-live. See db/stream-post-columns.sql.
+    tags: jsonb("tags").$type<{ network: string; tokenAddress: string; symbol: string; tokenId?: string | null }[]>(),
     thumbnailUrl: text("thumbnailUrl"),
     viewerCount: integer("viewerCount").default(0).notNull(),
     // Who may talk in this channel's chat, and how long they must have followed

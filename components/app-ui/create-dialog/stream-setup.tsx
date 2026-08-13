@@ -313,9 +313,20 @@ function StreamInfo({ title: savedTitle, category: savedCategory, ticker: savedT
     });
     useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
 
+    // Tags ride along with the title, and that is what makes the picker real.
+    // They can't be sent at go-live instead: "Start broadcast" lives in a
+    // SIBLING component, and `picked` is client-only state that never rebuilds
+    // itself from existing text — so a reload between setup and going live
+    // leaves the title still reading "$TICKER" with nothing behind it. Saved
+    // here, `startBroadcast` reads them off the stream row.
     const saveTitle = () => {
         if (title.trim() === (savedTitle ?? "")) return;
-        updateInfo.mutate({ title: title.trim() || undefined });
+        updateInfo.mutate({
+            title: title.trim() || undefined,
+            // `tagsIn`, not `picked` — it drops coins the author picked and
+            // then deleted from the text.
+            tags: titleTags.tagsIn(title),
+        });
     };
 
     // The stream's coin. Set BEFORE going live, and saved as intent only — the

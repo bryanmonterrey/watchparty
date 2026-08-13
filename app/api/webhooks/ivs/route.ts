@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
-import { eq } from "drizzle-orm";
+import { posts } from "@/db/schema/content/post";
+import { and, eq } from "drizzle-orm";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import { openStreamSession, closeStreamSession } from "@/lib/stream/sessions";
 import { timingSafeEqual } from "crypto";
@@ -68,6 +69,22 @@ export async function POST(req: NextRequest) {
             .returning({ id: streams.id, userId: streams.userId });
         for (const row of rows) {
             await closeStreamSession(row.userId);
+            // Retire the post the broadcast created (stream.startBroadcast).
+            // Without this every finished stream keeps isLive = true forever —
+            // a permanent LIVE badge in the feed, and the idempotency check in
+            // startBroadcast would then reuse that post for the NEXT broadcast
+            // instead of making a new one.
+            //
+            // Best-effort: the stream state above is the thing that matters, and
+            // a post that fails to retire must not cost us the isLive flip.
+            try {
+                await db
+                    .update(posts)
+                    .set({ isLive: false })
+                    .where(and(eq(posts.streamId, row.id), eq(posts.isLive, true)));
+            } catch (err) {
+                console.error("[ivs-webhook] retiring stream post failed:", err instanceof Error ? err.message : err);
+            }
             await dispatchDeveloperEvent(row.userId, "stream.offline", { streamId: row.id, sessionId });
         }
     }

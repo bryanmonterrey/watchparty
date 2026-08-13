@@ -22,6 +22,11 @@ export const posts = pgTable("posts", {
     duration: integer("duration").default(0),
     playbackId: text("playbackId"),
     isLive: boolean("isLive").default(false).notNull(),
+    // Which stream this post IS, when it is one. A stream and its playback are
+    // ONE post — set at startBroadcast so the VOD can find the post the
+    // broadcast already created instead of landing as a second feed entry.
+    // See db/stream-post-columns.sql.
+    streamId: text("streamId"),
     isShort: boolean("isShort").default(false).notNull(),
     category: text("category"),
     language: jsonb("language").$type<string[]>().default([]),

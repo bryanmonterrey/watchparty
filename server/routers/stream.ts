@@ -13,6 +13,8 @@ import { TRPCError } from "@trpc/server";
 import type { IvsClient } from "@aws-sdk/client-ivs";
 import { nanoid } from "nanoid";
 import { tokens } from "@/db/schema/content/token";
+import { posts } from "@/db/schema/content/post";
+import { postTagsInput, writePostTags } from "@/server/lib/write-post-tags";
 import { creatorModerators, vipMembers } from "@/db/schema/content/creator";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { giftSubscriptions } from "@/db/schema/content/subscription";
@@ -283,27 +285,88 @@ export const streamRouter = router({
             throw new TRPCError({ code: "BAD_REQUEST", message: "Generate your stream connection first" });
         }
 
-        // Already has one — pressing start again must not mint a second coin.
-        if (stream.tokenId) return { tokenId: stream.tokenId, created: false };
-        if (!stream.ticker?.trim()) return { tokenId: null, created: false };
+        // ── The coin ────────────────────────────────────────────────────────
+        //
+        // NOT an early return any more. It used to bail here when the coin
+        // already existed or when no ticker was configured, and both of those
+        // are now paths that still have to reach the post below — a stream
+        // without a coin is still a stream, and pressing start twice must reach
+        // the idempotent post check rather than skipping it.
+        let tokenId = stream.tokenId ?? null;
+        let created = false;
 
-        const tokenId = nanoid();
-        await db.insert(tokens).values({
-            id: tokenId,
-            ticker: stream.ticker.trim().toUpperCase(),
-            name: stream.title.trim().slice(0, 32),
-            description: stream.title.trim(),
-            // Server-resolved, like every other coin here: one that mints
-            // imageless keeps it forever.
-            imageUrl: ctx.user.avatar_url ?? undefined,
-            status: "draft",
-            earningsEnabled: true,
-            creatorId: ctx.user.id,
-        });
+        if (!tokenId && stream.ticker?.trim()) {
+            tokenId = nanoid();
+            await db.insert(tokens).values({
+                id: tokenId,
+                ticker: stream.ticker.trim().toUpperCase(),
+                name: stream.title.trim().slice(0, 32),
+                description: stream.title.trim(),
+                // Server-resolved, like every other coin here: one that mints
+                // imageless keeps it forever.
+                imageUrl: ctx.user.avatar_url ?? undefined,
+                status: "draft",
+                earningsEnabled: true,
+                creatorId: ctx.user.id,
+            });
+            await db.update(streams).set({ tokenId, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
+            created = true;
+        }
 
-        await db.update(streams).set({ tokenId, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
+        // ── The post ────────────────────────────────────────────────────────
+        //
+        // A stream and its playback are ONE post, the way a video already is.
+        // Before this, `insert(posts)` happened in exactly two places —
+        // content.ts and comment.ts — and no stream path reached either, so
+        // going live produced nothing in the feed at all.
+        //
+        // Idempotent on (streamId, isLive): pressing start twice, or an
+        // encoder reconnecting, must not produce a second entry for one
+        // broadcast. The next broadcast gets a new post because the IVS
+        // webhook clears isLive when this one ends.
+        const [existing] = await db
+            .select({ id: posts.id })
+            .from(posts)
+            .where(and(eq(posts.streamId, stream.id), eq(posts.isLive, true)))
+            .limit(1);
 
-        return { tokenId, created: true };
+        let postId = existing?.id ?? null;
+        if (!postId) {
+            postId = nanoid();
+            const title = stream.title.trim();
+            await db.insert(posts).values({
+                id: postId,
+                userId: ctx.user.id,
+                streamId: stream.id,
+                title,
+                // ⚠️ The HLS playback URL, and it is load-bearing rather than
+                // decorative: the video feed requires `isNotNull(videoUrl)`, so
+                // a stream post without one is created and then INVISIBLE —
+                // including under the feed's own "Live" category, which ANDs
+                // with that same condition.
+                videoUrl: stream.playbackUrl,
+                thumbnailUrl: stream.thumbnailUrl,
+                category: stream.category,
+                isLive: true,
+                status: "published",
+                // Streams reach the feed by default. The "visible or not"
+                // option belongs on this column, not a new one.
+                visibility: "public",
+                tokenId,
+                ticker: tokenId ? stream.ticker?.trim().toUpperCase() ?? null : null,
+                tokenStatus: tokenId ? "draft" : null,
+            });
+
+            // Re-filtered against the title as SAVED, the same rule the
+            // composer applies at submit: a coin picked and then deleted from
+            // the text must not tag the post.
+            const picked = (stream.tags ?? []).filter((t) =>
+                title.toLowerCase().includes(`$${t.symbol.toLowerCase()}`),
+            );
+            if (picked.length) await writePostTags(postId, picked);
+        }
+
+        return { tokenId, created, postId };
     }),
 
     // Get current user's stream config
@@ -412,6 +475,12 @@ export const streamRouter = router({
             // The stream's coin ticker. Intent only — the coin itself is
             // created when the broadcast starts.
             ticker: z.string().max(16).optional(),
+            // Coins the title tags. Saved WITH the title because the picker's
+            // `picked` state is client-only and never rebuilt from existing
+            // text — so a reload between setup and going live would otherwise
+            // leave a title still reading "$TICKER" with no tags behind it.
+            // Same validator the composer uses, so the two cannot drift.
+            tags: postTagsInput,
         }))
         .mutation(async ({ ctx, input }) => {
             await db.update(streams).set({ ...input, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
