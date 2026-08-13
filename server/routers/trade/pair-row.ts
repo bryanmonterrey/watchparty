@@ -1,5 +1,5 @@
 import { isRiskyHoldings } from "@/lib/coin-feed/quality";
-import type { MobulaPair } from "@/lib/coins/mobula";
+import type { MobulaPair, MobulaPulseLanes } from "@/lib/coins/mobula";
 
 /**
  * Pure row-shaping for the trade boards. Split out of server/routers/trade.ts,
@@ -73,4 +73,25 @@ export function pairToTradeToken(chain: string, p: MobulaPair, lane?: "fresh" | 
         // stats, drives the boards' "hide risky coins" toggle.
         risky: isRiskyHoldings(p),
     };
+}
+
+/** Pulse lanes → feed rows, deduped furthest-along-first: a coin
+ *  mid-migration can sit in two lanes for a beat, and the most advanced
+ *  state is the true one. One flat list — the client splits by status +
+ *  bondingProgress, same as it always did. */
+export function pulseLanesToTradeTokens(chain: string, lanes: MobulaPulseLanes) {
+    const seen = new Set<string>();
+    const tokens: ReturnType<typeof pairToTradeToken>[] = [];
+    for (const [lane, pairs] of [
+        ["bonded", lanes.bonded],
+        ["bonding", lanes.bonding],
+        ["fresh", lanes.fresh],
+    ] as const) {
+        for (const p of pairs) {
+            if (seen.has(p.tokenAddress)) continue;
+            seen.add(p.tokenAddress);
+            tokens.push(pairToTradeToken(chain, p, lane));
+        }
+    }
+    return tokens;
 }

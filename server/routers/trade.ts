@@ -28,7 +28,7 @@ import { recordMobulaTrades } from "@/lib/coins/record-mobula-trades";
 import { upstreamEmpty } from "@/server/lib/upstream-empty";
 import { securityWithLiquidityBackfill } from "@/server/lib/backfill-liquidity";
 import { dropMeasuredUntradeable } from "@/server/lib/measured-liquidity";
-import { timeAgo, pairToTradeToken } from "./trade/pair-row";
+import { timeAgo, pairToTradeToken, pulseLanesToTradeTokens } from "./trade/pair-row";
 import {
     traderConcentration,
     statsFromTrades,
@@ -204,32 +204,16 @@ export const tradeRouter = router({
                         // is a MIGRATIONS feed — measured 2026-08-13, all 40
                         // of solana's newest rows were post-migration pools.
                         // Pulse serves the lanes the memescope actually draws:
-                        // on-curve coins with real bondingPercentage. One list
-                        // still feeds all three columns — the client splits by
-                        // status + progress, unchanged.
-                        //
-                        // Lane order bonded → bonding → fresh, deduped: a coin
-                        // mid-migration can sit in two lanes for a beat, and
-                        // the furthest-along state is the true one.
+                        // on-curve coins with real bondingPercentage.
                         if (input.list === "new") {
                             const lanes = await lid(fetchMobulaPulse(input.chain, 50));
                             if (lanes) {
-                                const seen = new Set<string>();
-                                const tokens = [];
-                                for (const [lane, pairs] of [
-                                    ["bonded", lanes.bonded],
-                                    ["bonding", lanes.bonding],
-                                    ["fresh", lanes.fresh],
-                                ] as const) {
-                                    for (const p of pairs) {
-                                        if (seen.has(p.tokenAddress)) continue;
-                                        seen.add(p.tokenAddress);
-                                        tokens.push(pairToTradeToken(input.chain, p, lane));
-                                    }
-                                }
                                 return {
                                     enabled: mobulaEnabled(),
-                                    tokens: await dropMeasuredUntradeable(input.chain, tokens),
+                                    tokens: await dropMeasuredUntradeable(
+                                        input.chain,
+                                        pulseLanesToTradeTokens(input.chain, lanes),
+                                    ),
                                 };
                             }
                             // null = Pulse can't serve this chain — fall
