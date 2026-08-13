@@ -53,6 +53,7 @@ const publicCols = {
     websiteUrl: developerApps.websiteUrl,
     flags: developerApps.flags,
     oauthClientId: developerApps.oauthClientId,
+    projectId: developerApps.projectId,
     createdAt: developerApps.createdAt,
     updatedAt: developerApps.updatedAt,
 };

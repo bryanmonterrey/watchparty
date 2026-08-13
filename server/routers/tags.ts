@@ -4,10 +4,8 @@ import { db } from "@/db";
 import { posts } from "@/db/schema/content/post";
 import { postTags } from "@/db/schema/content/post-tag";
 import { user } from "@/db/schema/auth/user";
-import { tokens } from "@/db/schema/content/token";
-import { trendingCoins } from "@/db/schema/content/trending";
 import { coinCandles } from "@/db/schema/content/coin-candles";
-import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
 
 /**
@@ -172,96 +170,7 @@ export const tagsRouter = router({
             ),
         ),
 
-    /**
-     * The composer's ticker dropdown: what the author is typing after `$`.
-     *
-     * Searches coins we launched AND the trending board, because the board is
-     * where almost every coin anyone talks about lives — restricting this to
-     * `tokens` would offer a handful of our own launches and nothing else, and
-     * the author would go back to typing plain text.
-     *
-     * Ours rank first: a watchparty launch is the one case where the tag can
-     * also light up a creator's own page.
-     */
-    search: publicProcedure
-        .input(z.object({ q: SYMBOL, limit: z.number().min(1).max(20).default(8) }))
-        .query(({ input }) => {
-            const term = input.q.replace(/^\$/, "").trim();
-            if (!term) return Promise.resolve([]);
-            return withCache(`tags:search:v1:${term.toLowerCase()}:${input.limit}`, 60, async () => {
-                const like = `${term}%`;
-                const [ours, external] = await Promise.all([
-                    db
-                        .select({
-                            symbol: tokens.ticker,
-                            name: tokens.name,
-                            imageUrl: tokens.imageUrl,
-                            tokenAddress: tokens.tokenAddress,
-                            tokenId: tokens.id,
-                        })
-                        .from(tokens)
-                        .where(ilike(tokens.ticker, like))
-                        .limit(input.limit),
-                    db
-                        .select({
-                            symbol: trendingCoins.symbol,
-                            name: trendingCoins.name,
-                            imageUrl: trendingCoins.imageUrl,
-                            tokenAddress: trendingCoins.tokenAddress,
-                            network: trendingCoins.network,
-                            volume: trendingCoins.volume24hUsd,
-                        })
-                        .from(trendingCoins)
-                        .where(
-                            or(
-                                ilike(trendingCoins.symbol, like),
-                                ilike(trendingCoins.name, like),
-                            ),
-                        )
-                        .orderBy(desc(trendingCoins.volume24hUsd))
-                        .limit(input.limit * 3),
-                ]);
-
-                type Hit = {
-                    symbol: string;
-                    name: string | null;
-                    imageUrl: string | null;
-                    network: string;
-                    tokenAddress: string;
-                    tokenId: string | null;
-                };
-                const seen = new Set<string>();
-                const out: Hit[] = [];
-                const push = (h: Hit) => {
-                    if (!h.tokenAddress || !h.symbol) return;
-                    const k = `${h.network}:${h.tokenAddress}`;
-                    if (seen.has(k)) return;
-                    seen.add(k);
-                    out.push(h);
-                };
-                for (const t of ours) {
-                    if (!t.tokenAddress) continue;
-                    push({
-                        symbol: t.symbol,
-                        name: t.name,
-                        imageUrl: t.imageUrl,
-                        network: "solana",
-                        tokenAddress: t.tokenAddress,
-                        tokenId: t.tokenId,
-                    });
-                }
-                for (const c of external) {
-                    if (!c.tokenAddress) continue;
-                    push({
-                        symbol: c.symbol,
-                        name: c.name,
-                        imageUrl: c.imageUrl,
-                        network: c.network,
-                        tokenAddress: c.tokenAddress,
-                        tokenId: null,
-                    });
-                }
-                return out.slice(0, input.limit);
-            });
-        }),
+    // NOTE: there is no `search` here. `trade.searchTickers` already backs the
+    // composer's dropdown (components/browse/cashtag-autocomplete), and a second
+    // search would be a second answer to "which coins match $bo".
 });

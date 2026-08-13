@@ -44,6 +44,7 @@ import { tagsRouter } from "./tags";
 import { apiKeysRouter } from "./apiKeys";
 import { developerWebhooksRouter } from "./developerWebhooks";
 import { developerAppsRouter } from "./developerApps";
+import { developerProjectsRouter } from "./developerProjects";
 import { developerStreamRulesRouter } from "./developerStreamRules";
 import { developerAnnouncementsRouter } from "./developerAnnouncements";
 import { developerBotsRouter } from "./developerBots";
@@ -100,6 +101,7 @@ export const appRouter = router({
     apiKeys: apiKeysRouter,
     developerWebhooks: developerWebhooksRouter,
     developerApps: developerAppsRouter,
+    developerProjects: developerProjectsRouter,
     developerStreamRules: developerStreamRulesRouter,
     developerAnnouncements: developerAnnouncementsRouter,
     developerBots: developerBotsRouter,

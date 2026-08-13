@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { DashboardSquare01Icon, Add01Icon } from "@hugeicons/core-free-icons";
+import { DashboardSquare01Icon, Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc";
 import { Chip } from "@/components/console/chip";
 

@@ -96,8 +96,32 @@ export function PostComposer() {
     // fixed to them, so a mention of someone else's ticker can never be allowed
     // to replace it. When that flow lands it passes its own ticker and skips
     // this assignment.
+    // Coins the author PICKED from the dropdown, as references.
+    //
+    // Recorded here rather than parsed back out of the text at read time — see
+    // db/schema/content/post-tag. A ticker in prose cannot say WHICH coin (the
+    // live board carries eleven distinct mints called `BOT`), and a matcher that
+    // matches nothing is indistinguishable from a coin nobody tagged.
+    const [pickedTags, setPickedTags] = useState<
+        { network: string; tokenAddress: string; symbol: string; tokenId?: string | null }[]
+    >([]);
+
     const applyCashtag = (hit: TickerHit) => {
         if (!cashtag) return;
+        if (hit.tokenAddress) {
+            const network = hit.chain || "solana";
+            setPickedTags((prev) =>
+                prev.some((t) => t.network === network && t.tokenAddress === hit.tokenAddress)
+                    ? prev
+                    : [...prev, {
+                          network,
+                          tokenAddress: hit.tokenAddress!,
+                          symbol: hit.ticker.toUpperCase(),
+                          // `tokens.id` for our launches; external hits have none.
+                          tokenId: hit.id || null,
+                      }],
+            );
+        }
         const before = content.slice(0, cashtag.start);
         const after = content.slice(cashtag.end);
         const inserted = `$${hit.ticker.toUpperCase()}`;
@@ -380,6 +404,10 @@ export function PostComposer() {
             id: newPostId,
             content,
             imageUrl,
+            // Only the coins still written in the post. An author can pick a
+            // ticker and then delete it; storing that would put their avatar on
+            // a coin's chart for a post that never mentions it.
+            tags: pickedTags.filter((t) => content.toLowerCase().includes(`$${t.symbol.toLowerCase()}`)),
             // voiceNoteUrl was computed above and then never sent — voice notes
             // uploaded to storage and were silently discarded before reaching
             // the post. It rides in `media` as an audio item, with the length in

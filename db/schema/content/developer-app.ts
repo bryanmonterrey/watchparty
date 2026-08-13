@@ -26,6 +26,9 @@ export const developerApps = pgTable("developer_apps", {
     flags: bigint("flags", { mode: "number" }).default(0).notNull(),
     /** OAuth2 client for "Sign in with watchparty" — FK-less join to oauthClient.clientId. */
     oauthClientId: text("oauth_client_id").unique(),
+    /** Optional Project this app is filed under (developer_projects.id).
+     *  Nullable = unfiled; ON DELETE SET NULL so deleting a project keeps the app. */
+    projectId: text("project_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     /** soft delete — an app id must never be reused (it may be public). */
