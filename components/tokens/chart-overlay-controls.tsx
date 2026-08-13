@@ -9,6 +9,8 @@
 // Tags, with the size floor available when even that is too much.
 
 import * as React from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CheckIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 export interface OverlayState {
@@ -43,24 +45,29 @@ function Check({
     label: string;
 }) {
     return (
+        // t-check + aria-checked drive the transitions.dev checkbox draw
+        // (globals.css): the box fills, then the mark strokes in. The icon is
+        // always mounted — conditional rendering is what this replaced, and it
+        // hard-cuts because the path isn't there to transition from.
         <button
             type="button"
+            role="checkbox"
+            aria-checked={checked}
             onClick={() => onChange(!checked)}
-            className="flex items-center gap-2 text-sm font-medium text-zinc-300 transition-colors hover:text-white"
+            className="t-check flex items-center gap-2 text-sm font-medium text-zinc-300 hover:text-white"
         >
             <span
                 className={cn(
-                    "grid size-[18px] place-items-center rounded-full border transition-colors",
-                    checked ? "border-bleu bg-bleu" : "border-[rgba(138,145,158,0.4)] bg-transparent",
+                    "grid size-[18px] place-items-center rounded-full border border-[rgba(138,145,158,0.4)] transition-colors",
+                    checked ? "bg-soft-gray/15" : "bg-soft-gray/5",
                 )}
             >
-                {checked && (
-                    <svg viewBox="0 0 12 12" className="size-3 text-white" fill="none" aria-hidden>
-                        <path d="M2.5 6.2 4.8 8.5 9.5 3.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                )}
+                <HugeiconsIcon icon={CheckIcon} className="size-3 text-white" strokeWidth={2.5} aria-hidden />
             </span>
-            {label}
+            {/* Own transition-colors: .t-check's transition shorthand lands
+                later in the utilities layer and would override it on the
+                button itself, so the fade lives on the child instead. */}
+            <span className="transition-colors">{label}</span>
         </button>
     );
 }
@@ -77,7 +84,7 @@ export function ChartOverlayControls({
     const set = <K extends keyof OverlayState>(k: K, v: OverlayState[K]) => onChange({ ...value, [k]: v });
 
     return (
-        <div className={cn("flex flex-wrap items-center gap-x-6 gap-y-3 px-1 py-3", className)}>
+        <div className={cn("flex flex-wrap items-center gap-x-6 gap-y-3 px-1.5 py-3", className)}>
             <span className="text-sm font-semibold text-white">Chart overlays</span>
             <span className="hidden h-4 w-px bg-[rgba(138,145,158,0.2)] sm:block" />
             <Check checked={value.mySwaps} onChange={(v) => set("mySwaps", v)} label="My swaps" />

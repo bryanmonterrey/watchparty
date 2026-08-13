@@ -12,7 +12,7 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Clock01Icon, Copy01Icon, FavouriteIcon, LinkForwardIcon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, Copy01Icon, LinkForwardIcon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import type { ChartMarker } from "@/components/tokens/chart-trade-markers";
 import {
@@ -556,7 +556,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     const TABS: { id: TableTab; label: string }[] = [
         { id: "holders", label: "Holders" },
         { id: "swaps", label: "Swaps" },
-        { id: "mentions", label: `$tags (${rows.length})` },
+        { id: "mentions", label: `Tags (${rows.length})` },
     ];
 
     return (
@@ -579,7 +579,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 reads as one control, not three separate links. */}
             {/* No fill — an internal row of the box above, divided from the
                 table by an ordinary border-b. */}
-            <div className="flex min-w-0 items-center justify-between gap-4 py-4">
+            <div className="flex min-w-0 items-center justify-between gap-4 pl-1.5 pr-4 py-4">
                 <div className="flex min-w-0 items-center">
                     {TABS.map((t, i) => (
                         <React.Fragment key={t.id}>
@@ -599,7 +599,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-4">
-                    <Toggle checked={mentionsOnly} onChange={setMentionsOnly} label="$tags only" />
+                    <Toggle checked={mentionsOnly} onChange={setMentionsOnly} label="Tags only" />
                     <Toggle checked={friendsOnly} onChange={setFriendsOnly} label="Friends only" />
                 </div>
             </div>
@@ -609,7 +609,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 <span className="px-3.5 py-3">Position</span>
                 <span className="px-3.5 py-3">PnL</span>
                 <span className="px-3.5 py-3">Avg. entry</span>
-                <span className="px-3.5 py-3">$tags</span>
+                <span className="px-3.5 py-3">Tags</span>
             </div>
 
             {isLoading ? (
@@ -648,7 +648,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     full. */}
                                 <span className="flex min-w-0 items-center gap-3 self-stretch px-3.5 py-3.5">
                                     <span
-                                        className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                                        className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full"
                                         style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
                                     >
                                         {row.avatarUrl ? (
@@ -720,16 +720,13 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                                     `resolveTraders` gives the row — an anonymous
                                     wallet has nothing to say here by definition. */}
                                 <span className="flex min-w-0 items-center gap-3 px-3.5 py-3.5">
-                                    <span className="flex shrink-0 flex-col items-center text-zinc-700">
-                                        <HugeiconsIcon icon={FavouriteIcon} className="size-4" strokeWidth={2} />
-                                        <span className="text-[11px] font-medium tabular-nums">—</span>
-                                    </span>
+                                    
                                     {row.username && tagByUser[row.username] ? (
                                         <span className="min-w-0 truncate text-[13px] font-medium text-zinc-300">
                                             {tagByUser[row.username].text}
                                         </span>
                                     ) : (
-                                        <span className="min-w-0 truncate text-[13px] font-medium text-zinc-700">No tags yet</span>
+                                        <span className="min-w-0 truncate font-bold text-zinc-700">—</span>
                                     )}
                                 </span>
                             </div>

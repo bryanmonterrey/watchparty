@@ -127,7 +127,7 @@ export function ShowMoreSection({
                             <div className="space-y-3">
                                 <h3 className="text-sm font-medium text-zinc-300">Paid promotion</h3>
                                 <div className="flex items-start space-x-2">
-                                    <Checkbox id="paid" className="mt-1 border-zinc-600 rounded-full data-[state=checked]:bg-twitter2 data-[state=checked]:border-white/50" />
+                                    <Checkbox id="paid" className="mt-1" />
                                     <div className="grid gap-1.5 leading-none">
                                         <Label htmlFor="paid" className="text-sm font-normal text-zinc-300 leading-snug">
                                             My video contains paid promotion like a product placement, sponsorship, or endorsement
@@ -150,7 +150,7 @@ export function ShowMoreSection({
                                         id="autoChapters"
                                         checked={autoChapters}
                                         onCheckedChange={(c) => setAutoChapters(c as boolean)}
-                                        className="mt-1 border-zinc-600 data-[state=checked]:bg-twitter2 rounded-full data-[state=checked]:border-white/50"
+                                        className="mt-1"
                                     />
                                     <Label htmlFor="autoChapters" className="text-sm font-normal text-zinc-300 leading-snug pt-1">
                                         Allow automatic chapters and key moments
@@ -169,7 +169,7 @@ export function ShowMoreSection({
                                         id="autoPlaces"
                                         checked={autoPlaces}
                                         onCheckedChange={(c) => setAutoPlaces(c as boolean)}
-                                        className="mt-1 border-zinc-600 data-[state=checked]:bg-twitter2 rounded-full data-[state=checked]:border-white/50"
+                                        className="mt-1"
                                     />
                                     <Label htmlFor="autoPlaces" className="text-sm font-normal text-zinc-300 leading-snug pt-1">
                                         Allow automatic places
@@ -222,7 +222,7 @@ export function ShowMoreSection({
                                             id="embedding"
                                             checked={allowEmbedding}
                                             onCheckedChange={(c) => setAllowEmbedding(c as boolean)}
-                                            className="mt-1 border-zinc-600 rounded-full data-[state=checked]:bg-twitter2 data-[state=checked]:border-white/50"
+                                            className="mt-1"
                                         />
                                         <Label htmlFor="embedding" className="text-sm font-normal text-zinc-300 leading-snug pt-1">
                                             Allow embedding
@@ -233,7 +233,7 @@ export function ShowMoreSection({
                                             id="publishFeed"
                                             checked={publishToFeed}
                                             onCheckedChange={(c) => setPublishToFeed(c as boolean)}
-                                            className="mt-1 border-zinc-600 rounded-full data-[state=checked]:bg-twitter2 data-[state=checked]:border-white/50"
+                                            className="mt-1"
                                         />
                                         <Label htmlFor="publishFeed" className="text-sm font-normal text-zinc-300 leading-snug pt-1">
                                             Publish to followers feed and notify followers
@@ -445,7 +445,7 @@ export function ShowMoreSection({
                                             id="showLikes"
                                             checked={showLikeCount}
                                             onCheckedChange={(c) => setShowLikeCount(c as boolean)}
-                                            className="mt-1 border-zinc-600  data-[state=checked]:bg-twitter2 rounded-full data-[state=checked]:border-white/50"
+                                            className="mt-1"
                                         />
                                         <Label htmlFor="showLikes" className="text-sm font-normal text-zinc-300 leading-snug pt-1">
                                             Show how many viewers like this video

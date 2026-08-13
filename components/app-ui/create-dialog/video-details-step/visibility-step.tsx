@@ -54,7 +54,7 @@ export function VisibilityStep({ visibility, onVisibilityChange }: VisibilitySte
 
                         <div className="pl-7 pt-2">
                             <div className="flex items-center space-x-2">
-                                <Checkbox id="premiere" disabled={visibility !== 'public'} className="border-zinc-600 data-[state=checked]:bg-twitter2 rounded-full data-[state=checked]:border-twitter2 disabled:opacity-50" />
+                                <Checkbox id="premiere" disabled={visibility !== 'public'} />
                                 <Label htmlFor="premiere" className="text-sm text-zinc-400 font-normal">Set as instant Premiere</Label>
                             </div>
                         </div>
