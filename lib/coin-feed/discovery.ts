@@ -50,7 +50,7 @@ function qualifies(pool: DiscoveredPool): boolean {
     // Brand-squatting names ($CLAUDE, $ANTHROPIC…) clear the volume floor on
     // launch-day pumps; they get a much higher LIQUIDITY bar instead — see
     // lib/coin-feed/quality.ts.
-    if (!clearsBrandBar(pool.symbol, pool.name, pool.liquidityUsd)) return false;
+    if (!clearsBrandBar(pool.symbol, pool.name, pool.liquidityUsd, false, pool.tokenAddress)) return false;
     const liquidity = pool.liquidityUsd ?? 0;
     const volume = pool.volume24hUsd ?? 0;
     return liquidity >= net.minLiquidityUsd && volume >= net.minVolume24hUsd;
@@ -470,6 +470,7 @@ async function evictBrandSquats(): Promise<number> {
             symbol: trackedTokens.symbol,
             name: trackedTokens.name,
             liquidityUsd: trackedTokens.liquidityUsd,
+            tokenAddress: trackedTokens.tokenAddress,
         })
         .from(trackedTokens)
         .where(and(eq(trackedTokens.pinned, false), isNull(trackedTokens.wpTokenId)));
@@ -477,7 +478,9 @@ async function evictBrandSquats(): Promise<number> {
     // Filtered in JS, not SQL: clearsBrandBar is the one definition of this
     // rule and it lives in quality.ts. Re-expressing it as a WHERE clause would
     // be a second copy, and the first thing to drift.
-    const doomed = rows.filter((r) => !clearsBrandBar(r.symbol, r.name, r.liquidityUsd)).map((r) => r.id);
+    const doomed = rows
+        .filter((r) => !clearsBrandBar(r.symbol, r.name, r.liquidityUsd, false, r.tokenAddress))
+        .map((r) => r.id);
     if (doomed.length === 0) return 0;
 
     await db.delete(trackedTokens).where(inArray(trackedTokens.id, doomed));

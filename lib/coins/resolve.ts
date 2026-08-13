@@ -7,6 +7,7 @@ import { trackedTokens } from "@/db/schema/content/coin-feed";
 import { coinIndex } from "@/db/schema/content/coin-index";
 import { tokens } from "@/db/schema/content/token";
 import { fetchTokenPairs, normalizeAddress } from "@/lib/coins/dexscreener";
+import { isBannedToken } from "@/lib/coin-feed/quality";
 
 /** What /coin/<address> needs to render a coin we did not launch. Deliberately
  *  the same shape the chart overlay takes, so one view serves both. */
@@ -276,8 +277,13 @@ async function ownSocials(tokenAddress: string) {
 }
 
 export async function resolveCoin(raw: string, network?: string): Promise<ResolvedCoin | null> {
+    // A banned token resolves to nothing, so /coin/<address> 404s — the boards
+    // and feeds hide it via `clearsBrandBar`; this closes the direct-URL path.
+    // Checked on the way out as well: `raw` can be a pool address while the
+    // ban is keyed to the token's.
+    if (isBannedToken(raw)) return null;
     const coin = await resolveCoinBase(raw, network);
-    if (!coin) return null;
+    if (!coin || isBannedToken(coin.tokenAddress)) return null;
     try {
         const socials = await ownSocials(coin.tokenAddress);
         return socials ? { ...coin, socials } : coin;

@@ -99,7 +99,7 @@ export async function reviewCoinSpam(candidates: readonly ReviewCandidate[]): Pr
 
     // Only what the EXISTING rules let through. Reviewing the rejects measures
     // the gate; the misses are the point.
-    const reviewed = candidates.filter((c) => clearsBrandBar(c.symbol, c.name, c.liquidityUsd));
+    const reviewed = candidates.filter((c) => clearsBrandBar(c.symbol, c.name, c.liquidityUsd, false, c.tokenAddress));
     const base = {
         total: candidates.length,
         rejectedByBar: candidates.length - reviewed.length,

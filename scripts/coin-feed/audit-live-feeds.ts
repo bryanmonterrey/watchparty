@@ -92,7 +92,7 @@ const board = await sql<BoardRow[]>`
 // false: the allowlist is a network call and its only effect is to ADMIT coins,
 // so leaving it out can over-report suspects but never hide one.
 const visible = board
-    .filter((r) => clearsBrandBar(r.symbol, r.name, r.liquidity_usd, false))
+    .filter((r) => clearsBrandBar(r.symbol, r.name, r.liquidity_usd, false, r.token_address))
     .filter((r) => !isRiskyHoldings({
         top10Pct: r.top10_pct,
         devPct: r.dev_pct,

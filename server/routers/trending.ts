@@ -346,7 +346,7 @@ export const trendingRouter = router({
         const verified = await verifiedSolanaMints();
 
         const clean = items
-            .filter((i) => clearsBrandBar(i.symbol, i.name, i.liquidityUsd, isVerifiedMint(verified, i.network, i.tokenAddress)))
+            .filter((i) => clearsBrandBar(i.symbol, i.name, i.liquidityUsd, isVerifiedMint(verified, i.network, i.tokenAddress), i.tokenAddress))
             .filter((i) => !isRiskyHoldings(i));
 
         // ONE ROW PER COIN. Copycats relaunch the same symbol+name every few

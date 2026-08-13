@@ -14,7 +14,7 @@ import { follows } from "@/db/schema/content/follow";
 import { tokens } from "@/db/schema/content/token";
 import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
-import { brandSymbolPattern } from "@/lib/coin-feed/quality";
+import { bannedTokenAddresses, brandSymbolPattern } from "@/lib/coin-feed/quality";
 
 /** Cursor is `${iso}|${id}` — both halves of the ORDER BY, so it's total. */
 const encodeCursor = (occurredAt: Date, id: string) => `${occurredAt.toISOString()}|${id}`;
@@ -69,6 +69,21 @@ function buildFilters(input: FilterInput, viewerId: string | null): SQL[] {
     // case-insensitive regex negation.
     if (process.env.COIN_FEED_BRAND_GATE !== "off") {
         where.push(sql`${coinFeedEvents.symbol} !~* ${brandSymbolPattern()}`);
+    }
+
+    // Address bans ride the same read-time reasoning as the brand gate above:
+    // the events table is an append log, so a write-time check would leave
+    // every already-emitted event rendering forever. NULL-safe on purpose —
+    // `NOT IN` against a NULL address yields NULL, which would silently drop
+    // chain-level events that carry no token at all.
+    const banned = bannedTokenAddresses();
+    if (banned.length) {
+        where.push(
+            sql`(${coinFeedEvents.tokenAddress} IS NULL OR lower(${coinFeedEvents.tokenAddress}) NOT IN (${sql.join(
+                banned.map((a) => sql`${a}`),
+                sql`, `,
+            )}))`,
+        );
     }
 
     if (input.scope && input.scope !== "all") {

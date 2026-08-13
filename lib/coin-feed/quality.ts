@@ -293,6 +293,36 @@ export function passesSecurityBar(
     return !isRiskyHoldings(sec);
 }
 
+// ── Banned token addresses ──────────────────────────────────────────────────
+//
+// The hard denylist — ADDRESSES, not names. Every other gate in this file is
+// an argument (brand words vs verification, tickers vs liquidity); a ban is a
+// verdict. `clearsBrandBar` checks it before any exemption, so neither the
+// Jupiter allowlist nor a deep pool can rescue a banned address, and
+// `resolveCoin` consults it so the coin page 404s rather than merely falling
+// off the boards. Grown by hand, one owner call at a time.
+//
+// Compared lowercased on both sides: EVM addresses are case-insensitive hex
+// (checksum casing is display-only), and Solana mints lose nothing real —
+// two live mints differing only in letter case do not occur in practice.
+const BANNED_TOKEN_ADDRESSES = new Set(
+    [
+        // Owner call 2026-08-13.
+        "0x3c5cd672b204ba0fc48e93b98c0922920a87912d",
+    ].map((a) => a.toLowerCase()),
+);
+
+/** Hard-banned by address, on every network and every surface. */
+export function isBannedToken(address: string | null | undefined): boolean {
+    return !!address && BANNED_TOKEN_ADDRESSES.has(address.toLowerCase());
+}
+
+/** The ban list as lowercase strings, for surfaces that filter in SQL rather
+ *  than through `clearsBrandBar` (compare against `lower(column)`). */
+export function bannedTokenAddresses(): string[] {
+    return [...BANNED_TOKEN_ADDRESSES];
+}
+
 /** The gate discovery applies on top of the per-network floors: brand-riding
  *  names need the high liquidity bar; everything else passes through to the
  *  normal floors. */
@@ -314,7 +344,11 @@ export function clearsBrandBar(
      * the list is available.
      */
     verified = false,
+    /** When provided, a hard address ban rejects BEFORE any exemption —
+     *  verification and liquidity argue about names, not verdicts. */
+    tokenAddress?: string | null,
 ): boolean {
+    if (isBannedToken(tokenAddress)) return false;
     if (!isBrandSquat(symbol, name)) return true;
     if (verified) return true;
 

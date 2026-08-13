@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
     // somebody's alerts.
     const verified = await verifiedSolanaMints();
     const items = rows
-        .filter((r) => clearsBrandBar(r.symbol, r.name, r.liquidityUsd, isVerifiedMint(verified, r.network, r.tokenAddress)))
+        .filter((r) => clearsBrandBar(r.symbol, r.name, r.liquidityUsd, isVerifiedMint(verified, r.network, r.tokenAddress), r.tokenAddress))
         .filter((r) => !isRiskyHoldings(r))
         .slice(0, MAX_WATCH)
         .map((r) => ({ blockchain: r.network, address: r.tokenAddress! }));
