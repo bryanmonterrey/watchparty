@@ -21,7 +21,19 @@ import { AlertsRail } from "@/components/coin-feed/alerts-rail";
 // a stored value therefore means collapsed, not expanded — the initial state and
 // the read below have to agree on that or the rail flips open on first paint.
 
-const STORAGE_KEY = "wp:coin-alerts:collapsed";
+// Versioned, and the bump to :v2 is a deliberate ONE-TIME RESET (2026-08-13).
+//
+// Collapsed was already the default for anyone new — useState(true), and an
+// absent key reads as collapsed. But everyone who had ever opened the rail
+// carried an explicit "0" forever, so in practice the app had a large
+// population for whom the rail was permanently expanded, which is not what
+// this surface is for. Orphaning the old key discards those and starts
+// everybody collapsed once.
+//
+// It overrides a choice people actively made, so it is worth doing exactly
+// once and not casually: the very next click writes :v2 and that preference
+// sticks. Bump again only for another intentional reset.
+const STORAGE_KEY = "wp:coin-alerts:collapsed:v2";
 
 // Mirrors the right rail's RAIL_INNER: the rails pin at the scroller's top, so
 // their own padding is what clears the fixed header.
@@ -53,9 +65,17 @@ export function HomeLeftRail() {
     useEffect(() => {
         try {
             const stored = window.localStorage.getItem(STORAGE_KEY);
-            // Never opened it before → stay collapsed. Only an explicit "0"
+            // Never opened it before → stay collapsed. ONLY an explicit "0"
             // (they opened it and we saved that) expands the rail.
-            setCollapsed(stored === null ? true : stored === "1");
+            //
+            // Written as "not 0" rather than "is 1" so it fails CLOSED. The two
+            // agree on the values we write, but `stored === "1"` expands the
+            // rail for every OTHER value — a legacy "true"/"false" from an
+            // earlier shape, a half-written entry, anything a future rename
+            // leaves behind. Defaulting to open on data we don't recognise is
+            // backwards for a surface whose whole premise is that it stays out
+            // of the way until asked for.
+            setCollapsed(stored !== "0");
         } catch {
             // storage disabled — collapsed is the default either way
         }
