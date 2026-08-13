@@ -152,8 +152,11 @@ export function PostCard({
     // `useState(likes)` silently dropped realtime count updates on already-mounted
     // cards, because useState ignores later prop changes. Deriving keeps one source of
     // truth. React guidance: https://react.dev/learn/you-might-not-need-an-effect
-    const likeCount = Math.max(0, likes + (optLiked === null ? 0 : (optLiked ? 1 : 0) - (serverLiked ? 1 : 0)));
-    const repostCount = Math.max(0, reposts + (optReposted === null ? 0 : (optReposted ? 1 : 0) - (serverReposted ? 1 : 0)));
+    // ?? 0: posts assembled client-side (the feed's virtual self-thread parents,
+    // optimistic cache inserts) can omit counts, and undefined + delta is NaN —
+    // which the repost span renders raw as "NaN".
+    const likeCount = Math.max(0, (likes ?? 0) + (optLiked === null ? 0 : (optLiked ? 1 : 0) - (serverLiked ? 1 : 0)));
+    const repostCount = Math.max(0, (reposts ?? 0) + (optReposted === null ? 0 : (optReposted ? 1 : 0) - (serverReposted ? 1 : 0)));
 
     // ── Cache patchers ───────────────────────────────────────────────────────
     const patchFeedLike = (liked: boolean) => {

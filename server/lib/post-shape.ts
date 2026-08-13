@@ -115,6 +115,13 @@ export function postSelectFields({ origPosts, origUser, parentPosts, parentUser,
         parentMedia: parentPosts.media,
         parentImageUrl: parentPosts.imageUrl,
         parentCreatedAt: parentPosts.createdAt,
+        // Engagement counts for the feed's "virtual parent" cards (a self-thread
+        // parent lifted above its reply when it isn't in the page) — without
+        // them the parent card renders NaN counts.
+        parentLikes: parentPosts.likes,
+        parentReposts: parentPosts.reposts,
+        parentComments: parentPosts.comments,
+        parentViews: parentPosts.views,
         parentUserAvatar: parentUser.avatar_url,
         parentUserName: parentUser.name,
         parentUserVerifiedTier: effectiveVerifiedTier(parentUser.verifiedTier, parentUser.hideVerifiedBadge),
@@ -138,12 +145,14 @@ export function mapPostRow(row: any) {
         origAudience, origReplyPrivacy,
         parentUsername, parentUserId, parentContent, parentMedia, parentImageUrl,
         parentCreatedAt, parentUserAvatar, parentUserName, parentUserVerifiedTier,
+        parentLikes, parentReposts, parentComments, parentViews,
         ...rest
     } = row;
 
     const parentFields = {
         parentUsername, parentUserId, parentContent, parentMedia, parentImageUrl,
         parentCreatedAt, parentUserAvatar, parentUserName, parentUserVerifiedTier,
+        parentLikes, parentReposts, parentComments, parentViews,
     };
 
     if (row.repostOfId && row.origId) {

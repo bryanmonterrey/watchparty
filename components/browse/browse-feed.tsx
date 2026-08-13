@@ -105,6 +105,13 @@ function assembleFeed(rawPosts: any[]): FeedItem[] {
                     imageUrl: p.parentImageUrl,
                     media: p.parentMedia,
                     createdAt: p.parentCreatedAt,
+                    // Real counts ride in on the reply row (post-shape's parent*
+                    // columns); ?? 0 covers cached pages served before those
+                    // fields existed. Leaving them undefined renders NaN.
+                    likes: p.parentLikes ?? 0,
+                    reposts: p.parentReposts ?? 0,
+                    comments: p.parentComments ?? 0,
+                    views: p.parentViews ?? 0,
                     user: {
                         id: p.parentUserId,
                         name: p.parentUserName,
