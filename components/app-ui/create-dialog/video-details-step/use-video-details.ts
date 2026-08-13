@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useCashtagField } from "@/components/browse/use-cashtag-field"
 import { toast } from "sonner"
 import { useDropzone } from "react-dropzone"
 import { trpc } from "@/lib/trpc/client"
@@ -28,6 +29,13 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
     const { launchToken, isLaunching: isTokenLaunching } = useTokenLaunch()
 
     const createVideoMutation = trpc.content.createVideo.useMutation()
+
+    // Tagging lives HERE, beside the title and description state, not in the
+    // step that renders them. The step is unmounted as the wizard advances, so
+    // picks made there would be gone by the time submit runs — which is exactly
+    // how the first attempt dropped every tag on the floor.
+    const titleTags = useCashtagField(title, setTitle)
+    const descTags = useCashtagField(description, setDescription)
     const createCardMutation = trpc.cards.create.useMutation()
     const transcribeVideoMutation = trpc.upload.transcribeVideo.useMutation({
         onError: (err) => {
@@ -325,6 +333,13 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
                     duration: 0,
                     playlistIds: selectedPlaylists,
                     id: previewId,
+                    // Coins tagged in the title or the description. Deduped by
+                    // (network, address) because the same coin can legitimately
+                    // be named in both, and the table's PRIMARY KEY is that pair.
+                    tags: [...titleTags.tagsIn(title), ...descTags.tagsIn(description)].filter(
+                        (t, i, all) =>
+                            all.findIndex((o) => o.network === t.network && o.tokenAddress === t.tokenAddress) === i,
+                    ),
                     // Token Launch Data
                     earningsEnabled: tokenLaunch.earningsEnabled,
                     ticker: tokenLaunch.earningsEnabled ? tokenLaunch.ticker : undefined,
@@ -401,6 +416,8 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
         setTitle,
         description,
         setDescription,
+        titleTags,
+        descTags,
         isEditingTicker,
         setIsEditingTicker,
         currentStep,

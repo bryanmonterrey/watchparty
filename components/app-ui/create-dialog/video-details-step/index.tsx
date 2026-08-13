@@ -30,6 +30,8 @@ export function VideoDetailsStep(props: VideoDetailsStepProps) {
                         <DetailsStep
                             title={state.title}
                             setTitle={state.setTitle}
+                            titleTags={state.titleTags}
+                            descTags={state.descTags}
                             description={state.description}
                             setDescription={state.setDescription}
                             thumbnailPreview={state.thumbnailPreview}

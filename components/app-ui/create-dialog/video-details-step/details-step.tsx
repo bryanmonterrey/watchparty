@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useCashtagField } from "@/components/browse/use-cashtag-field";
+import type { useCashtagField } from "@/components/browse/use-cashtag-field"
 import { CashtagAutocomplete } from "@/components/browse/cashtag-autocomplete";
 import { Image as ImageIcon, Globe, Users, BadgeCheck, Medal, ChevronDown, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,10 @@ import type { Collaborator, AllowedCommenter } from "./types"
 interface DetailsStepProps {
     title: string
     setTitle: (v: string) => void
+    /** Ticker tagging, owned by use-video-details so picks survive this step
+     *  unmounting as the wizard advances. */
+    titleTags: ReturnType<typeof useCashtagField>
+    descTags: ReturnType<typeof useCashtagField>
     description: string
     setDescription: (v: string) => void
     thumbnailPreview: string | null
@@ -67,6 +71,7 @@ interface DetailsStepProps {
 }
 
 export function DetailsStep({
+    titleTags, descTags,
     title, setTitle,
     description, setDescription,
     thumbnailPreview,
@@ -95,11 +100,6 @@ export function DetailsStep({
     whoCanComment, setWhoCanComment,
     allowedCommenters, onAllowedCommentersChange,
 }: DetailsStepProps) {
-    // A video is a post, so `$TICKER` in its title or description tags the coin
-    // exactly as it would from the composer — same menu, same stored reference.
-    const titleTags = useCashtagField(title, setTitle);
-    const descTags = useCashtagField(description, setDescription);
-
     return (
         <div className="space-y-8 max-w-2xl mx-auto">
             {/* Title */}
