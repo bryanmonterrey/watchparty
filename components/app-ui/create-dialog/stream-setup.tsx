@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useCashtagField } from "@/components/browse/use-cashtag-field";
+import { CashtagAutocomplete } from "@/components/browse/cashtag-autocomplete";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
     ArrowDown01Icon,
@@ -296,6 +298,8 @@ function StreamInfo({ title: savedTitle, category: savedCategory, ticker: savedT
     const utils = trpc.useUtils();
     const [title, setTitle] = useState(savedTitle ?? "");
     const [savedFlash, setSavedFlash] = useState(false);
+    // Going live makes a post; a ticker typed here tags the coin on it.
+    const titleTags = useCashtagField(title, setTitle);
     const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const updateInfo = trpc.stream.updateInfo.useMutation({
@@ -349,16 +353,41 @@ function StreamInfo({ title: savedTitle, category: savedCategory, ticker: savedT
                     Saved
                 </span>
             </div>
-            <Input
-                radius={16}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onBlur={saveTitle}
-                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                placeholder="What are you streaming today?"
-                maxLength={100}
-                className="mt-2 h-12 bg-white/[0.04] text-[14px] font-medium"
-            />
+            {/* Going live creates a post, so `$TICKER` in the title tags the
+                coin exactly as it would from the composer. `relative` is the
+                menu's positioning context; without it the panel anchors to
+                whatever ancestor happens to be positioned. */}
+            <div className="relative">
+                <Input
+                    {...titleTags.inputProps}
+                    ref={titleTags.ref as React.RefObject<HTMLInputElement>}
+                    radius={16}
+                    value={title}
+                    onBlur={saveTitle}
+                    // Enter belongs to the MENU while it is open — blurring
+                    // would close the panel and lose the caret the replacement
+                    // needs, so the field only blurs when nothing is open.
+                    onKeyDown={(e) => {
+                        if (titleTags.open && titleTags.keyHandler.current?.(e)) {
+                            e.preventDefault();
+                            return;
+                        }
+                        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                    placeholder="What are you streaming today?"
+                    maxLength={100}
+                    className="mt-2 h-12 bg-white/[0.04] text-[14px] font-medium"
+                />
+                {titleTags.open && (
+                    <CashtagAutocomplete
+                        top={56}
+                        query={titleTags.query}
+                        onSelect={titleTags.select}
+                        onClose={titleTags.close}
+                        registerKeyHandler={(h) => { titleTags.keyHandler.current = h; }}
+                    />
+                )}
+            </div>
             <div className="mt-3 flex items-center gap-2">
                 <p className="text-[13px] font-bold text-zinc-400">Coin</p>
                 <TokenLaunchTrigger

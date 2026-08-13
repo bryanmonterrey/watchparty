@@ -88,8 +88,11 @@ export function useCashtagField(value: string, setValue: (next: string) => void)
         [picked],
     );
 
+    const close = React.useCallback(() => setHit(null), []);
+
     return {
         ref,
+        close,
         open: !!hit,
         query: hit?.query ?? "",
         select,

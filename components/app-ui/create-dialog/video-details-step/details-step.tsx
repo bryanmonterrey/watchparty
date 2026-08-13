@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { useCashtagField } from "@/components/browse/use-cashtag-field";
+import { CashtagAutocomplete } from "@/components/browse/cashtag-autocomplete";
 import { Image as ImageIcon, Globe, Users, BadgeCheck, Medal, ChevronDown, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -93,6 +95,11 @@ export function DetailsStep({
     whoCanComment, setWhoCanComment,
     allowedCommenters, onAllowedCommentersChange,
 }: DetailsStepProps) {
+    // A video is a post, so `$TICKER` in its title or description tags the coin
+    // exactly as it would from the composer — same menu, same stored reference.
+    const titleTags = useCashtagField(title, setTitle);
+    const descTags = useCashtagField(description, setDescription);
+
     return (
         <div className="space-y-8 max-w-2xl mx-auto">
             {/* Title */}
@@ -101,13 +108,26 @@ export function DetailsStep({
                     <Label className="text-sm font-medium text-zinc-300">Title (required)</Label>
                     <span className="text-xs text-zinc-500">{title.length}/100</span>
                 </div>
+                {/* A video IS a post, so a ticker typed here tags the coin the
+                    same way it would from the composer — same menu, same
+                    reference. `relative` is the menu's positioning context. */}
                 <div className="relative group">
                     <Input
+                        {...titleTags.inputProps}
+                        ref={titleTags.ref as React.RefObject<HTMLInputElement>}
                         value={title}
-                        onChange={(e) => setTitle(e.target.value)}
                         className="h-12 pr-10"
                         maxLength={100}
                     />
+                    {titleTags.open && (
+                        <CashtagAutocomplete
+                            top={48}
+                            query={titleTags.query}
+                            onSelect={titleTags.select}
+                            onClose={() => titleTags.close()}
+                            registerKeyHandler={(h) => { titleTags.keyHandler.current = h; }}
+                        />
+                    )}
                 </div>
             </div>
 
@@ -117,13 +137,25 @@ export function DetailsStep({
                     <Label className="text-sm font-medium text-zinc-300">Description</Label>
                     <span className="text-xs text-zinc-500">{description.length}/5000</span>
                 </div>
-                <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Tell viewers about your video (type @ to mention a channel)"
-                    className="bg-transparent text-md rounded-3xl border-zinc-700 focus:border-twitter2/50 min-h-[120px] resize-none"
-                    maxLength={5000}
-                />
+                <div className="relative">
+                    <Textarea
+                        {...descTags.inputProps}
+                        ref={descTags.ref as React.RefObject<HTMLTextAreaElement>}
+                        value={description}
+                        placeholder="Tell viewers about your video (type $ to tag a coin, @ to mention a channel)"
+                        className="bg-transparent text-md rounded-3xl border-zinc-700 focus:border-twitter2/50 min-h-[120px] resize-none"
+                        maxLength={5000}
+                    />
+                    {descTags.open && (
+                        <CashtagAutocomplete
+                            top={0}
+                            query={descTags.query}
+                            onSelect={descTags.select}
+                            onClose={() => descTags.close()}
+                            registerKeyHandler={(h) => { descTags.keyHandler.current = h; }}
+                        />
+                    )}
+                </div>
             </div>
 
             {/* Thumbnail */}
