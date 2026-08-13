@@ -76,8 +76,8 @@ export function SpaceSetup({ onDone }: { onDone?: () => void }) {
                     <HugeiconsIcon icon={Mic01Icon} className="size-5 text-pastelred" strokeWidth={1.8} />
                 </div>
                 <div>
-                    <p className="text-[15px] font-bold text-white">Start a Space</p>
-                    <p className="text-[13px] font-medium text-zinc-500">Drop in. Talk live.</p>
+                    <p className="text-base font-bold text-white">Start a Space</p>
+                    <p className="text-sm font-medium text-zinc-500">Drop in. Talk live.</p>
                 </div>
             </div>
 
@@ -105,7 +105,7 @@ export function SpaceSetup({ onDone }: { onDone?: () => void }) {
                     }}
                     placeholder="What do you want to talk about?"
                     maxLength={120}
-                    className="h-12 bg-white/[0.04] text-[14px] font-medium"
+                    className="h-12 bg-white/[0.04] text-sm font-medium"
                 />
                 {titleTags.open && (
                     <CashtagAutocomplete
@@ -119,7 +119,7 @@ export function SpaceSetup({ onDone }: { onDone?: () => void }) {
             </div>
 
             <div className="mt-5">
-                <p className="px-1 text-[13px] font-bold text-zinc-400">Who can see it</p>
+                <p className="px-1 text-sm font-bold text-zinc-400">Who can see it</p>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                     {VISIBILITY.map((v) => {
                         const active = visibility === v.key;
@@ -141,10 +141,10 @@ export function SpaceSetup({ onDone }: { onDone?: () => void }) {
                                     strokeWidth={1.8}
                                 />
                                 <span className="min-w-0">
-                                    <span className={cn("block text-[13px] font-bold", active ? "text-white" : "text-zinc-400")}>
+                                    <span className={cn("block text-sm font-bold", active ? "text-white" : "text-zinc-400")}>
                                         {v.label}
                                     </span>
-                                    <span className="block truncate text-[11px] font-medium text-zinc-500">{v.hint}</span>
+                                    <span className="block truncate text-xs font-medium text-zinc-500">{v.hint}</span>
                                 </span>
                             </button>
                         );
@@ -156,14 +156,14 @@ export function SpaceSetup({ onDone }: { onDone?: () => void }) {
                 onClick={submit}
                 disabled={!ready || create.isPending}
                 className={cn(
-                    "mt-6 h-12 w-full cursor-pointer rounded-full text-[15px] font-bold transition-colors",
+                    "mt-6 h-12 w-full cursor-pointer rounded-full text-base font-bold transition-colors",
                     "bg-pastelred text-black hover:bg-pastelred/90",
                     "disabled:cursor-not-allowed disabled:opacity-40",
                 )}
             >
                 {create.isPending ? "Starting…" : "Go live"}
             </button>
-            <p className="mt-2 text-center text-[12px] font-medium text-zinc-500">
+            <p className="mt-2 text-center text-xs font-medium text-zinc-500">
                 {ready ? "Creates a post so people can find it" : "Give your Space a name first"}
             </p>
         </div>

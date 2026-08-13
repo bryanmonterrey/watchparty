@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import dynamic from "next/dynamic"
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -47,32 +46,9 @@ interface CreateDialogProps extends React.HTMLAttributes<HTMLElement> {
 
 type Tab = "video" | "post" | "coin" | "stream" | "space"
 
-// Full stream setup (generate connection, keys, info, OBS steps), designed for
-// this dialog — paid for only when the tab opens.
-const LazyStreamSetup = dynamic(
-    () => import("./create-dialog/stream-setup").then((m) => m.StreamSetup),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="flex h-[350px] items-center justify-center">
-                <div className="h-3.5 w-40 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
-            </div>
-        ),
-    },
-)
-// Same treatment as the stream tab: the picker and its autocomplete are only
-// paid for when someone opens Space.
-const LazySpaceSetup = dynamic(
-    () => import("./create-dialog/space-setup").then((m) => m.SpaceSetup),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="flex h-[350px] items-center justify-center">
-                <div className="h-3.5 w-40 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
-            </div>
-        ),
-    },
-)
+// The tab surfaces that are code-split — see create-dialog/lazy-steps.
+import { LazyStreamSetup, LazySpaceSetup } from "./create-dialog/lazy-steps"
+
 type Step = "upload" | "details"
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
