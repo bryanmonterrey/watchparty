@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
+import { writePostTags, postTagsInput } from "@/server/lib/write-post-tags";
 import { posts, playlists, playlistVideos, escrows, tokens, likes, bookmarks, polls, pollVotes, postUnlocks, reports, seenPosts, videoProgress, videoHeatmap, videoCaptions } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
 import { eq, desc, and, count, like, or, ilike, sql, gt, lt, inArray, asc, isNotNull } from "drizzle-orm";
@@ -203,6 +204,7 @@ export const contentRouter = router({
                 audience: z.enum(["everyone", "followers", "verified", "token_holders", "community", "vip"]).default("everyone"),
                 replyPrivacy: z.enum(["everyone", "followers", "verified", "token_holders"]).default("everyone"),
                 communityId: z.string().optional(),
+                tags: postTagsInput,
                 // Token Launch
                 tokenAddress: z.string().optional(),
                 poolAddress: z.string().optional(),
@@ -258,7 +260,6 @@ export const contentRouter = router({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            console.log("SERVER: createPost mut received:", input);
             if (!input.content && !input.imageUrl && !input.poll) {
                 console.error("SERVER: Error missing content");
                 throw new Error("Post must have content, image, or poll");
@@ -360,6 +361,7 @@ export const contentRouter = router({
                 replyToId: input.replyToId,
                 repostOfId: input.repostOfId,
             });
+            if (input.tags?.length) await writePostTags(postId, input.tags); // server/lib/write-post-tags
             if (input.status === "published" && input.content) upsertPost({ id: postId, content: input.content, userId: ctx.session.user.id, imageUrl: input.imageUrl, createdAt: new Date() });
             if (input.status === "published") {
                 await awardXP(ctx.session.user.id, "post_created", postId);
