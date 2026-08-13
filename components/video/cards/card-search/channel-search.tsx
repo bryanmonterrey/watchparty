@@ -85,12 +85,15 @@ export function ChannelSearch({ onClose, onSelect }: ChannelSearchProps) {
     );
 
     const channels: ChannelResult[] = useMemo(() => {
-        return (data?.users ?? []).map(u => ({
-            id: u.id,
-            name: u.name,
-            username: u.username,
-            avatarUrl: u.avatar_url,
-        }));
+        // A user with no username has no channel URL to link to.
+        return (data?.users ?? [])
+            .filter((u): u is typeof u & { username: string } => !!u.username)
+            .map(u => ({
+                id: u.id,
+                name: u.name,
+                username: u.username,
+                avatarUrl: u.avatar_url,
+            }));
     }, [data]);
 
     const handleSelect = (channel: ChannelResult) => {

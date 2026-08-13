@@ -163,10 +163,15 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
                     <p className="px-4 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Coins</p>
                     {data!.tokens.map(token => {
                         const isUp = (token.change24h ?? 0) >= 0;
+                        const subtitle = [
+                            token.name,
+                            token.marketCap !== null ? `${formatMarketCap(token.marketCap)} MC` : null,
+                            token.volume24h !== null ? `${formatMarketCap(token.volume24h)} vol` : null,
+                        ].filter(Boolean).join(" · ");
                         return (
                             <button
                                 key={token.id}
-                                onClick={() => navigate(`/${token.ticker?.toLowerCase()}`, query)}
+                                onClick={() => navigate(token.href, query)}
                                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left"
                             >
                                 {token.imageUrl ? (
@@ -177,7 +182,7 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
                                 )}
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-white truncate">{token.ticker}</p>
-                                    <p className="text-xs text-zinc-500 truncate">{token.name}</p>
+                                    <p className="text-xs text-zinc-500 truncate">{subtitle}</p>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-sm font-medium text-white">{formatPrice(token.price)}</p>
@@ -186,9 +191,6 @@ export function SearchDropdown({ query, onClose, history, onRemoveHistory, onSel
                                             {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                                             {isUp ? "+" : ""}{token.change24h.toFixed(2)}%
                                         </p>
-                                    )}
-                                    {token.change24h === null && token.marketCap !== null && (
-                                        <p className="text-xs text-zinc-500">{formatMarketCap(token.marketCap)}</p>
                                     )}
                                 </div>
                             </button>
