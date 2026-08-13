@@ -602,8 +602,12 @@ export async function fetchMobulaChainPairs(
     if (!res.ok) throw new Error(`mobula pairs ${res.status}`);
 
     const json = (await res.json()) as { data?: MobulaPairRaw[] };
-    const rows = json.data ?? [];
+    return mapPairRows(json.data ?? []);
+}
 
+/** Raw pair rows → one `MobulaPair` per token. Shared by the pairs endpoint
+ *  and Pulse below — the two return the same row shape, verified 2026-08-13. */
+function mapPairRows(rows: MobulaPairRaw[]): MobulaPair[] {
     const out: MobulaPair[] = [];
     const seen = new Set<string>();
     for (const row of rows) {
@@ -658,6 +662,71 @@ export async function fetchMobulaChainPairs(
         });
     }
     return out;
+}
+
+// ── Pulse: the launchpad lifecycle feed (the /trade memescope's source) ──────
+//
+// GET /api/2/pulse returns THREE LANES per chain — new / bonding / bonded —
+// and, unlike the pairs endpoint above, it serves the BONDING PHASE: pump.fun
+// coins mid-curve, with holders and bondingPercentage attached. Measured
+// 2026-08-13 against the live key: solana's `new` lane carried a coin at 27.8%
+// curve with 5 holders and `bonding` had 49 mid-curve rows — while the pairs
+// endpoint's "newest" 40 rows were ALL post-migration PumpSwap/Meteora pools,
+// hours old. The pairs feed is pool-shaped, and a pump.fun coin has no pool
+// until it graduates; Pulse is the endpoint that sees it before that.
+//
+// It is also the Robinhood Chain source: pairs 500s on evm:4663, Pulse serves
+// it, launchpads (Klik/Flap/hoodfun…) included. Docs say all plans; verified
+// on ours.
+
+/** /trade's chain ids → Pulse `chainId` values (a different vocabulary from
+ *  PAIR_BLOCKCHAINS: ecosystem-prefixed, EVM chains by numeric id). */
+const PULSE_CHAIN_IDS: Record<string, string> = {
+    solana: "solana:solana",
+    ethereum: "evm:1",
+    base: "evm:8453",
+    polygon: "evm:137",
+    bnb: "evm:56",
+    hyperevm: "evm:999",
+    robinhood: "evm:4663",
+};
+
+/** The three Pulse lanes. `fresh` is the endpoint's `new` — renamed so callers
+ *  can destructure without colliding with the keyword everywhere. */
+export interface MobulaPulseLanes {
+    fresh: MobulaPair[];
+    bonding: MobulaPair[];
+    bonded: MobulaPair[];
+}
+
+/** Null = provider off or a chain Pulse doesn't cover — a real, cacheable
+ *  answer, distinct from a thrown upstream failure (same contract as the
+ *  pairs fetch above). */
+export async function fetchMobulaPulse(chain: string, limit = 50): Promise<MobulaPulseLanes | null> {
+    if (!mobulaEnabled()) return null;
+    const chainId = PULSE_CHAIN_IDS[chain.toLowerCase()];
+    if (!chainId) return null;
+
+    const url = new URL(`${isDemo() ? DEMO_BASE : LIVE_BASE}/2/pulse`);
+    url.searchParams.set("chainId", chainId);
+    url.searchParams.set("limit", String(limit));
+
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (!isDemo()) headers.Authorization = rawKey();
+
+    const res = await fetch(url.toString(), { headers, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`mobula pulse ${res.status}`);
+
+    const json = (await res.json()) as {
+        new?: { data?: MobulaPairRaw[] };
+        bonding?: { data?: MobulaPairRaw[] };
+        bonded?: { data?: MobulaPairRaw[] };
+    };
+    return {
+        fresh: mapPairRows(json.new?.data ?? []),
+        bonding: mapPairRows(json.bonding?.data ?? []),
+        bonded: mapPairRows(json.bonded?.data ?? []),
+    };
 }
 
 /**

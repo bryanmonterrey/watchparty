@@ -15,6 +15,7 @@ import { emitLaunchEvent } from "@/lib/coin-feed/emit";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import {
     fetchMobulaChainPairs,
+    fetchMobulaPulse,
     fetchMobulaTokenHolders,
     fetchMobulaTokenTrades,
     mobulaCadence,
@@ -102,7 +103,7 @@ function toTradeToken({ token: t, creatorIsLive, liveViewerCount, creatorUsernam
 
 /** Chains the /trade chain picker offers — our registry ∩ what Mobula's pairs
  *  endpoint actually serves (bitcoin has no token pairs; robinhood 500s). */
-export const TRADE_CHAINS = ["solana", "ethereum", "base", "polygon", "bnb", "hyperevm"] as const;
+export const TRADE_CHAINS = ["solana", "ethereum", "base", "polygon", "bnb", "hyperevm", "robinhood"] as const;
 
 export const tradeRouter = router({
     /**
@@ -178,22 +179,82 @@ export const tradeRouter = router({
         .query(async ({ input }) => {
             try {
                 return await withCache(
-                    `trade:chainfeed:v1:${input.chain}:${input.list}`,
+                    // v2: "new" became Pulse-backed (lifecycle lanes with real
+                    // bonding state) — the row semantics changed, so the old
+                    // cached shape must not serve alongside it.
+                    `trade:chainfeed:v2:${input.chain}:${input.list}`,
                     mobulaCadence().chainFeedTtl,
                     async () => {
                         // Hard 10s lid ON TOP of the fetch's own AbortSignal —
                         // observed on prod (bnb, 2026-08-06): the upstream call
                         // hung for minutes despite the 8s abort, and a request
                         // that never resolves is worse than an empty answer.
-                        const rows = await Promise.race([
-                            fetchMobulaChainPairs(input.chain, input.list, input.list === "new" ? 50 : 100),
-                            new Promise<never>((_, reject) =>
-                                setTimeout(() => reject(new Error("chain feed upstream timeout")), 10_000)
-                            ),
-                        ]);
+                        const lid = <T,>(p: Promise<T>): Promise<T> =>
+                            Promise.race([
+                                p,
+                                new Promise<never>((_, reject) =>
+                                    setTimeout(() => reject(new Error("chain feed upstream timeout")), 10_000)
+                                ),
+                            ]);
+
+                        // ── "new" is Pulse-backed ────────────────────────────
+                        //
+                        // The pairs endpoint is pool-shaped: a pump.fun coin
+                        // has no pool until it migrates, so its "newest" list
+                        // is a MIGRATIONS feed — measured 2026-08-13, all 40
+                        // of solana's newest rows were post-migration pools.
+                        // Pulse serves the lanes the memescope actually draws:
+                        // on-curve coins with real bondingPercentage. One list
+                        // still feeds all three columns — the client splits by
+                        // status + progress, unchanged.
+                        //
+                        // Lane order bonded → bonding → fresh, deduped: a coin
+                        // mid-migration can sit in two lanes for a beat, and
+                        // the furthest-along state is the true one.
+                        if (input.list === "new") {
+                            const lanes = await lid(fetchMobulaPulse(input.chain, 50));
+                            if (lanes) {
+                                const seen = new Set<string>();
+                                const tokens = [];
+                                for (const [lane, pairs] of [
+                                    ["bonded", lanes.bonded],
+                                    ["bonding", lanes.bonding],
+                                    ["fresh", lanes.fresh],
+                                ] as const) {
+                                    for (const p of pairs) {
+                                        if (seen.has(p.tokenAddress)) continue;
+                                        seen.add(p.tokenAddress);
+                                        tokens.push(pairToTradeToken(input.chain, p, lane));
+                                    }
+                                }
+                                return {
+                                    enabled: mobulaEnabled(),
+                                    tokens: await dropMeasuredUntradeable(input.chain, tokens),
+                                };
+                            }
+                            // null = Pulse can't serve this chain — fall
+                            // through to the newest-pairs list rather than
+                            // going dark.
+                        }
+
                         // null = provider off / chain unsupported — a real,
                         // cacheable answer, unlike a failure.
-                        const mapped = (rows ?? []).map((p) => pairToTradeToken(input.chain, p));
+                        const rows = await lid(
+                            fetchMobulaChainPairs(input.chain, input.list, input.list === "new" ? 50 : 100),
+                        );
+                        let mapped = (rows ?? []).map((p) => pairToTradeToken(input.chain, p));
+
+                        // Robinhood's pairs endpoint 500s (mapped as absent),
+                        // so its trending board is the Pulse bonded lane,
+                        // volume-sorted — same rows a pairs feed would carry.
+                        if (!rows && input.list === "trending") {
+                            const lanes = await lid(fetchMobulaPulse(input.chain, 100)).catch(() => null);
+                            if (lanes) {
+                                mapped = [...lanes.bonded]
+                                    .sort((a, b) => b.volume24h - a.volume24h)
+                                    .map((p) => pairToTradeToken(input.chain, p, "bonded"));
+                            }
+                        }
 
                         // This board is a live passthrough and carries no
                         // liquidity of its own, so the floor /trending applies

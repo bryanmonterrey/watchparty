@@ -152,6 +152,9 @@ export const TRENDING_NETWORKS: { id: string; label: string }[] = [
     // "sei-network", NOT "sei-v2" — the latter 404s (verified against GT).
     { id: "sei-network", label: "sei" },
     { id: "hyperevm", label: "hyperliquid" },
+    // Synced via Mobula Pulse, not GT (see trending-mobula) — listed here so
+    // the board's chain filter and chainLabel know it.
+    { id: "robinhood", label: "robinhood" },
     { id: "berachain", label: "berachain" },
     { id: "blast", label: "blast" },
     { id: "linea", label: "linea" },
@@ -184,6 +187,8 @@ const EXPLORERS: Record<string, (a: string) => string> = {
     aptos: (a) => `https://explorer.aptoslabs.com/coin/${a}`,
     "sei-network": (a) => `https://seitrace.com/token/${a}`,
     hyperevm: (a) => `https://hyperevmscan.io/token/${a}`,
+    // Blockscout (Arbitrum Orbit) — from the chain registry's explorer field.
+    robinhood: (a) => `https://explorer.chain.robinhood.com/token/${a}`,
     berachain: (a) => `https://berascan.com/token/${a}`,
     blast: (a) => `https://blastscan.io/token/${a}`,
     linea: (a) => `https://lineascan.build/token/${a}`,

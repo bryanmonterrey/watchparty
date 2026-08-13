@@ -20,13 +20,21 @@ export function timeAgo(date: Date): string {
 // A Mobula pair in the feed's row shape. External rows carry `chain` +
 // `external`, which is what routes them to /coin/<chain>/<address> and (off
 // Solana) hides the quick-buy — the swap engine only speaks Solana today.
-export function pairToTradeToken(chain: string, p: MobulaPair) {
+//
+// `lane` is set for Pulse rows, where the endpoint already sorted the coin
+// into its lifecycle lane — that VERDICT beats the field heuristic below,
+// which exists for pairs-endpoint rows that carry no lane. In particular a
+// fresh launchpad coin at 0% with a source string the heuristic doesn't know
+// (Klik, Flap, …) would land in Migrated, the one column it isn't.
+export function pairToTradeToken(chain: string, p: MobulaPair, lane?: "fresh" | "bonding" | "bonded") {
     // Launchpad pairs (pump.fun-style) keep their real bonding ring; a plain
     // DEX pair has no curve, which in this UI's language is "migrated" — the
     // full ring every already-tradeable coin wears. A pumpfun pair at 0% is
     // still ON the curve (seconds old, nothing bought yet) — without the
     // source check those landed in Migrated, the one column they aren't.
-    const onCurve = !p.bonded && ((p.bondingPercentage ?? 0) > 0 || p.source === "pumpfun");
+    const onCurve = lane
+        ? lane !== "bonded"
+        : !p.bonded && ((p.bondingPercentage ?? 0) > 0 || p.source === "pumpfun");
     return {
         id: `${chain}:${p.tokenAddress}`,
         name: p.name,
