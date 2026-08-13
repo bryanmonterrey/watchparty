@@ -42,7 +42,36 @@ liquidity figure for, so it stays NULL, stays at the head, and is re-paid for
 every hour. The fix if that shows up is a `liquidity_screened_at` column to key
 retries off — deliberately NOT built ahead of evidence.
 
-### VERIFIED ON PROD 2026-08-13, and the throttle is the binding constraint
+### RESOLVED 2026-08-13 — the source was wrong, not the budget
+
+Everything in the section below is kept because the reasoning was sound and the
+conclusion was wrong, which is worth being able to see.
+
+The screen now reads **Dexscreener** (`lib/coins/dexscreener`, free, per-IP
+limits in the hundreds/min), which was already vendored in this repo and already
+fronting every coin page for untracked coins. Five live passes of 60:
+
+    measured 54 / 48 / 47 / 45 / 43     failed 0 0 0 0 0     deadlineHit false
+
+against Mobula's 1-measured-2-failed per 3. Default per-pass raised 20 -> 60.
+
+**What it found, which is the actual point.** 105 of 243 measured rows — 43% of
+the board — sat under the $1,000 floor and are now hidden. The top of the board
+included:
+
+    TikTok    $168,842,702 of 24h volume  ->  $0.02 liquidity   HIDDEN
+    SNDK       $80,068,102                ->  $27.69            HIDDEN
+    UNITREE    $60,386,088                ->   $3.67            HIDDEN
+
+and, separately, a SECOND SNDK on a different mint with $256k of real liquidity
+that stays. Name matching could never have told those two apart; liquidity does
+it instantly. SOL, ETH and CBBTC all retained — which is why NULL must keep
+meaning "unmeasured" rather than "none".
+
+The Mobula $50 plan is no longer justified by this workstream. Its remaining
+case is the alert tape's `/2/token/trades`, which Dexscreener does not replace.
+
+### The original finding — kept, because the constraint it assumed was not real
 
 Deploy `1c4929b9`, three probes. The mechanism works: `liquidity_usd` went from
 **0 of 308 to 3 of 243 fresh rows**, values sane (max $13.5M), and they PERSIST

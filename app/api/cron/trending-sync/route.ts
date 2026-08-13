@@ -113,7 +113,11 @@ export async function GET(req: NextRequest) {
     const screenPinned = Number.isFinite(screenParam) && screenParam >= 0;
     const screenPerPass = screenPinned
         ? Math.min(200, Math.floor(screenParam))
-        : Math.max(0, Math.floor(Number(process.env.TRENDING_LIQUIDITY_SCREEN_PER_PASS ?? 20)) || 0);
+        // 60, not the original 20. That number was sized for a metered API at 1
+        // credit a coin; the source is free now, and 5 live passes of 60 ran
+        // with zero failures and `deadlineHit` false every time, so the only
+        // real bound is the 45s in-pass deadline.
+        : Math.max(0, Math.floor(Number(process.env.TRENDING_LIQUIDITY_SCREEN_PER_PASS ?? 60)) || 0);
     // An explicit ?screen= also bypasses the hourly gate — otherwise a manual
     // seed silently does nothing for 59 minutes out of every 60, which reads as
     // a broken endpoint rather than a scheduling rule.
