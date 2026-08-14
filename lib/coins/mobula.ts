@@ -536,11 +536,26 @@ export async function fetchMobulaTokenSecurity(
         bundlersPct: num(d.bundlersHoldingsPercentage),
         bundlersCount: num(d.bundlersCount),
         liquidityBurnPct: num(d.liquidityBurnPercentage),
-        // `liquidityUSD` first, `approximateReserveUSD` as the fallback — both
-        // appear on this response and both are real dollars (measured on BONK:
-        // 57,721 and 109,159 respectively; the reserve is the pool's total,
-        // the liquidity figure is the tradeable side).
-        liquidityUsd: num(d.liquidityUSD) ?? num(d.approximateReserveUSD),
+        // `liquidityUSD` ONLY. `approximateReserveUSD` used to be the fallback,
+        // on the strength of a single BONK reading where both looked sane
+        // (57,721 and 109,159). It is not safe:
+        //
+        //     coin      liquidityUSD   approximateReserveUSD
+        //     utility   0.008          1081.0951922489
+        //     Monkey    0.010          1081.0951922489     <- identical
+        //     UNITREE   1.81          10809.169652991792
+        //     Guidy     0.039         10809.164499715023   <- identical
+        //
+        // Unrelated coins share a reserve figure to ten significant digits, so
+        // the field is describing something other than this token's pool — the
+        // quote side, or a cached artifact. Harmless while liquidityUSD is
+        // present, and actively dangerous when it is null: it would write ~$1k
+        // or ~$10.8k for coins holding fractions of a cent, lifting them over
+        // MIN_BOARD_LIQUIDITY_USD and back onto the board as "real markets".
+        //
+        // A missing figure must stay NULL — unmeasured, which the floor admits
+        // on purpose — rather than become a fabricated one.
+        liquidityUsd: num(d.liquidityUSD),
         noMintAuthority: typeof sec.noMintAuthority === "boolean" ? sec.noMintAuthority : null,
         isFreezable: typeof sec.isFreezable === "boolean" ? sec.isFreezable : null,
         buyTaxPct: tax(sec.buyTax),
