@@ -36,6 +36,29 @@ const CHAIN_IMAGES: Record<string, string> = {
     unichain: "https://coin-images.coingecko.com/asset_platforms/images/22206/small/unichain.png?1739323630",
     sonic: "https://coin-images.coingecko.com/asset_platforms/images/22192/small/128xS_token_Black-BG_2x.png?1735963719",
     abstract: "https://coin-images.coingecko.com/asset_platforms/images/22196/small/abstract.jpg?1735611808",
+    robinhood: "https://coin-images.coingecko.com/asset_platforms/images/102132299/small/robinhood.png?1782921203",
+};
+
+/**
+ * Mobula's chain slugs → the GeckoTerminal ones this table is keyed by.
+ *
+ * The board used to be GT-sourced, so every key above is a GT slug. It is
+ * Mobula-sourced now, and the two vendors disagree on exactly the chains that
+ * were showing a coloured dot instead of a logo: `ethereum` vs `eth`, `bnb` vs
+ * `bsc`, `polygon` vs `polygon_pos`. `solana`, `base` and `hyperevm` happen to
+ * match in both, which is why some rows looked right and made the rest read as
+ * a missing-image problem rather than a naming one.
+ *
+ * An alias layer rather than duplicate entries: the URL for a chain lives once,
+ * and a third vendor later is a few more lines here instead of a second table.
+ */
+const SLUG_ALIASES: Record<string, string> = {
+    ethereum: "eth",
+    bnb: "bsc",
+    polygon: "polygon_pos",
+    avalanche: "avax",
+    sui: "sui-network",
+    sei: "sei-network",
 };
 
 /** Chains with no logo mapped still need to be distinguishable, so they fall
@@ -48,7 +71,7 @@ function colorFor(network: string) {
 }
 
 export function ChainBadge({ network, className }: { network: string; className?: string }) {
-    const src = CHAIN_IMAGES[network];
+    const src = CHAIN_IMAGES[network] ?? CHAIN_IMAGES[SLUG_ALIASES[network] ?? ""];
     const label = chainLabel(network);
 
     if (!src) {
