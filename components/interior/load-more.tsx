@@ -319,7 +319,7 @@ export function LoadMore({
                     }
                     load();
                 }}
-                className={`group relative inline-flex h-11 select-none items-center justify-center rounded-full px-4 text-[13px] font-medium outline-none transition-[background-color,box-shadow,transform] duration-150 focus-visible:bg-bleu/[0.08] focus-visible:shadow-[inset_0_0_0_1px_var(--color-bleu)] ${
+                className={`group relative inline-flex h-11 select-none items-center justify-center rounded-full px-4 text-sm font-medium outline-none transition-[background-color,box-shadow,transform] duration-150 focus-visible:bg-bleu/[0.08] focus-visible:shadow-[inset_0_0_0_1px_var(--color-bleu)] ${
                     inert
                         ? "cursor-default"
                         : "cursor-pointer hover:bg-flexwhite/[0.06] active:translate-y-px"
