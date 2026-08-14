@@ -106,7 +106,9 @@ code** (`services/phoenix/training/`), so closing this gap is now "accumulate da
 ## Tuning knobs (no redeploy of watchparty needed)
 
 - **Engagement weights + crypto boost**: the final score is a post-inference weighted
-  sum (`lib/feed-ranker/rank-feed.ts` for the crypto multipliers; the action weights
-  live in the service's `/rank`). Adjust emphasis without retraining.
+  sum (`lib/feed-ranker/rank-feed.ts` for the crypto multipliers + mutual-follow reply
+  boost; the action weights live in `WEIGHTS` in `services/phoenix/service.py` — since
+  2026-08-13 they follow X production's home-mixer values, incl. negative weights for
+  report/not-interested). Adjust emphasis without retraining.
 - **On/off**: `FEED_RANKER_ENABLED` env var.
 - **Candidate pool size**: `FEED_POOL_SIZE` in `server/routers/feed.ts`.

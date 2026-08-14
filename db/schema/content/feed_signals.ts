@@ -16,10 +16,13 @@ import { user } from "../auth/user"
 //   6  = repost
 //   11 = dwell            (value = visible seconds)
 //   13 = video quality view (value = fraction watched, 0..1)
-//   20 = negative feedback ("not interested" / report) — downranks, NOT a Phoenix
-//        default index; reserved high to avoid colliding with X's vocabulary.
-//   21 = trade/conversion — RESERVED, not logged in v1. Highest-intent crypto
+//   17 = negative feedback ("not interested" / report) — downranks. This IS a
+//        Phoenix index (CLIENT_TWEET_NOT_INTERESTED_IN in the published proto).
+//        Historically logged as 20, which the 19-slot checkpoint silently
+//        dropped; lib/feed-ranker/history.ts remaps old 20-rows to 17.
+//   100 = trade/conversion — RESERVED, not logged in v1. Highest-intent crypto
 //        action; left dormant until we can measure lift vs. manipulation risk.
+//        Parked past the proto enum (runs to 60+) so it can never collide.
 //
 // subjectType namespaces post ids vs stream ids (live streams are a separate
 // table, not posts) so the two never collide in the embedding tables.

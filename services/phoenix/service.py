@@ -51,9 +51,31 @@ def _require_secret(provided: str | None):
     if PHOENIX_SHARED_SECRET and provided != PHOENIX_SHARED_SECRET:
         raise HTTPException(status_code=401, detail="unauthorized")
 
-# Default engagement weights (watchparty re-weights + adds crypto boost on its
-# side; these are a sensible fallback matching the reference demo).
-IDX_FAV, IDX_REPLY, IDX_RT, IDX_DWELL = 1, 4, 6, 11
+# Engagement-blend weights following X production's home-mixer values
+# (home-mixer/params/param.rs in xai-org/x-algorithm, published 2026-08-13),
+# restricted to the action slots this checkpoint predicts (num_actions=19).
+# The proto ActionName enum continues past 19 — share (32/33/37), follow (21),
+# click (29), open-link (39), block/mute (23/25) are out of range for the OSS
+# mini model, so their production weights cannot apply here.
+# The previous fav*1.0 + reply*0.5 + rt*0.3 + dwell*0.2 blend was
+# run_pipeline.py's demo illustration — roughly the INVERSE of production
+# emphasis (production values a reply at 10 likes, the demo at half a like).
+# The bidirectional-follow reply boost (+15 * P(reply)) is applied on the
+# watchparty edge (lib/feed-ranker/rank-feed.ts), where the follow graph lives.
+WEIGHTS = {
+    1: 0.5,      # SERVER_TWEET_FAV                 favorite_weight
+    4: 5.0,      # SERVER_TWEET_REPLY               reply_weight
+    5: 5.0,      # SERVER_TWEET_QUOTE               quote_weight
+    6: 1.0,      # SERVER_TWEET_RETWEET             retweet_weight
+    11: 0.0,     # CLIENT_TWEET_RECAP_DWELLED       binary dwell — 0.0 in prod blend
+    12: -0.02,   # CLIENT_TWEET_RECAP_NOT_DWELLED   not_dwelled_weight
+    13: 0.05,    # CLIENT_TWEET_VIDEO_QUALITY_VIEW  vqv_weight
+    14: 0.05,    # CLIENT_TWEET_PHOTO_EXPAND        photo_expand_weight
+    16: -234.0,  # CLIENT_TWEET_REPORT              report_weight
+    17: -43.2,   # CLIENT_TWEET_NOT_INTERESTED_IN   not_interested_weight
+}
+# SERVER_TWEET_REPORT (10) stays unweighted on purpose: it duplicates 16 for our
+# data, and weighting the correlated pair at -234 each double-counts a report.
 
 STATE: dict = {}
 
@@ -226,18 +248,16 @@ def rank(req: RankRequest, x_phoenix_secret: str | None = Header(default=None)):
         all_probs.append(np.asarray(probs[0, :cs, :]))
 
     probs = np.concatenate(all_probs)  # [n, num_actions]
-    weighted = (
-        probs[:, IDX_FAV] * 1.0
-        + probs[:, IDX_REPLY] * 0.5
-        + probs[:, IDX_RT] * 0.3
-        + probs[:, IDX_DWELL] * 0.2
-    )
+    wvec = np.zeros(num_actions, dtype=np.float32)
+    for a, w in WEIGHTS.items():
+        wvec[a] = w
+    weighted = probs @ wvec
     order = np.argsort(-weighted)
     ranked = [
         {
             "ref": req.candidates[int(k)].ref,
             "score": float(weighted[int(k)]),
-            "actions": {int(a): float(probs[int(k), a]) for a in (IDX_FAV, IDX_REPLY, IDX_RT, IDX_DWELL)},
+            "actions": {int(a): float(probs[int(k), a]) for a in sorted(WEIGHTS)},
         }
         for k in order
     ]

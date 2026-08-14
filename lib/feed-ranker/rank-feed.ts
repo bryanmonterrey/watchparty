@@ -1,9 +1,12 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { and, eq, inArray } from "drizzle-orm";
 import { rankCandidates } from "./server";
 import { getUserHistory } from "./history";
 import { FEED_RANKER_ENABLED } from "./config";
 import { withCache } from "@/lib/cache";
+import { db } from "@/db";
+import { follows } from "@/db/schema";
 
 // Cache the expensive part (history assembly + Phoenix /rank) per
 // (user, surface, candidate-set). Repeated feed loads + pagination over the same
@@ -33,6 +36,33 @@ interface RankableRow {
 // Applied to the model's score AFTER ranking, so it's tunable without retraining.
 const TICKER_BOOST = 1.15;
 const LIVE_TOKEN_BOOST = 1.30;
+
+// X production's bidirectional-follow reply boost (home-mixer param.rs:
+// rust_home_mixer_bidirectional_follow_reply_weight_boost = 15.0): a predicted
+// reply to a mutual-follow author counts 20x a like instead of 10x. Applied
+// here, not in the service, because only the edge knows the follow graph.
+// Posts only — stream "replies" aren't the same interaction.
+const BIDIRECTIONAL_REPLY_BOOST = 15.0;
+const IDX_REPLY = 4; // SERVER_TWEET_REPLY in the per-action probs
+
+// Authors among `authorIds` in a mutual follow with the viewer: two indexed
+// lookups + a set intersection (avoids a drizzle self-join alias — see the
+// alias() type incident in CLAUDE.md).
+async function getMutualFollowAuthors(userId: string, authorIds: string[]): Promise<Set<string>> {
+    if (authorIds.length === 0) return new Set();
+    try {
+        const [iFollow, followMe] = await Promise.all([
+            db.select({ id: follows.followingId }).from(follows)
+                .where(and(eq(follows.followerId, userId), inArray(follows.followingId, authorIds))),
+            db.select({ id: follows.followerId }).from(follows)
+                .where(and(eq(follows.followingId, userId), inArray(follows.followerId, authorIds))),
+        ]);
+        const back = new Set(followMe.map((r) => r.id));
+        return new Set(iFollow.map((r) => r.id).filter((id) => back.has(id)));
+    } catch {
+        return new Set(); // boost is best-effort; never fail the feed over it
+    }
+}
 
 export async function rankFeedRows<T extends RankableRow>(
     userId: string | undefined,
@@ -66,13 +96,34 @@ export async function rankFeedRows<T extends RankableRow>(
     });
     if (!ranked) return null; // service down → caller keeps chronological order
 
-    // score by subjectId, with crypto boost folded in
+    // Mutual-follow set is fetched fresh (cheap, indexed) because the ranked
+    // result is cached across users' follow-graph changes.
+    const mutual = await getMutualFollowAuthors(
+        userId,
+        [...new Set(rows.map((r) => r.userId).filter(Boolean))],
+    );
+
+    // score by subjectId: additive reply boost first (part of the engagement
+    // blend), then watchparty's multiplicative crypto boost on top.
+    //
+    // The multiplier is applied ONLY to a positive score. Since the blend gained
+    // negative weights (report -234, not-interested -43.2) a score can now be
+    // negative, and multiplying a negative by 1.15 pushes it FURTHER down — the
+    // boost would silently invert into a penalty, hitting exactly the crypto
+    // posts it is meant to promote. Multiplicative boosts are only monotonic on
+    // the positive side.
     const rowById = new Map(rows.map((r) => [r.id, r]));
     const scored = ranked.map((r) => {
         const row = rowById.get(r.subjectId);
         let score = r.score;
-        if (row?.ticker) score *= TICKER_BOOST;
-        if (row?.tokenStatus === "live") score *= LIVE_TOKEN_BOOST;
+        const replyP = r.actions?.[IDX_REPLY];
+        if (replyP && row && (row.subjectType ?? "post") === "post" && mutual.has(row.userId)) {
+            score += BIDIRECTIONAL_REPLY_BOOST * replyP;
+        }
+        if (score > 0) {
+            if (row?.ticker) score *= TICKER_BOOST;
+            if (row?.tokenStatus === "live") score *= LIVE_TOKEN_BOOST;
+        }
         return { id: r.subjectId, score };
     });
     scored.sort((a, b) => b.score - a.score);

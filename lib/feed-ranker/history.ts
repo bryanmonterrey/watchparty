@@ -40,8 +40,12 @@ async function queryUserHistory(userId: string): Promise<HistoryItem[]> {
             item = { postId: r.subjectId, authorId: r.authorId, actions: {} };
             byPost.set(r.subjectId, item);
         }
+        // Legacy negative-feedback rows were logged as 20 (out of the model's
+        // 19-slot vocabulary, so the service zeroed them); remap to 17
+        // (CLIENT_TWEET_NOT_INTERESTED_IN), where ACTION.NEGATIVE now writes.
+        const actionType = r.actionType === 20 ? 17 : r.actionType;
         // Keep the strongest value seen for an action on this post.
-        item.actions[r.actionType] = Math.max(item.actions[r.actionType] ?? 0, r.value);
+        item.actions[actionType] = Math.max(item.actions[actionType] ?? 0, r.value);
     }
     return [...byPost.values()];
 }
