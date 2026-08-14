@@ -3,7 +3,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useAmbientGlow, AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
-import { useAudioOwner } from "@/lib/audio-bus";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useAds } from "./use-ads";
@@ -17,6 +16,8 @@ import {
 } from "./types";
 import { useCaptionStyle } from "./use-caption-style";
 import { useAudioProcessor } from "./use-audio-processor";
+import { useAudioBus } from "./use-audio-bus";
+import { useFrameThumbnails } from "./use-frame-thumbnails";
 
 export function usePlayer(props: VideoPlayerProps) {
     const {
@@ -110,12 +111,8 @@ export function usePlayer(props: VideoPlayerProps) {
     // ── Post-seek controls grace period ──────────────────────────────────────
     const lastSeekTimeRef = useRef(0);
 
-    // ── Thumbnail capture (hidden video + canvas) ─────────────────────────────
-    const thumbVideoRef = useRef<HTMLVideoElement | null>(null);
-    const thumbCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const thumbSeekingRef = useRef(false);
-    const thumbTargetRef = useRef(0);
-    const [thumbDataUrl, setThumbDataUrl] = useState<string | null>(null);
+    // ── Thumbnail capture (detached video + canvas) ───────────────────────────
+    const { thumbDataUrl, seekThumb } = useFrameThumbnails(videoUrl);
 
     // ── Buffering / error state ───────────────────────────────────────────────
     const [isWaiting, setIsWaiting] = useState(false);
@@ -159,21 +156,6 @@ export function usePlayer(props: VideoPlayerProps) {
 
     // ── Audio processor ───────────────────────────────────────────────────────
     const audioProcessor = useAudioProcessor(videoRef);
-
-    // ── Page audio bus ────────────────────────────────────────────────────────
-    // Opt-in (`audioBus`), and inert for everyone else — the effects below all
-    // return early, and nothing claims ownership, so the watch page behaves
-    // exactly as it did.
-    //
-    // `userMutedRef` is what the USER asked for, deliberately kept apart from the
-    // muting the bus does on its own: without the split, losing audio to a
-    // hovered card would read as "the user muted this" and the hero would never
-    // speak again once the card let go.
-    const { isOwner, hasOwner, claim, release } = useAudioOwner();
-    const userMutedRef = useRef(false);
-    // What the bus last left the element at, so an un-mute it performs itself can
-    // be told apart from one the user asked for.
-    const busMutedRef = useRef(true);
 
     // ── Scrubber color variant ────────────────────────────────────────────────
     const [scrubberRainbow, setScrubberRainbow] = useState(
@@ -253,55 +235,6 @@ export function usePlayer(props: VideoPlayerProps) {
     // Home's preset, not this player's old brightness-1.5 wash — same glow
     // everywhere. Still behind the ambientMode toggle (persisted, default on).
     useAmbientGlow(videoRef, AMBIENT_PRESET, !isLoading && ambientMode);
-
-    // ── Hidden video + canvas for frame-accurate thumbnail previews ───────────
-    useEffect(() => {
-        if (!videoUrl || videoUrl.includes(".m3u8")) return; // HLS: skip (no cross-origin frame capture)
-
-        const v = document.createElement("video");
-        v.crossOrigin = "anonymous";
-        v.muted = true;
-        v.preload = "metadata";
-        v.src = videoUrl;
-        thumbVideoRef.current = v;
-
-        const c = document.createElement("canvas");
-        c.width = 160;
-        c.height = 90;
-        thumbCanvasRef.current = c;
-
-        const onSeeked = () => {
-            const ctx = c.getContext("2d");
-            if (ctx) {
-                ctx.drawImage(v, 0, 0, 160, 90);
-                setThumbDataUrl(c.toDataURL("image/jpeg", 0.75));
-            }
-            thumbSeekingRef.current = false;
-            // If hover moved while seek was in flight, seek again to latest target
-            if (Math.abs(thumbTargetRef.current - v.currentTime) > 0.5) {
-                v.currentTime = thumbTargetRef.current;
-                thumbSeekingRef.current = true;
-            }
-        };
-        v.addEventListener("seeked", onSeeked);
-
-        return () => {
-            v.removeEventListener("seeked", onSeeked);
-            v.src = "";
-            thumbVideoRef.current = null;
-            thumbCanvasRef.current = null;
-            thumbSeekingRef.current = false;
-            setThumbDataUrl(null);
-        };
-    }, [videoUrl]);
-
-    const seekThumb = useCallback((time: number) => {
-        thumbTargetRef.current = time;
-        const v = thumbVideoRef.current;
-        if (!v || thumbSeekingRef.current) return;
-        v.currentTime = time;
-        thumbSeekingRef.current = true;
-    }, []);
 
     // ── Bezel helper — matches YouTube: wrapper display:none ↔ "", circle animated ──
     const showBezel = useCallback((icon: BezelIcon) => {
@@ -434,28 +367,17 @@ export function usePlayer(props: VideoPlayerProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [videoUrl]);
 
-    // ── Autoplay ──────────────────────────────────────────────────────────────
-    // Muted, always: a browser only grants autoplay to a silent element, and the
-    // audio bus below is what asks for the sound back a beat later. Declared
-    // BEFORE the bus effects on purpose — mount effects run in order, so the
-    // element is already playing by the time anything unmutes it.
-    //
-    // Retried once on `canplay` because on a cold load the first call happens
-    // before there's anything to play. The `paused` guard is what keeps that
-    // retry from re-muting a player the bus has already handed the audio to.
-    useEffect(() => {
-        if (!autoPlay) return;
-        const video = videoRef.current;
-        if (!video || !videoUrl) return;
-        const start = () => {
-            if (!video.paused) return;
-            video.muted = true;
-            void video.play().catch(() => { });
-        };
-        start();
-        video.addEventListener("canplay", start, { once: true });
-        return () => video.removeEventListener("canplay", start);
-    }, [autoPlay, videoUrl]);
+    // ── Autoplay + page audio bus ─────────────────────────────────────────────
+    // Both inert unless asked for, and declared HERE — after the effect that
+    // sets the source — because autoplay starts the element the moment it can.
+    const { noteUserMuted } = useAudioBus({
+        enabled: audioBus,
+        autoPlay,
+        videoRef,
+        videoUrl,
+        isPlaying,
+        setIsMuted,
+    });
 
     // ── Text-track detection (runs on metadata load AND when DB captions change) ─
     const syncTextTracks = useCallback(() => {
@@ -719,73 +641,20 @@ export function usePlayer(props: VideoPlayerProps) {
         if (!video) return;
         const newMuted = !video.muted;
         video.muted = newMuted;
-        // Record the intent, and take the page's audio back when un-muting — on
-        // the bus, un-muting IS the claim.
-        userMutedRef.current = newMuted;
-        if (audioBus && !newMuted) claim();
+        noteUserMuted(newMuted);
         setIsMuted(newMuted || video.volume === 0);
-    }, [audioBus, claim]);
+    }, [noteUserMuted]);
 
     const adjustVolume = useCallback((val: number) => {
         const video = videoRef.current;
         if (!video) return;
         video.volume = val;
         video.muted = val === 0;
-        userMutedRef.current = val === 0;
-        if (audioBus && val > 0) claim();
+        noteUserMuted(val === 0);
         setVolume(val);
         setIsMuted(val === 0);
         store.set("ytp-volume", String(val));
-    }, [audioBus, claim]);
-
-    // ── Audio-bus effects ─────────────────────────────────────────────────────
-    // Claim on mount / let go on unmount.
-    useEffect(() => {
-        if (!audioBus) return;
-        claim();
-        return () => release();
-    }, [audioBus, claim, release]);
-
-    // Take it back once nobody holds it — a hovered card finished its preview —
-    // unless the user is the one who silenced this player.
-    useEffect(() => {
-        if (!audioBus || hasOwner || userMutedRef.current) return;
-        claim();
-    }, [audioBus, hasOwner, claim]);
-
-    // Apply ownership to the element. `isPlaying` is in the deps because
-    // autoplay's muted retry can land after this last ran, and the sound is owed
-    // to the player the moment it's actually playing.
-    useEffect(() => {
-        if (!audioBus) return;
-        const video = videoRef.current;
-        if (!video) return;
-        const muted = userMutedRef.current || !isOwner;
-        // Only a bus-driven un-mute arms the guard below — one the user asked
-        // for came with a gesture, which is exactly what makes it safe.
-        const busUnmuting = busMutedRef.current && !muted;
-        busMutedRef.current = muted;
-        video.muted = muted;
-        setIsMuted(muted || video.volume === 0);
-        if (!busUnmuting || video.paused) return;
-
-        // Safari PAUSES a video that autoplayed muted the instant it is
-        // un-muted without a user gesture (WebKit's autoplay policy) — the hero
-        // would stop dead on its first frame. Silent and playing beats loud and
-        // stopped, so take the mute back and carry on. Armed for a moment only,
-        // so a real pause click a second later still pauses.
-        const onPause = () => {
-            video.muted = true;
-            setIsMuted(true);
-            void video.play().catch(() => { });
-        };
-        video.addEventListener("pause", onPause, { once: true });
-        const timer = setTimeout(() => video.removeEventListener("pause", onPause), 300);
-        return () => {
-            clearTimeout(timer);
-            video.removeEventListener("pause", onPause);
-        };
-    }, [audioBus, isOwner, isPlaying]);
+    }, [noteUserMuted]);
 
     // Document-level pointer handlers for volume drag
     useEffect(() => {
