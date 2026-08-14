@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useAmbientGlow, AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
+import { useAudioOwner } from "@/lib/audio-bus";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useAds } from "./use-ads";
@@ -23,9 +24,14 @@ export function usePlayer(props: VideoPlayerProps) {
         videoUrl,
         thumbnailUrl,
         isLoading,
-        loop: _loop,
+        loop: loopProp,
         chapters = [],
         progressDots: _progressDots = [],
+        autoPlay = false,
+        audioBus = false,
+        transient = false,
+        theaterMode,
+        onEnded: onEndedProp,
         onTheaterModeChange,
         onBeforePlay,
         hiddenControls = [],
@@ -70,7 +76,12 @@ export function usePlayer(props: VideoPlayerProps) {
 
     // ── View-mode state ───────────────────────────────────────────────────────
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [isTheaterMode, setIsTheaterMode] = useState(false);
+    // Seeded from the prop and re-synced below when it's supplied, so a host that
+    // owns the layout (home's focus mode) can't drift out of step with the button.
+    const [isTheaterMode, setIsTheaterMode] = useState(theaterMode ?? false);
+    useEffect(() => {
+        if (theaterMode !== undefined) setIsTheaterMode(theaterMode);
+    }, [theaterMode]);
 
     // ── UI state ──────────────────────────────────────────────────────────────
     const [showControls, setShowControls] = useState(true);
@@ -128,7 +139,10 @@ export function usePlayer(props: VideoPlayerProps) {
     const resumeAppliedRef = useRef(false);
 
     // ── Loop state ────────────────────────────────────────────────────────────
-    const [loop, setLoop] = useState(() => store.get("ytp-loop", "0") === "1");
+    // The prop is a starting value, not a lock: a caller with one video and
+    // nowhere to advance to (the home hero on a one-item feed) opens looping,
+    // and the toggle still works from there.
+    const [loop, setLoop] = useState(() => loopProp ?? store.get("ytp-loop", "0") === "1");
 
     // ── Caption style ─────────────────────────────────────────────────────────
     const captionStyle = useCaptionStyle();
@@ -145,6 +159,21 @@ export function usePlayer(props: VideoPlayerProps) {
 
     // ── Audio processor ───────────────────────────────────────────────────────
     const audioProcessor = useAudioProcessor(videoRef);
+
+    // ── Page audio bus ────────────────────────────────────────────────────────
+    // Opt-in (`audioBus`), and inert for everyone else — the effects below all
+    // return early, and nothing claims ownership, so the watch page behaves
+    // exactly as it did.
+    //
+    // `userMutedRef` is what the USER asked for, deliberately kept apart from the
+    // muting the bus does on its own: without the split, losing audio to a
+    // hovered card would read as "the user muted this" and the hero would never
+    // speak again once the card let go.
+    const { isOwner, hasOwner, claim, release } = useAudioOwner();
+    const userMutedRef = useRef(false);
+    // What the bus last left the element at, so an un-mute it performs itself can
+    // be told apart from one the user asked for.
+    const busMutedRef = useRef(true);
 
     // ── Scrubber color variant ────────────────────────────────────────────────
     const [scrubberRainbow, setScrubberRainbow] = useState(
@@ -176,7 +205,7 @@ export function usePlayer(props: VideoPlayerProps) {
     const saveProgressMutation = trpc.content.saveProgress.useMutation();
     const { data: progressData } = trpc.content.getProgress.useQuery(
         { postId },
-        { enabled: !!session?.user, staleTime: Infinity }
+        { enabled: !!session?.user && !transient, staleTime: Infinity }
     );
 
     const { data: heatmapData } = trpc.content.getHeatmap.useQuery(
@@ -194,8 +223,12 @@ export function usePlayer(props: VideoPlayerProps) {
         {
             // Never re-fetch once we have captions — avoids disrupting oncuechange
             staleTime: Infinity,
+            // The poll is for the minutes right after an upload, on the page the
+            // uploader is watching. A transient surface fetches once and lives
+            // with the answer — otherwise home would poll every 12s forever, for
+            // whichever feed video happens to be on the screen.
             refetchInterval: (query) =>
-                (query.state.data?.captions?.length ?? 0) > 0 ? false : 12_000,
+                transient || (query.state.data?.captions?.length ?? 0) > 0 ? false : 12_000,
         }
     );
     const captionTracks = captionsData?.captions ?? [];
@@ -401,6 +434,29 @@ export function usePlayer(props: VideoPlayerProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [videoUrl]);
 
+    // ── Autoplay ──────────────────────────────────────────────────────────────
+    // Muted, always: a browser only grants autoplay to a silent element, and the
+    // audio bus below is what asks for the sound back a beat later. Declared
+    // BEFORE the bus effects on purpose — mount effects run in order, so the
+    // element is already playing by the time anything unmutes it.
+    //
+    // Retried once on `canplay` because on a cold load the first call happens
+    // before there's anything to play. The `paused` guard is what keeps that
+    // retry from re-muting a player the bus has already handed the audio to.
+    useEffect(() => {
+        if (!autoPlay) return;
+        const video = videoRef.current;
+        if (!video || !videoUrl) return;
+        const start = () => {
+            if (!video.paused) return;
+            video.muted = true;
+            void video.play().catch(() => { });
+        };
+        start();
+        video.addEventListener("canplay", start, { once: true });
+        return () => video.removeEventListener("canplay", start);
+    }, [autoPlay, videoUrl]);
+
     // ── Text-track detection (runs on metadata load AND when DB captions change) ─
     const syncTextTracks = useCallback(() => {
         const video = videoRef.current;
@@ -455,6 +511,7 @@ export function usePlayer(props: VideoPlayerProps) {
 
     // ── View-increment ────────────────────────────────────────────────────────
     useEffect(() => {
+        if (transient) return;
         if (isPlaying && !viewIncremented.current) {
             viewIncremented.current = true;
             incrementView.mutate({ postId, contentType: "video" });
@@ -465,7 +522,7 @@ export function usePlayer(props: VideoPlayerProps) {
     // ── Resume from saved position ────────────────────────────────────────────
     // Apply once when metadata is loaded AND progressData is available
     useEffect(() => {
-        if (resumeAppliedRef.current) return;
+        if (transient || resumeAppliedRef.current) return;
         const video = videoRef.current;
         if (!video || !progressData) return;
 
@@ -489,7 +546,7 @@ export function usePlayer(props: VideoPlayerProps) {
         } else {
             resumeAppliedRef.current = true;
         }
-    }, [progressData, postId, session?.user]);
+    }, [progressData, postId, session?.user, transient]);
 
     // Reset resume gate and recorded heatmap buckets when postId changes
     useEffect(() => {
@@ -662,18 +719,73 @@ export function usePlayer(props: VideoPlayerProps) {
         if (!video) return;
         const newMuted = !video.muted;
         video.muted = newMuted;
+        // Record the intent, and take the page's audio back when un-muting — on
+        // the bus, un-muting IS the claim.
+        userMutedRef.current = newMuted;
+        if (audioBus && !newMuted) claim();
         setIsMuted(newMuted || video.volume === 0);
-    }, []);
+    }, [audioBus, claim]);
 
     const adjustVolume = useCallback((val: number) => {
         const video = videoRef.current;
         if (!video) return;
         video.volume = val;
         video.muted = val === 0;
+        userMutedRef.current = val === 0;
+        if (audioBus && val > 0) claim();
         setVolume(val);
         setIsMuted(val === 0);
         store.set("ytp-volume", String(val));
-    }, []);
+    }, [audioBus, claim]);
+
+    // ── Audio-bus effects ─────────────────────────────────────────────────────
+    // Claim on mount / let go on unmount.
+    useEffect(() => {
+        if (!audioBus) return;
+        claim();
+        return () => release();
+    }, [audioBus, claim, release]);
+
+    // Take it back once nobody holds it — a hovered card finished its preview —
+    // unless the user is the one who silenced this player.
+    useEffect(() => {
+        if (!audioBus || hasOwner || userMutedRef.current) return;
+        claim();
+    }, [audioBus, hasOwner, claim]);
+
+    // Apply ownership to the element. `isPlaying` is in the deps because
+    // autoplay's muted retry can land after this last ran, and the sound is owed
+    // to the player the moment it's actually playing.
+    useEffect(() => {
+        if (!audioBus) return;
+        const video = videoRef.current;
+        if (!video) return;
+        const muted = userMutedRef.current || !isOwner;
+        // Only a bus-driven un-mute arms the guard below — one the user asked
+        // for came with a gesture, which is exactly what makes it safe.
+        const busUnmuting = busMutedRef.current && !muted;
+        busMutedRef.current = muted;
+        video.muted = muted;
+        setIsMuted(muted || video.volume === 0);
+        if (!busUnmuting || video.paused) return;
+
+        // Safari PAUSES a video that autoplayed muted the instant it is
+        // un-muted without a user gesture (WebKit's autoplay policy) — the hero
+        // would stop dead on its first frame. Silent and playing beats loud and
+        // stopped, so take the mute back and carry on. Armed for a moment only,
+        // so a real pause click a second later still pauses.
+        const onPause = () => {
+            video.muted = true;
+            setIsMuted(true);
+            void video.play().catch(() => { });
+        };
+        video.addEventListener("pause", onPause, { once: true });
+        const timer = setTimeout(() => video.removeEventListener("pause", onPause), 300);
+        return () => {
+            clearTimeout(timer);
+            video.removeEventListener("pause", onPause);
+        };
+    }, [audioBus, isOwner, isPlaying]);
 
     // Document-level pointer handlers for volume drag
     useEffect(() => {
@@ -875,7 +987,7 @@ export function usePlayer(props: VideoPlayerProps) {
         }
 
         // Record heatmap hit for this 5-second bucket (once per session per bucket)
-        if (!isScrubbingRef.current) {
+        if (!transient && !isScrubbingRef.current) {
             const bucket = Math.floor(video.currentTime / 5);
             if (!recordedBucketsRef.current.has(bucket)) {
                 recordedBucketsRef.current.add(bucket);
@@ -884,7 +996,7 @@ export function usePlayer(props: VideoPlayerProps) {
         }
 
         // Throttled progress save: every 5s
-        if (!saveProgressThrottleRef.current) {
+        if (!transient && !saveProgressThrottleRef.current) {
             saveProgressThrottleRef.current = setTimeout(() => {
                 saveProgressThrottleRef.current = null;
                 const t = video.currentTime;
@@ -897,7 +1009,7 @@ export function usePlayer(props: VideoPlayerProps) {
                 }
             }, 5000);
         }
-    }, [session?.user, postId, saveProgressMutation]);
+    }, [session?.user, postId, saveProgressMutation, transient]);
 
     const onLoadedMetadata = useCallback(() => {
         const video = videoRef.current;
@@ -922,9 +1034,14 @@ export function usePlayer(props: VideoPlayerProps) {
         setShowControls(true);
         ads.onVideoEnded();
         // Clear saved progress so next watch starts from beginning
-        if (session?.user) saveProgressMutation.mutate({ postId, currentTime: 0 });
-        else store.set(`ytp-progress-${postId}`, "0");
-    }, [session?.user, postId, saveProgressMutation, ads]);
+        if (!transient) {
+            if (session?.user) saveProgressMutation.mutate({ postId, currentTime: 0 });
+            else store.set(`ytp-progress-${postId}`, "0");
+        }
+        // Last, so a host that swaps the source on this (the home hero advancing
+        // its queue) does it against a settled player.
+        onEndedProp?.();
+    }, [session?.user, postId, saveProgressMutation, ads, transient, onEndedProp]);
 
     const onWaiting = useCallback(() => setIsWaiting(true), []);
     const onCanPlay = useCallback(() => { setIsWaiting(false); setVideoError(null); }, []);

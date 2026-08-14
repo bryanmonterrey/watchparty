@@ -14,6 +14,7 @@ import { trpc } from "@/lib/trpc/client";
 import { PostCard } from "@/components/browse/post-card";
 import { PollProvider } from "@/components/browse/poll-context";
 import { PostCardSkeleton } from "@/components/browse/post-card-skeleton";
+import { LoadMore } from "@/components/interior/load-more";
 import { TradeRow } from "@/components/trades/trade-row";
 import { ProfilePnlCard } from "./profile-pnl-card";
 import { ProfileMediaGrid } from "./profile-media-grid";
@@ -104,7 +105,7 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
         : viewerKey(viewerSession?.user?.id, "profile-posts", userId, type, show, sort);
     const snapshotPlaceholder = useSnapshotPlaceholder(profilePostsSnapshotStore.read, snapshotKey);
 
-    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isPlaceholderData } =
+    const { data, isLoading, fetchNextPage, hasNextPage, isPlaceholderData } =
         trpc.content.getPostsByUser.useInfiniteQuery(
             { userId, limit: 20, type, show, sort, search: search || undefined },
             {
@@ -169,17 +170,12 @@ function ProfilePostsFeed({ userId, isOwner }: { userId: string; isOwner: boolea
                         />
                     ))}
                 </PollProvider>
-                {hasNextPage && (
-                    <div className="flex justify-center py-4">
-                        <button
-                            onClick={() => fetchNextPage()}
-                            disabled={isFetchingNextPage}
-                            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
-                        >
-                            {isFetchingNextPage ? "Loading…" : "Load more"}
-                        </button>
-                    </div>
-                )}
+                <LoadMore
+                    onLoad={() => fetchNextPage()}
+                    hasMore={!!hasNextPage}
+                    className="py-4"
+                    labels={{ end: "No more posts" }}
+                />
             </>
         );
     }

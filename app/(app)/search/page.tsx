@@ -13,6 +13,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 import { HOME_CATEGORIES } from "@/lib/data/home-categories";
 import { CategoryCard } from "@/components/categories/category-card";
+import { LoadMore } from "@/components/interior/load-more";
 
 // Discovery (Live + categories) shown while the query is empty. Lazy + ssr:false
 // so its feed queries aren't part of the initial search payload; the inline
@@ -200,13 +201,13 @@ export default function SearchPage() {
                                     {postSubset.map(p => (
                                         <PostCard key={p.id} post={p as any} />
                                     ))}
-                                    {(tab === "all" || tab === "videos" || tab === "media" || tab === "posts") && hasNextPage && (
-                                        <button
-                                            onClick={() => fetchNextPage()}
-                                            className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            Load more
-                                        </button>
+                                    {(tab === "all" || tab === "videos" || tab === "media" || tab === "posts") && (
+                                        <LoadMore
+                                            onLoad={() => fetchNextPage()}
+                                            hasMore={!!hasNextPage}
+                                            className="py-3"
+                                            labels={{ end: "No more results" }}
+                                        />
                                     )}
                                 </div>
                             )}

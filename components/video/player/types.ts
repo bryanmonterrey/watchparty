@@ -35,9 +35,41 @@ export interface VideoPlayerProps {
     videoUrl?: string | null;
     thumbnailUrl?: string | null;
     isLoading?: boolean;
+    /** Starting value for the loop toggle. Omitted, the user's stored choice wins. */
     loop?: boolean;
     chapters?: Chapter[];
     progressDots?: ProgressDot[];
+    /**
+     * Fill the parent box instead of imposing 16:9. For a slot that already owns
+     * its size — the home hero's screen, which grows past 16:9 in focus mode.
+     */
+    fill?: boolean;
+    /**
+     * Start playing on mount. Muted first, because that is the only autoplay a
+     * browser allows without a gesture; `audioBus` is what brings the sound back.
+     */
+    autoPlay?: boolean;
+    /** Runs after the player's own end handling — the home hero advances its queue with it. */
+    onEnded?: () => void;
+    /**
+     * Join the page-wide audio bus (`lib/audio-bus`): claim the page's audio on
+     * mount, mute whenever something else claims it, take it back when that
+     * thing lets go. The home hero opts in because the cards around it preview
+     * audio on hover.
+     */
+    audioBus?: boolean;
+    /**
+     * A surface someone landed on rather than chose: no view counted, no
+     * heatmap recorded, no watch progress saved or resumed. The home hero, whose
+     * videos autoplay by themselves, would otherwise mark the whole feed watched.
+     */
+    transient?: boolean;
+    /**
+     * Theater mode as a CONTROLLED value, for a host that owns the layout the
+     * button changes (home's focus mode). Left undefined the player keeps its own
+     * state, which is what the watch page wants.
+     */
+    theaterMode?: boolean;
     onTheaterModeChange?: (isTheater: boolean) => void;
     onBeforePlay?: () => Promise<void> | void;
     hiddenControls?: Array<"pip" | "theater" | "subtitles" | "settings" | "autoplay" | "airplay">;

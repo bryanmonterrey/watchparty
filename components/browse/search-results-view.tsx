@@ -8,7 +8,7 @@ import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { UserResultCard } from "./user-result-card";
 import { CoinResultCard } from "./coin-result-card";
-import { Loader2 } from "lucide-react";
+import { LoadMore } from "@/components/interior/load-more";
 
 type SearchTab = "top" | "latest" | "coins" | "people" | "media" | "lists";
 
@@ -137,18 +137,12 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
                     ))}
                 </PollProvider>
 
-                {postsQuery.hasNextPage && (
-                    <div className="p-4 flex justify-center">
-                        <button
-                            onClick={() => postsQuery.fetchNextPage()}
-                            disabled={postsQuery.isFetchingNextPage}
-                            className="text-sm text-primary hover:underline flex items-center gap-2"
-                        >
-                            {postsQuery.isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
-                            Load more
-                        </button>
-                    </div>
-                )}
+                <LoadMore
+                    onLoad={() => postsQuery.fetchNextPage()}
+                    hasMore={!!postsQuery.hasNextPage}
+                    className="p-4"
+                    labels={{ end: "No more results" }}
+                />
             </div>
         );
     };

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
+import { LoadMore } from "@/components/interior/load-more";
 import type { HomeCategory } from "@/lib/data/home-categories";
 
 interface FeedVideo {
@@ -58,7 +58,7 @@ function VideoTile({ v }: { v: FeedVideo }) {
 }
 
 export function CategoryDetail({ category }: { category: HomeCategory }) {
-    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    const { data, isLoading, fetchNextPage, hasNextPage } =
         trpc.content.getVideoFeed.useInfiniteQuery(
             { limit: 24, category: category.title },
             { getNextPageParam: (p) => p.nextCursor }
@@ -120,20 +120,12 @@ export function CategoryDetail({ category }: { category: HomeCategory }) {
                             <VideoTile key={v.id} v={v} />
                         ))}
                     </div>
-                    {hasNextPage && (
-                        <div className="mt-8 flex justify-center">
-                            <button
-                                onClick={() => fetchNextPage()}
-                                disabled={isFetchingNextPage}
-                                className={cn(
-                                    "rounded-full bg-card px-5 py-2 text-sm font-semibold ring-1 ring-border transition-colors hover:bg-muted",
-                                    isFetchingNextPage && "opacity-60"
-                                )}
-                            >
-                                {isFetchingNextPage ? "Loading…" : "Load more"}
-                            </button>
-                        </div>
-                    )}
+                    <LoadMore
+                        onLoad={() => fetchNextPage()}
+                        hasMore={!!hasNextPage}
+                        className="mt-8"
+                        labels={{ end: "No more videos" }}
+                    />
                 </>
             )}
         </div>

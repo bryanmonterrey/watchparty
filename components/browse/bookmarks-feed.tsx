@@ -5,6 +5,7 @@ import { PostCard } from "./post-card";
 import { PollProvider } from "./poll-context";
 import { PostCardSkeleton } from "./post-card-skeleton";
 import { BookmarkIcon } from "@/components/icons";
+import { LoadMore } from "@/components/interior/load-more";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { bookmarksSnapshotStore } from "@/lib/snapshot/surfaces";
 import { privateViewerKey } from "@/lib/snapshot/keys";
@@ -18,7 +19,7 @@ export function BookmarksFeed() {
     const snapshotKey = privateViewerKey(session?.user?.id, "bookmarks");
     const snapshotPlaceholder = useSnapshotPlaceholder(bookmarksSnapshotStore.read, snapshotKey);
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isPlaceholderData } =
+    const { data, fetchNextPage, hasNextPage, isLoading, isPlaceholderData } =
         trpc.content.getBookmarks.useInfiniteQuery(
             { limit: 20 },
             {
@@ -71,17 +72,12 @@ export function BookmarksFeed() {
                             initialReposted={(post as any).isReposted ?? false}
                         />
                     ))}
-                    {hasNextPage && (
-                        <div className="py-10 flex justify-center border-t border-flexwhite/15">
-                            <button
-                                onClick={() => fetchNextPage()}
-                                disabled={isFetchingNextPage}
-                                className="text-bleu hover:underline disabled:text-zinc-500"
-                            >
-                                {isFetchingNextPage ? "Loading more…" : "Load more"}
-                            </button>
-                        </div>
-                    )}
+                    <LoadMore
+                        onLoad={() => fetchNextPage()}
+                        hasMore={!!hasNextPage}
+                        className="py-8 border-t border-flexwhite/15"
+                        labels={{ end: "No more bookmarks" }}
+                    />
                 </PollProvider>
             )}
         </div>

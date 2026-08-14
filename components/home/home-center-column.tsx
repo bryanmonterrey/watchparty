@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDownDoubleIcon, ArrowUpDoubleIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
@@ -56,15 +56,14 @@ export function HomeCenterColumn() {
         }
     }, []);
 
-    const toggle = () => {
-        setFocus((prev) => {
-            const next = !prev;
-            try {
-                window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-            } catch { /* not worth failing the toggle over */ }
-            return next;
-        });
-    };
+    const setFocusTo = useCallback((next: boolean) => {
+        setFocus(next);
+        try {
+            window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+        } catch { /* not worth failing the toggle over */ }
+    }, []);
+
+    const toggle = () => setFocusTo(!focus);
 
     // One definition, two homes: inside the header's second row when expanded,
     // alone in the strip when not.
@@ -94,7 +93,11 @@ export function HomeCenterColumn() {
             <div
                 className={cn("relative bg-sidebar-hover/25", HERO_BASE, focus ? HERO_EXPANDED : HERO_DEFAULT)}
             >
-                <HomeHero />
+                {/* Theater mode IS focus mode: the player's theater button
+                    changes the same thing the chevron below does, so it drives
+                    this state rather than keeping a second one that would
+                    disagree with it. */}
+                <HomeHero theaterMode={focus} onTheaterModeChange={setFocusTo} />
             </div>
 
             {/* The video's header, with the focus toggle at its right edge.

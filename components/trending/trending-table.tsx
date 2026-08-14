@@ -22,6 +22,7 @@ import { ChainBadge } from "./chain-badge";
 import { useStar } from "./use-starred";
 import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
 import { CoinSparkline } from "@/components/coins/coin-sparkline";
+import { LoadMore } from "@/components/interior/load-more";
 
 // The trending board — every-chain coin table behind /trending.
 //
@@ -372,7 +373,7 @@ export function TrendingTable({ className }: { className?: string }) {
     const snapshotKey = useMemo(() => viewerKey(null, "trending", queryInputKey(input)), [input]);
     const snapshotPlaceholder = useSnapshotPlaceholder(trendingSnapshotStore.read, snapshotKey);
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, isPlaceholderData } =
+    const { data, fetchNextPage, hasNextPage, isLoading, isError, isPlaceholderData } =
         trpc.trending.list.useInfiniteQuery(input, {
             getNextPageParam: (last) => last.nextCursor,
             // The board is refreshed by cron every few minutes; anything tighter
@@ -469,17 +470,13 @@ export function TrendingTable({ className }: { className?: string }) {
                 </div>
             )}
 
-            {hasNextPage && rows.length > 0 && (
-                <div className="flex justify-center px-3 py-4">
-                    <button
-                        type="button"
-                        onClick={() => void fetchNextPage()}
-                        disabled={isFetchingNextPage}
-                        className={cn(CELL_TEXT, "h-11 cursor-pointer rounded-full bg-white/5 px-5 text-zinc-200 ring-1 ring-white/10 transition-colors hover:text-white disabled:opacity-50")}
-                    >
-                        {isFetchingNextPage ? "Loading…" : "Load more"}
-                    </button>
-                </div>
+            {rows.length > 0 && (
+                <LoadMore
+                    onLoad={() => fetchNextPage()}
+                    hasMore={!!hasNextPage}
+                    className="px-3 py-4"
+                    labels={{ end: "End of the list" }}
+                />
             )}
         </div>
     );

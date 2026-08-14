@@ -29,7 +29,7 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
     const notifSnapshotKey = privateViewerKey(notifSession?.user?.id, "notifications")
     const snapshotPlaceholder = useSnapshotPlaceholder(notificationsSnapshotStore.read, notifSnapshotKey)
 
-    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, isPlaceholderData } =
+    const { data, isLoading, fetchNextPage, hasNextPage, isPlaceholderData } =
         trpc.notification.getNotifications.useInfiniteQuery(
             { limit: 30 },
             {
@@ -127,7 +127,6 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                                 notifications={filtered}
                                 isLoading={isLoading}
                                 hasNextPage={hasNextPage ?? false}
-                                isFetchingNextPage={isFetchingNextPage}
                                 fetchNextPage={fetchNextPage}
                                 onMarkRead={handleMarkRead}
                             />

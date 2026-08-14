@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { MEDIA_RADIUS } from "../media-radius";
-import { PlayerLoadingScreen } from "../player-loading";
+import { PlayerLoadingScreen, PlayerLoadingOverlay } from "../player-loading";
 import { MiniPlayerOverlay } from "../mini-player-overlay";
 import { usePlayer } from "./use-player";
 import { Bezel } from "./bezel";
@@ -30,6 +30,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
         adTagUrl,
         videoUrl,
         showCards = true,
+        fill = false,
     } = props;
 
     const player = usePlayer(props);
@@ -132,7 +133,9 @@ export function VideoPlayer(props: VideoPlayerProps) {
         onError,
     } = player;
 
-    if (isLoading) return <PlayerLoadingScreen />;
+    // Fill mode's parent already owns the box, so the loading state has to fill
+    // it too — the 16:9 screen would stack a second box inside the slot.
+    if (isLoading) return fill ? <PlayerLoadingOverlay /> : <PlayerLoadingScreen />;
 
     return (
         <div
@@ -143,12 +146,17 @@ export function VideoPlayer(props: VideoPlayerProps) {
                 // what you see in a bar is the backdrop behind it: over home's muted
                 // grey the bar reads as lit, over pure black it reads as murky. Same
                 // glow, different floor.
-                "ambient-video-container isolate p-0 relative w-full [contain:none] overflow-visible bg-muted group",
+                "ambient-video-container isolate p-0 [contain:none] overflow-visible bg-muted group",
+                // Fill: the slot outside owns the size (home's screen grows past
+                // 16:9 in focus mode), so the player stretches into it instead of
+                // deriving a height. Still POSITIONED either way — the ambient
+                // glow canvas is placed relative to this box.
+                fill ? "absolute inset-0 size-full" : "relative w-full",
                 // Matches the home hero. Also on the <video> below — see
                 // MEDIA_RADIUS: ambient can't clip, so both carry it. The mini
                 // player keeps its own shape.
                 !isMiniPlayer && MEDIA_RADIUS,
-                !isMiniPlayer && "aspect-video"
+                !isMiniPlayer && !fill && "aspect-video"
             )}
             style={{ cursor: !showControls && isPlaying ? "none" : "auto" }}
             aria-label={title ?? "Video player"}

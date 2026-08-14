@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
 import { MiniProfile } from "./mini-profile-card";
+import { LoadMore } from "@/components/interior/load-more";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 
 type TabType = "followers" | "following";
@@ -85,7 +86,7 @@ interface UserListProps {
 }
 
 function UserList({ userId, type, isOwnProfile, onClose }: UserListProps) {
-    const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    const { data, isLoading, fetchNextPage, hasNextPage } =
         trpc.user[type === "followers" ? "getFollowers" : "getFollowing"].useInfiniteQuery(
             { userId, limit: 20 },
             { getNextPageParam: (last) => last.nextCursor }
@@ -121,15 +122,12 @@ function UserList({ userId, type, isOwnProfile, onClose }: UserListProps) {
             {items.map((item) => (
                 <UserRow key={item.id} item={item} onClose={onClose} />
             ))}
-            {hasNextPage && (
-                <button
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                    className="flex w-full items-center justify-center gap-2 py-3 text-sm font-semibold text-zinc-500 transition-colors hover:text-zinc-300"
-                >
-                    {isFetchingNextPage ? <Loader2 className="size-4 animate-spin" /> : "Load more"}
-                </button>
-            )}
+            <LoadMore
+                onLoad={() => fetchNextPage()}
+                hasMore={!!hasNextPage}
+                className="py-2"
+                labels={{ end: "End of the list" }}
+            />
         </div>
     );
 }
