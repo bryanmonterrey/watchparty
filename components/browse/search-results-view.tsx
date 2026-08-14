@@ -140,6 +140,9 @@ export function SearchResultsView({ query }: SearchResultsViewProps) {
                 <LoadMore
                     onLoad={() => postsQuery.fetchNextPage()}
                     hasMore={!!postsQuery.hasNextPage}
+                    // This view paints its own bg-canvas (a fixed rgb(5,5,5),
+                    // not a theme token), so it stays dark on Light.
+                    tone="dark"
                     className="p-4"
                     labels={{ end: "No more results" }}
                 />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { RefObject } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -36,6 +37,10 @@ export function FollowersFollowingDialog({
     followingCount = 0,
 }: FollowersFollowingDialogProps) {
     const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+    // The list scrolls inside the dialog, not the page, so LoadMore's sentinel
+    // is clipped out of the viewport and a viewport-rooted observer would never
+    // fire. Root the observer on this element instead.
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (open) setActiveTab(initialTab);
@@ -70,8 +75,8 @@ export function FollowersFollowingDialog({
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2">
-                    <UserList userId={userId} type={activeTab} isOwnProfile={isOwnProfile} onClose={() => onOpenChange(false)} />
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-2">
+                    <UserList userId={userId} type={activeTab} isOwnProfile={isOwnProfile} onClose={() => onOpenChange(false)} scrollRef={scrollRef} />
                 </div>
             </DialogContent>
         </Dialog>
@@ -83,9 +88,10 @@ interface UserListProps {
     type: TabType;
     isOwnProfile: boolean;
     onClose: () => void;
+    scrollRef: RefObject<HTMLDivElement | null>;
 }
 
-function UserList({ userId, type, isOwnProfile, onClose }: UserListProps) {
+function UserList({ userId, type, isOwnProfile, onClose, scrollRef }: UserListProps) {
     const { data, isLoading, fetchNextPage, hasNextPage } =
         trpc.user[type === "followers" ? "getFollowers" : "getFollowing"].useInfiniteQuery(
             { userId, limit: 20 },
@@ -125,6 +131,11 @@ function UserList({ userId, type, isOwnProfile, onClose }: UserListProps) {
             <LoadMore
                 onLoad={() => fetchNextPage()}
                 hasMore={!!hasNextPage}
+                rootRef={scrollRef}
+                // Half a screen of lead in a ~70vh box; the 600px default would
+                // burn all three auto-loads on one flick.
+                rootMargin="250px 0px"
+                tone="dark"
                 className="py-2"
                 labels={{ end: "End of the list" }}
             />

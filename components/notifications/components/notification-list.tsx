@@ -1,6 +1,7 @@
 "use client"
 
 import { Bell } from "lucide-react"
+import type { RefObject } from "react"
 import { NotificationItem } from "./notification-item"
 import { LoadMore } from "@/components/interior/load-more"
 
@@ -12,6 +13,9 @@ interface NotificationListProps {
     // know when the page landed, so this must not be narrowed to `void`.
     fetchNextPage: () => unknown
     onMarkRead: (id: string) => void
+    // The panel's scroll container. LoadMore's sentinel is clipped inside it,
+    // so a viewport-rooted observer would never fire.
+    scrollRef: RefObject<HTMLDivElement | null>
 }
 
 export function NotificationList({
@@ -20,6 +24,7 @@ export function NotificationList({
     hasNextPage,
     fetchNextPage,
     onMarkRead,
+    scrollRef,
 }: NotificationListProps) {
     if (isLoading) {
         return (
@@ -62,6 +67,9 @@ export function NotificationList({
             <LoadMore
                 onLoad={() => fetchNextPage()}
                 hasMore={hasNextPage}
+                rootRef={scrollRef}
+                rootMargin="400px 0px"
+                tone="dark"
                 className="py-4 pb-8"
                 labels={{ end: "You’re all caught up" }}
             />

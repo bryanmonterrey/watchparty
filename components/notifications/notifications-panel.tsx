@@ -22,6 +22,9 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
     const [tab, setTab] = React.useState<Tab>("All")
     const [searchQuery, setSearchQuery] = React.useState("")
     const utils = trpc.useUtils()
+    // The list scrolls inside the panel, not the page — LoadMore roots its
+    // observer here so the sentinel isn't clipped out of view forever.
+    const scrollRef = React.useRef<HTMLDivElement>(null)
 
     // Private surface: no viewer, no key, and every store treats "" as inert —
     // so a signed-out render can neither read nor write someone's notifications.
@@ -122,13 +125,14 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                             onTabChange={setTab}
                         />
 
-                        <div className="flex-1 overflow-y-auto scrollbar-hide">
+                        <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide">
                             <NotificationList
                                 notifications={filtered}
                                 isLoading={isLoading}
                                 hasNextPage={hasNextPage ?? false}
                                 fetchNextPage={fetchNextPage}
                                 onMarkRead={handleMarkRead}
+                                scrollRef={scrollRef}
                             />
                         </div>
                     </motion.div>

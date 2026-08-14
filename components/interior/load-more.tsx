@@ -245,11 +245,36 @@ const DEFAULT_LABELS: LoadMoreLabels = {
 
 const ORDER: LoadMoreStatus[] = ["idle", "loading", "error", "end"];
 
-const TONE: Record<LoadMoreStatus, string> = {
-    idle: "text-foreground",
-    loading: "text-muted-foreground",
-    error: "text-destructive",
-    end: "text-muted-foreground",
+/**
+ * `theme` follows the light/dark tokens and is right for any surface that sits
+ * on the page background. `dark` is for a surface that PAINTS ITS OWN dark
+ * background — the notifications panel (`bg-black`) and the dialog
+ * (`bg-[#0C0C0C]`) stay dark in both themes, but `--foreground` and
+ * `--flexwhite` invert, so the theme tone renders this control black-on-black
+ * for anyone on Light. Fixed values only here; see CLAUDE.md.
+ */
+export type LoadMoreTone = "theme" | "dark";
+
+const TONE: Record<LoadMoreTone, Record<LoadMoreStatus, string>> = {
+    theme: {
+        idle: "text-foreground",
+        loading: "text-muted-foreground",
+        error: "text-destructive",
+        end: "text-muted-foreground",
+    },
+    dark: {
+        idle: "text-white",
+        loading: "text-white/55",
+        error: "text-red-400",
+        end: "text-white/55",
+    },
+};
+
+// bleu is a fixed rgb() rather than a theme token, so the focus ring is safe on
+// both tones and only the hover wash has to change.
+const HOVER: Record<LoadMoreTone, string> = {
+    theme: "hover:bg-flexwhite/[0.06]",
+    dark: "hover:bg-white/[0.06]",
 };
 
 export type LoadMoreProps = {
@@ -262,6 +287,7 @@ export type LoadMoreProps = {
     labels?: Partial<LoadMoreLabels>;
     onError?: (error: unknown) => void;
     className?: string;
+    tone?: LoadMoreTone;
 };
 
 export function LoadMore({
@@ -274,6 +300,7 @@ export function LoadMore({
     labels,
     onError,
     className = "",
+    tone = "theme",
 }: LoadMoreProps) {
     const reduced = useReducedMotion();
 
@@ -322,7 +349,7 @@ export function LoadMore({
                 className={`group relative inline-flex h-11 select-none items-center justify-center rounded-full px-4 text-sm font-medium outline-none transition-[background-color,box-shadow,transform] duration-150 focus-visible:bg-bleu/[0.08] focus-visible:shadow-[inset_0_0_0_1px_var(--color-bleu)] ${
                     inert
                         ? "cursor-default"
-                        : "cursor-pointer hover:bg-flexwhite/[0.06] active:translate-y-px"
+                        : `cursor-pointer active:translate-y-px ${HOVER[tone]}`
                 }`}
                 style={{ touchAction: "manipulation" }}
             >
@@ -343,7 +370,7 @@ export function LoadMore({
                                     : { opacity: 0, y: 3, filter: "blur(3px)" }
                             }
                             transition={fade}
-                            className={`col-start-1 row-start-1 flex items-center gap-1.5 whitespace-nowrap ${TONE[s]}`}
+                            className={`col-start-1 row-start-1 flex items-center gap-1.5 whitespace-nowrap ${TONE[tone][s]}`}
                         >
                             {icons[s]}
                             {text[s]}
