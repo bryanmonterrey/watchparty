@@ -222,7 +222,23 @@ function SpinnerMark({ spinning }: { spinning: boolean }) {
             aria-hidden="true"
             className="shrink-0"
             style={{ transformOrigin: "50% 50%" }}
-            initial={false}
+            // NOT `initial={false}`, unlike every other mark in this file.
+            //
+            // All four status marks are mounted at once and crossfaded in
+            // place, so this one mounts exactly once — and now that the footer
+            // RESTS on the spinner, `spinning` is already true on that first
+            // render for any list with pages left. `initial={false}` means
+            // "start AT the animate value and skip the enter animation", which
+            // pins rotate at 360 and then never animates again, because the
+            // target never changes afterwards. The result is a spinner that
+            // never turns (measured on production 2026-08-15: six samples of
+            // the trending board's loader, all the identity matrix).
+            //
+            // Starting from an explicit 0 gives `repeat: Infinity` something to
+            // run. It only mattered once the resting state changed: before
+            // that the footer mounted on `idle`, so the target flipped 0 -> 360
+            // when a fetch began and the animation had a transition to play.
+            initial={{ rotate: 0 }}
             animate={spinning ? { rotate: 360 } : { rotate: 0 }}
             transition={spinning ? SPIN : INSTANT}
         >
