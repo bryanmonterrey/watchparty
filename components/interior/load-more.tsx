@@ -209,12 +209,15 @@ function AlertMark() {
     );
 }
 
+// Deliberately larger than the other status marks (22px vs 11px): loading is the
+// only state that renders WITHOUT its label, so the spinner has to carry the row
+// on its own rather than sit beside text.
 function SpinnerMark({ spinning }: { spinning: boolean }) {
     return (
         <motion.svg
-            width="11"
-            height="11"
-            viewBox="0 0 11 11"
+            width="22"
+            height="22"
+            viewBox="0 0 22 22"
             fill="none"
             aria-hidden="true"
             className="shrink-0"
@@ -223,11 +226,11 @@ function SpinnerMark({ spinning }: { spinning: boolean }) {
             animate={spinning ? { rotate: 360 } : { rotate: 0 }}
             transition={spinning ? SPIN : INSTANT}
         >
-            <circle cx="5.5" cy="5.5" r="3.9" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+            <circle cx="11" cy="11" r="8.4" stroke="currentColor" strokeWidth="2.4" opacity="0.25" />
             <path
-                d="M5.5 1.6a3.9 3.9 0 0 1 3.9 3.9"
+                d="M11 2.6a8.4 8.4 0 0 1 8.4 8.4"
                 stroke="currentColor"
-                strokeWidth="1.5"
+                strokeWidth="2.4"
                 strokeLinecap="round"
             />
         </motion.svg>
@@ -255,16 +258,19 @@ const ORDER: LoadMoreStatus[] = ["idle", "loading", "error", "end"];
  */
 export type LoadMoreTone = "theme" | "dark";
 
+// `loading` is twitter2 on BOTH tones — the spinner is the app's brand loader,
+// and #358efc is a fixed brand value, so it needs no light/dark branch. The
+// spinner strokes currentColor, which is what this sets.
 const TONE: Record<LoadMoreTone, Record<LoadMoreStatus, string>> = {
     theme: {
         idle: "text-foreground",
-        loading: "text-muted-foreground",
+        loading: "text-twitter2",
         error: "text-destructive",
         end: "text-muted-foreground",
     },
     dark: {
         idle: "text-white",
-        loading: "text-white/55",
+        loading: "text-twitter2",
         error: "text-red-400",
         end: "text-white/55",
     },
@@ -373,7 +379,10 @@ export function LoadMore({
                             className={`col-start-1 row-start-1 flex items-center gap-1.5 whitespace-nowrap ${TONE[tone][s]}`}
                         >
                             {icons[s]}
-                            {text[s]}
+                            {/* Loading renders the spinner ALONE — no label. The
+                                word still reaches assistive tech through the
+                                button's aria-label, which reads text[status]. */}
+                            {s === "loading" ? null : text[s]}
                         </motion.span>
                     ))}
                 </motion.span>
