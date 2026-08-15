@@ -392,11 +392,27 @@ export const feedRouter = router({
                             : undefined,
                     };
                 }
-                // ranker unavailable → chronological fallback over the fetched pool
-                const fb = results.length > input.limit;
+                // Ranker unavailable → chronological over the SAME pool, cut the
+                // SAME way: by offset, behind an `r:` cursor.
+                //
+                // It used to slice from 0 and hand back a createdAt cursor, and
+                // both halves were wrong in the same direction. A createdAt
+                // cursor is not a rank cursor, so the next request took
+                // `rankAnchor = new Date()`, re-fetched an identical pool, sliced
+                // 0…limit again and returned an identical page — with an
+                // identical cursor. Every page after the first was a copy of the
+                // first. The rail deduped them all away, so its list never grew
+                // while `hasNextPage` stayed true: it paged forever and looked
+                // like it could not find the end of the feed. Which it couldn't.
+                //
+                // Live for every signed-in viewer whenever Phoenix is down, which
+                // is exactly when nobody is looking at the ranker.
+                const pool = videos as typeof videos;
                 return {
-                    videos: (videos as typeof videos).slice(0, input.limit),
-                    nextCursor: fb ? rawItems[input.limit - 1]?.createdAt.toISOString() : undefined,
+                    videos: pool.slice(rankOffset, rankOffset + input.limit),
+                    nextCursor: rankOffset + input.limit < pool.length
+                        ? `r:${rankAnchor.toISOString()}:${rankOffset + input.limit}`
+                        : undefined,
                 };
             }
 

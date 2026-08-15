@@ -4,7 +4,6 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useAmbientGlow, AMBIENT_PRESET } from "@/hooks/use-ambient-glow";
 import { trpc } from "@/lib/trpc/client";
-import { useAuthSession } from "@/hooks/use-auth-session";
 import { useAds } from "./use-ads";
 import { usePreviewThumbnails } from "./use-preview-thumbnails";
 import {
@@ -18,6 +17,7 @@ import { useCaptionStyle } from "./use-caption-style";
 import { useAudioProcessor } from "./use-audio-processor";
 import { useAudioBus } from "./use-audio-bus";
 import { useFrameThumbnails } from "./use-frame-thumbnails";
+import { useWatchProgress } from "./use-watch-progress";
 
 export function usePlayer(props: VideoPlayerProps) {
     const {
@@ -52,7 +52,6 @@ export function usePlayer(props: VideoPlayerProps) {
     const isScrubbingRef = useRef(false);
     const isDraggingVolumeRef = useRef(false);
     const volumeTrackRef = useRef<HTMLDivElement>(null);
-    const viewIncremented = useRef(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hlsRef = useRef<any>(null);
 
@@ -129,10 +128,13 @@ export function usePlayer(props: VideoPlayerProps) {
         return () => { if (loadingClassTimerRef.current) clearTimeout(loadingClassTimerRef.current); };
     }, [isWaiting]);
 
-    // ── Progress persistence ──────────────────────────────────────────────────
-    const { data: session } = useAuthSession();
-    const saveProgressThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const resumeAppliedRef = useRef(false);
+    // ── Progress persistence + view count ─────────────────────────────────────
+    const { recordProgress, clearProgress } = useWatchProgress({
+        postId,
+        videoRef,
+        isPlaying,
+        setCurrentTime,
+    });
 
     // ── Loop state ────────────────────────────────────────────────────────────
     // The prop is a starting value, not a lock: a caller with one video and
@@ -182,12 +184,6 @@ export function usePlayer(props: VideoPlayerProps) {
     const [qualities, setQualities] = useState<Array<{ label: string; level: number }>>([]);
     const [selectedQuality, setSelectedQuality] = useState(-1);
 
-    const incrementView = trpc.content.incrementView.useMutation();
-    const saveProgressMutation = trpc.content.saveProgress.useMutation();
-    const { data: progressData } = trpc.content.getProgress.useQuery(
-        { postId },
-        { enabled: !!session?.user, staleTime: Infinity }
-    );
 
     const { data: heatmapData } = trpc.content.getHeatmap.useQuery(
         { postId },
@@ -433,47 +429,9 @@ export function usePlayer(props: VideoPlayerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [captionTracks, syncTextTracks]);
 
-    // ── View-increment ────────────────────────────────────────────────────────
+    // Recorded heatmap buckets are per-video; the resume gate lives with the
+    // rest of the progress logic now.
     useEffect(() => {
-        if (isPlaying && !viewIncremented.current) {
-            viewIncremented.current = true;
-            incrementView.mutate({ postId, contentType: "video" });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isPlaying, postId]);
-
-    // ── Resume from saved position ────────────────────────────────────────────
-    // Apply once when metadata is loaded AND progressData is available
-    useEffect(() => {
-        if (resumeAppliedRef.current) return;
-        const video = videoRef.current;
-        if (!video || !progressData) return;
-
-        const savedTime = session?.user
-            ? progressData.currentTime
-            : parseFloat(store.get(`ytp-progress-${postId}`, "0"));
-
-        if (savedTime > 5) {
-            const applyResume = () => {
-                if (resumeAppliedRef.current) return;
-                resumeAppliedRef.current = true;
-                video.currentTime = savedTime;
-                setCurrentTime(savedTime);
-            };
-            if (video.readyState >= 1) {
-                applyResume();
-            } else {
-                const onMeta = () => { applyResume(); video.removeEventListener("loadedmetadata", onMeta); };
-                video.addEventListener("loadedmetadata", onMeta);
-            }
-        } else {
-            resumeAppliedRef.current = true;
-        }
-    }, [progressData, postId, session?.user]);
-
-    // Reset resume gate and recorded heatmap buckets when postId changes
-    useEffect(() => {
-        resumeAppliedRef.current = false;
         recordedBucketsRef.current = new Set();
     }, [postId]);
 
@@ -866,20 +824,8 @@ export function usePlayer(props: VideoPlayerProps) {
         }
 
         // Throttled progress save: every 5s
-        if (!saveProgressThrottleRef.current) {
-            saveProgressThrottleRef.current = setTimeout(() => {
-                saveProgressThrottleRef.current = null;
-                const t = video.currentTime;
-                if (t > 5) {
-                    if (session?.user) {
-                        saveProgressMutation.mutate({ postId, currentTime: t });
-                    } else {
-                        store.set(`ytp-progress-${postId}`, String(t));
-                    }
-                }
-            }, 5000);
-        }
-    }, [session?.user, postId, saveProgressMutation]);
+        recordProgress(video);
+    }, [postId, recordProgress]);
 
     const onLoadedMetadata = useCallback(() => {
         const video = videoRef.current;
@@ -904,12 +850,11 @@ export function usePlayer(props: VideoPlayerProps) {
         setShowControls(true);
         ads.onVideoEnded();
         // Clear saved progress so next watch starts from beginning
-        if (session?.user) saveProgressMutation.mutate({ postId, currentTime: 0 });
-        else store.set(`ytp-progress-${postId}`, "0");
+        clearProgress();
         // Last, so a host that swaps the source on this (the home hero advancing
         // its queue) does it against a settled player.
         onEndedProp?.();
-    }, [session?.user, postId, saveProgressMutation, ads, onEndedProp]);
+    }, [clearProgress, ads, onEndedProp]);
 
     const onWaiting = useCallback(() => setIsWaiting(true), []);
     const onCanPlay = useCallback(() => { setIsWaiting(false); setVideoError(null); }, []);

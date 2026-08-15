@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { HOME_TAB_LIKED, RAIL_ICON_TAB } from "@/components/rails/rail-tabs";
 
@@ -127,7 +127,38 @@ export function HomeFeedProvider({ children }: { children: React.ReactNode }) {
     }, [feed.data]);
 
     const { hasNextPage, isFetchingNextPage, fetchNextPage } = feed;
-    const hasMore = hasNextPage && videos.length < MAX_FEED_VIDEOS;
+
+    // Stop paging when pages stop CONTRIBUTING. `hasNextPage` only reports what
+    // the server said about its cursor; it can't tell that the rows behind that
+    // cursor are ones we already have, and the dedupe above then throws the
+    // whole page away. The rail's sentinel stays on screen (the list didn't
+    // grow), asks again, gets the same page, and the loop has no exit — the
+    // symptom is a feed that never finds its end. A broken cursor is one cause
+    // (feed.ts's ranker fallback was, until 2026-08-15); this is the backstop
+    // for the next one, wherever it comes from.
+    //
+    // Two consecutive empty pages, not one: a single page really can be all
+    // reposts of videos already on screen, and stopping on that would cut a
+    // healthy feed short.
+    const [stalled, setStalled] = useState(false);
+    const pagingRef = useRef({ pages: 0, unique: 0, empty: 0 });
+    useEffect(() => {
+        const pages = feed.data?.pages.length ?? 0;
+        const prev = pagingRef.current;
+        if (pages <= prev.pages) return;
+        const empty = videos.length === prev.unique ? prev.empty + 1 : 0;
+        pagingRef.current = { pages, unique: videos.length, empty };
+        if (empty >= 2) setStalled(true);
+    }, [feed.data, videos.length]);
+
+    // A tab switch is a different query with its own pagination — the previous
+    // one's verdict says nothing about it.
+    useEffect(() => {
+        setStalled(false);
+        pagingRef.current = { pages: 0, unique: 0, empty: 0 };
+    }, [tab]);
+
+    const hasMore = hasNextPage && !stalled && videos.length < MAX_FEED_VIDEOS;
     const loadMore = useCallback(() => {
         if (hasMore && !isFetchingNextPage) void fetchNextPage();
     }, [hasMore, isFetchingNextPage, fetchNextPage]);
