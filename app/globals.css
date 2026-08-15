@@ -200,6 +200,20 @@
 }
 
 @theme inline {
+  /* Two sizes the Tailwind scale doesn't have and this design keeps reaching
+     for: 13px is the stat/table ROW, 15px is a CARD TITLE. Both were already
+     all over the coin surfaces as arbitrary values — named here so new work
+     stops minting them, which is what scripts/guards/check-text-scale.mjs
+     exists to stop. (That guard reads this file too, so the old spelling can't
+     be quoted in the comment explaining it.)
+
+     Named numerically, not semantically, on purpose: the arbitrary literals are
+     still allowlisted across dozens of older files, and a semantic name would
+     claim a vocabulary the rest of the app doesn't follow yet. A later sweep can
+     swap literal for name mechanically. */
+  --text-13: 13px;
+  --text-15: 15px;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

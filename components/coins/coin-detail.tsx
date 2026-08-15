@@ -12,7 +12,7 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Clock01Icon, Copy01Icon, LinkForwardIcon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, LinkForwardIcon } from "@hugeicons/core-free-icons";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import type { ChartMarker } from "@/components/tokens/chart-trade-markers";
 import {
@@ -25,8 +25,8 @@ import { StatCarousel } from "./stat-carousel";
 import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
-import { CoinSecurityCard } from "./coin-security-card";
-import { CoinActivityCard } from "./coin-activity-card";
+import { CoinRiskCard } from "./coin-risk-card";
+import { CopyTokenAddress } from "./copy-token-address";
 import { TokenBondingCurve } from "@/components/tokens/token-bonding-curve";
 import { TokenDescription } from "@/components/tokens/token-description";
 import { TokenChatCard } from "@/components/tokens/token-chat-card";
@@ -38,136 +38,6 @@ import { HomeActionDock } from "@/components/home/home-action-dock";
 import { coinTag, logClient } from "@/lib/client-log";
 import { Squircle } from "@/components/ui/squircle";
 import { retryTransient } from "@/lib/query-retry";
-
-/** Token-address pill beside the coin name — a small squircle chip with three
- *  faces, swapped in place by the transitions.dev text swap (exit up + blur,
- *  enter from below): resting shows the truncated address, hover swaps to
- *  "Copy" with the copy glyph, click swaps to "Copied" while a check
- *  stroke-draws in (transitions.dev success check). Touch has no hover, so
- *  the tap goes address → "Copied" directly — which is why the address is the
- *  resting face and not a hover reveal. */
-function CopyTokenAddress({ address }: { address: string }) {
-    const short = `${address.slice(0, 5)}…${address.slice(-5)}`;
-    const [copied, setCopied] = React.useState(false);
-    const [hovered, setHovered] = React.useState(false);
-    const labelRef = React.useRef<HTMLSpanElement | null>(null);
-    const swapTimer = React.useRef<number | undefined>(undefined);
-    const resetTimer = React.useRef<number | undefined>(undefined);
-
-    const label = copied ? "Copied" : hovered ? "Copy" : short;
-
-    // The skill's three-phase swap, imperative on textContent: the label has
-    // to change mid-transition (after the exit, before the enter), which a
-    // plain state render can't schedule. React never fights the mutation —
-    // the JSX child below is the constant `short`, so reconciliation has no
-    // text update to write. Re-targeting mid-swap (hover → quick click) just
-    // clears the pending timer; the exit is already underway and the newest
-    // label is the one that lands.
-    React.useEffect(() => {
-        const el = labelRef.current;
-        if (!el || el.textContent === label) return;
-        const dur =
-            parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--text-swap-dur")) || 150;
-        window.clearTimeout(swapTimer.current);
-        el.classList.add("is-exit");
-        swapTimer.current = window.setTimeout(() => {
-            el.textContent = label;
-            el.classList.remove("is-exit");
-            el.classList.add("is-enter-start");
-            void el.offsetHeight; // reflow so the enter transition plays
-            el.classList.remove("is-enter-start");
-        }, dur);
-    }, [label]);
-
-    React.useEffect(
-        () => () => {
-            window.clearTimeout(swapTimer.current);
-            window.clearTimeout(resetTimer.current);
-        },
-        [],
-    );
-
-    return (
-        <Squircle asChild radius={6}>
-            <button
-                type="button"
-                onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
-                onClick={() => {
-                    void navigator.clipboard.writeText(address);
-                    setCopied(true);
-                    window.clearTimeout(resetTimer.current);
-                    resetTimer.current = window.setTimeout(() => setCopied(false), 1500);
-                }}
-                aria-label={copied ? "token address copied" : "copy token address"}
-                className={cn(
-                    "relative grid h-6 shrink-0 cursor-pointer place-items-center bg-soft-gray/5 px-2 text-[13px] font-medium transition-colors",
-                    copied ? "text-emerald-400" : "text-zinc-500 hover:bg-soft-gray/10 hover:text-white",
-                )}
-            >
-                {/* Invisible sizers, stacked in one grid cell: they pin the
-                    pill to its widest face so the swap never changes its width
-                    — without them every hover nudged the market-cap block and
-                    the whole stat strip sideways. Two candidates (the resting
-                    address; "Copied" + open icon slot) because which is wider
-                    depends on the address's glyphs. */}
-                <span aria-hidden className="invisible whitespace-nowrap [grid-area:1/1]">
-                    {short}
-                </span>
-                <span aria-hidden className="invisible flex items-center whitespace-nowrap [grid-area:1/1]">
-                    Copied
-                    <span className="ml-1 w-3.5" />
-                </span>
-                {/* The live face is absolute so its transient widths (a label
-                    mid-swap while the icon slot is still closing) can't size
-                    the pill — it just recenters inside the reserved footprint. */}
-                <span className="absolute inset-0 flex items-center justify-center">
-                    <span ref={labelRef} className="t-text-swap whitespace-nowrap">
-                        {short}
-                    </span>
-                    {/* The icon slot collapses to zero width at rest so the
-                        resting face is just the address — it widens to admit
-                        the copy glyph on hover and the check on copy. */}
-                    <span
-                        className={cn(
-                            "relative inline-flex h-3.5 shrink-0 items-center justify-center transition-all duration-200 ease-out",
-                            hovered || copied ? "ml-1 w-3.5" : "ml-0 w-0",
-                        )}
-                    >
-                        <HugeiconsIcon
-                            icon={Copy01Icon}
-                            strokeWidth={2}
-                            className={cn(
-                                "absolute size-3.5 transition-all duration-200 ease-out",
-                                hovered && !copied ? "scale-100 opacity-100" : "scale-50 opacity-0",
-                            )}
-                        />
-                        {/* Success check: always mounted, toggled via data-state
-                            so the stroke-draw replays on each copy. Reverting to
-                            "out" snaps it hidden, and the label swapping back
-                            covers the exit. Path length ≈ 20.9 — the dasharray
-                            in globals.css is sized to THIS path. */}
-                        <span
-                            className="t-success-check absolute"
-                            data-state={copied ? "in" : "out"}
-                            aria-hidden="true"
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" className="size-3.5">
-                                <path
-                                    d="M5 12.5L10 17.5L19 7"
-                                    stroke="currentColor"
-                                    strokeWidth={2.5}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
-                        </span>
-                    </span>
-                </span>
-            </button>
-        </Squircle>
-    );
-}
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
  *  ResolvedCoin — declared here because that module is server-only and this
@@ -190,6 +60,18 @@ export type CoinViewData = {
     txns24h: number | null;
     /** Set for coins WE launched (lib/coins/resolve). Mobula covers the rest. */
     socials?: { twitter: string | null; telegram: string | null; website: string | null } | null;
+    /**
+     * True while a coin is still a DRAFT — no mint exists, so `tokenAddress` is
+     * the `tokens` row id standing in as a lookup key (see the route's
+     * `coinFromToken`). It must never be rendered AS an address: a nanoid is 21
+     * base58-ish characters, so truncated in the header pill it is
+     * indistinguishable from a real mint, and it copies clean into a wallet that
+     * will never resolve it. Every one of our 59 tokens is currently a draft.
+     *
+     * Absent means "not a draft", which is right for every coin that arrives
+     * through `resolveCoin` — those exist on chain by definition.
+     */
+    isDraft?: boolean;
 };
 
 /**
@@ -250,7 +132,10 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
  * chart down the page, and these read as one row.
  */
 function CoinHeader({ coin }: { coin: CoinViewData }) {
-    const explorer = explorerUrl(coin.network, coin.tokenAddress, coin.poolAddress);
+    // A draft has no mint, so there is nothing to link to and nothing to copy.
+    // Passing the row id to either would point at an explorer page that does
+    // not exist and hand out a string that looks exactly like an address.
+    const explorer = coin.isDraft ? null : explorerUrl(coin.network, coin.tokenAddress, coin.poolAddress);
     const up = coin.priceChange24h != null && coin.priceChange24h >= 0;
 
     return (
@@ -307,8 +192,9 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                         {/* The address sits next to the name as a copy
                             affordance — it was a full-width button at the bottom
                             of the old sidebar, which is a lot of room for a
-                            string nobody reads in full. */}
-                        <CopyTokenAddress address={coin.tokenAddress} />
+                            string nobody reads in full. Absent until the coin
+                            has a mint; it appears by itself on the first buy. */}
+                        {!coin.isDraft && <CopyTokenAddress address={coin.tokenAddress} />}
                     </div>
                 </div>
             </div>
@@ -873,8 +759,7 @@ function CoinSwap({ coin }: { coin: CoinViewData }) {
         <aside className="pr-0">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
                 <CoinTradePanel key={coin.id} coin={coin} marketUrl={marketUrl} cardClassName={SWAP_CARD} />
-                <CoinSecurityCard coin={coin} cardClassName={SWAP_CARD} />
-                <CoinActivityCard coin={coin} cardClassName={SWAP_CARD} />
+                <CoinRiskCard coin={coin} cardClassName={SWAP_CARD} enabled={!coin.isDraft} />
             </div>
         </aside>
     );
@@ -918,21 +803,25 @@ export function CoinDetail({ coin, wpToken }: { coin: CoinViewData; wpToken?: Wa
                 <div className="grid gap-1 min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_324px]">
                     {/* Header and chart are one column — the header spans the
                         chart's width and nothing else. */}
+                    {/* The left column is the coin itself: who it is, and what
+                        the price did. Everything that is commentary ON it —
+                        risk, the creator's pitch, curve progress, the room —
+                        reads down the right column under the trade panel, so
+                        the chart keeps the width it is worth. */}
                     <div className="flex min-w-0 flex-col">
                         <CoinHeader coin={coin} />
-                        {/* Bonding curve sits ABOVE the chart, and only for our
-                            own pre-migration launches: while a coin is still on
-                            the curve, progress IS the story and the price chart
-                            is a thin line. TokenBondingCurve no-ops on any other
-                            phase, so this needs no second condition. */}
-                        {wpToken && <TokenBondingCurve token={wpToken} />}
                         <CoinChart coin={coin} />
-                        {/* Creator + description: identity a coin we launched
-                            has and a Dexscreener row never will. */}
-                        {wpToken && <TokenDescription token={wpToken} />}
                     </div>
                     <div className="flex min-w-0 flex-col gap-1">
                         <CoinSwap coin={coin} />
+                        {/* Creator + description: identity a coin we launched
+                            has and a Dexscreener row never will. */}
+                        {wpToken && <TokenDescription token={wpToken} compact cardClassName={SWAP_CARD} />}
+                        {/* Only for our own pre-migration launches: while a coin
+                            is still on the curve, progress IS the story.
+                            TokenBondingCurve no-ops on any other phase, so this
+                            needs no second condition. */}
+                        {wpToken && <TokenBondingCurve token={wpToken} compact cardClassName={SWAP_CARD} />}
                         {wpToken && <TokenChatCard token={wpToken} creatorUsername={wpToken.creator.username} />}
                     </div>
                 </div>
@@ -963,7 +852,10 @@ function CoinSocials({ coin }: { coin: CoinViewData }) {
     const own = coin.socials ?? null;
     const { data } = trpc.trade.coinSecurity.useQuery(
         { network: coin.network, address: coin.tokenAddress },
-        { staleTime: 120_000, enabled: !own },
+        // Not for a draft: `tokenAddress` is a row id there, so the call can
+        // only ever come back empty, and the Mobula free tier 429s at the best
+        // of times (see CLAUDE.md).
+        { staleTime: 120_000, enabled: !own && !coin.isDraft },
     );
     const socials = own ?? data?.socials;
     if (!socials) return null;

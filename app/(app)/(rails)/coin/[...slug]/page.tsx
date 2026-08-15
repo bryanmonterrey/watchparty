@@ -56,7 +56,16 @@ function coinFromToken(token: NonNullable<Awaited<ReturnType<typeof getToken>>>)
     return {
         id: token.id,
         network: "solana",
+        // The row id STANDS IN as the lookup key when there's no mint yet, which
+        // is what makes the page addressable before a first buy. `isDraft` is
+        // what stops the view treating that stand-in as an address: a nanoid is
+        // 21 base58-ish characters, so truncated in the header pill it is
+        // indistinguishable from a real mint and it copies clean into a wallet
+        // that can never resolve it. It also switches off the Mobula-backed
+        // panels, which could only ever answer empty for a key no upstream has
+        // heard of.
         tokenAddress: token.tokenAddress ?? token.id,
+        isDraft: !token.tokenAddress,
         poolAddress: token.poolAddress ?? "",
         symbol: token.ticker,
         name: token.name,
