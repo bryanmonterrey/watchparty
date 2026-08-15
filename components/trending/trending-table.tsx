@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDownRight01Icon, ArrowUpRight01Icon, StarIcon } from "@hugeicons/core-free-icons";
@@ -17,7 +17,10 @@ import { stableHoverColor } from "@/lib/stable-hover-color";
 import { tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
 import { useStuck } from "@/hooks/use-stuck";
 import type { AppRouter } from "@/server/routers";
-import { Squircle } from "@/components/ui/squircle";
+import type { SortKey } from "@/server/routers/trending";
+import type { SortingState } from "@tanstack/react-table";
+import { DataTable, createDataTableColumnHelper } from "@/components/ui/data-table";
+import { useElementWidth } from "@/hooks/use-element-width";
 import { ChainBadge } from "./chain-badge";
 import { useStar } from "./use-starred";
 import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
@@ -105,23 +108,27 @@ const SPARKLINE = process.env.NEXT_PUBLIC_TRENDING_SPARKLINE === "1";
 // Hidden cells occupy no grid track, so the visible cell count has to match the
 // track count at EVERY step — keep these in sync with the per-cell
 // hidden/@block classes below.
-const GRID =
-    "grid items-center gap-x-3 " +
-    // coin · price · change · buy · star
-    "grid-cols-[minmax(0,1fr)_96px_92px_52px_24px] " +
-    // + volume
-    "@xl:grid-cols-[minmax(0,1fr)_104px_100px_104px_60px_28px] " +
-    // + market cap
-    // + market cap (+ the 24h sparkline when SPARKLINE is on)
-    (SPARKLINE
-        ? "@3xl:grid-cols-[minmax(0,1fr)_112px_112px_112px_88px_116px_72px_32px]"
-        : "@3xl:grid-cols-[minmax(0,1fr)_112px_112px_112px_116px_72px_32px]");
+// Track widths per container step, mirroring the reference's own proportions
+// (measured off it at 777px: name ~22%, the three number columns ~15% each,
+// change ~16%, buy ~10%). The name column stays flexible and absorbs the rest.
+//
+// CONTAINER width, not viewport width. This board renders inside home's centre
+// column, which is narrower than the window by both rails — measuring the
+// window would reveal columns that then overflow. `useElementWidth` is the JS
+// equivalent of the `@container` this used to use.
+const XL = 576; // @xl — volume appears
+const THREE_XL = 768; // @3xl — market cap (and the sparkline) appear
+
+function trackWidths(w: number) {
+    if (w >= THREE_XL) return { price: "112px", volume: "112px", marketCap: "112px", spark: "88px", change: "116px", buy: "72px", star: "32px" };
+    if (w >= XL) return { price: "104px", volume: "104px", marketCap: "112px", spark: "88px", change: "100px", buy: "60px", star: "28px" };
+    return { price: "96px", volume: "104px", marketCap: "112px", spark: "88px", change: "92px", buy: "52px", star: "24px" };
+}
 
 // ONE size and ONE weight for every string in the table, per the author: the
 // hierarchy is carried entirely by colour, so nothing here may set its own
 // text-[…] or font-…. The row's two-line name stack is what sets row height
-// (two of these plus the icon's padding ≈ the reference's 64px), which is why
-// the leading is pinned here too.
+// (two of these plus the icon's padding ≈ the reference's 64px).
 const CELL_TEXT = "text-[15px] font-medium leading-tight";
 
 function pctFor(row: TrendingRow, tf: Timeframe): number | null {
@@ -237,133 +244,82 @@ function StarCell({ row }: { row: TrendingRow }) {
     );
 }
 
-function TrendingRowView({ row, timeframe, quickBuy, buying }: {
-    row: TrendingRow;
-    timeframe: Timeframe;
-    quickBuy: QuickBuy;
-    buying: boolean;
-}) {
-    const title = row.name ?? row.symbol;
-    const hoverColor = stableHoverColor(row.id);
-
+/** Coin identity: icon with its chain badge, name, ticker. The name's stretched
+ *  ::after covers the WHOLE row — the row is a <tr> with `position: relative`,
+ *  so an absolutely-positioned descendant resolves against the row, not the
+ *  cell. Buy and star clear it with `relative z-10`. */
+function NameCell({ row }: { row: TrendingRow }) {
     return (
-        // No divider and no fill: the reference's rows sit straight on the
-        // canvas, so the only thing separating them is their own height. Hover
-        // is the one exception — it can't contradict a static reference, and a
-        // fifty-row table with no pointer feedback reads as dead.
-        //
-        // `relative` anchors the stretched link below; the row is a div, not an
-        // anchor, because buy and star are interactive and nesting those inside
-        // an <a> is invalid.
-        <Squircle asChild radius={12} autoEffects={false}>
-        <div className={cn(GRID, "group relative z-0 px-3 py-3")}>
-            <span
-                aria-hidden
-                style={{ backgroundColor: hoverColor }}
-                className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-10"
-            />
-            <span className="flex min-w-0 items-center gap-3">
-                {/* The chain mark rides the coin's icon rather than sitting
-                    beside the ticker: this board spans twenty chains and the
-                    same ticker exists on several of them, but the reference's
-                    ticker line is bare — a corner badge keeps both. */}
-                <span className="relative shrink-0">
-                    {row.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={row.imageUrl} alt="" loading="lazy" className="size-9 rounded-full object-cover" />
-                    ) : (
-                        <span className="block size-9 rounded-full bg-white/[0.06]" />
-                    )}
-                    <ChainBadge
-                        network={row.network}
-                        className="absolute -bottom-0.5 rounded-full bg-black p-1 -right-0.5 ring-1 p-0 ring-black"
-                    />
-                </span>
-                <span className="flex min-w-0 flex-col gap-0.5">
-                    {/* The coin PAGE, not the overlay. It used to open the
-                        overlay because /coin/<mint> resolved only against the
-                        `tokens` table and 404'd for a coin we hadn't launched —
-                        which was every row on this board. The page reads any
-                        coin on any chain now, so a row can just be a link.
-
-                        Chain-qualified: this board spans twenty chains and the
-                        same address exists on several of them, so naming the
-                        chain skips the resolution step entirely.
-
-                        after:inset-0 stretches the link over the whole row —
-                        the row is a div, not an anchor, because buy and star are
-                        interactive and can't nest inside one. */}
-                    <Link
-                        href={`/coin/${row.network}/${row.tokenAddress}`}
-                        className={cn(CELL_TEXT, "cursor-pointer truncate text-left text-white after:absolute after:inset-0 after:content-['']")}
-                    >
-                        {title}
-                    </Link>
-                    <span className={cn(CELL_TEXT, "truncate text-zinc-500")}>{row.symbol}</span>
-                </span>
-            </span>
-
-            <span className={cn(CELL_TEXT, "tabular-nums text-white")}>{tokenPrice(row.priceUsd)}</span>
-
-            <span className={cn(CELL_TEXT, "hidden tabular-nums text-white @xl:block")}>
-                {compactUsd(volFor(row, timeframe))}
-            </span>
-
-            <span className={cn(CELL_TEXT, "hidden tabular-nums text-white @3xl:block")}>
-                {compactUsd(row.marketCapUsd)}
-            </span>
-
-            {/* 24h shape. Bars are projected from the trade tape, so a coin
-                nothing is streaming has none — CoinSparkline draws an em-dash
-                rather than a flat line, because "no series" and "no movement"
-                are different facts. */}
-            {SPARKLINE && (
-            <span className="hidden @3xl:block">
-                <CoinSparkline
-                    points={row.spark ?? []}
-                    width={80}
-                    height={26}
-                    label={`${row.symbol} 24h trend`}
+        <span className="flex min-w-0 items-center gap-3">
+            {/* The chain mark rides the coin's icon rather than sitting beside
+                the ticker: this board spans twenty chains and the same ticker
+                exists on several of them, but the reference's ticker line is
+                bare — a corner badge keeps both. */}
+            <span className="relative shrink-0">
+                {row.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={row.imageUrl} alt="" loading="lazy" className="size-9 rounded-full object-cover" />
+                ) : (
+                    <span className="block size-9 rounded-full bg-white/[0.06]" />
+                )}
+                <ChainBadge
+                    network={row.network}
+                    className="absolute -bottom-0.5 rounded-full bg-black p-1 -right-0.5 ring-1 p-0 ring-black"
                 />
             </span>
-            )}
-
-            <ChangeCell pct={pctFor(row, timeframe)} />
-
-            <BuyCell row={row} quickBuy={quickBuy} buying={buying} />
-
-            <StarCell row={row} />
-        </div>
-        </Squircle>
+            <span className="flex min-w-0 flex-col gap-0.5">
+                {/* The coin PAGE, chain-qualified: this board spans twenty
+                    chains and the same address exists on several of them, so
+                    naming the chain skips the resolution step entirely. */}
+                <Link
+                    href={`/coin/${row.network}/${row.tokenAddress}`}
+                    className={cn(CELL_TEXT, "cursor-pointer truncate text-left text-white after:absolute after:inset-0 after:content-['']")}
+                >
+                    {row.name ?? row.symbol}
+                </Link>
+                <span className={cn(CELL_TEXT, "truncate text-zinc-500")}>{row.symbol}</span>
+            </span>
+        </span>
     );
 }
 
-function RowSkeleton({ index, count }: { index: number; count: number }) {
-    const pulse = staggerPulse(index, count);
-    return (
-        <div className={cn(GRID, "px-3 py-3")}>
-            <span className="flex min-w-0 items-center gap-3">
-                <span style={pulse} className="size-9 shrink-0 rounded-full shimmer-skeleton" />
-                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span style={pulse} className="h-3.5 w-28 rounded-xs shimmer-skeleton" />
-                    <span style={pulse} className="h-3.5 w-16 rounded-xs shimmer-skeleton" />
-                </span>
-            </span>
-            <span style={pulse} className="h-3 w-16 rounded-xs shimmer-skeleton" />
-            <span style={pulse} className="hidden h-3 w-14 rounded-xs shimmer-skeleton @xl:block" />
-            <span style={pulse} className="hidden h-3 w-14 rounded-xs shimmer-skeleton @3xl:block" />
-            <span style={pulse} className="h-3 w-12 rounded-xs shimmer-skeleton" />
-            <span style={pulse} className="h-3 w-8 rounded-xs shimmer-skeleton" />
-            <span style={pulse} className="size-4 rounded-full shimmer-skeleton" />
-        </div>
-    );
+const helper = createDataTableColumnHelper<TrendingRow>();
+
+const bar = (i: number, count: number, cls: string) => (
+    <span style={staggerPulse(i, count)} className={cn("block rounded-xs shimmer-skeleton", cls)} />
+);
+
+/**
+ * Which router sort a header click means. The board is paged from the server,
+ * so sorting has to be the QUERY's, not the loaded page's — sorting fifty rows
+ * of a two-hundred-row board client-side would silently answer a different
+ * question than the header claims.
+ *
+ * Change is the only column with both directions, because the router spells
+ * them as two different sorts. Volume and market cap are descending-only there,
+ * so their sort state is pinned descending rather than offering a toggle that
+ * would do nothing.
+ */
+const DESC_ONLY = new Set(["volume", "marketCap"]);
+
+function routerSort(sorting: SortingState): SortKey {
+    const s = sorting[0];
+    if (!s) return SORT;
+    if (s.id === "change") return s.desc ? "gainers" : "losers";
+    if (s.id === "volume") return "volume";
+    if (s.id === "marketCap") return "marketCap";
+    return SORT;
 }
 
 export function TrendingTable({ className }: { className?: string }) {
-    // No controls for now — the board is just the table. The router still takes
-    // sort / timeframe / chains / search, so bringing a control row back is
-    // wiring state to these, not rebuilding the query.
-    const input = useMemo(() => ({ sort: SORT, timeframe: TIMEFRAME, limit: PAGE }), []);
+    // Volume descending is the board's own order — the ecosystem's biggest
+    // markets first, with every chain interleaved by one number.
+    const [sorting, setSorting] = useState<SortingState>([{ id: "volume", desc: true }]);
+
+    const input = useMemo(
+        () => ({ sort: routerSort(sorting), timeframe: TIMEFRAME, limit: PAGE }),
+        [sorting],
+    );
 
     // One quick-buy instance for the whole board, not one per row: the hook
     // holds four tRPC mutations and the wallet connection, and fifty copies of
@@ -391,13 +347,124 @@ export function TrendingTable({ className }: { className?: string }) {
 
     const rows = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
     const { sentinelRef: labelsSentinel, stuck: labelsStuck } = useStuck();
+    const [boardRef, boardWidth] = useElementWidth<HTMLDivElement>();
+
+    const showVolume = boardWidth >= XL;
+    const showWide = boardWidth >= THREE_XL;
+    const columnVisibility = useMemo(
+        () => ({ volume: showVolume, marketCap: showWide, spark: showWide && SPARKLINE }),
+        [showVolume, showWide],
+    );
+
+    const columns = useMemo(() => {
+        const w = trackWidths(boardWidth);
+        return [
+            helper.display({
+                id: "coin",
+                // Sentence case, capital on the first word only — the one place
+                // in the app that isn't all-lowercase, per the author.
+                header: "Name",
+                enableSorting: false,
+                cell: ({ row }) => <NameCell row={row.original} />,
+                meta: {
+                    skeleton: (i, count) => (
+                        <span className="flex min-w-0 items-center gap-3">
+                            <span style={staggerPulse(i, count)} className="size-9 shrink-0 rounded-full shimmer-skeleton" />
+                            <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                                {bar(i, count, "h-3.5 w-28")}
+                                {bar(i, count, "h-3.5 w-16")}
+                            </span>
+                        </span>
+                    ),
+                },
+            }),
+            helper.accessor("priceUsd", {
+                id: "price",
+                header: "Market price",
+                // No server sort by price, and sorting one loaded page would be
+                // a lie — so this header stays a label.
+                enableSorting: false,
+                meta: { width: w.price, skeleton: (i, c) => bar(i, c, "h-3 w-16") },
+                cell: ({ row }) => (
+                    <span className={cn(CELL_TEXT, "tabular-nums text-white")}>{tokenPrice(row.original.priceUsd)}</span>
+                ),
+            }),
+            helper.accessor((r) => volFor(r, TIMEFRAME) ?? 0, {
+                id: "volume",
+                header: "Volume",
+                sortDescFirst: true,
+                meta: { width: w.volume, skeleton: (i, c) => bar(i, c, "h-3 w-14") },
+                cell: ({ row }) => (
+                    <span className={cn(CELL_TEXT, "tabular-nums text-white")}>
+                        {compactUsd(volFor(row.original, TIMEFRAME))}
+                    </span>
+                ),
+            }),
+            helper.accessor((r) => r.marketCapUsd ?? 0, {
+                id: "marketCap",
+                header: "Market cap",
+                sortDescFirst: true,
+                meta: { width: w.marketCap, skeleton: (i, c) => bar(i, c, "h-3 w-14") },
+                cell: ({ row }) => (
+                    <span className={cn(CELL_TEXT, "tabular-nums text-white")}>{compactUsd(row.original.marketCapUsd)}</span>
+                ),
+            }),
+            // 24h shape. Bars are projected from the trade tape, so a coin
+            // nothing is streaming has none — CoinSparkline draws an em-dash
+            // rather than a flat line, because "no series" and "no movement"
+            // are different facts.
+            helper.display({
+                id: "spark",
+                header: "Last 24h",
+                enableSorting: false,
+                meta: { width: w.spark },
+                cell: ({ row }) => (
+                    <CoinSparkline
+                        points={row.original.spark ?? []}
+                        width={80}
+                        height={26}
+                        label={`${row.original.symbol} 24h trend`}
+                    />
+                ),
+            }),
+            helper.accessor((r) => pctFor(r, TIMEFRAME) ?? 0, {
+                id: "change",
+                header: "Change",
+                sortDescFirst: true,
+                meta: { width: w.change, skeleton: (i, c) => bar(i, c, "h-3 w-12") },
+                cell: ({ row }) => <ChangeCell pct={pctFor(row.original, TIMEFRAME)} />,
+            }),
+            // The action columns are self-evident from the rows; a header over
+            // them would just be noise.
+            helper.display({
+                id: "buy",
+                header: "",
+                enableSorting: false,
+                meta: { width: w.buy, skeleton: (i, c) => bar(i, c, "h-3 w-8") },
+                cell: ({ row }) => (
+                    <BuyCell row={row.original} quickBuy={quickBuy} buying={buyingId === row.original.id} />
+                ),
+            }),
+            helper.display({
+                id: "star",
+                header: "",
+                enableSorting: false,
+                meta: {
+                    width: w.star,
+                    skeleton: (i, count) => (
+                        <span style={staggerPulse(i, count)} className="block size-4 rounded-full shimmer-skeleton" />
+                    ),
+                },
+                cell: ({ row }) => <StarCell row={row.original} />,
+            }),
+        ];
+    }, [boardWidth, quickBuy, buyingId]);
 
     return (
-        // Declares its own container so the grid measures THIS column, not the
-        // viewport — home's centre column is narrower than the window by both
-        // rails. Square and unpanelled: it sits directly on the column's own
-        // fill rather than floating in a card.
-        <div className={cn("@container", className)}>
+        // Measures ITSELF, not the viewport — home's centre column is narrower
+        // than the window by both rails. Square and unpanelled: it sits directly
+        // on the column's own fill rather than floating in a card.
+        <div ref={boardRef} className={className}>
             {/* The labels pin as the board scrolls under them, so you can still
                 read which column is which a hundred rows down.
 
@@ -417,57 +484,47 @@ export function TrendingTable({ className }: { className?: string }) {
                 IntersectionObserver subject. -mb-px cancels it, so it costs no
                 layout. */}
             <div ref={labelsSentinel} aria-hidden className="h-px -mb-px" />
-            <div
-                className={cn(
-                    GRID,
-                    CELL_TEXT,
-                    "sticky top-[var(--board-stick,0px)] z-15 w-full px-3 pb-3 pt-4 text-zinc-500 transition-colors duration-200",
-                    labelsStuck && "bg-canvas",
-                )}
-            >
-                {/* Sentence case, capital on the first word only — the one
-                    place in the app that isn't all-lowercase, per the author. */}
-                <span className="cursor-pointer transition-colors hover:text-twitter2">Name</span>
-                <span className="cursor-pointer transition-colors hover:text-twitter2">Market price</span>
-                <span className="hidden cursor-pointer transition-colors hover:text-twitter2 @xl:block">Volume</span>
-                <span className="hidden cursor-pointer transition-colors hover:text-twitter2 @3xl:block">Market cap</span>
-                {/* Matches the sparkline cell's @3xl visibility. A header that
-                    appears at a different breakpoint than its column shifts
-                    every heading one track right — silent, and only at one
-                    width. */}
-                {SPARKLINE && <span className="hidden @3xl:block">Last 24h</span>}
-                <span className="cursor-pointer transition-colors hover:text-twitter2">Change</span>
-                {/* The action columns are self-evident from the rows; a header
-                    over them would just be noise. They still need their tracks. */}
-                <span />
-                <span />
-            </div>
 
             {isError ? (
                 <p className={cn(CELL_TEXT, "py-16 text-center text-zinc-500")}>couldn&apos;t load the board.</p>
-            ) : isLoading ? (
-                <div>
-                    {Array.from({ length: 12 }).map((_, i) => (
-                        <RowSkeleton key={i} index={i} count={12} />
-                    ))}
-                </div>
-            ) : rows.length === 0 ? (
-                <div className="flex flex-col items-center gap-1 py-16">
-                    <p className={cn(CELL_TEXT, "text-zinc-400")}>nothing here yet</p>
-                    <p className={cn(CELL_TEXT, "text-zinc-600")}>the board fills as the chain sweep runs.</p>
-                </div>
             ) : (
-                <div>
-                    {rows.map((row) => (
-                        <TrendingRowView
-                            key={row.id}
-                            row={row}
-                            timeframe={TIMEFRAME}
-                            quickBuy={quickBuy}
-                            buying={buyingId === row.id}
-                        />
-                    ))}
-                </div>
+                <DataTable
+                    data={rows}
+                    columns={columns}
+                    getRowId={(r) => r.id}
+                    sorting={sorting}
+                    onSortingChange={(updater) =>
+                        setSorting((prev) => {
+                            const next = typeof updater === "function" ? updater(prev) : updater;
+                            // Pin the descending-only columns: the router has no
+                            // ascending sort for them, so a caret that flipped
+                            // would point one way while the rows stayed the other.
+                            return next.map((s) => (DESC_ONLY.has(s.id) ? { ...s, desc: true } : s));
+                        })
+                    }
+                    manualSorting
+                    columnVisibility={columnVisibility}
+                    rowHeight={64}
+                    loading={isLoading}
+                    skeletonRows={12}
+                    rowHoverRadius={12}
+                    rowHoverColor={(r) => stableHoverColor(r.id)}
+                    stickyHeader
+                    stickyTop="var(--board-stick,0px)"
+                    headerClassName={cn(
+                        "z-15 border-b-0 text-zinc-500 transition-colors duration-200",
+                        CELL_TEXT,
+                        labelsStuck && "bg-canvas",
+                    )}
+                    cellClassName="px-1.5"
+                    className="px-1.5"
+                    emptyState={
+                        <div className="flex flex-col items-center gap-1 py-16">
+                            <p className={cn(CELL_TEXT, "text-zinc-400")}>nothing here yet</p>
+                            <p className={cn(CELL_TEXT, "text-zinc-600")}>the board fills as the chain sweep runs.</p>
+                        </div>
+                    }
+                />
             )}
 
             {rows.length > 0 && (

@@ -14,25 +14,37 @@ export function DataTableSkeletonRows<TData extends RowData>({
     count,
     headers,
     rowHeight,
+    cellClassName,
+    borderRows = true,
 }: {
     count: number;
     headers: Header<DataTableFeatures, TData, unknown>[];
     rowHeight: number;
+    cellClassName?: string;
+    /** Off when the table uses the squircled hover — those rows carry no divider. */
+    borderRows?: boolean;
 }) {
     return (
         <>
             {Array.from({ length: count }, (_, r) => (
-                <tr key={`skeleton-${r}`} style={{ height: rowHeight }} className="border-b border-border/60">
+                <tr key={`skeleton-${r}`} style={{ height: rowHeight }} className={cn(borderRows && "border-b border-border/60")}>
                     {headers.map((header) => {
                         const meta = header.column.columnDef.meta as DataTableColumnMeta | undefined;
                         return (
-                            <td key={header.id} className={cn("px-4", alignText(meta?.align), meta?.hideClassName)}>
-                                <div
-                                    className={cn(
-                                        "h-3 rounded-full bg-soft-gray/15",
-                                        meta?.align === "right" ? "ml-auto w-10" : "w-2/3",
-                                    )}
-                                />
+                            <td
+                                key={header.id}
+                                className={cn("px-4", alignText(meta?.align), meta?.hideClassName, cellClassName)}
+                            >
+                                {meta?.skeleton ? (
+                                    meta.skeleton(r, count)
+                                ) : (
+                                    <div
+                                        className={cn(
+                                            "h-3 rounded-full bg-soft-gray/15",
+                                            meta?.align === "right" ? "ml-auto w-10" : "w-2/3",
+                                        )}
+                                    />
+                                )}
                             </td>
                         );
                     })}

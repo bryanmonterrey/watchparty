@@ -106,6 +106,11 @@ export interface DataTableProps<TData extends RowData> {
  * `lib/utils.ts` and `lib/ease.ts`, and `shadcn add` would have overwritten
  * ours with a two-export stub (see CLAUDE.md). lucide is swapped for HugeIcons
  * per the house rule.
+ *
+ * Cell renderers may hang reveal-on-hover affordances off `group-hover/row:` —
+ * `group/row` is part of this component's contract, not an internal, and is
+ * what a copy icon or an external-link chevron should key on rather than
+ * wrapping its own group around a single cell.
  */
 export function DataTable<TData extends RowData>({
     data,
@@ -345,6 +350,8 @@ export function DataTable<TData extends RowData>({
                             count={Math.max(1, Math.ceil((height ?? rowHeight * 10) / rowHeight))}
                             headers={table.getHeaderGroups().at(-1)?.headers ?? []}
                             rowHeight={rowHeight}
+                            cellClassName={cellClassName}
+                            borderRows={hoverRadius == null}
                         />
                     ) : (
                         <tr>
@@ -436,6 +443,8 @@ export function DataTable<TData extends RowData>({
                                 count={skeletonRows}
                                 headers={table.getHeaderGroups().at(-1)?.headers ?? []}
                                 rowHeight={rowHeight}
+                                cellClassName={cellClassName}
+                                borderRows={hoverRadius == null}
                             />
                         ) : null}
                     </>

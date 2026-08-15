@@ -37,6 +37,7 @@ import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
 import { HomeActionDock } from "@/components/home/home-action-dock";
 import { coinTag, logClient } from "@/lib/client-log";
 import { Squircle } from "@/components/ui/squircle";
+import { DataTable, createDataTableColumnHelper } from "@/components/ui/data-table";
 import { retryTransient } from "@/lib/query-retry";
 
 /** What the view needs. Structurally identical to lib/coins/resolve's
@@ -371,6 +372,41 @@ function foldTraders(
  */
 type TableTab = "holders" | "swaps" | "mentions";
 
+const traderHelper = createDataTableColumnHelper<TraderRow>();
+
+/** A PERSON where the wallet belongs to one. The fallback is the alerts rail's
+ *  treatment — a seeded circle with the brand star, never a letter — and
+ *  addresses are never rendered in full. */
+function TraderCell({ row }: { row: TraderRow }) {
+    const hold = holdLabel(row.firstBuyTs);
+    return (
+        <span className="flex min-w-0 items-center gap-3">
+            <span
+                className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
+            >
+                {row.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={row.avatarUrl} alt="" loading="lazy" className="size-full object-cover" />
+                ) : (
+                    <PinkStarLogo className="size-[58%]" />
+                )}
+            </span>
+            <span className="flex min-w-0 flex-col">
+                <span className={cn("truncate font-medium", row.username ? "text-white" : "text-zinc-400")}>
+                    {row.username ?? `${row.account.slice(0, 4)}…${row.account.slice(-4)}`}
+                </span>
+                {hold && (
+                    <span className="flex min-w-0 items-center gap-1 text-[13px] font-medium text-zinc-600">
+                        <HugeiconsIcon icon={Clock01Icon} className="size-3 shrink-0" strokeWidth={2} />
+                        <span className="truncate">{hold} avg. hold</span>
+                    </span>
+                )}
+            </span>
+        </span>
+    );
+}
+
 /**
  * The trader board under the chart, modelled on Fomo's.
  *
@@ -434,10 +470,115 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
         });
     }, [isLoading, trades.length, rows.length, coin.network, coin.tokenAddress]);
 
-    // Trader is fenced by a rule, so it owns a fixed column and the numbers
-    // share what's left. One definition for header and rows so they can't drift.
-    const GRID =
-        "grid grid-cols-[minmax(180px,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] items-center";
+    // Trader is fenced by a rule, so it stays the flexible column and the
+    // numbers take fixed shares of what's left. Position, PnL and entry sort
+    // from their headers now; the fold's own order is the default.
+    const columns = React.useMemo(
+        () => [
+            traderHelper.display({
+                id: "trader",
+                header: "Trader",
+                cell: ({ row }) => <TraderCell row={row.original} />,
+            }),
+            traderHelper.accessor((r) => r.positionUsd ?? -1, {
+                id: "position",
+                header: "Position",
+                sortDescFirst: true,
+                meta: { width: "19%" },
+                cell: ({ row }) => (
+                    <span className="flex min-w-0 flex-col">
+                        <span className="truncate font-medium tabular-nums text-white">
+                            {row.original.positionUsd == null ? "—" : compactUsd(row.original.positionUsd)}
+                        </span>
+                        <span className="truncate text-[13px] font-medium tabular-nums text-zinc-600">
+                            {compactAmount(row.original.position)} {coin.symbol}
+                        </span>
+                    </span>
+                ),
+            }),
+            traderHelper.accessor((r) => r.pnlUsd ?? Number.NEGATIVE_INFINITY, {
+                id: "pnl",
+                header: "PnL",
+                sortDescFirst: true,
+                meta: { width: "19%" },
+                cell: ({ row }) => {
+                    const up = (row.original.pnlUsd ?? 0) >= 0;
+                    return (
+                        <span className="flex min-w-0 flex-col">
+                            <span
+                                className={cn(
+                                    "truncate font-medium tabular-nums",
+                                    row.original.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred",
+                                )}
+                            >
+                                {row.original.pnlUsd == null
+                                    ? "—"
+                                    : `${up ? "+" : "−"}${compactUsd(Math.abs(row.original.pnlUsd))}`}
+                            </span>
+                            {row.original.pnlPct != null && (
+                                <span
+                                    className={cn(
+                                        "truncate text-[13px] font-medium tabular-nums",
+                                        up ? "text-lantern" : "text-pastelred",
+                                    )}
+                                >
+                                    {up ? "▲" : "▼"} {Math.abs(row.original.pnlPct).toFixed(2)}%
+                                </span>
+                            )}
+                        </span>
+                    );
+                },
+            }),
+            // Entry as MARKET CAP over price: on a memecoin "$10.2M MC" is the
+            // comparison people actually make, and $0.0102 alone says nothing.
+            traderHelper.accessor((r) => r.avgEntry ?? -1, {
+                id: "entry",
+                header: "Avg. entry",
+                sortDescFirst: true,
+                meta: { width: "19%" },
+                cell: ({ row }) => {
+                    const entryMc = entryMarketCap(row.original.avgEntry, coin);
+                    return (
+                        <span className="flex min-w-0 flex-col">
+                            <span className="truncate font-medium tabular-nums text-white">
+                                {entryMc == null ? (
+                                    row.original.avgEntry == null ? "—" : compactUsd(row.original.avgEntry)
+                                ) : (
+                                    <>
+                                        {compactUsd(entryMc)} <span className="font-medium text-zinc-600">MC</span>
+                                    </>
+                                )}
+                            </span>
+                            {entryMc != null && row.original.avgEntry != null && (
+                                <span className="truncate text-[13px] font-medium tabular-nums text-zinc-600">
+                                    {compactUsd(row.original.avgEntry)}
+                                </span>
+                            )}
+                        </span>
+                    );
+                },
+            }),
+            // Tags — this trader's MOST RECENT post carrying the coin's ticker.
+            // One line per trader, not a feed: the table answers "what does this
+            // person say about the coin", and their latest take is that answer.
+            // Keyed by USERNAME, which is what `resolveTraders` gives the row —
+            // an anonymous wallet has nothing to say here by definition.
+            traderHelper.display({
+                id: "tags",
+                header: "Tags",
+                meta: { width: "24%" },
+                cell: ({ row }) =>
+                    row.original.username && tagByUser[row.original.username] ? (
+                        <span className="min-w-0 truncate text-[13px] font-medium text-zinc-300">
+                            {tagByUser[row.original.username].text}
+                        </span>
+                    ) : (
+                        <span className="min-w-0 truncate font-medium text-zinc-700">—</span>
+                    ),
+            }),
+        ],
+        [coin, tagByUser],
+    );
 
     const TABS: { id: TableTab; label: string }[] = [
         { id: "holders", label: "Holders" },
@@ -490,139 +631,23 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 </div>
             </div>
 
-            <div className={cn(GRID, "text-[15px] font-normal text-zinc-500")}>
-                <span className="px-3.5 py-3">Trader</span>
-                <span className="px-3.5 py-3">Position</span>
-                <span className="px-3.5 py-3">PnL</span>
-                <span className="px-3.5 py-3">Avg. entry</span>
-                <span className="px-3.5 py-3">Tags</span>
-            </div>
+            <DataTable
+                data={rows.slice(0, 25)}
+                columns={columns}
+                getRowId={(r) => r.account}
+                rowHeight={68}
+                loading={isLoading}
+                skeletonRows={6}
+                rowHoverRadius={12}
+                rowHoverColor={(r) => stableHoverColor(r.account)}
+                className="px-1.5 pb-1.5"
+                emptyState={<p className="px-4 py-6 text-left text-sm text-zinc-500">No trader activity yet.</p>}
+            />
 
-            {isLoading ? (
-                <div className="space-y-px">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className={cn(GRID, "h-[68px]")}>
-                            <div className="flex items-center gap-3 px-4">
-                                <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
-                                <div className="h-3.5 w-24 rounded shimmer-skeleton" />
-                            </div>
-                            {[0, 1, 2, 3].map((c) => (
-                                <div key={c} className="px-4">
-                                    <div className="h-3.5 w-20 rounded shimmer-skeleton" />
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                </div>
-            ) : rows.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-zinc-500">No trader activity yet.</p>
-            ) : (
-                <div>
-                    {rows.slice(0, 25).map((row) => {
-                        const up = (row.pnlUsd ?? 0) >= 0;
-                        const hold = holdLabel(row.firstBuyTs);
-                        const entryMc = entryMarketCap(row.avgEntry, coin);
-                        return (
-                            <div
-                                key={row.account}
-                                className={cn(GRID, "text-[15px] transition-colors hover:bg-white/[0.02]")}
-                            >
-                                {/* A PERSON where the wallet belongs to one. The
-                                    fallback is the alerts rail's treatment — a
-                                    seeded circle with the brand star, never a
-                                    letter — and addresses are never rendered in
-                                    full. */}
-                                <span className="flex min-w-0 items-center gap-3 self-stretch px-3.5 py-3.5">
-                                    <span
-                                        className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full"
-                                        style={{ backgroundColor: row.avatarUrl ? undefined : stableHoverColor(row.account) }}
-                                    >
-                                        {row.avatarUrl ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img src={row.avatarUrl} alt="" loading="lazy" className="size-full object-cover" />
-                                        ) : (
-                                            <PinkStarLogo className="size-[58%]" />
-                                        )}
-                                    </span>
-                                    <span className="flex min-w-0 flex-col">
-                                        <span className={cn("truncate font-medium", row.username ? "text-white" : "text-zinc-400")}>
-                                            {row.username ?? `${row.account.slice(0, 4)}…${row.account.slice(-4)}`}
-                                        </span>
-                                        {hold && (
-                                            <span className="flex min-w-0 items-center gap-1 text-[13px] font-medium text-zinc-600">
-                                                <HugeiconsIcon icon={Clock01Icon} className="size-3 shrink-0" strokeWidth={2} />
-                                                <span className="truncate">{hold} avg. hold</span>
-                                            </span>
-                                        )}
-                                    </span>
-                                </span>
-
-                                <span className="flex min-w-0 flex-col px-3.5 py-3.5">
-                                    <span className="truncate font-medium tabular-nums text-white">
-                                        {row.positionUsd == null ? "—" : compactUsd(row.positionUsd)}
-                                    </span>
-                                    <span className="truncate text-[13px] font-medium tabular-nums text-zinc-600">
-                                        {compactAmount(row.position)} {coin.symbol}
-                                    </span>
-                                </span>
-
-                                <span className="flex min-w-0 flex-col px-3.5 py-3.5">
-                                    <span className={cn("truncate font-medium tabular-nums", row.pnlUsd == null ? "text-zinc-500" : up ? "text-lantern" : "text-pastelred")}>
-                                        {row.pnlUsd == null ? "—" : `${up ? "+" : "−"}${compactUsd(Math.abs(row.pnlUsd))}`}
-                                    </span>
-                                    {row.pnlPct != null && (
-                                        <span className={cn("truncate text-[13px] font-medium tabular-nums", up ? "text-lantern" : "text-pastelred")}>
-                                            {up ? "▲" : "▼"} {Math.abs(row.pnlPct).toFixed(2)}%
-                                        </span>
-                                    )}
-                                </span>
-
-                                {/* Entry as MARKET CAP over price: on a memecoin
-                                    "$10.2M MC" is the comparison people actually
-                                    make, and $0.0102 alone says nothing. */}
-                                <span className="flex min-w-0 flex-col px-3.5 py-3.5">
-                                    <span className="truncate font-medium tabular-nums text-white">
-                                        {entryMc == null ? (
-                                            row.avgEntry == null ? "—" : compactUsd(row.avgEntry)
-                                        ) : (
-                                            <>
-                                                {compactUsd(entryMc)} <span className="font-medium text-zinc-600">MC</span>
-                                            </>
-                                        )}
-                                    </span>
-                                    {entryMc != null && row.avgEntry != null && (
-                                        <span className="truncate text-[13px] font-medium tabular-nums text-zinc-600">
-                                            {compactUsd(row.avgEntry)}
-                                        </span>
-                                    )}
-                                </span>
-
-                                {/* Tags — this trader's MOST RECENT post
-                                    carrying the coin's ticker. One line per
-                                    trader, not a feed: the table answers "what
-                                    does this person say about the coin", and
-                                    their latest take is that answer.
-                                    Keyed by USERNAME, which is what
-                                    `resolveTraders` gives the row — an anonymous
-                                    wallet has nothing to say here by definition. */}
-                                <span className="flex min-w-0 items-center gap-3 px-3.5 py-3.5">
-                                    
-                                    {row.username && tagByUser[row.username] ? (
-                                        <span className="min-w-0 truncate text-[13px] font-medium text-zinc-300">
-                                            {tagByUser[row.username].text}
-                                        </span>
-                                    ) : (
-                                        <span className="min-w-0 truncate font-medium text-zinc-700">—</span>
-                                    )}
-                                </span>
-                            </div>
-                        );
-                    })}
-
-                    <p className="px-4 py-3 text-[12px] text-zinc-600">
-                        From swaps in the last 24h — not full chain history.
-                    </p>
-                </div>
+            {rows.length > 0 && !isLoading && (
+                <p className="px-4 py-3 text-[12px] text-zinc-600">
+                    From swaps in the last 24h — not full chain history.
+                </p>
             )}
         </Squircle>
         </section>

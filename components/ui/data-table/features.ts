@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
     columnOrderingFeature,
     columnSizingFeature,
@@ -25,6 +26,14 @@ export type DataTableColumnMeta = {
     width?: string;
     /** Hide below this breakpoint — a raw class, e.g. "max-lg:hidden". */
     hideClassName?: string;
+    /**
+     * What this column's blank slot looks like while loading. Skeletons wear
+     * the real component's chrome and blank only the content, so a column whose
+     * cell is an avatar plus two lines of text must say so — the default single
+     * bar would flatten it. Receives the row's index and the row count so a
+     * caller can stagger the pulse.
+     */
+    skeleton?: (index: number, count: number) => ReactNode;
 };
 
 /**
