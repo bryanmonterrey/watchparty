@@ -52,6 +52,13 @@ export interface VideoPlayerProps {
     /** Runs after the player's own end handling — the home hero advances its queue with it. */
     onEnded?: () => void;
     /**
+     * One control in the frame's top-right corner, part of the CHROME: it fades
+     * in and out with the controls bar rather than sitting on the video
+     * permanently. The home hero puts "Go to video" here, since a player that
+     * handles its own clicks can't also be a link to the watch page.
+     */
+    topRightAction?: React.ReactNode;
+    /**
      * Join the page-wide audio bus (`lib/audio-bus`): claim the page's audio on
      * mount, mute whenever something else claims it, take it back when that
      * thing lets go. The home hero opts in because the cards around it preview

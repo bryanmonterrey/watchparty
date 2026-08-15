@@ -31,6 +31,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
         videoUrl,
         showCards = true,
         fill = false,
+        topRightAction,
     } = props;
 
     const player = usePlayer(props);
@@ -391,6 +392,26 @@ export function VideoPlayer(props: VideoPlayerProps) {
             {/* ── Chrome overlay ────────────────────────────────────────────── */}
             {!isMiniPlayer && (
             <div className="absolute inset-0 z-[30] flex flex-col justify-end pointer-events-none overflow-hidden">
+
+                {/* Top-right action — same show/hide clock as the bottom bar,
+                    just travelling the other way, so the two read as one piece
+                    of chrome rather than two overlays with their own opinions. */}
+                {topRightAction && (
+                    <motion.div
+                        animate={{
+                            opacity: showControls || isEnded ? 1 : 0,
+                            y: showControls || isEnded ? 0 : -16,
+                        }}
+                        transition={{
+                            duration: 0.1,
+                            ease: showControls || isEnded ? [0, 0, 0.2, 1] : [0.4, 0, 1, 1],
+                        }}
+                        style={{ pointerEvents: showControls || isEnded ? "auto" : "none" }}
+                        className="absolute right-3 top-3"
+                    >
+                        {topRightAction}
+                    </motion.div>
+                )}
 
                 {/* Bottom Chrome — slides up on show, slides down on hide */}
                 <motion.div

@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useHomeFeed } from "./home-feed-context";
 import { PlayerLoadingOverlay } from "@/components/video/player-loading";
@@ -110,6 +111,35 @@ export function HomeHero({
             theaterMode={theaterMode}
             onTheaterModeChange={onTheaterModeChange}
             onEnterMiniPlayer={handleEnterMiniPlayer}
+            topRightAction={<GoToVideo postId={active.id} />}
         />
+    );
+}
+
+// The hero's only route to the watch page. The screen used to be one big
+// <Link>, which a player that handles its own clicks can't be — so the link
+// becomes a control, and lives in the chrome so it comes and goes with the
+// rest of it instead of sitting on the video.
+//
+// Height is the player's control height, not the app's h-11 button scale: it
+// sits in a row with the settings and fullscreen pills and has to match THEM.
+//
+// The chevron is two paths meeting at (10, 8) rather than one glyph, because
+// transitions.dev's "learn more hover" spreads the arms apart into a full
+// arrow on hover — see the .t-learn block in globals.css.
+function GoToVideo({ postId }: { postId: string }) {
+    return (
+        <Link
+            href={`/video/${postId}`}
+            className="t-learn flex h-(--player-control-h) cursor-pointer items-center gap-1.5 rounded-full bg-black/30 px-4 text-sm font-semibold text-white/90 backdrop-blur-md transition-colors hover:bg-black/50 hover:text-white"
+        >
+            Go to video
+            <span className="t-learn-chevron">
+                <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                    <path className="t-learn-arm t-learn-arm-top" d="M6 4L10 8" />
+                    <path className="t-learn-arm t-learn-arm-bot" d="M10 8L6 12" />
+                </svg>
+            </span>
+        </Link>
     );
 }

@@ -1415,3 +1415,41 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 .overflow-y-scroll:not(.overscroll-chain) {
   overscroll-behavior: contain;
 }
+
+/* ── "Learn more" hover: transitions.dev "learn more hover" ───────────────────
+   A trailing chevron that slides toward the reading direction while its two
+   arms spread apart into a full arrow, easing back on exit. For links that
+   send you onward — the home hero's "Go to video" is the first.
+
+   Hover-only by design: keyboard focus and touch rest at the closed chevron,
+   so nothing is communicated by the motion alone. The arms rotate about the
+   apex (10, 8), which is why the two paths must keep those coordinates and
+   `transform-box: view-box` — a percentage origin would move with the box.
+   Reference tuning, unchanged. */
+:root {
+  --learn-shift: 2px;
+  --learn-spread: 8deg;
+  --learn-in: 350ms;
+  --learn-out: 350ms;
+  --learn-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.t-learn-chevron {
+  display: inline-flex;
+  transform: translateX(0);
+  transition: transform var(--learn-out) var(--learn-ease);
+}
+.t-learn-arm {
+  transform-box: view-box;
+  transform-origin: 10px 8px;
+  vector-effect: non-scaling-stroke;
+  transition: transform var(--learn-out) var(--learn-ease);
+}
+.t-learn:hover .t-learn-chevron { transform: translateX(var(--learn-shift)); transition-duration: var(--learn-in); }
+.t-learn:hover .t-learn-arm { transition-duration: var(--learn-in); }
+.t-learn:hover .t-learn-arm-top { transform: rotate(var(--learn-spread)); }
+.t-learn:hover .t-learn-arm-bot { transform: rotate(calc(var(--learn-spread) * -1)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-learn-chevron, .t-learn-arm { transition: none !important; }
+}
