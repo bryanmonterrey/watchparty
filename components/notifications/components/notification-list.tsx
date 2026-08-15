@@ -68,7 +68,7 @@ export function NotificationList({
                 onLoad={() => fetchNextPage()}
                 hasMore={hasNextPage}
                 rootRef={scrollRef}
-                rootMargin="400px 0px"
+                rootMargin="800px 0px"
                 tone="dark"
                 className="py-4 pb-8"
                 labels={{ end: "You’re all caught up" }}

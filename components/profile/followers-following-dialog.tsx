@@ -132,9 +132,11 @@ function UserList({ userId, type, isOwnProfile, onClose, scrollRef }: UserListPr
                 onLoad={() => fetchNextPage()}
                 hasMore={!!hasNextPage}
                 rootRef={scrollRef}
-                // Half a screen of lead in a ~70vh box; the 600px default would
-                // burn all three auto-loads on one flick.
-                rootMargin="250px 0px"
+                // A screen of lead in a ~70vh box, so the fetch is already in
+                // flight before the footer is reached. Not the 1400px default:
+                // that would burn every auto-load on one flick in a box this
+                // short.
+                rootMargin="500px 0px"
                 tone="dark"
                 className="py-2"
                 labels={{ end: "End of the list" }}

@@ -15,6 +15,7 @@ import { UpgradeOverlay } from "@/components/premium/upgrade-overlay";
 import OnboardingDialog from "@/components/app-ui/app-onboarding";
 import { DesktopOnlyGate } from "@/components/app-ui/desktop-only-gate";
 import { LoadingDebug } from "@/components/dev/loading-debug";
+import { TabNotificationBadge } from "@/components/app-ui/tab-notification-badge";
 
 // Authenticated app shell. Guards every (app) route (no session -> /login) and
 // hosts the app's provider stack + sidebar frame.
@@ -78,6 +79,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {/* Renders nothing until ?debug-loading reveals it; then it pins the
             UI in its loading state so skeletons can be designed against. */}
         <LoadingDebug />
+        {/* Unread count in the browser tab (title + favicon badge). Renders
+            nothing; mounted here so it lives for the whole authenticated
+            session rather than per route. */}
+        <TabNotificationBadge />
       </MiniPlayerShell>
       </MotionConfigProvider>
     </AppProviders>

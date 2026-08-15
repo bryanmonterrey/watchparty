@@ -43,7 +43,7 @@ export function useLoadMore({
     hasMore = true,
     auto = true,
     rootRef,
-    rootMargin = "600px 0px",
+    rootMargin = "1400px 0px",
     maxAutoLoads = 3,
     onError,
 }: UseLoadMoreOptions): UseLoadMoreReturn {
@@ -209,15 +209,15 @@ function AlertMark() {
     );
 }
 
-// Deliberately larger than the other status marks (22px vs 11px): loading is the
-// only state that renders WITHOUT its label, so the spinner has to carry the row
-// on its own rather than sit beside text.
+// Deliberately much larger than the other status marks (28px vs 11px): loading
+// is the only state that renders WITHOUT its label, and it's now the RESTING
+// appearance of the footer, so the spinner has to carry the row on its own.
 function SpinnerMark({ spinning }: { spinning: boolean }) {
     return (
         <motion.svg
-            width="22"
-            height="22"
-            viewBox="0 0 22 22"
+            width="28"
+            height="28"
+            viewBox="0 0 28 28"
             fill="none"
             aria-hidden="true"
             className="shrink-0"
@@ -226,11 +226,11 @@ function SpinnerMark({ spinning }: { spinning: boolean }) {
             animate={spinning ? { rotate: 360 } : { rotate: 0 }}
             transition={spinning ? SPIN : INSTANT}
         >
-            <circle cx="11" cy="11" r="8.4" stroke="currentColor" strokeWidth="2.4" opacity="0.25" />
+            <circle cx="14" cy="14" r="10.8" stroke="currentColor" strokeWidth="3" opacity="0.25" />
             <path
-                d="M11 2.6a8.4 8.4 0 0 1 8.4 8.4"
+                d="M14 3.2a10.8 10.8 0 0 1 10.8 10.8"
                 stroke="currentColor"
-                strokeWidth="2.4"
+                strokeWidth="3"
                 strokeLinecap="round"
             />
         </motion.svg>
@@ -301,7 +301,7 @@ export function LoadMore({
     hasMore = true,
     auto = true,
     rootRef,
-    rootMargin = "600px 0px",
+    rootMargin = "1400px 0px",
     maxAutoLoads = 3,
     labels,
     onError,
@@ -310,7 +310,7 @@ export function LoadMore({
 }: LoadMoreProps) {
     const reduced = useReducedMotion();
 
-    const { status, sentinelRef, load } = useLoadMore({
+    const { status: rawStatus, paused, sentinelRef, load } = useLoadMore({
         onLoad,
         hasMore,
         auto,
@@ -319,6 +319,18 @@ export function LoadMore({
         maxAutoLoads,
         onError,
     });
+
+    // "Load more" should never be what the user arrives at. With auto-loading on
+    // and pages still to come, `idle` here means "the sentinel hasn't fired
+    // YET" — a fetch is imminent — so the footer rests on the spinner instead
+    // of an affordance nobody needs to press. The 1400px sentinel lead means
+    // the real fetch has usually started before this is even on screen.
+    //
+    // The idle LABEL still matters in the two cases where pressing is the only
+    // way forward: auto-loading gave up after maxAutoLoads (`paused`), or it's
+    // switched off entirely. Errors keep their own state regardless.
+    const restingOnSpinner = auto && !paused && rawStatus === "idle";
+    const status: LoadMoreStatus = restingOnSpinner ? "loading" : rawStatus;
 
     const fade = reduced ? INSTANT : CROSSFADE;
 
@@ -330,7 +342,11 @@ export function LoadMore({
         end: <CheckMark />,
     };
 
-    const inert = status === "loading" || status === "end";
+    // Keyed off rawStatus, NOT the displayed one: while resting on the spinner
+    // no fetch is actually in flight, and if the observer never fires (a
+    // clipped scroll container with no rootRef, say) the click is the only way
+    // out. Making the resting spinner inert would turn that into a dead end.
+    const inert = rawStatus === "loading" || rawStatus === "end";
 
     return (
         <div className={`relative flex w-full justify-center ${className}`}>
@@ -342,7 +358,7 @@ export function LoadMore({
 
             <button
                 type="button"
-                aria-busy={status === "loading" || undefined}
+                aria-busy={rawStatus === "loading" || undefined}
                 aria-disabled={inert || undefined}
                 aria-label={text[status]}
                 onClick={(event) => {
