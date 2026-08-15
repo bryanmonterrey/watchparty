@@ -16,6 +16,7 @@ import {
 } from "@/components/icons";
 import { PlayPauseMorph, VolumeMorph, CaptionsMorph, FullscreenMorph } from "@/components/morph-icons";
 import { Scrubber } from "./scrubber";
+import { Tooltip, TooltipGroup } from "@/components/interior/tooltip-group";
 import { FineScrubStrip, STRIP_H } from "./fine-scrub-strip";
 import { SettingsMenu } from "./settings-menu";
 import type { VttThumb } from "./use-preview-thumbnails";
@@ -104,6 +105,21 @@ interface ControlsBarProps {
     toggleVoiceBoost: () => void;
     toggleSpatialBoost: () => void;
 }
+
+/**
+ * How far above a control its tooltip sits, in px.
+ *
+ * The scrubber is a 16px box with the line centred in it, sitting directly on
+ * top of the 56px control row — so from a control's own top edge the line is
+ * (however far that control is inset) + 8px away, and the ask was ~pt-5 of air
+ * above the line.
+ *
+ * Two values because the controls are not inset alike: the play/loop pair ARE
+ * the 40px pill (8px in from the row), while every right-hand control is an
+ * `h-full` button inside a 40px pill with `p-1` (12px in).
+ */
+const TOOLTIP_LIFT_BARE = 8 + 8 + 20;
+const TOOLTIP_LIFT_PILL = 12 + 8 + 20;
 
 export function ControlsBar({
     timelineRef,
@@ -212,6 +228,12 @@ export function ControlsBar({
     const snapTransition = isDraggingFineScrub ? "transform 0.2s cubic-bezier(0,0,0.2,1)" : "transform 0.2s cubic-bezier(0.4,0,0.2,1)";
 
     return (
+        // One group for the whole chrome. TooltipGroup renders NO DOM node
+        // without a className, so the wrapper costs nothing in layout — and one
+        // shared store is the point: it makes a single tooltip GLIDE from
+        // control to control, and skips the open delay while the row is warm,
+        // instead of every button fading its own in and out.
+        <TooltipGroup>
         <div className="ytp-chrome-bottom absolute bottom-0 left-0 right-0 px-3 pb-1 pointer-events-auto flex flex-col gap-0 z-20">
 
             {/* ── Fine scrub strip ─────────────────────────────────────────────
@@ -326,32 +348,35 @@ export function ControlsBar({
                 {/* Left controls */}
                 <div className="ytp-left-controls flex gap-1 items-center h-full">
 
-                    <button
-                        onClick={() => isEnded ? onReplay() : void togglePlay()}
-                        className="ytp-button h-(--player-control-h) cursor-pointer p-1 bg-black/30 flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors"
-                    >
-                        <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
-                            {isEnded
-                                ? <YTReplayIcon className="size-[24px]" />
-                                : <PlayPauseMorph playing={isPlaying} className="size-[24px]" />
-                            }
-                        </div>
-                    </button>
+                    <Tooltip label={isEnded ? "Replay" : isPlaying ? "Pause" : "Play"} tone="dark" offset={TOOLTIP_LIFT_BARE}>
+                        <button
+                            onClick={() => isEnded ? onReplay() : void togglePlay()}
+                            className="ytp-button h-(--player-control-h) cursor-pointer p-1 bg-black/30 flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors"
+                        >
+                            <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
+                                {isEnded
+                                    ? <YTReplayIcon className="size-[24px]" />
+                                    : <PlayPauseMorph playing={isPlaying} className="size-[24px]" />
+                                }
+                            </div>
+                        </button>
+                    </Tooltip>
 
                     {/* Loop toggle — end screen only (replay/loop pair). */}
                     {isEnded && (
-                        <button
-                            onClick={toggleLoop}
-                            className={cn(
-                                "ytp-button h-(--player-control-h) cursor-pointer p-1 flex items-center justify-center rounded-full transition-colors",
-                                loop ? "text-twitter2" : "text-white/60 hover:text-white"
-                            )}
-                            title={loop ? "Loop on" : "Loop off"}
-                        >
-                            <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
-                                <YTLoopIcon className="size-[24px]" />
-                            </div>
-                        </button>
+                        <Tooltip label={loop ? "Loop on" : "Loop off"} tone="dark" offset={TOOLTIP_LIFT_BARE}>
+                            <button
+                                onClick={toggleLoop}
+                                className={cn(
+                                    "ytp-button h-(--player-control-h) cursor-pointer p-1 flex items-center justify-center rounded-full transition-colors",
+                                    loop ? "text-twitter2" : "text-white/60 hover:text-white"
+                                )}
+                            >
+                                <div className="flex rounded-full items-center justify-center hover:bg-white/35 p-1">
+                                    <YTLoopIcon className="size-[24px]" />
+                                </div>
+                            </button>
+                        </Tooltip>
                     )}
 
                     {/* Volume */}
@@ -364,9 +389,11 @@ export function ControlsBar({
                     >
                         <div className="bg-black/30 h-(--player-control-h) transition-[width] duration-200 ease-out p-1 rounded-full flex items-center justify-center">
                             <div className="flex items-center hover:bg-white/20 rounded-full p-1">
-                                <button onClick={toggleMute} className="ytp-button h-full cursor-pointer flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors">
-                                    <VolumeMorph level={volumeLevel} className="size-[24px] cursor-pointer" />
-                                </button>
+                                <Tooltip label={isMuted ? "Unmute" : "Mute"} tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                    <button onClick={toggleMute} className="ytp-button h-full cursor-pointer flex items-center justify-center text-white/90 hover:text-white rounded-full transition-colors">
+                                        <VolumeMorph level={volumeLevel} className="size-[24px] cursor-pointer" />
+                                    </button>
+                                </Tooltip>
                                 <div className="w-0 group-hover/vol:w-[56px] overflow-hidden h-6 transition-[width] duration-200 ease-out flex items-center justify-center">
                                     <div
                                         ref={volumeTrackRef}
@@ -463,98 +490,108 @@ export function ControlsBar({
                         />
 
                         {show("autoplay") && (
-                            <button
-                                className="ytp-button h-full p-1 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
-                                onClick={() => setAutoplay(a => !a)}
-                                title={autoplay ? "Autoplay is on" : "Autoplay is off"}
-                            >
-                                <div className="ytp-autonav-toggle-button-container scale-[0.85]">
-                                    <div className={`ytp-autonav-toggle-button w-[36px] h-[24px] rounded-full relative transition-colors flex items-center justify-center duration-200 ${autoplay ? "bg-twitter2" : "bg-white/20"}`}>
-                                        <div className={`absolute transition-all duration-200 bg-white rounded-full  flex items-center justify-center ${autoplay ? "left-[16px]" : "left-[0px]"}`}>
-                                            <div className={cn("size-[20px] p-1 rounded-full flex items-center justify-center", autoplay ? "text-twitter2" : "text-black/40")}>
-                                                {autoplay ? <YTPlayIcon /> : <YTPauseIcon />}
+                        <Tooltip label={autoplay ? "Autoplay is on" : "Autoplay is off"} tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                <button
+                                    className="ytp-button h-full p-1 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                    onClick={() => setAutoplay(a => !a)}
+                                >
+                                    <div className="ytp-autonav-toggle-button-container scale-[0.85]">
+                                        <div className={`ytp-autonav-toggle-button w-[36px] h-[24px] rounded-full relative transition-colors flex items-center justify-center duration-200 ${autoplay ? "bg-twitter2" : "bg-white/20"}`}>
+                                            <div className={`absolute transition-all duration-200 bg-white rounded-full  flex items-center justify-center ${autoplay ? "left-[16px]" : "left-[0px]"}`}>
+                                                <div className={cn("size-[20px] p-1 rounded-full flex items-center justify-center", autoplay ? "text-twitter2" : "text-black/40")}>
+                                                    {autoplay ? <YTPlayIcon /> : <YTPauseIcon />}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </button>
+                                </button>
+                        </Tooltip>
                         )}
 
                         {show("subtitles") && (
-                            <button
-                                className={cn("ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center", selectedTrack >= 0 ? "text-twitter2" : "text-white/90 hover:text-white")}
-                                onClick={() => setSubtitleTrack(selectedTrack >= 0 ? -1 : (textTracks[0]?.index ?? 0))}
-                                title={selectedTrack >= 0 ? "Subtitles on" : "Subtitles off"}
-                            >
-                                <CaptionsMorph on={selectedTrack >= 0} className="size-[24px]" />
-                            </button>
+                        <Tooltip label={selectedTrack >= 0 ? "Subtitles on" : "Subtitles off"} tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                <button
+                                    className={cn("ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center", selectedTrack >= 0 ? "text-twitter2" : "text-white/90 hover:text-white")}
+                                    onClick={() => setSubtitleTrack(selectedTrack >= 0 ? -1 : (textTracks[0]?.index ?? 0))}
+                                >
+                                    <CaptionsMorph on={selectedTrack >= 0} className="size-[24px]" />
+                                </button>
+                        </Tooltip>
                         )}
 
                         {show("settings") && (
-                            <button
-                                className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white relative"
-                                onClick={() => setOpenMenu(m => m === "settings" ? null : "settings")}
-                                title="Settings"
-                            >
-                                <YTSettingsIcon className="size-[24px]" />
-                                <div className="absolute top-[8px] right-[4px] bg-twitter2 text-[8px] font-bold px-[2px] rounded-[1px] leading-tight scale-90">
-                                    {speedLabel}
-                                </div>
-                            </button>
+                        <Tooltip label="Settings" tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                <button
+                                    className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white relative"
+                                    onClick={() => setOpenMenu(m => m === "settings" ? null : "settings")}
+                                >
+                                    <YTSettingsIcon className="size-[24px]" />
+                                    <div className="absolute top-[8px] right-[4px] bg-twitter2 text-[8px] font-bold px-[2px] rounded-[1px] leading-tight scale-90">
+                                        {speedLabel}
+                                    </div>
+                                </button>
+                        </Tooltip>
                         )}
 
                         {show("pip") && (
-                            <button
-                                className="ytp-button h-full px-2 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
-                                onClick={() => onEnterMiniPlayer?.(videoRef.current?.currentTime ?? 0)}
-                                title="Mini player"
-                            >
-                                <YTPiPIcon className="size-[36px]" />
-                            </button>
+                        <Tooltip label="Mini player" tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                <button
+                                    className="ytp-button h-full px-2 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                    onClick={() => onEnterMiniPlayer?.(videoRef.current?.currentTime ?? 0)}
+                                >
+                                    <YTPiPIcon className="size-[36px]" />
+                                </button>
+                        </Tooltip>
                         )}
 
                         {show("airplay") && airplayAvailable && (
-                            <button
-                                className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                onClick={() => (videoRef.current as any)?.webkitShowPlaybackTargetPicker?.()}
-                                title="AirPlay"
-                            >
-                                <YTAirPlayIcon className="size-[24px]" />
-                            </button>
+                        <Tooltip label="AirPlay" tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                <button
+                                    className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    onClick={() => (videoRef.current as any)?.webkitShowPlaybackTargetPicker?.()}
+                                >
+                                    <YTAirPlayIcon className="size-[24px]" />
+                                </button>
+                        </Tooltip>
                         )}
 
                         {show("theater") && (
-                            <button
-                                className={cn("ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center hover:text-white", isTheaterMode ? "text-twitter2" : "text-white/90")}
-                                onClick={toggleTheaterMode}
-                                title={isTheaterMode ? "Default view" : "Theater mode"}
-                            >
-                                <YTTheaterModeIcon className="size-[24px]" />
-                            </button>
+                        <Tooltip label={isTheaterMode ? "Default view" : "Theater mode"} tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                <button
+                                    className={cn("ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center hover:text-white", isTheaterMode ? "text-twitter2" : "text-white/90")}
+                                    onClick={toggleTheaterMode}
+                                >
+                                    <YTTheaterModeIcon className="size-[24px]" />
+                                </button>
+                        </Tooltip>
                         )}
 
                         {videoUrl && !videoUrl.includes(".m3u8") && (
-                            <a
-                                href={videoUrl}
-                                download
-                                className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
-                                title="Download"
-                                onClick={e => e.stopPropagation()}
-                            >
-                                <YTDownloadIcon className="size-[24px]" />
-                            </a>
+                        <Tooltip label="Download" tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                                <a
+                                    href={videoUrl}
+                                    download
+                                    className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    <YTDownloadIcon className="size-[24px]" />
+                                </a>
+                        </Tooltip>
                         )}
 
-                        <button
-                            onClick={toggleFullscreen}
-                            className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
-                        >
-                            <FullscreenMorph active={isFullscreen} className="size-[24px]" />
-                        </button>
+                        <Tooltip label={isFullscreen ? "Exit full screen" : "Full screen"} tone="dark" offset={TOOLTIP_LIFT_PILL} className="h-full">
+                            <button
+                                onClick={toggleFullscreen}
+                                className="ytp-button h-full p-1 px-3 hover:bg-white/35 cursor-pointer transition-colors rounded-full flex items-center justify-center text-white/90 hover:text-white"
+                            >
+                                <FullscreenMorph active={isFullscreen} className="size-[24px]" />
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
             </div>
         </div>
+        </TooltipGroup>
     );
 }
